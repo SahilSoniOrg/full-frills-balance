@@ -1,5 +1,6 @@
-import { ThemedText } from '@/components/themed-text'
-import { ThemedView } from '@/components/themed-view'
+import { ThemedText } from '@/components/legacy/themed-text'
+import { ThemedView } from '@/components/legacy/themed-view'
+import { AppConfig } from '@/constants'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import { AccountType } from '@/src/data/models/Account'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
@@ -9,11 +10,11 @@ import { sanitizeInput, validateAccountName } from '@/src/utils/validation'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'
-import { useUser } from '../contexts/UserContext'
+import { useUser } from '../contexts/UIContext'
 
 export default function AccountCreationScreen() {
   const router = useRouter()
-  const { userPreferences } = useUser()
+  const { themePreference } = useUser()
   const colorScheme = useColorScheme()
   const [accountName, setAccountName] = useState('')
   const [accountType, setAccountType] = useState<AccountType>(AccountType.ASSET)
@@ -34,7 +35,7 @@ export default function AccountCreationScreen() {
       await accountRepository.create({
         name: sanitizedName,
         accountType: accountType,
-        currencyCode: userPreferences?.currencyCode || 'USD',
+        currencyCode: AppConfig.defaultCurrency,
         description: `Created via onboarding`,
       })
 

@@ -1,24 +1,25 @@
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from '@/components/legacy/themed-text';
+import { ThemedView } from '@/components/legacy/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../contexts/UIContext';
 
 export default function OnboardingScreen() {
   const [name, setName] = useState('');
   const [isCompleting, setIsCompleting] = useState(false);
   const colorScheme = useColorScheme();
-  const { updateUserName, completeOnboarding } = useUser();
+  const { completeOnboarding } = useUser();
 
   const handleContinue = async () => {
     if (!name.trim()) return;
     
     setIsCompleting(true);
     try {
-      updateUserName(name.trim());
-      await completeOnboarding();
+      // Note: User name handling moved to preferences layer
+      // For now, just complete onboarding
+      completeOnboarding();
       router.push('/account-creation' as any);
     } catch (error) {
       console.error('Failed to complete onboarding:', error);

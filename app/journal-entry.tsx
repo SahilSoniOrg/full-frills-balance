@@ -1,6 +1,8 @@
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from '@/components/legacy/themed-text';
+import { ThemedView } from '@/components/legacy/themed-view';
+import { AppConfig } from '@/constants';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -11,8 +13,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUser } from '../contexts/UserContext';
-import { useThemeColor } from '../hooks/use-theme-color';
+import { useUser } from '../contexts/UIContext';
 
 interface JournalEntryLine {
   id: string;
@@ -26,7 +27,7 @@ interface JournalEntryLine {
 
 export default function JournalEntryScreen() {
   const router = useRouter()
-  const { userPreferences } = useUser()
+  const { themePreference } = useUser()
   const colorScheme = useColorScheme()
   
   // Theme colors
@@ -165,7 +166,7 @@ export default function JournalEntryScreen() {
       const journalData: CreateJournalData = {
         journalDate: new Date(journalDate).getTime(),
         description: description.trim() || undefined,
-        currencyCode: userPreferences?.currencyCode || 'USD',
+        currencyCode: AppConfig.defaultCurrency,
         transactions: lines.map(line => ({
           accountId: line.accountId,
           amount: sanitizeAmount(line.amount)!,

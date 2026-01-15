@@ -1,10 +1,10 @@
 import { Redirect } from 'expo-router';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../contexts/UIContext';
 
 export default function IndexScreen() {
-  const { isOnboardingCompleted } = useUser();
+  const { hasCompletedOnboarding } = useUser();
 
-  if (isOnboardingCompleted) {
+  if (hasCompletedOnboarding) {
     return <Redirect href="/accounts" />;
   }
 
