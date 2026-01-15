@@ -1,7 +1,7 @@
-import { ThemedText } from '@/components/legacy/themed-text';
-import { ThemedView } from '@/components/legacy/themed-view';
+import { AppButton, AppCard, AppText } from '@/components/core';
+import { ThemeMode, useThemeColors } from '@/constants';
+import { useUser } from '@/contexts/UIContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import { journalRepository, JournalWithTransactionTotals } from '@/src/data/repositories/JournalRepository';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { formatShortDate } from '@/src/utils/dateUtils';
@@ -22,13 +22,16 @@ interface JournalWithAmount {
 }
 
 export default function JournalListScreen() {
-  const router = useRouter();
-  const colorScheme = useColorScheme();
+  const router = useRouter()
+  const { themePreference } = useUser()
+  const systemColorScheme = useColorScheme()
   
-  // Theme colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const borderColor = useThemeColor({ light: '#e9ecef', dark: '#333' }, 'background');
-  const cardBackground = useThemeColor({ light: '#fff', dark: '#1a1a1a' }, 'background');
+  // Derive theme mode following the explicit pattern from design preview
+  const themeMode: ThemeMode = themePreference === 'system' 
+    ? (systemColorScheme === 'dark' ? 'dark' : 'light')
+    : themePreference as ThemeMode
+  
+  const theme = useThemeColors(themeMode)
   
   const [journals, setJournals] = useState<JournalWithTransactionTotals[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,85 +78,100 @@ export default function JournalListScreen() {
     const formattedDate = formatShortDate(journal.journalDate);
     
     return (
-      <TouchableOpacity 
-        style={[styles.journalCard, { backgroundColor: cardBackground, borderColor }]}
-        onPress={() => handleJournalPress(journal)}
+      <AppCard 
+        elevation="sm" 
+        padding="lg" 
+        style={styles.journalCard} 
+        themeMode={themeMode}
       >
-        <View style={styles.journalHeader}>
-          <ThemedText style={styles.journalDate}>{formattedDate}</ThemedText>
-          <TouchableOpacity 
-            style={styles.infoButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleJournalInfo(journal);
-            }}
+        <TouchableOpacity onPress={() => handleJournalPress(journal)}>
+          <View style={styles.journalHeader}>
+            <AppText variant="body" themeMode={themeMode} style={styles.journalDate}>
+              {formattedDate}
+            </AppText>
+            <TouchableOpacity 
+              style={[styles.infoButton, { backgroundColor: theme.surfaceSecondary }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleJournalInfo(journal);
+              }}
+            >
+              <AppText variant="caption" themeMode={themeMode}>ℹ️</AppText>
+            </TouchableOpacity>
+          </View>
+          
+          <AppText 
+            variant="body" 
+            color="secondary" 
+            themeMode={themeMode}
+            style={styles.journalDescription}
           >
-            <ThemedText style={styles.infoButtonText}>ℹ️</ThemedText>
-          </TouchableOpacity>
-        </View>
-        
-        <ThemedText style={styles.journalDescription}>
-          {journal.description || 'No description'}
-        </ThemedText>
-        
-        <View style={styles.journalFooter}>
-          <ThemedText style={styles.journalAmount}>
-            {journal.totalAmount.toFixed(2)} {journal.currencyCode}
-          </ThemedText>
-          <ThemedText style={styles.transactionCount}>
-            {journal.transactionCount} transaction{journal.transactionCount !== 1 ? 's' : ''}
-          </ThemedText>
-        </View>
-        
-        <View style={styles.journalActions}>
-          <TouchableOpacity 
-            style={[styles.viewTransactionsButton, { backgroundColor: cardBackground }]}
-            onPress={() => handleViewTransactions(journal)}
-          >
-            <ThemedText style={styles.viewTransactionsButtonText}>View Transactions</ThemedText>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
+            {journal.description || 'No description'}
+          </AppText>
+          
+          <View style={styles.journalFooter}>
+            <AppText variant="heading" themeMode={themeMode} style={styles.journalAmount}>
+              {journal.totalAmount.toFixed(2)} {journal.currencyCode}
+            </AppText>
+            <AppText variant="caption" color="secondary" themeMode={themeMode}>
+              {journal.transactionCount} transaction{journal.transactionCount !== 1 ? 's' : ''}
+            </AppText>
+          </View>
+          
+          <View style={styles.journalActions}>
+            <AppButton
+              variant="outline"
+              size="sm"
+              onPress={() => handleViewTransactions(journal)}
+              themeMode={themeMode}
+            >
+              View Transactions
+            </AppButton>
+          </View>
+        </TouchableOpacity>
+      </AppCard>
     );
   };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <ThemedView style={styles.header}>
-          <ThemedText style={styles.title}>Journal Entries</ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.loadingContainer}>
-          <ThemedText>Loading journals...</ThemedText>
-        </ThemedView>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.header}>
+          <AppText variant="heading" themeMode={themeMode}>Journal Entries</AppText>
+        </View>
+        <View style={styles.loadingContainer}>
+          <AppText variant="body" themeMode={themeMode}>Loading journals...</AppText>
+        </View>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <ThemedView style={styles.header}>
-          <ThemedText style={styles.title}>Journal Entries</ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        </ThemedView>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.header}>
+          <AppText variant="heading" themeMode={themeMode}>Journal Entries</AppText>
+        </View>
+        <View style={styles.errorContainer}>
+          <AppText variant="body" color="error" themeMode={themeMode}>{error}</AppText>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ThemedView style={styles.header}>
-        <ThemedText style={styles.title}>Journal Entries</ThemedText>
-        <TouchableOpacity 
-          style={[styles.createButton, { backgroundColor: cardBackground, borderColor }]}
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={styles.header}>
+        <AppText variant="heading" themeMode={themeMode}>Journal Entries</AppText>
+        <AppButton
+          variant="outline"
+          size="sm"
           onPress={handleCreateJournal}
+          themeMode={themeMode}
         >
-          <ThemedText style={styles.createButtonText}>+ New Journal</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+          + New Journal
+        </AppButton>
+      </View>
       
       <FlatList
         data={journals}
@@ -162,12 +180,19 @@ export default function JournalListScreen() {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <ThemedView style={styles.emptyContainer}>
-            <ThemedText style={styles.emptyText}>No journal entries found</ThemedText>
-            <ThemedText style={styles.emptySubtext}>
+          <View style={styles.emptyContainer}>
+            <AppText variant="subheading" themeMode={themeMode} style={styles.emptyText}>
+              No journal entries found
+            </AppText>
+            <AppText 
+              variant="body" 
+              color="secondary" 
+              themeMode={themeMode}
+              style={styles.emptySubtext}
+            >
               Create your first journal entry to get started
-            </ThemedText>
-          </ThemedView>
+            </AppText>
+          </View>
         }
       />
     </SafeAreaView>

@@ -1,6 +1,5 @@
-import { ThemedText } from '@/components/legacy/themed-text'
-import { ThemedView } from '@/components/legacy/themed-view'
-import { AppConfig } from '@/constants'
+import { AppButton, AppCard, AppText } from '@/components/core'
+import { AppConfig, Shape, Spacing, ThemeMode, useThemeColors } from '@/constants'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import { AccountType } from '@/src/data/models/Account'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
@@ -15,7 +14,15 @@ import { useUser } from '../contexts/UIContext'
 export default function AccountCreationScreen() {
   const router = useRouter()
   const { themePreference } = useUser()
-  const colorScheme = useColorScheme()
+  const systemColorScheme = useColorScheme()
+  
+  // Derive theme mode following the explicit pattern from design preview
+  const themeMode: ThemeMode = themePreference === 'system' 
+    ? (systemColorScheme === 'dark' ? 'dark' : 'light')
+    : themePreference as ThemeMode
+  
+  const theme = useThemeColors(themeMode)
+  
   const [accountName, setAccountName] = useState('')
   const [accountType, setAccountType] = useState<AccountType>(AccountType.ASSET)
   const [isCreating, setIsCreating] = useState(false)
@@ -48,12 +55,10 @@ export default function AccountCreationScreen() {
       setAccountName('')
       setAccountType(AccountType.ASSET)
       
-      // Navigate to accounts after a short delay
-      setTimeout(() => {
-        router.push('/accounts' as any)
-      }, 1000)
-      
+      // Navigate to accounts list
+      router.push('/accounts' as any)
     } catch (error) {
+      console.error('Error creating account:', error)
       showErrorAlert(error, 'Failed to Create Account')
     } finally {
       setIsCreating(false)
@@ -69,38 +74,38 @@ export default function AccountCreationScreen() {
   ]
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.content}>
-        <ThemedText type="title" style={styles.title}>
+        <AppText variant="heading" themeMode={themeMode} style={styles.title}>
           Create Your First Account
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
+        </AppText>
+        <AppText variant="body" color="secondary" themeMode={themeMode} style={styles.subtitle}>
           Start tracking your finances
-        </ThemedText>
+        </AppText>
         
-        <View style={styles.inputContainer}>
-          <ThemedText style={styles.label}>Account Name</ThemedText>
+        <AppCard elevation="sm" padding="lg" style={styles.inputContainer} themeMode={themeMode}>
+          <AppText variant="body" themeMode={themeMode} style={styles.label}>Account Name</AppText>
           <TextInput
             style={[
               styles.input,
               { 
-                borderColor: colorScheme === 'dark' ? '#444' : '#ddd',
-                color: colorScheme === 'dark' ? '#fff' : '#000',
-                backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#fff'
+                borderColor: theme.border,
+                color: theme.text,
+                backgroundColor: theme.surface
               }
             ]}
             value={accountName}
             onChangeText={setAccountName}
             placeholder="e.g., Checking Account"
-            placeholderTextColor={colorScheme === 'dark' ? '#888' : '#999'}
+            placeholderTextColor={theme.textSecondary}
             autoFocus
             maxLength={100}
             returnKeyType="next"
           />
-        </View>
+        </AppCard>
 
-        <View style={styles.inputContainer}>
-          <ThemedText style={styles.label}>Account Type</ThemedText>
+        <AppCard elevation="sm" padding="lg" style={styles.inputContainer} themeMode={themeMode}>
+          <AppText variant="body" themeMode={themeMode} style={styles.label}>Account Type</AppText>
           <View style={styles.accountTypeContainer}>
             {accountTypes.map((type) => (
               <TouchableOpacity
@@ -109,124 +114,104 @@ export default function AccountCreationScreen() {
                   styles.accountTypeButton,
                   accountType === type.key && styles.accountTypeButtonSelected,
                   { 
-                    borderColor: colorScheme === 'dark' ? '#444' : '#ddd',
+                    borderColor: theme.border,
                     backgroundColor: accountType === type.key 
-                      ? '#007AFF' 
-                      : colorScheme === 'dark' ? '#2a2a2a' : '#fff'
+                      ? theme.primary 
+                      : theme.surface
                   }
                 ]}
                 onPress={() => setAccountType(type.key as AccountType)}
               >
-                <ThemedText style={[
-                  styles.accountTypeText,
-                  accountType === type.key && styles.accountTypeTextSelected
-                ]}>
+                <AppText 
+                  variant="body" 
+                  themeMode={themeMode}
+                  style={[
+                    styles.accountTypeText,
+                    accountType === type.key && styles.accountTypeTextSelected,
+                    {
+                      color: accountType === type.key 
+                        ? '#fff' 
+                        : theme.text
+                    }
+                  ]}
+                >
                   {type.label}
-                </ThemedText>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
+        </AppCard>
 
-        <TouchableOpacity 
-          style={[
-            styles.button, 
-            (!accountName.trim() || isCreating) && styles.buttonDisabled
-          ]}
+        <AppButton
+          variant="primary"
+          size="lg"
           onPress={handleCreateAccount}
           disabled={!accountName.trim() || isCreating}
+          themeMode={themeMode}
+          style={styles.createButton}
         >
-          <ThemedText style={styles.buttonText}>
-            {isCreating ? 'Creating...' : 'Create Account'}
-          </ThemedText>
-        </TouchableOpacity>
+          {isCreating ? 'Creating...' : 'Create Account'}
+        </AppButton>
       </ScrollView>
-    </ThemedView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   content: {
     flex: 1,
-    padding: 24,
+    padding: Spacing.lg,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a1a1a',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: Spacing.xl,
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: Shape.radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     fontSize: 16,
-    backgroundColor: '#fff',
   },
   accountTypeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 24,
+    gap: Spacing.sm,
   },
   accountTypeButton: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    minWidth: 100,
-    alignItems: 'center',
+    borderRadius: Shape.radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    minWidth: 80,
   },
   accountTypeButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    borderWidth: 2,
   },
   accountTypeText: {
-    fontSize: 14,
-    color: '#333',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   accountTypeTextSelected: {
-    fontSize: 14,
-    color: '#fff',
     fontWeight: '600',
   },
-  button: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
+  createButton: {
+    marginTop: Spacing.xl,
   },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-})
+});

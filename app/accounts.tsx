@@ -1,6 +1,7 @@
 import type { AppTextProps, BadgeProps } from '@/components/core'
 import { AppButton, AppCard, AppText, Badge } from '@/components/core'
-import { Spacing } from '@/constants/design-tokens'
+import { Spacing, ThemeMode, useThemeColors } from '@/constants'
+import { useUser } from '@/contexts/UIContext'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import Account, { AccountType } from '@/src/data/models/Account'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
@@ -18,8 +19,15 @@ interface AccountWithBalance {
 
 export default function AccountsScreen() {
   const router = useRouter()
-  const colorScheme = useColorScheme()
-  const themeMode = colorScheme === 'dark' ? 'dark' : 'light'
+  const { themePreference } = useUser()
+  const systemColorScheme = useColorScheme()
+  
+  // Derive theme mode following the explicit pattern from design preview
+  const themeMode: ThemeMode = themePreference === 'system' 
+    ? (systemColorScheme === 'dark' ? 'dark' : 'light')
+    : themePreference as ThemeMode
+  
+  const theme = useThemeColors(themeMode)
   const [accountsWithBalances, setAccountsWithBalances] = useState<AccountWithBalance[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

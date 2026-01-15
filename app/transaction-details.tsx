@@ -1,27 +1,30 @@
-import { ThemedText } from '@/components/legacy/themed-text';
-import { ThemedView } from '@/components/legacy/themed-view';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { database } from '@/src/data/database/Database';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { TransactionWithAccountInfo } from '@/src/types/readModels';
-import { showErrorAlert } from '@/src/utils/alerts';
-import { formatDate } from '@/src/utils/dateUtils';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppCard, AppText } from '@/components/core'
+import { ThemeMode, useThemeColors } from '@/constants'
+import { useUser } from '@/contexts/UIContext'
+import { useColorScheme } from '@/hooks/use-color-scheme'
+import { database } from '@/src/data/database/Database'
+import { TransactionType } from '@/src/data/models/Transaction'
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { TransactionWithAccountInfo } from '@/src/types/readModels'
+import { showErrorAlert } from '@/src/utils/alerts'
+import { formatDate } from '@/src/utils/dateUtils'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import React, { useEffect, useState } from 'react'
+import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function TransactionDetailsScreen() {
-  const router = useRouter();
-  const { journalId } = useLocalSearchParams<{ journalId: string }>();
-  const colorScheme = useColorScheme();
+  const router = useRouter()
+  const { journalId } = useLocalSearchParams<{ journalId: string }>()
+  const { themePreference } = useUser()
+  const systemColorScheme = useColorScheme()
   
-  // Theme colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const borderColor = useThemeColor({ light: '#e9ecef', dark: '#333' }, 'background');
-  const cardBackground = useThemeColor({ light: '#fff', dark: '#1a1a1a' }, 'background');
+  // Derive theme mode following the explicit pattern from design preview
+  const themeMode: ThemeMode = themePreference === 'system' 
+    ? (systemColorScheme === 'dark' ? 'dark' : 'light')
+    : themePreference as ThemeMode
+  
+  const theme = useThemeColors(themeMode)
   
   const [transactions, setTransactions] = useState<TransactionWithAccountInfo[]>([]);
   const [journalInfo, setJournalInfo] = useState<{ description?: string; date: number; status: string } | null>(null);
@@ -76,86 +79,98 @@ export default function TransactionDetailsScreen() {
     const transactionTypeColor = transaction.transactionType === TransactionType.DEBIT ? '#DC3545' : '#10B981';
     
     return (
-      <View style={[styles.transactionCard, { backgroundColor: cardBackground, borderColor }]}>
+      <AppCard elevation="sm" padding="md" style={styles.transactionCard} themeMode={themeMode}>
         <View style={styles.transactionHeader}>
           <View style={styles.transactionInfo}>
-            <ThemedText style={styles.accountName}>{transaction.accountName}</ThemedText>
-            <ThemedText style={styles.accountType}>{transaction.accountType}</ThemedText>
+            <AppText variant="body" themeMode={themeMode}>{transaction.accountName}</AppText>
+            <AppText variant="caption" color="secondary" themeMode={themeMode}>{transaction.accountType}</AppText>
           </View>
           <View style={styles.transactionTypeBadge}>
-            <ThemedText style={[styles.transactionTypeText, { color: transactionTypeColor }]}>
+            <AppText 
+              variant="caption" 
+              color={transaction.transactionType === TransactionType.DEBIT ? 'expense' : 'income'}
+              themeMode={themeMode}
+            >
               {transaction.transactionType}
-            </ThemedText>
+            </AppText>
           </View>
         </View>
         
         <View style={styles.transactionDetails}>
-          <ThemedText style={styles.transactionDate}>{formattedDate}</ThemedText>
+          <AppText variant="caption" color="secondary" themeMode={themeMode}>{formattedDate}</AppText>
           <View style={styles.amountContainer}>
-            <ThemedText style={styles.transactionAmount}>{formattedAmount}</ThemedText>
+            <AppText 
+              variant="body" 
+              color={transaction.transactionType === TransactionType.DEBIT ? 'expense' : 'income'}
+              themeMode={themeMode}
+            >
+              {formattedAmount}
+            </AppText>
             {formattedRunningBalance && (
-              <ThemedText style={styles.runningBalance}>
+              <AppText variant="caption" color="tertiary" themeMode={themeMode}>
                 Balance: {formattedRunningBalance}
-              </ThemedText>
+              </AppText>
             )}
           </View>
           {transaction.notes && (
-            <ThemedText style={styles.transactionNotes}>{transaction.notes}</ThemedText>
+            <AppText variant="caption" color="secondary" themeMode={themeMode} style={styles.transactionNotes}>
+              {transaction.notes}
+            </AppText>
           )}
         </View>
-      </View>
+      </AppCard>
     );
   };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <ThemedView style={styles.header}>
-          <ThemedText style={styles.title}>Transaction Details</ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.loadingContainer}>
-          <ThemedText>Loading transactions...</ThemedText>
-        </ThemedView>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.header}>
+          <AppText variant="heading" themeMode={themeMode}>Transaction Details</AppText>
+        </View>
+        <View style={styles.loadingContainer}>
+          <AppText variant="body" themeMode={themeMode}>Loading transactions...</AppText>
+        </View>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <ThemedView style={styles.header}>
-          <ThemedText style={styles.title}>Transaction Details</ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        </ThemedView>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.header}>
+          <AppText variant="heading" themeMode={themeMode}>Transaction Details</AppText>
+        </View>
+        <View style={styles.errorContainer}>
+          <AppText variant="body" color="error" themeMode={themeMode}>{error}</AppText>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <ThemedView style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ThemedText style={styles.backButtonText}>←</ThemedText>
+          <AppText variant="body" themeMode={themeMode}>←</AppText>
         </TouchableOpacity>
-        <ThemedText style={styles.title}>Transaction Details</ThemedText>
+        <AppText variant="heading" themeMode={themeMode}>Transaction Details</AppText>
         <TouchableOpacity onPress={() => router.push('/journal-list' as any)} style={styles.contextButton}>
-          <ThemedText style={styles.contextButtonText}>All Journals</ThemedText>
+          <AppText variant="caption" themeMode={themeMode}>All Journals</AppText>
         </TouchableOpacity>
-      </ThemedView>
+      </View>
 
       {journalInfo && (
-        <ThemedView style={styles.journalInfoCard}>
-          <ThemedText style={styles.journalInfoTitle}>Journal Info</ThemedText>
-          <ThemedText style={styles.journalInfoDescription}>
+        <AppCard elevation="sm" padding="md" style={styles.journalInfoCard} themeMode={themeMode}>
+          <AppText variant="subheading" themeMode={themeMode}>Journal Info</AppText>
+          <AppText variant="body" themeMode={themeMode}>
             {journalInfo.description || 'No description'}
-          </ThemedText>
-          <ThemedText style={styles.journalInfoDate}>
+          </AppText>
+          <AppText variant="caption" color="secondary" themeMode={themeMode}>
             {formatDate(journalInfo.date, { includeTime: false })}
-          </ThemedText>
-          <ThemedText style={styles.journalInfoStatus}>{journalInfo.status}</ThemedText>
-        </ThemedView>
+          </AppText>
+          <AppText variant="caption" color="tertiary" themeMode={themeMode}>{journalInfo.status}</AppText>
+        </AppCard>
       )}
       
       <FlatList
@@ -165,9 +180,9 @@ export default function TransactionDetailsScreen() {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <ThemedView style={styles.emptyContainer}>
-            <ThemedText style={styles.emptyText}>No transactions found</ThemedText>
-          </ThemedView>
+          <View style={styles.emptyContainer}>
+            <AppText variant="body" color="secondary" themeMode={themeMode}>No transactions found</AppText>
+          </View>
         }
       />
     </SafeAreaView>
