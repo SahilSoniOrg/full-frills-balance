@@ -9,6 +9,7 @@ import { sanitizeInput, validateAccountName } from '@/src/utils/validation'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useUser } from '../contexts/UIContext'
 
 export default function AccountCreationScreen() {
@@ -74,7 +75,7 @@ export default function AccountCreationScreen() {
   ]
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.content}>
         <AppText variant="heading" themeMode={themeMode} style={styles.title}>
           Create Your First Account
@@ -153,7 +154,7 @@ export default function AccountCreationScreen() {
           {isCreating ? 'Creating...' : 'Create Account'}
         </AppButton>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   )
 }
 
