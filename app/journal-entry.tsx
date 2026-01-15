@@ -181,10 +181,8 @@ export default function JournalEntryScreen() {
         'Journal entry has been created successfully!'
       )
       
-      // Navigate back after a short delay
-      setTimeout(() => {
-        router.back()
-      }, 1000)
+      // Navigate back immediately
+      router.back()
       
     } catch (error) {
       showErrorAlert(error, 'Failed to Create Journal')

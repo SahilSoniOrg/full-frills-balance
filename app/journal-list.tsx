@@ -56,6 +56,11 @@ export default function JournalListScreen() {
   }
 
   const handleJournalPress = (journal: JournalWithTransactionTotals) => {
+    // Primary action: view transactions (natural flow)
+    router.push(`/transaction-details?journalId=${journal.id}` as any);
+  }
+
+  const handleJournalInfo = (journal: JournalWithTransactionTotals) => {
     const formattedDate = formatShortDate(journal.journalDate);
     const message = `Date: ${formattedDate}\nDescription: ${journal.description || 'No description'}\nCurrency: ${journal.currencyCode}\nStatus: ${journal.status}\nTransactions: ${journal.transactionCount}\nTotal Amount: ${journal.totalAmount.toFixed(2)}`;
     
@@ -76,7 +81,15 @@ export default function JournalListScreen() {
       >
         <View style={styles.journalHeader}>
           <ThemedText style={styles.journalDate}>{formattedDate}</ThemedText>
-          <ThemedText style={styles.journalStatus}>{journal.status}</ThemedText>
+          <TouchableOpacity 
+            style={styles.infoButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleJournalInfo(journal);
+            }}
+          >
+            <ThemedText style={styles.infoButtonText}>ℹ️</ThemedText>
+          </TouchableOpacity>
         </View>
         
         <ThemedText style={styles.journalDescription}>
@@ -210,13 +223,21 @@ const styles = StyleSheet.create({
   },
   journalStatus: {
     fontSize: 12,
-    fontWeight: '500',
     opacity: 0.7,
   },
+  infoButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  infoButtonText: {
+    fontSize: 12,
+  },
   journalDescription: {
-    fontSize: 14,
-    marginBottom: 12,
+    fontSize: 16,
     opacity: 0.8,
+    marginBottom: 8,
   },
   journalFooter: {
     flexDirection: 'row',

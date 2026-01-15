@@ -38,6 +38,7 @@ export default function AccountsScreen() {
         setAccountsWithBalances(accountsWithBalanceData)
       } catch (error) {
         showErrorAlert(error, 'Failed to Load Accounts')
+        setAccountsWithBalances([]) // Clear data on error
       } finally {
         setIsLoading(false)
       }
@@ -140,10 +141,10 @@ export default function AccountsScreen() {
         <Text style={styles.title}>Your Accounts</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity 
-            style={[styles.headerButton, styles.journalListButton]}
-            onPress={handleViewJournals}
+            style={[styles.headerButton, styles.createButton]}
+            onPress={handleCreateAccount}
           >
-            <Text style={styles.headerButtonText}>📋 Journals</Text>
+            <Text style={styles.headerButtonText}>+ Account</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.headerButton, styles.journalButton]}
@@ -152,10 +153,10 @@ export default function AccountsScreen() {
             <Text style={styles.headerButtonText}>+ Journal</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.headerButton, styles.createButton]}
-            onPress={handleCreateAccount}
+            style={[styles.headerButton, styles.journalListButton]}
+            onPress={handleViewJournals}
           >
-            <Text style={styles.headerButtonText}>+ Account</Text>
+            <Text style={styles.headerButtonText}>📋 View All</Text>
           </TouchableOpacity>
         </View>
       </View>

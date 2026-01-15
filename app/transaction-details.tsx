@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { database } from '@/src/data/database/Database';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { TransactionWithAccountInfo } from '@/src/types/readModels';
@@ -23,6 +24,7 @@ export default function TransactionDetailsScreen() {
   const cardBackground = useThemeColor({ light: '#fff', dark: '#1a1a1a' }, 'background');
   
   const [transactions, setTransactions] = useState<TransactionWithAccountInfo[]>([]);
+  const [journalInfo, setJournalInfo] = useState<{ description?: string; date: number; status: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +45,16 @@ export default function TransactionDetailsScreen() {
         const journalTransactions = await transactionRepository.findByJournalWithAccountInfo(journalId);
         console.log('Found transactions:', journalTransactions.length);
         setTransactions(journalTransactions);
+
+        // Get journal info for context
+        const journal = await database.collections.get('journals').find(journalId);
+        if (journal) {
+          setJournalInfo({
+            description: (journal as any).description,
+            date: (journal as any).journalDate,
+            status: (journal as any).status
+          });
+        }
       } catch (error) {
         console.error('Error loading transactions:', error);
         showErrorAlert(error, 'Failed to Load Transactions');
@@ -132,6 +144,19 @@ export default function TransactionDetailsScreen() {
           <ThemedText style={styles.contextButtonText}>All Journals</ThemedText>
         </TouchableOpacity>
       </ThemedView>
+
+      {journalInfo && (
+        <ThemedView style={styles.journalInfoCard}>
+          <ThemedText style={styles.journalInfoTitle}>Journal Info</ThemedText>
+          <ThemedText style={styles.journalInfoDescription}>
+            {journalInfo.description || 'No description'}
+          </ThemedText>
+          <ThemedText style={styles.journalInfoDate}>
+            {formatDate(journalInfo.date, { includeTime: false })}
+          </ThemedText>
+          <ThemedText style={styles.journalInfoStatus}>{journalInfo.status}</ThemedText>
+        </ThemedView>
+      )}
       
       <FlatList
         data={transactions}
@@ -183,6 +208,34 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  journalInfoCard: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  journalInfoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  journalInfoDescription: {
+    fontSize: 14,
+    marginBottom: 4,
+    opacity: 0.8,
+  },
+  journalInfoDate: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginBottom: 2,
+  },
+  journalInfoStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   list: {
     flex: 1,
