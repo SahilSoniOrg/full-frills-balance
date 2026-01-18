@@ -7,6 +7,7 @@
 import Account from '@/src/data/models/Account'
 import Journal from '@/src/data/models/Journal'
 import Transaction from '@/src/data/models/Transaction'
+import { AccountBalance, accountRepository } from '@/src/data/repositories/AccountRepository'
 import { Q } from '@nozbe/watermelondb'
 import { useDatabase } from '@nozbe/watermelondb/react'
 import { useEffect, useState } from 'react'
@@ -124,6 +125,39 @@ export function useAccountTransactions(accountId: string | null) {
 }
 
 /**
+ * Hook to reactively get transactions for a specific journal
+ */
+export function useJournalTransactions(journalId: string | null) {
+    const database = useDatabase()
+    const [transactions, setTransactions] = useState<Transaction[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    useEffect(() => {
+        if (!journalId) {
+            setTransactions([])
+            setIsLoading(false)
+            return
+        }
+
+        const collection = database.collections.get<Transaction>('transactions')
+        const subscription = collection
+            .query(
+                Q.where('journal_id', journalId),
+                Q.where('deleted_at', Q.eq(null))
+            )
+            .observe()
+            .subscribe((transactions) => {
+                setTransactions(transactions)
+                setIsLoading(false)
+            })
+
+        return () => subscription.unsubscribe()
+    }, [database, journalId])
+
+    return { transactions, isLoading }
+}
+
+/**
  * Hook to reactively get a single account by ID
  */
 export function useAccount(accountId: string | null) {
@@ -156,4 +190,41 @@ export function useAccount(accountId: string | null) {
     }, [database, accountId])
 
     return { account, isLoading }
+}
+
+/**
+ * Hook to reactively get account balance
+ */
+export function useAccountBalance(accountId: string | null) {
+    const database = useDatabase()
+    const [balanceData, setBalanceData] = useState<AccountBalance | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+
+    useEffect(() => {
+        if (!accountId) {
+            setBalanceData(null)
+            setIsLoading(false)
+            return
+        }
+
+        // Re-calculate balance whenever transactions for this account change
+        const collection = database.collections.get<Transaction>('transactions')
+        const subscription = collection
+            .query(Q.where('account_id', accountId))
+            .observe()
+            .subscribe(async () => {
+                try {
+                    const data = await accountRepository.getAccountBalance(accountId)
+                    setBalanceData(data)
+                } catch (error) {
+                    console.error('Failed to update account balance:', error)
+                } finally {
+                    setIsLoading(false)
+                }
+            })
+
+        return () => subscription.unsubscribe()
+    }, [database, accountId])
+
+    return { balanceData, isLoading }
 }

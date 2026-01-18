@@ -22,12 +22,13 @@ export default function RootLayout() {
               headerShown: false,
             }}
           >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="accounts" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="journal-entry" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="account-creation" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
+            <Stack.Screen name="account-details" options={{ headerShown: true, title: 'Account Details' }} />
+            <Stack.Screen name="transaction-details" options={{ headerShown: true, title: 'Transaction Details' }} />
           </Stack>
 
           <StatusBar style="auto" />

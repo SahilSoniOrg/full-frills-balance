@@ -11,6 +11,8 @@ interface UIPreferences {
   };
   theme?: 'light' | 'dark' | 'system';
   defaultCurrencyCode?: string;
+  lastUsedSourceAccountId?: string;
+  lastUsedDestinationAccountId?: string;
 }
 
 class PreferencesHelper {
@@ -82,6 +84,24 @@ class PreferencesHelper {
 
   async setDefaultCurrencyCode(currencyCode: string): Promise<void> {
     this.preferences.defaultCurrencyCode = currencyCode;
+    await this.savePreferences();
+  }
+
+  get lastUsedSourceAccountId(): string | undefined {
+    return this.preferences.lastUsedSourceAccountId;
+  }
+
+  async setLastUsedSourceAccountId(accountId: string | undefined): Promise<void> {
+    this.preferences.lastUsedSourceAccountId = accountId;
+    await this.savePreferences();
+  }
+
+  get lastUsedDestinationAccountId(): string | undefined {
+    return this.preferences.lastUsedDestinationAccountId;
+  }
+
+  async setLastUsedDestinationAccountId(accountId: string | undefined): Promise<void> {
+    this.preferences.lastUsedDestinationAccountId = accountId;
     await this.savePreferences();
   }
 

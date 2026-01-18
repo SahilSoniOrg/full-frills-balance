@@ -6,13 +6,12 @@
 
 import { AppButton, AppCard, AppText, Badge } from '@/components/core'
 import { Spacing } from '@/constants'
-import { useAccount, useAccountTransactions } from '@/hooks/use-data'
+import { useAccount, useAccountBalance, useAccountTransactions } from '@/hooks/use-data'
 import { useTheme } from '@/hooks/use-theme'
 import { TransactionType } from '@/src/data/models/Transaction'
-import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -24,25 +23,10 @@ export default function AccountDetailsScreen() {
 
     const { account, isLoading: accountLoading } = useAccount(accountId)
     const { transactions, isLoading: transactionsLoading } = useAccountTransactions(accountId)
+    const { balanceData, isLoading: balanceLoading } = useAccountBalance(accountId)
 
-    const [balance, setBalance] = useState(0)
-    const [transactionCount, setTransactionCount] = useState(0)
-
-    useEffect(() => {
-        if (accountId) {
-            loadBalance()
-        }
-    }, [accountId])
-
-    const loadBalance = async () => {
-        try {
-            const balanceData = await accountRepository.getAccountBalance(accountId)
-            setBalance(balanceData.balance)
-            setTransactionCount(balanceData.transactionCount)
-        } catch (error) {
-            console.error('Failed to load balance:', error)
-        }
-    }
+    const balance = balanceData?.balance || 0
+    const transactionCount = balanceData?.transactionCount || 0
 
     if (accountLoading) {
         return (
@@ -99,7 +83,7 @@ export default function AccountDetailsScreen() {
                             Current Balance
                         </AppText>
                         <AppText variant="heading" themeMode={themeMode}>
-                            {balance.toFixed(2)} {account.currencyCode}
+                            {balanceLoading ? '...' : `${balance.toFixed(2)} ${account.currencyCode}`}
                         </AppText>
                     </View>
 
@@ -108,7 +92,7 @@ export default function AccountDetailsScreen() {
                             Transactions
                         </AppText>
                         <AppText variant="subheading" themeMode={themeMode}>
-                            {transactionCount}
+                            {balanceLoading ? '...' : transactionCount}
                         </AppText>
                     </View>
                 </View>

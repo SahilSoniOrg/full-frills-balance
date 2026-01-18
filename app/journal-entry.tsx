@@ -1,5 +1,4 @@
 import { AppButton, AppCard, AppText } from '@/components/core';
-import { CurrencyConverterWidget } from '@/components/CurrencyConverterWidget';
 import { AppConfig, Shape, Spacing, ThemeMode, useThemeColors } from '@/constants';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AccountType } from '@/src/data/models/Account';
@@ -13,6 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SimpleJournalForm from '../components/journal/SimpleJournalForm';
 import { useUser } from '../contexts/UIContext';
 
 interface JournalEntryLine {
@@ -54,12 +54,8 @@ export default function JournalEntryScreen() {
   // Guided mode state
   const [isGuidedMode, setIsGuidedMode] = useState(true)
 
-  // Simple mode state
+  // Simple mode state (Handled in SimpleJournalForm)
   const [transactionType, setTransactionType] = useState<'expense' | 'income' | 'transfer'>('expense')
-  const [fromAccount, setFromAccount] = useState('')
-  const [toAccount, setToAccount] = useState('')
-  const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState('')
 
   // Advanced mode state (existing)
   const [description, setDescription] = useState('')
@@ -186,155 +182,6 @@ export default function JournalEntryScreen() {
     return { valid: true, error: null }
   }
 
-  const createGuidedJournal = async () => {
-    // Validate guided mode inputs
-    if (!fromAccount || !amount || sanitizeAmount(amount) === 0 || amount === '') {
-      Alert.alert('Validation Error', 'Please enter a valid amount greater than 0')
-      return
-    }
-
-    // Additional validation to prevent alphabetic characters
-    if (!/^\d*\.?\d*$/.test(amount.trim())) {
-      Alert.alert('Validation Error', 'Amount can only contain numbers and a decimal point')
-      return
-    }
-
-    if (transactionType === 'transfer' && !toAccount) {
-      Alert.alert('Validation Error', 'Please select a destination account for transfer')
-      return
-    }
-
-    setIsCreating(true)
-
-    try {
-      const sanitizedAmount = sanitizeAmount(amount)!
-      let journalData: CreateJournalData
-
-      if (transactionType === 'expense') {
-        // Expense: From account (asset) debit, To account (expense) credit
-        const expenseAccount = accounts.find(acc => acc.accountType === AccountType.EXPENSE)
-        if (!expenseAccount) {
-          throw new Error('No expense account found. Please create an expense account first.')
-        }
-
-        journalData = {
-          journalDate: Date.now(),
-          description: category || 'Expense',
-          currencyCode: AppConfig.defaultCurrency,
-          transactions: [
-            {
-              accountId: fromAccount,
-              amount: sanitizedAmount,
-              transactionType: TransactionType.DEBIT,
-              notes: category
-            },
-            {
-              accountId: expenseAccount.id,
-              amount: sanitizedAmount,
-              transactionType: TransactionType.CREDIT,
-              notes: category
-            }
-          ]
-        }
-      } else if (transactionType === 'income') {
-        // Income: From account (income) credit, To account (asset) debit
-        const incomeAccount = accounts.find(acc => acc.accountType === AccountType.INCOME)
-        if (!incomeAccount) {
-          throw new Error('No income account found. Please create an income account first.')
-        }
-
-        // Income/Expense: Convert amount to base currency if needed
-        const acc = accounts.find(a => a.id === (toAccount || fromAccount))
-        const accCurrency = acc?.currencyCode || AppConfig.defaultCurrency
-
-        let baseAmount = sanitizedAmount
-        let rateToJournal: number | undefined
-
-        if (accCurrency !== AppConfig.defaultCurrency) {
-          const rate = await exchangeRateService.getRate(accCurrency, AppConfig.defaultCurrency)
-          baseAmount = sanitizedAmount * rate // (Wait, wait... if it's 100 EUR, and USD/EUR is 1.1, then 100 EUR = 110 USD? No, rate EUR/USD = 1.1. So 100 EUR * 1.1 = 110 USD. Correct.)
-          rateToJournal = rate
-        }
-
-        // (Already declared above)
-
-        journalData = {
-          journalDate: Date.now(),
-          description: category || 'Income',
-          currencyCode: AppConfig.defaultCurrency,
-          transactions: [
-            {
-              accountId: incomeAccount.id,
-              amount: baseAmount,
-              transactionType: TransactionType.CREDIT,
-              notes: category
-            },
-            {
-              accountId: toAccount || fromAccount,
-              amount: baseAmount,
-              transactionType: TransactionType.DEBIT,
-              notes: category,
-              exchangeRate: rateToJournal
-            }
-          ]
-        }
-      } else {
-        // Transfer: From account credit, To account debit
-        const fromAcc = accounts.find(a => a.id === fromAccount)
-        const toAcc = accounts.find(a => a.id === toAccount)
-
-        if (!fromAcc || !toAcc) {
-          throw new Error('Selected accounts not found')
-        }
-
-        const fromCurrency = fromAcc.currencyCode
-        const toCurrency = toAcc.currencyCode
-
-        // Calculate USD amounts for both legs to ensure journal balance
-        const fromToUSDRate = await exchangeRateService.getRate(fromCurrency, AppConfig.defaultCurrency)
-        const amountInUSD = sanitizedAmount * fromToUSDRate
-
-        // For the 'to' side, we also need to know its rate relative to USD
-        const toToUSDRate = await exchangeRateService.getRate(toCurrency, AppConfig.defaultCurrency)
-
-        // Final translated amount for UI description
-        const convertedToAccountAmount = toToUSDRate !== 0 ? amountInUSD / toToUSDRate : sanitizedAmount
-
-        journalData = {
-          journalDate: Date.now(),
-          description: fromCurrency !== toCurrency
-            ? `Transfer (${sanitizedAmount} ${fromCurrency} → ${convertedToAccountAmount.toFixed(2)} ${toCurrency})`
-            : 'Transfer',
-          currencyCode: AppConfig.defaultCurrency,
-          transactions: [
-            {
-              accountId: fromAccount,
-              amount: amountInUSD,
-              transactionType: TransactionType.CREDIT,
-              notes: 'Transfer',
-              exchangeRate: fromToUSDRate,
-            },
-            {
-              accountId: toAccount,
-              amount: amountInUSD,
-              transactionType: TransactionType.DEBIT,
-              notes: 'Transfer',
-              exchangeRate: toToUSDRate,
-            }
-          ]
-        }
-      }
-
-      await journalRepository.createJournalWithTransactions(journalData)
-      showSuccessAlert('Success', 'Transaction created successfully')
-      router.push('/journal-list' as any)
-    } catch (error) {
-      console.error('Failed to create guided journal:', error)
-      showErrorAlert('Failed to create transaction')
-    } finally {
-      setIsCreating(false)
-    }
-  }
 
   const createJournal = async () => {
     const validation = validateJournal()
@@ -436,203 +283,14 @@ export default function JournalEntryScreen() {
         </AppCard>
 
         {isGuidedMode ? (
-          // Guided Mode UI
-          <View>
-            <AppCard elevation="sm" padding="lg" style={styles.inputCard} themeMode={themeMode}>
-              <AppText variant="subheading" themeMode={themeMode} style={styles.sectionTitle}>
-                Transaction Type
-              </AppText>
-              <View style={styles.transactionTypeContainer}>
-                {(['expense', 'income', 'transfer'] as const).map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.transactionTypeButton,
-                      transactionType === type && styles.transactionTypeButtonSelected,
-                      {
-                        backgroundColor: transactionType === type ? theme.primary : theme.surface,
-                        borderColor: theme.border
-                      }
-                    ]}
-                    onPress={() => setTransactionType(type)}
-                  >
-                    <AppText
-                      variant="body"
-                      themeMode={themeMode}
-                      style={{
-                        color: transactionType === type ? '#fff' : theme.text,
-                        textTransform: 'capitalize'
-                      }}
-                    >
-                      {type}
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </AppCard>
-
-            <AppCard elevation="sm" padding="lg" style={styles.inputCard} themeMode={themeMode}>
-              <AppText variant="subheading" themeMode={themeMode} style={styles.sectionTitle}>
-                {transactionType === 'transfer' ? 'From Account' : 'Account'}
-              </AppText>
-              <View style={styles.accountSelector}>
-                {accounts
-                  .filter(acc =>
-                    transactionType === 'expense'
-                      ? acc.accountType === AccountType.ASSET || acc.accountType === AccountType.LIABILITY
-                      : transactionType === 'income'
-                        ? acc.accountType === AccountType.ASSET
-                        : true // Transfer: all accounts
-                  )
-                  .map((account) => (
-                    <TouchableOpacity
-                      key={account.id}
-                      style={[
-                        styles.accountOption,
-                        fromAccount === account.id && styles.accountOptionSelected,
-                        {
-                          backgroundColor: fromAccount === account.id ? theme.primary : theme.surface,
-                          borderColor: theme.border
-                        }
-                      ]}
-                      onPress={() => setFromAccount(account.id)}
-                    >
-                      <AppText
-                        variant="body"
-                        themeMode={themeMode}
-                        style={{
-                          color: fromAccount === account.id ? '#fff' : theme.text
-                        }}
-                      >
-                        {account.name}
-                      </AppText>
-                      <AppText
-                        variant="caption"
-                        color="secondary"
-                        themeMode={themeMode}
-                        style={{
-                          color: fromAccount === account.id ? '#fff' : theme.textSecondary
-                        }}
-                      >
-                        {account.accountType}
-                      </AppText>
-                    </TouchableOpacity>
-                  ))}
-              </View>
-            </AppCard>
-
-            {transactionType === 'transfer' && (
-              <AppCard elevation="sm" padding="lg" style={styles.inputCard} themeMode={themeMode}>
-                <AppText variant="subheading" themeMode={themeMode} style={styles.sectionTitle}>
-                  To Account
-                </AppText>
-                <View style={styles.accountSelector}>
-                  {accounts
-                    .filter(acc => acc.id !== fromAccount)
-                    .map((account) => (
-                      <TouchableOpacity
-                        key={account.id}
-                        style={[
-                          styles.accountOption,
-                          toAccount === account.id && styles.accountOptionSelected,
-                          {
-                            backgroundColor: toAccount === account.id ? theme.primary : theme.surface,
-                            borderColor: theme.border
-                          }
-                        ]}
-                        onPress={() => setToAccount(account.id)}
-                      >
-                        <AppText
-                          variant="body"
-                          themeMode={themeMode}
-                          style={{
-                            color: toAccount === account.id ? '#fff' : theme.text
-                          }}
-                        >
-                          {account.name}
-                        </AppText>
-                        <AppText
-                          variant="caption"
-                          color="secondary"
-                          themeMode={themeMode}
-                          style={{
-                            color: toAccount === account.id ? '#fff' : theme.textSecondary
-                          }}
-                        >
-                          {account.accountType}
-                        </AppText>
-                      </TouchableOpacity>
-                    ))}
-                </View>
-              </AppCard>
-            )}
-
-            <AppCard elevation="sm" padding="lg" style={styles.inputCard} themeMode={themeMode}>
-              <AppText variant="subheading" themeMode={themeMode} style={styles.sectionTitle}>
-                Amount
-              </AppText>
-              <TextInput
-                style={[styles.input, {
-                  backgroundColor: theme.surface,
-                  borderColor: theme.border,
-                  color: theme.text
-                }]}
-                value={amount}
-                onChangeText={(text) => {
-                  // Only allow numbers and decimal point
-                  const cleanedText = text.replace(/[^0-9.]/g, '')
-                  // Prevent multiple decimal points
-                  const parts = cleanedText.split('.')
-                  if (parts.length > 2) return
-                  if (parts.length === 2 && parts[1].length > 2) return
-                  setAmount(cleanedText)
-                }}
-                placeholder="0.00"
-                placeholderTextColor={theme.textSecondary}
-                keyboardType="numeric"
-              />
-            </AppCard>
-
-            {/* Show currency converter for cross-currency transfers */}
-            {transactionType === 'transfer' && fromAccount && toAccount && amount && (
-              <CurrencyConverterWidget
-                amount={sanitizeAmount(amount) || 0}
-                fromCurrency={accounts.find(a => a.id === fromAccount)?.currencyCode || 'USD'}
-                toCurrency={accounts.find(a => a.id === toAccount)?.currencyCode || 'USD'}
-                themeMode={themeMode}
-              />
-            )}
-
-            {transactionType !== 'transfer' && (
-              <AppCard elevation="sm" padding="lg" style={styles.inputCard} themeMode={themeMode}>
-                <AppText variant="subheading" themeMode={themeMode} style={styles.sectionTitle}>
-                  Category (Optional)
-                </AppText>
-                <TextInput
-                  style={[styles.input, {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text
-                  }]}
-                  value={category}
-                  onChangeText={setCategory}
-                  placeholder={`e.g., ${transactionType === 'expense' ? 'Groceries, Gas' : 'Salary, Freelance'}`}
-                  placeholderTextColor={theme.textSecondary}
-                />
-              </AppCard>
-            )}
-
-            <AppButton
-              variant="primary"
-              size="lg"
-              onPress={createGuidedJournal}
-              disabled={isCreating}
-              themeMode={themeMode}
-              style={styles.createButton}
-            >
-              {isCreating ? 'Creating...' : `Create ${transactionType}`}
-            </AppButton>
-          </View>
+          <SimpleJournalForm
+            accounts={accounts}
+            themeMode={themeMode}
+            onSuccess={() => {
+              router.push('/(tabs)')
+            }}
+            initialType={transactionType}
+          />
         ) : (
           // Advanced Mode UI (existing)
           <View>

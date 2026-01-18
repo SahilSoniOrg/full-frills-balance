@@ -1,9 +1,8 @@
-import 'react-native-get-random-values';
-
+import { useUser } from '@/contexts/UIContext';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
-import { TabNavigator } from '../components/layout';
-import { useUser } from '../contexts/UIContext';
+import 'react-native-get-random-values';
+import JournalListScreen from './journal-list-content';
 
 export default function IndexScreen() {
   const { hasCompletedOnboarding, isInitialized } = useUser();
@@ -18,9 +17,10 @@ export default function IndexScreen() {
   }
 
   if (hasCompletedOnboarding) {
-    // Show custom tab navigator as home page
-    return <TabNavigator />;
+    // Render the journal list content as the dashboard
+    return <JournalListScreen />;
   }
 
+  // Mandatory onboarding for new users
   return <Redirect href="/onboarding" />;
 }
