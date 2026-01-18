@@ -29,3 +29,4 @@ export type { BadgeProps } from './Badge'
 export { Divider } from './Divider'
 export type { DividerProps } from './Divider'
 
+export { FloatingActionButton } from './FloatingActionButton'

@@ -5,10 +5,10 @@
  */
 
 import { AppButton, AppCard, AppText, Badge } from '@/components/core'
+import { TransactionItem } from '@/components/journal/TransactionItem'
 import { Spacing } from '@/constants'
 import { useAccount, useAccountBalance, useAccountTransactions } from '@/hooks/use-data'
 import { useTheme } from '@/hooks/use-theme'
-import { TransactionType } from '@/src/data/models/Transaction'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React from 'react'
@@ -128,30 +128,12 @@ export default function AccountDetailsScreen() {
                         data={transactions}
                         keyExtractor={(item) => item.id}
                         renderItem={({ item }) => (
-                            <AppCard elevation="sm" padding="md" style={styles.transactionCard} themeMode={themeMode}>
-                                <View style={styles.transactionRow}>
-                                    <View style={styles.transactionInfo}>
-                                        <AppText variant="body" themeMode={themeMode}>
-                                            {item.transactionType === TransactionType.DEBIT ? '+ ' : '- '}
-                                            {item.amount.toFixed(2)} {item.currencyCode}
-                                        </AppText>
-                                        {item.exchangeRate && (
-                                            <AppText variant="caption" color="secondary" themeMode={themeMode}>
-                                                Rate: {item.exchangeRate.toFixed(4)}
-                                            </AppText>
-                                        )}
-                                        {item.notes && (
-                                            <AppText variant="caption" color="secondary" themeMode={themeMode}>
-                                                {item.notes}
-                                            </AppText>
-                                        )}
-                                    </View>
-                                    <AppText variant="caption" color="secondary" themeMode={themeMode}>
-                                        {new Date(item.transactionDate).toLocaleDateString()}
-                                    </AppText>
-                                </View>
-                            </AppCard>
+                            <TransactionItem
+                                transaction={item as any}
+                                themeMode={themeMode}
+                            />
                         )}
+                        contentContainerStyle={{ paddingBottom: Spacing.xl }}
                     />
                 )}
             </View>

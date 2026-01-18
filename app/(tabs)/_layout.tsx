@@ -1,3 +1,4 @@
+import { Palette } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
@@ -9,17 +10,25 @@ export default function TabLayout() {
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: theme.primary,
+                tabBarActiveTintColor: Palette.ivy,
                 tabBarInactiveTintColor: theme.textSecondary,
                 tabBarStyle: {
                     backgroundColor: theme.background,
                     borderTopColor: theme.border,
+                    height: 60,
+                    paddingBottom: 8,
                 },
                 headerStyle: {
                     backgroundColor: theme.background,
+                    elevation: 0,
+                    shadowOpacity: 0,
+                    borderBottomWidth: 1,
+                    borderBottomColor: theme.border,
                 },
                 headerTitleStyle: {
                     color: theme.text,
+                    fontFamily: 'SF Pro Display-Bold',
+                    fontSize: 20,
                 },
                 headerShown: true,
             }}

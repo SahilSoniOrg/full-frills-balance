@@ -8,6 +8,7 @@ import { CreateJournalData, journalRepository } from '@/src/data/repositories/Jo
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { sanitizeAmount } from '@/src/utils/validation';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -211,7 +212,7 @@ export default function JournalEntryScreen() {
 
       await journalRepository.createJournalWithTransactions(journalData)
       showSuccessAlert('Success', 'Journal entry created successfully')
-      router.push('/journal-list' as any)
+      router.push('/(tabs)' as any)
     } catch (error) {
       console.error('Failed to create journal:', error)
       showErrorAlert('Failed to create journal entry')
@@ -232,15 +233,15 @@ export default function JournalEntryScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <AppText variant="body" themeMode={themeMode} style={styles.backButtonText}>←</AppText>
+          <Ionicons name="close" size={28} color={theme.text} />
         </TouchableOpacity>
         <AppText variant="heading" themeMode={themeMode} style={styles.headerTitle}>
-          {isGuidedMode ? 'Add Transaction' : 'Create Journal Entry'}
+          {isGuidedMode ? 'New Transaction' : 'Journal Entry'}
         </AppText>
-        <TouchableOpacity onPress={() => router.push('/journal-list' as any)} style={styles.listButton}>
-          <AppText variant="body" themeMode={themeMode} style={styles.listButtonText}>List</AppText>
+        <TouchableOpacity onPress={() => router.push('/(tabs)' as any)} style={styles.listButton}>
+          <Ionicons name="list" size={24} color={theme.text} />
         </TouchableOpacity>
       </View>
 

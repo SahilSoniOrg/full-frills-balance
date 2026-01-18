@@ -8,6 +8,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { TransactionWithAccountInfo } from '@/src/types/readModels'
 import { showErrorAlert } from '@/src/utils/alerts'
 import { formatDate } from '@/src/utils/dateUtils'
+import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native'
@@ -112,8 +113,8 @@ export default function TransactionDetailsScreen() {
           <AppText variant="body" themeMode={themeMode}>←</AppText>
         </TouchableOpacity>
         <AppText variant="heading" themeMode={themeMode}>Transaction Details</AppText>
-        <TouchableOpacity onPress={() => router.push('/journal-list' as any)} style={styles.contextButton}>
-          <AppText variant="caption" themeMode={themeMode}>All Journals</AppText>
+        <TouchableOpacity onPress={() => router.push('/(tabs)' as any)} style={styles.contextButton}>
+          <Ionicons name="list" size={24} color={theme.text} />
         </TouchableOpacity>
       </View>
 

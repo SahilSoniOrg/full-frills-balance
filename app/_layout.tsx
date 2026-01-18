@@ -27,8 +27,8 @@ export default function RootLayout() {
             <Stack.Screen name="account-creation" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'modal' }} />
             <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
-            <Stack.Screen name="account-details" options={{ headerShown: true, title: 'Account Details' }} />
-            <Stack.Screen name="transaction-details" options={{ headerShown: true, title: 'Transaction Details' }} />
+            <Stack.Screen name="account-details" options={{ headerShown: false }} />
+            <Stack.Screen name="transaction-details" options={{ headerShown: false }} />
           </Stack>
 
           <StatusBar style="auto" />

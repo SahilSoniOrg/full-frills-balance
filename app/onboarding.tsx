@@ -11,18 +11,18 @@ export default function OnboardingScreen() {
   const [isCompleting, setIsCompleting] = useState(false)
   const { themePreference } = useUser()
   const systemColorScheme = useColorScheme()
-  
+
   // Derive theme mode following the explicit pattern from design preview
-  const themeMode: ThemeMode = themePreference === 'system' 
+  const themeMode: ThemeMode = themePreference === 'system'
     ? (systemColorScheme === 'dark' ? 'dark' : 'light')
     : themePreference as ThemeMode
-  
+
   const theme = useThemeColors(themeMode)
   const { completeOnboarding } = useUser()
 
   const handleContinue = async () => {
     if (!name.trim()) return;
-    
+
     setIsCompleting(true);
     try {
       // Note: User name handling moved to preferences layer
@@ -52,18 +52,18 @@ export default function OnboardingScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
-        <AppText variant="heading" themeMode={themeMode} style={styles.title}>
-          Welcome to Full Frills Balance
+        <AppText variant="title" themeMode={themeMode} style={styles.title}>
+          Welcome
         </AppText>
         <AppText variant="body" color="secondary" themeMode={themeMode} style={styles.subtitle}>
-          Let's get started by telling us your name
+          Track your finances with precision and clarity.
         </AppText>
-        
+
         <AppCard elevation="sm" padding="lg" style={styles.inputContainer} themeMode={themeMode}>
           <TextInput
             style={[
               styles.input,
-              { 
+              {
                 borderColor: theme.border,
                 color: theme.text,
                 backgroundColor: theme.surface
@@ -76,7 +76,7 @@ export default function OnboardingScreen() {
             autoFocus
           />
         </AppCard>
-        
+
         <View style={styles.buttonContainer}>
           <AppButton
             variant="primary"
@@ -88,7 +88,7 @@ export default function OnboardingScreen() {
           >
             {isCompleting ? 'Setting up...' : 'Continue'}
           </AppButton>
-          
+
           <AppButton
             variant="outline"
             size="lg"

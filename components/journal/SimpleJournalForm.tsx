@@ -174,33 +174,40 @@ export default function SimpleJournalForm({ accounts, themeMode, onSuccess, init
 
     return (
         <View style={styles.container}>
-            {/* Type Selector */}
-            <View style={styles.typeSelector}>
-                {(['expense', 'income', 'transfer'] as TabType[]).map(t => (
+            {/* Type Selector: Ivy Style */}
+            <View style={[styles.typeSelector, { backgroundColor: theme.surfaceSecondary }]}>
+                {([
+                    { key: 'expense', label: 'EXPENSE', color: theme.expense, icon: '−' },
+                    { key: 'income', label: 'INCOME', color: theme.income, icon: '+' },
+                    { key: 'transfer', label: 'TRANSFER', color: theme.transfer, icon: '⇄' }
+                ] as const).map(t => (
                     <TouchableOpacity
-                        key={t}
+                        key={t.key}
                         style={[
                             styles.typeButton,
-                            type === t && { backgroundColor: theme.primary }
+                            type === t.key && { backgroundColor: t.color }
                         ]}
-                        onPress={() => setType(t)}
+                        onPress={() => setType(t.key)}
                     >
-                        <AppText
-                            variant="caption"
-                            themeMode={themeMode}
-                            style={[styles.typeButtonText, { color: type === t ? '#fff' : theme.textSecondary }]}
-                        >
-                            {t.toUpperCase()}
-                        </AppText>
+                        <View style={styles.tabRow}>
+                            {type === t.key && <AppText style={styles.tabIcon}>{t.icon}</AppText>}
+                            <AppText
+                                variant="caption"
+                                themeMode={themeMode}
+                                style={[styles.typeButtonText, { color: type === t.key ? '#fff' : theme.textSecondary }]}
+                            >
+                                {t.label}
+                            </AppText>
+                        </View>
                     </TouchableOpacity>
                 ))}
             </View>
 
-            {/* Amount Input Section */}
+            {/* Amount Input Section: Hero Style */}
             <View style={styles.amountContainer}>
-                <View style={styles.amountRow}>
-                    <AppText variant="title" themeMode={themeMode} style={styles.currencySymbol}>
-                        {accounts.find(a => a.id === (type === 'income' ? destinationId : sourceId))?.currencyCode || '$'}
+                <View style={[styles.amountRow, { borderBottomColor: theme.border }]}>
+                    <AppText variant="subheading" color="secondary" themeMode={themeMode} style={styles.currencySymbol}>
+                        {accounts.find(a => a.id === (type === 'income' ? destinationId : sourceId))?.currencyCode || AppConfig.defaultCurrency}
                     </AppText>
                     <TextInput
                         style={[styles.amountInput, { color: theme.text }]}
@@ -209,7 +216,7 @@ export default function SimpleJournalForm({ accounts, themeMode, onSuccess, init
                         placeholder="0.00"
                         keyboardType="decimal-pad"
                         autoFocus
-                        placeholderTextColor={theme.textSecondary}
+                        placeholderTextColor={theme.textTertiary}
                     />
                 </View>
             </View>
@@ -278,7 +285,19 @@ const styles = StyleSheet.create({
     },
     amountRow: {
         flexDirection: 'row',
+        alignItems: 'baseline',
+        borderBottomWidth: 1,
+        paddingBottom: Spacing.xs,
+    },
+    tabRow: {
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 6,
+    },
+    tabIcon: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     currencySymbol: {
         marginRight: Spacing.sm,

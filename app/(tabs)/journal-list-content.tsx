@@ -1,4 +1,4 @@
-import { AppText } from '@/components/core';
+import { AppText, FloatingActionButton } from '@/components/core';
 import { JournalCard } from '@/components/journal/JournalCard';
 import { Spacing, ThemeMode, useThemeColors } from '@/constants';
 import { useUser } from '@/contexts/UIContext';
@@ -74,6 +74,9 @@ export default function JournalListScreen() {
             </AppText>
           </View>
         }
+      />
+      <FloatingActionButton
+        onPress={() => router.push('/journal-entry' as any)}
       />
     </View>
   );

@@ -54,7 +54,7 @@ export default function AccountCreationScreen() {
       router.back()
     } else {
       // If no previous screen, go to accounts
-      router.push('/accounts')
+      router.push('/accounts' as any)
     }
   }
 
@@ -88,7 +88,7 @@ export default function AccountCreationScreen() {
       setSelectedCurrency(AppConfig.defaultCurrency)
 
       // Navigate to accounts list
-      router.push('/accounts')
+      router.push('/(tabs)/accounts' as any)
     } catch (error) {
       console.error('Error creating account:', error)
       showErrorAlert(error, 'Failed to Create Account')
@@ -108,19 +108,19 @@ export default function AccountCreationScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header with back button */}
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
         <TouchableOpacity
           onPress={handleCancel}
           style={styles.backButton}
         >
           <Ionicons
-            name="chevron-back"
+            name="arrow-back"
             size={24}
             color={theme.text}
           />
         </TouchableOpacity>
-        <AppText variant="subheading" themeMode={themeMode}>
-          Create Account
+        <AppText variant="heading" themeMode={themeMode}>
+          New Account
         </AppText>
         <View style={styles.placeholder} />
       </View>
