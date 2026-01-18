@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.r3,
     padding: Spacing.md,
     fontSize: 16,
   },

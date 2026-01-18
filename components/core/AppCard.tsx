@@ -13,25 +13,25 @@ export type AppCardProps = ViewProps & {
   // Padding options
   padding?: 'none' | 'sm' | 'md' | 'lg'
   // Border radius options
-  radius?: 'sm' | 'md' | 'lg' | 'xl'
+  radius?: 'sm' | 'md' | 'lg' | 'xl' | 'r1' | 'r2' | 'r3' | 'r4'
   // Background variant
   variant?: 'default' | 'secondary'
   // Theme mode override (for design preview)
   themeMode?: ThemeMode
 }
 
-export function AppCard({ 
+export function AppCard({
   elevation = 'sm',
   padding = 'md',
-  radius = 'lg',
+  radius = 'r2',
   variant = 'default',
   themeMode,
   style,
   children,
-  ...props 
+  ...props
 }: AppCardProps) {
   const theme = useThemeColors(themeMode)
-  
+
   // Get elevation styles
   const getElevationStyles = () => {
     return Shape.elevation[elevation]
@@ -43,11 +43,11 @@ export function AppCard({
       case 'none':
         return { padding: 0 }
       case 'sm':
-        return { padding: Spacing.sm }
+        return { padding: Spacing.md }
       case 'md':
         return { padding: Spacing.lg }
       case 'lg':
-        return { padding: Spacing.xxl }
+        return { padding: Spacing.xl }
       default:
         return { padding: Spacing.lg }
     }

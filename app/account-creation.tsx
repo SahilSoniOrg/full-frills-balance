@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: Spacing.sm,
-    borderRadius: Shape.radius.sm,
+    borderRadius: Shape.radius.full, // Circular back button
   },
   placeholder: {
     width: 32, // Same width as back button for centering
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.r3,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     fontSize: 16,
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   },
   accountTypeButton: {
     borderWidth: 1,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.full,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     minWidth: 80,
@@ -355,8 +355,8 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     height: '70%',
-    borderTopLeftRadius: Shape.radius.lg,
-    borderTopRightRadius: Shape.radius.lg,
+    borderTopLeftRadius: Shape.radius.r1,
+    borderTopRightRadius: Shape.radius.r1,
     overflow: 'hidden',
   },
   modalHeader: {

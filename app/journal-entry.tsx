@@ -623,14 +623,14 @@ const styles = StyleSheet.create({
   modeToggleContainer: {
     flexDirection: 'row',
     backgroundColor: '#f5f5f5',
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.full,
     padding: Spacing.xs,
   },
   modeButton: {
     flex: 1,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: Shape.radius.sm,
+    borderRadius: Shape.radius.full,
     alignItems: 'center',
   },
   modeButtonActive: {
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
   },
   accountOption: {
     padding: Spacing.md,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.r3,
     borderWidth: 1,
   },
   accountOptionSelected: {
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.r3,
     padding: Spacing.md,
     fontSize: 16,
     marginBottom: Spacing.md,
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
   },
   lineContainer: {
     borderWidth: 1,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.r2,
     padding: Spacing.md,
     marginBottom: Spacing.md,
   },
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   accountItem: {
     padding: Spacing.md,
     borderWidth: 1,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.r3,
     marginBottom: Spacing.sm,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
   typeButton: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.full,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     alignItems: 'center',
@@ -779,8 +779,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: Shape.radius.xl,
-    borderTopRightRadius: Shape.radius.xl,
+    borderTopLeftRadius: Shape.radius.r1,
+    borderTopRightRadius: Shape.radius.r1,
     maxHeight: '70%',
   },
   modalHeader: {

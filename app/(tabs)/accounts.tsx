@@ -44,24 +44,29 @@ export default function AccountsScreen() {
       <View style={[styles.headerButtons, { padding: Spacing.lg, backgroundColor: theme.background }]}>
         <AppButton
           variant="primary"
+          size="sm"
           onPress={handleCreateAccount}
           themeMode={themeMode}
+          style={{ flex: 1 }}
         >
           + Account
         </AppButton>
         <AppButton
           variant="secondary"
+          size="sm"
           onPress={handleCreateJournal}
           themeMode={themeMode}
+          style={{ flex: 1 }}
         >
           + Journal
         </AppButton>
         <AppButton
           variant="outline"
+          size="sm"
           onPress={handleViewJournals}
           themeMode={themeMode}
         >
-          📋 View All
+          📋
         </AppButton>
       </View>
 
@@ -108,6 +113,8 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,
+    paddingBottom: 80, // Space for FAB
+    gap: Spacing.md,
   },
   accountCard: {
     marginBottom: Spacing.md,

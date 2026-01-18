@@ -1,6 +1,6 @@
 import { AppCard, AppText } from '@/components/core'
 import { TransactionItem } from '@/components/journal/TransactionItem'
-import { ThemeMode, useThemeColors } from '@/constants'
+import { Shape, ThemeMode, useThemeColors } from '@/constants'
 import { useUser } from '@/contexts/UIContext'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import { database } from '@/src/data/database/Database'
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   contextButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
+    backgroundColor: '#007AFF', // Theme color override? Should use theme
+    borderRadius: Shape.radius.full,
   },
   contextButtonText: {
     color: '#fff',
@@ -184,9 +184,7 @@ const styles = StyleSheet.create({
   },
   journalInfoCard: {
     margin: 16,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    // borderRadius handled by AppCard default (r2)
     borderWidth: 1,
     borderColor: '#e9ecef',
   },

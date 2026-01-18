@@ -6,10 +6,10 @@
 import { Spacing, ThemeMode } from '@/constants/design-tokens'
 import { useThemeColors } from '@/constants/theme-helpers'
 import {
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    type TouchableOpacityProps
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  type TouchableOpacityProps
 } from 'react-native'
 import { AppText, type AppTextProps } from './AppText'
 
@@ -29,7 +29,7 @@ export type ListRowProps = TouchableOpacityProps & {
   themeMode?: ThemeMode
 }
 
-export function ListRow({ 
+export function ListRow({
   leading,
   title,
   subtitle,
@@ -41,16 +41,16 @@ export function ListRow({
   themeMode,
   style,
   onPress,
-  ...props 
+  ...props
 }: ListRowProps) {
   const theme = useThemeColors(themeMode)
-  
+
   // Get padding styles
   const getPaddingStyles = () => {
     switch (padding) {
       case 'sm':
         return {
-          paddingHorizontal: Spacing.lg,
+          paddingHorizontal: Spacing.md,
           paddingVertical: Spacing.sm,
         }
       case 'md':
@@ -60,7 +60,7 @@ export function ListRow({
         }
       case 'lg':
         return {
-          paddingHorizontal: Spacing.xxl,
+          paddingHorizontal: Spacing.xl,
           paddingVertical: Spacing.lg,
         }
       default:
@@ -74,10 +74,10 @@ export function ListRow({
   const content = (
     <View style={[styles.container, getPaddingStyles(), style]}>
       {leading && <View style={styles.leading}>{leading}</View>}
-      
+
       <View style={styles.content}>
-        <AppText 
-          variant={titleVariant} 
+        <AppText
+          variant={titleVariant}
           color="primary"
           numberOfLines={1}
           style={styles.title}
@@ -86,8 +86,8 @@ export function ListRow({
           {title}
         </AppText>
         {subtitle && (
-          <AppText 
-            variant={subtitleVariant} 
+          <AppText
+            variant={subtitleVariant}
             color="secondary"
             numberOfLines={2}
             style={styles.subtitle}
@@ -97,15 +97,15 @@ export function ListRow({
           </AppText>
         )}
       </View>
-      
+
       {trailing && <View style={styles.trailing}>{trailing}</View>}
-      
+
       {showDivider && (
-        <View 
+        <View
           style={[
             styles.divider,
             { backgroundColor: theme.divider }
-          ]} 
+          ]}
         />
       )}
     </View>
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   divider: {
     position: 'absolute',
     bottom: 0,
-    left: Spacing.xxxl,
+    left: Spacing.xl + Spacing.lg, // account for icon + padding
     right: 0,
     height: 1,
   },

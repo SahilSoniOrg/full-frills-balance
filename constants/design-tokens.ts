@@ -151,6 +151,16 @@ export const Typography = {
       android: 'Roboto-Bold',
       default: 'system-ui',
     }),
+    heading: Platform.select({
+      ios: 'Raleway-ExtraBold',
+      android: 'Raleway-ExtraBold',
+      default: 'system-ui',
+    }),
+    subheading: Platform.select({
+      ios: 'Raleway-SemiBold',
+      android: 'Raleway-SemiBold',
+      default: 'system-ui',
+    }),
   },
 
   // Font sizes
@@ -184,11 +194,15 @@ export const Typography = {
 export const Shape = {
   radius: {
     none: 0,
-    sm: 4,   // Small elements, badges
-    md: 8,   // Buttons, inputs
-    lg: 12,  // Cards
-    xl: 16,  // Large cards, modals
+    r4: 16,  // Ivy r4
+    r3: 20,  // Ivy r3
+    r2: 24,  // Ivy r2
+    r1: 32,  // Ivy r1
     full: 9999, // Circular elements
+    sm: 8,   // Backward compatibility
+    md: 12,  // Backward compatibility
+    lg: 16,  // Backward compatibility
+    xl: 24,  // Backward compatibility
   },
 
   elevation: {

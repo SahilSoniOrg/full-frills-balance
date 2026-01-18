@@ -55,28 +55,28 @@ export function AppText({
         return {
           fontSize: Typography.sizes.lg,
           lineHeight: Typography.sizes.lg * Typography.lineHeights.tight,
-          fontFamily: Typography.fonts.semibold,
+          fontFamily: Typography.fonts.subheading,
           letterSpacing: Typography.letterSpacing.tight,
         }
       case 'heading':
         return {
           fontSize: Typography.sizes.xl,
           lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
-          fontFamily: Typography.fonts.semibold,
+          fontFamily: Typography.fonts.heading,
           letterSpacing: Typography.letterSpacing.tight,
         }
       case 'title':
         return {
           fontSize: Typography.sizes.xxxl,
           lineHeight: Typography.sizes.xxxl * Typography.lineHeights.tight,
-          fontFamily: Typography.fonts.bold,
+          fontFamily: Typography.fonts.heading,
           letterSpacing: Typography.letterSpacing.tight,
         }
       case 'xl':
         return {
           fontSize: Typography.sizes.xxl,
           lineHeight: Typography.sizes.xxl * Typography.lineHeights.tight,
-          fontFamily: Typography.fonts.bold,
+          fontFamily: Typography.fonts.heading,
           letterSpacing: Typography.letterSpacing.tight,
         }
       default:

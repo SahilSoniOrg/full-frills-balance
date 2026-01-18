@@ -6,12 +6,12 @@
 import { Shape, Spacing, ThemeMode, Typography } from '@/constants/design-tokens'
 import { useThemeColors } from '@/constants/theme-helpers'
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    ViewStyle,
-    type TouchableOpacityProps
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  ViewStyle,
+  type TouchableOpacityProps
 } from 'react-native'
 
 export type AppButtonProps = TouchableOpacityProps & {
@@ -27,7 +27,7 @@ export type AppButtonProps = TouchableOpacityProps & {
   themeMode?: ThemeMode
 }
 
-export function AppButton({ 
+export function AppButton({
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -36,14 +36,14 @@ export function AppButton({
   style,
   onPress,
   themeMode,
-  ...props 
+  ...props
 }: AppButtonProps) {
   const theme = useThemeColors(themeMode)
-  
+
   // Get button styles based on variant
   const getButtonStyles = (): ViewStyle => {
     const baseStyles = {
-      borderRadius: Shape.radius.md,
+      borderRadius: Shape.radius.full,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
     }
@@ -83,19 +83,19 @@ export function AppButton({
     switch (size) {
       case 'sm':
         return {
-          paddingHorizontal: Spacing.md,
+          paddingHorizontal: Spacing.lg,
           paddingVertical: Spacing.sm,
-          minHeight: 36,
+          minHeight: 32,
         }
       case 'md':
         return {
-          paddingHorizontal: Spacing.lg,
+          paddingHorizontal: Spacing.xl,
           paddingVertical: Spacing.md,
           minHeight: 44,
         }
       case 'lg':
         return {
-          paddingHorizontal: Spacing.xxl,
+          paddingHorizontal: Spacing.xxxl,
           paddingVertical: Spacing.lg,
           minHeight: 52,
         }
@@ -166,9 +166,9 @@ export function AppButton({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator 
-          size="small" 
-          color={getTextColor()} 
+        <ActivityIndicator
+          size="small"
+          color={getTextColor()}
         />
       ) : (
         <Text
