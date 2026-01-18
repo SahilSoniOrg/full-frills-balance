@@ -36,44 +36,57 @@ export const AccountCard = ({ account, themeMode, onPress, initialBalanceData }:
     const balance = balanceData?.balance || 0;
     const transactionCount = balanceData?.transactionCount || 0;
 
-    // Determine color based on account type
-    let accountColor: string = theme.asset;
+    // Account type colors for card background/accent
+    let backgroundColor = theme.surface;
+    let accentColor = theme.asset;
     const typeLower = account.accountType.toLowerCase();
-    if (typeLower === 'liability') accountColor = theme.liability;
-    if (typeLower === 'equity') accountColor = theme.equity;
-    if (typeLower === 'income') accountColor = theme.income;
-    if (typeLower === 'expense') accountColor = theme.expense;
+
+    // Ivy-like color mapping
+    if (typeLower === 'liability') {
+        accentColor = theme.liability as any;
+    } else if (typeLower === 'equity') {
+        accentColor = theme.equity as any;
+    } else if (typeLower === 'income') {
+        accentColor = theme.income as any;
+    } else if (typeLower === 'expense') {
+        accentColor = theme.expense as any;
+    }
 
     return (
         <AppCard
             elevation="sm"
-            style={styles.container}
+            style={[styles.container, { backgroundColor: theme.surface }]}
             themeMode={themeMode}
+            padding="none" // Custom padding for layout
         >
-            <TouchableOpacity onPress={() => onPress(account)} style={styles.content}>
-                {/* Header: Status Icon & Account Name */}
-                <View style={styles.header}>
-                    <IvyIcon
-                        label={account.name}
-                        color={accountColor}
-                        size={32}
-                    />
-                    <View style={styles.titleInfo}>
-                        <AppText variant="heading" themeMode={themeMode} numberOfLines={1}>
-                            {account.name}
-                        </AppText>
-                        <View style={styles.badgeRow}>
-                            <Badge variant={typeLower as any} size="sm" themeMode={themeMode}>
-                                {account.accountType}
-                            </Badge>
+            <TouchableOpacity onPress={() => onPress(account)}>
+                {/* Colored Top Bar */}
+                <View style={[styles.colorBar, { backgroundColor: accentColor }]} />
+
+                <View style={styles.content}>
+                    {/* Header: Icon & Name */}
+                    <View style={styles.header}>
+                        <IvyIcon
+                            label={account.name}
+                            color={accentColor} // Use the type color for the icon
+                            size={40}
+                        />
+                        <View style={styles.titleInfo}>
+                            <AppText variant="heading" themeMode={themeMode} numberOfLines={1}>
+                                {account.name}
+                            </AppText>
                             <AppText variant="caption" color="secondary" themeMode={themeMode} style={styles.txCount}>
-                                {transactionCount} txs
+                                {transactionCount} Transactions
                             </AppText>
                         </View>
+                        <Badge variant={typeLower as any} size="sm" themeMode={themeMode}>
+                            {account.accountType}
+                        </Badge>
                     </View>
 
+                    {/* Balance */}
                     <View style={styles.amountInfo}>
-                        <AppText variant="subheading" themeMode={themeMode} style={styles.amountText}>
+                        <AppText variant="title" themeMode={themeMode} style={[styles.amountText, { color: accentColor }]}>
                             {isLoading ? '...' : balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </AppText>
                         <AppText variant="caption" color="secondary" themeMode={themeMode}>
@@ -92,29 +105,31 @@ const styles = StyleSheet.create({
         borderRadius: Shape.radius.xl,
         overflow: 'hidden',
     },
+    colorBar: {
+        height: 6,
+        width: '100%',
+    },
     content: {
         padding: Spacing.lg,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginBottom: Spacing.lg,
     },
     titleInfo: {
         marginLeft: Spacing.md,
         flex: 1,
     },
-    badgeRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 4,
-    },
     txCount: {
-        marginLeft: Spacing.sm,
+        marginTop: 2,
     },
     amountInfo: {
-        alignItems: 'flex-end',
+        alignItems: 'flex-start', // Left align balance for impact
     },
     amountText: {
+        fontSize: 32, // Large balance
         fontWeight: 'bold',
+        marginBottom: -4, // Tighten up currency line
     },
 });
