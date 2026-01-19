@@ -193,6 +193,45 @@ class IntegrityService {
 
         return summary
     }
+
+    /**
+     * Factory Reset: Deletes all data from all collections.
+     * WARNING: Irreversible action.
+     */
+    async resetDatabase(): Promise<void> {
+        logger.warn('[IntegrityService] PERFORMING FACTORY RESET...')
+        await database.write(async () => {
+            await database.unsafeResetDatabase()
+        })
+        logger.info('[IntegrityService] Factory reset complete.')
+    }
+
+    /**
+     * Data Cleanup: Permanently removes all records marked as soft-deleted.
+     */
+    async cleanupDatabase(): Promise<{ deletedCount: number }> {
+        logger.info('[IntegrityService] Starting database cleanup...')
+        let totalDeleted = 0
+
+        await database.write(async () => {
+            const collections = ['journals', 'transactions', 'accounts', 'audit_logs']
+
+            for (const table of collections) {
+                const deletedRecords = await database.collections.get(table)
+                    .query(Q.where('deleted_at', Q.notEq(null)))
+                    .fetch()
+
+                totalDeleted += deletedRecords.length
+
+                for (const record of deletedRecords) {
+                    await record.destroyPermanently()
+                }
+            }
+        })
+
+        logger.info(`[IntegrityService] Cleanup complete. Removed ${totalDeleted} records permanently.`)
+        return { deletedCount: totalDeleted }
+    }
 }
 
 export const integrityService = new IntegrityService()

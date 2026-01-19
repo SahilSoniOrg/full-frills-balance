@@ -37,6 +37,8 @@ interface UIContextType extends UIState {
   completeOnboarding: () => Promise<void>
   setThemePreference: (theme: 'light' | 'dark' | 'system') => Promise<void>
   setLoading: (loading: boolean) => void
+  resetApp: () => Promise<void>
+  cleanupDatabase: () => Promise<{ deletedCount: number }>
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined)
@@ -131,11 +133,49 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setUIState(prev => ({ ...prev, isLoading: loading }))
   }
 
+  const resetApp = async () => {
+    try {
+      setLoading(true)
+      const { integrityService } = await import('../src/services/IntegrityService')
+      await integrityService.resetDatabase()
+      await preferences.clearPreferences()
+
+      setUIState({
+        hasCompletedOnboarding: false,
+        themePreference: 'system',
+        themeMode: systemColorScheme === 'dark' ? 'dark' : 'light',
+        isLoading: false,
+        isInitialized: true,
+      })
+    } catch (error) {
+      console.warn('Failed to reset app:', error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const cleanupDatabase = async () => {
+    try {
+      setLoading(true)
+      const { integrityService } = await import('../src/services/IntegrityService')
+      const result = await integrityService.cleanupDatabase()
+      return result
+    } catch (error) {
+      console.warn('Failed to cleanup database:', error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const value: UIContextType = {
     ...uiState,
     completeOnboarding,
     setThemePreference,
     setLoading,
+    resetApp,
+    cleanupDatabase,
   }
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>
