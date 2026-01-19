@@ -1,8 +1,7 @@
 import { AppCard, AppText, Badge, IvyIcon } from '@/components/core';
 import { Shape, Spacing, ThemeMode, useThemeColors } from '@/constants';
-import { useJournalTransactions } from '@/hooks/use-data';
 import Journal from '@/src/data/models/Journal';
-import { TransactionType } from '@/src/data/models/Transaction';
+import { JournalDisplayType, JournalPresenter } from '@/src/domain/accounting/JournalPresenter';
 import { formatShortDate } from '@/src/utils/dateUtils';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -18,35 +17,17 @@ interface JournalCardProps {
  * Inspired by Ivy Wallet's TransactionCard
  */
 export const JournalCard = ({ journal, themeMode, onPress }: JournalCardProps) => {
-    const { transactions, isLoading } = useJournalTransactions(journal.id);
     const theme = useThemeColors(themeMode);
-
     const formattedDate = formatShortDate(journal.journalDate);
 
-    // Derive totals
-    const debits = transactions.filter(tx => tx.transactionType === TransactionType.DEBIT);
-    const credits = transactions.filter(tx => tx.transactionType === TransactionType.CREDIT);
+    // Use denormalized fields
+    const totalAmount = journal.totalAmount || 0;
+    const count = journal.transactionCount || 0;
+    const displayType = (journal.displayType as JournalDisplayType) || JournalDisplayType.MIXED;
 
-    const totalAmount = debits.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-
-    // Determine primary "type" of journal for coloring the icon
-    // In a real Ivy recreation, we'd have a circular icon with a gradient
-    let typeColor = theme.primary;
-    let typeLabel = 'TR';
-
-    if (credits.length === 1 && debits.length === 1) {
-        typeColor = theme.transfer;
-        typeLabel = '⇄';
-    } else if (credits.length > 0 && debits.length > 0) {
-        typeColor = theme.primary; // Generic journal
-        typeLabel = 'J';
-    } else if (debits.length > 0) {
-        typeColor = theme.income;
-        typeLabel = '+';
-    } else if (credits.length > 0) {
-        typeColor = theme.expense;
-        typeLabel = '−';
-    }
+    const presentation = JournalPresenter.getPresentation(displayType, theme);
+    const typeColor = presentation.colorHex;
+    const typeLabel = JournalPresenter.getIconLabel(displayType);
 
     return (
         <AppCard
@@ -55,7 +36,7 @@ export const JournalCard = ({ journal, themeMode, onPress }: JournalCardProps) =
             themeMode={themeMode}
         >
             <TouchableOpacity onPress={() => onPress(journal)} style={styles.content}>
-                {/* Header: Badges & Account Info */}
+                {/* Header: Date & Count */}
                 <View style={styles.header}>
                     <View style={styles.badgeRow}>
                         {journal.currencyCode !== 'USD' && (
@@ -63,17 +44,9 @@ export const JournalCard = ({ journal, themeMode, onPress }: JournalCardProps) =
                                 {journal.currencyCode}
                             </Badge>
                         )}
-                        {/* Display account names involved */}
-                        {transactions.slice(0, 2).map((tx, idx) => (
-                            <Badge key={tx.id} variant={tx.transactionType === TransactionType.DEBIT ? 'expense' : 'income'} size="sm" themeMode={themeMode}>
-                                {tx.accountName || 'Unknown'}
-                            </Badge>
-                        ))}
-                        {transactions.length > 2 && (
-                            <AppText variant="caption" color="secondary" themeMode={themeMode}>
-                                +{transactions.length - 2}
-                            </AppText>
-                        )}
+                        <Badge variant="default" size="sm" themeMode={themeMode}>
+                            {count} {count === 1 ? 'entry' : 'entries'}
+                        </Badge>
                     </View>
                     <View style={{ flex: 1 }} />
                     <AppText variant="caption" color="secondary" themeMode={themeMode}>
@@ -99,11 +72,8 @@ export const JournalCard = ({ journal, themeMode, onPress }: JournalCardProps) =
 
                     <View style={styles.amountInfo}>
                         <AppText variant="xl" themeMode={themeMode} style={styles.amountText}>
-                            {isLoading ? '...' : totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             <AppText variant="body" color="secondary" themeMode={themeMode}> {journal.currencyCode}</AppText>
-                        </AppText>
-                        <AppText variant="caption" color="secondary" themeMode={themeMode}>
-                            {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
                         </AppText>
                     </View>
                 </View>
@@ -115,7 +85,7 @@ export const JournalCard = ({ journal, themeMode, onPress }: JournalCardProps) =
 const styles = StyleSheet.create({
     container: {
         marginBottom: Spacing.md,
-        borderRadius: Shape.radius.xl, // Ivy uses larger radius
+        borderRadius: Shape.radius.xl,
         overflow: 'hidden',
     },
     content: {

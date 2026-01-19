@@ -39,5 +39,28 @@ export const migrations = schemaMigrations({
                 }),
             ],
         },
+        {
+            toVersion: 3,
+            steps: [
+                addColumns({
+                    table: 'journals',
+                    columns: [
+                        { name: 'total_amount', type: 'number' },
+                        { name: 'transaction_count', type: 'number' },
+                    ],
+                }),
+            ],
+        },
+        {
+            toVersion: 4,
+            steps: [
+                addColumns({
+                    table: 'journals',
+                    columns: [
+                        { name: 'display_type', type: 'string' },
+                    ],
+                }),
+            ],
+        },
     ],
 })

@@ -20,6 +20,12 @@ export default class Journal extends Model {
   @field('original_journal_id') originalJournalId?: string
   @field('reversing_journal_id') reversingJournalId?: string
 
+  // Denormalized fields for list performance
+  // totalAmount is the magnitude of the journal (sum of all debits)
+  @field('total_amount') totalAmount!: number
+  @field('transaction_count') transactionCount!: number
+  @field('display_type') displayType!: string // INCOME, EXPENSE, TRANSFER, MIXED
+
   @date('created_at') createdAt!: Date
   @date('updated_at') updatedAt!: Date
   @date('deleted_at') deletedAt?: Date

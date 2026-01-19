@@ -1,4 +1,5 @@
 import { Q } from '@nozbe/watermelondb'
+import { JournalPresenter } from '../../domain/accounting/JournalPresenter'
 import { auditService } from '../../services/audit-service'
 import { sanitizeAmount } from '../../utils/validation'
 import { database } from '../database/Database'
@@ -6,6 +7,8 @@ import Account, { AccountType } from '../models/Account'
 import { AuditAction } from '../models/AuditLog'
 import Journal, { JournalStatus } from '../models/Journal'
 import Transaction, { TransactionType } from '../models/Transaction'
+import { accountRepository } from './AccountRepository'
+import { transactionRepository } from './TransactionRepository'
 
 export interface CreateJournalData {
   journalDate: number
@@ -40,15 +43,6 @@ export class JournalRepository {
     return database.collections.get<Transaction>('transactions')
   }
 
-  private journalFields(journal: any) {
-    return {
-      journalDate: journal.journalDate,
-      description: journal.description,
-      currencyCode: journal.currencyCode,
-      status: journal.status,
-    }
-  }
-
   /**
    * Creates a journal with its transactions
    * Enforces double-entry accounting: total debits must equal total credits
@@ -59,7 +53,6 @@ export class JournalRepository {
     const { transactions: transactionData, ...journalFields } = journalData
 
     // Validate double-entry accounting by converting transaction amounts to journal currency
-    // Formula: journal_amount = account_amount / exchange_rate
     const getJournalAmount = (t: typeof transactionData[0]) => {
       const rate = t.exchangeRate || 1
       return t.amount / rate
@@ -73,46 +66,84 @@ export class JournalRepository {
       .filter(t => t.transactionType === TransactionType.CREDIT)
       .reduce((sum, t) => sum + getJournalAmount(t), 0)
 
-    // Validate double-entry accounting with epsilon for floating point noise
-    const epsilon = 0.01 // Balances must be within 1 cent in the journal currency
+    // Validate double-entry accounting with epsilon
+    const epsilon = 0.01
     const difference = Math.abs(totalDebits - totalCredits)
 
     if (difference > epsilon) {
       throw new Error(
-        `Double-entry violation in journal currency: total debits (${totalDebits.toFixed(4)}) must equal total credits (${totalCredits.toFixed(4)}). Difference: ${difference.toFixed(4)}`
+        `Double-entry violation: total debits (${totalDebits.toFixed(4)}) must equal total credits (${totalCredits.toFixed(4)}).`
       )
     }
 
-    return database.write(async () => {
-      // Create the journal
-      const journal = await this.journals.create((j) => {
-        Object.assign(j, {
-          ...journalFields,
-          status: JournalStatus.POSTED,
-        })
+    // Prepare for Running Balance Calculation
+    const accountIds = Array.from(new Set(transactionData.map(t => t.accountId)))
+    const accounts = await Promise.all(accountIds.map(id => accountRepository.find(id)))
+    const accountMap = new Map<string, Account>(accounts.filter((a): a is Account => !!a).map(a => [a.id, a]))
+
+    const accountsToRebuild = new Set<string>()
+    const calculatedBalances = new Map<string, number>()
+
+    for (const tx of transactionData) {
+      if (!accountMap.has(tx.accountId)) continue
+
+      const latestTx = (await transactionRepository.findByAccount(tx.accountId))[0]
+      const isBackdated = latestTx && latestTx.transactionDate > journalData.journalDate
+
+      if (isBackdated) {
+        accountsToRebuild.add(tx.accountId)
+      } else {
+        const account = accountMap.get(tx.accountId)!
+        let balance = latestTx?.runningBalance || 0
+        let multiplier = 0
+        if (['ASSET', 'EXPENSE'].includes(account.accountType)) {
+          multiplier = tx.transactionType === TransactionType.DEBIT ? 1 : -1
+        } else {
+          multiplier = tx.transactionType === TransactionType.CREDIT ? 1 : -1
+        }
+        balance += (tx.amount * multiplier)
+        calculatedBalances.set(tx.accountId, balance)
+      }
+    }
+
+    const journal = await database.write(async () => {
+      // Create properties map for presenter
+      const accountTypes = new Map<string, AccountType>()
+      accountMap.forEach((acc, id) => accountTypes.set(id, acc.accountType as AccountType))
+
+      const newJournal = await this.journals.create((j: Journal) => {
+        j.journalDate = journalFields.journalDate
+        j.description = journalFields.description
+        j.currencyCode = journalFields.currencyCode
+        j.status = JournalStatus.POSTED
+        j.totalAmount = Math.max(Math.abs(totalDebits), Math.abs(totalCredits))
+        j.transactionCount = transactionData.length
+        j.displayType = JournalPresenter.getJournalType(transactionData as any, accountTypes)
       })
 
       // Create all transactions
       for (const txData of transactionData) {
         const amount = sanitizeAmount(txData.amount) || 0
-        await this.transactions.create((tx) => {
-          Object.assign(tx, {
-            ...txData,
-            amount,
-            journalId: journal.id,
-            transactionDate: journalData.journalDate,
-            currencyCode: journalData.currencyCode,
-            exchangeRate: txData.exchangeRate,
-            // Never set running_balance during creation
-            running_balance: undefined,
-          })
+        const running_balance = !accountsToRebuild.has(txData.accountId)
+          ? calculatedBalances.get(txData.accountId)
+          : 0
+
+        await this.transactions.create((tx: Transaction) => {
+          tx.accountId = txData.accountId
+          tx.amount = amount
+          tx.transactionType = txData.transactionType
+          tx.journalId = newJournal.id
+          tx.transactionDate = journalData.journalDate
+          tx.notes = txData.notes
+          tx.exchangeRate = txData.exchangeRate
+          tx.runningBalance = running_balance
         })
       }
 
       // Log audit trail
       await auditService.log({
         entityType: 'journal',
-        entityId: journal.id,
+        entityId: newJournal.id,
         action: AuditAction.CREATE,
         changes: {
           journalDate: journalData.journalDate,
@@ -122,94 +153,42 @@ export class JournalRepository {
         },
       })
 
-      return journal
+      return newJournal
     })
+
+    // Trigger rebuilds
+    if (accountsToRebuild.size > 0) {
+      const rebuildIds = Array.from(accountsToRebuild)
+      for (const accId of rebuildIds) {
+        await transactionRepository.rebuildRunningBalances(accId)
+      }
+    }
+
+    return journal
   }
 
-  /**
-   * Creates a journal without transactions (for testing)
-   */
-  async createJournalWithoutTransactions(
-    journalData: CreateJournalData
-  ): Promise<Journal> {
-    const { transactions: transactionData, ...journalFields } = journalData
-
-    return database.write(async () => {
-      // Create the journal
-      const journal = await this.journals.create((j) => {
-        Object.assign(j, {
-          ...journalFields,
-          status: JournalStatus.POSTED,
-        })
-      })
-
-      return journal
-    })
-  }
-
-  /**
-   * Finds a journal by ID
-   */
   async find(id: string): Promise<Journal | null> {
     return this.journals.find(id)
   }
 
-  /**
-   * Gets all journals with transaction totals and counts
-   * Eliminates N+1 query problem by fetching data efficiently
-   */
   async findAllWithTransactionTotals(): Promise<JournalWithTransactionTotals[]> {
-    // Fetch all journals with their transactions in a single query where possible
     const journals = await this.journals
       .query(Q.where('deleted_at', Q.eq(null)))
       .extend(Q.sortBy('journal_date', 'desc'))
       .fetch()
 
-    // Fetch all transactions for these journals in batch
-    const journalIds = journals.map(j => j.id)
-    const allTransactions = await this.transactions
-      .query(
-        Q.and(
-          Q.where('journal_id', Q.oneOf(journalIds)),
-          Q.where('deleted_at', Q.eq(null))
-        )
-      )
-      .fetch()
-
-    // Group transactions by journal_id for efficient processing
-    const transactionsByJournal = allTransactions.reduce((acc, tx) => {
-      if (!acc[tx.journalId]) {
-        acc[tx.journalId] = []
-      }
-      acc[tx.journalId].push(tx)
-      return acc
-    }, {} as Record<string, typeof allTransactions>)
-
-    // Build results with transaction totals
-    return journals.map(journal => {
-      const journalTransactions = transactionsByJournal[journal.id] || []
-
-      // Calculate total amount (sum of debit transactions only)
-      const totalAmount = journalTransactions
-        .filter(tx => tx.transactionType === TransactionType.DEBIT)
-        .reduce((sum, tx) => sum + (tx.amount || 0), 0)
-
-      return {
-        id: journal.id,
-        journalDate: journal.journalDate,
-        description: journal.description,
-        currencyCode: journal.currencyCode,
-        status: journal.status,
-        createdAt: journal.createdAt,
-        totalAmount,
-        transactionCount: journalTransactions.length,
-      }
-    })
+    return journals.map(journal => ({
+      id: journal.id,
+      journalDate: journal.journalDate,
+      description: journal.description,
+      currencyCode: journal.currencyCode,
+      status: journal.status,
+      createdAt: journal.createdAt,
+      totalAmount: journal.totalAmount || 0,
+      transactionCount: journal.transactionCount || 0,
+    }))
   }
 
-  /**
-   * Gets all journals
-   */
   async findAll(): Promise<Journal[]> {
     return this.journals
       .query(Q.where('deleted_at', Q.eq(null)))
@@ -217,9 +196,6 @@ export class JournalRepository {
       .fetch()
   }
 
-  /**
-   * Gets journals for a date range
-   */
   async findByDateRange(startDate: number, endDate: number): Promise<Journal[]> {
     return this.journals
       .query(
@@ -233,94 +209,59 @@ export class JournalRepository {
       .fetch()
   }
 
-  /**
-   * Creates a reversal journal for an existing journal
-   */
-  async createReversalJournal(
-    originalJournalId: string,
-    reason?: string
-  ): Promise<Journal> {
-    const originalJournal = await this.find(originalJournalId)
-    if (!originalJournal) {
-      throw new Error('Original journal not found')
-    }
-
-    // Get original transactions
-    const originalTransactions = await this.transactions
-      .query(
-        Q.and(
-          Q.where('journal_id', originalJournalId),
-          Q.where('deleted_at', Q.eq(null))
-        )
-      )
-      .fetch()
-
-    // Create reversal transactions (swap debit/credit)
-    const reversalTransactions = originalTransactions.map(tx => ({
-      accountId: tx.accountId,
-      amount: tx.amount,
-      transactionType: tx.transactionType === TransactionType.DEBIT
-        ? TransactionType.CREDIT
-        : TransactionType.DEBIT,
-      notes: reason ? `Reversal: ${reason}` : `Reversal of journal ${originalJournalId}`,
-    }))
-
-    return database.write(async () => {
-      // Mark original as reversed
-      await originalJournal.update((j) => {
-        j.status = JournalStatus.REVERSED
-      })
-
-      // Create reversal journal with same date as original for period accuracy
-      const reversalJournal = await this.journals.create((j) => {
-        Object.assign(j, {
-          journalDate: originalJournal.journalDate, // Use original date for period accuracy
-          description: reason || `Reversal of journal ${originalJournalId}`,
-          currencyCode: originalJournal.currencyCode,
-          status: JournalStatus.POSTED,
-          originalJournalId: originalJournalId,
-        })
-      })
-
-      // Create reversal transactions
-      for (const txData of reversalTransactions) {
-        await this.transactions.create((tx) => {
-          Object.assign(tx, {
-            ...txData,
-            journalId: reversalJournal.id,
-            transactionDate: reversalJournal.journalDate,
-            currencyCode: reversalJournal.currencyCode,
-            running_balance: undefined,
-          })
-        })
-      }
-
-      // Link the reversal
-      await originalJournal.update((j) => {
-        j.reversingJournalId = reversalJournal.id
-      })
-
-      return reversalJournal
-    })
-  }
-
-  /**
-   * Updates a journal
-   */
-  async update(
-    journal: Journal,
-    updates: Partial<Journal>
-  ): Promise<Journal> {
+  async update(journal: Journal, updates: Partial<Journal>): Promise<Journal> {
     return journal.update((j) => {
       Object.assign(j, updates)
     })
   }
 
-  /**
-   * Soft deletes a journal
-   */
+  async createReversalJournal(originalJournalId: string, reason?: string): Promise<Journal> {
+    const originalJournal = await this.find(originalJournalId)
+    if (!originalJournal) throw new Error('Original journal not found')
+
+    const originalTransactions = await this.transactions
+      .query(Q.where('journal_id', originalJournalId), Q.where('deleted_at', Q.eq(null)))
+      .fetch()
+
+    const reversalTransactions = originalTransactions.map(tx => ({
+      accountId: tx.accountId,
+      amount: tx.amount,
+      transactionType: tx.transactionType === TransactionType.DEBIT ? TransactionType.CREDIT : TransactionType.DEBIT,
+      notes: reason ? `Reversal: ${reason}` : `Reversal of journal ${originalJournalId}`,
+    }))
+
+    return database.write(async () => {
+      await originalJournal.update(j => { j.status = JournalStatus.REVERSED })
+
+      const reversalJournal = await this.journals.create((j: Journal) => {
+        j.journalDate = originalJournal.journalDate
+        j.description = reason || `Reversal of journal ${originalJournalId}`
+        j.currencyCode = originalJournal.currencyCode
+        j.status = JournalStatus.POSTED
+        j.totalAmount = originalJournal.totalAmount
+        j.transactionCount = originalJournal.transactionCount
+        j.displayType = originalJournal.displayType // Inherit type
+      })
+
+      for (const txData of reversalTransactions) {
+        await this.transactions.create((tx: Transaction) => {
+          tx.accountId = txData.accountId
+          tx.amount = txData.amount
+          tx.transactionType = txData.transactionType
+          tx.journalId = reversalJournal.id
+          tx.transactionDate = reversalJournal.journalDate
+          tx.notes = txData.notes
+          tx.runningBalance = 0 // Will be rebuilt if needed, or we should calc it
+        })
+      }
+
+      await originalJournal.update(j => { j.reversingJournalId = reversalJournal.id })
+      return reversalJournal
+    })
+  }
+
   async delete(journal: Journal): Promise<void> {
-    return journal.markAsDeleted()
+    await journal.markAsDeleted()
   }
 
   /**
@@ -360,11 +301,9 @@ export class JournalRepository {
     txs.forEach(t => {
       const type = accountTypeMap[t.accountId]
       if (type === AccountType.INCOME) {
-        // Income increases on CREDIT
         if (t.transactionType === TransactionType.CREDIT) totalIncome += t.amount
         else totalIncome -= t.amount
       } else if (type === AccountType.EXPENSE) {
-        // Expense increases on DEBIT
         if (t.transactionType === TransactionType.DEBIT) totalExpense += t.amount
         else totalExpense -= t.amount
       }
@@ -372,7 +311,54 @@ export class JournalRepository {
 
     return { income: totalIncome, expense: totalExpense }
   }
+
+  async backfillTotals(): Promise<void> {
+    console.log('Starting Journal Totals Backfill...')
+    const journals = await this.journals.query(Q.where('deleted_at', Q.eq(null))).fetch()
+    let updatedCount = 0
+
+    await database.write(async () => {
+      for (const journal of journals) {
+        const txs = await this.transactions
+          .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
+          .fetch()
+
+        if (txs.length === 0) continue
+
+        const transactionCount = txs.length
+        const totalDebits = txs
+          .filter(t => t.transactionType === TransactionType.DEBIT)
+          .reduce((sum, t) => sum + (Number(t.amount) / (t.exchangeRate || 1)), 0)
+
+        const totalCredits = txs
+          .filter(t => t.transactionType === TransactionType.CREDIT)
+          .reduce((sum, t) => sum + (Number(t.amount) / (t.exchangeRate || 1)), 0)
+
+        const magnitude = Math.max(Math.abs(totalDebits), Math.abs(totalCredits))
+
+        const accountIds = Array.from(new Set(txs.map(t => t.accountId)))
+        const accounts = await database.collections.get<Account>('accounts')
+          .query(Q.where('id', Q.oneOf(accountIds)))
+          .fetch()
+        const accountTypeMap = new Map(accounts.map(a => [a.id, a.accountType as AccountType]))
+        const displayType = JournalPresenter.getJournalType(txs, accountTypeMap)
+
+        if (
+          Math.abs((journal.totalAmount || 0) - magnitude) > 0.001 ||
+          journal.transactionCount !== transactionCount ||
+          journal.displayType !== displayType
+        ) {
+          await journal.update((j: Journal) => {
+            j.totalAmount = magnitude
+            j.transactionCount = transactionCount
+            j.displayType = displayType
+          })
+          updatedCount++
+        }
+      }
+    })
+    console.log(`Backfill complete. Updated ${updatedCount} journals.`)
+  }
 }
 
-// Export a singleton instance
 export const journalRepository = new JournalRepository()

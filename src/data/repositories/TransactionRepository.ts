@@ -100,19 +100,48 @@ export class TransactionRepository {
     accountId: string,
     upToDate: number = Date.now()
   ): Promise<void> {
-    // Get all transactions for the account, ordered by journal date (accounting principle)
+    // 1. Get Account to determine direction
+    const account = await accountRepository.find(accountId)
+    if (!account) throw new Error(`Account ${accountId} not found running balance rebuild`)
+
+    // Determine multiplier
+    // Asset/Expense: Debit +, Credit -
+    // Liability/Equity/Income: Credit +, Debit -
+    let debitMult = 0
+    let creditMult = 0
+
+    switch (account.accountType) {
+      case 'ASSET':
+      case 'EXPENSE':
+        debitMult = 1
+        creditMult = -1
+        break
+      case 'LIABILITY':
+      case 'EQUITY':
+      case 'INCOME':
+        debitMult = -1
+        creditMult = 1
+        break
+    }
+
+    // 2. Fetch transactions ordered by Date
+    // Note: We need ALL transactions to rebuild chain accurately from start
+    // If we only fetch "upToDate", we might miss the start.
+    // Ideally we assume start is 0. 
+    // But if we want to support "partial rebuild", we'd need the balance at 'fromDate'.
+    // For safety, let's rebuild ALL for now (O(N) per account is okay for 50k total txs, ~5k per account).
     const transactions = await this.transactions
       .query(
         Q.and(
           Q.where('account_id', accountId),
-          Q.on('journals', 'journal_date', Q.lte(upToDate)),
           Q.where('deleted_at', Q.eq(null)),
-          Q.on('journals', 'status', Q.eq('POSTED')),
-          Q.on('journals', 'deleted_at', Q.eq(null))
+          // Standard Q.on syntax: Q.on('table', Q.where('col', val))
+          Q.on('journals', Q.where('status', 'POSTED')),
+          Q.on('journals', Q.where('deleted_at', Q.eq(null)))
         )
       )
-      .extend(Q.sortBy('journal_date', 'asc')) // Order by journal date, not transaction date
-      .extend(Q.sortBy('created_at', 'asc')) // Secondary sort for consistency
+      .extend(Q.sortBy('journal_date', 'asc')) // Primary sort: Journal Date
+      .extend(Q.sortBy('created_at', 'asc'))   // Secondary sort: Creation Time
       .fetch()
 
     let runningBalance = 0
@@ -121,11 +150,15 @@ export class TransactionRepository {
     await database.write(async () => {
       for (const tx of transactions) {
         // Calculate effect of this transaction
-        const amount = tx.transactionType === TransactionType.DEBIT ? -tx.amount : tx.amount
+        const amount = tx.transactionType === TransactionType.DEBIT
+          ? tx.amount * debitMult
+          : tx.amount * creditMult
+
         runningBalance += amount
 
-        // Only update if balance has changed
-        if (tx.runningBalance !== runningBalance) {
+        // Only update if balance has changed to avoid write churn
+        // Note: Floating point comparison
+        if (Math.abs((tx.runningBalance || 0) - runningBalance) > 0.001) {
           await tx.update((txToUpdate) => {
             txToUpdate.runningBalance = runningBalance
           })

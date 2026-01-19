@@ -3,7 +3,7 @@ import { AccountCreateInput, AccountUpdateInput } from '../../types/Account'
 import { database } from '../database/Database'
 import Account, { AccountType } from '../models/Account'
 import { JournalStatus } from '../models/Journal'
-import { TransactionType } from '../models/Transaction'
+import Transaction from '../models/Transaction'
 
 export interface AccountBalance {
   accountId: string
@@ -19,7 +19,7 @@ export class AccountRepository {
   }
 
   private get transactions() {
-    return database.collections.get('transactions')
+    return database.collections.get<Transaction>('transactions')
   }
 
   /**
@@ -53,15 +53,15 @@ export class AccountRepository {
    * @param asOfDate Optional cutoff date (timestamp). Defaults to current time.
    */
   async getAccountBalance(accountId: string, asOfDate?: number): Promise<AccountBalance> {
-    // 1. Get account to determine type
     const account = await this.find(accountId)
     if (!account) {
       throw new Error(`Account ${accountId} not found`)
     }
 
-    // 2. Query transactions from posted, non-deleted journals
     const cutoffDate = asOfDate || Date.now()
-    const validTransactions = await this.transactions
+
+    // 1. Get latest transaction for running balance (O(1))
+    const latestTxs = await this.transactions
       .query(
         Q.on('journals', Q.and(
           Q.where('status', JournalStatus.POSTED),
@@ -69,27 +69,33 @@ export class AccountRepository {
         )),
         Q.where('account_id', accountId),
         Q.where('deleted_at', Q.eq(null)),
-        asOfDate ? Q.where('transaction_date', Q.lte(asOfDate)) : Q.where('id', Q.notEq(null))
+        // Use transaction_date which maps to journal_date
+        Q.where('transaction_date', Q.lte(cutoffDate))
       )
-      .fetch() as any[]
+      .extend(Q.sortBy('transaction_date', 'desc'))
+      .extend(Q.sortBy('created_at', 'desc'))
+      .extend(Q.take(1))
+      .fetch()
 
-    // 3. Calculate balance using normalized direction map
-    const direction = this.getBalanceDirection(account.accountType)
-    let balance = 0
+    const balance = latestTxs.length > 0 ? (latestTxs[0].runningBalance || 0) : 0
 
-    for (const tx of validTransactions) {
-      const amount = tx.amount || 0
-      if (tx.transactionType === TransactionType.DEBIT) {
-        balance += amount * direction.debit
-      } else if (tx.transactionType === TransactionType.CREDIT) {
-        balance += amount * direction.credit
-      }
-    }
+    // 2. Get transaction count (Fast Count)
+    const transactionCount = await this.transactions
+      .query(
+        Q.on('journals', Q.and(
+          Q.where('status', JournalStatus.POSTED),
+          Q.where('deleted_at', Q.eq(null))
+        )),
+        Q.where('account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('transaction_date', Q.lte(cutoffDate))
+      )
+      .fetchCount()
 
     return {
       accountId: account.id,
       balance,
-      transactionCount: validTransactions.length,
+      transactionCount,
       asOfDate: cutoffDate,
       accountType: account.accountType
     }
@@ -97,53 +103,12 @@ export class AccountRepository {
 
   /**
    * Gets balances for all accounts in batch
+   * Optimized to avoid fetching all transactions
    */
   async getAccountBalances(asOfDate?: number): Promise<AccountBalance[]> {
     const accounts = await this.findAll()
-    const balances: AccountBalance[] = []
-
-    const cutoffDate = asOfDate || Date.now()
-    const allValidTransactions = await this.transactions
-      .query(
-        Q.on('journals', Q.and(
-          Q.where('status', JournalStatus.POSTED),
-          Q.where('deleted_at', Q.eq(null))
-        )),
-        Q.where('deleted_at', Q.eq(null)),
-        asOfDate ? Q.where('transaction_date', Q.lte(asOfDate)) : Q.where('id', Q.notEq(null))
-      )
-      .fetch() as any[]
-
-    const txByAccount = allValidTransactions.reduce((acc, tx) => {
-      if (!acc[tx.accountId]) acc[tx.accountId] = []
-      acc[tx.accountId].push(tx)
-      return acc
-    }, {} as Record<string, any[]>)
-
-    for (const account of accounts) {
-      const txs = txByAccount[account.id] || []
-      const direction = this.getBalanceDirection(account.accountType)
-      let balance = 0
-
-      for (const tx of txs) {
-        const amount = tx.amount || 0
-        if (tx.transactionType === TransactionType.DEBIT) {
-          balance += amount * direction.debit
-        } else if (tx.transactionType === TransactionType.CREDIT) {
-          balance += amount * direction.credit
-        }
-      }
-
-      balances.push({
-        accountId: account.id,
-        balance,
-        transactionCount: txs.length,
-        asOfDate: cutoffDate,
-        accountType: account.accountType
-      })
-    }
-
-    return balances
+    // Process in parallel
+    return Promise.all(accounts.map(acc => this.getAccountBalance(acc.id, asOfDate)))
   }
 
   /**

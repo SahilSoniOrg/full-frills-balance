@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 2,
+  version: 4,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -37,6 +37,10 @@ export const schema = appSchema({
         { name: 'status', type: 'string' }, // POSTED, REVERSED
         { name: 'original_journal_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'reversing_journal_id', type: 'string', isOptional: true, isIndexed: true },
+        // Denormalized fields for list performance
+        { name: 'total_amount', type: 'number' },
+        { name: 'transaction_count', type: 'number' },
+        { name: 'display_type', type: 'string' },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
