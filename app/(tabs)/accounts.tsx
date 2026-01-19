@@ -6,6 +6,7 @@ import { useUser } from '@/contexts/UIContext'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import { useAccounts, useNetWorth } from '@/hooks/use-data'
 import Account from '@/src/data/models/Account'
+import { getAccountSections } from '@/src/utils/accountUtils'
 import { useRouter } from 'expo-router'
 import React, { useMemo } from 'react'
 import { SectionList, StyleSheet, View } from 'react-native'
@@ -43,34 +44,8 @@ export default function AccountsScreen() {
   // Combine accounts with their balances and group by type
   const sections = useMemo(() => {
     if (!accounts.length) return []
-
-    // Grouping
-    const groups: Record<string, Account[]> = {
-      ASSET: [],
-      LIABILITY: [],
-      EQUITY: [],
-      INCOME: [],
-      EXPENSE: []
-    }
-
-    accounts.forEach(acc => {
-      const type = acc.accountType.toUpperCase()
-      if (groups[type]) {
-        groups[type].push(acc)
-      }
-    })
-
-    const result = []
-
-    // Order matters
-    if (groups.ASSET.length > 0) result.push({ title: 'Assets', data: groups.ASSET })
-    if (groups.LIABILITY.length > 0) result.push({ title: 'Liabilities', data: groups.LIABILITY })
-    if (groups.EQUITY.length > 0) result.push({ title: 'Equity', data: groups.EQUITY })
-    if (groups.INCOME.length > 0) result.push({ title: 'Income', data: groups.INCOME })
-    if (groups.EXPENSE.length > 0) result.push({ title: 'Expenses', data: groups.EXPENSE })
-
-    return result
-  }, [accounts, balances])
+    return getAccountSections(accounts)
+  }, [accounts])
 
   const renderHeader = () => (
     <View>

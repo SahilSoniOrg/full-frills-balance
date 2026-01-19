@@ -1,5 +1,6 @@
-import { Model } from '@nozbe/watermelondb'
+import { Model, Query } from '@nozbe/watermelondb'
 import { children, date, field } from '@nozbe/watermelondb/decorators'
+import Transaction from './Transaction'
 
 export enum AccountType {
   ASSET = 'ASSET',
@@ -26,7 +27,7 @@ export default class Account extends Model {
   @date('updated_at') updatedAt!: Date
   @date('deleted_at') deletedAt?: Date
 
-  // Relations
-  @children('transactions') transactions!: any
-  @children('accounts') subAccounts!: any
+  // Relations with proper types
+  @children('transactions') transactions!: Query<Transaction>
+  @children('accounts') subAccounts!: Query<Account>
 }

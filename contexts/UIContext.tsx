@@ -69,6 +69,13 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
             console.warn('Failed to initialize currencies:', err)
           })
         })
+
+        // Run integrity check on startup (async, don't block UI)
+        import('../src/services/IntegrityService').then(({ integrityService }) => {
+          integrityService.runStartupCheck().catch(err => {
+            console.warn('Failed to run integrity check:', err)
+          })
+        })
       } catch (error) {
         console.warn('Failed to load preferences:', error)
         setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true }))

@@ -1,4 +1,5 @@
 import { Q } from '@nozbe/watermelondb'
+import { BALANCE_EPSILON, MIN_EXCHANGE_RATE } from '../../domain/accounting/AccountingConstants'
 import { JournalPresenter } from '../../domain/accounting/JournalPresenter'
 import { auditService } from '../../services/audit-service'
 import { sanitizeAmount } from '../../utils/validation'
@@ -52,6 +53,15 @@ export class JournalRepository {
   ): Promise<Journal> {
     const { transactions: transactionData, ...journalFields } = journalData
 
+    // Validate exchange rates before any calculations
+    for (const t of transactionData) {
+      if (t.exchangeRate !== undefined && t.exchangeRate <= MIN_EXCHANGE_RATE) {
+        throw new Error(
+          `Invalid exchange rate: ${t.exchangeRate}. Exchange rate must be greater than ${MIN_EXCHANGE_RATE}.`
+        )
+      }
+    }
+
     // Validate double-entry accounting by converting transaction amounts to journal currency
     const getJournalAmount = (t: typeof transactionData[0]) => {
       const rate = t.exchangeRate || 1
@@ -67,10 +77,9 @@ export class JournalRepository {
       .reduce((sum, t) => sum + getJournalAmount(t), 0)
 
     // Validate double-entry accounting with epsilon
-    const epsilon = 0.01
     const difference = Math.abs(totalDebits - totalCredits)
 
-    if (difference > epsilon) {
+    if (difference > BALANCE_EPSILON) {
       throw new Error(
         `Double-entry violation: total debits (${totalDebits.toFixed(4)}) must equal total credits (${totalCredits.toFixed(4)}).`
       )

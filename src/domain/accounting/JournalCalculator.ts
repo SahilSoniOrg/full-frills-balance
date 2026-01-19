@@ -3,6 +3,7 @@ import { TransactionType } from '../../data/models/Transaction';
 export interface JournalLineInput {
     amount: number; // Integer minor units (e.g. cents)
     type: TransactionType;
+    exchangeRate?: number; // Optional: for multi-currency transactions
 }
 
 export class JournalCalculator {

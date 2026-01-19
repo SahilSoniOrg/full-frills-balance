@@ -46,3 +46,8 @@ app-example
 /playwright/.auth/
 
 coverage/
+
+# Editor swap files
+*.swp
+*.swo
+*~

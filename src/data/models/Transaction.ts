@@ -1,5 +1,7 @@
-import { Model } from '@nozbe/watermelondb'
+import { Model, Relation } from '@nozbe/watermelondb'
 import { date, field, relation } from '@nozbe/watermelondb/decorators'
+import Account from './Account'
+import Journal from './Journal'
 
 export enum TransactionType {
   DEBIT = 'DEBIT',
@@ -27,7 +29,7 @@ export default class Transaction extends Model {
   @date('updated_at') updatedAt!: Date
   @date('deleted_at') deletedAt?: Date
 
-  // Relations
-  @relation('journals', 'journal_id') journal!: any
-  @relation('accounts', 'account_id') account!: any
+  // Relations with proper types
+  @relation('journals', 'journal_id') journal!: Relation<Journal>
+  @relation('accounts', 'account_id') account!: Relation<Account>
 }

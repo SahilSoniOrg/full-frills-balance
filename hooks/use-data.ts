@@ -10,7 +10,7 @@ import Transaction from '@/src/data/models/Transaction'
 import { AccountBalance, accountRepository } from '@/src/data/repositories/AccountRepository'
 import { Q } from '@nozbe/watermelondb'
 import { useDatabase } from '@nozbe/watermelondb/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * Hook to reactively get all accounts
@@ -238,9 +238,14 @@ export function useAccountBalance(accountId: string | null) {
 
 /**
  * Hook to reactively get all account balances and net worth
+ * 
+ * Optimizations:
+ * - Debounced recalculation (300ms) to prevent rapid re-renders
+ * - Subscribes to journals (fewer entities) instead of all transactions
  */
 export function useNetWorth() {
     const database = useDatabase()
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const [data, setData] = useState<{
         balances: AccountBalance[]
         netWorth: number
@@ -256,46 +261,63 @@ export function useNetWorth() {
     })
 
     useEffect(() => {
-        // Subscribe to transaction changes to re-calculate everything
-        const collection = database.collections.get<Transaction>('transactions')
+        // Calculate net worth with debouncing
+        const calculateNetWorth = async () => {
+            try {
+                const balances = await accountRepository.getAccountBalances()
+
+                let totalAssets = 0
+                let totalLiabilities = 0
+
+                balances.forEach(b => {
+                    if (b.accountType === 'ASSET') {
+                        totalAssets += b.balance
+                    } else if (b.accountType === 'LIABILITY') {
+                        totalLiabilities += b.balance
+                    }
+                })
+
+                const netWorth = totalAssets - totalLiabilities
+
+                setData({
+                    balances,
+                    netWorth,
+                    totalAssets,
+                    totalLiabilities,
+                    isLoading: false
+                })
+            } catch (error) {
+                console.error('Failed to calculate net worth:', error)
+                setData(prev => ({ ...prev, isLoading: false }))
+            }
+        }
+
+        // Debounced calculation
+        const debouncedCalculate = () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current)
+            }
+            timeoutRef.current = setTimeout(calculateNetWorth, 300)
+        }
+
+        // Subscribe to journal changes (fewer updates than transactions)
+        const collection = database.collections.get<Journal>('journals')
         const subscription = collection
             .query(Q.where('deleted_at', Q.eq(null)))
             .observe()
-            .subscribe(async () => {
-                try {
-                    const balances = await accountRepository.getAccountBalances()
+            .subscribe(debouncedCalculate)
 
-                    let totalAssets = 0
-                    let totalLiabilities = 0
+        // Initial load (immediate, no debounce)
+        calculateNetWorth()
 
-                    balances.forEach(b => {
-                        if (b.accountType === 'ASSET') {
-                            totalAssets += b.balance
-                        } else if (b.accountType === 'LIABILITY') {
-                            totalLiabilities += b.balance // Liabilities are typically positive in balance but negative in net worth?
-                            // Wait, getAccountBalance returns normalized positive balance for the account itself (e.g., Credit Card debt of $500 is +500 in liability account).
-                            // But for Net Worth, Assets - Liabilities.
-                        }
-                    })
-
-                    // Assuming balances are positive numbers representing the magnitude of the account value
-                    const netWorth = totalAssets - totalLiabilities
-
-                    setData({
-                        balances,
-                        netWorth,
-                        totalAssets,
-                        totalLiabilities,
-                        isLoading: false
-                    })
-                } catch (error) {
-                    console.error('Failed to calculate net worth:', error)
-                    setData(prev => ({ ...prev, isLoading: false }))
-                }
-            })
-
-        return () => subscription.unsubscribe()
+        return () => {
+            subscription.unsubscribe()
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current)
+            }
+        }
     }, [database])
 
     return data
 }
+
