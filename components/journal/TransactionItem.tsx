@@ -1,7 +1,6 @@
 import { AppCard, AppText, Badge, IvyIcon } from '@/components/core';
 import { Shape, Spacing } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
-import { TransactionType } from '@/src/data/models/Transaction';
 import { TransactionWithAccountInfo } from '@/src/types/readModels';
 import { formatDate } from '@/src/utils/dateUtils';
 import React from 'react';
@@ -24,9 +23,9 @@ export const TransactionItem = ({ transaction }: TransactionItemProps) => {
         ? transaction.runningBalance.toFixed(2)
         : null;
 
-    const isDebit = transaction.transactionType === TransactionType.DEBIT;
-    const typeColor = isDebit ? theme.expense : theme.income;
-    const typeLabel = isDebit ? '−' : '+';
+    const isIncrease = transaction.isIncrease ?? false;
+    const typeColor = isIncrease ? theme.income : theme.expense;
+    const typeLabel = isIncrease ? '+' : '−';
     const statusColor = typeColor; // IvyIcon color
 
     return (
@@ -45,11 +44,11 @@ export const TransactionItem = ({ transaction }: TransactionItemProps) => {
 
                 <View style={styles.content}>
                     <View style={styles.headerRow}>
-                        <AppText variant="body" style={styles.accountName}>
-                            {transaction.accountName}
+                        <AppText variant="body" style={styles.accountName} numberOfLines={1}>
+                            {transaction.displayTitle || transaction.accountName}
                         </AppText>
-                        <Badge variant={isDebit ? 'expense' : 'income'} size="sm">
-                            {transaction.accountType}
+                        <Badge variant={(transaction.counterAccountType || transaction.accountType || '').toLowerCase() as any} size="sm">
+                            {transaction.counterAccountType || transaction.accountType}
                         </Badge>
                     </View>
 
@@ -63,20 +62,20 @@ export const TransactionItem = ({ transaction }: TransactionItemProps) => {
                         variant="body"
                         style={[styles.amountText, { color: typeColor }]}
                     >
-                        {isDebit ? '−' : '+'} {formattedAmount}
+                        {typeLabel} {formattedAmount}
                     </AppText>
                     {formattedRunningBalance && (
                         <AppText variant="caption" color="tertiary">
-                            Bal: {formattedRunningBalance}
+                            {formattedRunningBalance}
                         </AppText>
                     )}
                 </View>
             </View>
 
-            {transaction.notes && (
+            {(transaction.notes || transaction.journalDescription) && (
                 <View style={styles.notesSection}>
                     <AppText variant="caption" color="secondary" italic>
-                        {transaction.notes}
+                        {transaction.notes || transaction.journalDescription}
                     </AppText>
                 </View>
             )}

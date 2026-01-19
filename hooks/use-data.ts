@@ -110,7 +110,7 @@ export function useJournals(pageSize: number = 50) {
  */
 export function useAccountTransactions(accountId: string | null) {
     const database = useDatabase()
-    const [transactions, setTransactions] = useState<Transaction[]>([])
+    const [transactions, setTransactions] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
@@ -128,8 +128,50 @@ export function useAccountTransactions(accountId: string | null) {
                 Q.sortBy('transaction_date', Q.desc)
             )
             .observe()
-            .subscribe((transactions) => {
-                setTransactions(transactions)
+            .subscribe(async (txs) => {
+                const enriched = await Promise.all(txs.map(async (tx) => {
+                    const journal = await tx.journal.fetch()
+                    const account = await tx.account.fetch()
+
+                    // Fetch all legs of this journal to find counter-parties
+                    const allJournalTxs = await database.collections.get<Transaction>('transactions')
+                        .query(Q.where('journal_id', tx.journalId), Q.where('deleted_at', Q.eq(null)))
+                        .fetch()
+
+                    const otherLegs = allJournalTxs.filter(l => l.accountId !== tx.accountId)
+
+                    let displayTitle = journal?.description || ''
+                    let counterAccountType = undefined
+                    if (otherLegs.length === 1) {
+                        const otherAcc = await otherLegs[0].account.fetch()
+                        displayTitle = otherAcc?.name || journal?.description || 'Offset Entry'
+                        counterAccountType = otherAcc?.accountType
+                    } else if (otherLegs.length > 1 && !journal?.description) {
+                        displayTitle = 'Split'
+                    }
+
+                    // Accounting logic for increase/decrease
+                    const isDebitIncrease = ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
+                    const isIncrease = isDebitIncrease
+                        ? tx.transactionType === 'DEBIT'
+                        : tx.transactionType === 'CREDIT'
+
+                    return {
+                        id: tx.id,
+                        amount: tx.amount,
+                        transactionType: tx.transactionType,
+                        transactionDate: tx.transactionDate,
+                        notes: tx.notes,
+                        journalDescription: journal?.description,
+                        accountName: account?.name,
+                        accountType: account?.accountType,
+                        counterAccountType,
+                        runningBalance: tx.runningBalance,
+                        displayTitle,
+                        isIncrease
+                    }
+                }))
+                setTransactions(enriched)
                 setIsLoading(false)
             })
 
@@ -328,7 +370,7 @@ export function useNetWorth() {
         const transactionsCollection = database.collections.get<Transaction>('transactions')
         const transactionSubscription = transactionsCollection
             .query(Q.where('deleted_at', Q.eq(null)))
-            .observeCount()
+            .observe()
             .subscribe(debouncedCalculate)
 
         // Initial load (immediate, no debounce)

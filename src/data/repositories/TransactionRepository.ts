@@ -141,7 +141,7 @@ export class TransactionRepository {
           Q.where('deleted_at', Q.eq(null))
         ))
       )
-      .extend(Q.sortBy('journal_date', 'asc')) // Primary sort: Journal Date
+      .extend(Q.sortBy('transaction_date', 'asc')) // Primary sort: Transaction Date
       .extend(Q.sortBy('created_at', 'asc'))   // Secondary sort: Creation Time
       .fetch()
 

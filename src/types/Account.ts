@@ -6,6 +6,7 @@ export interface AccountCreateInput {
   currencyCode: string
   description?: string
   parentAccountId?: string
+  initialBalance?: number
 }
 
 export interface AccountUpdateInput {

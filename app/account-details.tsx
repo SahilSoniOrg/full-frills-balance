@@ -9,6 +9,7 @@ import { TransactionItem } from '@/components/journal/TransactionItem'
 import { Shape, Spacing } from '@/constants'
 import { useAccount, useAccountBalance, useAccountTransactions } from '@/hooks/use-data'
 import { useTheme } from '@/hooks/use-theme'
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React from 'react'
@@ -58,7 +59,7 @@ export default function AccountDetailsScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={[styles.circularButton, { backgroundColor: theme.surface }]}>
-                    <Ionicons name="close" size={24} color={theme.text} />
+                    <Ionicons name="arrow-back" size={24} color={theme.text} />
                 </TouchableOpacity>
                 <AppText variant="subheading" style={styles.headerTitle}>
                     Account Details
@@ -90,7 +91,7 @@ export default function AccountDetailsScreen() {
                             Current Balance
                         </AppText>
                         <AppText variant="heading">
-                            {balanceLoading ? '...' : `${balance.toFixed(2)} ${account.currencyCode}`}
+                            {balanceLoading ? '...' : CurrencyFormatter.format(balance, account.currencyCode)}
                         </AppText>
                     </View>
 
@@ -104,15 +105,14 @@ export default function AccountDetailsScreen() {
                     </View>
                 </View>
 
-                <View style={styles.accountMeta}>
-                    <AppText variant="caption" color="secondary">
-                        Created: {new Date(account.createdAt).toLocaleDateString()}
-                    </AppText>
-                    {account.description && (
-                        <AppText variant="body" style={styles.description}>
-                            {account.description}
-                        </AppText>
-                    )}
+                <View style={[styles.accountMeta, { borderTopWidth: 1, borderTopColor: theme.border }]}>
+                    <TouchableOpacity
+                        style={styles.historyLink}
+                        onPress={() => router.push(`/audit-log?entityType=account&entityId=${accountId}` as any)}
+                    >
+                        <AppText variant="caption" color="primary" weight="semibold">View Edit History</AppText>
+                        <Ionicons name="chevron-forward" size={14} color={theme.primary} />
+                    </TouchableOpacity>
                 </View>
             </AppCard>
 
@@ -213,6 +213,12 @@ const styles = StyleSheet.create({
     accountMeta: {
         gap: Spacing.xs,
         paddingTop: Spacing.md,
+    },
+    historyLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: Spacing.sm,
     },
     description: {
         marginTop: Spacing.xs,

@@ -150,21 +150,30 @@ export class JournalRepository {
         })
       }
 
-      // Log audit trail
-      await auditService.log({
-        entityType: 'journal',
-        entityId: newJournal.id,
-        action: AuditAction.CREATE,
-        changes: {
-          journalDate: journalData.journalDate,
-          description: journalData.description,
-          currencyCode: journalData.currencyCode,
-          transactionCount: transactionData.length,
-        },
-      })
-
       return newJournal
     })
+
+    // Log audit trail outside of write block to avoid deadlocks
+    await auditService.log({
+      entityType: 'journal',
+      entityId: journal.id,
+      action: AuditAction.CREATE,
+      changes: {
+        journalDate: journalData.journalDate,
+        description: journalData.description,
+        currencyCode: journalData.currencyCode,
+        transactionCount: transactionData.length,
+        transactions: transactionData.map(tx => ({
+          accountId: tx.accountId,
+          accountName: accountMap.get(tx.accountId)?.name,
+          currencyCode: accountMap.get(tx.accountId)?.currencyCode,
+          amount: tx.amount,
+          type: tx.transactionType,
+          notes: tx.notes
+        }))
+      },
+    })
+
 
     // Queue rebuilds for background processing
     if (accountsToRebuild.size > 0) {
@@ -289,10 +298,54 @@ export class JournalRepository {
     const accountTypes = new Map<string, AccountType>()
     accountMap.forEach((acc, id) => accountTypes.set(id, acc.accountType as AccountType))
 
+    // Prepare for Running Balance Calculation (Synchronous part)
+    const accountsToRebuild = new Set<string>()
+    const calculatedBalances = new Map<string, number>()
+
+    for (const tx of transactionData) {
+      if (!accountMap.has(tx.accountId)) continue
+
+      // Optimized check for latest transaction
+      const accountId = tx.accountId
+      const latestOtherTxs = await database.collections.get<Transaction>('transactions')
+        .query(
+          Q.where('account_id', accountId),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('journal_id', Q.notEq(journalId)),
+          Q.on('journals', Q.and(
+            Q.where('status', 'POSTED'),
+            Q.where('deleted_at', Q.eq(null))
+          ))
+        )
+        .extend(Q.sortBy('transaction_date', 'desc'))
+        .extend(Q.sortBy('created_at', 'desc'))
+        .extend(Q.take(1))
+        .fetch()
+
+      const latestOtherTx = latestOtherTxs[0]
+      const isBackdated = latestOtherTx && latestOtherTx.transactionDate > journalData.journalDate
+
+      if (isBackdated) {
+        accountsToRebuild.add(tx.accountId)
+      } else {
+        const account = accountMap.get(tx.accountId)!
+        let balance = latestOtherTx?.runningBalance || 0
+        let multiplier = 0
+        if (['ASSET', 'EXPENSE'].includes(account.accountType)) {
+          multiplier = tx.transactionType === TransactionType.DEBIT ? 1 : -1
+        } else {
+          multiplier = tx.transactionType === TransactionType.CREDIT ? 1 : -1
+        }
+        balance += (tx.amount * multiplier)
+        calculatedBalances.set(tx.accountId, balance)
+      }
+    }
+
     // Capture before state for audit
     const beforeState = {
       journalDate: existingJournal.journalDate,
       description: existingJournal.description,
+      currencyCode: existingJournal.currencyCode,
       totalAmount: existingJournal.totalAmount,
       transactionCount: existingJournal.transactionCount,
       displayType: existingJournal.displayType,
@@ -309,6 +362,10 @@ export class JournalRepository {
       // 2. Create new transactions
       for (const txData of transactionData) {
         const amount = sanitizeAmount(txData.amount) || 0
+        const running_balance = !accountsToRebuild.has(txData.accountId)
+          ? calculatedBalances.get(txData.accountId)
+          : 0
+
         await this.transactions.create((tx: Transaction) => {
           tx.accountId = txData.accountId
           tx.amount = amount
@@ -317,7 +374,7 @@ export class JournalRepository {
           tx.transactionDate = journalFields.journalDate
           tx.notes = txData.notes
           tx.exchangeRate = txData.exchangeRate
-          tx.runningBalance = 0 // Will be rebuilt
+          tx.runningBalance = running_balance
         })
       }
 
@@ -336,25 +393,45 @@ export class JournalRepository {
         j.displayType = newDisplayType
       })
 
-      // 5. Log audit trail with before/after
-      await auditService.log({
-        entityType: 'journal',
-        entityId: journalId,
-        action: AuditAction.UPDATE,
-        changes: {
-          before: beforeState,
-          after: {
-            journalDate: journalFields.journalDate,
-            description: journalFields.description,
-            totalAmount: newTotalAmount,
-            transactionCount: newTransactionCount,
-            displayType: newDisplayType,
-          }
-        },
-      })
-
       return existingJournal
     })
+
+    // 5. Log audit trail outside of write block to avoid deadlocks
+    await auditService.log({
+      entityType: 'journal',
+      entityId: journalId,
+      action: AuditAction.UPDATE,
+      changes: {
+        before: {
+          ...beforeState,
+          transactions: oldTransactions.map(tx => ({
+            accountId: tx.accountId,
+            accountName: accountMap.get(tx.accountId)?.name,
+            currencyCode: accountMap.get(tx.accountId)?.currencyCode,
+            amount: tx.amount,
+            type: tx.transactionType,
+            notes: tx.notes
+          }))
+        },
+        after: {
+          journalDate: journalFields.journalDate,
+          description: journalFields.description,
+          currencyCode: journalFields.currencyCode,
+          totalAmount: updatedJournal.totalAmount, // Use updated values
+          transactionCount: updatedJournal.transactionCount,
+          displayType: updatedJournal.displayType,
+          transactions: transactionData.map(tx => ({
+            accountId: tx.accountId,
+            accountName: accountMap.get(tx.accountId)?.name,
+            currencyCode: accountMap.get(tx.accountId)?.currencyCode,
+            amount: tx.amount,
+            type: tx.transactionType,
+            notes: tx.notes
+          }))
+        }
+      }
+    })
+
 
     // 6. Queue running balance rebuilds for background processing
     rebuildQueueService.enqueueMany(allAffectedAccountIds)

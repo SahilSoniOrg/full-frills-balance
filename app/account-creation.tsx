@@ -23,6 +23,7 @@ export default function AccountCreationScreen() {
   const [accountName, setAccountName] = useState('')
   const [accountType, setAccountType] = useState<AccountType>(AccountType.ASSET)
   const [selectedCurrency, setSelectedCurrency] = useState<string>(defaultCurrency || AppConfig.defaultCurrency)
+  const [initialBalance, setInitialBalance] = useState('')
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [showCurrencyModal, setShowCurrencyModal] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -72,7 +73,7 @@ export default function AccountCreationScreen() {
         name: sanitizedName,
         accountType: accountType,
         currencyCode: selectedCurrency,
-        description: `Created via account creation`,
+        initialBalance: initialBalance ? parseFloat(initialBalance) : 0,
       })
 
       showSuccessAlert(
@@ -84,6 +85,7 @@ export default function AccountCreationScreen() {
       setAccountName('')
       setAccountType(AccountType.ASSET)
       setSelectedCurrency(defaultCurrency || AppConfig.defaultCurrency)
+      setInitialBalance('')
 
       // Navigate to accounts list
       router.push('/(tabs)/accounts' as any)
@@ -139,6 +141,17 @@ export default function AccountCreationScreen() {
             placeholder="e.g., Checking Account"
             autoFocus
             maxLength={100}
+            returnKeyType="next"
+          />
+        </AppCard>
+
+        <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+          <AppInput
+            label="Initial Balance"
+            value={initialBalance}
+            onChangeText={setInitialBalance}
+            placeholder="0.00"
+            keyboardType="decimal-pad"
             returnKeyType="next"
           />
         </AppCard>

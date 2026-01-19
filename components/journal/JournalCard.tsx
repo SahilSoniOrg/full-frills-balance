@@ -34,47 +34,45 @@ export const JournalCard = ({ journal, onPress }: JournalCardProps) => {
     return (
         <AppCard
             elevation="sm"
-            style={styles.container}
+            style={[styles.container, { backgroundColor: theme.surface }]}
+            padding="none"
         >
             <TouchableOpacity onPress={() => onPress(journal)} style={styles.content}>
-                {/* Header: Date & Count */}
-                <View style={styles.header}>
-                    <View style={styles.badgeRow}>
-                        {journal.currencyCode !== (preferences.defaultCurrencyCode || 'USD') && (
-                            <Badge variant="default" size="sm">
-                                {journal.currencyCode}
-                            </Badge>
-                        )}
-                        <Badge variant="default" size="sm">
-                            {count} {count === 1 ? 'entry' : 'entries'}
-                        </Badge>
-                    </View>
-                    <View style={{ flex: 1 }} />
-                    <AppText variant="caption" color="secondary">
-                        {formattedDate}
-                    </AppText>
-                </View>
-
-                {/* Title / Description */}
-                <View style={styles.titleSection}>
-                    <AppText variant="heading" numberOfLines={1}>
-                        {journal.description || 'Transaction'}
-                    </AppText>
-                </View>
-
-                {/* Amount Row: Ivy Style */}
-                <View style={styles.amountRow}>
+                {/* Left side: Icon */}
+                <View style={styles.iconContainer}>
                     <IvyIcon
                         label={typeLabel}
                         color={typeColor}
-                        size={40}
-                        style={{ marginRight: Spacing.md }}
+                        size={32}
                     />
+                </View>
 
-                    <View style={styles.amountInfo}>
-                        <AppText variant="xl" style={styles.amountText}>
+                {/* Right side: Content */}
+                <View style={styles.mainContent}>
+                    <View style={styles.header}>
+                        <AppText variant="body" weight="bold" numberOfLines={1} style={styles.title}>
+                            {journal.description || 'Transaction'}
+                        </AppText>
+                        <AppText variant="body" weight="bold" style={[styles.amountText, { color: typeColor === theme.text ? theme.text : typeColor }]}>
                             {CurrencyFormatter.format(totalAmount, journal.currencyCode)}
                         </AppText>
+                    </View>
+
+                    <View style={styles.footer}>
+                        <AppText variant="caption" color="secondary">
+                            {formattedDate}
+                        </AppText>
+                        <View style={styles.spacer} />
+                        <View style={styles.badgeRow}>
+                            {journal.currencyCode !== (preferences.defaultCurrencyCode || 'USD') && (
+                                <Badge variant="default" size="sm">
+                                    <AppText variant="caption" style={{ fontSize: 10 }}>{journal.currencyCode}</AppText>
+                                </Badge>
+                            )}
+                            <Badge variant="default" size="sm">
+                                <AppText variant="caption" style={{ fontSize: 10 }}>{count} {count === 1 ? 'entry' : 'entries'}</AppText>
+                            </Badge>
+                        </View>
                     </View>
                 </View>
             </TouchableOpacity>
@@ -84,36 +82,44 @@ export const JournalCard = ({ journal, onPress }: JournalCardProps) => {
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: Spacing.md,
-        borderRadius: Shape.radius.xl,
+        marginBottom: Spacing.sm,
+        borderRadius: Shape.radius.lg,
         overflow: 'hidden',
     },
     content: {
-        padding: Spacing.lg,
+        padding: Spacing.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconContainer: {
+        marginRight: Spacing.md,
+    },
+    mainContent: {
+        flex: 1,
     },
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.md,
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 2,
     },
-    titleSection: {
-        marginBottom: Spacing.lg,
+    title: {
+        flex: 1,
+        marginRight: Spacing.sm,
     },
-    amountRow: {
+    footer: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    spacer: {
+        flex: 1,
     },
     badgeRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing.xs,
-        flex: 1,
-        flexWrap: 'wrap',
-    },
-    amountInfo: {
-        flex: 1,
     },
     amountText: {
-        fontWeight: 'bold',
+        textAlign: 'right',
     },
 });

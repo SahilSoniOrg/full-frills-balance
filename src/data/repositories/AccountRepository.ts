@@ -1,9 +1,20 @@
 import { Q } from '@nozbe/watermelondb'
-import { AccountCreateInput, AccountUpdateInput } from '../../types/Account'
+import { auditService } from '../../services/audit-service'
+import { AccountUpdateInput } from '../../types/Account'
 import { database } from '../database/Database'
 import Account, { AccountType } from '../models/Account'
+import { AuditAction } from '../models/AuditLog'
 import { JournalStatus } from '../models/Journal'
 import Transaction from '../models/Transaction'
+
+export interface AccountCreateInput {
+  name: string
+  accountType: AccountType
+  currencyCode: string
+  description?: string
+  parentAccountId?: string
+  initialBalance?: number
+}
 
 export interface AccountBalance {
   accountId: string
@@ -125,13 +136,88 @@ export class AccountRepository {
 
   /**
    * Creates a new account
+   * Supports optional initial balance by creating a "Balance Adjustment" journal
    */
   async create(accountData: AccountCreateInput): Promise<Account> {
-    return this.db.write(async () => {
+    const { initialBalance, ...accountFields } = accountData
+
+    // 1. Create the account
+    const newAccount = await this.db.write(async () => {
       return this.accounts.create((account) => {
-        Object.assign(account, accountData)
+        Object.assign(account, accountFields)
       })
     })
+
+    // 2. Audit account creation
+    await auditService.log({
+      entityType: 'account',
+      entityId: newAccount.id,
+      action: AuditAction.CREATE,
+      changes: {
+        name: newAccount.name,
+        accountType: newAccount.accountType,
+        currencyCode: newAccount.currencyCode,
+        description: newAccount.description
+      }
+    })
+
+    // 3. Handle initial balance if provided and non-zero
+    if (initialBalance && Math.abs(initialBalance) > 0) {
+      const { journalRepository } = require('./JournalRepository')
+      const { TransactionType } = require('../models/Transaction')
+
+      // Determine if we need an EQUITY or INCOME account for balancing
+      // For simplicity in v1, we'll use a virtual "Opening Balances" account (EQUITY)
+      // or just assume Equity.
+      let balancingAccountId = await this.getOpeningBalancesAccountId(newAccount.currencyCode)
+
+      const isDebitIncrease = [AccountType.ASSET, AccountType.EXPENSE].includes(newAccount.accountType)
+
+      // If Asset increases with Debit, and we want positive balance -> Debit Account, Credit Equity
+      // If Liability increases with Credit, and we want positive balance -> Credit Account, Debit Equity
+      const accountTxType = isDebitIncrease ? TransactionType.DEBIT : TransactionType.CREDIT
+      const equityTxType = isDebitIncrease ? TransactionType.CREDIT : TransactionType.DEBIT
+
+      await journalRepository.createJournalWithTransactions({
+        journalDate: Date.now(),
+        description: `Initial Balance: ${newAccount.name}`,
+        currencyCode: newAccount.currencyCode,
+        transactions: [
+          {
+            accountId: newAccount.id,
+            amount: Math.abs(initialBalance),
+            transactionType: accountTxType
+          },
+          {
+            accountId: balancingAccountId,
+            amount: Math.abs(initialBalance),
+            transactionType: equityTxType
+          }
+        ]
+      })
+    }
+
+    return newAccount
+  }
+
+  /**
+   * Helper to get or create the "Opening Balances" equity account
+   */
+  private async getOpeningBalancesAccountId(currencyCode: string): Promise<string> {
+    const name = `Opening Balances (${currencyCode})`
+    const existing = await this.findByName(name)
+    if (existing) return existing.id
+
+    // Use a direct write to bypass the 'create' wrapper's recursion
+    const openingAcc = await this.db.write(async () => {
+      return this.accounts.create((account) => {
+        account.name = name
+        account.accountType = AccountType.EQUITY
+        account.currencyCode = currencyCode
+        account.description = 'System account for initial balances'
+      })
+    })
+    return openingAcc.id
   }
 
   /**

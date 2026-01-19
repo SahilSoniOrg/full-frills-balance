@@ -4,6 +4,8 @@ import { useUI } from '@/contexts/UIContext';
 import { useAccountBalance } from '@/hooks/use-data';
 import { useTheme } from '@/hooks/use-theme';
 import Account from '@/src/data/models/Account';
+import { getContrastColor } from '@/src/utils/colorUtils';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -20,14 +22,6 @@ interface AccountCardProps {
  * Inspired by Ivy Wallet's Account cards
  */
 export const AccountCard = ({ account, onPress, initialBalanceData }: AccountCardProps) => {
-    // Only fetch if initial data is not provided, or better: use useAccountBalance but bypass if we have data?
-    // Actually simpler: if initialBalanceData provided, use it. If not, fetch.
-    // However, we want updates. useAccountBalance provides updates.
-    // If we pass initial data, we usually still want live updates.
-    // But AccountsScreen re-renders when useNetWorth updates (which updates balances).
-    // So if we pass data from parent, we can just use that.
-
-    // Let's defer to the hook if no data passed, otherwise use passed data.
     const hookData = useAccountBalance(initialBalanceData ? null : account.id);
     const balanceData = initialBalanceData || hookData.balanceData;
     const isLoading = initialBalanceData ? false : hookData.isLoading;
@@ -39,59 +33,51 @@ export const AccountCard = ({ account, onPress, initialBalanceData }: AccountCar
     const transactionCount = balanceData?.transactionCount || 0;
 
     // Account type colors for card background/accent
-    let backgroundColor = theme.surface;
     let accentColor = theme.asset;
     const typeLower = account.accountType.toLowerCase();
 
-    // Ivy-like color mapping
-    if (typeLower === 'liability') {
-        accentColor = theme.liability as any;
-    } else if (typeLower === 'equity') {
-        accentColor = theme.equity as any;
-    } else if (typeLower === 'income') {
-        accentColor = theme.income as any;
-    } else if (typeLower === 'expense') {
-        accentColor = theme.expense as any;
-    }
+    if (typeLower === 'liability') accentColor = theme.liability as any;
+    else if (typeLower === 'equity') accentColor = theme.equity as any;
+    else if (typeLower === 'income') accentColor = theme.income as any;
+    else if (typeLower === 'expense') accentColor = theme.expense as any;
+
+    const contrastColor = getContrastColor(accentColor);
+    const textColor = contrastColor === 'white' ? '#FFFFFF' : '#000000';
+    const subTextColor = contrastColor === 'white' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)';
 
     return (
         <AppCard
             elevation="sm"
             style={[styles.container, { backgroundColor: theme.surface }]}
-            padding="none" // Custom padding for layout
+            padding="none"
         >
             <TouchableOpacity onPress={() => onPress(account)}>
-                {/* Colored Top Bar */}
-                <View style={[styles.colorBar, { backgroundColor: accentColor }]} />
-
-                <View style={styles.content}>
-                    {/* Header: Icon & Name */}
-                    <View style={styles.header}>
+                {/* Ivy-style Header: Full colored background */}
+                <View style={[styles.headerSection, { backgroundColor: accentColor }]}>
+                    <View style={styles.headerTop}>
                         <IvyIcon
                             label={account.name}
-                            color={accentColor} // Use the type color for the icon
-                            size={40}
+                            color={textColor}
+                            size={32}
                         />
                         <View style={styles.titleInfo}>
-                            <AppText variant="heading" numberOfLines={1}>
+                            <AppText variant="body" weight="bold" style={{ color: textColor }} numberOfLines={1}>
                                 {account.name}
                             </AppText>
-                            <AppText variant="caption" color="secondary" style={styles.txCount}>
-                                {transactionCount} Transactions
+                            <AppText variant="caption" style={{ color: subTextColor }}>
+                                {account.accountType}
                             </AppText>
                         </View>
-                        <Badge variant={typeLower as any} size="sm">
-                            {account.accountType}
+                        <Badge variant="default" size="sm" style={{ backgroundColor: textColor }}>
+                            <AppText variant="caption" weight="bold" style={{ color: accentColor, fontSize: 10 }}>
+                                {transactionCount}
+                            </AppText>
                         </Badge>
                     </View>
 
-                    {/* Balance */}
-                    <View style={styles.amountInfo}>
-                        <AppText variant="title" style={[styles.amountText, { color: accentColor }]}>
-                            {isLoading ? '...' : balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </AppText>
-                        <AppText variant="caption" color="secondary">
-                            {account.currencyCode}
+                    <View style={styles.balanceSection}>
+                        <AppText variant="title" style={[styles.balanceText, { color: textColor }]}>
+                            {isLoading ? '...' : CurrencyFormatter.format(balance, account.currencyCode)}
                         </AppText>
                     </View>
                 </View>
@@ -106,14 +92,11 @@ const styles = StyleSheet.create({
         borderRadius: Shape.radius.xl,
         overflow: 'hidden',
     },
-    colorBar: {
-        height: 6,
-        width: '100%',
-    },
-    content: {
+    headerSection: {
         padding: Spacing.lg,
+        paddingBottom: Spacing.xl,
     },
-    header: {
+    headerTop: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: Spacing.lg,
@@ -122,15 +105,17 @@ const styles = StyleSheet.create({
         marginLeft: Spacing.md,
         flex: 1,
     },
-    txCount: {
-        marginTop: 2,
+    balanceSection: {
+        marginTop: Spacing.sm,
     },
-    amountInfo: {
-        alignItems: 'flex-start', // Left align balance for impact
-    },
-    amountText: {
-        fontSize: 32, // Large balance
+    balanceText: {
+        fontSize: 32,
         fontWeight: 'bold',
-        marginBottom: -4, // Tighten up currency line
+    },
+    footer: {
+        padding: Spacing.md,
+        paddingHorizontal: Spacing.lg,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: 'rgba(128, 128, 128, 0.1)',
     },
 });

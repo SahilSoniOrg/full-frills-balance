@@ -1,7 +1,7 @@
 import { AppButton, AppInput, AppText } from '@/components/core';
 import { AppConfig, Spacing } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -32,10 +32,8 @@ export default function SimpleJournalForm({ accounts, onSuccess, initialType = '
     const [isLoadingRate, setIsLoadingRate] = useState(false);
     const [rateError, setRateError] = useState<string | null>(null);
 
-    // Filter accounts
-    const assetAccounts = accounts.filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY);
-    const expenseAccounts = accounts.filter(a => a.accountType === AccountType.EXPENSE);
-    const incomeAccounts = accounts.filter(a => a.accountType === AccountType.INCOME);
+    // Use all accounts for flexibility (e.g., refunds, adjustments)
+    const allAccounts = accounts;
 
     // Detect cross-currency transaction
     const sourceAccount = accounts.find(a => a.id === sourceId);
@@ -87,19 +85,19 @@ export default function SimpleJournalForm({ accounts, onSuccess, initialType = '
         const lastDestId = preferences.lastUsedDestinationAccountId;
 
         if (type === 'expense') {
-            if (lastSourceId && assetAccounts.some(a => a.id === lastSourceId)) setSourceId(lastSourceId);
-            else if (assetAccounts.length > 0) setSourceId(assetAccounts[0].id);
+            if (lastSourceId && allAccounts.some((a: Account) => a.id === lastSourceId)) setSourceId(lastSourceId);
+            else if (allAccounts.length > 0) setSourceId(allAccounts[0].id);
             setDestinationId('');
         } else if (type === 'income') {
-            if (lastDestId && assetAccounts.some(a => a.id === lastDestId)) setDestinationId(lastDestId);
-            else if (assetAccounts.length > 0) setDestinationId(assetAccounts[0].id);
+            if (lastDestId && allAccounts.some((a: Account) => a.id === lastDestId)) setDestinationId(lastDestId);
+            else if (allAccounts.length > 0) setDestinationId(allAccounts[0].id);
             setSourceId('');
         } else {
             // Transfer
-            if (lastSourceId && assetAccounts.some(a => a.id === lastSourceId)) setSourceId(lastSourceId);
-            if (lastDestId && assetAccounts.some(a => a.id === lastDestId)) setDestinationId(lastDestId);
+            if (lastSourceId && allAccounts.some((a: Account) => a.id === lastSourceId)) setSourceId(lastSourceId);
+            if (lastDestId && allAccounts.some((a: Account) => a.id === lastDestId)) setDestinationId(lastDestId);
         }
-    }, [type, accounts]);
+    }, [type, allAccounts]);
 
     const handleSave = async () => {
         if (!numAmount || numAmount <= 0) return;
@@ -259,25 +257,25 @@ export default function SimpleJournalForm({ accounts, onSuccess, initialType = '
                 </View>
             </View>
 
-            {/* Dynamic Selectors based on type */}
+            {/* Dynamic Selectors based on context */}
             {type === 'expense' && (
                 <>
-                    {renderAccountGrid("What for?", expenseAccounts, destinationId, setDestinationId)}
-                    {renderAccountGrid("Paid from?", assetAccounts, sourceId, setSourceId)}
+                    {renderAccountGrid("What for?", allAccounts, destinationId, setDestinationId)}
+                    {renderAccountGrid("Paid from?", allAccounts, sourceId, setSourceId)}
                 </>
             )}
 
             {type === 'income' && (
                 <>
-                    {renderAccountGrid("Where from?", incomeAccounts, sourceId, setSourceId)}
-                    {renderAccountGrid("Deposit to?", assetAccounts, destinationId, setDestinationId)}
+                    {renderAccountGrid("Where from?", allAccounts, sourceId, setSourceId)}
+                    {renderAccountGrid("Deposit to?", allAccounts, destinationId, setDestinationId)}
                 </>
             )}
 
             {type === 'transfer' && (
                 <>
-                    {renderAccountGrid("From?", assetAccounts, sourceId, setSourceId)}
-                    {renderAccountGrid("To?", assetAccounts, destinationId, setDestinationId)}
+                    {renderAccountGrid("From?", allAccounts, sourceId, setSourceId)}
+                    {renderAccountGrid("To?", allAccounts, destinationId, setDestinationId)}
                 </>
             )}
 

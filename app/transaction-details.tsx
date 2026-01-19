@@ -131,6 +131,16 @@ export default function TransactionDetailsScreen() {
             <View style={styles.infoSection}>
               <InfoRow label="Date" value={formattedDate} />
               <InfoRow label="Journal ID" value={journalId?.substring(0, 8) || '...'} />
+              <TouchableOpacity
+                style={styles.historyLink}
+                onPress={() => router.push(`/audit-log?entityType=journal&entityId=${journalId}` as any)}
+              >
+                <AppText variant="caption" color="secondary" style={{ width: 100 }}>History</AppText>
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 4 }}>
+                  <AppText variant="body" color="primary">View Edit History</AppText>
+                  <Ionicons name="chevron-forward" size={14} color={theme.primary} />
+                </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.divider} />
@@ -216,6 +226,12 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  historyLink: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
   },
   splitRow: {
     flexDirection: 'row',

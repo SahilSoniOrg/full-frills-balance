@@ -21,6 +21,11 @@ export interface TransactionWithAccountInfo {
   // Account information for display
   accountName: string
   accountType: AccountType
+  counterAccountName?: string
+  counterAccountType?: AccountType
+  journalDescription?: string
+  displayTitle?: string
+  isIncrease?: boolean
 
   // Running balance for this transaction
   runningBalance?: number
