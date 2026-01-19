@@ -1,4 +1,4 @@
-import { AppButton, AppText, FloatingActionButton } from '@/components/core'
+import { AppText, FloatingActionButton } from '@/components/core'
 import { NetWorthCard } from '@/components/dashboard/NetWorthCard'
 import { AccountCard } from '@/components/journal/AccountCard'
 import { Spacing } from '@/constants'
@@ -24,14 +24,6 @@ export default function AccountsScreen() {
     router.push(`/account-details?accountId=${account.id}` as any)
   }
 
-  const handleCreateJournal = () => {
-    router.push('/journal-entry' as any)
-  }
-
-  const handleViewJournals = () => {
-    router.push('/(tabs)')
-  }
-
   const handleCreateAccount = () => {
     router.push('/account-creation' as any)
   }
@@ -44,32 +36,6 @@ export default function AccountsScreen() {
 
   const renderHeader = () => (
     <View>
-      <View style={[styles.headerButtons, { backgroundColor: theme.background }]}>
-        <AppButton
-          variant="primary"
-          size="sm"
-          onPress={handleCreateAccount}
-          style={{ flex: 1 }}
-        >
-          + Account
-        </AppButton>
-        <AppButton
-          variant="secondary"
-          size="sm"
-          onPress={handleCreateJournal}
-          style={{ flex: 1 }}
-        >
-          + Journal
-        </AppButton>
-        <AppButton
-          variant="outline"
-          size="sm"
-          onPress={handleViewJournals}
-        >
-          📋
-        </AppButton>
-      </View>
-
       <NetWorthCard
         netWorth={netWorth}
         totalAssets={totalAssets}
@@ -115,7 +81,7 @@ export default function AccountsScreen() {
       />
 
       <FloatingActionButton
-        onPress={() => router.push('/journal-entry' as any)}
+        onPress={handleCreateAccount}
       />
     </View>
   )

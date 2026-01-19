@@ -27,9 +27,7 @@ export const JournalEntryHeader = ({ title, onClose }: JournalEntryHeaderProps) 
                 {title}
             </AppText>
 
-            <TouchableOpacity onPress={() => router.push('/(tabs)' as any)} style={styles.listButton}>
-                <Ionicons name="list" size={24} color={theme.text} />
-            </TouchableOpacity>
+            <View style={{ width: 44 }} />
         </View>
     );
 };

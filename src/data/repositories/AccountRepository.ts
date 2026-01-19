@@ -14,6 +14,14 @@ export interface AccountBalance {
 }
 
 export class AccountRepository {
+  /**
+   * Returns whether any accounts exist
+   */
+  async exists(): Promise<boolean> {
+    const count = await this.accounts.query(Q.where('deleted_at', Q.eq(null))).fetchCount()
+    return count > 0
+  }
+
   private get db() {
     return database
   }

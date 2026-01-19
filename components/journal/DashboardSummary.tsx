@@ -1,6 +1,7 @@
-import { AppConfig, Spacing } from '@/constants';
+import { Spacing } from '@/constants';
+import { useUI } from '@/contexts/UIContext';
 import { useTheme } from '@/hooks/use-theme';
-import { preferences } from '@/src/utils/preferences';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -9,16 +10,21 @@ import { AppCard, AppText } from '../core';
 interface DashboardSummaryProps {
     income: number;
     expense: number;
-    isPrivacyMode: boolean;
+    isHidden?: boolean;
 }
 
-export const DashboardSummary = ({ income, expense, isPrivacyMode }: DashboardSummaryProps) => {
+export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }: DashboardSummaryProps) => {
     const { theme } = useTheme();
+    const { isPrivacyMode } = useUI();
+
+    const isActuallyHidden = controlledHidden !== undefined ? controlledHidden : isPrivacyMode;
 
     const formatValue = (val: number) => {
-        if (isPrivacyMode) return '••••';
-        const currency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-        return `${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ${currency}`;
+        if (isActuallyHidden) return '••••';
+        return CurrencyFormatter.format(val, undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        });
     };
 
     return (

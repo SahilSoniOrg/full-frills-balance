@@ -17,6 +17,8 @@ export default function SettingsScreen() {
     const {
         themePreference,
         setThemePreference,
+        isPrivacyMode,
+        setPrivacyMode,
         resetApp,
         cleanupDatabase,
         isLoading
@@ -160,6 +162,22 @@ export default function SettingsScreen() {
                             </AppButton>
                         ))}
                     </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.rowBetween}>
+                        <View style={{ flex: 1 }}>
+                            <AppText variant="body" weight="semibold">Privacy Mode</AppText>
+                            <AppText variant="caption" color="secondary">Mask balances across the app</AppText>
+                        </View>
+                        <AppButton
+                            variant={isPrivacyMode ? 'primary' : 'outline'}
+                            size="sm"
+                            onPress={() => setPrivacyMode(!isPrivacyMode)}
+                        >
+                            {isPrivacyMode ? 'On' : 'Off'}
+                        </AppButton>
+                    </View>
                 </AppCard>
 
                 {/* Data Section */}
@@ -249,7 +267,6 @@ export default function SettingsScreen() {
         </ScrollView>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -264,6 +281,11 @@ const styles = StyleSheet.create({
     },
     card: {
         marginBottom: Spacing.md,
+    },
+    rowBetween: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     cardDesc: {
         marginBottom: Spacing.md,

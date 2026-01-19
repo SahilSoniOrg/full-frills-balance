@@ -1,5 +1,6 @@
 import { AppCard, AppText, Badge, IvyIcon } from '@/components/core';
 import { Shape, Spacing } from '@/constants';
+import { useUI } from '@/contexts/UIContext';
 import { useAccountBalance } from '@/hooks/use-data';
 import { useTheme } from '@/hooks/use-theme';
 import Account from '@/src/data/models/Account';
@@ -32,6 +33,7 @@ export const AccountCard = ({ account, onPress, initialBalanceData }: AccountCar
     const isLoading = initialBalanceData ? false : hookData.isLoading;
 
     const { theme } = useTheme();
+    const { isPrivacyMode } = useUI();
 
     const balance = balanceData?.balance || 0;
     const transactionCount = balanceData?.transactionCount || 0;

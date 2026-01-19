@@ -26,6 +26,7 @@ export default function AccountCreationScreen() {
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [showCurrencyModal, setShowCurrencyModal] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [hasExistingAccounts, setHasExistingAccounts] = useState(false)
 
   // Load available currencies
   React.useEffect(() => {
@@ -34,8 +35,12 @@ export default function AccountCreationScreen() {
         const currencyCollection = database.collections.get<Currency>('currencies')
         const allCurrencies = await currencyCollection.query().fetch()
         setCurrencies(allCurrencies)
+
+        // Check for existing accounts
+        const exists = await accountRepository.exists()
+        setHasExistingAccounts(exists)
       } catch (error) {
-        console.error('Failed to load currencies:', error)
+        console.error('Failed to load screen data:', error)
       }
     }
     loadCurrencies()
@@ -120,10 +125,10 @@ export default function AccountCreationScreen() {
 
       <ScrollView style={styles.content}>
         <AppText variant="heading" style={styles.title}>
-          Create Your First Account
+          {hasExistingAccounts ? 'Create New Account' : 'Create Your First Account'}
         </AppText>
         <AppText variant="body" color="secondary" style={styles.subtitle}>
-          Start tracking your finances
+          {hasExistingAccounts ? 'Add another source of funds' : 'Start tracking your finances'}
         </AppText>
 
         <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>

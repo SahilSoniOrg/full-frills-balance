@@ -57,7 +57,6 @@ export default function ReportsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
             <AppCard elevation="sm" padding="lg" style={styles.section}>
-                <AppText variant="heading">Data Export</AppText>
                 <AppText variant="body" color="secondary" style={styles.description}>
                     Export all your accounts, journals, and transactions as a JSON file.
                 </AppText>
@@ -71,7 +70,6 @@ export default function ReportsScreen() {
             </AppCard>
 
             <AppCard elevation="none" padding="lg" style={styles.section}>
-                <AppText variant="heading">Reports</AppText>
                 <AppText variant="body" color="secondary" style={styles.description}>
                     Coming Soon: Net Worth trends, Income vs Expense charts, and account-level analytics.
                 </AppText>

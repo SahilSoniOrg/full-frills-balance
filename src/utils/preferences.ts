@@ -15,6 +15,7 @@ interface UIPreferences {
   theme?: 'light' | 'dark' | 'system';
   lastUsedSourceAccountId?: string;
   lastUsedDestinationAccountId?: string;
+  isPrivacyMode: boolean;
 }
 
 class PreferencesHelper {
@@ -22,6 +23,7 @@ class PreferencesHelper {
     onboardingCompleted: false,
     userName: '',
     defaultCurrencyCode: 'USD',
+    isPrivacyMode: false,
   };
 
   async loadPreferences(): Promise<UIPreferences> {
@@ -118,9 +120,21 @@ class PreferencesHelper {
     await this.savePreferences();
   }
 
+  get isPrivacyMode(): boolean {
+    return this.preferences.isPrivacyMode;
+  }
+
+  async setIsPrivacyMode(isPrivacyMode: boolean): Promise<void> {
+    this.preferences.isPrivacyMode = isPrivacyMode;
+    await this.savePreferences();
+  }
+
   // Clear all preferences (useful for testing or reset)
   async clearPreferences(): Promise<void> {
-    this.preferences = { onboardingCompleted: false };
+    this.preferences = {
+      onboardingCompleted: false,
+      isPrivacyMode: false
+    };
     try {
       await AsyncStorage.removeItem(PREFERENCES_KEY);
     } catch (error) {

@@ -22,6 +22,12 @@ export default function JournalListScreen() {
   const { income, expense, isPrivacyMode } = useSummary()
   const { netWorth, totalAssets, totalLiabilities, isLoading: worthLoading } = useNetWorth()
   const [searchQuery, setSearchQuery] = React.useState('')
+  const [isDashboardHidden, setIsDashboardHidden] = React.useState(isPrivacyMode)
+
+  // Sync with global privacy mode when it changes
+  React.useEffect(() => {
+    setIsDashboardHidden(isPrivacyMode)
+  }, [isPrivacyMode])
   // WORKAROUND: FlashList 2.0.2 types are currently incompatible with React 19/RN 0.81 JSX checks.
   // We use 'any' here to unblock the build while keeping the core logic intact.
   const TypedFlashList = FlashList as any
@@ -78,11 +84,13 @@ export default function JournalListScreen() {
               totalAssets={totalAssets}
               totalLiabilities={totalLiabilities}
               isLoading={worthLoading}
+              hidden={isDashboardHidden}
+              onToggleHidden={setIsDashboardHidden}
             />
             <DashboardSummary
               income={income}
               expense={expense}
-              isPrivacyMode={isPrivacyMode}
+              isHidden={isDashboardHidden}
             />
             <SearchField
               value={searchQuery}

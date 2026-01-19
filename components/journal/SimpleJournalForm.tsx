@@ -89,11 +89,11 @@ export default function SimpleJournalForm({ accounts, onSuccess, initialType = '
         if (type === 'expense') {
             if (lastSourceId && assetAccounts.some(a => a.id === lastSourceId)) setSourceId(lastSourceId);
             else if (assetAccounts.length > 0) setSourceId(assetAccounts[0].id);
-            setDestinationId(''); // Reset for category selection
+            setDestinationId('');
         } else if (type === 'income') {
             if (lastDestId && assetAccounts.some(a => a.id === lastDestId)) setDestinationId(lastDestId);
             else if (assetAccounts.length > 0) setDestinationId(assetAccounts[0].id);
-            setSourceId(''); // Reset for category selection
+            setSourceId('');
         } else {
             // Transfer
             if (lastSourceId && assetAccounts.some(a => a.id === lastSourceId)) setSourceId(lastSourceId);

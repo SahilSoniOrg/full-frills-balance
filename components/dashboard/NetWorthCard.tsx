@@ -1,9 +1,10 @@
 import { AppCard, AppText } from '@/components/core';
 import { Spacing } from '@/constants';
+import { useUI } from '@/contexts/UIContext';
 import { useTheme } from '@/hooks/use-theme';
-import { preferences } from '@/src/utils/preferences';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface NetWorthCardProps {
@@ -11,23 +12,41 @@ interface NetWorthCardProps {
     totalAssets: number;
     totalLiabilities: number;
     isLoading?: boolean;
+    hidden?: boolean;
+    onToggleHidden?: (hidden: boolean) => void;
 }
 
 export const NetWorthCard = ({
     netWorth,
     totalAssets,
     totalLiabilities,
-    isLoading = false
+    isLoading = false,
+    hidden: controlledHidden,
+    onToggleHidden
 }: NetWorthCardProps) => {
     const { theme } = useTheme();
-    const [hidden, setHidden] = useState(false);
+    const { isPrivacyMode } = useUI();
+    const [internalHidden, setInternalHidden] = useState(isPrivacyMode);
+
+    // Sync with global privacy mode when it changes (e.g. from settings)
+    useEffect(() => {
+        setInternalHidden(isPrivacyMode);
+    }, [isPrivacyMode]);
+
+    const isActuallyHidden = controlledHidden !== undefined ? controlledHidden : internalHidden;
+
+    const handleToggle = () => {
+        if (onToggleHidden) {
+            onToggleHidden(!isActuallyHidden);
+        } else {
+            setInternalHidden(!internalHidden);
+        }
+    };
 
     const formatCurrency = (amount: number) => {
         if (isLoading) return '...';
-        if (hidden) return '••••••';
-        return amount.toLocaleString(undefined, {
-            style: 'currency',
-            currency: preferences.defaultCurrencyCode || 'USD',
+        if (isActuallyHidden) return '••••••';
+        return CurrencyFormatter.format(amount, undefined, {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         });
@@ -44,9 +63,9 @@ export const NetWorthCard = ({
                 <AppText variant="subheading" color="secondary">
                     Net Worth
                 </AppText>
-                <TouchableOpacity onPress={() => setHidden(!hidden)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <TouchableOpacity onPress={handleToggle} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Ionicons
-                        name={hidden ? "eye-off" : "eye"}
+                        name={isActuallyHidden ? "eye-off" : "eye"}
                         size={20}
                         color={theme.textTertiary}
                     />

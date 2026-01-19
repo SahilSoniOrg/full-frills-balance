@@ -36,6 +36,9 @@ interface UIState {
   // User details
   userName: string
   defaultCurrency: string
+
+  // Privacy
+  isPrivacyMode: boolean
 }
 
 interface UIContextType extends UIState {
@@ -46,6 +49,7 @@ interface UIContextType extends UIState {
   resetApp: () => Promise<void>
   cleanupDatabase: () => Promise<{ deletedCount: number }>
   updateUserDetails: (name: string, currency: string) => Promise<void>
+  setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined)
@@ -61,6 +65,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     isInitialized: false,
     userName: '',
     defaultCurrency: 'USD',
+    isPrivacyMode: false,
   })
 
   // Update themeMode when preference or system scheme changes
@@ -92,6 +97,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           themeMode: computedThemeMode,
           userName: loadedPreferences.userName || '',
           defaultCurrency: loadedPreferences.defaultCurrencyCode || 'USD',
+          isPrivacyMode: loadedPreferences.isPrivacyMode || false,
           isLoading: false,
           isInitialized: true,
         })
@@ -161,6 +167,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const setPrivacyMode = async (isPrivacyMode: boolean) => {
+    try {
+      await preferences.setIsPrivacyMode(isPrivacyMode)
+      setUIState(prev => ({ ...prev, isPrivacyMode }))
+    } catch (error) {
+      console.warn('Failed to save privacy mode:', error)
+      setUIState(prev => ({ ...prev, isPrivacyMode }))
+    }
+  }
+
   const setLoading = (loading: boolean) => {
     setUIState(prev => ({ ...prev, isLoading: loading }))
   }
@@ -183,6 +199,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         themeMode: systemColorScheme === 'dark' ? 'dark' : 'light',
         userName: '',
         defaultCurrency: 'USD',
+        isPrivacyMode: false,
         isLoading: false,
         isInitialized: true,
       })
@@ -217,6 +234,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     resetApp,
     cleanupDatabase,
     updateUserDetails,
+    setPrivacyMode,
   }
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>
