@@ -4,11 +4,13 @@
  * Shows account information and transaction history
  */
 
-import { AppButton, AppCard, AppText, Badge, IvyIcon } from '@/components/core'
+import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IvyIcon } from '@/components/core'
 import { TransactionItem } from '@/components/journal/TransactionItem'
 import { Shape, Spacing } from '@/constants'
 import { useAccount, useAccountBalance, useAccountTransactions } from '@/hooks/use-data'
 import { useTheme } from '@/hooks/use-theme'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -28,6 +30,9 @@ export default function AccountDetailsScreen() {
 
     const balance = balanceData?.balance || 0
     const transactionCount = balanceData?.transactionCount || 0
+    // WatermelonDB's markAsDeleted sets _raw._status = 'deleted'
+    const isDeleted = (account as any)?._raw?._status === 'deleted' || (account as any)?._raw?.deleted_at != null
+
 
     if (accountLoading) {
         return (
@@ -54,41 +59,71 @@ export default function AccountDetailsScreen() {
         )
     }
 
-    return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={[styles.circularButton, { backgroundColor: theme.surface }]}>
-                    <Ionicons name="arrow-back" size={24} color={theme.text} />
-                </TouchableOpacity>
-                <AppText variant="subheading" style={styles.headerTitle}>
-                    Account Details
-                </AppText>
-                <View style={styles.headerActions}>
-                    <TouchableOpacity
-                        onPress={() => router.push(`/account-creation?accountId=${accountId}` as any)}
-                        style={[styles.circularButton, { backgroundColor: theme.surface }]}
-                    >
-                        <Ionicons name="create-outline" size={22} color={theme.text} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+    const handleDelete = () => {
+        const hasTransactions = transactionCount > 0;
+        const message = hasTransactions
+            ? `This account has ${transactionCount} transaction(s). Deleting it will orphan these transactions. Are you sure?`
+            : 'Are you sure you want to delete this account? This action cannot be undone.';
 
+        showConfirmationAlert(
+            'Delete Account',
+            message,
+            async () => {
+                try {
+                    await accountRepository.delete(account);
+                    showSuccessAlert('Deleted', 'Account has been deleted.');
+                    router.push('/(tabs)/accounts' as any);
+                } catch (error) {
+                    console.error('Failed to delete account:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    showErrorAlert(`Could not delete account: ${errorMessage}`);
+                }
+            }
+        );
+    };
+
+    const handleRecover = async () => {
+        showConfirmationAlert(
+            'Recover Account',
+            'This will restore the deleted account. Continue?',
+            async () => {
+                try {
+                    await accountRepository.recover(accountId);
+                    showSuccessAlert('Recovered', 'Account has been restored.');
+                    router.replace(`/account-details?accountId=${accountId}` as any);
+                } catch (error) {
+                    console.error('Failed to recover account:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    showErrorAlert(`Could not recover account: ${errorMessage}`);
+                }
+            }
+        );
+    };
+
+    const renderHeader = () => (
+        <>
             {/* Account Info Card */}
             <AppCard elevation="sm" style={styles.accountInfoCard}>
                 <View style={styles.accountHeader}>
                     <IvyIcon
-                        label={account.name}
-                        color={account.accountType.toLowerCase() === 'liability' ? theme.liability : (account.accountType.toLowerCase() === 'expense' ? theme.expense : theme.asset)}
+                        label={account!.name}
+                        color={account!.accountType.toLowerCase() === 'liability' ? theme.liability : (account!.accountType.toLowerCase() === 'expense' ? theme.expense : theme.asset)}
                         size={48}
                     />
                     <View style={styles.titleInfo}>
                         <AppText variant="title">
-                            {account.name}
+                            {account!.name}
                         </AppText>
-                        <Badge variant={account.accountType.toLowerCase() as any}>
-                            {account.accountType}
-                        </Badge>
+                        <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
+                            <Badge variant={account!.accountType.toLowerCase() as any}>
+                                {account!.accountType}
+                            </Badge>
+                            {isDeleted && (
+                                <Badge variant="expense">
+                                    DELETED
+                                </Badge>
+                            )}
+                        </View>
                     </View>
                 </View>
 
@@ -98,7 +133,7 @@ export default function AccountDetailsScreen() {
                             Current Balance
                         </AppText>
                         <AppText variant="heading">
-                            {balanceLoading ? '...' : CurrencyFormatter.format(balance, account.currencyCode)}
+                            {balanceLoading ? '...' : CurrencyFormatter.format(balance, account!.currencyCode)}
                         </AppText>
                     </View>
 
@@ -123,34 +158,79 @@ export default function AccountDetailsScreen() {
                 </View>
             </AppCard>
 
-            {/* Transaction History */}
-            <View style={styles.transactionsSection}>
-                <AppText variant="heading" style={styles.sectionTitle}>
-                    Transaction History
-                </AppText>
+            {/* Transaction History Header */}
+            <AppText variant="heading" style={styles.sectionTitle}>
+                Transaction History
+            </AppText>
+        </>
+    );
 
-                {transactionsLoading ? (
-                    <ActivityIndicator size="small" color={theme.primary} />
-                ) : transactions.length === 0 ? (
-                    <AppCard elevation="sm" padding="lg">
-                        <AppText variant="body" color="secondary" style={styles.emptyText}>
-                            No transactions yet
-                        </AppText>
-                    </AppCard>
-                ) : (
-                    <FlatList
-                        data={transactions}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                            <TransactionItem
-                                transaction={item as any}
-                                onPress={() => router.push(`/transaction-details?journalId=${item.journalId}` as any)}
-                            />
-                        )}
-                        contentContainerStyle={{ paddingBottom: Spacing.xl }}
+    return (
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.circularButton, { backgroundColor: theme.surface }]}>
+                    <Ionicons name="arrow-back" size={24} color={theme.text} />
+                </TouchableOpacity>
+                <AppText variant="subheading" style={styles.headerTitle}>
+                    Account Details
+                </AppText>
+                <View style={styles.headerActions}>
+                    {isDeleted ? (
+                        <TouchableOpacity
+                            onPress={handleRecover}
+                            style={[styles.circularButton, { backgroundColor: theme.income + '20' }]}
+                        >
+                            <Ionicons name="refresh-outline" size={22} color={theme.income} />
+                        </TouchableOpacity>
+                    ) : (
+                        <>
+                            <TouchableOpacity
+                                onPress={() => router.push(`/account-creation?accountId=${accountId}` as any)}
+                                style={[styles.circularButton, { backgroundColor: theme.surface }]}
+                            >
+                                <Ionicons name="create-outline" size={22} color={theme.text} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleDelete}
+                                style={[styles.circularButton, { backgroundColor: theme.surface }]}
+                            >
+                                <Ionicons name="trash-outline" size={22} color={theme.error} />
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </View>
+            </View>
+
+            <FlatList
+                data={transactions}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                    <TransactionItem
+                        transaction={item as any}
+                        onPress={() => router.push(`/transaction-details?journalId=${item.journalId}` as any)}
                     />
                 )}
-            </View>
+                ListHeaderComponent={renderHeader}
+                ListEmptyComponent={
+                    transactionsLoading ? (
+                        <ActivityIndicator size="small" color={theme.primary} />
+                    ) : (
+                        <AppCard elevation="sm" padding="lg">
+                            <AppText variant="body" color="secondary" style={styles.emptyText}>
+                                No transactions yet
+                            </AppText>
+                        </AppCard>
+                    )
+                }
+                contentContainerStyle={styles.listContainer}
+            />
+
+            {!isDeleted && (
+                <FloatingActionButton
+                    onPress={() => router.push(`/journal-entry?sourceId=${accountId}` as any)}
+                />
+            )}
         </SafeAreaView>
     )
 }
@@ -256,5 +336,9 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         textAlign: 'center',
+    },
+    listContainer: {
+        paddingHorizontal: Spacing.lg,
+        paddingBottom: 100, // Space for FAB
     },
 })

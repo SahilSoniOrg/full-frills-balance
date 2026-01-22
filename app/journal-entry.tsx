@@ -1,4 +1,4 @@
-import { AppText } from '@/components/core';
+import { AppText, Badge } from '@/components/core';
 import { useTheme } from '@/hooks/use-theme';
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
@@ -8,7 +8,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountSelector } from '../components/journal/AccountSelector';
 import { AdvancedJournalForm } from '../components/journal/AdvancedJournalForm';
@@ -141,37 +141,50 @@ export default function JournalEntryScreen() {
         title={isEdit ? 'Edit Transaction' : (isGuidedMode ? 'New Transaction' : 'Journal Entry')}
       />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {!isEdit && (
-          <JournalModeToggle
-            isGuidedMode={isGuidedMode}
-            setIsGuidedMode={setIsGuidedMode}
-          />
-        )}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {isEdit && (
+            <View style={[styles.editBanner, { backgroundColor: theme.warning + '20' }]}>
+              <Badge variant="expense" size="sm">EDITING</Badge>
+              <AppText variant="caption" color="secondary" style={{ marginLeft: 8 }}>
+                You are modifying an existing transaction
+              </AppText>
+            </View>
+          )}
+          {!isEdit && (
+            <JournalModeToggle
+              isGuidedMode={isGuidedMode}
+              setIsGuidedMode={setIsGuidedMode}
+            />
+          )}
 
-        {isGuidedMode ? (
-          <SimpleJournalForm
-            accounts={accounts}
-            onSuccess={() => router.push('/(tabs)')}
-            initialType={transactionType}
-          />
-        ) : (
-          <AdvancedJournalForm
-            accounts={accounts}
-            onSuccess={() => router.push('/(tabs)')}
-            onSelectAccountRequest={(id) => {
-              setSelectedLineId(id)
-              setShowAccountPicker(true)
-            }}
-            lines={lines}
-            setLines={setLines}
-            initialDescription={initialDescription}
-            initialDate={initialDate}
-            isEdit={isEdit}
-            journalId={params.journalId as string}
-          />
-        )}
-      </ScrollView>
+          {isGuidedMode ? (
+            <SimpleJournalForm
+              accounts={accounts}
+              onSuccess={() => router.back()}
+              initialType={transactionType}
+            />
+          ) : (
+            <AdvancedJournalForm
+              accounts={accounts}
+              onSuccess={() => router.back()}
+              onSelectAccountRequest={(id) => {
+                setSelectedLineId(id)
+                setShowAccountPicker(true)
+              }}
+              lines={lines}
+              setLines={setLines}
+              initialDescription={initialDescription}
+              initialDate={initialDate}
+              isEdit={isEdit}
+              journalId={params.journalId as string}
+            />
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <AccountSelector
         visible={showAccountPicker}
@@ -194,5 +207,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  editBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
   },
 });

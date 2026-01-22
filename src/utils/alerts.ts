@@ -1,4 +1,4 @@
-import { Alert } from 'react-native'
+import { Alert, Platform } from 'react-native'
 import { handleError } from '../utils/errors'
 import { logger } from '../utils/logger'
 
@@ -31,11 +31,19 @@ export const showErrorAlert = (error: unknown, customTitle?: string) => {
       message = 'Something went wrong. Please try again.'
   }
 
-  Alert.alert(title, message)
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`)
+  } else {
+    Alert.alert(title, message)
+  }
 }
 
 export const showSuccessAlert = (title: string, message: string) => {
-  Alert.alert(title, message)
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`)
+  } else {
+    Alert.alert(title, message)
+  }
 }
 
 export const showConfirmationAlert = (
@@ -44,20 +52,30 @@ export const showConfirmationAlert = (
   onConfirm: () => void,
   onCancel?: () => void
 ) => {
-  Alert.alert(
-    title,
-    message,
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-        onPress: onCancel
-      },
-      {
-        text: 'Confirm',
-        style: 'destructive',
-        onPress: onConfirm
-      }
-    ]
-  )
+  if (Platform.OS === 'web') {
+    // Use window.confirm for web platform
+    const confirmed = window.confirm(`${title}\n\n${message}`)
+    if (confirmed) {
+      onConfirm()
+    } else {
+      onCancel?.()
+    }
+  } else {
+    Alert.alert(
+      title,
+      message,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: onCancel
+        },
+        {
+          text: 'Confirm',
+          style: 'destructive',
+          onPress: onConfirm
+        }
+      ]
+    )
+  }
 }

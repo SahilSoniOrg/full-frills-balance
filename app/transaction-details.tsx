@@ -2,8 +2,10 @@ import { AppCard, AppText, Badge } from '@/components/core'
 import { Spacing } from '@/constants'
 import { useTheme } from '@/hooks/use-theme'
 import { database } from '@/src/data/database/Database'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { TransactionWithAccountInfo } from '@/src/types/readModels'
+import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { formatDate } from '@/src/utils/dateUtils'
 import { Ionicons } from '@expo/vector-icons'
@@ -71,6 +73,30 @@ export default function TransactionDetailsScreen() {
 
   const formattedDate = journalInfo ? formatDate(journalInfo.date, { includeTime: true }) : '';
 
+  const handleDelete = () => {
+    showConfirmationAlert(
+      'Delete Transaction',
+      'Are you sure you want to delete this transaction? This action cannot be undone.',
+      async () => {
+        try {
+          const journal = await journalRepository.find(journalId);
+          if (!journal) {
+            showErrorAlert('Transaction not found. It may have already been deleted.');
+            router.back();
+            return;
+          }
+          await journalRepository.delete(journal);
+          showSuccessAlert('Deleted', 'Transaction has been deleted.');
+          router.back();
+        } catch (error) {
+          console.error('Failed to delete transaction:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          showErrorAlert(`Could not delete transaction: ${errorMessage}`);
+        }
+      }
+    );
+  };
+
   if (isLoading) return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.center}><AppText variant="body">Loading...</AppText></View>
@@ -85,12 +111,17 @@ export default function TransactionDetailsScreen() {
           <Ionicons name="close" size={24} color={theme.text} />
         </TouchableOpacity>
         <AppText variant="subheading">Transaction Details</AppText>
-        <TouchableOpacity
-          onPress={() => router.push({ pathname: '/journal-entry', params: { journalId } })}
-          style={styles.navButton}
-        >
-          <Ionicons name="create-outline" size={24} color={theme.text} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: '/journal-entry', params: { journalId } })}
+            style={styles.navButton}
+          >
+            <Ionicons name="create-outline" size={24} color={theme.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDelete} style={styles.navButton}>
+            <Ionicons name="trash-outline" size={24} color={theme.error} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -151,15 +182,22 @@ export default function TransactionDetailsScreen() {
             </AppText>
 
             {transactions.map(item => (
-              <View key={item.id} style={styles.splitRow}>
+              <TouchableOpacity
+                key={item.id}
+                style={styles.splitRow}
+                onPress={() => router.push(`/account-details?accountId=${item.accountId}` as any)}
+              >
                 <View style={styles.splitInfo}>
-                  <AppText variant="body">{item.accountName}</AppText>
+                  <AppText variant="body" color="primary">{item.accountName}</AppText>
                   <AppText variant="caption" color="secondary">{item.transactionType}</AppText>
                 </View>
-                <AppText variant="subheading">
-                  {CurrencyFormatter.format(item.amount, journalInfo?.currency)}
-                </AppText>
-              </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <AppText variant="subheading">
+                    {CurrencyFormatter.format(item.amount, journalInfo?.currency)}
+                  </AppText>
+                  <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+                </View>
+              </TouchableOpacity>
             ))}
 
           </AppCard>
@@ -241,5 +279,10 @@ const styles = StyleSheet.create({
   },
   splitInfo: {
     flex: 1,
-  }
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
 });

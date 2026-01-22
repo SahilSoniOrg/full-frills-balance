@@ -11,7 +11,7 @@ import { sanitizeInput, validateAccountName } from '@/src/utils/validation'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useState } from 'react'
-import { FlatList, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useUI } from '../contexts/UIContext'
 
@@ -23,11 +23,23 @@ export default function AccountCreationScreen() {
 
   // Edit mode state
   const accountId = params.accountId as string | undefined
+  const typeParam = params.type as string | undefined
   const isEditMode = Boolean(accountId)
   const [existingAccount, setExistingAccount] = useState<Account | null>(null)
 
+  // Parse initial account type from URL param for deep-linking
+  const getInitialAccountType = (): AccountType => {
+    if (typeParam) {
+      const upperType = typeParam.toUpperCase() as keyof typeof AccountType
+      if (Object.values(AccountType).includes(upperType as AccountType)) {
+        return upperType as AccountType
+      }
+    }
+    return AccountType.ASSET
+  }
+
   const [accountName, setAccountName] = useState('')
-  const [accountType, setAccountType] = useState<AccountType>(AccountType.ASSET)
+  const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType())
   const [selectedCurrency, setSelectedCurrency] = useState<string>(defaultCurrency || AppConfig.defaultCurrency)
   const [initialBalance, setInitialBalance] = useState('')
   const [currencies, setCurrencies] = useState<Currency[]>([])
@@ -169,113 +181,121 @@ export default function AccountCreationScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content}>
-        <AppText variant="heading" style={styles.title}>
-          {isEditMode ? 'Edit Account' : (hasExistingAccounts ? 'Create New Account' : 'Create Your First Account')}
-        </AppText>
-        <AppText variant="body" color="secondary" style={styles.subtitle}>
-          {isEditMode ? 'Update your account details' : (hasExistingAccounts ? 'Add another source of funds' : 'Start tracking your finances')}
-        </AppText>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView style={styles.content}>
+          <AppText variant="heading" style={styles.title}>
+            {isEditMode ? 'Edit Account' : (hasExistingAccounts ? 'Create New Account' : 'Create Your First Account')}
+          </AppText>
+          <AppText variant="body" color="secondary" style={styles.subtitle}>
+            {isEditMode ? 'Update your account details' : (hasExistingAccounts ? 'Add another source of funds' : 'Start tracking your finances')}
+          </AppText>
 
-        <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-          <AppInput
-            label="Account Name"
-            value={accountName}
-            onChangeText={setAccountName}
-            placeholder="e.g., Checking Account"
-            autoFocus
-            maxLength={100}
-            returnKeyType="next"
-          />
-        </AppCard>
-
-        {/* Initial Balance - only shown for new accounts */}
-        {!isEditMode && (
           <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
             <AppInput
-              label="Initial Balance"
-              value={initialBalance}
-              onChangeText={setInitialBalance}
-              placeholder="0.00"
-              keyboardType="decimal-pad"
+              label="Account Name"
+              value={accountName}
+              onChangeText={setAccountName}
+              placeholder="e.g., Checking Account"
+              autoFocus
+              maxLength={100}
               returnKeyType="next"
             />
           </AppCard>
-        )}
 
-        <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-          <AppText variant="body" style={styles.label}>Account Type{isEditMode && ' (cannot be changed)'}</AppText>
-          <View style={styles.accountTypeContainer}>
-            {accountTypes.map((type) => (
-              <TouchableOpacity
-                key={type.key}
-                style={[
-                  styles.accountTypeButton,
-                  accountType === type.key && styles.accountTypeButtonSelected,
-                  {
-                    borderColor: theme.border,
-                    backgroundColor: accountType === type.key
-                      ? theme.primary
-                      : theme.surface
-                  }
-                ]}
-                onPress={() => setAccountType(type.key as AccountType)}
-              >
-                <AppText
-                  variant="body"
+          {/* Initial Balance - only shown for new accounts */}
+          {!isEditMode && (
+            <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+              <AppInput
+                label="Initial Balance"
+                value={initialBalance}
+                onChangeText={setInitialBalance}
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+                returnKeyType="next"
+              />
+            </AppCard>
+          )}
+
+          <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+            <AppText variant="body" style={styles.label}>Account Type{isEditMode && ' (cannot be changed)'}</AppText>
+            <View style={styles.accountTypeContainer}>
+              {accountTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.key}
                   style={[
-                    styles.accountTypeText,
-                    accountType === type.key && styles.accountTypeTextSelected,
+                    styles.accountTypeButton,
+                    accountType === type.key && styles.accountTypeButtonSelected,
                     {
-                      color: accountType === type.key
-                        ? theme.pureInverse
-                        : theme.text
+                      borderColor: theme.border,
+                      backgroundColor: accountType === type.key
+                        ? theme.primary
+                        : theme.surface,
+                      opacity: isEditMode ? 0.6 : 1
                     }
                   ]}
+                  onPress={() => !isEditMode && setAccountType(type.key as AccountType)}
+                  disabled={isEditMode}
                 >
-                  {type.label}
-                </AppText>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </AppCard>
+                  <AppText
+                    variant="body"
+                    style={[
+                      styles.accountTypeText,
+                      accountType === type.key && styles.accountTypeTextSelected,
+                      {
+                        color: accountType === type.key
+                          ? theme.pureInverse
+                          : theme.text
+                      }
+                    ]}
+                  >
+                    {type.label}
+                  </AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </AppCard>
 
-        {/* Currency Selector */}
-        <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-          <AppText variant="body" style={styles.label}>Currency</AppText>
-          <TouchableOpacity
-            style={[
-              styles.input,
-              {
-                borderColor: theme.border,
-                backgroundColor: theme.surface,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }
-            ]}
-            onPress={() => setShowCurrencyModal(true)}
+          {/* Currency Selector */}
+          <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+            <AppText variant="body" style={styles.label}>Currency{isEditMode && ' (cannot be changed)'}</AppText>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.surface,
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  opacity: isEditMode ? 0.6 : 1
+                }
+              ]}
+              onPress={() => !isEditMode && setShowCurrencyModal(true)}
+              disabled={isEditMode}
+            >
+              <AppText variant="body">
+                {currencies.find(c => c.code === selectedCurrency)?.name || selectedCurrency}
+              </AppText>
+              <AppText variant="body" color="secondary">
+                {selectedCurrency} {currencies.find(c => c.code === selectedCurrency)?.symbol}
+              </AppText>
+            </TouchableOpacity>
+          </AppCard>
+
+          <AppButton
+            variant="primary"
+            size="lg"
+            onPress={handleSaveAccount}
+            disabled={!accountName.trim() || isCreating}
+            style={styles.createButton}
           >
-            <AppText variant="body">
-              {currencies.find(c => c.code === selectedCurrency)?.name || selectedCurrency}
-            </AppText>
-            <AppText variant="body" color="secondary">
-              {selectedCurrency} {currencies.find(c => c.code === selectedCurrency)?.symbol}
-            </AppText>
-          </TouchableOpacity>
-        </AppCard>
-
-        <AppButton
-          variant="primary"
-          size="lg"
-          onPress={handleSaveAccount}
-          disabled={!accountName.trim() || isCreating}
-          style={styles.createButton}
-        >
-          {isCreating ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Account')}
-        </AppButton>
-      </ScrollView>
-
+            {isCreating ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Account')}
+          </AppButton>
+        </ScrollView>
+      </KeyboardAvoidingView>
       {/* Currency Selection Modal */}
       <Modal
         visible={showCurrencyModal}

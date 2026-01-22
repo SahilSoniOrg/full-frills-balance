@@ -266,22 +266,31 @@ export default function AuditLogScreen() {
 
                                             const beforeAmt = tBefore?.amount || 0;
                                             const afterAmt = tAfter?.amount || 0;
-                                            const diff = afterAmt - beforeAmt;
+                                            const beforeType = tBefore?.type || '';
+                                            const afterType = tAfter?.type || '';
 
-                                            if (diff === 0 && tBefore && tAfter) return null; // No change for this account
+                                            const amountDiff = afterAmt - beforeAmt;
+                                            const typeChanged = beforeType !== afterType;
 
-                                            const color = diff > 0 ? theme.success : diff < 0 ? theme.error : theme.textSecondary;
-                                            const diffPrefix = diff > 0 ? '+' : '';
+                                            // Skip if no changes at all (same amount AND same type)
+                                            if (amountDiff === 0 && !typeChanged && tBefore && tAfter) return null;
 
                                             return (
                                                 <View key={accountId} style={styles.arrayItem}>
                                                     <AppText variant="caption" color="secondary" weight="semibold">• {name}</AppText>
                                                     <View style={[styles.financialDiffRow, { marginLeft: 12 }]}>
-                                                        <AppText variant="caption" color="secondary" style={{ fontSize: 10, opacity: 0.6 }}>{CurrencyFormatter.format(beforeAmt, currency)}</AppText>
-                                                        <AppText variant="caption" style={[styles.diffMarker, { fontSize: 10 }]}>:</AppText>
-                                                        <AppText variant="caption" style={[styles.diffValue, { color, fontSize: 11 }]}>{diffPrefix}{CurrencyFormatter.format(diff, currency)}</AppText>
-                                                        <AppText variant="caption" style={[styles.diffMarker, { fontSize: 10 }]}>:</AppText>
-                                                        <AppText variant="caption" color="secondary" style={{ fontSize: 10, opacity: 0.9 }}>{CurrencyFormatter.format(afterAmt, currency)}</AppText>
+                                                        <AppText variant="caption" color="secondary" style={{ fontSize: 10, opacity: 0.6 }}>
+                                                            {CurrencyFormatter.format(beforeAmt, currency)} ({beforeType})
+                                                        </AppText>
+                                                        <AppText variant="caption" style={[styles.diffMarker, { fontSize: 10 }]}>→</AppText>
+                                                        <AppText variant="caption" color="secondary" style={{ fontSize: 10, opacity: 0.9 }}>
+                                                            {CurrencyFormatter.format(afterAmt, currency)} ({afterType})
+                                                        </AppText>
+                                                        {typeChanged && (
+                                                            <AppText variant="caption" style={{ color: theme.transfer, fontSize: 10, marginLeft: 4 }}>
+                                                                (type changed)
+                                                            </AppText>
+                                                        )}
                                                     </View>
                                                 </View>
                                             );

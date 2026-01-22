@@ -492,19 +492,19 @@ export class JournalRepository {
 
       await originalJournal.update(j => { j.reversingJournalId = newReversalJournal.id })
 
-      // Log audit trail for reversal
-      await auditService.log({
-        entityType: 'journal',
-        entityId: originalJournalId,
-        action: AuditAction.UPDATE,
-        changes: {
-          action: 'REVERSED',
-          reversalJournalId: newReversalJournal.id,
-          reason: reason,
-        }
-      })
-
       return newReversalJournal
+    })
+
+    // Log audit trail OUTSIDE write block to avoid deadlocks
+    await auditService.log({
+      entityType: 'journal',
+      entityId: originalJournalId,
+      action: AuditAction.UPDATE,
+      changes: {
+        action: 'REVERSED',
+        reversalJournalId: reversalJournal.id,
+        reason: reason,
+      }
     })
 
     // Queue rebuild for background processing
@@ -521,6 +521,12 @@ export class JournalRepository {
 
     const accountIdsToRebuild = new Set(associatedTransactions.map(tx => tx.accountId))
 
+    // Capture data for audit before deletion
+    const auditData = {
+      description: journal.description,
+      totalAmount: journal.totalAmount,
+    }
+
     // 2. All mutations in single write block (atomic)
     await database.write(async () => {
       // Mark journal as soft-deleted
@@ -534,20 +540,17 @@ export class JournalRepository {
           t.deletedAt = new Date()
         })
       }
-
-      // Log audit trail
-      await auditService.log({
-        entityType: 'journal',
-        entityId: journal.id,
-        action: AuditAction.DELETE,
-        changes: {
-          description: journal.description,
-          totalAmount: journal.totalAmount,
-        }
-      })
     })
 
-    // 3. Queue rebuild for background processing
+    // 3. Log audit trail OUTSIDE write block to avoid deadlocks
+    await auditService.log({
+      entityType: 'journal',
+      entityId: journal.id,
+      action: AuditAction.DELETE,
+      changes: auditData
+    })
+
+    // 4. Queue rebuild for background processing
     rebuildQueueService.enqueueMany(accountIdsToRebuild, journal.journalDate)
   }
 

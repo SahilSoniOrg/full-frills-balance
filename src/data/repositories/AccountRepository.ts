@@ -290,16 +290,82 @@ export class AccountRepository {
     account: Account,
     updates: AccountUpdateInput
   ): Promise<Account> {
-    return account.update((acc) => {
-      Object.assign(acc, updates)
+    const beforeState = {
+      name: account.name,
+      accountType: account.accountType,
+      currencyCode: account.currencyCode,
+      description: account.description,
+      parentAccountId: account.parentAccountId
+    }
+
+    const updatedAccount = await this.db.write(async () => {
+      await account.update((acc) => {
+        Object.assign(acc, updates)
+      })
+      return account
     })
+
+    // Log update
+    await auditService.log({
+      entityType: 'account',
+      entityId: account.id,
+      action: AuditAction.UPDATE,
+      changes: {
+        before: beforeState,
+        after: updates
+      }
+    })
+
+    return updatedAccount
   }
 
   /**
    * Soft deletes an account
    */
   async delete(account: Account): Promise<void> {
-    return account.markAsDeleted()
+    const auditData = {
+      name: account.name,
+      accountType: account.accountType
+    }
+
+    await this.db.write(async () => {
+      await account.markAsDeleted()
+    })
+
+    await auditService.log({
+      entityType: 'account',
+      entityId: account.id,
+      action: AuditAction.DELETE,
+      changes: auditData
+    })
+  }
+
+  async recover(accountId: string): Promise<void> {
+    await this.db.write(async () => {
+      const account = await this.accounts.find(accountId)
+
+      // Clear deletion status and timestamp in raw record
+      const raw = {
+        ...(account as any)._raw,
+        _status: 'updated',
+        deleted_at: null
+      }
+
+      // Bypasses Model level restrictions by going to the adapter directly.
+      // Cast to any to handle potential signature variations across adapters.
+      await (this.db.adapter.batch as any)([['update', 'accounts', raw]])
+
+      // Log recovery
+      await auditService.log({
+        entityType: 'account',
+        entityId: accountId,
+        action: AuditAction.UPDATE,
+        changes: {
+          action: 'RECOVERED',
+          name: account.name
+        }
+      })
+    })
   }
 }
 
