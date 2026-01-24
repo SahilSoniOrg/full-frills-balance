@@ -3,7 +3,6 @@ import { JournalListScreen } from '@/src/features/journal/list/JournalListScreen
 import { Redirect } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import 'react-native-get-random-values';
 
 export default function IndexScreen() {
   const { hasCompletedOnboarding, isInitialized } = useUI();

@@ -1,4 +1,3 @@
-import 'react-native-get-random-values';
 
 import { ErrorBoundary } from '@/components/core';
 import { useColorScheme } from '@/hooks/use-color-scheme';
