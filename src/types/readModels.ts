@@ -1,5 +1,6 @@
 import { AccountType } from '../data/models/Account'
 import { TransactionType } from '../data/models/Transaction'
+import { JournalDisplayType } from '../domain/accounting/JournalPresenter'
 
 /**
  * Repository-owned read models for UI consumption
@@ -70,4 +71,46 @@ export interface AccountWithBalance {
   // Audit fields
   createdAt: Date
   updatedAt: Date
+}
+
+/**
+ * Enriched Journal data for UI display
+ */
+export interface EnrichedJournal {
+  id: string
+  journalDate: number
+  description?: string
+  currencyCode: string
+  status: string
+  totalAmount: number
+  transactionCount: number
+  displayType: string
+  accounts: Array<{
+    id: string
+    name: string
+    accountType: string
+  }>
+}
+
+/**
+ * Enriched transaction data for UI display
+ */
+export interface EnrichedTransaction {
+  id: string
+  journalId: string
+  accountId: string
+  amount: number
+  currencyCode: string
+  transactionType: string
+  transactionDate: number
+  notes?: string
+  journalDescription?: string
+  accountName?: string
+  accountType?: string
+  counterAccountName?: string
+  counterAccountType?: string
+  runningBalance?: number
+  displayTitle: string
+  displayType: JournalDisplayType
+  isIncrease: boolean
 }

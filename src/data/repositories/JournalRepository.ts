@@ -1,10 +1,12 @@
 import { Q } from '@nozbe/watermelondb'
 import { MIN_EXCHANGE_RATE } from '../../domain/accounting/AccountingConstants'
-import { JournalPresenter } from '../../domain/accounting/JournalPresenter'
+import { JournalDisplayType, JournalPresenter } from '../../domain/accounting/JournalPresenter'
+import { accountingService } from '../../domain/AccountingService'
 import { auditService } from '../../services/audit-service'
 import { rebuildQueueService } from '../../services/rebuild-queue-service'
+import { EnrichedJournal, EnrichedTransaction } from '../../types/readModels'
 import { logger } from '../../utils/logger'
-import { amountsAreEqual, roundToPrecision } from '../../utils/money'
+import { roundToPrecision } from '../../utils/money'
 import { sanitizeAmount } from '../../utils/validation'
 import { database } from '../database/Database'
 import Account, { AccountType } from '../models/Account'
@@ -67,25 +69,15 @@ export class JournalRepository {
     }
 
     // Validate double-entry accounting by converting transaction amounts to journal currency
-    const journalPrecision = await currencyRepository.getPrecision(journalFields.currencyCode)
+    const validationResult = accountingService.validateBalance(transactionData.map(t => ({
+      amount: t.amount,
+      type: t.transactionType,
+      exchangeRate: t.exchangeRate
+    })));
 
-    const getJournalAmount = (t: typeof transactionData[0]) => {
-      const rate = t.exchangeRate || 1
-      return roundToPrecision(t.amount * rate, journalPrecision)
-    }
-
-    const totalDebits = transactionData
-      .filter(t => t.transactionType === TransactionType.DEBIT)
-      .reduce((sum, t) => sum + getJournalAmount(t), 0)
-
-    const totalCredits = transactionData
-      .filter(t => t.transactionType === TransactionType.CREDIT)
-      .reduce((sum, t) => sum + getJournalAmount(t), 0)
-
-    // Validate double-entry accounting with absolute equality after rounding
-    if (!amountsAreEqual(totalDebits, totalCredits, journalPrecision)) {
+    if (!validationResult.isValid) {
       throw new Error(
-        `Double-entry violation: total debits (${totalDebits.toFixed(journalPrecision)}) must equal total credits (${totalCredits.toFixed(journalPrecision)}) for currency ${journalFields.currencyCode}.`
+        `Double-entry violation: imbalance of ${validationResult.imbalance.toFixed(2)} in currency ${journalFields.currencyCode}.`
       )
     }
 
@@ -109,12 +101,7 @@ export class JournalRepository {
         accountsToRebuild.add(tx.accountId)
       } else {
         let balance = latestTx?.runningBalance || 0
-        let multiplier = 0
-        if (['ASSET', 'EXPENSE'].includes(account.accountType)) {
-          multiplier = tx.transactionType === TransactionType.DEBIT ? 1 : -1
-        } else {
-          multiplier = tx.transactionType === TransactionType.CREDIT ? 1 : -1
-        }
+        const multiplier = accountingService.getBalanceImpactMultiplier(account.accountType as any, tx.transactionType)
         balance = roundToPrecision(balance + (tx.amount * multiplier), precision)
         calculatedBalances.set(tx.accountId, balance)
       }
@@ -130,7 +117,7 @@ export class JournalRepository {
         j.description = journalFields.description
         j.currencyCode = journalFields.currencyCode
         j.status = JournalStatus.POSTED
-        j.totalAmount = Math.max(Math.abs(totalDebits), Math.abs(totalCredits))
+        j.totalAmount = Math.max(Math.abs(validationResult.totalDebits), Math.abs(validationResult.totalCredits))
         j.transactionCount = transactionData.length
         j.displayType = JournalPresenter.getJournalType(transactionData, accountTypes)
       })
@@ -209,6 +196,152 @@ export class JournalRepository {
     }))
   }
 
+  /**
+   * Fetches enriched journals with account information.
+   * Centralizes logic previously in useJournals hook.
+   */
+  async findEnrichedJournals(limit: number): Promise<EnrichedJournal[]> {
+    const journals = await this.journals
+      .query(
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('journal_date', 'desc'),
+        Q.take(limit)
+      )
+      .fetch()
+
+    if (journals.length === 0) return []
+
+    const journalIds = journals.map(j => j.id)
+    const transactions = await this.transactions
+      .query(
+        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .fetch()
+
+    const accountIds = [...new Set(transactions.map(t => t.accountId))]
+    const accounts = await accountRepository.findAllByIds(accountIds)
+    const accountMap = new Map(accounts.map(a => [a.id, a]))
+
+    const txsByJournal = new Map<string, Transaction[]>()
+    transactions.forEach(tx => {
+      const existing = txsByJournal.get(tx.journalId) || []
+      existing.push(tx)
+      txsByJournal.set(tx.journalId, existing)
+    })
+
+    return journals.map(j => {
+      const journalTxs = txsByJournal.get(j.id) || []
+      const journalAccounts = journalTxs.map(tx => {
+        const acc = accountMap.get(tx.accountId) as Account | undefined
+        return {
+          id: tx.accountId,
+          name: acc?.name || 'Unknown',
+          accountType: acc?.accountType || 'ASSET'
+        }
+      })
+
+      const uniqueAccounts = Array.from(new Map(journalAccounts.map(a => [a.id, a])).values())
+
+      return {
+        id: j.id,
+        journalDate: j.journalDate,
+        description: j.description,
+        currencyCode: j.currencyCode,
+        status: j.status,
+        totalAmount: j.totalAmount || 0,
+        transactionCount: j.transactionCount || 0,
+        displayType: j.displayType || 'MIXED',
+        accounts: uniqueAccounts
+      }
+    })
+  }
+
+  /**
+   * Fetches enriched transactions for a specific account.
+   * Centralizes logic previously in useAccountTransactions hook.
+   */
+  async findEnrichedTransactionsForAccount(accountId: string, limit: number): Promise<EnrichedTransaction[]> {
+    const loadedTransactions = await this.transactions
+      .query(
+        Q.where('account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('transaction_date', 'desc'),
+        Q.take(limit)
+      )
+      .fetch()
+
+    if (loadedTransactions.length === 0) return []
+
+    const journalIds = [...new Set(loadedTransactions.map(t => t.journalId))]
+    const journals = await this.journals.query(Q.where('id', Q.oneOf(journalIds))).fetch()
+    const journalMap = new Map(journals.map(j => [j.id, j]))
+
+    const allJournalTxs = await this.transactions
+      .query(Q.where('journal_id', Q.oneOf(journalIds)), Q.where('deleted_at', Q.eq(null)))
+      .fetch()
+
+    const accountIds = [...new Set(allJournalTxs.map(t => t.accountId))]
+    const accounts = await accountRepository.findAllByIds(accountIds)
+    const accountMap = new Map(accounts.map(a => [a.id, a]))
+
+    return loadedTransactions.map(tx => {
+      const journal = journalMap.get(tx.journalId)
+      const journalTxs = allJournalTxs.filter(t => t.journalId === tx.journalId)
+      const otherLegs = journalTxs.filter(t => t.accountId !== accountId)
+      const account = accountMap.get(accountId) as Account | undefined
+
+      let displayTitle = journal?.description || ''
+      let counterAccountName: string | undefined = undefined
+      let counterAccountType: string | undefined = undefined
+
+      if (otherLegs.length === 1) {
+        const otherAcc = accountMap.get(otherLegs[0].accountId) as Account | undefined
+        displayTitle = otherAcc?.name || journal?.description || 'Offset Entry'
+        counterAccountName = otherAcc?.name
+        counterAccountType = otherAcc?.accountType
+      } else if (otherLegs.length > 1 && !journal?.description) {
+        displayTitle = 'Split'
+      }
+
+      const isIncrease = ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
+        ? tx.transactionType === 'DEBIT'
+        : tx.transactionType === 'CREDIT'
+
+      // Determine displayType for this specific leg
+      let legDisplayType = JournalDisplayType.MIXED
+      if (account?.accountType === AccountType.INCOME) legDisplayType = JournalDisplayType.INCOME
+      else if (account?.accountType === AccountType.EXPENSE) legDisplayType = JournalDisplayType.EXPENSE
+      else if (otherLegs.length > 0) {
+        const allOtherAreAL = otherLegs.every(ol => {
+          const oa = accountMap.get(ol.accountId)
+          return oa?.accountType === AccountType.ASSET || oa?.accountType === AccountType.LIABILITY
+        })
+        if (allOtherAreAL) legDisplayType = JournalDisplayType.TRANSFER
+      }
+
+      return {
+        id: tx.id,
+        journalId: tx.journalId,
+        accountId: tx.accountId,
+        amount: tx.amount,
+        currencyCode: tx.currencyCode,
+        transactionType: tx.transactionType as any,
+        transactionDate: tx.transactionDate,
+        notes: tx.notes,
+        journalDescription: journal?.description,
+        accountName: account?.name,
+        accountType: account?.accountType,
+        counterAccountName,
+        counterAccountType,
+        runningBalance: tx.runningBalance,
+        displayTitle,
+        isIncrease,
+        displayType: legDisplayType
+      }
+    })
+  }
+
   async findAll(): Promise<Journal[]> {
     return this.journals
       .query(Q.where('deleted_at', Q.eq(null)))
@@ -266,24 +399,15 @@ export class JournalRepository {
     }
 
     // Validate double-entry
-    const journalPrecision = await currencyRepository.getPrecision(journalFields.currencyCode)
+    const validationResult = accountingService.validateBalance(transactionData.map(t => ({
+      amount: t.amount,
+      type: t.transactionType,
+      exchangeRate: t.exchangeRate
+    })));
 
-    const getJournalAmount = (t: typeof transactionData[0]) => {
-      const rate = t.exchangeRate || 1
-      return roundToPrecision(t.amount * rate, journalPrecision)
-    }
-
-    const totalDebits = transactionData
-      .filter(t => t.transactionType === TransactionType.DEBIT)
-      .reduce((sum, t) => sum + getJournalAmount(t), 0)
-
-    const totalCredits = transactionData
-      .filter(t => t.transactionType === TransactionType.CREDIT)
-      .reduce((sum, t) => sum + getJournalAmount(t), 0)
-
-    if (!amountsAreEqual(totalDebits, totalCredits, journalPrecision)) {
+    if (!validationResult.isValid) {
       throw new Error(
-        `Double-entry violation: total debits (${totalDebits.toFixed(journalPrecision)}) must equal total credits (${totalCredits.toFixed(journalPrecision)}) for currency ${journalFields.currencyCode}.`
+        `Double-entry violation: imbalance of ${validationResult.imbalance.toFixed(2)} in currency ${journalFields.currencyCode}.`
       )
     }
 
@@ -337,12 +461,7 @@ export class JournalRepository {
         accountsToRebuild.add(tx.accountId)
       } else {
         let balance = latestOtherTx?.runningBalance || 0
-        let multiplier = 0
-        if (['ASSET', 'EXPENSE'].includes(account.accountType)) {
-          multiplier = tx.transactionType === TransactionType.DEBIT ? 1 : -1
-        } else {
-          multiplier = tx.transactionType === TransactionType.CREDIT ? 1 : -1
-        }
+        const multiplier = accountingService.getBalanceImpactMultiplier(account.accountType as any, tx.transactionType)
         balance = roundToPrecision(balance + (tx.amount * multiplier), precision)
         calculatedBalances.set(tx.accountId, balance)
       }
@@ -386,7 +505,7 @@ export class JournalRepository {
       }
 
       // 3. Calculate new denormalized fields
-      const newTotalAmount = Math.max(Math.abs(totalDebits), Math.abs(totalCredits))
+      const newTotalAmount = Math.max(Math.abs(validationResult.totalDebits), Math.abs(validationResult.totalCredits))
       const newTransactionCount = transactionData.length
       const newDisplayType = JournalPresenter.getJournalType(transactionData, accountTypes)
 

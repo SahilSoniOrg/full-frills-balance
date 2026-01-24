@@ -4,9 +4,10 @@ import { DashboardSummary } from '@/components/journal/DashboardSummary';
 import { JournalCard } from '@/components/journal/JournalCard';
 import { Spacing } from '@/constants'; // Removed useThemeColors
 import { useUI } from '@/contexts/UIContext'; // Changed useUser to useUI
-import { EnrichedJournal, useJournals, useNetWorth } from '@/hooks/use-data';
+import { useJournals, useNetWorth } from '@/hooks/use-data';
 import { useSummary } from '@/hooks/use-summary';
 import { useTheme } from '@/hooks/use-theme';
+import { EnrichedJournal } from '@/src/types/readModels';
 import { FlashList } from '@shopify/flash-list';
 import { usePathname, useRouter } from 'expo-router'; // Added usePathname
 import React from 'react';

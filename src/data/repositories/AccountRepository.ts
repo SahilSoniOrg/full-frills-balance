@@ -232,6 +232,14 @@ export class AccountRepository {
   }
 
   /**
+   * Fetches multiple accounts by ID in a single batch.
+   */
+  async findAllByIds(ids: string[]): Promise<Account[]> {
+    if (ids.length === 0) return []
+    return this.accounts.query(Q.where('id', Q.oneOf(ids))).fetch()
+  }
+
+  /**
    * Finds an account by name
    */
   async findByName(name: string): Promise<Account | null> {

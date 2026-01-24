@@ -9,10 +9,11 @@ import { Q } from '@nozbe/watermelondb'
 import { database } from '../data/database/Database'
 import Account from '../data/models/Account'
 import { JournalStatus } from '../data/models/Journal'
-import Transaction, { TransactionType } from '../data/models/Transaction'
+import Transaction from '../data/models/Transaction'
 import { accountRepository } from '../data/repositories/AccountRepository'
 import { transactionRepository } from '../data/repositories/TransactionRepository'
 import { BALANCE_EPSILON } from '../domain/accounting/AccountingConstants'
+import { accountingService } from '../domain/AccountingService'
 import { logger } from '../utils/logger'
 
 export interface BalanceVerificationResult {
@@ -44,24 +45,6 @@ export class IntegrityService {
             throw new Error(`Account ${accountId} not found`)
         }
 
-        // Determine balance direction based on account type
-        let debitMult = 0
-        let creditMult = 0
-
-        switch (account.accountType) {
-            case 'ASSET':
-            case 'EXPENSE':
-                debitMult = 1
-                creditMult = -1
-                break
-            case 'LIABILITY':
-            case 'EQUITY':
-            case 'INCOME':
-                debitMult = -1
-                creditMult = 1
-                break
-        }
-
         // Fetch all posted, non-deleted transactions for this account
         const transactions = await database.collections.get<Transaction>('transactions')
             .query(
@@ -77,10 +60,8 @@ export class IntegrityService {
         // Sum up all transactions
         let balance = 0
         for (const tx of transactions) {
-            const amount = tx.transactionType === TransactionType.DEBIT
-                ? tx.amount * debitMult
-                : tx.amount * creditMult
-            balance += amount
+            const multiplier = accountingService.getBalanceImpactMultiplier(account.accountType as any, tx.transactionType)
+            balance += tx.amount * multiplier
         }
 
         return balance

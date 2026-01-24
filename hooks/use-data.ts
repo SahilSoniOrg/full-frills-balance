@@ -8,6 +8,8 @@ import Account from '@/src/data/models/Account'
 import Journal from '@/src/data/models/Journal'
 import Transaction from '@/src/data/models/Transaction'
 import { AccountBalance, accountRepository } from '@/src/data/repositories/AccountRepository'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { EnrichedJournal, EnrichedTransaction } from '@/src/types/readModels'
 import { Q } from '@nozbe/watermelondb'
 import { useDatabase } from '@nozbe/watermelondb/react'
 import { useEffect, useRef, useState } from 'react'
@@ -69,25 +71,6 @@ export function useAccountsByType(accountType: string) {
  * @param pageSize - Number of journals to load per page (default 50)
  */
 /**
- * Enriched Journal data for UI display
- */
-export interface EnrichedJournal {
-    id: string
-    journalDate: number
-    description?: string
-    currencyCode: string
-    status: string
-    totalAmount: number
-    transactionCount: number
-    displayType: string
-    accounts: Array<{
-        id: string
-        name: string
-        accountType: string
-    }>
-}
-
-/**
  * Hook to reactively get journals with pagination and account enrichment
  */
 export function useJournals(pageSize: number = 50) {
@@ -103,72 +86,14 @@ export function useJournals(pageSize: number = 50) {
         const subscription = collection
             .query(
                 Q.where('deleted_at', Q.eq(null)),
-                Q.sortBy('journal_date', Q.desc),
+                Q.sortBy('journal_date', 'desc'),
                 Q.take(currentLimit)
             )
             .observe()
-            .subscribe(async (loadedJournals) => {
-                if (loadedJournals.length === 0) {
-                    setJournals([])
-                    setIsLoading(false)
-                    setIsLoadingMore(false)
-                    return
-                }
-
-                // Collect all journal IDs to fetch transactions in batch
-                const journalIds = loadedJournals.map(j => j.id)
-                const transactions = await database.collections.get<Transaction>('transactions')
-                    .query(
-                        Q.where('journal_id', Q.oneOf(journalIds)),
-                        Q.where('deleted_at', Q.eq(null))
-                    )
-                    .fetch()
-
-                // Collect all account IDs to fetch accounts in batch
-                const accountIds = [...new Set(transactions.map(t => t.accountId))]
-                const accounts = await database.collections.get<Account>('accounts')
-                    .query(Q.where('id', Q.oneOf(accountIds)))
-                    .fetch()
-                const accountMap = new Map(accounts.map(a => [a.id, a]))
-
-                // Group transactions by journal
-                const txsByJournal = new Map<string, Transaction[]>()
-                transactions.forEach(tx => {
-                    const existing = txsByJournal.get(tx.journalId) || []
-                    existing.push(tx)
-                    txsByJournal.set(tx.journalId, existing)
-                })
-
-                // Build enriched journals
-                const enriched: EnrichedJournal[] = loadedJournals.map(j => {
-                    const journalTxs = txsByJournal.get(j.id) || []
-                    const journalAccounts = journalTxs.map(tx => {
-                        const acc = accountMap.get(tx.accountId)
-                        return {
-                            id: tx.accountId,
-                            name: acc?.name || 'Unknown',
-                            accountType: acc?.accountType || 'ASSET'
-                        }
-                    })
-
-                    // De-duplicate accounts for display
-                    const uniqueAccounts = Array.from(new Map(journalAccounts.map(a => [a.id, a])).values())
-
-                    return {
-                        id: j.id,
-                        journalDate: j.journalDate,
-                        description: j.description,
-                        currencyCode: j.currencyCode,
-                        status: j.status,
-                        totalAmount: j.totalAmount,
-                        transactionCount: j.transactionCount,
-                        displayType: j.displayType,
-                        accounts: uniqueAccounts
-                    }
-                })
-
+            .subscribe(async (loaded) => {
+                const enriched = await journalRepository.findEnrichedJournals(currentLimit)
                 setJournals(enriched)
-                setHasMore(loadedJournals.length >= currentLimit)
+                setHasMore(loaded.length >= currentLimit)
                 setIsLoading(false)
                 setIsLoadingMore(false)
             })
@@ -186,143 +111,45 @@ export function useJournals(pageSize: number = 50) {
 }
 
 /**
- * Enriched transaction data for UI display
+ * Custom hook to get reactively updated transactions for an account
  */
-export interface EnrichedTransaction {
-    id: string
-    journalId: string
-    amount: number
-    transactionType: string
-    transactionDate: number
-    notes?: string
-    journalDescription?: string
-    accountName?: string
-    accountType?: string
-    counterAccountName?: string
-    counterAccountType?: string
-    runningBalance?: number
-    displayTitle: string
-    isIncrease: boolean
-}
-
-/**
- * Hook to reactively get transactions for an account
- * Optimized with batch fetching to avoid N+1 queries
- */
-export function useAccountTransactions(accountId: string | null) {
+export function useAccountTransactions(accountId: string, pageSize: number = 50) {
     const database = useDatabase()
     const [transactions, setTransactions] = useState<EnrichedTransaction[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const [currentLimit, setCurrentLimit] = useState(pageSize)
 
     useEffect(() => {
-        if (!accountId) {
-            setTransactions([])
-            setIsLoading(false)
-            return
-        }
-
         const collection = database.collections.get<Transaction>('transactions')
         const subscription = collection
             .query(
                 Q.where('account_id', accountId),
                 Q.where('deleted_at', Q.eq(null)),
-                Q.sortBy('transaction_date', Q.desc)
+                Q.sortBy('transaction_date', Q.desc),
+                Q.take(currentLimit)
             )
             .observe()
-            .subscribe(async (txs) => {
-                if (txs.length === 0) {
-                    setTransactions([])
-                    setIsLoading(false)
-                    return
-                }
-
-                // Batch fetch all related data in 3 queries instead of N*3
-                const journalIds = [...new Set(txs.map(tx => tx.journalId))]
-                const journals = await database.collections.get<Journal>('journals')
-                    .query(Q.where('id', Q.oneOf(journalIds)))
-                    .fetch()
-                const journalMap = new Map(journals.map(j => [j.id, j]))
-
-                // Get the account for this view 
-                const account = await database.collections.get<Account>('accounts')
-                    .find(accountId)
-
-                // Get all transactions for these journals to find counterparties
-                const allJournalTxs = await database.collections.get<Transaction>('transactions')
-                    .query(
-                        Q.where('journal_id', Q.oneOf(journalIds)),
-                        Q.where('deleted_at', Q.eq(null))
-                    )
-                    .fetch()
-
-                // Get all related accounts for counterparties
-                const allAccountIds = [...new Set(allJournalTxs.map(tx => tx.accountId))]
-                const allAccounts = await database.collections.get<Account>('accounts')
-                    .query(Q.where('id', Q.oneOf(allAccountIds)))
-                    .fetch()
-                const accountMap = new Map(allAccounts.map(a => [a.id, a]))
-
-                // Group transactions by journal for finding counterparties
-                const txsByJournal = new Map<string, Transaction[]>()
-                allJournalTxs.forEach(tx => {
-                    const existing = txsByJournal.get(tx.journalId) || []
-                    existing.push(tx)
-                    txsByJournal.set(tx.journalId, existing)
-                })
-
-                // Build enriched transactions
-                const enriched: EnrichedTransaction[] = txs.map(tx => {
-                    const journal = journalMap.get(tx.journalId)
-                    const journalTxs = txsByJournal.get(tx.journalId) || []
-                    const otherLegs = journalTxs.filter(t => t.accountId !== accountId)
-
-                    let displayTitle = journal?.description || ''
-                    let counterAccountName: string | undefined = undefined
-                    let counterAccountType: string | undefined = undefined
-
-                    if (otherLegs.length === 1) {
-                        const otherAcc = accountMap.get(otherLegs[0].accountId)
-                        displayTitle = otherAcc?.name || journal?.description || 'Offset Entry'
-                        counterAccountName = otherAcc?.name
-                        counterAccountType = otherAcc?.accountType
-                    } else if (otherLegs.length > 1 && !journal?.description) {
-                        displayTitle = 'Split'
-                    }
-
-                    // Accounting logic for increase/decrease
-                    const isDebitIncrease = ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
-                    const isIncrease = isDebitIncrease
-                        ? tx.transactionType === 'DEBIT'
-                        : tx.transactionType === 'CREDIT'
-
-                    return {
-                        id: tx.id,
-                        journalId: tx.journalId,
-                        amount: tx.amount,
-                        transactionType: tx.transactionType,
-                        transactionDate: tx.transactionDate,
-                        notes: tx.notes,
-                        journalDescription: journal?.description,
-                        accountName: account?.name,
-                        accountType: account?.accountType,
-                        counterAccountName,
-                        counterAccountType,
-                        runningBalance: tx.runningBalance,
-                        displayTitle,
-                        isIncrease
-                    }
-                })
-
+            .subscribe(async (loaded) => {
+                const enriched = await journalRepository.findEnrichedTransactionsForAccount(accountId, currentLimit)
                 setTransactions(enriched)
+                setHasMore(loaded.length >= currentLimit)
                 setIsLoading(false)
+                setIsLoadingMore(false)
             })
 
         return () => subscription.unsubscribe()
-    }, [database, accountId])
+    }, [database, accountId, currentLimit])
 
-    return { transactions, isLoading }
+    const loadMore = () => {
+        if (isLoadingMore || !hasMore) return
+        setIsLoadingMore(true)
+        setCurrentLimit(prev => prev + pageSize)
+    }
+
+    return { transactions, isLoading, isLoadingMore, hasMore, loadMore }
 }
-
 /**
  * Hook to reactively get transactions for a specific journal with account names
  */

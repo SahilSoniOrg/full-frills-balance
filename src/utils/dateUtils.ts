@@ -15,16 +15,16 @@ export interface DateRange {
  * @returns Formatted date string
  */
 export const formatDate = (
-  timestamp: number, 
+  value: number | Date,
   options: {
     includeTime?: boolean;
     locale?: string;
   } = {}
 ): string => {
   const { includeTime = false, locale = 'en-US' } = options;
-  
+  const timestamp = typeof value === 'number' ? value : value.getTime();
   const date = new Date(timestamp);
-  
+
   if (includeTime) {
     return date.toLocaleString(locale, {
       year: 'numeric',
@@ -34,7 +34,7 @@ export const formatDate = (
       minute: '2-digit',
     });
   }
-  
+
   return date.toLocaleString(locale, {
     year: 'numeric',
     month: 'short',
@@ -47,7 +47,8 @@ export const formatDate = (
  * @param timestamp Unix timestamp in milliseconds
  * @returns Short date string
  */
-export const formatShortDate = (timestamp: number): string => {
+export const formatShortDate = (value: number | Date): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
   const date = new Date(timestamp);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -61,7 +62,8 @@ export const formatShortDate = (timestamp: number): string => {
  * @param timestamp Unix timestamp in milliseconds
  * @returns Time string
  */
-export const formatTime = (timestamp: number): string => {
+export const formatTime = (value: number | Date): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
   const date = new Date(timestamp);
   return date.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -74,13 +76,14 @@ export const formatTime = (timestamp: number): string => {
  * @param timestamp Unix timestamp in milliseconds
  * @returns Relative time string
  */
-export const formatRelativeTime = (timestamp: number): string => {
+export const formatRelativeTime = (value: number | Date): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
   const now = Date.now();
   const diffMs = now - timestamp;
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  
+
   if (diffDays > 0) {
     return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
   } else if (diffHours > 0) {
@@ -179,59 +182,59 @@ export const createDateRange = (
 ): DateRange => {
   const now = timestamp;
   const date = new Date(now);
-  
+
   switch (period) {
     case 'today':
       return {
         startDate: getStartOfDay(now),
         endDate: getEndOfDay(now)
       };
-      
+
     case 'week':
       return {
         startDate: getStartOfWeek(now),
         endDate: getEndOfWeek(now)
       };
-      
+
     case 'month':
       return {
         startDate: getStartOfMonth(now),
         endDate: getEndOfMonth(now)
       };
-      
+
     case 'quarter':
       const currentMonth = date.getMonth();
       const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
       const quarterEndMonth = quarterStartMonth + 2;
-      
+
       const quarterStart = new Date(now);
       quarterStart.setMonth(quarterStartMonth, 1);
       quarterStart.setHours(0, 0, 0, 0);
-      
+
       const quarterEnd = new Date(now);
       quarterEnd.setMonth(quarterEndMonth + 1, 0); // Next month, day 0
       quarterEnd.setDate(0);
       quarterEnd.setHours(23, 59, 59, 999);
-      
+
       return {
         startDate: quarterStart.getTime(),
         endDate: quarterEnd.getTime()
       };
-      
+
     case 'year':
       const yearStart = new Date(now);
       yearStart.setMonth(0, 1);
       yearStart.setHours(0, 0, 0, 0);
-      
+
       const yearEnd = new Date(now);
       yearEnd.setMonth(11, 31); // December 31st
       yearEnd.setHours(23, 59, 59, 999);
-      
+
       return {
         startDate: yearStart.getTime(),
         endDate: yearEnd.getTime()
       };
-      
+
     default:
       return {
         startDate: getStartOfDay(now),
