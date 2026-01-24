@@ -49,6 +49,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     ]);
     const [description, setDescription] = useState('');
     const [journalDate, setJournalDate] = useState(new Date().toISOString().split('T')[0]);
+    const [journalTime, setJournalTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Load initial data for edit mode
@@ -58,8 +59,10 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 try {
                     const journal = await database.collections.get('journals').find(journalId) as any;
                     if (journal) {
+                        const dateObj = new Date(journal.journalDate);
                         setDescription(journal.description || '');
-                        setJournalDate(new Date(journal.journalDate).toISOString().split('T')[0]);
+                        setJournalDate(dateObj.toISOString().split('T')[0]);
+                        setJournalTime(dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
 
                         const txs = await transactionRepository.findByJournalWithAccountInfo(journalId);
                         if (txs.length > 0) {
@@ -138,10 +141,19 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
             return;
         }
 
+        const distinctValidation = accountingService.validateDistinctAccounts(lines.map(l => l.accountId));
+        if (!distinctValidation.isValid) {
+            showErrorAlert('A journal entry must involve at least 2 distinct accounts');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
+            // Merge Date and Time
+            const combinedTimestamp = new Date(`${journalDate}T${journalTime}`).getTime();
+
             const journalData: CreateJournalData = {
-                journalDate: new Date(journalDate).getTime(),
+                journalDate: combinedTimestamp,
                 description: description.trim(),
                 currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
                 transactions: lines.map(l => ({
@@ -181,6 +193,8 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         setDescription,
         journalDate,
         setJournalDate,
+        journalTime,
+        setJournalTime,
         isSubmitting,
         addLine,
         removeLine,

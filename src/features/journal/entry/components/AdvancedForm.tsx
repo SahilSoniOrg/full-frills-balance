@@ -59,13 +59,22 @@ export const AdvancedForm = ({
             </AppCard>
 
             <AppCard elevation="sm" padding="lg" style={styles.inputCard}>
-                <AppInput
-                    label="Date"
-                    value={editor.journalDate}
-                    onChangeText={editor.setJournalDate}
-                    placeholder="YYYY-MM-DD"
-                    containerStyle={{ marginBottom: Spacing.md }}
-                />
+                <View style={styles.dateTimeRow}>
+                    <AppInput
+                        label="Date"
+                        value={editor.journalDate}
+                        onChangeText={editor.setJournalDate}
+                        placeholder="YYYY-MM-DD"
+                        containerStyle={styles.dateTimeInput}
+                    />
+                    <AppInput
+                        label="Time"
+                        value={editor.journalTime}
+                        onChangeText={editor.setJournalTime}
+                        placeholder="HH:mm"
+                        containerStyle={styles.dateTimeInput}
+                    />
+                </View>
 
                 <AppInput
                     label="Description"
@@ -123,6 +132,8 @@ export const AdvancedForm = ({
 const styles = StyleSheet.create({
     titleCard: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
     inputCard: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
+    dateTimeRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
+    dateTimeInput: { flex: 1 },
     linesCard: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
     textArea: { height: 80, textAlignVertical: 'top' },
     linesHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },

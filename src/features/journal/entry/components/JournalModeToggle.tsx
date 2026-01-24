@@ -1,4 +1,4 @@
-import { AppCard, AppText } from '@/components/core';
+import { AppText } from '@/components/core';
 import { Shape, Spacing } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import React from 'react';
@@ -13,62 +13,58 @@ export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode }: JournalMode
     const { theme } = useTheme();
 
     return (
-        <AppCard elevation="sm" padding="lg" style={styles.modeToggleCard}>
-            <View style={[styles.modeToggleContainer, { backgroundColor: theme.surfaceSecondary }]}>
-                <TouchableOpacity
-                    style={[
-                        styles.modeButton,
-                        isGuidedMode && styles.modeButtonActive,
-                        { backgroundColor: isGuidedMode ? theme.primary : 'transparent' }
-                    ]}
-                    onPress={() => setIsGuidedMode(true)}
+        <View style={[styles.modeToggleContainer, { backgroundColor: theme.surfaceSecondary }]}>
+            <TouchableOpacity
+                style={[
+                    styles.modeButton,
+                    { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
+                    isGuidedMode && Shape.elevation.sm
+                ]}
+                onPress={() => setIsGuidedMode(true)}
+            >
+                <AppText
+                    variant="body"
+                    weight={isGuidedMode ? "bold" : "medium"}
+                    style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
                 >
-                    <AppText
-                        variant="body"
-                        style={{ color: isGuidedMode ? theme.pureInverse : theme.text }}
-                    >
-                        Simple
-                    </AppText>
-                </TouchableOpacity>
+                    Simple
+                </AppText>
+            </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[
-                        styles.modeButton,
-                        !isGuidedMode && styles.modeButtonActive,
-                        { backgroundColor: !isGuidedMode ? theme.primary : 'transparent' }
-                    ]}
-                    onPress={() => setIsGuidedMode(false)}
+            <TouchableOpacity
+                style={[
+                    styles.modeButton,
+                    { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
+                    !isGuidedMode && Shape.elevation.sm
+                ]}
+                onPress={() => setIsGuidedMode(false)}
+            >
+                <AppText
+                    variant="body"
+                    weight={!isGuidedMode ? "bold" : "medium"}
+                    style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
                 >
-                    <AppText
-                        variant="body"
-                        style={{ color: !isGuidedMode ? theme.pureInverse : theme.text }}
-                    >
-                        Advanced
-                    </AppText>
-                </TouchableOpacity>
-            </View>
-        </AppCard>
+                    Advanced
+                </AppText>
+            </TouchableOpacity>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    modeToggleCard: {
-        marginHorizontal: Spacing.lg,
-        marginBottom: Spacing.md,
-    },
     modeToggleContainer: {
         flexDirection: 'row',
         borderRadius: Shape.radius.full,
-        padding: Spacing.xs,
+        padding: 4,
+        marginHorizontal: Spacing.lg,
+        marginVertical: Spacing.md,
     },
     modeButton: {
         flex: 1,
-        paddingVertical: Spacing.sm,
+        paddingVertical: 10,
         paddingHorizontal: Spacing.md,
         borderRadius: Shape.radius.full,
         alignItems: 'center',
-    },
-    modeButtonActive: {
-        ...Shape.elevation.sm,
+        justifyContent: 'center',
     },
 });

@@ -113,6 +113,17 @@ export class AccountingService {
             totalCredits
         };
     }
+
+    /**
+     * Ensures that a journal entry involves at least two distinct accounts.
+     */
+    validateDistinctAccounts(accountIds: string[]): { isValid: boolean; uniqueCount: number } {
+        const uniqueAccounts = new Set(accountIds.filter(id => !!id));
+        return {
+            isValid: uniqueAccounts.size >= 2,
+            uniqueCount: uniqueAccounts.size
+        };
+    }
 }
 
 export const accountingService = new AccountingService();
