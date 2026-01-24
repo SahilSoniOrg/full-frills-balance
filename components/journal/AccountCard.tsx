@@ -1,5 +1,5 @@
 import { AppCard, AppText, Badge, IvyIcon } from '@/components/core';
-import { Shape, Spacing } from '@/constants';
+import { Shape, Spacing, withOpacity } from '@/constants';
 import { useUI } from '@/contexts/UIContext';
 import { useAccountBalance } from '@/hooks/use-data';
 import { useTheme } from '@/hooks/use-theme';
@@ -43,7 +43,7 @@ export const AccountCard = ({ account, onPress, initialBalanceData }: AccountCar
 
     const contrastColor = getContrastColor(accentColor);
     const textColor = contrastColor === 'white' ? '#FFFFFF' : '#000000';
-    const subTextColor = contrastColor === 'white' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)';
+    const subTextColor = withOpacity(textColor, 0.7);
 
     return (
         <AppCard

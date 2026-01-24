@@ -303,7 +303,7 @@ export default function AccountCreationScreen() {
         transparent
         onRequestClose={() => setShowCurrencyModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
               <AppText variant="heading">Select Currency</AppText>
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // backgroundColor handled in component
     justifyContent: 'flex-end',
   },
   modalContent: {

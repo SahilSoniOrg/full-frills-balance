@@ -251,40 +251,48 @@ export const Shape = {
 } as const
 
 // === IVY PALETTE ===
-// Raw colors from Ivy Wallet source code
+// Exact colors from Ivy Wallet source code (IvyColors.kt)
 export const Palette = {
-  white: '#FAFAFA',
-  black: '#111114',
-  trueBlack: '#000000',
+  // Neutrals
+  white: '#FAFAFC', // IvyColors.White
+  extraLightGray: '#EBEBF0', // IvyColors.ExtraLightGray
+  lightGray: '#CBCBD6', // IvyColors.LightGray
+  gray: '#74747A', // IvyColors.Gray
+  darkGray: '#303033', // IvyColors.DarkGray
+  extraDarkGray: '#1C1C1F', // IvyColors.ExtraDarkGray
+  black: '#09090A', // IvyColors.Black
+  trueBlack: '#000000', // IvyColors.TrueBlack
 
-  // Primary
-  ivy: '#6B4DFF',
-  purple: '#6B4DFF',
-  purple1: '#C34CFF',
-  purple2: '#FF4CFF',
+  // Purple (Primary)
+  purple: '#5C3DF5', // IvyColors.Purple.primary
+  purpleLight: '#9987F5', // IvyColors.Purple.light
+  purpleDark: '#36248F', // IvyColors.Purple.dark
+  purpleExtraLight: '#B8ABF5', // IvyColors.Purple.extraLight
 
-  blue: '#4CC3FF',
-  blue2: '#45E6E6',
-  blue3: '#457BE6',
+  // Green (Success/Income)
+  green: '#12B880', // IvyColors.Green.primary
+  greenLight: '#5AE0B4', // IvyColors.Green.light
+  greenDark: '#0C7A56', // IvyColors.Green.dark
+  greenExtraLight: '#ABF5DC', // IvyColors.Green.extraLight
 
-  green: '#14CC9E',
-  green2: '#45E67B',
-  green3: '#96E645',
-  green4: '#C7E62E',
+  // Red (Error/Expense)
+  red: '#F53D3D', // IvyColors.Red.primary
+  redLight: '#F5AB87', // IvyColors.Red.light (Salmon-ish)
+  redDark: '#8F2424', // IvyColors.Red.dark
+  redExtraLight: '#F5ABAB', // IvyColors.Red.extraLight
 
-  yellow: '#FFEE33',
-  orange: '#F29F30',
-  orange2: '#E67B45',
-  orange3: '#FFC34C',
+  // Orange (Warning)
+  orange: '#F57A3D', // IvyColors.Orange.primary
+  orangeLight: '#F5AB87', // IvyColors.Orange.light
+  orangeDark: '#8F4724', // IvyColors.Orange.dark
 
-  red: '#FF4060',
-  red2: '#E62E2E',
-  red3: '#FF4CA6',
+  // Blue (Asset)
+  blue: '#3193F5', // IvyColors.Blue.primary
+  blueLight: '#87BEF5', // IvyColors.Blue.light
+  blueDark: '#24598F', // IvyColors.Blue.dark
 
-  // Neutral
-  mediumBlack: '#2B2C2D',
-  gray: '#939199',
-  mediumWhite: '#EFEEF0',
+  // Yellow
+  yellow: '#F5D018', // IvyColors.Yellow.primary
 } as const
 
 // === THEME TYPES ===
@@ -320,19 +328,19 @@ export interface Theme {
 // === SEMANTIC COLORS ===
 // Ivy Wallet inspired clean color palette
 export const Colors: { light: Theme; dark: Theme } = {
-  // Light theme
+  // Light theme - Matches IvyMaterial3Theme ivyLightColorScheme
   light: {
     // Primary colors
     primary: Palette.purple,
-    primaryLight: '#D5CCFF',    // IvyLight
+    primaryLight: Palette.purpleExtraLight, // Using ExtraLight for nicer backgrounds than Light
 
     // Semantic colors
     success: Palette.green,
-    successLight: '#AAF2E0',    // GreenLight
+    successLight: Palette.greenExtraLight, // Lighter tint for backgrounds
     warning: Palette.orange,
-    warningLight: '#FFDEB3',    // OrangeLight
+    warningLight: '#FFE8D6', // Custom softer orange tint (Ivy's orangeLight is same as redLight)
     error: Palette.red,
-    errorLight: '#FFCCD5',      // RedLight
+    errorLight: Palette.redExtraLight,     // Using ExtraLight as Light is too dark/orange
 
     // Account type colors
     asset: Palette.blue,
@@ -344,56 +352,57 @@ export const Colors: { light: Theme; dark: Theme } = {
 
     // Neutral colors
     background: Palette.white,
-    surface: '#F1F1F4',         // Medium in Ivy Light
-    surfaceSecondary: '#E5E5E8',
-    border: '#EBEBEF',
+    surface: Palette.white,        // Ivy uses White for surface
+    surfaceSecondary: Palette.extraLightGray, // Ivy uses SurfaceVariant
+    border: Palette.extraLightGray,
     text: Palette.black,
     textSecondary: Palette.gray,
-    textTertiary: '#B1B1B8',
+    textTertiary: Palette.lightGray,
     icon: Palette.gray,
 
     // Special colors
-    overlay: 'rgba(0, 0, 0, 0.5)',
-    divider: '#EBEBEF',
+    overlay: 'rgba(9, 9, 10, 0.5)',
+    divider: Palette.extraLightGray,
     pure: '#FFFFFF',
     pureInverse: '#000000',
   },
 
-  // Dark theme
+  // Dark theme - Matches IvyMaterial3Theme ivyDarkColorScheme
   dark: {
     // Primary colors
     primary: Palette.purple,
-    primaryLight: '#352680',    // IvyDark
+    primaryLight: Palette.purpleDark,    // Darker tint for backgrounds
 
     // Semantic colors
     success: Palette.green,
-    successLight: '#0A664F',    // GreenDark
+    successLight: Palette.greenDark,
     warning: Palette.orange,
-    warningLight: '#734B17',    // OrangeDark
+    warningLight: Palette.orangeDark,
     error: Palette.red,
-    errorLight: '#801919',      // RedDark
+    errorLight: Palette.redDark,
 
     // Account type colors
-    asset: '#266280',           // BlueDark
-    liability: '#806226',        // Orange3Dark
-    equity: '#0A664F',          // GreenDark
-    income: '#14CC9E',          // Green
-    expense: '#FF4060',         // Red
+    asset: Palette.blue,
+    liability: Palette.orange,
+    equity: Palette.green,
+    income: Palette.green,
+    expense: Palette.red,
     transfer: Palette.purple,
 
     // Neutral colors
-    background: Palette.black,
-    surface: '#1B1C20',         // Medium in Ivy Dark
-    surfaceSecondary: '#25262B',
-    border: '#2A2B32',
-    text: '#FAFAFC',            // White in Ivy
-    textSecondary: Palette.gray,
-    textTertiary: '#5C5C64',
-    icon: Palette.gray,
+    background: Palette.black,   // Ivy uses Black or TrueBlack
+    surface: Palette.extraDarkGray, // Ivy SurfaceVariant for dark is ExtraDarkGray? No, Surface is TrueBlack/Black.
+    // Let's use ExtraDarkGray for cards to separate from Black background
+    surfaceSecondary: '#25252A',   // Slightly lighter than ExtraDarkGray
+    border: Palette.darkGray,
+    text: Palette.white,
+    textSecondary: Palette.lightGray,
+    textTertiary: Palette.gray,
+    icon: Palette.lightGray,
 
     // Special colors
-    overlay: 'rgba(0, 0, 0, 0.7)',
-    divider: '#2A2B32',
+    overlay: 'rgba(0, 0, 0, 0.8)',
+    divider: Palette.darkGray,
     pure: '#000000',
     pureInverse: '#FFFFFF',
   },

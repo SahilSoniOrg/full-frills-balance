@@ -1,5 +1,5 @@
 import { AppButton, AppCard, AppText } from '@/components/core';
-import { Spacing } from '@/constants';
+import { Spacing, withOpacity } from '@/constants';
 import { useUI } from '@/contexts/UIContext';
 import { useTheme } from '@/hooks/use-theme';
 import { exportService } from '@/src/services/export-service';
@@ -163,7 +163,7 @@ export default function SettingsScreen() {
                         ))}
                     </View>
 
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
                     <View style={styles.rowBetween}>
                         <View style={{ flex: 1 }}>
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
                         Export to JSON
                     </AppButton>
 
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
                     <AppText variant="body" style={styles.cardDesc}>
                         View all changes made to your data for auditing and debugging.
@@ -230,7 +230,7 @@ export default function SettingsScreen() {
                 <AppText variant="subheading" style={[styles.sectionTitle, { color: theme.error }]}>
                     Danger Zone
                 </AppText>
-                <AppCard elevation="sm" padding="md" style={[styles.card, { borderColor: theme.error + '44', borderWidth: 1 }]}>
+                <AppCard elevation="sm" padding="md" style={[styles.card, { borderColor: withOpacity(theme.error, 0.25), borderWidth: 1 }]}>
                     <AppText variant="body" style={styles.cardDesc}>
                         Permanently delete soft-deleted records to free up space.
                     </AppText>
@@ -243,7 +243,7 @@ export default function SettingsScreen() {
                         Cleanup Deleted Data
                     </AppButton>
 
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
                     <AppText variant="body" style={styles.cardDesc}>
                         Wipe all data and reset the app to its original state.
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(0,0,0,0.1)',
+        // backgroundColor: 'rgba(0,0,0,0.1)',
         marginVertical: Spacing.lg,
     },
     footer: {

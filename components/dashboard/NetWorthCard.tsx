@@ -87,7 +87,7 @@ export const NetWorthCard = ({
                     </View>
                 </View>
 
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
                 <View style={styles.breakdownItem}>
                     <View style={[styles.dot, { backgroundColor: theme.liability }]} />
@@ -136,7 +136,6 @@ const styles = StyleSheet.create({
     divider: {
         width: 1,
         height: '100%',
-        backgroundColor: 'rgba(0,0,0,0.05)',
         marginHorizontal: Spacing.md,
     }
 });

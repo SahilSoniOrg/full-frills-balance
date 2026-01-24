@@ -1,5 +1,5 @@
 import { AppCard, AppText, Badge } from '@/components/core'
-import { Spacing } from '@/constants'
+import { Spacing, withOpacity } from '@/constants'
 import { useTheme } from '@/hooks/use-theme'
 import { database } from '@/src/data/database/Database'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
@@ -131,7 +131,7 @@ export default function TransactionDetailsScreen() {
 
             {/* Big Icon */}
             <View style={styles.iconContainer}>
-              <View style={[styles.bigIcon, { backgroundColor: theme.primary + '20' }]}>
+              <View style={[styles.bigIcon, { backgroundColor: withOpacity(theme.primary, 0.12) }]}>
                 <Ionicons name="receipt" size={32} color={theme.primary} />
               </View>
             </View>
@@ -156,7 +156,7 @@ export default function TransactionDetailsScreen() {
               </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
             {/* Metadata List */}
             <View style={styles.infoSection}>
@@ -174,7 +174,7 @@ export default function TransactionDetailsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
             {/* Splits / Breakdown */}
             <AppText variant="caption" color="secondary" style={{ marginBottom: 12 }}>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    // backgroundColor: 'rgba(0,0,0,0.05)',
     marginVertical: Spacing.lg,
   },
   infoSection: {

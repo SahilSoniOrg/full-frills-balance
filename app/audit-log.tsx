@@ -1,5 +1,5 @@
 import { AppCard, AppText } from '@/components/core';
-import { Spacing } from '@/constants';
+import { Spacing, withOpacity } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -187,7 +187,7 @@ export default function AuditLogScreen() {
 
         if (typeof value === 'object') {
             return (
-                <View style={styles.nestedObject}>
+                <View style={[styles.nestedObject, { backgroundColor: theme.surfaceSecondary }]}>
                     {Object.entries(value).map(([k, v]) => (
                         <AppText key={k} variant="caption" color="secondary">
                             {k}: {typeof v === 'object' ? '[Object]' : String(v)}
@@ -209,7 +209,7 @@ export default function AuditLogScreen() {
             const afterCurrency = (changes.after as any).currencyCode;
 
             return (
-                <View style={styles.changesContainer}>
+                <View style={[styles.changesContainer, { backgroundColor: theme.surfaceSecondary }]}>
                     {allKeys.map(key => {
                         const beforeVal = (changes.before as any)[key];
                         const afterVal = (changes.after as any)[key];
@@ -231,7 +231,7 @@ export default function AuditLogScreen() {
                                 const diffPrefix = diff > 0 ? '+' : '';
 
                                 return (
-                                    <View key={key} style={styles.changeRow}>
+                                    <View key={key} style={[styles.changeRow, { borderBottomColor: theme.divider }]}>
                                         <AppText variant="caption" weight="bold">{key}:</AppText>
                                         <View style={styles.financialDiffRow}>
                                             <AppText variant="caption" color="secondary">{CurrencyFormatter.format(bNum, currency)}</AppText>
@@ -343,7 +343,7 @@ export default function AuditLogScreen() {
             <AppCard style={styles.card} padding="md" elevation="sm">
                 <TouchableOpacity onPress={() => toggleExpanded(item.id)}>
                     <View style={styles.row}>
-                        <View style={[styles.iconContainer, { backgroundColor: actionColor + '20' }]}>
+                        <View style={[styles.iconContainer, { backgroundColor: withOpacity(actionColor, 0.15) }]}>
                             <Ionicons name={getActionIcon(item.action)} size={20} color={actionColor} />
                         </View>
                         <View style={styles.content}>
@@ -492,13 +492,21 @@ const styles = StyleSheet.create({
         marginTop: Spacing.md,
         padding: Spacing.sm,
         borderRadius: 8,
-        backgroundColor: 'rgba(128, 128, 128, 0.05)',
+        // backgroundColor: theme.surfaceSecondary ??
+        // Let's use a subtle tint of textTertiary simply or theme.surfaceSecondary
+        // But theme.surfaceSecondary is for cards usually.
+        // Let's use withOpacity on theme.textTertiary or similar?
+        // Actually theme.surfaceSecondary is #EEEEEF in light, #25252A in dark. Ideally suitable.
+        // But the hardcoded value was rgba(128,128,128, 0.05).
+        // Let's try theme.surfaceSecondary.
+        backgroundColor: 'transparent', // We will inject theme via style prop in render if needed, or use a new token.
+        // Wait, styles are created once. We cannot access theme here easily unless we use inline styles or verify theme content.
+        // Best practice: Use theme color in the component style prop.
     },
     changeRow: {
         marginBottom: Spacing.sm,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(128, 128, 128, 0.1)',
-        paddingBottom: Spacing.xs,
+        // borderBottomColor: theme.divider
     },
     simpleChangeRow: {
         flexDirection: 'row',
@@ -530,7 +538,7 @@ const styles = StyleSheet.create({
     },
     nestedObject: {
         padding: 4,
-        backgroundColor: 'rgba(128, 128, 128, 0.05)',
+        // backgroundColor: 'rgba(128, 128, 128, 0.05)' -> see above
         borderRadius: 4,
     },
     financialDiffRow: {

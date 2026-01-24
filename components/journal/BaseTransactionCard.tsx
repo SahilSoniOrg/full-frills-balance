@@ -72,7 +72,7 @@ export const BaseTransactionCard = ({
                 <Badge
                     variant="default"
                     size="sm"
-                    backgroundColor={withOpacity(typeColor, 0.15)}
+                    backgroundColor={withOpacity(typeColor, theme.pure === '#000000' ? 0.25 : 0.15)}
                     textColor={typeColor}
                     icon={typeIcon}
                     style={{ borderRightWidth: 1, borderRightColor: withOpacity(theme.border, 0.5), paddingRight: Spacing.sm }}

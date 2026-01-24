@@ -26,7 +26,7 @@ export function AccountSelector({
             animationType="slide"
             onRequestClose={onClose}
         >
-            <View style={styles.modalOverlay}>
+            <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
                 <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
                     <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
                         <AppText variant="heading">Select Account</AppText>
@@ -66,7 +66,6 @@ export function AccountSelector({
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
     modalContent: {
