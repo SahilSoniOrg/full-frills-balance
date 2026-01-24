@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
         marginTop: Spacing.sm,
     },
     listContent: {
-        padding: 16,
+        padding: Spacing.lg,
     },
     loadingContainer: {
         flex: 1,
@@ -158,12 +158,12 @@ const styles = StyleSheet.create({
         paddingTop: 100,
     },
     emptyText: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 8,
+        fontSize: 18, // Typography.sizes.lg
+        fontWeight: 'bold',
+        marginBottom: Spacing.sm,
     },
     emptySubtext: {
-        fontSize: 14,
+        fontSize: 14, // Typography.sizes.sm
         opacity: 0.6,
         textAlign: 'center',
     },

@@ -262,6 +262,7 @@ export const Palette = {
   extraDarkGray: '#1C1C1F', // IvyColors.ExtraDarkGray
   black: '#09090A', // IvyColors.Black
   trueBlack: '#000000', // IvyColors.TrueBlack
+  pureWhite: '#FFFFFF', // Absolute white for high contrast
 
   // Purple (Primary)
   purple: '#5C3DF5', // IvyColors.Purple.primary

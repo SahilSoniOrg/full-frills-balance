@@ -18,7 +18,7 @@ export const FloatingActionButton = ({ onPress, style }: FABProps) => {
                 styles.fab,
                 {
                     backgroundColor: theme.primary,
-                    shadowColor: theme.pure,
+                    shadowColor: '#000', // Physical shadow is always dark
                 },
                 style
             ]}

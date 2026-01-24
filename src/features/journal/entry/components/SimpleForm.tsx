@@ -147,7 +147,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
 
     const renderAccountSelector = (title: string, accountList: Account[], selectedId: string, onSelect: (id: string) => void) => (
         <Box gap="sm" marginVertical="md">
-            <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: 4 }}>
+            <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: Spacing.xs }}>
                 {title.toUpperCase()}
             </AppText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountScroll}>
@@ -193,7 +193,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                     AMOUNT
                 </AppText>
                 <Stack horizontal align="center" justify="center">
-                    <Box marginVertical="sm" style={{ marginTop: 12 }}>
+                    <Box marginVertical="sm" style={{ marginTop: Spacing.md }}>
                         <AppText variant="title" weight="bold" style={{ color: activeColor, opacity: Opacity.heavy }}>
                             {sourceAccount?.currencyCode || defaultCurrency}
                         </AppText>
@@ -213,7 +213,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
             </Stack>
 
             {/* Type Selector */}
-            <Box direction="row" padding="xs" backgroundColor={theme.surfaceSecondary} borderRadius={16} marginVertical="xl">
+            <Box direction="row" padding="xs" backgroundColor={theme.surfaceSecondary} borderRadius={Shape.radius.r4} marginVertical="xl">
                 {(['expense', 'income', 'transfer'] as const).map(t => (
                     <TouchableOpacity
                         key={t}
@@ -285,7 +285,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
 
             {/* Schedule Section */}
             <Box marginVertical="lg">
-                <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: 4, marginBottom: Spacing.sm }}>
+                <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: Spacing.xs, marginBottom: Spacing.sm }}>
                     SCHEDULE
                 </AppText>
                 <AppCard elevation="none" padding="none" style={{ backgroundColor: theme.surfaceSecondary, borderColor: theme.border, borderWidth: 1 }}>
@@ -315,7 +315,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                     variant="primary"
                     onPress={handleSave}
                     disabled={!amount || !sourceId || !destinationId || (sourceId === destinationId) || isSubmitting || isLoadingRate || !!rateError}
-                    style={{ backgroundColor: activeColor, height: 60, borderRadius: 16 }}
+                    style={{ backgroundColor: activeColor, height: 60, borderRadius: Shape.radius.r4 }}
                 >
                     {isSubmitting ? 'SAVING...' : sourceId === destinationId ? 'CHOOSE DIFFERENT ACCOUNTS' : `SAVE ${type.toUpperCase()}`}
                 </AppButton>

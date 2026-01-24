@@ -1,4 +1,4 @@
-import { Spacing } from '@/constants';
+import { Spacing, withOpacity } from '@/constants';
 import { useUI } from '@/contexts/UIContext';
 import { useTheme } from '@/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -32,7 +32,7 @@ export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }
             {/* Income Column */}
             <AppCard elevation="sm" padding="md" style={styles.column}>
                 <View style={styles.row}>
-                    <View style={[styles.iconBox, { backgroundColor: theme.income + '20' }]}>
+                    <View style={[styles.iconBox, { backgroundColor: withOpacity(theme.income, 0.15) }]}>
                         <Ionicons name="arrow-down-outline" size={16} color={theme.income} />
                     </View>
                     <AppText variant="caption" color="secondary">INCOME</AppText>
@@ -45,7 +45,7 @@ export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }
             {/* Expense Column */}
             <AppCard elevation="sm" padding="md" style={styles.column}>
                 <View style={styles.row}>
-                    <View style={[styles.iconBox, { backgroundColor: theme.expense + '20' }]}>
+                    <View style={[styles.iconBox, { backgroundColor: withOpacity(theme.expense, 0.15) }]}>
                         <Ionicons name="arrow-up-outline" size={16} color={theme.expense} />
                     </View>
                     <AppText variant="caption" color="secondary">EXPENSE</AppText>

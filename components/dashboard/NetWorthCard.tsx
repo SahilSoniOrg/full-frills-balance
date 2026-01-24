@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.xs,
     },
     netWorthAmount: {
-        fontSize: 36, // Larger than standard title
+        fontSize: 32, // Typography.sizes.xxxl
         marginBottom: Spacing.xl,
     },
     breakdownContainer: {
@@ -128,9 +128,9 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
     },
     dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: Spacing.sm,
+        height: Spacing.sm,
+        borderRadius: Spacing.sm / 2,
         marginTop: 6, // Optical alignment with text
     },
     divider: {

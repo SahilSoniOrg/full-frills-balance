@@ -106,7 +106,7 @@ export default function OnboardingScreen() {
               <View style={styles.currencyRight}>
                 <AppText variant="subheading">{item.symbol}</AppText>
                 {selectedCurrency === item.code && (
-                  <Ionicons name="checkmark-circle" size={20} color={theme.primary} style={{ marginLeft: 8 }} />
+                  <Ionicons name="checkmark-circle" size={20} color={theme.primary} style={{ marginLeft: Spacing.sm }} />
                 )}
               </View>
             </TouchableOpacity>

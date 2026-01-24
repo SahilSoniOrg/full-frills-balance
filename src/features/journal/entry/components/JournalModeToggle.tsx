@@ -55,13 +55,13 @@ const styles = StyleSheet.create({
     modeToggleContainer: {
         flexDirection: 'row',
         borderRadius: Shape.radius.full,
-        padding: 4,
+        padding: Spacing.xs,
         marginHorizontal: Spacing.lg,
         marginVertical: Spacing.md,
     },
     modeButton: {
         flex: 1,
-        paddingVertical: 10,
+        paddingVertical: Spacing.md, // Approx 10->12
         paddingHorizontal: Spacing.md,
         borderRadius: Shape.radius.full,
         alignItems: 'center',
