@@ -4,7 +4,7 @@
  * Consolidates theme logic used across all screens.
  */
 
-import { ThemeMode, useThemeColors } from '@/constants'
+import { getContextualTokens, ThemeMode, useThemeColors } from '@/constants'
 import { useUI } from '@/contexts/UIContext'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 
@@ -17,6 +17,7 @@ export function useTheme() {
         : themePreference as ThemeMode
 
     const theme = useThemeColors(themeMode)
+    const tokens = getContextualTokens(theme)
 
-    return { theme, themeMode }
+    return { theme, themeMode, tokens }
 }

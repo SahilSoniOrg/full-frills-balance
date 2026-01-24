@@ -13,6 +13,7 @@ import { AppText } from './AppText'
 export type AppInputProps = TextInputProps & {
     label?: string
     error?: string
+    variant?: 'default' | 'hero' | 'minimal'
     containerStyle?: ViewStyle
     themeMode?: ThemeMode
 }
@@ -20,14 +21,16 @@ export type AppInputProps = TextInputProps & {
 export function AppInput({
     label,
     error,
+    variant = 'default',
     containerStyle,
     themeMode,
     style,
     ...props
 }: AppInputProps) {
-    const { theme: globalTheme } = useTheme()
+    const { theme: globalTheme, tokens: globalTokens } = useTheme()
     const overrideTheme = useThemeColors(themeMode)
     const theme = themeMode ? overrideTheme : globalTheme
+    const tokens = themeMode ? { input: { background: theme.surface, border: theme.border, text: theme.text, placeholder: theme.textSecondary } } : globalTokens
 
     return (
         <View style={[styles.container, containerStyle]}>
@@ -44,14 +47,16 @@ export function AppInput({
             <TextInput
                 style={[
                     styles.input,
+                    variant === 'hero' && styles.heroInput,
+                    variant === 'minimal' && styles.minimalInput,
                     {
-                        borderColor: error ? theme.error : theme.border,
+                        borderColor: error ? theme.error : (variant === 'minimal' ? 'transparent' : theme.border),
                         color: theme.text,
-                        backgroundColor: theme.surface,
+                        backgroundColor: variant === 'minimal' ? 'transparent' : theme.surface,
                     },
                     style,
                 ]}
-                placeholderTextColor={theme.textSecondary}
+                placeholderTextColor={tokens.input.placeholder}
                 {...props}
             />
             {error && (
@@ -82,6 +87,19 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.sm,
         fontSize: 16,
         minHeight: 48,
+    },
+    heroInput: {
+        fontSize: 72,
+        fontWeight: '800',
+        textAlign: 'center',
+        borderWidth: 0,
+        minHeight: 100,
+    },
+    minimalInput: {
+        borderWidth: 0,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        minHeight: 0,
     },
     error: {
         marginTop: Spacing.xs,

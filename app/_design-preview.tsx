@@ -20,10 +20,13 @@
 import {
   AppButton,
   AppCard,
+  AppInput,
   AppText,
   Badge,
+  Box,
   Divider,
-  ListRow
+  ListRow,
+  Stack
 } from '@/components/core'
 import { Shape, Spacing, ThemeMode, useThemeColors } from '@/constants'
 import { useColorScheme } from '@/hooks/use-color-scheme'
@@ -76,6 +79,7 @@ export default function DesignPreviewScreen() {
         <AppText variant="heading" themeMode={themeMode}>Typography</AppText>
         <Divider themeMode={themeMode} />
 
+        <AppText variant="hero" themeMode={themeMode}>$12,345</AppText>
         <AppText variant="title" themeMode={themeMode}>Title</AppText>
         <AppText variant="heading" themeMode={themeMode}>Heading</AppText>
         <AppText variant="subheading" themeMode={themeMode}>Subheading</AppText>
@@ -99,7 +103,43 @@ export default function DesignPreviewScreen() {
         <AppText variant="body" color="expense" themeMode={themeMode}>Expense</AppText>
       </AppCard>
 
-      {/* Cards Section */}
+      {/* Layout Primitives Section */}
+      <AppCard elevation="sm" padding="lg" style={styles.section} themeMode={themeMode}>
+        <AppText variant="heading" themeMode={themeMode}>Layout Primitives</AppText>
+        <Divider themeMode={themeMode} />
+
+        <AppText variant="subheading" themeMode={themeMode}>Stack (Vertical, gap: md)</AppText>
+        <Box style={{ backgroundColor: theme.surfaceSecondary, padding: Spacing.md, borderRadius: Shape.radius.md }}>
+          <Stack space="md">
+            <AppCard elevation="none" padding="sm" themeMode={themeMode}><AppText variant="caption">Item 1</AppText></AppCard>
+            <AppCard elevation="none" padding="sm" themeMode={themeMode}><AppText variant="caption">Item 2</AppText></AppCard>
+            <AppCard elevation="none" padding="sm" themeMode={themeMode}><AppText variant="caption">Item 3</AppText></AppCard>
+          </Stack>
+        </Box>
+
+        <AppText variant="subheading" style={{ marginTop: Spacing.md }} themeMode={themeMode}>Stack (Horizontal, gap: lg)</AppText>
+        <Box style={{ backgroundColor: theme.surfaceSecondary, padding: Spacing.md, borderRadius: Shape.radius.md }}>
+          <Stack horizontal space="lg">
+            <TokenBox size={40} radius={Shape.radius.sm} />
+            <TokenBox size={40} radius={Shape.radius.sm} />
+            <TokenBox size={40} radius={Shape.radius.sm} />
+          </Stack>
+        </Box>
+      </AppCard>
+
+      {/* Inputs Section */}
+      <AppCard elevation="sm" padding="lg" style={styles.section} themeMode={themeMode}>
+        <AppText variant="heading" themeMode={themeMode}>Inputs</AppText>
+        <Divider themeMode={themeMode} />
+
+        <Stack space="md">
+          <AppInput label="Default Variant" placeholder="Type here..." themeMode={themeMode} />
+          <AppInput variant="hero" value="1,200.00" themeMode={themeMode} />
+          <Box padding="md" backgroundColor={theme.surfaceSecondary} borderRadius={Shape.radius.md}>
+            <AppInput variant="minimal" placeholder="Minimal variant" themeMode={themeMode} />
+          </Box>
+        </Stack>
+      </AppCard>
       <AppCard elevation="sm" padding="lg" style={styles.section} themeMode={themeMode}>
         <AppText variant="heading" themeMode={themeMode}>Cards</AppText>
         <Divider themeMode={themeMode} />

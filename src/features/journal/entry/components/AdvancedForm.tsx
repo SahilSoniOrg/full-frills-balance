@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppInput, AppText } from '@/components/core';
+import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/components/core';
 import { AppConfig, Spacing } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import { JournalCalculator, JournalLineInput } from '@/src/domain/accounting/JournalCalculator';
@@ -6,7 +6,7 @@ import { JournalValidator } from '@/src/domain/accounting/JournalValidator';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { useJournalEditor } from '../hooks/useJournalEditor';
 import { JournalLineItem } from './JournalLineItem';
 import { JournalSummary } from './JournalSummary';
@@ -53,60 +53,64 @@ export const AdvancedForm = ({
     const isBalanced = JournalCalculator.isBalanced(getDomainLines());
 
     return (
-        <View>
-            <AppCard elevation="sm" padding="lg" style={styles.titleCard}>
+        <Stack space="md" padding="lg">
+            <AppCard elevation="sm" padding="lg">
                 <AppText variant="title">{editor.isEdit ? 'Edit Journal Entry' : 'Create Journal Entry'}</AppText>
             </AppCard>
 
-            <AppCard elevation="sm" padding="lg" style={styles.inputCard}>
-                <View style={styles.dateTimeRow}>
-                    <AppInput
-                        label="Date"
-                        value={editor.journalDate}
-                        onChangeText={editor.setJournalDate}
-                        placeholder="YYYY-MM-DD"
-                        containerStyle={styles.dateTimeInput}
-                    />
-                    <AppInput
-                        label="Time"
-                        value={editor.journalTime}
-                        onChangeText={editor.setJournalTime}
-                        placeholder="HH:mm"
-                        containerStyle={styles.dateTimeInput}
-                    />
-                </View>
+            <AppCard elevation="sm" padding="lg">
+                <Stack space="md">
+                    <Stack horizontal space="md">
+                        <AppInput
+                            label="Date"
+                            value={editor.journalDate}
+                            onChangeText={editor.setJournalDate}
+                            placeholder="YYYY-MM-DD"
+                            containerStyle={{ flex: 1 }}
+                        />
+                        <AppInput
+                            label="Time"
+                            value={editor.journalTime}
+                            onChangeText={editor.setJournalTime}
+                            placeholder="HH:mm"
+                            containerStyle={{ flex: 1 }}
+                        />
+                    </Stack>
 
-                <AppInput
-                    label="Description"
-                    value={editor.description}
-                    onChangeText={editor.setDescription}
-                    placeholder="Enter description"
-                    multiline
-                    numberOfLines={3}
-                    style={styles.textArea}
-                />
+                    <AppInput
+                        label="Description"
+                        value={editor.description}
+                        onChangeText={editor.setDescription}
+                        placeholder="Enter description"
+                        multiline
+                        numberOfLines={3}
+                        style={{ height: 80, textAlignVertical: 'top' }}
+                    />
+                </Stack>
             </AppCard>
 
-            <AppCard elevation="sm" padding="lg" style={styles.linesCard}>
-                <View style={styles.linesHeader}>
-                    <AppText variant="heading">Journal Lines</AppText>
-                    <TouchableOpacity onPress={editor.addLine} style={styles.addButton}>
-                        <AppText variant="body" color="primary">+ Add Line</AppText>
-                    </TouchableOpacity>
-                </View>
+            <AppCard elevation="sm" padding="lg">
+                <Stack space="md">
+                    <Box direction="row" justify="space-between" align="center">
+                        <AppText variant="heading">Journal Lines</AppText>
+                        <TouchableOpacity onPress={editor.addLine} style={{ padding: Spacing.sm }}>
+                            <AppText variant="body" color="primary">+ Add Line</AppText>
+                        </TouchableOpacity>
+                    </Box>
 
-                {editor.lines.map((line, index) => (
-                    <JournalLineItem
-                        key={line.id}
-                        line={line}
-                        index={index}
-                        canRemove={editor.lines.length > 2}
-                        onUpdate={(field, value) => editor.updateLine(line.id, { [field]: value })}
-                        onRemove={() => editor.removeLine(line.id)}
-                        onSelectAccount={() => onSelectAccountRequest(line.id)}
-                        getLineBaseAmount={getLineBaseAmount}
-                    />
-                ))}
+                    {editor.lines.map((line, index) => (
+                        <JournalLineItem
+                            key={line.id}
+                            line={line}
+                            index={index}
+                            canRemove={editor.lines.length > 2}
+                            onUpdate={(field, value) => editor.updateLine(line.id, { [field]: value })}
+                            onRemove={() => editor.removeLine(line.id)}
+                            onSelectAccount={() => onSelectAccountRequest(line.id)}
+                            getLineBaseAmount={getLineBaseAmount}
+                        />
+                    ))}
+                </Stack>
             </AppCard>
 
             <JournalSummary
@@ -115,29 +119,18 @@ export const AdvancedForm = ({
                 isBalanced={isBalanced}
             />
 
-            <View style={styles.actions}>
+            <Box style={{ paddingVertical: Spacing.lg }}>
                 <AppButton
                     variant="primary"
                     onPress={editor.submit}
                     disabled={!isBalanced || editor.isSubmitting}
-                    style={styles.createButton}
+                    style={{ marginBottom: Spacing.xl, height: 60, borderRadius: 16 }}
                 >
                     {editor.isSubmitting ? (editor.isEdit ? 'Updating...' : 'Creating...') : (editor.isEdit ? 'Update Journal' : 'Create Journal')}
                 </AppButton>
-            </View>
-        </View>
+            </Box>
+        </Stack>
     );
 };
 
-const styles = StyleSheet.create({
-    titleCard: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
-    inputCard: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
-    dateTimeRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
-    dateTimeInput: { flex: 1 },
-    linesCard: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md },
-    textArea: { height: 80, textAlignVertical: 'top' },
-    linesHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-    addButton: { padding: Spacing.sm },
-    actions: { padding: Spacing.lg },
-    createButton: { marginBottom: Spacing.xl },
-});
+const styles = StyleSheet.create({});

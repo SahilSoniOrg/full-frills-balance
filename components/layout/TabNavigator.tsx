@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import AccountsScreen from '../../app/(tabs)/accounts';
-import JournalListScreen from '../../app/(tabs)/journal-list-content';
+import JournalListScreen from '../../app/(tabs)/index';
 import CustomTabBar from './CustomTabBar';
 
 interface TabNavigatorProps {

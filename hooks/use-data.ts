@@ -82,23 +82,42 @@ export function useJournals(pageSize: number = 50) {
     const [currentLimit, setCurrentLimit] = useState(pageSize)
 
     useEffect(() => {
-        const collection = database.collections.get<Journal>('journals')
-        const subscription = collection
+        const journalsCollection = database.collections.get<Journal>('journals')
+        const transactionsCollection = database.collections.get<Transaction>('transactions')
+
+        // Observe both journals and transactions
+        // Note: Transactions observation ensures badges update immediately on creation
+        const journalsObservable = journalsCollection
             .query(
                 Q.where('deleted_at', Q.eq(null)),
                 Q.sortBy('journal_date', 'desc'),
                 Q.take(currentLimit)
             )
             .observe()
-            .subscribe(async (loaded) => {
-                const enriched = await journalRepository.findEnrichedJournals(currentLimit)
-                setJournals(enriched)
-                setHasMore(loaded.length >= currentLimit)
-                setIsLoading(false)
-                setIsLoadingMore(false)
-            })
 
-        return () => subscription.unsubscribe()
+        const transactionsObservable = transactionsCollection
+            .query(Q.where('deleted_at', Q.eq(null)))
+            .observe()
+
+        // Combine observables or simply subscribe to both to trigger enrichment
+        const subscription = journalsObservable.subscribe(async (loaded) => {
+            const enriched = await journalRepository.findEnrichedJournals(currentLimit)
+            setJournals(enriched)
+            setHasMore(loaded.length >= currentLimit)
+            setIsLoading(false)
+            setIsLoadingMore(false)
+        })
+
+        const txSubscription = transactionsObservable.subscribe(async () => {
+            // Re-fetch enriched journals when any transaction changes
+            const enriched = await journalRepository.findEnrichedJournals(currentLimit)
+            setJournals(enriched)
+        })
+
+        return () => {
+            subscription.unsubscribe()
+            txSubscription.unsubscribe()
+        }
     }, [database, currentLimit])
 
     const loadMore = () => {

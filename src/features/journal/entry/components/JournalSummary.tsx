@@ -1,9 +1,9 @@
-import { AppCard, AppText } from '@/components/core';
+import { AppCard, AppText, Box, Stack } from '@/components/core';
 import { Spacing } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import { preferences } from '@/src/utils/preferences';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 interface JournalSummaryProps {
     totalDebits: number;
@@ -21,58 +21,46 @@ export function JournalSummary({
     const difference = Math.abs(totalDebits - totalCredits);
 
     return (
-        <AppCard style={styles.card}>
-            <AppText variant="subheading" style={styles.title}>
-                Summary
-            </AppText>
-
-            <View style={styles.summaryRow}>
-                <AppText variant="body">Total Debits:</AppText>
-                <AppText variant="body">{totalDebits.toFixed(2)} {currency}</AppText>
-            </View>
-
-            <View style={styles.summaryRow}>
-                <AppText variant="body">Total Credits:</AppText>
-                <AppText variant="body">{totalCredits.toFixed(2)} {currency}</AppText>
-            </View>
-
-            <View style={styles.summaryRow}>
-                <AppText variant="heading">Balance:</AppText>
-                <AppText
-                    variant="heading"
-                    color={isBalanced ? "success" : "error"}
-                >
-                    {difference.toFixed(2)} {currency}
+        <AppCard style={{ marginHorizontal: Spacing.lg, marginVertical: Spacing.sm }}>
+            <Stack space="md">
+                <AppText variant="subheading">
+                    Summary
                 </AppText>
-            </View>
 
-            <AppText
-                variant="body"
-                color={isBalanced ? "success" : "error"}
-                style={styles.balanceText}
-            >
-                {isBalanced ? `✓ Journal is balanced in ${currency}` : `✗ Journal must be balanced in ${currency}`}
-            </AppText>
+                <Stack space="sm">
+                    <Box direction="row" justify="space-between">
+                        <AppText variant="body">Total Debits:</AppText>
+                        <AppText variant="body">{totalDebits.toFixed(2)} {currency}</AppText>
+                    </Box>
+
+                    <Box direction="row" justify="space-between">
+                        <AppText variant="body">Total Credits:</AppText>
+                        <AppText variant="body">{totalCredits.toFixed(2)} {currency}</AppText>
+                    </Box>
+                </Stack>
+
+                <Box direction="row" justify="space-between" style={{ paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: theme.border }}>
+                    <AppText variant="heading">Balance:</AppText>
+                    <AppText
+                        variant="heading"
+                        color={isBalanced ? "success" : "error"}
+                    >
+                        {difference.toFixed(2)} {currency}
+                    </AppText>
+                </Box>
+
+                <AppText
+                    variant="body"
+                    color={isBalanced ? "success" : "error"}
+                    align="center"
+                    weight="semibold"
+                    style={{ marginTop: Spacing.xs }}
+                >
+                    {isBalanced ? `✓ Journal is balanced in ${currency}` : `✗ Journal must be balanced in ${currency}`}
+                </AppText>
+            </Stack>
         </AppCard>
     );
 }
 
-const styles = StyleSheet.create({
-    card: {
-        margin: Spacing.lg,
-        marginTop: Spacing.sm,
-    },
-    title: {
-        marginBottom: Spacing.md,
-    },
-    summaryRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: Spacing.sm,
-    },
-    balanceText: {
-        marginTop: Spacing.sm,
-        textAlign: 'center',
-        fontWeight: '600',
-    },
-});
+const styles = StyleSheet.create({});

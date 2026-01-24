@@ -1,4 +1,4 @@
-import { AppInput, AppText } from '@/components/core';
+import { AppInput, AppText, Box, Stack } from '@/components/core';
 import { AppConfig, Shape, Spacing } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import { AccountType } from '@/src/data/models/Account';
@@ -7,7 +7,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 // Reuse the interface for now to minimize friction, eventually move to shared types
 export interface JournalEntryLine {
@@ -45,18 +45,20 @@ export function JournalLineItem({
     const { theme } = useTheme();
 
     return (
-        <View style={[styles.lineContainer, {
-            backgroundColor: theme.surfaceSecondary,
-            borderColor: theme.border
-        }]}>
-            <View style={styles.lineHeader}>
+        <Box
+            padding="md"
+            borderRadius={Shape.radius.r2}
+            backgroundColor={theme.surfaceSecondary}
+            style={{ borderWidth: 1, borderColor: theme.border, marginBottom: Spacing.md }}
+        >
+            <Box direction="row" justify="space-between" align="center" style={{ marginBottom: Spacing.md }}>
                 <AppText variant="subheading">Line {index + 1}</AppText>
                 {canRemove && (
-                    <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
+                    <TouchableOpacity onPress={onRemove} style={{ padding: Spacing.sm }}>
                         <AppText variant="body" color="error">Remove</AppText>
                     </TouchableOpacity>
                 )}
-            </View>
+            </Box>
 
             <TouchableOpacity
                 style={[styles.accountSelector, {
@@ -71,15 +73,14 @@ export function JournalLineItem({
                 <AppText variant="body" color="secondary">▼</AppText>
             </TouchableOpacity>
 
-            <View style={styles.lineRow}>
-                <View style={styles.halfWidth}>
-                    <AppText variant="body" style={styles.label}>Type</AppText>
-                    <View style={styles.typeButtons}>
+            <Stack horizontal space="md" style={{ marginBottom: Spacing.md }}>
+                <Box flex={1}>
+                    <AppText variant="body" weight="medium" style={{ marginBottom: Spacing.xs }}>Type</AppText>
+                    <Stack horizontal space="sm">
                         <TouchableOpacity
                             style={[
                                 styles.typeButton,
-                                line.transactionType === TransactionType.DEBIT && styles.typeButtonActive,
-                                line.transactionType === TransactionType.DEBIT && { backgroundColor: theme.primary },
+                                line.transactionType === TransactionType.DEBIT && { backgroundColor: theme.primary, borderColor: theme.primary },
                                 { borderColor: theme.border }
                             ]}
                             onPress={() => onUpdate('transactionType', TransactionType.DEBIT)}
@@ -96,8 +97,7 @@ export function JournalLineItem({
                         <TouchableOpacity
                             style={[
                                 styles.typeButton,
-                                line.transactionType === TransactionType.CREDIT && styles.typeButtonActive,
-                                line.transactionType === TransactionType.CREDIT && { backgroundColor: theme.primary },
+                                line.transactionType === TransactionType.CREDIT && { backgroundColor: theme.primary, borderColor: theme.primary },
                                 { borderColor: theme.border }
                             ]}
                             onPress={() => onUpdate('transactionType', TransactionType.CREDIT)}
@@ -111,18 +111,18 @@ export function JournalLineItem({
                                 Credit
                             </AppText>
                         </TouchableOpacity>
-                    </View>
-                </View>
+                    </Stack>
+                </Box>
 
-                <View style={styles.halfWidth}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <AppText variant="body" style={styles.label}>Amount</AppText>
+                <Box flex={1}>
+                    <Box direction="row" justify="space-between" align="center" style={{ marginBottom: Spacing.xs }}>
+                        <AppText variant="body" weight="medium">Amount</AppText>
                         {line.accountCurrency && (
                             <AppText variant="caption" color="primary">
                                 {line.accountCurrency}
                             </AppText>
                         )}
-                    </View>
+                    </Box>
                     <AppInput
                         value={line.amount}
                         onChangeText={(value) => onUpdate('amount', value)}
@@ -130,12 +130,12 @@ export function JournalLineItem({
                         keyboardType="numeric"
                     />
                     {line.accountCurrency && line.accountCurrency !== (preferences.defaultCurrencyCode || AppConfig.defaultCurrency) && (
-                        <AppText variant="caption" color="secondary">
+                        <AppText variant="caption" color="secondary" style={{ marginTop: 2 }}>
                             ≈ {CurrencyFormatter.format(getLineBaseAmount(line))}
                         </AppText>
                     )}
-                </View>
-            </View>
+                </Box>
+            </Stack>
 
             <AppInput
                 label="Notes"
@@ -145,60 +145,47 @@ export function JournalLineItem({
                 containerStyle={{ marginBottom: Spacing.md }}
             />
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs }}>
-                <AppText variant="body" weight="medium">
-                    Exchange Rate (Optional)
+            <Box style={{ marginBottom: Spacing.md }}>
+                <Box direction="row" justify="space-between" align="center" style={{ marginBottom: Spacing.xs }}>
+                    <AppText variant="body" weight="medium">
+                        Exchange Rate (Optional)
+                    </AppText>
+                    {line.accountCurrency && line.accountCurrency !== (preferences.defaultCurrencyCode || AppConfig.defaultCurrency) && (
+                        <TouchableOpacity
+                            onPress={async () => {
+                                try {
+                                    const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+                                    const rate = await exchangeRateService.getRate(
+                                        line.accountCurrency!,
+                                        defaultCurrency
+                                    )
+                                    onUpdate('exchangeRate', rate.toString())
+                                } catch (error) {
+                                    console.error('Failed to fetch rate:', error)
+                                }
+                            }}
+                        >
+                            <AppText variant="caption" color="primary">Auto-fetch</AppText>
+                        </TouchableOpacity>
+                    )}
+                </Box>
+                <AppInput
+                    value={line.exchangeRate || ''}
+                    onChangeText={(value) => onUpdate('exchangeRate', value)}
+                    placeholder="e.g., 1.1050"
+                    keyboardType="decimal-pad"
+                />
+                <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.xs }}>
+                    {line.accountCurrency === (preferences.defaultCurrencyCode || AppConfig.defaultCurrency)
+                        ? 'Not needed (same as base currency)'
+                        : `Rate to convert ${line.accountCurrency} to ${preferences.defaultCurrencyCode || AppConfig.defaultCurrency}`}
                 </AppText>
-                {line.accountCurrency && line.accountCurrency !== (preferences.defaultCurrencyCode || AppConfig.defaultCurrency) && (
-                    <TouchableOpacity
-                        onPress={async () => {
-                            try {
-                                const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-                                const rate = await exchangeRateService.getRate(
-                                    line.accountCurrency!,
-                                    defaultCurrency
-                                )
-                                onUpdate('exchangeRate', rate.toString())
-                            } catch (error) {
-                                console.error('Failed to fetch rate:', error)
-                            }
-                        }}
-                    >
-                        <AppText variant="caption" color="primary">Auto-fetch</AppText>
-                    </TouchableOpacity>
-                )}
-            </View>
-            <AppInput
-                value={line.exchangeRate || ''}
-                onChangeText={(value) => onUpdate('exchangeRate', value)}
-                placeholder="e.g., 1.1050"
-                keyboardType="decimal-pad"
-            />
-            <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.xs, marginBottom: Spacing.md }}>
-                {line.accountCurrency === (preferences.defaultCurrencyCode || AppConfig.defaultCurrency)
-                    ? 'Not needed (same as base currency)'
-                    : `Rate to convert ${line.accountCurrency} to ${preferences.defaultCurrencyCode || AppConfig.defaultCurrency}`}
-            </AppText>
-        </View>
+            </Box>
+        </Box>
     );
 }
 
 const styles = StyleSheet.create({
-    lineContainer: {
-        borderWidth: 1,
-        borderRadius: Shape.radius.r2,
-        padding: Spacing.md,
-        marginBottom: Spacing.md,
-    },
-    lineHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: Spacing.md,
-    },
-    removeButton: {
-        padding: Spacing.sm,
-    },
     accountSelector: {
         gap: Spacing.sm,
         padding: Spacing.md,
@@ -209,22 +196,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    label: {
-        marginBottom: Spacing.xs,
-        fontWeight: '600',
-    },
-    lineRow: {
-        flexDirection: 'row',
-        gap: Spacing.md,
-        marginBottom: Spacing.md,
-    },
-    halfWidth: {
-        flex: 1,
-    },
-    typeButtons: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-    },
     typeButton: {
         flex: 1,
         borderWidth: 1,
@@ -232,8 +203,5 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.sm,
         paddingHorizontal: Spacing.md,
         alignItems: 'center',
-    },
-    typeButtonActive: {
-        // Handled by inline styles
     },
 });

@@ -7,7 +7,7 @@
  * Rules:
  * - No new components without concrete use case
  * - No variant explosion 
- * - No layout primitives
+ * - Standardized layout primitives (Box/Stack)
  * - Must stay small and strict (~5 props max)
  */
 
@@ -31,6 +31,12 @@ export type { BadgeProps } from './Badge'
 
 export { Divider } from './Divider'
 export type { DividerProps } from './Divider'
+
+export { Box } from './Box'
+export type { BoxProps } from './Box'
+
+export { Stack } from './Stack'
+export type { StackProps } from './Stack'
 
 export { ErrorBoundary } from './ErrorBoundary'
 export { FloatingActionButton } from './FloatingActionButton'

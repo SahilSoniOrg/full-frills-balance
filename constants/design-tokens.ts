@@ -116,6 +116,17 @@ export const Spacing = {
   full: 9999, // Circular elements
 }
 
+// === OPACITY SCALE ===
+// Consistent transparency for overlays and semantic highlights
+export const Opacity = {
+  none: 0,
+  soft: 0.15,    // Selection highlights, secondary surfaces
+  muted: 0.3,   // Placeholders, disabled states
+  medium: 0.5,  // Overlays, inactive tabs
+  heavy: 0.7,   // Modal backdrops
+  solid: 1,
+} as const
+
 // === SIZE SCALE ===
 // For consistent sizing across components
 export const Size = {
@@ -173,6 +184,7 @@ export const Typography = {
     xl: 20,    // Card titles, screen headers
     xxl: 24,   // Large headers
     xxxl: 32,  // Hero titles
+    hero: 72,  // Massive financial amounts
   },
 
   // Line heights for readability
@@ -275,9 +287,39 @@ export const Palette = {
   mediumWhite: '#EFEEF0',
 } as const
 
+// === THEME TYPES ===
+export interface Theme {
+  primary: string
+  primaryLight: string
+  success: string
+  successLight: string
+  warning: string
+  warningLight: string
+  error: string
+  errorLight: string
+  asset: string
+  liability: string
+  equity: string
+  income: string
+  expense: string
+  transfer: string
+  background: string
+  surface: string
+  surfaceSecondary: string
+  border: string
+  text: string
+  textSecondary: string
+  textTertiary: string
+  icon: string
+  overlay: string
+  divider: string
+  pure: string
+  pureInverse: string
+}
+
 // === SEMANTIC COLORS ===
 // Ivy Wallet inspired clean color palette
-export const Colors = {
+export const Colors: { light: Theme; dark: Theme } = {
   // Light theme
   light: {
     // Primary colors
@@ -357,6 +399,43 @@ export const Colors = {
   },
 } as const
 
+// === CONTEXTUAL TOKENS ===
+// Specific UI roles mapped to semantic colors
+// These will be used by core components to reduce ad-hoc styling
+export type ContextualTokens = {
+  input: {
+    background: string
+    border: string
+    text: string
+    placeholder: string
+  }
+  card: {
+    background: string
+    border: string
+  }
+  hero: {
+    text: string
+    placeholder: string
+  }
+}
+
+export const getContextualTokens = (theme: Theme): ContextualTokens => ({
+  input: {
+    background: theme.surface,
+    border: theme.border,
+    text: theme.text,
+    placeholder: theme.textTertiary,
+  },
+  card: {
+    background: theme.surface,
+    border: theme.border,
+  },
+  hero: {
+    text: theme.text,
+    placeholder: withOpacity(theme.text, Opacity.muted),
+  },
+})
+
 // === UTILITIES ===
 /**
  * Apply opacity to a hex color
@@ -375,7 +454,7 @@ export function withOpacity(color: string, opacity: number): string {
 
 // === TYPE DEFINITIONS ===
 export type ThemeMode = 'light' | 'dark'
-export type ColorKey = keyof typeof Colors.light
+export type ColorKey = keyof Theme
 export type SpacingKey = keyof typeof Spacing
 export type TypographySize = keyof typeof Typography.sizes
 export type RadiusKey = keyof typeof Shape.radius

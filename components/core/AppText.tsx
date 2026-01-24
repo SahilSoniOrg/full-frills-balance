@@ -10,7 +10,7 @@ import { StyleSheet, Text, type TextProps } from 'react-native'
 
 export type AppTextProps = TextProps & {
   // Typography variants - limited and intentional
-  variant?: 'caption' | 'body' | 'subheading' | 'heading' | 'title' | 'xl'
+  variant?: 'caption' | 'body' | 'subheading' | 'heading' | 'title' | 'xl' | 'hero'
   // Semantic color options
   color?: 'primary' | 'secondary' | 'tertiary' | 'success' | 'warning' | 'error' | 'asset' | 'liability' | 'equity' | 'income' | 'expense'
   // Text alignment
@@ -80,6 +80,13 @@ export function AppText({
           fontSize: Typography.sizes.xxl,
           lineHeight: Typography.sizes.xxl * Typography.lineHeights.tight,
           fontFamily: Typography.fonts.heading,
+          letterSpacing: Typography.letterSpacing.tight,
+        }
+      case 'hero':
+        return {
+          fontSize: Typography.sizes.hero,
+          lineHeight: Typography.sizes.hero * Typography.lineHeights.tight,
+          fontFamily: Typography.fonts.bold,
           letterSpacing: Typography.letterSpacing.tight,
         }
       default:

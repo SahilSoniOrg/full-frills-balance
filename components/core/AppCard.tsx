@@ -31,9 +31,10 @@ export function AppCard({
   children,
   ...props
 }: AppCardProps) {
-  const { theme: globalTheme } = useTheme()
+  const { theme: globalTheme, tokens: globalTokens } = useTheme()
   const overrideTheme = useThemeColors(themeMode)
   const theme = themeMode ? overrideTheme : globalTheme
+  const tokens = themeMode ? { card: { background: theme.surface, border: theme.border } } : globalTokens
 
   // Get elevation styles
   const getElevationStyles = () => {
@@ -69,7 +70,7 @@ export function AppCard({
       case 'secondary':
         return theme.surfaceSecondary
       default:
-        return theme.surface
+        return tokens.card.background
     }
   }
 

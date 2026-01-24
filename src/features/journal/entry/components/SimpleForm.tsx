@@ -1,5 +1,5 @@
-import { AppButton, AppCard, AppInput, AppText } from '@/components/core';
-import { AppConfig, Shape, Spacing } from '@/constants';
+import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/components/core';
+import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import Account from '@/src/data/models/Account';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -9,7 +9,7 @@ import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SimpleFormProps {
     accounts: Account[];
@@ -146,69 +146,74 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
     };
 
     const renderAccountSelector = (title: string, accountList: Account[], selectedId: string, onSelect: (id: string) => void) => (
-        <View style={styles.section}>
-            <AppText variant="caption" weight="bold" color="tertiary" style={styles.sectionTitle}>
+        <Box gap="sm" marginVertical="md">
+            <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: 4 }}>
                 {title.toUpperCase()}
             </AppText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountScroll}>
-                {accountList.map(account => (
-                    <TouchableOpacity
-                        key={account.id}
-                        style={[
-                            styles.accountCard,
-                            { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-                            selectedId === account.id && { backgroundColor: type === 'expense' ? theme.expense + '15' : type === 'income' ? theme.income + '15' : theme.primary + '15', borderColor: type === 'expense' ? theme.expense : type === 'income' ? theme.income : theme.primary }
-                        ]}
-                        onPress={() => onSelect(account.id)}
-                    >
-                        <View style={[styles.accountIndicator, { backgroundColor: type === 'expense' ? theme.expense : type === 'income' ? theme.income : theme.primary, opacity: selectedId === account.id ? 1 : 0.2 }]} />
-                        <AppText
-                            variant="body"
-                            weight={selectedId === account.id ? "semibold" : "regular"}
-                            style={{ color: theme.text, flex: 1 }}
+                <Stack horizontal space="md">
+                    {accountList.map(account => (
+                        <TouchableOpacity
+                            key={account.id}
+                            style={[
+                                styles.accountCard,
+                                { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+                                selectedId === account.id && {
+                                    backgroundColor: withOpacity(activeColor, Opacity.soft),
+                                    borderColor: activeColor
+                                }
+                            ]}
+                            onPress={() => onSelect(account.id)}
                         >
-                            {account.name}
-                        </AppText>
-                        {selectedId === account.id && (
-                            <Ionicons name="checkmark-circle" size={18} color={type === 'expense' ? theme.expense : type === 'income' ? theme.income : theme.primary} />
-                        )}
-                    </TouchableOpacity>
-                ))}
+                            <View style={[styles.accountIndicator, { backgroundColor: activeColor, opacity: selectedId === account.id ? 1 : Opacity.soft }]} />
+                            <AppText
+                                variant="body"
+                                weight={selectedId === account.id ? "semibold" : "regular"}
+                                style={{ color: theme.text, flex: 1 }}
+                            >
+                                {account.name}
+                            </AppText>
+                            {selectedId === account.id && (
+                                <Ionicons name="checkmark-circle" size={18} color={activeColor} />
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                </Stack>
             </ScrollView>
-        </View>
+        </Box>
     );
 
     const activeColor = type === 'expense' ? theme.expense : type === 'income' ? theme.income : theme.primary;
 
     return (
-        <View style={styles.container}>
+        <Box padding="lg">
             {/* Amount Section */}
-            <View style={styles.heroSection}>
-                <AppText variant="caption" weight="bold" color="tertiary" style={styles.labelCenter}>
+            <Stack align="center" marginVertical="lg" space="md">
+                <AppText variant="caption" weight="bold" color="tertiary" style={{ letterSpacing: 2 }}>
                     AMOUNT
                 </AppText>
-                <View style={styles.amountWrapper}>
-                    <View style={styles.currencyWrapper}>
-                        <AppText variant="title" weight="bold" style={{ color: activeColor, opacity: 0.6 }}>
+                <Stack horizontal align="center" justify="center">
+                    <Box marginVertical="sm" style={{ marginTop: 12 }}>
+                        <AppText variant="title" weight="bold" style={{ color: activeColor, opacity: Opacity.heavy }}>
                             {sourceAccount?.currencyCode || defaultCurrency}
                         </AppText>
-                    </View>
-                    <TextInput
-                        style={[styles.heroInput, { color: activeColor }]}
+                    </Box>
+                    <AppInput
+                        variant="hero"
+                        style={{ color: activeColor }}
                         value={amount}
                         onChangeText={setAmount}
                         placeholder="0.00"
                         keyboardType="decimal-pad"
                         autoFocus
-                        placeholderTextColor={activeColor + '30'}
                         cursorColor={activeColor}
-                        selectionColor={activeColor + '40'}
+                        selectionColor={withOpacity(activeColor, Opacity.muted)}
                     />
-                </View>
-            </View>
+                </Stack>
+            </Stack>
 
             {/* Type Selector */}
-            <View style={[styles.typeSelectorContainer, { backgroundColor: theme.surfaceSecondary }]}>
+            <Box direction="row" padding="xs" backgroundColor={theme.surfaceSecondary} borderRadius={16} marginVertical="xl">
                 {(['expense', 'income', 'transfer'] as const).map(t => (
                     <TouchableOpacity
                         key={t}
@@ -227,7 +232,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                         </AppText>
                     </TouchableOpacity>
                 ))}
-            </View>
+            </Box>
 
             {/* Account Selection */}
             <AppCard elevation="none" variant="secondary" style={styles.mainCard}>
@@ -258,13 +263,13 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
 
             {/* Exchange Rate / Conversion */}
             {isCrossCurrency && sourceId && destinationId && (
-                <View style={[styles.conversionBadge, { backgroundColor: theme.primary + '10' }]}>
+                <Box align="center" padding="md" borderRadius={12} backgroundColor={withOpacity(theme.primary, Opacity.soft)} marginVertical="lg">
                     {isLoadingRate ? (
                         <AppText variant="caption" color="secondary">Fetching rate...</AppText>
                     ) : rateError ? (
                         <AppText variant="caption" color="error">{rateError}</AppText>
                     ) : exchangeRate ? (
-                        <View style={styles.conversionRow}>
+                        <Stack horizontal space="lg">
                             <AppText variant="caption" color="primary" weight="medium">
                                 1 {sourceCurrency} = {exchangeRate.toFixed(4)} {destCurrency}
                             </AppText>
@@ -273,106 +278,58 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                                     Total: {convertedAmount.toFixed(2)} {destCurrency}
                                 </AppText>
                             )}
-                        </View>
+                        </Stack>
                     ) : null}
-                </View>
+                </Box>
             )}
 
             {/* Schedule Section */}
-            <View style={styles.scheduleSection}>
-                <AppText variant="caption" weight="bold" color="tertiary" style={styles.sectionTitle}>
+            <Box marginVertical="lg">
+                <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: 4, marginBottom: Spacing.sm }}>
                     SCHEDULE
                 </AppText>
-                <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}>
-                    <AppInput
-                        placeholder="Date"
-                        value={journalDate}
-                        onChangeText={setJournalDate}
-                        containerStyle={styles.flex1}
-                        style={[styles.scheduleInput, { color: theme.text }]}
-                    />
-                    <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-                    <AppInput
-                        placeholder="Time"
-                        value={journalTime}
-                        onChangeText={setJournalTime}
-                        containerStyle={styles.flex1}
-                        style={[styles.scheduleInput, { color: theme.text }]}
-                    />
-                </View>
-            </View>
+                <AppCard elevation="none" padding="none" style={{ backgroundColor: theme.surfaceSecondary, borderColor: theme.border, borderWidth: 1 }}>
+                    <Stack horizontal align="center" paddingHorizontal="lg">
+                        <AppInput
+                            variant="minimal"
+                            placeholder="Date"
+                            value={journalDate}
+                            onChangeText={setJournalDate}
+                            containerStyle={{ flex: 1 }}
+                        />
+                        <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
+                        <AppInput
+                            variant="minimal"
+                            placeholder="Time"
+                            value={journalTime}
+                            onChangeText={setJournalTime}
+                            containerStyle={{ flex: 1 }}
+                        />
+                    </Stack>
+                </AppCard>
+            </Box>
 
             {/* Actions */}
-            <View style={styles.footer}>
+            <Box style={{ marginTop: Spacing.md }}>
                 <AppButton
                     variant="primary"
                     onPress={handleSave}
                     disabled={!amount || !sourceId || !destinationId || (sourceId === destinationId) || isSubmitting || isLoadingRate || !!rateError}
-                    style={[styles.saveButton, { backgroundColor: activeColor }]}
+                    style={{ backgroundColor: activeColor, height: 60, borderRadius: 16 }}
                 >
                     {isSubmitting ? 'SAVING...' : sourceId === destinationId ? 'CHOOSE DIFFERENT ACCOUNTS' : `SAVE ${type.toUpperCase()}`}
                 </AppButton>
-            </View>
-        </View>
+            </Box>
+        </Box>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { padding: Spacing.lg },
-    heroSection: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: Spacing.xxxl,
-        marginTop: Spacing.lg,
-    },
-    labelCenter: { textAlign: 'center', marginBottom: Spacing.md, letterSpacing: 2, opacity: 0.6 },
-    amountWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    currencyWrapper: {
-        marginRight: Spacing.sm,
-        marginTop: 6, // Visual baseline alignment
-    },
-    heroInput: {
-        fontSize: 72,
-        fontWeight: '800',
-        textAlign: 'center',
-        padding: 0,
-        margin: 0,
-        borderWidth: 0,
-        backgroundColor: 'transparent',
-    },
-    typeSelectorContainer: {
-        flexDirection: 'row',
-        padding: 6,
-        borderRadius: 16,
-        marginBottom: Spacing.xl,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    typeTab: {
-        flex: 1,
-        paddingVertical: 12,
-        alignItems: 'center',
-        borderRadius: 12,
-    },
-    mainCard: {
-        borderRadius: 24,
-        padding: Spacing.lg,
-        marginBottom: Spacing.xl,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    section: { marginBottom: Spacing.lg },
-    sectionTitle: { marginBottom: Spacing.sm, letterSpacing: 0.5, marginLeft: 4 },
     accountScroll: { paddingVertical: Spacing.xs },
     accountCard: {
         paddingHorizontal: Spacing.lg,
         paddingVertical: Spacing.md,
         borderRadius: 12,
-        marginRight: Spacing.md,
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
@@ -383,25 +340,19 @@ const styles = StyleSheet.create({
         height: 16,
         borderRadius: 2,
     },
-    cardDivider: { height: 1, marginVertical: Spacing.md, opacity: 0.3 },
-    conversionBadge: {
-        padding: Spacing.md,
+    typeTab: {
+        flex: 1,
+        paddingVertical: 12,
+        alignItems: 'center',
         borderRadius: 12,
-        marginBottom: Spacing.xl,
-        alignItems: 'center',
     },
-    conversionRow: { flexDirection: 'row', gap: Spacing.lg },
-    scheduleSection: { marginBottom: Spacing.xxl },
-    scheduleCard: {
-        flexDirection: 'row',
-        borderRadius: 16,
+    mainCard: {
+        borderRadius: 24,
+        padding: Spacing.lg,
+        marginVertical: Spacing.xl,
         borderWidth: 1,
-        alignItems: 'center',
-        paddingHorizontal: Spacing.lg,
+        borderColor: 'transparent',
     },
-    scheduleInput: { borderWidth: 0, height: 52, fontSize: 16, fontWeight: '600' },
-    flex1: { flex: 1 },
+    cardDivider: { height: 1, marginVertical: Spacing.md, opacity: Opacity.muted },
     verticalDivider: { width: 1, height: 24, marginHorizontal: Spacing.md },
-    footer: { marginTop: Spacing.md },
-    saveButton: { height: 60, borderRadius: 16 },
 });
