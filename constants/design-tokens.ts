@@ -228,25 +228,19 @@ export const Shape = {
       elevation: 0,
     },
     sm: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
       elevation: 1,
+      // @ts-ignore - boxShadow is valid in RN 0.81+ and Web
+      boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
     },
     md: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
       elevation: 3,
+      // @ts-ignore
+      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.08)',
     },
     lg: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.12,
-      shadowRadius: 8,
       elevation: 6,
+      // @ts-ignore
+      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.12)',
     },
   },
 } as const

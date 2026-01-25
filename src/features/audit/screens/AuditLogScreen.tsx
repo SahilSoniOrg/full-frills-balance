@@ -21,12 +21,7 @@ export default function AuditLogScreen() {
 
     const isFiltered = !!(entityType && entityId);
 
-    useEffect(() => {
-        loadLogs();
-        loadAccountMap();
-    }, [entityType, entityId]);
-
-    const loadAccountMap = async () => {
+    const loadAccountMap = React.useCallback(async () => {
         try {
             const allAccounts = await accountRepository.findAll();
             const map: Record<string, { name: string; currency: string }> = {};
@@ -37,9 +32,9 @@ export default function AuditLogScreen() {
         } catch (error) {
             console.error('Failed to load account map:', error);
         }
-    };
+    }, []);
 
-    const loadLogs = async () => {
+    const loadLogs = React.useCallback(async () => {
         setIsLoading(true);
         try {
             let fetchedLogs;
@@ -61,7 +56,12 @@ export default function AuditLogScreen() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [entityType, entityId, isFiltered]);
+
+    useEffect(() => {
+        loadLogs();
+        loadAccountMap();
+    }, [loadLogs, loadAccountMap]);
 
     const toggleExpanded = (id: string) => {
         setExpandedIds(prev => {

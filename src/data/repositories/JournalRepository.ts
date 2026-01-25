@@ -21,13 +21,13 @@ export interface CreateJournalData {
   journalDate: number
   description?: string
   currencyCode: string
-  transactions: Array<{
+  transactions: {
     accountId: string
     amount: number
     transactionType: TransactionType
     notes?: string
     exchangeRate?: number // For multi-currency transactions
-  }>
+  }[]
 }
 
 export interface JournalWithTransactionTotals {

@@ -5,7 +5,7 @@ import { Link } from 'expo-router'
 import { StyleSheet, View } from 'react-native'
 
 export default function SimpleModal() {
-    const { theme, themeMode } = useTheme()
+    const { theme } = useTheme()
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>

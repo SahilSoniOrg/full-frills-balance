@@ -29,8 +29,8 @@ export default function TabLayout() {
                 },
                 headerStyle: {
                     backgroundColor: theme.background,
-                    elevation: 0,
-                    shadowOpacity: 0,
+                    // @ts-ignore
+                    boxShadow: 'none',
                     borderBottomWidth: 1,
                     borderBottomColor: theme.border,
                 },

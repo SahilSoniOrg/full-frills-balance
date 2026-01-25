@@ -1,12 +1,10 @@
-import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
 import { AppConfig, Shape, Spacing } from '@/constants';
-import { useTheme } from '@/src/hooks/use-theme';
+import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
 import { JournalCalculator, JournalLineInput } from '@/src/domain/accounting/JournalCalculator';
-import { JournalValidator } from '@/src/domain/accounting/JournalValidator';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import { useJournalEditor } from '../hooks/useJournalEditor';
 import { JournalLineItem } from './JournalLineItem';
 import { JournalSummary } from './JournalSummary';
@@ -26,7 +24,7 @@ export const AdvancedForm = ({
     editor,
     onSelectAccountRequest,
 }: AdvancedFormProps) => {
-    const { theme } = useTheme();
+    // const { theme } = useTheme(); // Unused
 
     const getLineBaseAmount = (line: any): number => {
         const amount = sanitizeAmount(line.amount) || 0;
@@ -49,7 +47,7 @@ export const AdvancedForm = ({
 
     const getTotalDebits = () => JournalCalculator.calculateTotalDebits(getDomainLines());
     const getTotalCredits = () => JournalCalculator.calculateTotalCredits(getDomainLines());
-    const validationResult = JournalValidator.validate(getDomainLines());
+    // const validationResult = JournalValidator.validate(getDomainLines()); // Unused
     const isBalanced = JournalCalculator.isBalanced(getDomainLines());
 
     return (
@@ -133,4 +131,4 @@ export const AdvancedForm = ({
     );
 };
 
-const styles = StyleSheet.create({});
+// styles removed as it was empty and unused

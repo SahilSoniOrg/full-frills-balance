@@ -96,7 +96,7 @@ class RebuildQueueService {
         this.isProcessing = true
         try {
             // Take up to maxBatchSize items from the queue
-            const batch: Array<{ id: string; fromDate: number }> = []
+            const batch:  { id: string; fromDate: number }[]  = []
             for (const [accountId, fromDate] of this.queue.entries()) {
                 batch.push({ id: accountId, fromDate })
                 if (batch.length >= this.config.maxBatchSize) {

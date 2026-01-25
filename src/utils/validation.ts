@@ -1,3 +1,5 @@
+import { roundToPrecision } from './money';
+
 export const sanitizeInput = (input: string): string => {
   return input
     .trim()
@@ -58,7 +60,6 @@ export const validateDescription = (description: string): { isValid: boolean; er
   return { isValid: true }
 }
 
-import { roundToPrecision } from './money';
 
 export const sanitizeAmount = (amount: string | number, precision = 2): number | null => {
   const numAmount = typeof amount === 'string' ? parseFloat(amount.replace(/[^0-9.-]/g, '')) : amount

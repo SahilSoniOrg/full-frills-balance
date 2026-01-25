@@ -35,7 +35,7 @@ export const CurrencyFormatter = {
                 minimumFractionDigits,
                 maximumFractionDigits,
             });
-        } catch (error) {
+        } catch {
             // Fallback if currency code is invalid or not supported
             return `${amount.toFixed(maximumFractionDigits)} ${currencyCode}`;
         }

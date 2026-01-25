@@ -20,7 +20,4 @@ export type { ScreenHeaderProps } from './ScreenHeader'
 export { NavigationBar } from './NavigationBar'
 export type { NavigationBarProps } from './NavigationBar'
 
-export { default as CustomTabBar } from './CustomTabBar'
-
-export { default as TabNavigator } from './TabNavigator'
 

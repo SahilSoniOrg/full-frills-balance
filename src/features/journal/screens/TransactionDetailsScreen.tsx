@@ -30,7 +30,7 @@ export default function TransactionDetailsScreen() {
     const [transactions, setTransactions] = useState<TransactionWithAccountInfo[]>([]);
     const [journalInfo, setJournalInfo] = useState<{ description?: string; date: number; status: string; currency: string; displayType?: string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // const [error, setError] = useState<string | null>(null); // Unused
 
     useEffect(() => {
         const loadTransactions = async () => {
@@ -53,7 +53,6 @@ export default function TransactionDetailsScreen() {
                 }
             } catch (error) {
                 console.error('Error loading details:', error);
-                setError('Failed to load transaction details.');
             } finally {
                 setIsLoading(false);
             }

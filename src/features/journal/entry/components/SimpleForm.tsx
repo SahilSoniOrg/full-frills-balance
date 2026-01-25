@@ -1,9 +1,9 @@
-import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/constants';
-import { useTheme } from '@/src/hooks/use-theme';
+import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
 import Account from '@/src/data/models/Account';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { accountingService } from '@/src/domain/AccountingService';
+import { useTheme } from '@/src/hooks/use-theme';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
@@ -68,7 +68,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                 } else {
                     setExchangeRate(rate);
                 }
-            } catch (error) {
+            } catch {
                 setRateError(`Failed to fetch exchange rate`);
                 setExchangeRate(null);
             } finally {
@@ -208,6 +208,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                         autoFocus
                         cursorColor={activeColor}
                         selectionColor={withOpacity(activeColor, Opacity.muted)}
+                        testID="amount-input"
                     />
                 </Stack>
             </Stack>

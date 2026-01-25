@@ -72,13 +72,14 @@ export class JournalPresenter {
     static getJournalType(txs: TransactionLike[], accountTypes: Map<string, AccountType>): JournalDisplayType {
         let hasIncome = false;
         let hasExpense = false;
-        let hasAssetLiability = false;
 
         txs.forEach(tx => {
             const type = accountTypes.get(tx.accountId);
             if (type === AccountType.INCOME) hasIncome = true;
             else if (type === AccountType.EXPENSE) hasExpense = true;
-            else hasAssetLiability = true;
+            else {
+                // Asset, Liability, Equity - used implicitly as default (Transfer)
+            }
         });
 
         if (hasIncome && hasExpense) return JournalDisplayType.MIXED;

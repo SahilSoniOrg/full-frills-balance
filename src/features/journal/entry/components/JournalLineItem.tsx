@@ -1,8 +1,8 @@
-import { AppInput, AppText, Box, Stack } from '@/src/components/core';
 import { AppConfig, Shape, Spacing } from '@/constants';
-import { useTheme } from '@/src/hooks/use-theme';
+import { AppInput, AppText, Box, Stack } from '@/src/components/core';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { useTheme } from '@/src/hooks/use-theme';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
@@ -128,6 +128,7 @@ export function JournalLineItem({
                         onChangeText={(value) => onUpdate('amount', value)}
                         placeholder="0.00"
                         keyboardType="numeric"
+                        testID="amount-input"
                     />
                     {line.accountCurrency && line.accountCurrency !== (preferences.defaultCurrencyCode || AppConfig.defaultCurrency) && (
                         <AppText variant="caption" color="secondary" style={{ marginTop: 2 }}>

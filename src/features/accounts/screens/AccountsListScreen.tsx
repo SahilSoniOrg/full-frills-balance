@@ -1,22 +1,19 @@
 import { Spacing } from '@/constants';
 import { AppText, FloatingActionButton } from '@/src/components/core';
-import { useUI } from '@/src/contexts/UIContext';
 import Account from '@/src/data/models/Account';
+import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useNetWorth } from '@/src/features/dashboard';
 import { NetWorthCard } from '@/src/features/dashboard/NetWorthCard';
-import { AccountCard } from '@/src/features/journal/components/AccountCard';
 import { useTheme } from '@/src/hooks/use-theme'; // Added useTheme
 import { getAccountSections } from '@/src/utils/accountUtils';
-import { usePathname, useRouter } from 'expo-router'; // Added usePathname
+import { useRouter } from 'expo-router'; // Added usePathname
 import React, { useMemo } from 'react';
 import { SectionList, StyleSheet, View } from 'react-native';
 
 export default function AccountsScreen() {
     const router = useRouter()
-    const pathname = usePathname()
-    const { theme, themeMode } = useTheme()
-    const { userName } = useUI()
+    const { theme } = useTheme()
 
     const { accounts, isLoading: accountsLoading } = useAccounts()
     const { balances, netWorth, totalAssets, totalLiabilities, isLoading: worthLoading } = useNetWorth()

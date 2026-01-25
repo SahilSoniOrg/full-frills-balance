@@ -3,9 +3,7 @@ import { AppText, FloatingActionButton, SearchField } from '@/src/components/cor
 import { useUI } from '@/src/contexts/UIContext';
 import { useNetWorth } from '@/src/features/dashboard';
 import { NetWorthCard } from '@/src/features/dashboard/NetWorthCard';
-import { useJournals } from '@/src/features/journal';
 import { DashboardSummary } from '@/src/features/journal/components/DashboardSummary';
-import { JournalCard } from '@/src/features/journal/components/JournalCard';
 import { useSummary } from '@/src/hooks/use-summary';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal } from '@/src/types/readModels';
@@ -13,12 +11,14 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { JournalCard } from '../components/JournalCard';
+import { useJournals } from '../hooks/useJournals';
 
 export function JournalListScreen() {
     const router = useRouter()
     const { userName } = useUI()
     const { theme } = useTheme();
-    const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals()
+    const { journals, isLoading, isLoadingMore, loadMore } = useJournals()
     const { income, expense, isPrivacyMode } = useSummary()
     const { netWorth, totalAssets, totalLiabilities, isLoading: worthLoading } = useNetWorth()
     const [searchQuery, setSearchQuery] = React.useState('')

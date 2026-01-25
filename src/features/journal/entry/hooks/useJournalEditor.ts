@@ -35,7 +35,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
 
     const [isGuidedMode, setIsGuidedMode] = useState(initialMode === 'simple');
     const [transactionType, setTransactionType] = useState<'expense' | 'income' | 'transfer'>(initialType);
-    const [isEdit, setIsEdit] = useState(!!journalId);
+    const isEdit = !!journalId;
 
     // Advanced / Generic state
     const [lines, setLines] = useState<JournalEntryLine[]>([
@@ -134,7 +134,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 showSuccessAlert('Created', 'Transaction created successfully');
             }
             router.back();
-        } catch (error) {
+        } catch {
             showErrorAlert('Unexpected error occurred');
         } finally {
             setIsSubmitting(false);

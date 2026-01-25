@@ -1,9 +1,8 @@
-import { AppCard, AppText, Box, Stack } from '@/src/components/core';
 import { Spacing } from '@/constants';
+import { AppCard, AppText, Box, Stack } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
 import { preferences } from '@/src/utils/preferences';
 import React from 'react';
-import { StyleSheet } from 'react-native';
 
 interface JournalSummaryProps {
     totalDebits: number;
@@ -63,4 +62,3 @@ export function JournalSummary({
     );
 }
 
-const styles = StyleSheet.create({});

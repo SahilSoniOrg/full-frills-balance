@@ -85,12 +85,12 @@ export interface EnrichedJournal {
   totalAmount: number
   transactionCount: number
   displayType: string
-  accounts: Array<{
+  accounts: {
     id: string
     name: string
     accountType: string
     role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL'
-  }>
+  }[]
   semanticType?: string
   semanticLabel?: string
 }

@@ -65,7 +65,7 @@ export class AccountingService {
         description?: string;
         date?: number;
     }) {
-        const { type, amount, sourceAccount, destinationAccount, description, date } = params;
+        const { amount, sourceAccount, destinationAccount, description, date } = params;
 
         const transactions = [
             {

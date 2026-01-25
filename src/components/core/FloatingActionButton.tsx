@@ -18,12 +18,12 @@ export const FloatingActionButton = ({ onPress, style }: FABProps) => {
                 styles.fab,
                 {
                     backgroundColor: theme.primary,
-                    shadowColor: '#000', // Physical shadow is always dark
                 },
                 style
             ]}
             onPress={onPress}
             activeOpacity={Opacity.heavy}
+            testID="fab-button"
         >
             <Ionicons name="add" size={32} color={theme.pureInverse} />
         </TouchableOpacity>
@@ -40,7 +40,9 @@ const styles = StyleSheet.create({
         borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
-        ...Shape.elevation.lg,
+        // @ts-ignore
+        boxShadow: Shape.elevation.lg.boxShadow,
+        elevation: Shape.elevation.lg.elevation,
         zIndex: 100,
     },
 });

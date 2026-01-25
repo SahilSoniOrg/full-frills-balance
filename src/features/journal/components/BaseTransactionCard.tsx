@@ -1,7 +1,7 @@
-import { AppCard, AppText, Badge } from '@/src/components/core';
 import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/constants';
-import { useTheme } from '@/src/hooks/use-theme';
+import { AppCard, AppText, Badge } from '@/src/components/core';
 import { JournalDisplayType, JournalPresenter } from '@/src/domain/accounting/JournalPresenter';
+import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,12 +16,12 @@ export interface BaseTransactionCardProps {
     displayType: JournalDisplayType;
     semanticLabel?: string;
     semanticType?: string;
-    accounts: Array<{
+    accounts: {
         id: string;
         name: string;
         accountType: string;
         role?: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
-    }>;
+    }[];
     notes?: string;
     isIncrease?: boolean;
     onPress?: () => void;

@@ -78,7 +78,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     if (newThemeMode !== uiState.themeMode) {
       setUIState(prev => ({ ...prev, themeMode: newThemeMode }))
     }
-  }, [uiState.themePreference, systemColorScheme])
+  }, [uiState.themePreference, systemColorScheme, uiState.themeMode])
 
   // Load preferences on mount
   useEffect(() => {
@@ -123,7 +123,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
 
     loadPreferences()
-  }, [])
+  }, [systemColorScheme])
 
   const completeOnboarding = async (name: string, currency: string) => {
     try {

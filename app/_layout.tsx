@@ -14,6 +14,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { database } from '../src/data/database/Database';
 
 export default function RootLayout() {
@@ -29,28 +30,30 @@ export default function RootLayout() {
   }
 
   return (
-    <DatabaseProvider database={database}>
-      <UIProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <ErrorBoundary>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-              }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="journal-entry" options={{ headerShown: false, presentation: 'modal' }} />
-              <Stack.Screen name="account-creation" options={{ headerShown: false, presentation: 'modal' }} />
-              <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'modal' }} />
-              <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
-              <Stack.Screen name="account-details" options={{ headerShown: false }} />
-              <Stack.Screen name="transaction-details" options={{ headerShown: false }} />
-            </Stack>
-          </ErrorBoundary>
+    <SafeAreaProvider>
+      <DatabaseProvider database={database}>
+        <UIProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <ErrorBoundary>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="journal-entry" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="account-creation" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
+                <Stack.Screen name="account-details" options={{ headerShown: false }} />
+                <Stack.Screen name="transaction-details" options={{ headerShown: false }} />
+              </Stack>
+            </ErrorBoundary>
 
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </UIProvider>
-    </DatabaseProvider>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </UIProvider>
+      </DatabaseProvider>
+    </SafeAreaProvider>
   );
 }
