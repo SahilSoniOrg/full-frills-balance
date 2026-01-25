@@ -4,6 +4,7 @@
     "strict": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
+    "useDefineForClassFields": false,
     "paths": {
       "@/*": [
         "./*"
