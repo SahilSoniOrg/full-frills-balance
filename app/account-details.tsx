@@ -5,12 +5,12 @@
  */
 
 import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/components/core'
-import { TransactionItem } from '@/components/journal/TransactionItem'
 import { Screen } from '@/components/layout'
 import { Shape, Spacing } from '@/constants'
 import { useAccount, useAccountBalance, useAccountTransactions } from '@/hooks/use-data'
 import { useTheme } from '@/hooks/use-theme'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { TransactionItem } from '@/src/features/journal/components/TransactionItem'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -208,7 +208,9 @@ export default function AccountDetailsScreen() {
                 ListHeaderComponent={renderHeader}
                 ListEmptyComponent={
                     transactionsLoading ? (
-                        <ActivityIndicator size="small" color={theme.primary} padding={Spacing.lg} />
+                        <View style={{ padding: Spacing.lg }}>
+                            <ActivityIndicator size="small" color={theme.primary} />
+                        </View>
                     ) : (
                         <AppCard elevation="sm" padding="lg">
                             <AppText variant="body" color="secondary" style={styles.emptyText}>

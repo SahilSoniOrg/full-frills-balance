@@ -12,6 +12,7 @@
  * ========================================
  */
 
+import { ThemeMode } from '@/constants'
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useColorScheme } from 'react-native'
 import { integrityService } from '../src/services/integrity-service'
@@ -238,6 +239,17 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>
+}
+
+// Support for local theme overrides (e.g. Design Preview)
+const ThemeOverrideContext = createContext<ThemeMode | undefined>(undefined)
+
+export function ThemeOverride({ mode, children }: { mode: ThemeMode; children: React.ReactNode }) {
+  return <ThemeOverrideContext.Provider value={mode}>{children}</ThemeOverrideContext.Provider>
+}
+
+export function useThemeOverride() {
+  return useContext(ThemeOverrideContext)
 }
 
 export function useUI() {

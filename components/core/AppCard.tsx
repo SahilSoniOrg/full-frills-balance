@@ -1,11 +1,7 @@
-/**
- * AppCard - Consistent card component with elevation and radius
- * Clean, minimal card design inspired by Ivy Wallet
- */
-
 import { Shape, Spacing, ThemeMode } from '@/constants/design-tokens'
 import { useThemeColors } from '@/constants/theme-helpers'
 import { useTheme } from '@/hooks/use-theme'
+import { useMemo } from 'react'
 import { StyleSheet, View, type ViewProps } from 'react-native'
 
 export type AppCardProps = ViewProps & {
@@ -34,60 +30,38 @@ export function AppCard({
   const { theme: globalTheme, tokens: globalTokens } = useTheme()
   const overrideTheme = useThemeColors(themeMode)
   const theme = themeMode ? overrideTheme : globalTheme
-  const tokens = themeMode ? { card: { background: theme.surface, border: theme.border } } : globalTokens
+  const tokens = useMemo(() =>
+    themeMode ? { card: { background: theme.surface, border: theme.border } } : globalTokens,
+    [themeMode, theme, globalTokens])
 
-  // Get elevation styles
-  const getElevationStyles = () => {
-    return Shape.elevation[elevation]
-  }
+  const cardStyle = useMemo(() => {
+    const elevationStyles = Shape.elevation[elevation]
+    const radiusStyles = { borderRadius: Shape.radius[radius] }
 
-  // Get padding styles
-  const getPaddingStyles = () => {
-    switch (padding) {
-      case 'none':
-        return { padding: 0 }
-      case 'sm':
-        return { padding: Spacing.md }
-      case 'md':
-        return { padding: Spacing.lg }
-      case 'lg':
-        return { padding: Spacing.xl }
-      default:
-        return { padding: Spacing.lg }
-    }
-  }
+    const paddingStyles = (() => {
+      switch (padding) {
+        case 'none': return styles.paddingNone
+        case 'sm': return styles.paddingSm
+        case 'md': return styles.paddingMd
+        case 'lg': return styles.paddingLg
+        default: return styles.paddingMd
+      }
+    })()
 
-  // Get border radius styles
-  const getRadiusStyles = () => {
-    return {
-      borderRadius: Shape.radius[radius],
-    }
-  }
+    const backgroundColor = variant === 'secondary' ? theme.surfaceSecondary : tokens.card.background
 
-  // Get background color
-  const getBackgroundColor = () => {
-    switch (variant) {
-      case 'secondary':
-        return theme.surfaceSecondary
-      default:
-        return tokens.card.background
-    }
-  }
+    return [
+      styles.card,
+      elevationStyles,
+      paddingStyles,
+      radiusStyles,
+      { backgroundColor },
+      style,
+    ]
+  }, [elevation, padding, radius, variant, theme, tokens, style])
 
   return (
-    <View
-      style={[
-        styles.card,
-        getElevationStyles(),
-        getPaddingStyles(),
-        getRadiusStyles(),
-        {
-          backgroundColor: getBackgroundColor(),
-        },
-        style,
-      ]}
-      {...props}
-    >
+    <View style={cardStyle} {...props}>
       {children}
     </View>
   )
@@ -95,7 +69,10 @@ export function AppCard({
 
 const styles = StyleSheet.create({
   card: {
-    // Base card styles
     overflow: 'hidden',
   },
+  paddingNone: { padding: 0 },
+  paddingSm: { padding: Spacing.md },
+  paddingMd: { padding: Spacing.lg },
+  paddingLg: { padding: Spacing.xl },
 })

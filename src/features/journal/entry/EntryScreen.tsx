@@ -1,9 +1,9 @@
 import { AppText, Badge } from '@/components/core';
-import { AccountSelector } from '@/components/journal/AccountSelector';
 import { Opacity, Shape, Spacing, withOpacity } from '@/constants';
 import { useTheme } from '@/hooks/use-theme';
 import Account from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';

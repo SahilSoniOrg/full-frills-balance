@@ -5,16 +5,17 @@
  */
 
 import { getContextualTokens, ThemeMode, useThemeColors } from '@/constants'
-import { useUI } from '@/contexts/UIContext'
+import { useThemeOverride, useUI } from '@/contexts/UIContext'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 
 export function useTheme() {
-    const { themePreference, defaultCurrency } = useUI()
+    const { themePreference } = useUI()
+    const overrideMode = useThemeOverride()
     const systemColorScheme = useColorScheme()
 
-    const themeMode: ThemeMode = themePreference === 'system'
+    const themeMode: ThemeMode = overrideMode || (themePreference === 'system'
         ? (systemColorScheme === 'dark' ? 'dark' : 'light')
-        : themePreference as ThemeMode
+        : themePreference as ThemeMode)
 
     const theme = useThemeColors(themeMode)
     const tokens = getContextualTokens(theme)

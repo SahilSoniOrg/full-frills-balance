@@ -1,15 +1,15 @@
-import { AppText, FloatingActionButton } from '@/components/core'
-import { NetWorthCard } from '@/components/dashboard/NetWorthCard'
-import { AccountCard } from '@/components/journal/AccountCard'
-import { Spacing } from '@/constants'
-import { useUI } from '@/contexts/UIContext'
-import { useAccounts, useNetWorth } from '@/hooks/use-data'
+import { AppText, FloatingActionButton } from '@/components/core';
+import { NetWorthCard } from '@/components/dashboard/NetWorthCard';
+import { Spacing } from '@/constants';
+import { useUI } from '@/contexts/UIContext';
+import { useAccounts, useNetWorth } from '@/hooks/use-data';
 import { useTheme } from '@/hooks/use-theme'; // Added useTheme
-import Account from '@/src/data/models/Account'
-import { getAccountSections } from '@/src/utils/accountUtils'
+import Account from '@/src/data/models/Account';
+import { AccountCard } from '@/src/features/journal/components/AccountCard';
+import { getAccountSections } from '@/src/utils/accountUtils';
 import { usePathname, useRouter } from 'expo-router'; // Added usePathname
-import React, { useMemo } from 'react'
-import { SectionList, StyleSheet, View } from 'react-native'
+import React, { useMemo } from 'react';
+import { SectionList, StyleSheet, View } from 'react-native';
 
 export default function AccountsScreen() {
   const router = useRouter()

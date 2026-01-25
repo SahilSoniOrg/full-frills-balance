@@ -1,12 +1,12 @@
 import { AppText, FloatingActionButton, SearchField } from '@/components/core';
 import { NetWorthCard } from '@/components/dashboard/NetWorthCard';
-import { DashboardSummary } from '@/components/journal/DashboardSummary';
-import { JournalCard } from '@/components/journal/JournalCard';
 import { Opacity, Spacing, Typography } from '@/constants';
 import { useUI } from '@/contexts/UIContext';
 import { useJournals, useNetWorth } from '@/hooks/use-data';
 import { useSummary } from '@/hooks/use-summary';
 import { useTheme } from '@/hooks/use-theme';
+import { DashboardSummary } from '@/src/features/journal/components/DashboardSummary';
+import { JournalCard } from '@/src/features/journal/components/JournalCard';
 import { EnrichedJournal } from '@/src/types/readModels';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';

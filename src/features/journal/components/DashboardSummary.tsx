@@ -1,3 +1,4 @@
+import { AppCard, AppText } from '@/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/constants';
 import { useUI } from '@/contexts/UIContext';
 import { useTheme } from '@/hooks/use-theme';
@@ -5,7 +6,6 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { AppCard, AppText } from '../core';
 
 interface DashboardSummaryProps {
     income: number;

@@ -1,17 +1,13 @@
-/**
- * AppButton - Minimal, opinionated button component
- * Clean button design with limited variants inspired by Ivy Wallet
- */
-
 import { Opacity, Shape, Spacing, ThemeMode, Typography } from '@/constants/design-tokens'
 import { useThemeColors } from '@/constants/theme-helpers'
 import { useTheme } from '@/hooks/use-theme'
+import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
+import { useMemo } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
-  ViewStyle,
   type TouchableOpacityProps
 } from 'react-native'
 
@@ -43,126 +39,94 @@ export function AppButton({
   const overrideTheme = useThemeColors(themeMode)
   const theme = themeMode ? overrideTheme : globalTheme
 
-  // Get button styles based on variant
-  const getButtonStyles = (): ViewStyle => {
-    const baseStyles = {
-      borderRadius: Shape.radius.full,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    }
+  const { buttonCombinedStyle, textCombinedStyle, finalTextColor } = useMemo(() => {
+    // Correctly map AppButton variant to style-helpers variant
+    // AppButton 'primary' -> ComponentVariant 'primary'
+    // AppButton 'secondary' -> ComponentVariant 'default' (or specialized)
+    // AppButton 'ghost' -> ComponentVariant 'primary' (for text color)
+    const helperVariant: ComponentVariant = variant === 'secondary' ? 'default' : 'primary'
+    const variantColors = getVariantColors(theme, helperVariant)
+
+    const baseStyles = styles.buttonBase
+    let variantStyle = {}
+    let textColor = theme.text
 
     switch (variant) {
       case 'primary':
-        return {
-          ...baseStyles,
-          backgroundColor: disabled ? theme.textTertiary : theme.primary,
+        variantStyle = {
+          backgroundColor: disabled ? theme.textTertiary : variantColors.main,
         }
+        textColor = variantColors.contrast
+        break
       case 'secondary':
-        return {
-          ...baseStyles,
+        variantStyle = {
           backgroundColor: disabled ? theme.surfaceSecondary : theme.surface,
           borderWidth: 1,
           borderColor: disabled ? theme.textTertiary : theme.border,
         }
+        textColor = disabled ? theme.textTertiary : theme.text
+        break
       case 'outline':
-        return {
-          ...baseStyles,
+        variantStyle = {
           backgroundColor: 'transparent',
           borderWidth: 1,
           borderColor: disabled ? theme.textTertiary : theme.primary,
         }
+        textColor = disabled ? theme.textTertiary : theme.primary
+        break
       case 'ghost':
-        return {
-          ...baseStyles,
+        variantStyle = {
           backgroundColor: 'transparent',
         }
-      default:
-        return baseStyles
+        textColor = disabled ? theme.textTertiary : theme.primary
+        break
     }
-  }
 
-  // Get padding styles based on size
-  const getSizeStyles = () => {
-    switch (size) {
-      case 'sm':
-        return {
-          paddingHorizontal: Spacing.lg,
-          paddingVertical: Spacing.sm,
-          minHeight: 32,
-        }
-      case 'md':
-        return {
-          paddingHorizontal: Spacing.xl,
-          paddingVertical: Spacing.md,
-          minHeight: 44,
-        }
-      case 'lg':
-        return {
-          paddingHorizontal: Spacing.xxxl,
-          paddingVertical: Spacing.lg,
-          minHeight: 52,
-        }
-      default:
-        return {
-          paddingHorizontal: Spacing.lg,
-          paddingVertical: Spacing.md,
-          minHeight: 44,
-        }
+    const sizeStyles = (() => {
+      switch (size) {
+        case 'sm':
+          return styles.sizeSm
+        case 'md':
+          return styles.sizeMd
+        case 'lg':
+          return styles.sizeLg
+        default:
+          return styles.sizeMd
+      }
+    })()
+
+    const textTypography = (() => {
+      switch (size) {
+        case 'sm':
+          return styles.textSm
+        case 'md':
+          return styles.textMd
+        case 'lg':
+          return styles.textLg
+        default:
+          return styles.textMd
+      }
+    })()
+
+    return {
+      buttonCombinedStyle: [
+        baseStyles,
+        variantStyle,
+        sizeStyles,
+        style
+      ],
+      textCombinedStyle: [
+        styles.textBase,
+        textTypography,
+        { color: textColor }
+      ],
+      finalTextColor: textColor
     }
-  }
-
-  // Get text color based on variant
-  const getTextColor = () => {
-    if (disabled) return theme.textTertiary
-
-    switch (variant) {
-      case 'primary':
-        return theme.pureInverse // Always contrast on primary
-      case 'secondary':
-        return theme.text
-      case 'outline':
-        return theme.primary
-      case 'ghost':
-        return theme.primary
-      default:
-        return theme.text
-    }
-  }
-
-  // Get text styles based on size
-  const getTextStyles = () => {
-    switch (size) {
-      case 'sm':
-        return {
-          fontSize: Typography.sizes.sm,
-          fontFamily: Typography.fonts.semibold,
-        }
-      case 'md':
-        return {
-          fontSize: Typography.sizes.base,
-          fontFamily: Typography.fonts.semibold,
-        }
-      case 'lg':
-        return {
-          fontSize: Typography.sizes.lg,
-          fontFamily: Typography.fonts.semibold,
-        }
-      default:
-        return {
-          fontSize: Typography.sizes.base,
-          fontFamily: Typography.fonts.semibold,
-        }
-    }
-  }
+  }, [theme, variant, size, disabled, style])
 
   return (
     <TouchableOpacity
-      style={[
-        styles.button,
-        getButtonStyles(),
-        getSizeStyles(),
-        style,
-      ]}
+      style={buttonCombinedStyle}
       disabled={disabled || loading}
       onPress={onPress}
       activeOpacity={Opacity.heavy}
@@ -171,18 +135,10 @@ export function AppButton({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={getTextColor()}
+          color={finalTextColor}
         />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            getTextStyles(),
-            {
-              color: getTextColor(),
-            },
-          ]}
-        >
+        <Text style={textCombinedStyle}>
           {children}
         </Text>
       )}
@@ -191,12 +147,40 @@ export function AppButton({
 }
 
 const styles = StyleSheet.create({
-  button: {
-    // Base button styles
+  buttonBase: {
+    borderRadius: Shape.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  text: {
-    // Base text styles
+  textBase: {
     textAlign: 'center',
     includeFontPadding: false,
+  },
+  sizeSm: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    minHeight: 32,
+  },
+  sizeMd: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    minHeight: 44,
+  },
+  sizeLg: {
+    paddingHorizontal: Spacing.xxxl,
+    paddingVertical: Spacing.lg,
+    minHeight: 52,
+  },
+  textSm: {
+    fontSize: Typography.sizes.sm,
+    fontFamily: Typography.fonts.semibold,
+  },
+  textMd: {
+    fontSize: Typography.sizes.base,
+    fontFamily: Typography.fonts.semibold,
+  },
+  textLg: {
+    fontSize: Typography.sizes.lg,
+    fontFamily: Typography.fonts.semibold,
   },
 })
