@@ -1,7 +1,7 @@
 import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs'
 
-import { migrations } from './migrations'
-import { schema } from './schema'
+import { migrations } from '@/src/data/database/migrations'
+import { schema } from '@/src/data/database/schema'
 
 /**
  * Web/Test Adapter (LokiJS)

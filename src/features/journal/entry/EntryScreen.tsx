@@ -1,18 +1,18 @@
-import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AppText, Badge } from '@/src/components/core';
+import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { useAccounts } from '@/src/features/accounts';
 import { AccountSelector } from '@/src/features/journal';
+import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
+import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
+import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
+import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
+import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useTheme } from '@/src/hooks/use-theme';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AdvancedForm } from './components/AdvancedForm';
-import { JournalEntryHeader } from './components/JournalEntryHeader';
-import { JournalModeToggle } from './components/JournalModeToggle';
-import { SimpleForm } from './components/SimpleForm';
-import { useJournalEditor } from './hooks/useJournalEditor';
 
 export default function EntryScreen() {
   const { theme } = useTheme();

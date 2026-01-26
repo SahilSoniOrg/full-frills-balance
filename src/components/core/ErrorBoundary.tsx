@@ -8,11 +8,11 @@
  * This is intentional - the error boundary must work even when context fails.
  */
 
+import { AppText } from '@/src/components/core/AppText';
 import { Palette, Shape, Spacing, Typography } from '@/src/constants';
 import { logger } from '@/src/utils/logger';
 import React, { Component, ReactNode } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { AppText } from './AppText';
 
 interface ErrorBoundaryProps {
     children: ReactNode;

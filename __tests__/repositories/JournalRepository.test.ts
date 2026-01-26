@@ -3,12 +3,12 @@
  * Tests double-entry accounting, precision handling, and balance integrity
  */
 
-import { database } from '../../src/data/database/Database'
-import { AccountType } from '../../src/data/models/Account'
-import { TransactionType } from '../../src/data/models/Transaction'
-import { accountRepository } from '../../src/data/repositories/AccountRepository'
-import { journalRepository } from '../../src/data/repositories/JournalRepository'
-import { rebuildQueueService } from '../../src/services/rebuild-queue-service'
+import { database } from '@/src/data/database/Database'
+import { AccountType } from '@/src/data/models/Account'
+import { TransactionType } from '@/src/data/models/Transaction'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { rebuildQueueService } from '@/src/data/repositories/RebuildQueue'
 
 describe('JournalRepository', () => {
     let cashAccountId: string

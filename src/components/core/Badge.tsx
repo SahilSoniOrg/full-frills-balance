@@ -1,3 +1,4 @@
+import { AppText } from '@/src/components/core/AppText'
 import { Shape, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
 import { useThemeColors } from '@/src/constants/theme-helpers'
 import { useTheme } from '@/src/hooks/use-theme'
@@ -5,7 +6,6 @@ import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
 import { Ionicons } from '@expo/vector-icons'
 import { useMemo } from 'react'
 import { StyleSheet, View, type ViewProps } from 'react-native'
-import { AppText } from './AppText'
 
 export type BadgeProps = ViewProps & {
   // Badge content

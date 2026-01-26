@@ -2,36 +2,27 @@
  * Reactive Data Hooks for Accounts
  */
 import Account from '@/src/data/models/Account'
-import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { AccountBalance } from '@/src/types/domain'
-import { Q } from '@nozbe/watermelondb'
-import { useDatabase } from '@nozbe/watermelondb/react'
 import { useEffect, useState } from 'react'
 
 /**
  * Hook to reactively get all accounts
  */
 export function useAccounts() {
-    const database = useDatabase()
     const [accounts, setAccounts] = useState<Account[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        const collection = database.collections.get<Account>('accounts')
-        const subscription = collection
-            .query(
-                Q.where('deleted_at', Q.eq(null)),
-                Q.sortBy('order_num', Q.asc)
-            )
-            .observe()
+        const subscription = accountRepository
+            .observeAll()
             .subscribe((accounts) => {
                 setAccounts(accounts)
                 setIsLoading(false)
             })
 
         return () => subscription.unsubscribe()
-    }, [database])
+    }, [])
 
     return { accounts, isLoading }
 }
@@ -40,26 +31,19 @@ export function useAccounts() {
  * Hook to reactively get accounts by type
  */
 export function useAccountsByType(accountType: string) {
-    const database = useDatabase()
     const [accounts, setAccounts] = useState<Account[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        const collection = database.collections.get<Account>('accounts')
-        const subscription = collection
-            .query(
-                Q.where('account_type', accountType),
-                Q.where('deleted_at', Q.eq(null)),
-                Q.sortBy('order_num', Q.asc)
-            )
-            .observe()
+        const subscription = accountRepository
+            .observeByType(accountType)
             .subscribe((accounts) => {
                 setAccounts(accounts)
                 setIsLoading(false)
             })
 
         return () => subscription.unsubscribe()
-    }, [database, accountType])
+    }, [accountType])
 
     return { accounts, isLoading }
 }
@@ -68,7 +52,6 @@ export function useAccountsByType(accountType: string) {
  * Hook to reactively get a single account by ID
  */
 export function useAccount(accountId: string | null) {
-    const database = useDatabase()
     const [account, setAccount] = useState<Account | null>(null)
     const [isLoading, setIsLoading] = useState(true)
 
@@ -79,9 +62,8 @@ export function useAccount(accountId: string | null) {
             return
         }
 
-        const collection = database.collections.get<Account>('accounts')
-        const subscription = collection
-            .findAndObserve(accountId)
+        const subscription = accountRepository
+            .observeById(accountId)
             .subscribe({
                 next: (account) => {
                     setAccount(account)
@@ -94,7 +76,7 @@ export function useAccount(accountId: string | null) {
             })
 
         return () => subscription.unsubscribe()
-    }, [database, accountId])
+    }, [accountId])
 
     return { account, isLoading }
 }
@@ -103,7 +85,6 @@ export function useAccount(accountId: string | null) {
  * Hook to reactively get account balance
  */
 export function useAccountBalance(accountId: string | null) {
-    const database = useDatabase()
     const [balanceData, setBalanceData] = useState<AccountBalance | null>(null)
     const [isLoading, setIsLoading] = useState(true)
 
@@ -114,11 +95,8 @@ export function useAccountBalance(accountId: string | null) {
             return
         }
 
-        // Re-calculate balance whenever transactions for this account change
-        const collection = database.collections.get<Transaction>('transactions')
-        const subscription = collection
-            .query(Q.where('account_id', accountId))
-            .observe()
+        const subscription = accountRepository
+            .observeBalance(accountId)
             .subscribe(async () => {
                 try {
                     const data = await accountRepository.getAccountBalance(accountId)
@@ -131,7 +109,7 @@ export function useAccountBalance(accountId: string | null) {
             })
 
         return () => subscription.unsubscribe()
-    }, [database, accountId])
+    }, [accountId])
 
     return { balanceData, isLoading }
 }

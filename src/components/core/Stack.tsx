@@ -1,6 +1,6 @@
+import { Box, type BoxProps } from '@/src/components/core/Box'
 import { SpacingKey } from '@/src/constants/design-tokens'
 import React from 'react'
-import { Box, type BoxProps } from './Box'
 
 export type StackProps = Omit<BoxProps, 'direction'> & {
     space?: SpacingKey

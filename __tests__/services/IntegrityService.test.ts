@@ -1,9 +1,9 @@
-import { database } from '../../src/data/database/Database'
-import { AccountType } from '../../src/data/models/Account'
-import Transaction, { TransactionType } from '../../src/data/models/Transaction'
-import { accountRepository } from '../../src/data/repositories/AccountRepository'
-import { journalRepository } from '../../src/data/repositories/JournalRepository'
-import { IntegrityService } from '../../src/services/integrity-service'
+import { database } from '@/src/data/database/Database'
+import { AccountType } from '@/src/data/models/Account'
+import Transaction, { TransactionType } from '@/src/data/models/Transaction'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { IntegrityService } from '@/src/services/integrity-service'
 
 describe('IntegrityService', () => {
     let service: IntegrityService

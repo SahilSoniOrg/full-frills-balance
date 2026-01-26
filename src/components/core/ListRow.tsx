@@ -3,6 +3,7 @@
  * Clean, minimal list design inspired by Ivy Wallet
  */
 
+import { AppText, type AppTextProps } from '@/src/components/core/AppText'
 import { Opacity, Spacing, ThemeMode } from '@/src/constants/design-tokens'
 import { useThemeColors } from '@/src/constants/theme-helpers'
 import {
@@ -11,7 +12,6 @@ import {
   View,
   type TouchableOpacityProps
 } from 'react-native'
-import { AppText, type AppTextProps } from './AppText'
 
 export type ListRowProps = TouchableOpacityProps & {
   // Content areas

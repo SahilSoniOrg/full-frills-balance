@@ -3,11 +3,11 @@
  * Tests account creation, balance calculations, and precision handling
  */
 
-import { database } from '../../src/data/database/Database'
-import { AccountType } from '../../src/data/models/Account'
-import { TransactionType } from '../../src/data/models/Transaction'
-import { accountRepository } from '../../src/data/repositories/AccountRepository'
-import { journalRepository } from '../../src/data/repositories/JournalRepository'
+import { database } from '@/src/data/database/Database'
+import { AccountType } from '@/src/data/models/Account'
+import { TransactionType } from '@/src/data/models/Transaction'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
 
 describe('AccountRepository', () => {
     beforeEach(async () => {

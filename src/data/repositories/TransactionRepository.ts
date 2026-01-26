@@ -266,6 +266,26 @@ export class TransactionRepository {
       await this.rebuildRunningBalances(transaction.accountId)
     })
   }
+
+  /**
+   * Finds the latest transaction for an account before a given date.
+   * Useful for balance calculations.
+   */
+  async findLatestForAccountBeforeDate(
+    accountId: string,
+    date: number
+  ): Promise<Transaction | null> {
+    const transactions = await this.transactions
+      .query(
+        Q.where('account_id', accountId),
+        Q.where('transaction_date', Q.lt(date)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('transaction_date', Q.desc),
+        Q.take(1)
+      )
+      .fetch()
+    return transactions[0] || null
+  }
 }
 
 // Export a singleton instance

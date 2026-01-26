@@ -3,12 +3,12 @@ import Account, { AccountType } from '@/src/data/models/Account'
 import { AuditAction } from '@/src/data/models/AuditLog'
 import { JournalStatus } from '@/src/data/models/Journal'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
-import { auditService } from '@/src/services/audit-service'
-import { rebuildQueueService } from '@/src/services/rebuild-queue-service'
+import { auditRepository } from '@/src/data/repositories/AuditRepository'
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
+import { rebuildQueueService } from '@/src/data/repositories/RebuildQueue'
 import { AccountBalance, AccountCreateInput, AccountUpdateInput } from '@/src/types/domain'
 import { getEpsilon, roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
-import { currencyRepository } from './CurrencyRepository'
 
 export class AccountRepository {
   /**
@@ -29,6 +29,41 @@ export class AccountRepository {
 
   private get transactions() {
     return this.db.collections.get<Transaction>('transactions')
+  }
+
+  /**
+   * Reactive Observation Methods
+   */
+
+  observeAll(includeDeleted = false) {
+    const query = includeDeleted
+      ? this.accounts.query(Q.sortBy('order_num', Q.asc))
+      : this.accounts.query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
+    return query.observe()
+  }
+
+  observeByType(accountType: string) {
+    return this.accounts
+      .query(
+        Q.where('account_type', accountType),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('order_num', Q.asc)
+      )
+      .observe()
+  }
+
+  observeById(accountId: string) {
+    return this.accounts.findAndObserve(accountId)
+  }
+
+  /**
+   * Observe account balance.
+   * Re-emits whenever transactions for this account change.
+   */
+  observeBalance(accountId: string) {
+    return this.transactions
+      .query(Q.where('account_id', accountId))
+      .observe()
   }
 
   /**
@@ -128,7 +163,7 @@ export class AccountRepository {
 
     // 2. Audit account creation
     const precision = await currencyRepository.getPrecision(newAccount.currencyCode)
-    await auditService.log({
+    await auditRepository.log({
       entityType: 'account',
       entityId: newAccount.id,
       action: AuditAction.CREATE,
@@ -296,7 +331,7 @@ export class AccountRepository {
     })
 
     // Log update
-    await auditService.log({
+    await auditRepository.log({
       entityType: 'account',
       entityId: account.id,
       action: AuditAction.UPDATE,
@@ -324,7 +359,7 @@ export class AccountRepository {
       })
     })
 
-    await auditService.log({
+    await auditRepository.log({
       entityType: 'Account',
       entityId: account.id,
       action: AuditAction.UPDATE,
@@ -345,7 +380,7 @@ export class AccountRepository {
       await account.markAsDeleted()
     })
 
-    await auditService.log({
+    await auditRepository.log({
       entityType: 'account',
       entityId: account.id,
       action: AuditAction.DELETE,
@@ -369,7 +404,7 @@ export class AccountRepository {
       await (this.db.adapter.batch as any)([['update', 'accounts', raw]])
 
       // Log recovery
-      await auditService.log({
+      await auditRepository.log({
         entityType: 'account',
         entityId: accountId,
         action: AuditAction.UPDATE,

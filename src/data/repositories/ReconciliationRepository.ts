@@ -1,8 +1,8 @@
 import { database } from '@/src/data/database/Database'
 import Journal from '@/src/data/models/Journal'
 import { AccountRepository } from '@/src/data/repositories/AccountRepository'
+import { JournalRepository } from '@/src/data/repositories/JournalRepository'
 import { Q } from '@nozbe/watermelondb'
-import { JournalRepository } from './JournalRepository'
 
 export interface ReconciliationResult {
   accountId: string

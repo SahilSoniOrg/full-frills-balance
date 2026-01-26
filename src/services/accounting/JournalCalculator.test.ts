@@ -1,5 +1,5 @@
 import { TransactionType } from '@/src/data/models/Transaction';
-import { JournalCalculator } from './JournalCalculator';
+import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 
 describe('JournalCalculator', () => {
     const debit100 = { amount: 100, type: TransactionType.DEBIT };

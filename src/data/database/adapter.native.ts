@@ -1,8 +1,8 @@
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
 import { Platform } from 'react-native'
 
-import { migrations } from './migrations'
-import { schema } from './schema'
+import { migrations } from '@/src/data/database/migrations'
+import { schema } from '@/src/data/database/schema'
 
 const adapter = new SQLiteAdapter({
   schema,

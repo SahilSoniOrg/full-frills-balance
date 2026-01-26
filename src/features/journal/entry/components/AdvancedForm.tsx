@@ -1,11 +1,11 @@
-import { Shape, Spacing } from '@/src/constants';
 import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
+import { Shape, Spacing } from '@/src/constants';
+import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
+import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
-import { JournalLineItem } from './JournalLineItem';
-import { JournalSummary } from './JournalSummary';
 
 interface AdvancedFormProps {
     accounts: any[];

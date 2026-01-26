@@ -1,3 +1,4 @@
+import { AppText } from '@/src/components/core/AppText'
 import { Opacity, Shape, Size, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
 import { useThemeColors } from '@/src/constants/theme-helpers'
 import { useTheme } from '@/src/hooks/use-theme'
@@ -9,7 +10,6 @@ import {
   TouchableOpacity,
   type TouchableOpacityProps
 } from 'react-native'
-import { AppText } from './AppText'
 
 export type AppButtonProps = TouchableOpacityProps & {
   // Button variants - limited and intentional

@@ -1,6 +1,6 @@
+import { BaseTransactionCard } from '@/src/features/journal/components/BaseTransactionCard';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import React from 'react';
-import { BaseTransactionCard } from './BaseTransactionCard';
 
 interface JournalCardProps {
     journal: EnrichedJournal;

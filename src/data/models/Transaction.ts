@@ -1,7 +1,7 @@
+import Account from '@/src/data/models/Account'
+import Journal from '@/src/data/models/Journal'
 import { Model, Relation } from '@nozbe/watermelondb'
 import { date, field, relation } from '@nozbe/watermelondb/decorators'
-import Account from './Account'
-import Journal from './Journal'
 
 export enum TransactionType {
   DEBIT = 'DEBIT',

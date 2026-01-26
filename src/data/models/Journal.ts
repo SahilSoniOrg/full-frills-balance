@@ -1,6 +1,6 @@
+import Transaction from '@/src/data/models/Transaction'
 import { Model, Query, Relation } from '@nozbe/watermelondb'
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators'
-import Transaction from './Transaction'
 
 export enum JournalStatus {
   DRAFT = 'DRAFT',

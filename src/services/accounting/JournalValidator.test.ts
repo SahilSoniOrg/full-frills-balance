@@ -1,6 +1,6 @@
 import { TransactionType } from '@/src/data/models/Transaction';
-import { JournalLineInput } from './JournalCalculator';
-import { JournalValidator } from './JournalValidator';
+import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
+import { JournalValidator } from '@/src/services/accounting/JournalValidator';
 
 describe('JournalValidator', () => {
     const debit100: JournalLineInput = { amount: 100, type: TransactionType.DEBIT };

@@ -3,12 +3,12 @@
  * Consistent input design inspired by Ivy Wallet
  */
 
+import { AppText } from '@/src/components/core/AppText'
 import { Shape, Size, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
 import { useThemeColors } from '@/src/constants/theme-helpers'
 import { useTheme } from '@/src/hooks/use-theme'
 import React from 'react'
 import { StyleSheet, TextInput, type TextInputProps, View, ViewStyle } from 'react-native'
-import { AppText } from './AppText'
 
 export type AppInputProps = TextInputProps & {
     label?: string

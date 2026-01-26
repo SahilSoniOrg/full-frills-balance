@@ -3,13 +3,13 @@
  * Tests complete user workflows across multiple repositories
  */
 
-import { database } from '../../src/data/database/Database'
-import { AccountType } from '../../src/data/models/Account'
-import { TransactionType } from '../../src/data/models/Transaction'
-import { accountRepository } from '../../src/data/repositories/AccountRepository'
-import { journalRepository } from '../../src/data/repositories/JournalRepository'
-import { IntegrityService } from '../../src/services/integrity-service'
-import { rebuildQueueService } from '../../src/services/rebuild-queue-service'
+import { database } from '@/src/data/database/Database'
+import { AccountType } from '@/src/data/models/Account'
+import { TransactionType } from '@/src/data/models/Transaction'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { rebuildQueueService } from '@/src/data/repositories/RebuildQueue'
+import { IntegrityService } from '@/src/services/integrity-service'
 
 describe('E2E Workflows', () => {
     let integrityService: IntegrityService

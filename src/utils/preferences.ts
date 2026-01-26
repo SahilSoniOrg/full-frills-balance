@@ -1,5 +1,5 @@
+import { logger } from '@/src/utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logger } from './logger';
 
 const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 

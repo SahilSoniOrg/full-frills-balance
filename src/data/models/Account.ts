@@ -1,6 +1,6 @@
+import Transaction from '@/src/data/models/Transaction'
 import { Model, Query } from '@nozbe/watermelondb'
 import { children, date, field } from '@nozbe/watermelondb/decorators'
-import Transaction from './Transaction'
 
 export enum AccountType {
   ASSET = 'ASSET',

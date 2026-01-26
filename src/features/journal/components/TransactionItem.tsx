@@ -1,6 +1,6 @@
+import { BaseTransactionCard } from '@/src/features/journal/components/BaseTransactionCard';
 import { EnrichedTransaction } from '@/src/types/domain';
 import React from 'react';
-import { BaseTransactionCard } from './BaseTransactionCard';
 
 interface TransactionItemProps {
     transaction: EnrichedTransaction;

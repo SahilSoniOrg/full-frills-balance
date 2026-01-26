@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { preferences } from './preferences';
+import { preferences } from '@/src/utils/preferences';
 
 /**
  * Formatting options for CurrencyFormatter

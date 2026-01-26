@@ -1,5 +1,5 @@
-import { MIN_EXCHANGE_RATE } from './AccountingConstants';
-import { JournalCalculator, JournalLineInput } from './JournalCalculator';
+import { MIN_EXCHANGE_RATE } from '@/src/services/accounting/AccountingConstants';
+import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 
 export interface ValidationResult {
     isValid: boolean;

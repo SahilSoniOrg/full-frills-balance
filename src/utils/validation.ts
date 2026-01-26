@@ -1,4 +1,4 @@
-import { roundToPrecision } from './money';
+import { roundToPrecision } from '@/src/utils/money';
 
 export const sanitizeInput = (input: string): string => {
   return input

@@ -3,13 +3,13 @@
  * Provides consistent screen layout with safe area, background, and navigation
  */
 
+import { NavigationBar, type NavigationBarProps } from '@/src/components/layout/NavigationBar'
 import { Spacing } from '@/src/constants'
 import { useTheme } from '@/src/hooks/use-theme'
 import { StatusBar } from 'expo-status-bar'
 import React from 'react'
 import { ScrollView, StyleSheet, View, type ViewProps } from 'react-native'
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context'
-import { NavigationBar, type NavigationBarProps } from './NavigationBar'
 
 export type ScreenProps = ViewProps & {
   children: React.ReactNode

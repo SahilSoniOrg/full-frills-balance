@@ -3,8 +3,8 @@
  * Provides access to design tokens with proper TypeScript support
  */
 
+import { Colors, ThemeMode } from '@/src/constants/design-tokens'
 import { useColorScheme } from 'react-native'
-import { Colors, ThemeMode } from './design-tokens'
 
 // Enhanced theme colors with semantic naming
 export const useThemeColors = (mode?: ThemeMode | 'system') => {
