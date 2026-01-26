@@ -1,9 +1,10 @@
-import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { AppButton, AppCard, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
+import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountType } from '@/src/data/models/Account';
-import { useAccountActions, useAccount, useAccounts } from '@/src/features/accounts';
+import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
+import { useAccount, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { showErrorAlert } from '@/src/utils/alerts';

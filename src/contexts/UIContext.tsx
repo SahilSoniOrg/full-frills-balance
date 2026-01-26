@@ -43,6 +43,7 @@ interface UIState {
 
   // App Lifecycle
   isRestartRequired: boolean
+  restartType: 'IMPORT' | 'RESET' | null
   importStats: { accounts: number; journals: number; transactions: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } | null
 }
 
@@ -73,6 +74,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     defaultCurrency: 'USD',
     isPrivacyMode: false,
     isRestartRequired: false,
+    restartType: null,
     importStats: null,
   })
 
@@ -107,6 +109,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           defaultCurrency: loadedPreferences.defaultCurrencyCode || 'USD',
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
           isRestartRequired: false,
+          restartType: null,
           importStats: null,
           isLoading: false,
           isInitialized: true,
@@ -213,6 +216,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         isLoading: false,
         isInitialized: true,
         isRestartRequired: true, // Block the app
+        restartType: 'RESET',
         importStats: null,
       })
     } catch (error) {
@@ -239,7 +243,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }
 
   const requireRestart = (stats?: { accounts: number; journals: number; transactions: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] }) => {
-    setUIState(prev => ({ ...prev, isRestartRequired: true, importStats: stats || null }))
+    setUIState(prev => ({ ...prev, isRestartRequired: true, restartType: 'IMPORT', importStats: stats || null }))
   }
 
   const value: UIContextType = {

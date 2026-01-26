@@ -4,6 +4,7 @@ import Account, { AccountType } from '@/src/data/models/Account';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { ImportStats } from '@/src/services/import-service';
+import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
@@ -80,8 +81,9 @@ class IvyImportService {
             logger.info('Starting Import from Ivy Wallet JSON...');
             logger.info(`Found ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions`);
 
-
-            // 2. Prepare for batching
+            // 1. Wipe existing data for clean import
+            logger.warn('Wiping database before Ivy import...');
+            await integrityService.resetDatabase();
             const accountActions: any[] = [];
 
             // 3. Pre-Scan Transactions for Category Usage (Per Currency)

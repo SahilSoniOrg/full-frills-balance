@@ -38,9 +38,13 @@ export function Screen({
   withPadding = false,
   edges = ['top'],
   style,
-  ...props
+  ...rest
 }: ScreenProps) {
   const { theme, themeMode } = useTheme()
+
+  // Clean props for SafeAreaView to avoid Web DOM warnings
+  // @ts-ignore
+  const { scrollable: _s, withPadding: _w, ...safeAreaProps } = rest;
 
   const content = (
     <View style={[
@@ -56,7 +60,7 @@ export function Screen({
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
       edges={edges}
-      {...props}
+      {...safeAreaProps}
     >
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
 

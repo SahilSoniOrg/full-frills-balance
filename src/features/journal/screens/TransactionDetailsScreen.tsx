@@ -1,7 +1,8 @@
-import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants'
 import { AppButton, AppCard, AppText, Badge, IconButton } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
-import { useJournalActions, useJournalTransactionsWithAccountInfo } from '@/src/features/journal'
+import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants'
+import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions'
+import { useJournalTransactionsWithAccountInfo } from '@/src/features/journal/hooks/useJournalTransactionsWithAccountInfo'
 import { useTheme } from '@/src/hooks/use-theme'
 import { TransactionWithAccountInfo } from '@/src/types/domain'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
@@ -61,7 +62,7 @@ export default function TransactionDetailsScreen() {
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
     const totalAmount = transactions
-        .filter(t => t.transactionType === 'DEBIT')
+        .filter(t => t.flowDirection === 'IN')
         .reduce((sum: number, t: TransactionWithAccountInfo) => sum + (t.amount || 0), 0);
 
     const formattedDate = journalInfo ? formatDate(journalInfo.date, { includeTime: true }) : '';
@@ -195,24 +196,39 @@ export default function TransactionDetailsScreen() {
                         BREAKDOWN
                     </AppText>
 
-                    {transactions.map(item => (
-                        <TouchableOpacity
-                            key={item.id}
-                            style={styles.splitRow}
-                            onPress={() => router.push(`/account-details?accountId=${item.accountId}` as any)}
-                        >
-                            <View style={styles.splitInfo}>
-                                <AppText variant="body" color="primary">{item.accountName}</AppText>
-                                <AppText variant="caption" color="secondary">{item.transactionType}</AppText>
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                                <AppText variant="subheading">
-                                    {CurrencyFormatter.format(item.amount, journalInfo?.currency)}
-                                </AppText>
-                                <Ionicons name="chevron-forward" size={Typography.sizes.sm} color={theme.textSecondary} />
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                    {transactions.map(item => {
+                        const isIn = item.flowDirection === 'IN';
+                        return (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={styles.splitRow}
+                                onPress={() => router.push(`/account-details?accountId=${item.accountId}` as any)}
+                            >
+                                <View style={styles.splitIconContainer}>
+                                    <View style={[
+                                        styles.directionIcon,
+                                        { backgroundColor: withOpacity(isIn ? theme.income : theme.error, Opacity.soft) }
+                                    ]}>
+                                        <Ionicons
+                                            name={isIn ? 'arrow-down' : 'arrow-up'}
+                                            size={16}
+                                            color={isIn ? theme.income : theme.error}
+                                        />
+                                    </View>
+                                </View>
+                                <View style={styles.splitInfo}>
+                                    <AppText variant="body" color="primary">{item.accountName}</AppText>
+                                    <AppText variant="caption" color="secondary">{item.transactionType}</AppText>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                                    <AppText variant="subheading" style={{ color: isIn ? theme.income : theme.error }}>
+                                        {isIn ? '+' : '-'}{CurrencyFormatter.format(item.amount, item.currencyCode)}
+                                    </AppText>
+                                    <Ionicons name="chevron-forward" size={Typography.sizes.sm} color={theme.textSecondary} />
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })}
 
                 </AppCard>
             </View>
@@ -277,6 +293,16 @@ const styles = StyleSheet.create({
     },
     splitInfo: {
         flex: 1,
+    },
+    splitIconContainer: {
+        marginRight: Spacing.md,
+    },
+    directionIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: Shape.radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     headerActions: {
         flexDirection: 'row',

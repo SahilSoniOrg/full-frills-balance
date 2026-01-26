@@ -10,10 +10,11 @@ import Account from '@/src/data/models/Account'
 import { JournalStatus } from '@/src/data/models/Journal'
 import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
-import { BALANCE_EPSILON } from '@/src/services/accounting/AccountingConstants'
 import { accountingService } from '@/src/services/AccountingService'
 import { logger } from '@/src/utils/logger'
+import { amountsAreEqual, roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
 export interface BalanceVerificationResult {
@@ -57,11 +58,13 @@ export class IntegrityService {
             )
             .fetch()
 
-        // Sum up all transactions
+        const precision = await currencyRepository.getPrecision(account.currencyCode)
+
+        // Sum up all transactions with precision-aware rounding at each step
         let balance = 0
         for (const tx of transactions) {
             const multiplier = accountingService.getBalanceImpactMultiplier(account.accountType as any, tx.transactionType)
-            balance += tx.amount * multiplier
+            balance = roundToPrecision(balance + (tx.amount * multiplier), precision)
         }
 
         return balance
@@ -78,6 +81,7 @@ export class IntegrityService {
 
         const cachedData = await accountRepository.getAccountBalance(accountId)
         const computedBalance = await this.computeBalanceFromTransactions(accountId)
+        const precision = await currencyRepository.getPrecision(account.currencyCode)
         const discrepancy = Math.abs(cachedData.balance - computedBalance)
 
         return {
@@ -85,7 +89,7 @@ export class IntegrityService {
             accountName: account.name,
             cachedBalance: cachedData.balance,
             computedBalance,
-            matches: discrepancy < BALANCE_EPSILON,
+            matches: amountsAreEqual(cachedData.balance, computedBalance, precision),
             discrepancy,
         }
     }

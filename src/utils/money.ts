@@ -21,10 +21,11 @@ export const getEpsilon = (precision: number): number => {
 };
 
 /**
- * Compares two amounts for equality within a precision-aware epsilon.
+ * Compares two amounts for equality using rounding to specific precision.
+ * This is more robust against accumulated floating-point noise than simple epsilon checks.
  */
 export const amountsAreEqual = (a: number, b: number, precision: number): boolean => {
-    return Math.abs(a - b) < getEpsilon(precision);
+    return roundToPrecision(a, precision) === roundToPrecision(b, precision);
 };
 
 /**

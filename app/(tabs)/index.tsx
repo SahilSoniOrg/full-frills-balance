@@ -1,6 +1,5 @@
 import { useUI } from '@/src/contexts/UIContext';
 import { JournalListScreen } from '@/src/features/journal/list/JournalListScreen';
-import { Redirect } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -21,6 +20,6 @@ export default function IndexScreen() {
     return <JournalListScreen />;
   }
 
-  // Mandatory onboarding for new users
-  return <Redirect href="/onboarding" />;
+  // Fallback (should be handled by root index, but safe to keep as null or basic view)
+  return null;
 }

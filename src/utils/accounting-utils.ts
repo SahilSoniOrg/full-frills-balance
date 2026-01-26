@@ -1,5 +1,6 @@
-import { AccountType } from '@/src/data/models/Account'
-import { TransactionType } from '@/src/data/models/Transaction'
+import { AccountType } from '@/src/data/models/Account';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { roundToPrecision } from './money';
 
 /**
  * Validatable transaction partial
@@ -32,9 +33,10 @@ export function getBalanceImpactMultiplier(
 }
 
 /**
- * Determines if a change is an "increase" in the intuitive sense.
+ * Determines if a change is an "increase" in the account's balance.
+ * (e.g. Asset Debit is an increase, Liability Credit is an increase)
  */
-export function isIncrease(
+export function isBalanceIncrease(
     accountType: AccountType,
     transactionType: TransactionType
 ): boolean {
@@ -42,9 +44,29 @@ export function isIncrease(
 }
 
 /**
- * Validates if a set of journal lines are balanced.
+ * Determines if a transaction represents value ENTERING an account (Destination).
+ * This follows the "Value Flow" model where DEBIT = IN and CREDIT = OUT.
  */
-export function validateBalance(lines: JournalLineInput[]): {
+export function isValueEntering(transactionType: TransactionType): boolean {
+    return transactionType === TransactionType.DEBIT
+}
+
+/**
+ * Determines if a transaction represents value LEAVING an account (Source).
+ */
+export function isValueLeaving(transactionType: TransactionType): boolean {
+    return transactionType === TransactionType.CREDIT
+}
+
+// Deprecated: Use isBalanceIncrease for clarity
+export const isIncrease = isBalanceIncrease
+
+/**
+ * Validates if a set of journal lines are balanced.
+ * @param lines Journal lines to validate
+ * @param precision Precision of the journal currency (default 2)
+ */
+export function validateBalance(lines: JournalLineInput[], precision: number = 2): {
     isValid: boolean
     imbalance: number
     totalDebits: number
@@ -58,12 +80,12 @@ export function validateBalance(lines: JournalLineInput[]): {
         .filter((l) => l.type === TransactionType.CREDIT)
         .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0)
 
-    const imbalance = Math.round((totalDebits - totalCredits) * 100) / 100
+    const imbalance = roundToPrecision(totalDebits - totalCredits, precision);
 
     return {
-        isValid: Math.abs(imbalance) < 0.01,
+        isValid: Math.abs(imbalance) < Math.pow(10, -(precision + 1)), // Use precision-aware epsilon
         imbalance,
-        totalDebits,
-        totalCredits,
+        totalDebits: roundToPrecision(totalDebits, precision),
+        totalCredits: roundToPrecision(totalCredits, precision),
     }
 }

@@ -1,8 +1,8 @@
-import { Palette, Shape, Spacing } from '@/src/constants';
 import { AppCard, AppText, Stack } from '@/src/components/core';
+import { Palette, Shape, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { useAccounts } from '@/src/features/accounts';
+import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

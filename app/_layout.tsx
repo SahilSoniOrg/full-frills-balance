@@ -1,7 +1,8 @@
 
-import { AppText, ErrorBoundary } from '@/src/components/core';
+import { ErrorBoundary } from '@/src/components/core';
 import { UIProvider, useUI } from '@/src/contexts/UIContext';
 import { database } from '@/src/data/database/Database';
+import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import {
   Raleway_600SemiBold,
@@ -12,9 +13,7 @@ import {
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -47,13 +46,7 @@ function AppContent() {
   const { isRestartRequired } = useUI();
 
   if (isRestartRequired) {
-    // Basic placeholder for restart, actual UI should be in features
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
-        <StatusBar style="light" />
-        <AppText variant="title" style={{ color: '#fff' }}>Restart Required</AppText>
-      </View>
-    );
+    return <RestartRequiredScreen />;
   }
 
   return (

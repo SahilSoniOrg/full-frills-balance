@@ -1,8 +1,10 @@
-import { Opacity, Spacing, Typography } from '@/src/constants';
 import { AppText, FloatingActionButton, SearchField } from '@/src/components/core';
+import { Opacity, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { NetWorthCard } from '@/src/features/dashboard';
-import { DashboardSummary, JournalCard, useJournals } from '@/src/features/journal';
+import { DashboardSummary } from '@/src/features/journal/components/DashboardSummary';
+import { JournalCard } from '@/src/features/journal/components/JournalCard';
+import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useSummary } from '@/src/hooks/use-summary';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal } from '@/src/types/domain';

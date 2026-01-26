@@ -63,13 +63,8 @@ export interface JournalPresentation {
 export class JournalPresenter {
     /**
      * Determines the high-level type of a journal based on its transactions
-     * Logic:
-     * - If all transactions are between Assets/Liabilities/Equity -> Transfer
-     * - If there are Income accounts -> Income
-     * - If there are Expense accounts -> Expense
-     * - If both Income and Expense -> Mixed (rare)
      */
-    static getJournalType(txs: TransactionLike[], accountTypes: Map<string, AccountType>): JournalDisplayType {
+    static getJournalDisplayType(txs: TransactionLike[], accountTypes: Map<string, AccountType>): JournalDisplayType {
         let hasIncome = false;
         let hasExpense = false;
 
@@ -101,7 +96,7 @@ export class JournalPresenter {
                 return { type, label: semanticLabel || 'Transfer', colorHex: theme.primary };
             case JournalDisplayType.MIXED:
             default:
-                return { type, label: semanticLabel || 'Journal', colorHex: theme.textSecondary };
+                return { type, label: semanticLabel || 'Split', colorHex: theme.textSecondary };
         }
     }
 
@@ -152,9 +147,9 @@ export class JournalPresenter {
     }
 
     /**
-     * Gets theme color key for an account type
+     * Gets theme color key for an account type (Used by hooks/repositories)
      */
-    static getAccountColor(type: string): 'asset' | 'liability' | 'equity' | 'income' | 'expense' {
+    static getAccountColorKey(type: string): 'asset' | 'liability' | 'equity' | 'income' | 'expense' {
         switch (type) {
             case AccountType.ASSET: return 'asset';
             case AccountType.LIABILITY: return 'liability';

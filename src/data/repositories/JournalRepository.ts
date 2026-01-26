@@ -8,9 +8,9 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { rebuildQueueService } from '@/src/data/repositories/RebuildQueue'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { JournalPresenter } from '@/src/services/accounting/JournalPresenter'
 import { EnrichedJournal, EnrichedTransaction } from '@/src/types/domain'
 import { getBalanceImpactMultiplier, validateBalance } from '@/src/utils/accounting-utils'
-import { getJournalDisplayType, getSemanticType, JournalDisplayType } from '@/src/utils/journal-presenter-utils'
 import { logger } from '@/src/utils/logger'
 import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
@@ -92,12 +92,30 @@ export class JournalRepository {
     const accountMap = new Map(accounts.map(a => [a.id, a]))
     const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]))
 
+    // Get precisions for each account involved to ensure accurate intermediate conversion
+    const accountPrecisions = new Map<string, number>()
+    await Promise.all(accounts.map(async acc => {
+      const p = await currencyRepository.getPrecision(acc.currencyCode)
+      accountPrecisions.set(acc.id, p)
+    }))
+
+    const journalPrecision = await currencyRepository.getPrecision(journalFields.currencyCode)
+
+    // Round transaction amounts according to their account precision before conversion
+    const roundedTransactionData = transactionData.map(t => {
+      const precision = accountPrecisions.get(t.accountId) ?? 2
+      return {
+        ...t,
+        amount: roundToPrecision(t.amount, precision)
+      }
+    })
+
     // Validate double-entry accounting by converting transaction amounts to journal currency
-    const validationResult = validateBalance(transactionData.map(t => ({
+    const validationResult = validateBalance(roundedTransactionData.map(t => ({
       amount: t.amount,
       type: t.transactionType,
       exchangeRate: t.exchangeRate
-    })));
+    })), journalPrecision);
 
     if (!validationResult.isValid) {
       throw new Error(`Journal is unbalanced by ${validationResult.imbalance} ${journalFields.currencyCode}`)
@@ -107,11 +125,11 @@ export class JournalRepository {
     const calculatedBalances = new Map<string, number>()
 
     // Determine rebuilds or fast-updates
-    for (const tx of transactionData) {
+    for (const tx of roundedTransactionData) {
       const account = accountMap.get(tx.accountId)
       if (!account) throw new Error(`Account ${tx.accountId} not found`)
 
-      const precision = await currencyRepository.getPrecision(account.currencyCode)
+      const precision = accountPrecisions.get(tx.accountId) ?? 2
       const latestTx = await transactionRepository.findLatestForAccountBeforeDate(tx.accountId, journalFields.journalDate)
 
       const isBackdated = !!latestTx && latestTx.transactionDate > journalFields.journalDate
@@ -133,15 +151,15 @@ export class JournalRepository {
         j.status = JournalStatus.POSTED
         j.totalAmount = Math.max(Math.abs(validationResult.totalDebits), Math.abs(validationResult.totalCredits))
         j.transactionCount = transactionData.length
-        j.displayType = getJournalDisplayType(transactionData, accountTypes)
+        j.displayType = JournalPresenter.getJournalDisplayType(transactionData, accountTypes)
       })
 
-      // Create all transactions
-      await Promise.all(transactionData.map(txData => {
+      // Create all transactions using the rounded amounts
+      await Promise.all(roundedTransactionData.map(txData => {
         return this.transactions.create((tx) => {
           tx.journalId = j.id
           tx.accountId = txData.accountId
-          tx.amount = txData.amount
+          tx.amount = txData.amount // Already rounded above
           tx.currencyCode = accountMap.get(txData.accountId)?.currencyCode || journalFields.currencyCode
           tx.transactionType = txData.transactionType
           tx.transactionDate = journalFields.journalDate
@@ -231,7 +249,7 @@ export class JournalRepository {
       let semanticLabel: string | undefined
 
       if (sourceAcc && destAcc) {
-        const sType = getSemanticType(sourceAcc.accountType as AccountType, destAcc.accountType as AccountType)
+        const sType = JournalPresenter.getSemanticType(sourceAcc.accountType as AccountType, destAcc.accountType as AccountType)
         semanticType = sType
         semanticLabel = sType // The enum strings are user-friendly
       }
@@ -316,17 +334,30 @@ export class JournalRepository {
       ? tx.transactionType === 'DEBIT'
       : tx.transactionType === 'CREDIT'
 
-    // Determine displayType for this specific leg
-    let legDisplayType = JournalDisplayType.MIXED
-    if (account?.accountType === AccountType.INCOME) legDisplayType = JournalDisplayType.INCOME
-    else if (account?.accountType === AccountType.EXPENSE) legDisplayType = JournalDisplayType.EXPENSE
-    else if (otherLegs.length > 0) {
-      const allOtherAreAL = otherLegs.every(ol => {
-        const oa = accountMap.get(ol.accountId)
-        return oa?.accountType === AccountType.ASSET || oa?.accountType === AccountType.LIABILITY
-      })
-      if (allOtherAreAL) legDisplayType = JournalDisplayType.TRANSFER
+    // Calculate semantic labeling for 2-leg transactions
+    let semanticType: string | undefined = undefined
+    let semanticLabel: string | undefined = undefined
+
+    if (journalTxs.length === 2) {
+      const debitLeg = journalTxs.find(t => t.transactionType === 'DEBIT')
+      const creditLeg = journalTxs.find(t => t.transactionType === 'CREDIT')
+      if (debitLeg && creditLeg) {
+        const sourceAcc = accountMap.get(creditLeg.accountId)
+        const destAcc = accountMap.get(debitLeg.accountId)
+        if (sourceAcc && destAcc) {
+          semanticLabel = JournalPresenter.getSemanticType(sourceAcc.accountType as any, destAcc.accountType as any)
+          semanticType = semanticLabel
+        }
+      }
     }
+
+    // Use standardized journal classification for the display type
+    const accountTypesMap = new Map<string, AccountType>()
+    journalTxs.forEach(t => {
+      const acc = accountMap.get(t.accountId)
+      if (acc) accountTypesMap.set(t.accountId, acc.accountType as AccountType)
+    })
+    const legDisplayType = JournalPresenter.getJournalDisplayType(journalTxs, accountTypesMap)
 
     return {
       id: tx.id,
@@ -345,7 +376,9 @@ export class JournalRepository {
       runningBalance: tx.runningBalance,
       displayTitle,
       isIncrease,
-      displayType: legDisplayType
+      displayType: legDisplayType,
+      semanticType,
+      semanticLabel
     }
   }
 
@@ -400,17 +433,6 @@ export class JournalRepository {
   ): Promise<Journal> {
     const { transactions: transactionData, ...journalFields } = journalData
 
-    // 1. Validate the balance first
-    const validationResult = validateBalance(transactionData.map(t => ({
-      amount: t.amount,
-      type: t.transactionType,
-      exchangeRate: t.exchangeRate
-    })));
-
-    if (!validationResult.isValid) {
-      throw new Error(`Unbalanced journal: ${validationResult.imbalance}`)
-    }
-
     const existingJournal = await this.find(journalId)
     if (!existingJournal) throw new Error('Journal not found')
 
@@ -426,6 +448,35 @@ export class JournalRepository {
     const accountMap = new Map(accounts.map(a => [a.id, a]))
     const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]))
 
+    // Get precisions for each account involved
+    const accountPrecisions = new Map<string, number>()
+    await Promise.all(accounts.map(async acc => {
+      const p = await currencyRepository.getPrecision(acc.currencyCode)
+      accountPrecisions.set(acc.id, p)
+    }))
+
+    const journalPrecision = await currencyRepository.getPrecision(journalFields.currencyCode)
+
+    // Round transaction amounts according to their account precision before conversion
+    const roundedTransactionData = transactionData.map(t => {
+      const precision = accountPrecisions.get(t.accountId) ?? 2
+      return {
+        ...t,
+        amount: roundToPrecision(t.amount, precision)
+      }
+    })
+
+    // 1. Validate the balance first using the rounded amounts
+    const validationResult = validateBalance(roundedTransactionData.map(t => ({
+      amount: t.amount,
+      type: t.transactionType,
+      exchangeRate: t.exchangeRate
+    })), journalPrecision);
+
+    if (!validationResult.isValid) {
+      throw new Error(`Unbalanced journal: ${validationResult.imbalance}`)
+    }
+
     const accountsToRebuild = new Set<string>()
     const calculatedBalances = new Map<string, number>()
 
@@ -438,11 +489,11 @@ export class JournalRepository {
       // Mark old accounts for rebuild (since we deleted their transactions)
       oldTransactions.forEach(tx => accountsToRebuild.add(tx.accountId))
 
-      for (const txData of transactionData) {
+      for (const txData of roundedTransactionData) {
         const account = accountMap.get(txData.accountId)
         if (!account) throw new Error(`Account ${txData.accountId} not found`)
 
-        const precision = await currencyRepository.getPrecision(account.currencyCode)
+        const precision = accountPrecisions.get(txData.accountId) ?? 2
         const latestOtherTx = await transactionRepository.findLatestForAccountBeforeDate(txData.accountId, journalFields.journalDate)
 
         const isBackdated = !!latestOtherTx && latestOtherTx.transactionDate > journalFields.journalDate
@@ -459,7 +510,7 @@ export class JournalRepository {
 
         await this.transactions.create((tx) => {
           tx.accountId = txData.accountId
-          tx.amount = txData.amount
+          tx.amount = txData.amount // Rounded above
           tx.currencyCode = account?.currencyCode || journalFields.currencyCode
           tx.transactionType = txData.transactionType
           tx.journalId = journalId
@@ -473,7 +524,7 @@ export class JournalRepository {
       // 3. Calculate new denormalized fields
       const newTotalAmount = Math.max(Math.abs(validationResult.totalDebits), Math.abs(validationResult.totalCredits))
       const newTransactionCount = transactionData.length
-      const newDisplayType = getJournalDisplayType(transactionData, accountTypes)
+      const newDisplayType = JournalPresenter.getJournalDisplayType(transactionData, accountTypes)
 
       // 4. Update journal
       await existingJournal.update((j: Journal) => {
@@ -676,7 +727,7 @@ export class JournalRepository {
       const totalDebits = txs.filter(t => t.transactionType === TransactionType.DEBIT).reduce((sum, t) => sum + t.amount, 0)
       const totalCredits = txs.filter(t => t.transactionType === TransactionType.CREDIT).reduce((sum, t) => sum + t.amount, 0)
       const magnitude = Math.max(totalDebits, totalCredits)
-      const displayType = getJournalDisplayType(txs, accountTypeMap)
+      const displayType = JournalPresenter.getJournalDisplayType(txs, accountTypeMap)
 
       if (
         Math.abs((journal.totalAmount || 0) - magnitude) > 0.001 ||

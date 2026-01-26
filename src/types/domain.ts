@@ -43,6 +43,10 @@ export interface TransactionWithAccountInfo {
     displayTitle?: string;
     isIncrease?: boolean;
 
+    // Semantic flags
+    flowDirection: 'IN' | 'OUT';
+    balanceImpact: 'INCREASE' | 'DECREASE';
+
     // Running balance for this transaction
     runningBalance?: number;
 

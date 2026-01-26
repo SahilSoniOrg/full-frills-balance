@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database'
 import Transaction from '@/src/data/models/Transaction'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { AccountType, TransactionType, TransactionWithAccountInfo } from '@/src/types/domain'
+import { isBalanceIncrease, isValueEntering } from '@/src/utils/accounting-utils'
 import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
@@ -29,12 +30,21 @@ export class TransactionRepository {
       throw new Error('Transaction amount must be positive. Sign is determined by transactionType.')
     }
 
+    const accountId = transactionData.accountId;
+    if (!accountId) throw new Error('accountId is required for transaction creation');
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { accountRepository } = require('./AccountRepository');
+    const account = await accountRepository.find(accountId);
+    if (!account) throw new Error(`Account ${accountId} not found`);
+    const precision = await currencyRepository.getPrecision(account.currencyCode);
+
     return database.write(async () => {
       return this.transactions.create((transaction) => {
         Object.assign(transaction, {
           ...transactionData,
-          // Ensure amount is positive
-          amount: Math.abs(transactionData.amount || 0),
+          // Ensure amount is positive and rounded to precision
+          amount: roundToPrecision(Math.abs(transactionData.amount || 0), precision),
           // Never set running_balance during creation
           running_balance: undefined,
         })
@@ -77,6 +87,9 @@ export class TransactionRepository {
     // Build read model with account information and running balance
     return transactions.map(tx => {
       const account = accountMap.get(tx.accountId)
+      const flowDirection = isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT'
+      const balanceImpact = isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE'
+
       return {
         id: tx.id,
         amount: tx.amount,
@@ -87,11 +100,12 @@ export class TransactionRepository {
         accountId: tx.accountId,
         exchangeRate: tx.exchangeRate,
         accountName: account?.name || 'Unknown Account',
-        accountType: account?.accountType || AccountType.ASSET, // Fallback for safety
-        runningBalance: tx.runningBalance, // Include running balance if available
+        accountType: account?.accountType as AccountType, // Fallback for safety
+        flowDirection,
+        balanceImpact,
         createdAt: tx.createdAt,
         updatedAt: tx.updatedAt,
-      }
+      } as TransactionWithAccountInfo
     })
   }
 

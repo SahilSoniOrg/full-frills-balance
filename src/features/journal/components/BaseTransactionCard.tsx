@@ -1,5 +1,5 @@
-import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppCard, AppText, Badge } from '@/src/components/core';
+import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalDisplayType, JournalPresenter } from '@/src/services/accounting/JournalPresenter';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -81,7 +81,7 @@ export const BaseTransactionCard = ({
                 </Badge>
 
                 {/* Account Badges */}
-                {accounts.slice(0, 3).map((acc) => {
+                {accounts.slice(0, 2).map((acc) => {
                     const isSource = acc.role === 'SOURCE';
                     const isDest = acc.role === 'DESTINATION';
 
