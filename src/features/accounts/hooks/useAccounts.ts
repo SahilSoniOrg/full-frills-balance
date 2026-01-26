@@ -19,7 +19,10 @@ export function useAccounts() {
     useEffect(() => {
         const collection = database.collections.get<Account>('accounts')
         const subscription = collection
-            .query(Q.where('deleted_at', Q.eq(null)))
+            .query(
+                Q.where('deleted_at', Q.eq(null)),
+                Q.sortBy('order_num', Q.asc)
+            )
             .observe()
             .subscribe((accounts) => {
                 setAccounts(accounts)
@@ -45,7 +48,8 @@ export function useAccountsByType(accountType: string) {
         const subscription = collection
             .query(
                 Q.where('account_type', accountType),
-                Q.where('deleted_at', Q.eq(null))
+                Q.where('deleted_at', Q.eq(null)),
+                Q.sortBy('order_num', Q.asc)
             )
             .observe()
             .subscribe((accounts) => {

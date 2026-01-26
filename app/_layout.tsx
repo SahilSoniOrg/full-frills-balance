@@ -100,6 +100,7 @@ function AppContent() {
         <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
         <Stack.Screen name="account-details" options={{ headerShown: false }} />
         <Stack.Screen name="transaction-details" options={{ headerShown: false }} />
+        <Stack.Screen name="account-reorder" options={{ headerShown: false, presentation: 'modal' }} />
       </Stack>
     </ErrorBoundary>
   );

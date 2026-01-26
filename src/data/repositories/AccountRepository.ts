@@ -253,7 +253,10 @@ export class AccountRepository {
    */
   async findAll(): Promise<Account[]> {
     return this.accounts
-      .query(Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('order_num', Q.asc)
+      )
       .fetch()
   }
 
@@ -266,7 +269,8 @@ export class AccountRepository {
         Q.and(
           Q.where('account_type', type),
           Q.where('deleted_at', Q.eq(null))
-        )
+        ),
+        Q.sortBy('order_num', Q.asc)
       )
       .fetch()
   }
@@ -280,7 +284,8 @@ export class AccountRepository {
         Q.and(
           Q.where('parent_account_id', parentAccountId),
           Q.where('deleted_at', Q.eq(null))
-        )
+        ),
+        Q.sortBy('order_num', Q.asc)
       )
       .fetch()
   }
@@ -324,6 +329,24 @@ export class AccountRepository {
     }
 
     return updatedAccount
+  }
+
+  /**
+   * Updates an account's order number
+   */
+  async updateOrder(account: Account, newOrderNum: number): Promise<void> {
+    await this.db.write(async () => {
+      await account.update(record => {
+        record.orderNum = newOrderNum
+      })
+    })
+
+    await auditService.log({
+      entityType: 'Account',
+      entityId: account.id,
+      action: AuditAction.UPDATE,
+      changes: { orderNum: newOrderNum }
+    })
   }
 
   /**

@@ -33,12 +33,12 @@ export function groupAccountsByType(accounts: Account[]): Record<AccountType, Ac
  * Returns account type sections in standard display order.
  * Only includes sections that have accounts.
  */
-export function getAccountSections(accounts: Account[]):  { title: string; data: Account[] }[]  {
+export function getAccountSections(accounts: Account[]): { title: string; data: Account[] }[] {
     const groups = groupAccountsByType(accounts)
-    const sections:  { title: string; data: Account[] }[]  = []
+    const sections: { title: string; data: Account[] }[] = []
 
     // Standard order: Asset, Liability, Equity, Income, Expense
-    const orderedTypes:  { type: AccountType; title: string }[]  = [
+    const orderedTypes: { type: AccountType; title: string }[] = [
         { type: AccountType.ASSET, title: 'Assets' },
         { type: AccountType.LIABILITY, title: 'Liabilities' },
         { type: AccountType.EQUITY, title: 'Equity' },
@@ -48,7 +48,9 @@ export function getAccountSections(accounts: Account[]):  { title: string; data:
 
     orderedTypes.forEach(({ type, title }) => {
         if (groups[type].length > 0) {
-            sections.push({ title, data: groups[type] })
+            // Sort by orderNum (handling potential undefined)
+            const sortedData = [...groups[type]].sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
+            sections.push({ title, data: sortedData })
         }
     })
 
