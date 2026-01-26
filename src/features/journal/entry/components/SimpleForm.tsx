@@ -99,38 +99,51 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
 
         if (type === 'expense') {
             // Expenses: Pay FROM (Asset/Liability) -> TO (Expense)
-            if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
-                setSourceId(lastSourceId);
-            } else if (transactionAccounts.length > 0) {
-                setSourceId(transactionAccounts[0].id);
-            } else {
-                setSourceId('');
+            const isSourceValid = sourceId && transactionAccounts.some(a => a.id === sourceId);
+            if (!isSourceValid) {
+                if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
+                    setSourceId(lastSourceId);
+                } else if (transactionAccounts.length > 0) {
+                    setSourceId(transactionAccounts[0].id);
+                } else {
+                    setSourceId('');
+                }
             }
 
-            const currentDest = accounts.find(a => a.id === destinationId);
-            if (currentDest && currentDest.accountType !== AccountType.EXPENSE) {
+            const isDestValid = destinationId && accounts.find(a => a.id === destinationId)?.accountType === AccountType.EXPENSE;
+            if (!isDestValid) {
                 setDestinationId('');
             }
         } else if (type === 'income') {
             // Income: Receive FROM (Income) -> TO (Asset/Liability)
-            if (lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
-                setDestinationId(lastDestId);
-            } else if (transactionAccounts.length > 0) {
-                setDestinationId(transactionAccounts[0].id);
-            } else {
-                setDestinationId('');
+            const isDestValid = destinationId && transactionAccounts.some(a => a.id === destinationId);
+            if (!isDestValid) {
+                if (lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
+                    setDestinationId(lastDestId);
+                } else if (transactionAccounts.length > 0) {
+                    setDestinationId(transactionAccounts[0].id);
+                } else {
+                    setDestinationId('');
+                }
             }
 
-            const currentSource = accounts.find(a => a.id === sourceId);
-            if (currentSource && currentSource.accountType !== AccountType.INCOME) {
+            const isSourceValid = sourceId && accounts.find(a => a.id === sourceId)?.accountType === AccountType.INCOME;
+            if (!isSourceValid) {
                 setSourceId('');
             }
         } else {
             // Transfer: Asset/Liability -> Asset/Liability (usually)
-            if (lastSourceId && accounts.some(a => a.id === lastSourceId)) setSourceId(lastSourceId);
-            if (lastDestId && accounts.some(a => a.id === lastDestId)) setDestinationId(lastDestId);
+            const isSourceValid = sourceId && accounts.some(a => a.id === sourceId);
+            if (!isSourceValid && lastSourceId && accounts.some(a => a.id === lastSourceId)) {
+                setSourceId(lastSourceId);
+            }
+
+            const isDestValid = destinationId && accounts.some(a => a.id === destinationId);
+            if (!isDestValid && lastDestId && accounts.some(a => a.id === lastDestId)) {
+                setDestinationId(lastDestId);
+            }
         }
-    }, [type, accounts, transactionAccounts, sourceId, destinationId]);
+    }, [type, accounts, transactionAccounts]);
 
 
     const handleSave = async () => {

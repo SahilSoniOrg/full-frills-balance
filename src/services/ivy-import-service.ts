@@ -1,10 +1,10 @@
 import { database } from '@/src/data/database/Database';
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import Account, { AccountType } from '@/src/data/models/Account';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import Account, { AccountType } from '../data/models/Account';
+import Journal, { JournalStatus } from '../data/models/Journal';
+import Transaction, { TransactionType } from '../data/models/Transaction';
 import { ImportStats } from './import-service';
 
 // Ivy Wallet Interfaces (keeping these for reference)
@@ -35,7 +35,6 @@ interface IvyTransaction {
     title?: string;
     description?: string;
     dateTime?: string; // Instant format usually
-    categoryId?: string;
     categoryId?: string;
     isDeleted?: boolean;
     dueDate?: string | number; // Planned payments have this
@@ -136,8 +135,23 @@ class IvyImportService {
             // 4. Create Accounts (From Ivy Real Accounts)
             const accountMap = new Map<string, string>(); // IvyAccountID -> BalanceAccountID
             const accountCurrencyMap = new Map<string, string>(); // BalanceAccountID -> Currency
+            const categoryAccountMap = new Map<string, string>(); // Key `${categoryId}:::${currency}` -> BalanceAccountID
 
             const accountsCollection = database.collections.get<Account>('accounts');
+
+            // 4a. Generate IDs and currencies for mapping
+            data.accounts.forEach(a => {
+                const balanceId = generateId();
+                accountMap.set(a.id, balanceId);
+                accountCurrencyMap.set(balanceId, a.currency || 'USD');
+            });
+
+            for (const key of categoryUsageMap.keys()) {
+                const balanceId = generateId();
+                const [, currency] = key.split(':::');
+                categoryAccountMap.set(key, balanceId);
+                accountCurrencyMap.set(balanceId, currency);
+            }
 
             // 5a. Prepare ALL accounts for sorting before creating actions
             interface PendingAccount {
@@ -150,7 +164,6 @@ class IvyImportService {
             }
 
             const allPendingAccounts: PendingAccount[] = [];
-            const categoryAccountMap = new Map<string, string>(); // Key `${categoryId}:::${currency}` -> BalanceAccountID
             const ivyCategoryLookup = new Map<string, IvyCategory>();
             data.categories.forEach(c => ivyCategoryLookup.set(c.id, c));
 
@@ -389,7 +402,7 @@ class IvyImportService {
 
             // Log skipped items
             if (skippedItems.length > 0) {
-                logger.warn('Skipped Items Report:', JSON.stringify(skippedItems, null, 2));
+                logger.warn('Skipped Items Report:', { count: skippedItems.length, items: skippedItems });
             }
 
             return {

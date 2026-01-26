@@ -67,26 +67,18 @@ export class AccountRepository {
   }
 
   /**
-   * Computes derived account balance as of a specific date
-   * 
-   * Rules:
-   * - Only includes transactions from POSTED journals
-   * - Excludes transactions from REVERSED journals  
-   * - Date filtering applies to journalDate only (accounting principle)
-   * - Default asOfDate means "up to latest posted journal"
-   * 
-   * @param accountId Account ID to calculate balance for
-   * @param asOfDate Optional cutoff date (timestamp). Defaults to current time.
+   * Returns an account's balance and transaction count as of a given date
+   * @param accountId The account ID
+   * @param cutoffDate Optional end date (timestamp). Defaults to now.
    */
-  async getAccountBalance(accountId: string, asOfDate?: number): Promise<AccountBalance> {
+  async getAccountBalance(
+    accountId: string,
+    cutoffDate: number = Date.now()
+  ): Promise<AccountBalance> {
     const account = await this.find(accountId)
-    if (!account) {
-      throw new Error(`Account ${accountId} not found`)
-    }
+    if (!account) throw new Error(`Account ${accountId} not found`)
 
-    const cutoffDate = asOfDate || Date.now()
-
-    // 1. Get latest transaction for running balance (O(1))
+    // 1. Get running balance from latest transaction before cutoff
     const latestTxs = await this.transactions
       .query(
         Q.on('journals', Q.and(
@@ -178,10 +170,10 @@ export class AccountRepository {
         const roundedAmount = roundToPrecision(Math.abs(initialBalance), precision)
 
         let balancingAccountId = await this.getOpeningBalancesAccountId(newAccount.currencyCode)
-        const isDebitIncrease = [AccountType.ASSET, AccountType.EXPENSE].includes(newAccount.accountType)
+        const direction = this.getBalanceDirection(newAccount.accountType)
 
-        const accountTxType = isDebitIncrease ? TransactionType.DEBIT : TransactionType.CREDIT
-        const equityTxType = isDebitIncrease ? TransactionType.CREDIT : TransactionType.DEBIT
+        const accountTxType = direction.debit === 1 ? TransactionType.DEBIT : TransactionType.CREDIT
+        const equityTxType = direction.debit === 1 ? TransactionType.CREDIT : TransactionType.DEBIT
 
         await journalRepository.createJournalWithTransactions({
           journalDate: Date.now(),

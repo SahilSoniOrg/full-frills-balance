@@ -4,7 +4,6 @@ import { roundToPrecision } from '../../utils/money'
 import { database } from '../database/Database'
 import { AccountType } from '../models/Account'
 import Transaction, { TransactionType } from '../models/Transaction'
-import { accountRepository } from './AccountRepository'
 import { currencyRepository } from './CurrencyRepository'
 
 export class TransactionRepository {
@@ -65,6 +64,8 @@ export class TransactionRepository {
 
     // Get unique account IDs to fetch account information
     const accountIds = [...new Set(transactions.map(tx => tx.accountId))]
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { accountRepository } = require('./AccountRepository')
     const accounts = await Promise.all(
       accountIds.map(id => accountRepository.find(id))
     )
@@ -106,6 +107,8 @@ export class TransactionRepository {
     fromDate?: number
   ): Promise<void> {
     // 1. Get Account to determine direction
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { accountRepository } = require('./AccountRepository')
     const account = await accountRepository.find(accountId)
     if (!account) throw new Error(`Account ${accountId} not found running balance rebuild`)
 
