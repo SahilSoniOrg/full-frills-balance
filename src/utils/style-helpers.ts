@@ -12,7 +12,8 @@ export type ComponentVariant =
     | 'liability'
     | 'equity'
     | 'income'
-    | 'expense';
+    | 'expense'
+    | 'text';
 
 export interface VariantColors {
     main: string;
@@ -72,6 +73,7 @@ export const getVariantColors = (theme: Theme, variant: ComponentVariant): Varia
                 light: theme.primaryLight,
                 contrast: getContrastColor(theme.asset),
             };
+        case 'text':
         case 'default':
         default:
             return {

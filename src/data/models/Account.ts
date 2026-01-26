@@ -22,6 +22,7 @@ export default class Account extends Model {
   @field('currency_code') currencyCode!: string
   @field('parent_account_id') parentAccountId?: string
   @field('description') description?: string
+  @field('order_num') orderNum?: number
 
   @date('created_at') createdAt!: Date
   @date('updated_at') updatedAt!: Date

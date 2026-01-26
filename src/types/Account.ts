@@ -13,6 +13,7 @@ export interface AccountUpdateInput {
   name?: string
   description?: string
   parentAccountId?: string
+  accountType?: AccountType
 }
 
 export interface AccountWithBalance extends Account {

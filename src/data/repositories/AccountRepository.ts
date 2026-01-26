@@ -1,5 +1,6 @@
 import { Q } from '@nozbe/watermelondb'
 import { auditService } from '../../services/audit-service'
+import { rebuildQueueService } from '../../services/rebuild-queue-service'
 import { AccountUpdateInput } from '../../types/Account'
 import { getEpsilon, roundToPrecision } from '../../utils/money'
 import { database } from '../database/Database'
@@ -323,6 +324,11 @@ export class AccountRepository {
         after: updates
       }
     })
+
+    // Trigger rebuild if account type changed (as it affects running balance logic)
+    if (updates.accountType && updates.accountType !== beforeState.accountType) {
+      rebuildQueueService.enqueue(account.id, 0) // Rebuild from the beginning
+    }
 
     return updatedAccount
   }

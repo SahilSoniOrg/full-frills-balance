@@ -99,36 +99,39 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
 
         if (type === 'expense') {
             // Expenses: Pay FROM (Asset/Liability) -> TO (Expense)
-            if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) setSourceId(lastSourceId);
-            else if (transactionAccounts.length > 0) setSourceId(transactionAccounts[0].id);
-            else setSourceId('');
+            if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
+                setSourceId(lastSourceId);
+            } else if (transactionAccounts.length > 0) {
+                setSourceId(transactionAccounts[0].id);
+            } else {
+                setSourceId('');
+            }
 
-            // For destination, we don't auto-select last used for expenses usually, or maybe we do?
-            // Existing logic was just clearing it or setting default.
-            // Let's safe default to first expense account if empty
-            if (activeDestAccount && activeDestAccount.accountType !== AccountType.EXPENSE) {
+            const currentDest = accounts.find(a => a.id === destinationId);
+            if (currentDest && currentDest.accountType !== AccountType.EXPENSE) {
                 setDestinationId('');
             }
         } else if (type === 'income') {
             // Income: Receive FROM (Income) -> TO (Asset/Liability)
-            if (lastDestId && transactionAccounts.some(a => a.id === lastDestId)) setDestinationId(lastDestId);
-            else if (transactionAccounts.length > 0) setDestinationId(transactionAccounts[0].id);
-            else setDestinationId('');
+            if (lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
+                setDestinationId(lastDestId);
+            } else if (transactionAccounts.length > 0) {
+                setDestinationId(transactionAccounts[0].id);
+            } else {
+                setDestinationId('');
+            }
 
-            // For source (Income category), safe default
-            if (activeSourceAccount && activeSourceAccount.accountType !== AccountType.INCOME) {
+            const currentSource = accounts.find(a => a.id === sourceId);
+            if (currentSource && currentSource.accountType !== AccountType.INCOME) {
                 setSourceId('');
             }
         } else {
             // Transfer: Asset/Liability -> Asset/Liability (usually)
-            // But user requested ALL accounts for transfer.
             if (lastSourceId && accounts.some(a => a.id === lastSourceId)) setSourceId(lastSourceId);
             if (lastDestId && accounts.some(a => a.id === lastDestId)) setDestinationId(lastDestId);
         }
-    }, [type, accounts]);
+    }, [type, accounts, transactionAccounts, sourceId, destinationId]);
 
-    const activeSourceAccount = accounts.find(a => a.id === sourceId);
-    const activeDestAccount = accounts.find(a => a.id === destinationId);
 
     const handleSave = async () => {
         if (!numAmount || numAmount <= 0) return;

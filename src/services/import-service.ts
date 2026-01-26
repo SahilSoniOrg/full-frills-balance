@@ -18,7 +18,7 @@ export interface ImportStats {
     journals: number;
     transactions: number;
     skippedTransactions: number;
-    skippedItems?: Array<{ id: string; reason: string; description?: string }>;
+    skippedItems?: { id: string; reason: string; description?: string }[];
 }
 
 // Redefining interface if circular dependency is an issue, or just for clarity. 
@@ -96,7 +96,7 @@ class ImportService {
                 const journalPrepares = data.journals.map(j =>
                     journalsCollection.prepareCreate(record => {
                         record._raw.id = j.id;
-                        record.journalDate = new Date(j.journalDate);
+                        record.journalDate = new Date(j.journalDate).getTime();
                         record.description = j.description;
                         record.currencyCode = j.currencyCode;
                         record.status = j.status;
@@ -116,7 +116,7 @@ class ImportService {
                         record.amount = t.amount;
                         record.transactionType = t.transactionType;
                         record.currencyCode = t.currencyCode;
-                        record.transactionDate = new Date(t.transactionDate);
+                        record.transactionDate = new Date(t.transactionDate).getTime();
                         record.notes = t.notes;
                         record.exchangeRate = t.exchangeRate;
                         record._raw._status = 'synced';

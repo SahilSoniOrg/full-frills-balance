@@ -118,6 +118,7 @@ export default function AccountCreationScreen() {
             if (isEditMode && existingAccount) {
                 await accountRepository.update(existingAccount, {
                     name: sanitizedName,
+                    accountType: accountType,
                 })
 
                 if (Platform.OS !== 'web') {
@@ -220,7 +221,7 @@ export default function AccountCreationScreen() {
                     )}
 
                     <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <AppText variant="body" style={styles.label}>Account Type{isEditMode && ' (cannot be changed)'}</AppText>
+                        <AppText variant="body" style={styles.label}>Account Type</AppText>
                         <View style={styles.accountTypeContainer}>
                             {accountTypes.map((type) => (
                                 <TouchableOpacity
@@ -233,11 +234,10 @@ export default function AccountCreationScreen() {
                                             backgroundColor: accountType === type.key
                                                 ? theme.primary
                                                 : theme.surface,
-                                            opacity: isEditMode ? Opacity.medium : Opacity.solid
+                                            opacity: Opacity.solid
                                         }
                                     ]}
-                                    onPress={() => !isEditMode && setAccountType(type.key as AccountType)}
-                                    disabled={isEditMode}
+                                    onPress={() => setAccountType(type.key as AccountType)}
                                 >
                                     <AppText
                                         variant="body"

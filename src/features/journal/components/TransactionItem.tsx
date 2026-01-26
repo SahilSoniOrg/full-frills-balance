@@ -32,7 +32,7 @@ export const TransactionItem = ({ transaction, onPress }: TransactionItemProps) 
 
     return (
         <BaseTransactionCard
-            title={transaction.displayTitle || transaction.journalDescription || 'Transaction'}
+            title={transaction.journalDescription || transaction.displayTitle || 'Transaction'}
             amount={transaction.amount}
             currencyCode={transaction.currencyCode}
             transactionDate={transaction.transactionDate}

@@ -139,86 +139,100 @@ class IvyImportService {
 
             const accountsCollection = database.collections.get<Account>('accounts');
 
-            data.accounts.forEach(ivyAcc => {
-                const newId = generateId();
-                accountMap.set(ivyAcc.id, newId);
-                const currency = ivyAcc.currency || 'USD';
-                accountCurrencyMap.set(newId, currency);
+            // 5a. Prepare ALL accounts for sorting before creating actions
+            interface PendingAccount {
+                id: string;
+                name: string;
+                currency: string;
+                type: AccountType;
+                description: string;
+                isOriginal: boolean;
+            }
 
-                // Check for 'archived' in description mapping or check if we have field
-                let description = 'Imported from Ivy Wallet';
-                if (ivyAcc.archived) {
-                    description = '[ARCHIVED] ' + (ivyAcc.name || '');
-                }
-
-                accountActions.push(
-                    accountsCollection.prepareCreate(record => {
-                        record._raw.id = newId;
-                        record.name = ivyAcc.name;
-                        // Default to ASSET if accountCategory is missing (safe default for Ivy)
-                        const cat = ivyAcc.accountCategory || 'ASSET';
-
-                        let mappedType = AccountType.ASSET;
-                        if (cat === 'LIABILITY') mappedType = AccountType.LIABILITY;
-                        else if (cat === 'EQUITY') mappedType = AccountType.EQUITY; // Assuming Balance has EQUITY support? Yes, checked Account model.
-                        else if (cat === 'INCOME') mappedType = AccountType.INCOME;
-                        else if (cat === 'EXPENSE') mappedType = AccountType.EXPENSE;
-
-                        record.accountType = mappedType;
-                        record.currencyCode = currency;
-                        record.description = description;
-                    })
-                );
-            });
-
-            // 5. Create Accounts (From Ivy Categories)
-            // We iterate over the USAGE map keys to create specific currency accounts
+            const allPendingAccounts: PendingAccount[] = [];
             const categoryAccountMap = new Map<string, string>(); // Key `${categoryId}:::${currency}` -> BalanceAccountID
-
-            // Also need to lookup Category details by ID
             const ivyCategoryLookup = new Map<string, IvyCategory>();
             data.categories.forEach(c => ivyCategoryLookup.set(c.id, c));
 
+            // Add Original Accounts
+            data.accounts.forEach(ivyAcc => {
+                const id = accountMap.get(ivyAcc.id)!;
+                const description = ivyAcc.archived ? '[ARCHIVED] ' + (ivyAcc.name || '') : 'Imported from Ivy Wallet';
+                const cat = ivyAcc.accountCategory || 'ASSET';
+                let mappedType = AccountType.ASSET;
+                if (cat === 'LIABILITY') mappedType = AccountType.LIABILITY;
+                else if (cat === 'EQUITY') mappedType = AccountType.EQUITY;
+                else if (cat === 'INCOME') mappedType = AccountType.INCOME;
+                else if (cat === 'EXPENSE') mappedType = AccountType.EXPENSE;
+
+                allPendingAccounts.push({
+                    id,
+                    name: ivyAcc.name,
+                    currency: ivyAcc.currency || 'USD',
+                    type: mappedType,
+                    description,
+                    isOriginal: true
+                });
+            });
+
+            // Add Category Accounts
             for (const [key, stats] of categoryUsageMap.entries()) {
                 const [categoryId, currency] = key.split(':::');
                 const ivyCat = ivyCategoryLookup.get(categoryId);
+                if (!ivyCat) continue;
 
-                if (!ivyCat) continue; // Should not happen if data consistent
-
-                const newId = generateId();
-                categoryAccountMap.set(key, newId);
-
-                // Determine name: Append currency if useful
-                // If this category is used in multiple currencies, strict naming helps.
-                // Even if single, explicit is good for imported data. 
-                // Matches reference script: `${category.name} - ${currency}`
+                const id = categoryAccountMap.get(key)!;
                 const name = `${ivyCat.name} - ${currency}`;
 
-                // Determine Type
                 let type = AccountType.EXPENSE;
                 if (stats.incomeCount > stats.expenseCount) {
                     type = AccountType.INCOME;
                 }
 
+                allPendingAccounts.push({
+                    id,
+                    name,
+                    currency,
+                    type,
+                    description: 'Imported Category',
+                    isOriginal: false
+                });
+            }
+
+            // Sort Accounts: Originals first, then Category Accounts (Name then Currency)
+            allPendingAccounts.sort((a, b) => {
+                if (a.isOriginal && !b.isOriginal) return -1;
+                if (!a.isOriginal && b.isOriginal) return 1;
+
+                if (!a.isOriginal && !b.isOriginal) {
+                    const nameCompare = a.name.localeCompare(b.name);
+                    if (nameCompare !== 0) return nameCompare;
+                    return a.currency.localeCompare(b.currency);
+                }
+
+                return 0; // Keep original relative order for originals
+            });
+
+            // Creates actions with OrderNum
+            allPendingAccounts.forEach((acc, index) => {
                 accountActions.push(
                     accountsCollection.prepareCreate(record => {
-                        record._raw.id = newId;
-                        record.name = name;
-                        record.accountType = type;
-                        record.currencyCode = currency;
-                        record.description = 'Imported Category';
-                        // Map color/icon if possible (Balance Account model has color?)
-                        // record.color = ivyCat.color; // If supported
+                        record._raw.id = acc.id;
+                        record.name = acc.name;
+                        record.accountType = acc.type;
+                        record.currencyCode = acc.currency;
+                        record.description = acc.description;
+                        record.orderNum = index + 1;
                     })
                 );
-            }
+            });
 
             // 6. Create Journals & Transactions
             const journalsCollection = database.collections.get<Journal>('journals');
             const transactionsCollection = database.collections.get<Transaction>('transactions');
             const journalActions: any[] = [];
             const transactionActions: any[] = [];
-            const skippedItems: Array<{ id: string; reason: string; description?: string }> = [];
+            const skippedItems: { id: string; reason: string; description?: string }[] = [];
 
             data.transactions.forEach(tx => {
                 const txDesc = tx.title || tx.description || 'Unknown Transaction';

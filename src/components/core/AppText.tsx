@@ -22,7 +22,7 @@ export type AppTextProps = TextProps & {
 
 export function AppText({
   variant = 'body',
-  color = 'primary',
+  color = 'text',
   align = 'auto',
   weight = 'regular',
   italic = false,
