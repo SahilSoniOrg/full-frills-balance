@@ -1,31 +1,34 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-    testDir: './e2e',
-    timeout: 60 * 1000, // Increase global test timeout to 60s
-    expect: {
-        timeout: 10 * 1000,
-    },
+    testDir: './',
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
-    retries: process.env.CI ? 2 : 1, // Add a retry for flakiness
+    retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : undefined,
     reporter: 'html',
     use: {
         baseURL: 'http://localhost:8081',
         trace: 'on-first-retry',
-        actionTimeout: 15 * 1000, // Action timeout
     },
     projects: [
         {
             name: 'chromium',
             use: { ...devices['Desktop Chrome'] },
         },
+        {
+            name: 'Mobile Chrome',
+            use: { ...devices['Pixel 5'] },
+        },
+        {
+            name: 'Mobile Safari',
+            use: { ...devices['iPhone 12'] },
+        },
     ],
     webServer: {
         command: 'npm run web',
         url: 'http://localhost:8081',
-        reuseExistingServer: true, // Use a running server if available
-        timeout: 180 * 1000, // Server boot timeout
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
     },
 });
