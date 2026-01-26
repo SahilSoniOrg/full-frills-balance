@@ -1,3 +1,4 @@
+export * from './hooks/useAccountActions';
 export * from './hooks/useAccounts';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';

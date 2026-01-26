@@ -1,6 +1,6 @@
 import { AccountType } from '../data/models/Account'
 import { TransactionType } from '../data/models/Transaction'
-import { JournalDisplayType } from '../domain/accounting/JournalPresenter'
+import { JournalDisplayType } from '../services/accounting/JournalPresenter'
 
 /**
  * Repository-owned read models for UI consumption

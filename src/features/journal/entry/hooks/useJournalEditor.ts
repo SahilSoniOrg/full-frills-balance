@@ -1,8 +1,9 @@
-import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { journalEntryService } from '@/src/services/journal-entry-service';
+import { TransactionWithAccountInfo } from '@/src/types/readModels';
 import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -52,7 +53,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         if (journalId) {
             const loadData = async () => {
                 try {
-                    const journal = await database.collections.get('journals').find(journalId) as any;
+                    const journal = await journalRepository.find(journalId);
                     if (journal) {
                         const dateObj = new Date(journal.journalDate);
                         setDescription(journal.description || '');
@@ -66,7 +67,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                                 setIsGuidedMode(false);
                             }
 
-                            setLines(txs.map(tx => ({
+                            setLines(txs.map((tx: TransactionWithAccountInfo) => ({
                                 id: tx.id,
                                 accountId: tx.accountId,
                                 accountName: tx.accountName,

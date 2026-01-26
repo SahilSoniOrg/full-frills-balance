@@ -1,8 +1,8 @@
 import { AppConfig } from '@/constants';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
-import { accountingService } from '@/src/domain/AccountingService';
-import { JournalLineInput } from '@/src/domain/accounting/JournalCalculator';
 import { JournalEntryLine } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
+import { accountingService } from '@/src/services/AccountingService';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 

@@ -6,9 +6,10 @@ import { AppText } from '@/src/components/core/AppText';
 import { Box } from '@/src/components/core/Box';
 import { Stack } from '@/src/components/core/Stack';
 import Account, { AccountType } from '@/src/data/models/Account';
-import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
-import { accountingService } from '@/src/domain/AccountingService';
+import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
+import { useJournalActions } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
+import { accountingService } from '@/src/services/AccountingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
@@ -31,6 +32,7 @@ type TabType = 'expense' | 'income' | 'transfer';
  */
 export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: SimpleFormProps) => {
     const { theme } = useTheme();
+    const { createJournal } = useJournalActions();
 
     // Filter accounts by type
     const transactionAccounts = accounts.filter(a =>
@@ -143,7 +145,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                 setDestinationId(lastDestId);
             }
         }
-    }, [type, accounts, transactionAccounts]);
+    }, [type, accounts, transactionAccounts, sourceId, destinationId]);
 
 
     const handleSave = async () => {
@@ -180,7 +182,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                 }
             }
 
-            await journalRepository.createJournalWithTransactions(journalData);
+            await createJournal(journalData);
 
             if (type === 'expense' || type === 'transfer') await preferences.setLastUsedSourceAccountId(sourceId);
             if (type === 'income' || type === 'transfer') await preferences.setLastUsedDestinationAccountId(destinationId);

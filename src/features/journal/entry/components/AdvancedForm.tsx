@@ -1,6 +1,6 @@
 import { AppConfig, Shape, Spacing } from '@/constants';
 import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
-import { JournalCalculator, JournalLineInput } from '@/src/domain/accounting/JournalCalculator';
+import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import React from 'react';

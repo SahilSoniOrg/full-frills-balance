@@ -1,9 +1,7 @@
 import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/constants'
 import { AppCard, AppText, Badge, IconButton } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
-import { database } from '@/src/data/database/Database'
-import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { useJournalActions, useJournalTransactionsWithAccountInfo } from '@/src/features/journal'
 import { useTheme } from '@/src/hooks/use-theme'
 import { TransactionWithAccountInfo } from '@/src/types/readModels'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
@@ -26,39 +24,39 @@ export default function TransactionDetailsScreen() {
     const router = useRouter()
     const { journalId } = useLocalSearchParams<{ journalId: string }>()
     const { theme } = useTheme()
+    const { deleteJournal, findJournal } = useJournalActions()
+    const { transactions, isLoading: isLoadingTransactions } = useJournalTransactionsWithAccountInfo(journalId)
 
-    const [transactions, setTransactions] = useState<TransactionWithAccountInfo[]>([]);
     const [journalInfo, setJournalInfo] = useState<{ description?: string; date: number; status: string; currency: string; displayType?: string } | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingJournal, setIsLoadingJournal] = useState(true);
     // const [error, setError] = useState<string | null>(null); // Unused
 
     useEffect(() => {
-        const loadTransactions = async () => {
+        const loadJournal = async () => {
             if (!journalId) return;
             try {
-                setIsLoading(true);
-                const journal = await database.collections.get('journals').find(journalId);
-                const journalTransactions = await transactionRepository.findByJournalWithAccountInfo(journalId);
+                setIsLoadingJournal(true);
+                const journal = await findJournal(journalId);
 
-                setTransactions(journalTransactions);
                 if (journal) {
-                    const j = journal as any;
                     setJournalInfo({
-                        description: j.description,
-                        date: j.journalDate,
-                        status: j.status,
-                        currency: j.currencyCode,
-                        displayType: j.displayType
+                        description: journal.description,
+                        date: journal.journalDate,
+                        status: journal.status,
+                        currency: journal.currencyCode,
+                        displayType: journal.displayType
                     });
                 }
             } catch (error) {
-                console.error('Error loading details:', error);
+                console.error('Error loading journal:', error);
             } finally {
-                setIsLoading(false);
+                setIsLoadingJournal(false);
             }
         };
-        loadTransactions();
-    }, [journalId]);
+        loadJournal();
+    }, [journalId, findJournal]);
+
+    const isLoading = isLoadingTransactions || isLoadingJournal;
 
     const totalAmount = transactions
         .filter(t => t.transactionType === 'DEBIT')
@@ -72,13 +70,13 @@ export default function TransactionDetailsScreen() {
             'Are you sure you want to delete this transaction? This action cannot be undone.',
             async () => {
                 try {
-                    const journal = await journalRepository.find(journalId);
+                    const journal = await findJournal(journalId);
                     if (!journal) {
                         showErrorAlert('Transaction not found. It may have already been deleted.');
                         router.back();
                         return;
                     }
-                    await journalRepository.delete(journal);
+                    await deleteJournal(journal);
                     showSuccessAlert('Deleted', 'Transaction has been deleted.');
                     router.back();
                 } catch (error) {

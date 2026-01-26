@@ -1,11 +1,10 @@
 import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/constants';
 import { AppButton, AppCard, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { useUI } from '@/src/contexts/UIContext'; // Fixed relative import to absolute
-import { database } from '@/src/data/database/Database';
-import Account, { AccountType } from '@/src/data/models/Account';
-import Currency from '@/src/data/models/Currency';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { useUI } from '@/src/contexts/UIContext';
+import { AccountType } from '@/src/data/models/Account';
+import { useAccount, useAccountActions, useAccounts } from '@/src/features/accounts';
+import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
@@ -25,7 +24,10 @@ export default function AccountCreationScreen() {
     const accountId = params.accountId as string | undefined
     const typeParam = params.type as string | undefined
     const isEditMode = Boolean(accountId)
-    const [existingAccount, setExistingAccount] = useState<Account | null>(null)
+    const { account: existingAccount } = useAccount(accountId || null)
+    const { createAccount, updateAccount } = useAccountActions()
+    const { accounts } = useAccounts()
+    const { currencies } = useCurrencies()
 
     // Parse initial account type from URL param for deep-linking
     const getInitialAccountType = (): AccountType => {
@@ -42,50 +44,24 @@ export default function AccountCreationScreen() {
     const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType())
     const [selectedCurrency, setSelectedCurrency] = useState<string>(defaultCurrency || AppConfig.defaultCurrency)
     const [initialBalance, setInitialBalance] = useState('')
-    const [currencies, setCurrencies] = useState<Currency[]>([])
     const [showCurrencyModal, setShowCurrencyModal] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
     const [hasExistingAccounts, setHasExistingAccounts] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
 
-    // Load available currencies
+    // Sync state when account data loads
     React.useEffect(() => {
-        const loadCurrencies = async () => {
-            try {
-                const currencyCollection = database.collections.get<Currency>('currencies')
-                const allCurrencies = await currencyCollection.query().fetch()
-                setCurrencies(allCurrencies)
-
-                // Check for existing accounts
-                const exists = await accountRepository.exists()
-                setHasExistingAccounts(exists)
-            } catch (error) {
-                console.error('Failed to load screen data:', error)
-            }
+        if (existingAccount) {
+            setAccountName(existingAccount.name)
+            setAccountType(existingAccount.accountType)
+            setSelectedCurrency(existingAccount.currencyCode)
         }
-        loadCurrencies()
-    }, [])
+    }, [existingAccount])
 
-    // Load existing account data for edit mode
+    // Update hasExistingAccounts based on accounts list from hook
     React.useEffect(() => {
-        if (!accountId) return
-
-        const loadAccountData = async () => {
-            try {
-                const account = await accountRepository.find(accountId)
-                if (account) {
-                    setExistingAccount(account)
-                    setAccountName(account.name)
-                    setAccountType(account.accountType)
-                    setSelectedCurrency(account.currencyCode)
-                }
-            } catch (error) {
-                console.error('Failed to load account:', error)
-                showErrorAlert(error, 'Failed to load account')
-            }
-        }
-        loadAccountData()
-    }, [accountId])
+        setHasExistingAccounts(accounts.length > 0)
+    }, [accounts])
 
     const handleCancel = () => {
         if (router.canGoBack()) {
@@ -105,7 +81,7 @@ export default function AccountCreationScreen() {
         const sanitizedName = sanitizeInput(accountName)
 
         // Check for duplicates
-        const existing = await accountRepository.findByName(sanitizedName)
+        const existing = accounts.find(a => a.name.toLowerCase() === sanitizedName.toLowerCase());
         if (existing && existing.id !== accountId) {
             setFormError(`Account with name "${sanitizedName}" already exists`)
             return
@@ -116,7 +92,7 @@ export default function AccountCreationScreen() {
 
         try {
             if (isEditMode && existingAccount) {
-                await accountRepository.update(existingAccount, {
+                await updateAccount(existingAccount, {
                     name: sanitizedName,
                     accountType: accountType,
                 })
@@ -131,7 +107,7 @@ export default function AccountCreationScreen() {
                 }
                 router.back()
             } else {
-                await accountRepository.create({
+                await createAccount({
                     name: sanitizedName,
                     accountType: accountType,
                     currencyCode: selectedCurrency,

@@ -12,9 +12,9 @@ import { JournalStatus } from '../data/models/Journal'
 import Transaction from '../data/models/Transaction'
 import { accountRepository } from '../data/repositories/AccountRepository'
 import { transactionRepository } from '../data/repositories/TransactionRepository'
-import { BALANCE_EPSILON } from '../domain/accounting/AccountingConstants'
-import { accountingService } from '../domain/AccountingService'
 import { logger } from '../utils/logger'
+import { BALANCE_EPSILON } from './accounting/AccountingConstants'
+import { accountingService } from './AccountingService'
 
 export interface BalanceVerificationResult {
     accountId: string

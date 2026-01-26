@@ -1,12 +1,11 @@
-import { AppText, Badge } from '@/src/components/core';
 import { Opacity, Shape, Spacing, withOpacity } from '@/constants';
-import { useTheme } from '@/src/hooks/use-theme';
-import Account from '@/src/data/models/Account';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { AppText, Badge } from '@/src/components/core';
+import { useAccounts } from '@/src/features/accounts';
 import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
+import { useTheme } from '@/src/hooks/use-theme';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AdvancedForm } from './components/AdvancedForm';
@@ -27,27 +26,9 @@ export default function EntryScreen() {
     initialType: params.type as any,
   });
 
-  // Local UI state (not domain logic)
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
+  const { accounts, isLoading: isLoadingAccounts } = useAccounts();
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  const loadAccounts = async () => {
-    try {
-      const allAccounts = await accountRepository.findAll();
-      setAccounts(allAccounts);
-    } catch (error) {
-      console.error('Failed to load accounts:', error);
-      showErrorAlert('Failed to load accounts');
-    } finally {
-      setIsLoadingAccounts(false);
-    }
-  };
 
   const handleSelectAccountRequest = (lineId: string) => {
     setActiveLineId(lineId);

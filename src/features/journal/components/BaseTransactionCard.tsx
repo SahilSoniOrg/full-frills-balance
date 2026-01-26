@@ -1,7 +1,7 @@
 import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/constants';
 import { AppCard, AppText, Badge } from '@/src/components/core';
-import { JournalDisplayType, JournalPresenter } from '@/src/domain/accounting/JournalPresenter';
 import { useTheme } from '@/src/hooks/use-theme';
+import { JournalDisplayType, JournalPresenter } from '@/src/services/accounting/JournalPresenter';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { Ionicons } from '@expo/vector-icons';
