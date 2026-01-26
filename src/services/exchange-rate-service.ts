@@ -5,9 +5,9 @@
  * Uses exchangerate-api.com free tier (1500 requests/month).
  */
 
+import { database } from '@/src/data/database/Database'
+import ExchangeRate from '@/src/data/models/ExchangeRate'
 import { Q } from '@nozbe/watermelondb'
-import { database } from '../data/database/Database'
-import ExchangeRate from '../data/models/ExchangeRate'
 
 export interface ExchangeRateData {
     fromCurrency: string

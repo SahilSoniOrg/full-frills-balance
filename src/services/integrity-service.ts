@@ -5,16 +5,16 @@
  * Ensures data integrity by detecting and repairing stale running balances.
  */
 
+import { database } from '@/src/data/database/Database'
+import Account from '@/src/data/models/Account'
+import { JournalStatus } from '@/src/data/models/Journal'
+import Transaction from '@/src/data/models/Transaction'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { BALANCE_EPSILON } from '@/src/services/accounting/AccountingConstants'
+import { accountingService } from '@/src/services/AccountingService'
+import { logger } from '@/src/utils/logger'
 import { Q } from '@nozbe/watermelondb'
-import { database } from '../data/database/Database'
-import Account from '../data/models/Account'
-import { JournalStatus } from '../data/models/Journal'
-import Transaction from '../data/models/Transaction'
-import { accountRepository } from '../data/repositories/AccountRepository'
-import { transactionRepository } from '../data/repositories/TransactionRepository'
-import { logger } from '../utils/logger'
-import { BALANCE_EPSILON } from './accounting/AccountingConstants'
-import { accountingService } from './AccountingService'
 
 export interface BalanceVerificationResult {
     accountId: string

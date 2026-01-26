@@ -2,14 +2,14 @@ import { Opacity, Palette, Shape, Spacing, Typography, withOpacity } from '@/con
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
 import Account from '@/src/data/models/Account';
+import { useAccountBalance } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getContrastColor } from '@/src/utils/colorUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useAccountBalance } from '../hooks/useAccounts';
 
-import { AccountBalance } from '@/src/data/repositories/AccountRepository';
+import { AccountBalance } from '@/src/types/domain';
 
 interface AccountCardProps {
     account: Account;

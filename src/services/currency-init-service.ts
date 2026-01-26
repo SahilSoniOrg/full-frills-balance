@@ -4,9 +4,9 @@
  * Populates the currencies table with common currencies on first launch.
  */
 
-import { database } from '../data/database/Database'
-import Currency from '../data/models/Currency'
-import { logger } from '../utils/logger'
+import { database } from '@/src/data/database/Database'
+import Currency from '@/src/data/models/Currency'
+import { logger } from '@/src/utils/logger'
 
 interface CurrencyData {
     code: string

@@ -1,7 +1,7 @@
+import { database } from '@/src/data/database/Database'
+import Journal from '@/src/data/models/Journal'
+import { AccountRepository } from '@/src/data/repositories/AccountRepository'
 import { Q } from '@nozbe/watermelondb'
-import { database } from '../database/Database'
-import Journal from '../models/Journal'
-import { AccountRepository } from './AccountRepository'
 import { JournalRepository } from './JournalRepository'
 
 export interface ReconciliationResult {

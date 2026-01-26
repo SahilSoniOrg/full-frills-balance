@@ -4,7 +4,7 @@
 import Journal from '@/src/data/models/Journal'
 import Transaction from '@/src/data/models/Transaction'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { EnrichedJournal, EnrichedTransaction } from '@/src/types/readModels'
+import { EnrichedJournal, EnrichedTransaction } from '@/src/types/domain'
 import { Q } from '@nozbe/watermelondb'
 import { useDatabase } from '@nozbe/watermelondb/react'
 import { useEffect, useState } from 'react'

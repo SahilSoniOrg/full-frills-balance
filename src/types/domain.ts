@@ -1,0 +1,156 @@
+import { AccountType } from '@/src/data/models/Account';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { JournalDisplayType } from '@/src/services/accounting/JournalPresenter';
+
+export { AccountType, JournalDisplayType, TransactionType };
+
+/**
+ * Domain-owned models and read models for UI consumption.
+ * These are types that often combine multiple entities for presentation.
+ * Follows Rule 3: Data-Driven UI (these define the 'data' the UI consumes).
+ */
+
+/**
+ * AccountBalance - Summary of an account's financial state
+ */
+export interface AccountBalance {
+    accountId: string;
+    balance: number;
+    transactionCount: number;
+    asOfDate: number;
+    accountType: AccountType;
+}
+
+/**
+ * TransactionWithAccountInfo - Transaction data merged with metadata of the account it belongs to
+ */
+export interface TransactionWithAccountInfo {
+    id: string;
+    amount: number;
+    transactionType: TransactionType;
+    currencyCode: string;
+    transactionDate: number;
+    notes?: string;
+    accountId: string;
+    exchangeRate?: number;
+
+    // Account information for display
+    accountName: string;
+    accountType: AccountType;
+    counterAccountName?: string;
+    counterAccountType?: AccountType;
+    journalDescription?: string;
+    displayTitle?: string;
+    isIncrease?: boolean;
+
+    // Running balance for this transaction
+    runningBalance?: number;
+
+    // Audit fields
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+/**
+ * JournalWithTransactionSummary - Journal data with computed summary from its transactions
+ */
+export interface JournalWithTransactionSummary {
+    id: string;
+    journalDate: number;
+    description?: string;
+    currencyCode: string;
+    status: string;
+
+    // Computed transaction summary
+    totalDebits: number;
+    totalCredits: number;
+    transactionCount: number;
+    isBalanced: boolean;
+
+    // Audit fields
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+/**
+ * AccountWithBalance - Account data with its current balance information
+ */
+export interface AccountWithBalance {
+    id: string;
+    name: string;
+    accountType: AccountType;
+    currencyCode: string;
+    description?: string;
+
+    // Computed balance information
+    currentBalance: number;
+    transactionCount: number;
+    lastActivityDate?: number;
+
+    // Audit fields
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+/**
+ * EnrichedJournal - Highly processed journal data for card-style list display
+ */
+export interface EnrichedJournal {
+    id: string;
+    journalDate: number;
+    description?: string;
+    currencyCode: string;
+    status: string;
+    totalAmount: number;
+    transactionCount: number;
+    displayType: string;
+    accounts: {
+        id: string;
+        name: string;
+        accountType: string;
+        role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
+    }[];
+    semanticType?: string;
+    semanticLabel?: string;
+}
+
+/**
+ * EnrichedTransaction - Highly processed transaction data for transaction-specific lists
+ */
+export interface EnrichedTransaction {
+    id: string;
+    journalId: string;
+    accountId: string;
+    amount: number;
+    currencyCode: string;
+    transactionType: string;
+    transactionDate: number;
+    notes?: string;
+    journalDescription?: string;
+    accountName?: string;
+    accountType?: string;
+    counterAccountName?: string;
+    counterAccountType?: string;
+    runningBalance?: number;
+    displayTitle: string;
+    displayType: JournalDisplayType;
+    isIncrease: boolean;
+    semanticType?: string;
+    semanticLabel?: string;
+}
+
+/**
+ * JournalEntryLine - UI-specific model for a single line in the journal editor.
+ * Used in guided and advanced forms.
+ */
+export interface JournalEntryLine {
+    id: string;
+    accountId: string;
+    accountName: string;
+    accountType: AccountType;
+    amount: string;
+    transactionType: TransactionType;
+    notes: string;
+    exchangeRate: string;
+    accountCurrency?: string;
+}

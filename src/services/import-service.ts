@@ -1,17 +1,17 @@
 /**
  * Import Service
- * 
+ *
  * Handles data import from JSON files.
  * Replaces current database with imported data.
  */
 
-import { database } from '../data/database/Database';
-import Account from '../data/models/Account';
-import Journal from '../data/models/Journal';
-import Transaction from '../data/models/Transaction';
-import { logger } from '../utils/logger';
-import { preferences } from '../utils/preferences';
-import { integrityService } from './integrity-service';
+import { database } from '@/src/data/database/Database';
+import Account from '@/src/data/models/Account';
+import Journal from '@/src/data/models/Journal';
+import Transaction from '@/src/data/models/Transaction';
+import { integrityService } from '@/src/services/integrity-service';
+import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
 
 export interface ImportStats {
     accounts: number;

@@ -1,13 +1,14 @@
+import { database } from '@/src/data/database/Database'
+import Account, { AccountType } from '@/src/data/models/Account'
+import { AuditAction } from '@/src/data/models/AuditLog'
+import { JournalStatus } from '@/src/data/models/Journal'
+import Transaction, { TransactionType } from '@/src/data/models/Transaction'
+import { auditService } from '@/src/services/audit-service'
+import { rebuildQueueService } from '@/src/services/rebuild-queue-service'
+import { AccountUpdateInput } from '@/src/types/Account'
+import { AccountBalance } from '@/src/types/domain'
+import { getEpsilon, roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
-import { auditService } from '../../services/audit-service'
-import { rebuildQueueService } from '../../services/rebuild-queue-service'
-import { AccountUpdateInput } from '../../types/Account'
-import { getEpsilon, roundToPrecision } from '../../utils/money'
-import { database } from '../database/Database'
-import Account, { AccountType } from '../models/Account'
-import { AuditAction } from '../models/AuditLog'
-import { JournalStatus } from '../models/Journal'
-import Transaction, { TransactionType } from '../models/Transaction'
 import { currencyRepository } from './CurrencyRepository'
 
 export interface AccountCreateInput {
@@ -17,14 +18,6 @@ export interface AccountCreateInput {
   description?: string
   parentAccountId?: string
   initialBalance?: number
-}
-
-export interface AccountBalance {
-  accountId: string
-  balance: number
-  transactionCount: number
-  asOfDate: number
-  accountType: AccountType
 }
 
 export class AccountRepository {

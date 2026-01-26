@@ -1,27 +1,19 @@
 import Journal from '@/src/data/models/Journal';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
+import { useCallback } from 'react';
 
 export function useJournalActions() {
-    /**
-     * Create a new journal entry with transactions
-     */
-    const createJournal = async (data: CreateJournalData) => {
+    const createJournal = useCallback(async (data: CreateJournalData) => {
         return journalRepository.createJournalWithTransactions(data);
-    };
+    }, []);
 
-    /**
-     * Delete a journal entry and its transactions
-     */
-    const deleteJournal = async (journal: Journal) => {
+    const deleteJournal = useCallback(async (journal: Journal) => {
         return journalRepository.delete(journal);
-    };
+    }, []);
 
-    /**
-     * Find a journal by ID
-     */
-    const findJournal = async (journalId: string) => {
+    const findJournal = useCallback(async (journalId: string) => {
         return journalRepository.find(journalId);
-    };
+    }, []);
 
     return {
         createJournal,

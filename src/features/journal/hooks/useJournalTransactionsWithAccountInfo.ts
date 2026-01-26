@@ -1,5 +1,5 @@
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { TransactionWithAccountInfo } from '@/src/types/readModels';
+import { TransactionWithAccountInfo } from '@/src/types/domain';
 import { useEffect, useState } from 'react';
 
 /**

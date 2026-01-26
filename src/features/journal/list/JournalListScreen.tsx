@@ -1,26 +1,24 @@
 import { Opacity, Spacing, Typography } from '@/constants';
 import { AppText, FloatingActionButton, SearchField } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
-import { useNetWorth } from '@/src/features/dashboard';
-import { NetWorthCard } from '@/src/features/dashboard/NetWorthCard';
+import { NetWorthCard } from '@/src/features/dashboard';
 import { DashboardSummary } from '@/src/features/journal/components/DashboardSummary';
+import { JournalCard } from '@/src/features/journal/components/JournalCard';
+import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useSummary } from '@/src/hooks/use-summary';
 import { useTheme } from '@/src/hooks/use-theme';
-import { EnrichedJournal } from '@/src/types/readModels';
+import { EnrichedJournal } from '@/src/types/domain';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { JournalCard } from '../components/JournalCard';
-import { useJournals } from '../hooks/useJournals';
 
 export function JournalListScreen() {
     const router = useRouter()
     const { userName } = useUI()
     const { theme } = useTheme();
     const { journals, isLoading, isLoadingMore, loadMore } = useJournals()
-    const { income, expense, isPrivacyMode } = useSummary()
-    const { netWorth, totalAssets, totalLiabilities, isLoading: worthLoading } = useNetWorth()
+    const { income, expense, netWorth, totalAssets, totalLiabilities, isPrivacyMode, isLoading: isSummaryLoading } = useSummary()
     const [searchQuery, setSearchQuery] = React.useState('')
     const [isDashboardHidden, setIsDashboardHidden] = React.useState(isPrivacyMode)
 
@@ -34,7 +32,7 @@ export function JournalListScreen() {
     const TypedFlashList = FlashList as any
 
     const handleJournalPress = (journal: EnrichedJournal) => {
-        router.push(`/transaction-details?journalId=${journal.id}` as any);
+        router.push(`/transaction-details?journalId=${journal.id}`);
     }
 
     // Filter journals based on search query
@@ -84,7 +82,7 @@ export function JournalListScreen() {
                             netWorth={netWorth}
                             totalAssets={totalAssets}
                             totalLiabilities={totalLiabilities}
-                            isLoading={worthLoading}
+                            isLoading={isSummaryLoading}
                             hidden={isDashboardHidden}
                             onToggleHidden={setIsDashboardHidden}
                         />

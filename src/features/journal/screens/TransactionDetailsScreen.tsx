@@ -1,9 +1,10 @@
 import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/constants'
-import { AppCard, AppText, Badge, IconButton } from '@/src/components/core'
+import { AppButton, AppCard, AppText, Badge, IconButton } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
-import { useJournalActions, useJournalTransactionsWithAccountInfo } from '@/src/features/journal'
+import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions'
+import { useJournalTransactionsWithAccountInfo } from '@/src/features/journal/hooks/useJournalTransactionsWithAccountInfo'
 import { useTheme } from '@/src/hooks/use-theme'
-import { TransactionWithAccountInfo } from '@/src/types/readModels'
+import { TransactionWithAccountInfo } from '@/src/types/domain'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { formatDate } from '@/src/utils/dateUtils'
@@ -29,13 +30,14 @@ export default function TransactionDetailsScreen() {
 
     const [journalInfo, setJournalInfo] = useState<{ description?: string; date: number; status: string; currency: string; displayType?: string } | null>(null);
     const [isLoadingJournal, setIsLoadingJournal] = useState(true);
-    // const [error, setError] = useState<string | null>(null); // Unused
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const loadJournal = async () => {
             if (!journalId) return;
             try {
                 setIsLoadingJournal(true);
+                setError(null);
                 const journal = await findJournal(journalId);
 
                 if (journal) {
@@ -49,6 +51,7 @@ export default function TransactionDetailsScreen() {
                 }
             } catch (error) {
                 console.error('Error loading journal:', error);
+                setError('Journal not found or deleted');
             } finally {
                 setIsLoadingJournal(false);
             }
@@ -110,6 +113,22 @@ export default function TransactionDetailsScreen() {
     if (isLoading) return (
         <Screen title="Details">
             <View style={styles.center}><AppText variant="body">Loading...</AppText></View>
+        </Screen>
+    );
+
+    if (error || !journalInfo) return (
+        <Screen title="Details" backIcon="close">
+            <View style={styles.center}>
+                <Ionicons name="alert-circle-outline" size={48} color={theme.textSecondary} />
+                <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Transaction not found</AppText>
+                <AppButton
+                    variant="ghost"
+                    onPress={() => router.back()}
+                    style={{ marginTop: Spacing.lg }}
+                >
+                    Go Back
+                </AppButton>
+            </View>
         </Screen>
     );
 

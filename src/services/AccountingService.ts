@@ -1,6 +1,6 @@
-import { AccountType } from '../data/models/Account';
-import { TransactionType } from '../data/models/Transaction';
-import { JournalLineInput } from './accounting/JournalCalculator';
+import { AccountType } from '@/src/data/models/Account';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 
 /**
  * AccountingService - Centralized domain logic for the accounting system.

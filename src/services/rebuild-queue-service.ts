@@ -5,8 +5,8 @@
  * Queues account IDs and processes them in batches with debouncing.
  */
 
-import { transactionRepository } from '../data/repositories/TransactionRepository'
-import { logger } from '../utils/logger'
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { logger } from '@/src/utils/logger'
 
 interface RebuildQueueConfig {
     debounceMs: number
@@ -96,7 +96,7 @@ class RebuildQueueService {
         this.isProcessing = true
         try {
             // Take up to maxBatchSize items from the queue
-            const batch:  { id: string; fromDate: number }[]  = []
+            const batch: { id: string; fromDate: number }[] = []
             for (const [accountId, fromDate] of this.queue.entries()) {
                 batch.push({ id: accountId, fromDate })
                 if (batch.length >= this.config.maxBatchSize) {

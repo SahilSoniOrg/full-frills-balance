@@ -1,9 +1,10 @@
 /**
  * Reactive Data Hooks for Accounts
  */
-import Account from '@/src/data/models/Account'
+import Account, { AccountType } from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
-import { AccountBalance, accountRepository } from '@/src/data/repositories/AccountRepository'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { AccountBalance } from '@/src/types/domain'
 import { Q } from '@nozbe/watermelondb'
 import { useDatabase } from '@nozbe/watermelondb/react'
 import { useEffect, useState } from 'react'

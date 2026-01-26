@@ -1,14 +1,14 @@
 import { database } from '@/src/data/database/Database';
-import { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { WealthSummary, wealthService } from '@/src/services/wealth-service';
 import { useEffect, useState } from 'react';
 
-export interface DashboardSummaryData {
+export interface DashboardSummaryData extends WealthSummary {
     income: number;
     expense: number;
-    netWorth: number;
     isPrivacyMode: boolean;
+    isLoading: boolean;
     togglePrivacyMode: () => void;
 }
 
@@ -17,28 +17,35 @@ export const useSummary = () => {
         income: 0,
         expense: 0,
         netWorth: 0,
+        totalAssets: 0,
+        totalLiabilities: 0,
+        isLoading: true,
     });
     const [isPrivacyMode, setIsPrivacyMode] = useState(false);
 
     const fetchSummary = async () => {
-        const now = new Date();
-        const month = now.getMonth();
-        const year = now.getFullYear();
+        try {
+            const now = new Date();
+            const month = now.getMonth();
+            const year = now.getFullYear();
 
-        const monthly = await journalRepository.getMonthlySummary(month, year);
-        const balances = await accountRepository.getAccountBalances();
+            const [monthly, balances] = await Promise.all([
+                journalRepository.getMonthlySummary(month, year),
+                accountRepository.getAccountBalances()
+            ]);
 
-        const netWorth = balances.reduce((sum, b) => {
-            if (b.accountType === AccountType.ASSET) return sum + b.balance;
-            if (b.accountType === AccountType.LIABILITY) return sum - b.balance; // Standard: Net Worth = Assets - Liabilities
-            return sum;
-        }, 0);
+            const wealth = wealthService.calculateSummary(balances);
 
-        setData({
-            income: monthly.income,
-            expense: monthly.expense,
-            netWorth,
-        });
+            setData({
+                income: monthly.income,
+                expense: monthly.expense,
+                ...wealth,
+                isLoading: false,
+            });
+        } catch (error) {
+            console.error('Failed to fetch summary:', error);
+            setData(prev => ({ ...prev, isLoading: false }));
+        }
     };
 
     const togglePrivacyMode = () => setIsPrivacyMode(!isPrivacyMode);

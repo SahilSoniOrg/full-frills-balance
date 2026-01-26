@@ -1,11 +1,9 @@
-import { AppConfig, Shape, Spacing } from '@/constants';
+import { Shape, Spacing } from '@/constants';
 import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
+import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
-import { preferences } from '@/src/utils/preferences';
-import { sanitizeAmount } from '@/src/utils/validation';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
-import { useJournalEditor } from '../hooks/useJournalEditor';
 import { JournalLineItem } from './JournalLineItem';
 import { JournalSummary } from './JournalSummary';
 
@@ -26,28 +24,15 @@ export const AdvancedForm = ({
 }: AdvancedFormProps) => {
     // const { theme } = useTheme(); // Unused
 
-    const getLineBaseAmount = (line: any): number => {
-        const amount = sanitizeAmount(line.amount) || 0;
-        const rate = line.exchangeRate && parseFloat(line.exchangeRate) ? parseFloat(line.exchangeRate) : 1;
-        const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-
-        if (!line.accountCurrency || line.accountCurrency === defaultCurrency) {
-            return amount;
-        }
-        const baseAmount = amount * rate;
-        return Math.round(baseAmount * 100) / 100;
-    };
-
     const getDomainLines = (): JournalLineInput[] => {
         return editor.lines.map(line => ({
-            amount: getLineBaseAmount(line),
+            amount: JournalCalculator.getLineBaseAmount(line),
             type: line.transactionType
         }));
     };
 
     const getTotalDebits = () => JournalCalculator.calculateTotalDebits(getDomainLines());
     const getTotalCredits = () => JournalCalculator.calculateTotalCredits(getDomainLines());
-    // const validationResult = JournalValidator.validate(getDomainLines()); // Unused
     const isBalanced = JournalCalculator.isBalanced(getDomainLines());
 
     return (
@@ -105,7 +90,7 @@ export const AdvancedForm = ({
                             onUpdate={(field, value) => editor.updateLine(line.id, { [field]: value })}
                             onRemove={() => editor.removeLine(line.id)}
                             onSelectAccount={() => onSelectAccountRequest(line.id)}
-                            getLineBaseAmount={getLineBaseAmount}
+                            getLineBaseAmount={JournalCalculator.getLineBaseAmount}
                         />
                     ))}
                 </Stack>

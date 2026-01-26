@@ -1,10 +1,9 @@
+import { database } from '@/src/data/database/Database'
+import Transaction from '@/src/data/models/Transaction'
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
+import { AccountType, TransactionType, TransactionWithAccountInfo } from '@/src/types/domain'
+import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
-import { TransactionWithAccountInfo } from '../../types/readModels'
-import { roundToPrecision } from '../../utils/money'
-import { database } from '../database/Database'
-import { AccountType } from '../models/Account'
-import Transaction, { TransactionType } from '../models/Transaction'
-import { currencyRepository } from './CurrencyRepository'
 
 export class TransactionRepository {
   private get transactions() {

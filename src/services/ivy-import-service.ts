@@ -1,11 +1,11 @@
 import { database } from '@/src/data/database/Database';
 import { generator as generateId } from '@/src/data/database/idGenerator';
+import Account, { AccountType } from '@/src/data/models/Account';
+import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import { ImportStats } from '@/src/services/import-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import Account, { AccountType } from '../data/models/Account';
-import Journal, { JournalStatus } from '../data/models/Journal';
-import Transaction, { TransactionType } from '../data/models/Transaction';
-import { ImportStats } from './import-service';
 
 // Ivy Wallet Interfaces (keeping these for reference)
 interface IvyAccount {

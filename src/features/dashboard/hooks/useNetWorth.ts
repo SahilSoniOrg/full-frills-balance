@@ -1,6 +1,8 @@
 import Account from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
-import { AccountBalance, accountRepository } from '@/src/data/repositories/AccountRepository'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { wealthService } from '@/src/services/wealth-service'
+import { AccountBalance } from '@/src/types/domain'
 import { Q } from '@nozbe/watermelondb'
 import { useDatabase } from '@nozbe/watermelondb/react'
 import { useEffect, useRef, useState } from 'react'
@@ -35,25 +37,11 @@ export function useNetWorth() {
         const calculateNetWorth = async () => {
             try {
                 const balances = await accountRepository.getAccountBalances()
-
-                let totalAssets = 0
-                let totalLiabilities = 0
-
-                balances.forEach(b => {
-                    if (b.accountType === 'ASSET') {
-                        totalAssets += b.balance
-                    } else if (b.accountType === 'LIABILITY') {
-                        totalLiabilities += b.balance
-                    }
-                })
-
-                const netWorth = totalAssets - totalLiabilities
+                const wealth = wealthService.calculateSummary(balances)
 
                 setData({
                     balances,
-                    netWorth,
-                    totalAssets,
-                    totalLiabilities,
+                    ...wealth,
                     isLoading: false
                 })
             } catch (error) {

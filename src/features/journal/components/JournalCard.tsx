@@ -1,5 +1,4 @@
-import { JournalDisplayType } from '@/src/services/accounting/JournalPresenter';
-import { EnrichedJournal } from '@/src/types/readModels';
+import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import React from 'react';
 import { BaseTransactionCard } from './BaseTransactionCard';
 

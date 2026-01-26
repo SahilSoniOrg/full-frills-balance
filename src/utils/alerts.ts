@@ -1,6 +1,6 @@
 import { Alert, Platform } from 'react-native'
-import { handleError } from '../utils/errors'
-import { logger } from '../utils/logger'
+import { handleError } from '@/src/utils/errors'
+import { logger } from '@/src/utils/logger'
 
 export const showErrorAlert = (error: unknown, customTitle?: string) => {
   const appError = handleError(error)

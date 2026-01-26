@@ -4,7 +4,7 @@
  * Pure utility functions for account operations.
  */
 
-import Account, { AccountType } from '../data/models/Account'
+import Account, { AccountType } from '@/src/data/models/Account'
 
 /**
  * Groups accounts by their account type.

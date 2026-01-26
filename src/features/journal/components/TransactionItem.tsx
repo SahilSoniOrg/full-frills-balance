@@ -1,4 +1,4 @@
-import { EnrichedTransaction } from '@/src/types/readModels';
+import { EnrichedTransaction } from '@/src/types/domain';
 import React from 'react';
 import { BaseTransactionCard } from './BaseTransactionCard';
 

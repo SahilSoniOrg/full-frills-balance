@@ -4,9 +4,9 @@
  * Tracks all create/update/delete operations for compliance and audit trail.
  */
 
+import { database } from '@/src/data/database/Database'
+import AuditLog, { AuditAction } from '@/src/data/models/AuditLog'
 import { Q } from '@nozbe/watermelondb'
-import { database } from '../data/database/Database'
-import AuditLog, { AuditAction } from '../data/models/AuditLog'
 
 export interface AuditEntry {
     entityType: string

@@ -5,12 +5,12 @@
  * Exports mandatory per project principles.
  */
 
+import { database } from '@/src/data/database/Database';
+import Account from '@/src/data/models/Account';
+import Journal from '@/src/data/models/Journal';
+import Transaction from '@/src/data/models/Transaction';
+import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
-import { database } from '../data/database/Database';
-import Account from '../data/models/Account';
-import Journal from '../data/models/Journal';
-import Transaction from '../data/models/Transaction';
-import { logger } from '../utils/logger';
 import { preferences } from '../utils/preferences';
 
 export interface ExportData {

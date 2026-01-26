@@ -3,22 +3,10 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { journalEntryService } from '@/src/services/journal-entry-service';
-import { TransactionWithAccountInfo } from '@/src/types/readModels';
+import { JournalEntryLine, TransactionWithAccountInfo } from '@/src/types/domain';
 import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-
-export interface JournalEntryLine {
-    id: string;
-    accountId: string;
-    accountName: string;
-    accountType: AccountType;
-    amount: string;
-    transactionType: TransactionType;
-    notes: string;
-    exchangeRate: string;
-    accountCurrency?: string;
-}
 
 export interface UseJournalEditorOptions {
     journalId?: string;

@@ -9,7 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useUI } from '../contexts/UIContext';
-import { importService } from '../services/import-service';
+import { ImportStats, importService } from '../services/import-service';
 import { ivyImportService } from '../services/ivy-import-service';
 import { logger } from '../utils/logger';
 
