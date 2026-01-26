@@ -13,6 +13,14 @@ import { logger } from '../utils/logger';
 import { preferences } from '../utils/preferences';
 import { integrityService } from './integrity-service';
 
+export interface ImportStats {
+    accounts: number;
+    journals: number;
+    transactions: number;
+    skippedTransactions: number;
+    skippedItems?: Array<{ id: string; reason: string; description?: string }>;
+}
+
 // Redefining interface if circular dependency is an issue, or just for clarity. 
 // Ideally should reside in a shared types file, but for now matching export-service.ts
 interface ImportData {
@@ -28,7 +36,7 @@ class ImportService {
      * Imports data from a JSON string.
      * WARNING: This performs a full database wipe before importing.
      */
-    async importFromJSON(jsonContent: string): Promise<boolean> {
+    async importFromJSON(jsonContent: string): Promise<ImportStats> {
         logger.info('[ImportService] Starting import...');
 
         let data: ImportData;
@@ -126,7 +134,12 @@ class ImportService {
             });
 
             logger.info('[ImportService] Import successful.');
-            return true;
+            return {
+                accounts: data.accounts.length,
+                journals: data.journals.length,
+                transactions: data.transactions.length,
+                skippedTransactions: 0
+            };
         } catch (error) {
             logger.error('[ImportService] Import failed mid-process', error);
             throw new Error('Failed to import data into database');

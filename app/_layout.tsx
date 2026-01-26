@@ -47,14 +47,41 @@ function AppContent() {
   const { isRestartRequired } = useUI();
 
   if (isRestartRequired) {
+    const stats = useUI().importStats;
+
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000', padding: 20 }}>
         <StatusBar style="light" />
         <AppText variant="title" style={{ color: '#fff', textAlign: 'center', marginBottom: 20 }}>
-          App Restart Required
+          Import Successful
         </AppText>
-        <AppText variant="body" style={{ color: '#fff', textAlign: 'center' }}>
-          Data has been reset or restored. Please completely close and restart the app not.
+
+        {stats && (
+          <View style={{ marginBottom: 30, width: '100%', maxWidth: 300, backgroundColor: '#1A1A1A', padding: 20, borderRadius: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+              <AppText variant="body" style={{ color: '#888' }}>Accounts</AppText>
+              <AppText variant="body" weight="bold" style={{ color: '#fff' }}>{stats.accounts}</AppText>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+              <AppText variant="body" style={{ color: '#888' }}>Journals</AppText>
+              <AppText variant="body" weight="bold" style={{ color: '#fff' }}>{stats.journals}</AppText>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <AppText variant="body" style={{ color: '#888' }}>Transactions</AppText>
+              <AppText variant="body" weight="bold" style={{ color: '#fff' }}>{stats.transactions}</AppText>
+            </View>
+
+            {stats.skippedTransactions > 0 && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#333' }}>
+                <AppText variant="body" style={{ color: '#FF453A' }}>Skipped</AppText>
+                <AppText variant="body" weight="bold" style={{ color: '#FF453A' }}>{stats.skippedTransactions}</AppText>
+              </View>
+            )}
+          </View>
+        )}
+
+        <AppText variant="body" style={{ color: '#fff', textAlign: 'center', opacity: 0.8 }}>
+          Please completely close and restart the app to apply changes.
         </AppText>
       </View>
     );

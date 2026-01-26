@@ -43,6 +43,7 @@ interface UIState {
 
   // App Lifecycle
   isRestartRequired: boolean
+  importStats: { accounts: number; journals: number; transactions: number; skippedTransactions: number; skippedItems?: Array<{ id: string; reason: string; description?: string }> } | null
 }
 
 interface UIContextType extends UIState {
@@ -54,7 +55,7 @@ interface UIContextType extends UIState {
   cleanupDatabase: () => Promise<{ deletedCount: number }>
   updateUserDetails: (name: string, currency: string) => Promise<void>
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
-  requireRestart: () => void
+  requireRestart: (stats?: { accounts: number; journals: number; transactions: number; skippedTransactions: number; skippedItems?: Array<{ id: string; reason: string; description?: string }> }) => void
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined)
@@ -72,6 +73,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     defaultCurrency: 'USD',
     isPrivacyMode: false,
     isRestartRequired: false,
+    importStats: null,
   })
 
   // Update themeMode when preference or system scheme changes
@@ -105,6 +107,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           defaultCurrency: loadedPreferences.defaultCurrencyCode || 'USD',
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
           isRestartRequired: false,
+          importStats: null,
           isLoading: false,
           isInitialized: true,
         })
@@ -210,6 +213,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         isLoading: false,
         isInitialized: true,
         isRestartRequired: true, // Block the app
+        importStats: null,
       })
     } catch (error) {
       logger.error('[UIContext] Failed to reset app:', error)
@@ -234,8 +238,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const requireRestart = () => {
-    setUIState(prev => ({ ...prev, isRestartRequired: true }))
+  const requireRestart = (stats?: { accounts: number; journals: number; transactions: number; skippedTransactions: number; skippedItems?: Array<{ id: string; reason: string; description?: string }> }) => {
+    setUIState(prev => ({ ...prev, isRestartRequired: true, importStats: stats || null }))
   }
 
   const value: UIContextType = {
