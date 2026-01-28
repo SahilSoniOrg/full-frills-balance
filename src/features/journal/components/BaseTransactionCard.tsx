@@ -1,5 +1,5 @@
 import { AppCard, AppText, Badge } from '@/src/components/core';
-import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalDisplayType, JournalPresenter } from '@/src/services/accounting/JournalPresenter';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -195,8 +195,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     iconCircle: {
-        width: 28,
-        height: 28,
+        width: Size.iconLg,
+        height: Size.iconLg,
         borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',

@@ -1,2 +1,2 @@
-import EntryScreen from '@/src/features/journal/entry/EntryScreen';
+import { EntryScreen } from '@/src/features/journal';
 export default EntryScreen;

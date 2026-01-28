@@ -3,6 +3,7 @@ import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { wealthService } from '@/src/services/wealth-service'
 import { AccountBalance } from '@/src/types/domain'
+import { logger } from '@/src/utils/logger'
 import { Q } from '@nozbe/watermelondb'
 import { useDatabase } from '@nozbe/watermelondb/react'
 import { useEffect, useRef, useState } from 'react'
@@ -45,7 +46,7 @@ export function useNetWorth() {
                     isLoading: false
                 })
             } catch (error) {
-                console.error('Failed to calculate net worth:', error)
+                logger.error('Failed to calculate net worth:', error)
                 setData(prev => ({ ...prev, isLoading: false }))
             }
         }

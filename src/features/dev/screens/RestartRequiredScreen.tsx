@@ -1,7 +1,8 @@
 import { AppButton, AppCard, AppText, IvyIcon, Stack } from '@/src/components/core';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
+import { logger } from '@/src/utils/logger';
 import * as Updates from 'expo-updates';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -23,7 +24,7 @@ export const RestartRequiredScreen = () => {
                 await Updates.reloadAsync();
             } catch (e) {
                 // Fallback if expo-updates isn't available/configured
-                console.error('Failed to reload app', e);
+                logger.error('Failed to reload app', e);
             }
         }
     };
@@ -104,9 +105,9 @@ const styles = StyleSheet.create({
         padding: Spacing.xl,
     },
     iconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: Size.avatarXl,
+        height: Size.avatarXl,
+        borderRadius: Size.avatarXl / 2,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: Spacing.lg,

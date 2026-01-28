@@ -1,5 +1,5 @@
 import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
@@ -67,7 +67,7 @@ export const AdvancedForm = ({
                         placeholder="Enter description"
                         multiline
                         numberOfLines={3}
-                        style={{ height: 80, textAlignVertical: 'top' }}
+                        style={{ height: Size.textareaHeight, textAlignVertical: 'top' }}
                     />
                 </Stack>
             </AppCard>
@@ -107,7 +107,7 @@ export const AdvancedForm = ({
                     variant="primary"
                     onPress={editor.submit}
                     disabled={!isBalanced || editor.isSubmitting}
-                    style={{ marginBottom: Spacing.xl, height: 60, borderRadius: Shape.radius.r4 }}
+                    style={{ marginBottom: Spacing.xl, height: Size.buttonXl, borderRadius: Shape.radius.r4 }}
                 >
                     {editor.isSubmitting ? (editor.isEdit ? 'Updating...' : 'Creating...') : (editor.isEdit ? 'Update Journal' : 'Create Journal')}
                 </AppButton>

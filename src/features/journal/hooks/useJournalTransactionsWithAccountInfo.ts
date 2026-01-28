@@ -1,5 +1,6 @@
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { TransactionWithAccountInfo } from '@/src/types/domain';
+import { logger } from '@/src/utils/logger';
 import { useEffect, useState } from 'react';
 
 /**
@@ -22,7 +23,7 @@ export function useJournalTransactionsWithAccountInfo(journalId: string | null) 
                 const data = await transactionRepository.findByJournalWithAccountInfo(journalId);
                 setTransactions(data);
             } catch (error) {
-                console.error('Failed to load journal transactions:', error);
+                logger.error('Failed to load journal transactions:', error);
             } finally {
                 setIsLoading(false);
             }

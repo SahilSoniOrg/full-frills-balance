@@ -1,10 +1,11 @@
-import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { AppInput, AppText, Box, Stack } from '@/src/components/core';
+import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useTheme } from '@/src/hooks/use-theme';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
@@ -162,7 +163,7 @@ export function JournalLineItem({
                                     )
                                     onUpdate('exchangeRate', rate.toString())
                                 } catch (error) {
-                                    console.error('Failed to fetch rate:', error)
+                                    logger.error('Failed to fetch rate:', error)
                                 }
                             }}
                         >

@@ -4,6 +4,7 @@
 import Account from '@/src/data/models/Account'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { AccountBalance } from '@/src/types/domain'
+import { logger } from '@/src/utils/logger'
 import { useEffect, useState } from 'react'
 
 /**
@@ -102,7 +103,7 @@ export function useAccountBalance(accountId: string | null) {
                     const data = await accountRepository.getAccountBalance(accountId)
                     setBalanceData(data)
                 } catch (error) {
-                    console.error('Failed to update account balance:', error)
+                    logger.error('Failed to update account balance:', error)
                 } finally {
                     setIsLoading(false)
                 }

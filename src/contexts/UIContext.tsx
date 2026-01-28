@@ -125,11 +125,11 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         // Run integrity check on startup (async, don't block UI)
         import('@/src/services/integrity-service').then(({ integrityService }) => {
           integrityService.runStartupCheck().catch(err => {
-            console.warn('Failed to run integrity check:', err)
+            logger.warn('Failed to run integrity check', { error: err })
           })
         })
       } catch (error) {
-        console.warn('Failed to load preferences:', error)
+        logger.warn('Failed to load preferences', { error })
         setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true }))
       }
     }
@@ -149,7 +149,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         defaultCurrency: currency
       }))
     } catch (error) {
-      console.warn('Failed to save onboarding state:', error)
+      logger.warn('Failed to save onboarding state', { error })
       // Still update local state for better UX
       setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }))
     }
@@ -165,7 +165,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         defaultCurrency: currency || prev.defaultCurrency
       }))
     } catch (error) {
-      console.warn('Failed to update user details:', error)
+      logger.warn('Failed to update user details', { error })
     }
   }
 
@@ -174,7 +174,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setTheme(theme)
       setUIState(prev => ({ ...prev, themePreference: theme }))
     } catch (error) {
-      console.warn('Failed to save theme preference:', error)
+      logger.warn('Failed to save theme preference', { error })
       // Still update local state for better UX
       setUIState(prev => ({ ...prev, themePreference: theme }))
     }
@@ -185,7 +185,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setIsPrivacyMode(isPrivacyMode)
       setUIState(prev => ({ ...prev, isPrivacyMode }))
     } catch (error) {
-      console.warn('Failed to save privacy mode:', error)
+      logger.warn('Failed to save privacy mode', { error })
       setUIState(prev => ({ ...prev, isPrivacyMode }))
     }
   }

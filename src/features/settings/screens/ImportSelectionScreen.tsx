@@ -1,6 +1,6 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Spacing } from '@/src/constants';
+import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useImport } from '@/src/hooks/use-import';
 import { importRegistry } from '@/src/services/import';
 import React from 'react';
@@ -28,7 +28,7 @@ export default function ImportSelectionScreen() {
                     <AppCard key={plugin.id} elevation="sm" padding="md" style={styles.card}>
                         <View style={styles.headerRow}>
                             <View style={styles.iconPlaceholder}>
-                                <AppText variant="heading" style={{ fontSize: 24 }}>{plugin.icon}</AppText>
+                                <AppText variant="heading" style={{ fontSize: Typography.sizes.xxl }}>{plugin.icon}</AppText>
                             </View>
                             <View style={styles.textCol}>
                                 <AppText variant="subheading">{plugin.name}</AppText>
@@ -75,9 +75,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     iconPlaceholder: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: Size.xxl,
+        height: Size.xxl,
+        borderRadius: Shape.radius.full,
         backgroundColor: 'rgba(0,0,0,0.05)',
         alignItems: 'center',
         justifyContent: 'center',

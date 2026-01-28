@@ -5,6 +5,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { journalEntryService } from '@/src/services/journal-entry-service';
 import { JournalEntryLine, TransactionWithAccountInfo } from '@/src/types/domain';
 import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
+import { logger } from '@/src/utils/logger';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -69,7 +70,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                         }
                     }
                 } catch (error) {
-                    console.error('Failed to load journal for edit:', error);
+                    logger.error('Failed to load journal for edit:', error);
                     showErrorAlert('Failed to load transaction');
                 }
             };

@@ -5,6 +5,7 @@ import Currency from '@/src/data/models/Currency';
 import { useImport } from '@/src/hooks/use-import';
 import { useTheme } from '@/src/hooks/use-theme';
 import { currencyInitService } from '@/src/services/currency-init-service';
+import { logger } from '@/src/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -42,7 +43,7 @@ export default function OnboardingScreen() {
             await completeOnboarding(name.trim(), selectedCurrency)
             router.replace('/account-creation' as any)
         } catch (error) {
-            console.error('Failed to complete onboarding:', error)
+            logger.error('Failed to complete onboarding:', error)
         } finally {
             setIsCompleting(false)
         }

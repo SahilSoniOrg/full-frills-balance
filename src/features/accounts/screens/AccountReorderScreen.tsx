@@ -4,6 +4,7 @@ import Account from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
+import { logger } from '@/src/utils/logger';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -59,7 +60,7 @@ export default function AccountReorderScreen() {
         try {
             await accountRepository.updateOrder(item, newOrderNum);
         } catch (error) {
-            console.error('Failed to update account order:', error);
+            logger.error('Failed to update account order:', error);
             // Revert if failed
             setAccounts([...initialAccounts]);
         }

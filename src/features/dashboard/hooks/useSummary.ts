@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { WealthSummary, wealthService } from '@/src/services/wealth-service';
+import { logger } from '@/src/utils/logger';
 import { useEffect, useState } from 'react';
 
 export interface DashboardSummaryData extends WealthSummary {
@@ -43,7 +44,7 @@ export const useSummary = () => {
                 isLoading: false,
             });
         } catch (error) {
-            console.error('Failed to fetch summary:', error);
+            logger.error('Failed to fetch summary:', error);
             setData(prev => ({ ...prev, isLoading: false }));
         }
     };

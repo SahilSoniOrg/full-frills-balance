@@ -3,6 +3,7 @@ import { CreateJournalData, journalRepository } from '@/src/data/repositories/Jo
 import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 import { accountingService } from '@/src/services/AccountingService';
 import { JournalEntryLine } from '@/src/types/domain';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 
@@ -70,7 +71,7 @@ export class JournalEntryService {
                 return { success: true, action: 'created' };
             }
         } catch (error) {
-            console.error('Failed to submit journal:', error);
+            logger.error('Failed to submit journal:', error);
             return { success: false, error: 'Failed to save transaction' };
         }
     }

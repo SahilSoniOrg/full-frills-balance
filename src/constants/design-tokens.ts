@@ -130,6 +130,7 @@ export const Opacity = {
 // === SIZE SCALE ===
 // For consistent sizing across components
 export const Size = {
+  // Base scale
   xs: 16,   // Small icons, compact elements
   sm: 20,   // Small icons
   md: 24,   // Medium icons, touch targets
@@ -137,10 +138,42 @@ export const Size = {
   xl: 40,   // Extra large icons
   xxl: 48,  // Extra extra large icons
   fab: 64,  // Main FAB size
+
+  // Button sizes
   buttonSm: 32,
   buttonMd: 44,
   buttonLg: 52,
+  buttonXl: 60,
+
+  // Input sizes
   inputMd: 48,
+  inputLg: 60,
+  textareaHeight: 80,
+
+  // Icon sizes (semantic)
+  iconXs: 16,
+  iconSm: 20,
+  iconMd: 24,
+  iconLg: 28,
+  iconXl: 32,
+
+  // Avatar sizes
+  avatarSm: 32,
+  avatarMd: 48,
+  avatarLg: 64,
+  avatarXl: 100,
+
+  // Touch targets (minimum 44pt for accessibility)
+  touchTarget: 44,
+  touchTargetLg: 48,
+
+  // Header/Navigation
+  headerHeight: 64,
+  navBarButton: 44,
+
+  // Card minimums
+  cardMinWidth: 160,
+  maxContentWidth: 400,
 } as const
 
 // === TYPOGRAPHY SCALE ===

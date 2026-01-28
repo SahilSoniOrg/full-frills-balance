@@ -1,10 +1,11 @@
-import { Spacing } from '@/src/constants'
 import { AppText } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
+import { Spacing } from '@/src/constants'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { AuditLogItem, type AuditLogEntry } from '@/src/features/audit/components/AuditLogItem'
 import { useTheme } from '@/src/hooks/use-theme'
 import { auditService } from '@/src/services/audit-service'
+import { logger } from '@/src/utils/logger'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useState } from 'react'
@@ -30,7 +31,7 @@ export default function AuditLogScreen() {
             });
             setAccountMap(map);
         } catch (error) {
-            console.error('Failed to load account map:', error);
+            logger.error('Failed to load account map:', error);
         }
     }, []);
 
@@ -52,7 +53,7 @@ export default function AuditLogScreen() {
                 timestamp: log.timestamp,
             })));
         } catch (error) {
-            console.error('Failed to load audit logs:', error);
+            logger.error('Failed to load audit logs:', error);
         } finally {
             setIsLoading(false);
         }

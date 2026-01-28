@@ -5,8 +5,10 @@
  * Uses exchangerate-api.com free tier (1500 requests/month).
  */
 
+import { AppConfig } from '@/src/constants'
 import { database } from '@/src/data/database/Database'
 import ExchangeRate from '@/src/data/models/ExchangeRate'
+import { logger } from '@/src/utils/logger'
 import { Q } from '@nozbe/watermelondb'
 
 export interface ExchangeRateData {
@@ -17,7 +19,6 @@ export interface ExchangeRateData {
     source: string
 }
 
-const API_BASE = 'https://api.exchangerate-api.com/v4/latest'
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 export class ExchangeRateService {
@@ -84,7 +85,7 @@ export class ExchangeRateService {
         toCurrency: string
     ): Promise<number> {
         try {
-            const response = await fetch(`${API_BASE}/${fromCurrency}`)
+            const response = await fetch(`${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`)
 
             if (!response.ok) {
                 throw new Error(`Exchange rate API error: ${response.statusText}`)
@@ -98,11 +99,11 @@ export class ExchangeRateService {
 
             return data.rates[toCurrency]
         } catch (error) {
-            console.error('Failed to fetch exchange rate:', error)
+            logger.error('Failed to fetch exchange rate:', error)
             // Fallback: try to get last known rate even if stale
             const cached = await this.getCachedRate(fromCurrency, toCurrency)
             if (cached) {
-                console.warn('Using stale exchange rate from cache')
+                logger.warn('Using stale exchange rate from cache')
                 return cached.rate
             }
             throw new Error(

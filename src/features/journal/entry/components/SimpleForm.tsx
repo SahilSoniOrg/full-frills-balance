@@ -1,16 +1,17 @@
-import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AppButton } from '@/src/components/core/AppButton';
 import { AppCard } from '@/src/components/core/AppCard';
 import { AppInput } from '@/src/components/core/AppInput';
 import { AppText } from '@/src/components/core/AppText';
 import { Box } from '@/src/components/core/Box';
 import { Stack } from '@/src/components/core/Stack';
+import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { useJournalActions } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
 import { accountingService } from '@/src/services/AccountingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Ionicons } from '@expo/vector-icons';
@@ -152,7 +153,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
         if (!numAmount || numAmount <= 0) return;
         if (!sourceAccount || !destAccount) return;
         if (sourceId === destinationId) {
-            console.warn('Source and destination accounts must be different');
+            logger.warn('Source and destination accounts must be different');
             return;
         }
 
@@ -190,7 +191,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
             setAmount('');
             onSuccess();
         } catch (error) {
-            console.error('Failed to save:', error);
+            logger.error('Failed to save:', error);
         } finally {
             setIsSubmitting(false);
         }
@@ -374,7 +375,7 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                     variant="primary"
                     onPress={handleSave}
                     disabled={!amount || !sourceId || !destinationId || (sourceId === destinationId) || isSubmitting || isLoadingRate || !!rateError}
-                    style={{ backgroundColor: activeColor, height: 60, borderRadius: Shape.radius.r4 }}
+                    style={{ backgroundColor: activeColor, height: Size.buttonXl, borderRadius: Shape.radius.r4 }}
                 >
                     {isSubmitting ? 'SAVING...' : sourceId === destinationId ? 'CHOOSE DIFFERENT ACCOUNTS' : `SAVE ${type.toUpperCase()}`}
                 </AppButton>
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing.sm,
-        minWidth: 160,
+        minWidth: Size.cardMinWidth,
     },
     accountIndicator: {
         width: 4,

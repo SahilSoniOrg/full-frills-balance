@@ -1,6 +1,6 @@
 import { AppButton, AppCard, AppText, Badge, IconButton } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
-import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants'
+import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants'
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions'
 import { useJournalTransactionsWithAccountInfo } from '@/src/features/journal/hooks/useJournalTransactionsWithAccountInfo'
 import { useTheme } from '@/src/hooks/use-theme'
@@ -8,6 +8,7 @@ import { TransactionWithAccountInfo } from '@/src/types/domain'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { formatDate } from '@/src/utils/dateUtils'
+import { logger } from '@/src/utils/logger'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
@@ -50,7 +51,7 @@ export default function TransactionDetailsScreen() {
                     });
                 }
             } catch (error) {
-                console.error('Error loading journal:', error);
+                logger.error('Error loading journal:', error);
                 setError('Journal not found or deleted');
             } finally {
                 setIsLoadingJournal(false);
@@ -83,7 +84,7 @@ export default function TransactionDetailsScreen() {
                     showSuccessAlert('Deleted', 'Transaction has been deleted.');
                     router.back();
                 } catch (error) {
-                    console.error('Failed to delete transaction:', error);
+                    logger.error('Failed to delete transaction:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     showErrorAlert(`Could not delete transaction: ${errorMessage}`);
                 }
@@ -254,8 +255,8 @@ const styles = StyleSheet.create({
         marginTop: Spacing.md,
     },
     bigIcon: {
-        width: 64,
-        height: 64,
+        width: Size.avatarLg,
+        height: Size.avatarLg,
         borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
@@ -298,8 +299,8 @@ const styles = StyleSheet.create({
         marginRight: Spacing.md,
     },
     directionIcon: {
-        width: 32,
-        height: 32,
+        width: Size.lg,
+        height: Size.lg,
         borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',

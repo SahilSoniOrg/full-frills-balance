@@ -9,6 +9,7 @@ import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
+import { logger } from '@/src/utils/logger';
 import { sanitizeInput, validateAccountName } from '@/src/utils/validation';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -115,7 +116,7 @@ export default function AccountCreationScreen() {
                     initialBalance: initialBalance ? parseFloat(initialBalance) : 0,
                 })
 
-                // On web, window.alert blocks. We use console log for E2E and then navigate.
+                // On web, window.alert blocks. We use logs for E2E and then navigate.
                 // In a real app, we'd use a Toast or similar.
                 if (Platform.OS !== 'web') {
                     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -135,7 +136,7 @@ export default function AccountCreationScreen() {
                 router.push('/(tabs)/accounts' as any)
             }
         } catch (error) {
-            console.error('Error saving account:', error)
+            logger.error('Error saving account:', error)
             showErrorAlert(error, isEditMode ? 'Failed to Update Account' : 'Failed to Create Account')
         } finally {
             setIsCreating(false)

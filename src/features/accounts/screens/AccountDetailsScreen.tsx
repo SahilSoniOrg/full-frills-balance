@@ -16,6 +16,7 @@ import { useTheme } from '@/src/hooks/use-theme'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { DateRange, PeriodFilter, getCurrentMonthRange, getNextMonthRange, getPreviousMonthRange } from '@/src/utils/dateUtils'
+import { logger } from '@/src/utils/logger'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React from 'react'
@@ -69,7 +70,7 @@ export default function AccountDetailsScreen() {
                     showSuccessAlert('Deleted', 'Account has been deleted.');
                     router.push('/(tabs)/accounts' as any);
                 } catch (error) {
-                    console.error('Failed to delete account:', error);
+                    logger.error('Failed to delete account:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     showErrorAlert(`Could not delete account: ${errorMessage}`);
                 }
@@ -87,7 +88,7 @@ export default function AccountDetailsScreen() {
                     showSuccessAlert('Recovered', 'Account has been restored.');
                     router.replace(`/account-details?accountId=${accountId}` as any);
                 } catch (error) {
-                    console.error('Failed to recover account:', error);
+                    logger.error('Failed to recover account:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     showErrorAlert(`Could not recover account: ${errorMessage}`);
                 }
