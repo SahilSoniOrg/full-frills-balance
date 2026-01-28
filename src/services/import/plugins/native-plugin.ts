@@ -1,49 +1,64 @@
 /**
- * Import Service
+ * Native Import Plugin
  *
- * Handles data import from JSON files.
- * Replaces current database with imported data.
+ * Handles import of Full Frills Balance native backup format.
+ * Refactored from import-service.ts to implement ImportPlugin interface.
  */
 
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
+import { ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
-export interface ImportStats {
-    accounts: number;
-    journals: number;
-    transactions: number;
-    skippedTransactions: number;
-    skippedItems?: { id: string; reason: string; description?: string }[];
-}
-
-// Redefining interface if circular dependency is an issue, or just for clarity. 
-// Ideally should reside in a shared types file, but for now matching export-service.ts
-interface ImportData {
+interface NativeImportData {
     version: string;
-    preferences: any;
+    preferences: {
+        theme?: string;
+        onboardingCompleted?: boolean;
+        userName?: string;
+        defaultCurrencyCode?: string;
+        isPrivacyMode?: boolean;
+    };
     accounts: any[];
     journals: any[];
     transactions: any[];
 }
 
-class ImportService {
-    /**
-     * Imports data from a JSON string.
-     * WARNING: This performs a full database wipe before importing.
-     */
-    async importFromJSON(jsonContent: string): Promise<ImportStats> {
-        logger.info('[ImportService] Starting import...');
+export const nativePlugin: ImportPlugin = {
+    id: 'native',
+    name: 'Full Frills Backup',
+    description: 'Restore from a JSON backup file created by this app.',
+    icon: '⚡️',
 
-        let data: ImportData;
+    detect(data: unknown): boolean {
+        if (!data || typeof data !== 'object') return false;
+
+        const obj = data as Record<string, unknown>;
+
+        // Native format has journals (not categories) and a version field
+        const hasJournals = Array.isArray(obj.journals);
+        const hasAccounts = Array.isArray(obj.accounts);
+        const hasTransactions = Array.isArray(obj.transactions);
+        const hasVersion = typeof obj.version === 'string';
+
+        // Categories is the hallmark of Ivy format, not native
+        const hasCategories = Array.isArray(obj.categories);
+
+        return hasJournals && hasAccounts && hasTransactions && hasVersion && !hasCategories;
+    },
+
+    async import(jsonContent: string): Promise<ImportStats> {
+        logger.info('[NativePlugin] Starting import...');
+
+        let data: NativeImportData;
         try {
             data = JSON.parse(jsonContent);
         } catch (error) {
-            logger.error('[ImportService] Failed to parse JSON', error);
+            logger.error('[NativePlugin] Failed to parse JSON', error);
             throw new Error('Invalid JSON file format');
         }
 
@@ -52,18 +67,20 @@ class ImportService {
             throw new Error('Invalid export file: missing required data sections');
         }
 
-        logger.info(`[ImportService] Validated file. Found ${data.accounts.length} accounts, ${data.journals.length} journals, ${data.transactions.length} transactions.`);
+        logger.info(`[NativePlugin] Validated file. Found ${data.accounts.length} accounts, ${data.journals.length} journals, ${data.transactions.length} transactions.`);
 
         try {
             // 1. Wipe existing data
-            logger.warn('[ImportService] Wiping database for import...');
+            logger.warn('[NativePlugin] Wiping database for import...');
             await integrityService.resetDatabase();
 
             // 2. Clear and restore preferences
             await preferences.clearPreferences();
             if (data.preferences) {
-                // Restore critical preferences
-                if (data.preferences.theme) await preferences.setTheme(data.preferences.theme);
+                const validThemes = ['light', 'dark', 'system'] as const;
+                if (data.preferences.theme && validThemes.includes(data.preferences.theme as typeof validThemes[number])) {
+                    await preferences.setTheme(data.preferences.theme as 'light' | 'dark' | 'system');
+                }
                 if (data.preferences.onboardingCompleted !== undefined) await preferences.setOnboardingCompleted(data.preferences.onboardingCompleted);
                 if (data.preferences.userName) await preferences.setUserName(data.preferences.userName);
                 if (data.preferences.defaultCurrencyCode) await preferences.setDefaultCurrencyCode(data.preferences.defaultCurrencyCode);
@@ -72,23 +89,21 @@ class ImportService {
 
             // 3. Import Data in Batch
             await database.write(async () => {
-                // Accounts
                 const accountsCollection = database.collections.get<Account>('accounts');
                 const journalsCollection = database.collections.get<Journal>('journals');
                 const transactionsCollection = database.collections.get<Transaction>('transactions');
 
-                logger.debug(`[ImportService] creating ${data.accounts.length} accounts...`);
-                // WatermelonDB batch requires array of model preparations
+                logger.debug(`[NativePlugin] creating ${data.accounts.length} accounts...`);
+
                 const accountPrepares = data.accounts.map(acc =>
                     accountsCollection.prepareCreate(record => {
-                        record._raw.id = acc.id; // Preserve ID
+                        record._raw.id = acc.id;
                         record.name = acc.name;
                         record.accountType = acc.accountType;
                         record.currencyCode = acc.currencyCode;
                         record.parentAccountId = acc.parentAccountId;
                         record.description = acc.description;
                         record._raw._status = 'synced';
-                        // Handle Date strings
                         if (acc.createdAt) (record as any)._raw.created_at = new Date(acc.createdAt).getTime();
                     })
                 );
@@ -124,8 +139,7 @@ class ImportService {
                     })
                 );
 
-                // Execute batch
-                logger.info('[ImportService] Executing batch insert...');
+                logger.info('[NativePlugin] Executing batch insert...');
                 await database.batch(
                     ...accountPrepares,
                     ...journalPrepares,
@@ -133,7 +147,7 @@ class ImportService {
                 );
             });
 
-            logger.info('[ImportService] Import successful.');
+            logger.info('[NativePlugin] Import successful.');
             return {
                 accounts: data.accounts.length,
                 journals: data.journals.length,
@@ -141,10 +155,8 @@ class ImportService {
                 skippedTransactions: 0
             };
         } catch (error) {
-            logger.error('[ImportService] Import failed mid-process', error);
+            logger.error('[NativePlugin] Import failed mid-process', error);
             throw new Error('Failed to import data into database');
         }
     }
-}
-
-export const importService = new ImportService();
+};

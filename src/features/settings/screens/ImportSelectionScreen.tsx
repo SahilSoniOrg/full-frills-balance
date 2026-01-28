@@ -1,16 +1,16 @@
-
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { useImport } from '@/src/hooks/use-import';
+import { importRegistry } from '@/src/services/import';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export default function ImportSelectionScreen() {
     const { handleImport, isImporting } = useImport();
 
-    const onImportNative = () => handleImport('native');
-    const onImportIvy = () => handleImport('ivy');
+    // Get all registered plugins dynamically
+    const plugins = importRegistry.getAll();
 
     return (
         <Screen
@@ -24,49 +24,29 @@ export default function ImportSelectionScreen() {
                     Choose the format of your backup file to restore your data.
                 </AppText>
 
-                <AppCard elevation="sm" padding="md" style={styles.card}>
-                    <View style={styles.headerRow}>
-                        <View style={styles.iconPlaceholder}>
-                            <AppText variant="heading" style={{ fontSize: 24 }}>⚡️</AppText>
+                {plugins.map((plugin, index) => (
+                    <AppCard key={plugin.id} elevation="sm" padding="md" style={styles.card}>
+                        <View style={styles.headerRow}>
+                            <View style={styles.iconPlaceholder}>
+                                <AppText variant="heading" style={{ fontSize: 24 }}>{plugin.icon}</AppText>
+                            </View>
+                            <View style={styles.textCol}>
+                                <AppText variant="subheading">{plugin.name}</AppText>
+                                <AppText variant="caption" color="secondary" style={styles.desc}>
+                                    {plugin.description}
+                                </AppText>
+                            </View>
                         </View>
-                        <View style={styles.textCol}>
-                            <AppText variant="subheading">Full Frills Backup</AppText>
-                            <AppText variant="caption" color="secondary" style={styles.desc}>
-                                Restore from a JSON backup file created by this app.
-                            </AppText>
-                        </View>
-                    </View>
-                    <AppButton
-                        variant="primary"
-                        onPress={onImportNative}
-                        loading={isImporting}
-                        style={styles.button}
-                    >
-                        Select Backup File
-                    </AppButton>
-                </AppCard>
-
-                <AppCard elevation="sm" padding="md" style={styles.card}>
-                    <View style={styles.headerRow}>
-                        <View style={styles.iconPlaceholder}>
-                            <AppText variant="heading" style={{ fontSize: 24 }}>🌱</AppText>
-                        </View>
-                        <View style={styles.textCol}>
-                            <AppText variant="subheading">Ivy Wallet Backup</AppText>
-                            <AppText variant="caption" color="secondary" style={styles.desc}>
-                                Migrate data from an Ivy Wallet export (JSON/CSV).
-                            </AppText>
-                        </View>
-                    </View>
-                    <AppButton
-                        variant="outline"
-                        onPress={onImportIvy}
-                        loading={isImporting}
-                        style={styles.button}
-                    >
-                        Select Ivy Wallet File
-                    </AppButton>
-                </AppCard>
+                        <AppButton
+                            variant={index === 0 ? 'primary' : 'outline'}
+                            onPress={() => handleImport(plugin.id)}
+                            loading={isImporting}
+                            style={styles.button}
+                        >
+                            {`Select ${plugin.name.split(' ')[0]} File`}
+                        </AppButton>
+                    </AppCard>
+                ))}
 
                 <View style={styles.note}>
                     <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>

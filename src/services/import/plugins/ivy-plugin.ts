@@ -1,0 +1,397 @@
+/**
+ * Ivy Wallet Import Plugin
+ *
+ * Handles import of Ivy Wallet backup format.
+ * Refactored from ivy-import-service.ts to implement ImportPlugin interface.
+ */
+
+import { database } from '@/src/data/database/Database';
+import { generator as generateId } from '@/src/data/database/idGenerator';
+import Account, { AccountType } from '@/src/data/models/Account';
+import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import { ImportPlugin, ImportStats } from '@/src/services/import/types';
+import { integrityService } from '@/src/services/integrity-service';
+import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
+
+// Ivy Wallet Interfaces
+interface IvyAccount {
+    id: string;
+    name: string;
+    currency?: string;
+    color: number;
+    icon?: string;
+    accountCategory?: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+    archived?: boolean;
+}
+
+interface IvyCategory {
+    id: string;
+    name: string;
+    color: number;
+    icon?: string;
+}
+
+interface IvyTransaction {
+    id: string;
+    accountId: string;
+    type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+    amount: number;
+    toAccountId?: string;
+    toAmount?: number;
+    title?: string;
+    description?: string;
+    dateTime?: string;
+    categoryId?: string;
+    isDeleted?: boolean;
+    dueDate?: string | number;
+}
+
+interface IvyData {
+    accounts: IvyAccount[];
+    categories: IvyCategory[];
+    transactions: IvyTransaction[];
+}
+
+export const ivyPlugin: ImportPlugin = {
+    id: 'ivy',
+    name: 'Ivy Wallet Backup',
+    description: 'Migrate data from an Ivy Wallet backup file.',
+    icon: '🌱',
+
+    detect(data: unknown): boolean {
+        if (!data || typeof data !== 'object') return false;
+
+        const obj = data as Record<string, unknown>;
+
+        // Ivy format has accounts, categories, and transactions
+        // The presence of 'categories' is the strongest differentiator from native format
+        const hasAccounts = Array.isArray(obj.accounts);
+        const hasCategories = Array.isArray(obj.categories);
+        const hasTransactions = Array.isArray(obj.transactions);
+
+        return hasAccounts && hasCategories && hasTransactions;
+    },
+
+    async import(jsonContent: string): Promise<ImportStats> {
+        const data: IvyData = JSON.parse(jsonContent);
+
+        if (!this.detect(data)) {
+            throw new Error('Invalid Ivy Wallet backup format');
+        }
+
+        logger.info('[IvyPlugin] Starting Import from Ivy Wallet JSON...');
+        logger.info(`[IvyPlugin] Found ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions`);
+
+        // 1. Wipe existing data for clean import
+        logger.warn('[IvyPlugin] Wiping database before import...');
+        await integrityService.resetDatabase();
+        const accountActions: any[] = [];
+
+        // 2. Pre-Scan Transactions for Category Usage (Per Currency)
+        interface CategoryStat {
+            expenseCount: number;
+            incomeCount: number;
+        }
+
+        const categoryUsageMap = new Map<string, CategoryStat>();
+        const categoryCurrencies = new Map<string, Set<string>>();
+
+        const rawIvyAccountCurrency = new Map<string, string>();
+        data.accounts.forEach(a => {
+            rawIvyAccountCurrency.set(a.id, a.currency || 'USD');
+        });
+
+        data.transactions.forEach(tx => {
+            if (tx.isDeleted) return;
+            if (tx.dueDate) return;
+            if (!tx.categoryId) return;
+
+            let currency = 'USD';
+            if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
+                currency = rawIvyAccountCurrency.get(tx.accountId)!;
+            }
+
+            const key = `${tx.categoryId}:::${currency}`;
+
+            if (!categoryUsageMap.has(key)) {
+                categoryUsageMap.set(key, { expenseCount: 0, incomeCount: 0 });
+            }
+            const stats = categoryUsageMap.get(key)!;
+
+            if (tx.type === 'EXPENSE') stats.expenseCount++;
+            if (tx.type === 'INCOME') stats.incomeCount++;
+
+            if (!categoryCurrencies.has(tx.categoryId)) {
+                categoryCurrencies.set(tx.categoryId, new Set());
+            }
+            categoryCurrencies.get(tx.categoryId)!.add(currency);
+        });
+
+        // 3. Create Accounts
+        const accountMap = new Map<string, string>();
+        const accountCurrencyMap = new Map<string, string>();
+        const categoryAccountMap = new Map<string, string>();
+
+        const accountsCollection = database.collections.get<Account>('accounts');
+
+        data.accounts.forEach(a => {
+            const balanceId = generateId();
+            accountMap.set(a.id, balanceId);
+            accountCurrencyMap.set(balanceId, a.currency || 'USD');
+        });
+
+        for (const key of categoryUsageMap.keys()) {
+            const balanceId = generateId();
+            const [, currency] = key.split(':::');
+            categoryAccountMap.set(key, balanceId);
+            accountCurrencyMap.set(balanceId, currency);
+        }
+
+        // 4. Prepare ALL accounts for sorting
+        interface PendingAccount {
+            id: string;
+            name: string;
+            currency: string;
+            type: AccountType;
+            description: string;
+            isOriginal: boolean;
+        }
+
+        const allPendingAccounts: PendingAccount[] = [];
+        const ivyCategoryLookup = new Map<string, IvyCategory>();
+        data.categories.forEach(c => ivyCategoryLookup.set(c.id, c));
+
+        // Add Original Accounts
+        data.accounts.forEach(ivyAcc => {
+            const id = accountMap.get(ivyAcc.id)!;
+            const description = ivyAcc.archived ? '[ARCHIVED] ' + (ivyAcc.name || '') : 'Imported from Ivy Wallet';
+            const cat = ivyAcc.accountCategory || 'ASSET';
+            let mappedType = AccountType.ASSET;
+            if (cat === 'LIABILITY') mappedType = AccountType.LIABILITY;
+            else if (cat === 'EQUITY') mappedType = AccountType.EQUITY;
+            else if (cat === 'INCOME') mappedType = AccountType.INCOME;
+            else if (cat === 'EXPENSE') mappedType = AccountType.EXPENSE;
+
+            allPendingAccounts.push({
+                id,
+                name: ivyAcc.name,
+                currency: ivyAcc.currency || 'USD',
+                type: mappedType,
+                description,
+                isOriginal: true
+            });
+        });
+
+        // Add Category Accounts
+        for (const [key, stats] of categoryUsageMap.entries()) {
+            const [categoryId, currency] = key.split(':::');
+            const ivyCat = ivyCategoryLookup.get(categoryId);
+            if (!ivyCat) continue;
+
+            const id = categoryAccountMap.get(key)!;
+            const name = `${ivyCat.name} - ${currency}`;
+
+            let type = AccountType.EXPENSE;
+            if (stats.incomeCount > stats.expenseCount) {
+                type = AccountType.INCOME;
+            }
+
+            allPendingAccounts.push({
+                id,
+                name,
+                currency,
+                type,
+                description: 'Imported Category',
+                isOriginal: false
+            });
+        }
+
+        // Sort Accounts
+        allPendingAccounts.sort((a, b) => {
+            if (a.isOriginal && !b.isOriginal) return -1;
+            if (!a.isOriginal && b.isOriginal) return 1;
+
+            if (!a.isOriginal && !b.isOriginal) {
+                const nameCompare = a.name.localeCompare(b.name);
+                if (nameCompare !== 0) return nameCompare;
+                return a.currency.localeCompare(b.currency);
+            }
+
+            return 0;
+        });
+
+        // Create account actions
+        allPendingAccounts.forEach((acc, index) => {
+            accountActions.push(
+                accountsCollection.prepareCreate(record => {
+                    record._raw.id = acc.id;
+                    record.name = acc.name;
+                    record.accountType = acc.type;
+                    record.currencyCode = acc.currency;
+                    record.description = acc.description;
+                    record.orderNum = index + 1;
+                })
+            );
+        });
+
+        // 5. Create Journals & Transactions
+        const journalsCollection = database.collections.get<Journal>('journals');
+        const transactionsCollection = database.collections.get<Transaction>('transactions');
+        const journalActions: any[] = [];
+        const transactionActions: any[] = [];
+        const skippedItems: { id: string; reason: string; description?: string }[] = [];
+
+        data.transactions.forEach(tx => {
+            const txDesc = tx.title || tx.description || 'Unknown Transaction';
+
+            if (tx.isDeleted) {
+                skippedItems.push({ id: tx.id, reason: 'Deleted', description: txDesc });
+                return;
+            }
+
+            if (tx.dueDate) {
+                skippedItems.push({ id: tx.id, reason: 'Planned Payment', description: txDesc });
+                return;
+            }
+
+            const journalId = tx.id;
+            const timestamp = tx.dateTime ? new Date(tx.dateTime).getTime() : Date.now();
+            const description = tx.title || tx.description || (tx.type === 'TRANSFER' ? 'Transfer' : 'Transaction');
+
+            let sourceId: string | undefined;
+            let destId: string | undefined;
+            let displayType = 'EXPENSE';
+            let currencyCode = 'USD';
+
+            if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
+                currencyCode = rawIvyAccountCurrency.get(tx.accountId)!;
+            }
+
+            if (tx.type === 'TRANSFER') {
+                sourceId = accountMap.get(tx.accountId);
+                destId = accountMap.get(tx.toAccountId || '');
+                displayType = 'TRANSFER';
+                if (!destId) {
+                    skippedItems.push({ id: tx.id, reason: 'Missing Destination Account', description: txDesc });
+                }
+            } else if (tx.type === 'EXPENSE') {
+                sourceId = accountMap.get(tx.accountId);
+                const key = `${tx.categoryId}:::${currencyCode}`;
+                destId = categoryAccountMap.get(key);
+                displayType = 'EXPENSE';
+                if (!destId) {
+                    skippedItems.push({ id: tx.id, reason: `Missing Category Account (${key})`, description: txDesc });
+                }
+            } else if (tx.type === 'INCOME') {
+                const key = `${tx.categoryId}:::${currencyCode}`;
+                sourceId = categoryAccountMap.get(key);
+                destId = accountMap.get(tx.accountId);
+                displayType = 'INCOME';
+                if (!sourceId) {
+                    skippedItems.push({ id: tx.id, reason: `Missing Category Account (${key})`, description: txDesc });
+                }
+            }
+
+            if (!sourceId || !destId) {
+                return;
+            }
+
+            const amount = Math.abs(tx.amount);
+            const toAmount = tx.toAmount !== undefined ? Math.abs(tx.toAmount) : amount;
+
+            journalActions.push(
+                journalsCollection.prepareCreate(record => {
+                    record._raw.id = journalId;
+                    record.journalDate = timestamp;
+                    record.description = description;
+                    record.currencyCode = currencyCode;
+                    record.status = JournalStatus.POSTED;
+                    record.totalAmount = amount;
+                    record.transactionCount = 2;
+                    record.displayType = displayType;
+                })
+            );
+
+            // Transaction 1: SOURCE (Credit)
+            transactionActions.push(
+                transactionsCollection.prepareCreate(record => {
+                    record._raw.id = generateId();
+                    record.journalId = journalId;
+                    record.transactionDate = timestamp;
+                    record.accountId = sourceId!;
+                    record.amount = amount;
+                    record.transactionType = TransactionType.CREDIT;
+                    record.currencyCode = currencyCode;
+                })
+            );
+
+            // Transaction 2: DEST (Debit)
+            transactionActions.push(
+                transactionsCollection.prepareCreate(record => {
+                    record._raw.id = generateId();
+                    record.journalId = journalId;
+                    record.transactionDate = timestamp;
+                    record.accountId = destId!;
+                    record.amount = toAmount;
+                    record.transactionType = TransactionType.DEBIT;
+
+                    // Handle multi-currency transfers
+                    if (tx.type === 'TRANSFER' && tx.toAccountId) {
+                        const destAccId = accountMap.get(tx.toAccountId);
+                        const destCurr = accountCurrencyMap.get(destAccId!);
+                        if (destCurr) {
+                            record.currencyCode = destCurr;
+                            if (amount !== 0 && toAmount !== 0) {
+                                record.exchangeRate = amount / toAmount;
+                            }
+                        }
+                    } else {
+                        record.currencyCode = currencyCode;
+                    }
+                })
+            );
+        });
+
+        // 6. Write to DB
+        logger.info('[IvyPlugin] Writing mapped data to database...');
+        await database.write(async () => {
+            await database.batch(
+                ...accountActions,
+                ...journalActions,
+                ...transactionActions
+            );
+        });
+
+        // 7. Run integrity check to repair account balances
+        logger.info('[IvyPlugin] Running integrity check to fix account balances...');
+        const integrityResult = await integrityService.runStartupCheck();
+        logger.info('[IvyPlugin] Integrity check complete', {
+            discrepanciesFound: integrityResult.discrepanciesFound,
+            repairsSuccessful: integrityResult.repairsSuccessful
+        });
+
+        // 8. Restore Preferences
+        await preferences.setOnboardingCompleted(true);
+
+        const firstCurrency = accountCurrencyMap.values().next().value;
+        if (firstCurrency) {
+            await preferences.setDefaultCurrencyCode(firstCurrency);
+        }
+
+        logger.info('[IvyPlugin] Import successful.');
+
+        if (skippedItems.length > 0) {
+            logger.warn('[IvyPlugin] Skipped Items:', { count: skippedItems.length, items: skippedItems });
+        }
+
+        return {
+            accounts: accountActions.length,
+            journals: journalActions.length,
+            transactions: transactionActions.length,
+            skippedTransactions: skippedItems.length,
+            skippedItems
+        };
+    }
+};
