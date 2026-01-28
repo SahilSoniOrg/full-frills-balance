@@ -1,6 +1,5 @@
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { Opacity, Palette, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
 import Account from '@/src/data/models/Account';
 import { useAccountBalance } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -27,7 +26,6 @@ export const AccountCard = ({ account, onPress, initialBalanceData }: AccountCar
     const isLoading = initialBalanceData ? false : hookData.isLoading;
 
     const { theme } = useTheme();
-    useUI(); // Keep hook call if it provides context, but destructure nothing if unused
 
     const balance = balanceData?.balance || 0;
     const transactionCount = balanceData?.transactionCount || 0;

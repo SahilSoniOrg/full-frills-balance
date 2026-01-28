@@ -13,9 +13,10 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { useAccount, useAccountBalance } from '@/src/features/accounts/hooks/useAccounts'
 import { TransactionItem, useAccountTransactions } from '@/src/features/journal'
 import { useTheme } from '@/src/hooks/use-theme'
+import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
-import { DateRange, PeriodFilter, getCurrentMonthRange, getNextMonthRange, getPreviousMonthRange } from '@/src/utils/dateUtils'
+import { DateRange, PeriodFilter } from '@/src/utils/dateUtils'
 import { logger } from '@/src/utils/logger'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -28,13 +29,17 @@ export default function AccountDetailsScreen() {
     const { theme } = useTheme()
     const accountId = params.accountId as string
 
-    // Default to Current Month
-    const [dateRange, setDateRange] = React.useState<DateRange | null>(() => getCurrentMonthRange())
-    const [periodFilter, setPeriodFilter] = React.useState<PeriodFilter>(() => {
-        const now = new Date();
-        return { type: 'MONTH', month: now.getMonth(), year: now.getFullYear() };
-    })
-    const [isDatePickerVisible, setIsDatePickerVisible] = React.useState(false)
+    // Date range filter state (from shared hook)
+    const {
+        dateRange,
+        periodFilter,
+        isPickerVisible: isDatePickerVisible,
+        showPicker: showDatePicker,
+        hidePicker: hideDatePicker,
+        setFilter,
+        navigatePrevious,
+        navigateNext,
+    } = useDateRangeFilter({ defaultToCurrentMonth: true })
 
     const { account, isLoading: accountLoading } = useAccount(accountId)
     const { transactions, isLoading: transactionsLoading } = useAccountTransactions(accountId, 50, dateRange || undefined)
@@ -43,17 +48,6 @@ export default function AccountDetailsScreen() {
     const balance = balanceData?.balance || 0
     const transactionCount = balanceData?.transactionCount || 0
     const isDeleted = (account as any)?._raw?._status === 'deleted' || (account as any)?._raw?.deleted_at != null
-
-    const handleMonthNavigation = (direction: 'PREV' | 'NEXT') => {
-        if (periodFilter.type === 'MONTH' && periodFilter.month !== undefined && periodFilter.year !== undefined) {
-            const { range, month, year } = direction === 'PREV'
-                ? getPreviousMonthRange(periodFilter.month, periodFilter.year)
-                : getNextMonthRange(periodFilter.month, periodFilter.year);
-
-            setDateRange(range);
-            setPeriodFilter({ type: 'MONTH', month, year });
-        }
-    };
 
     const handleDelete = () => {
         const hasTransactions = transactionCount > 0;
@@ -214,9 +208,9 @@ export default function AccountDetailsScreen() {
                 </AppText>
                 <DateRangeFilter
                     range={dateRange}
-                    onPress={() => setIsDatePickerVisible(true)}
-                    onPrevious={periodFilter.type === 'MONTH' ? () => handleMonthNavigation('PREV') : undefined}
-                    onNext={periodFilter.type === 'MONTH' ? () => handleMonthNavigation('NEXT') : undefined}
+                    onPress={showDatePicker}
+                    onPrevious={navigatePrevious}
+                    onNext={navigateNext}
                 />
             </View>
         </View>
@@ -262,12 +256,11 @@ export default function AccountDetailsScreen() {
 
             <DateRangePicker
                 visible={isDatePickerVisible}
-                onClose={() => setIsDatePickerVisible(false)}
+                onClose={hideDatePicker}
                 currentFilter={periodFilter}
                 onSelect={(range: DateRange | null, filter: PeriodFilter) => {
-                    setDateRange(range)
-                    setPeriodFilter(filter)
-                    setIsDatePickerVisible(false)
+                    setFilter(range, filter)
+                    hideDatePicker()
                 }}
             />
         </Screen>

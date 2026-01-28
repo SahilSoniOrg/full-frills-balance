@@ -1,9 +1,8 @@
 import { AppText, Box, FloatingActionButton } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
-import { NetWorthCard, useNetWorth } from '@/src/features/dashboard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountSections } from '@/src/utils/accountUtils';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +15,6 @@ export default function AccountsScreen() {
     const { theme } = useTheme()
 
     const { accounts, isLoading: accountsLoading } = useAccounts()
-    const { balances, netWorth, totalAssets, totalLiabilities, isLoading: worthLoading } = useNetWorth()
 
     const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set())
 
@@ -44,23 +42,15 @@ export default function AccountsScreen() {
     }, [accounts])
 
     const renderHeader = () => (
-        <View>
-            <NetWorthCard
-                netWorth={netWorth}
-                totalAssets={totalAssets}
-                totalLiabilities={totalLiabilities}
-                isLoading={worthLoading}
-            />
-            <Box direction="row" justify="flex-end" style={{ marginTop: Spacing.sm, marginBottom: Spacing.md }}>
-                <TouchableOpacity
-                    onPress={() => router.push('/account-reorder' as any)}
-                    style={[styles.reorderButton, { borderColor: theme.border }]}
-                >
-                    <Ionicons name="swap-vertical" size={16} color={theme.primary} />
-                    <AppText variant="caption" weight="bold" color="primary">REORDER</AppText>
-                </TouchableOpacity>
-            </Box>
-        </View>
+        <Box direction="row" justify="flex-end" style={{ marginTop: Spacing.sm, marginBottom: Spacing.md }}>
+            <TouchableOpacity
+                onPress={() => router.push('/account-reorder' as any)}
+                style={[styles.reorderButton, { borderColor: theme.border }]}
+            >
+                <Ionicons name="swap-vertical" size={Size.iconXs} color={theme.primary} />
+                <AppText variant="caption" weight="bold" color="primary">REORDER</AppText>
+            </TouchableOpacity>
+        </Box>
     )
 
     return (
@@ -95,7 +85,7 @@ export default function AccountsScreen() {
                                 </Box>
                                 <Ionicons
                                     name={isCollapsed ? "chevron-forward" : "chevron-down"}
-                                    size={18}
+                                    size={Size.iconSm}
                                     color={theme.textSecondary}
                                 />
                             </Box>
@@ -108,7 +98,6 @@ export default function AccountsScreen() {
                         <AccountCard
                             account={item}
                             onPress={handleAccountPress}
-                            initialBalanceData={balances.find(b => b.accountId === item.id)}
                         />
                     )
                 }}
@@ -144,8 +133,7 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         paddingHorizontal: Spacing.lg,
-        paddingBottom: 100, // Space for FAB - fine as layout constant for now or use a large spacing token? 
-        // Actually Ivy uses a bottom padding to avoid FAB overlap. 100 is typical for RN FABs.
+        paddingBottom: Size.fab + Spacing.xxxl, // Space for FAB overlap
     },
     sectionHeaderContainer: {
         marginTop: Spacing.md,
@@ -155,9 +143,9 @@ const styles = StyleSheet.create({
     },
     countBadge: {
         paddingHorizontal: Spacing.xs,
-        paddingVertical: 2,
+        paddingVertical: Spacing.xs / 2,
         borderRadius: Shape.radius.sm,
-        minWidth: 20,
+        minWidth: Size.iconSm,
         alignItems: 'center',
     },
     reorderButton: {

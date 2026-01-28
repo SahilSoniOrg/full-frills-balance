@@ -1,9 +1,13 @@
+import { useUI } from '@/src/contexts/UIContext';
 import { database } from '@/src/data/database/Database';
+import Account from '@/src/data/models/Account';
+import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { WealthSummary, wealthService } from '@/src/services/wealth-service';
 import { logger } from '@/src/utils/logger';
-import { useEffect, useState } from 'react';
+import { Q } from '@nozbe/watermelondb';
+import { useEffect, useRef, useState } from 'react';
 
 export interface DashboardSummaryData extends WealthSummary {
     income: number;
@@ -13,7 +17,17 @@ export interface DashboardSummaryData extends WealthSummary {
     togglePrivacyMode: () => void;
 }
 
+/**
+ * Hook for dashboard summary data with net worth, income, and expense
+ * 
+ * Optimizations:
+ * - Debounced recalculation (300ms) to prevent rapid re-renders
+ * - Subscribes to accounts + transactions (not journals) for efficiency
+ * - Filters out deleted records
+ */
 export const useSummary = () => {
+    const { isPrivacyMode, setPrivacyMode } = useUI();
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [data, setData] = useState<Omit<DashboardSummaryData, 'togglePrivacyMode' | 'isPrivacyMode'>>({
         income: 0,
         expense: 0,
@@ -22,7 +36,6 @@ export const useSummary = () => {
         totalLiabilities: 0,
         isLoading: true,
     });
-    const [isPrivacyMode, setIsPrivacyMode] = useState(false);
 
     const fetchSummary = async () => {
         try {
@@ -49,23 +62,40 @@ export const useSummary = () => {
         }
     };
 
-    const togglePrivacyMode = () => setIsPrivacyMode(!isPrivacyMode);
+    const togglePrivacyMode = () => setPrivacyMode(!isPrivacyMode);
 
     useEffect(() => {
+        // Debounced calculation to match useNetWorth behavior
+        const debouncedFetch = () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(fetchSummary, 300);
+        };
+
+        // Initial load (immediate, no debounce)
         fetchSummary();
 
-        // Subscribe to changes in journals and transactions
-        const journalSubscription = database.collections.get('journals').query().observe().subscribe(() => {
-            fetchSummary();
-        });
+        // Subscribe to account changes (filtered to non-deleted)
+        const accountSubscription = database.collections
+            .get<Account>('accounts')
+            .query(Q.where('deleted_at', Q.eq(null)))
+            .observe()
+            .subscribe(debouncedFetch);
 
-        const transactionSubscription = database.collections.get('transactions').query().observe().subscribe(() => {
-            fetchSummary();
-        });
+        // Subscribe to transaction changes (filtered to non-deleted)
+        const transactionSubscription = database.collections
+            .get<Transaction>('transactions')
+            .query(Q.where('deleted_at', Q.eq(null)))
+            .observe()
+            .subscribe(debouncedFetch);
 
         return () => {
-            journalSubscription.unsubscribe();
+            accountSubscription.unsubscribe();
             transactionSubscription.unsubscribe();
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
         };
     }, []);
 
