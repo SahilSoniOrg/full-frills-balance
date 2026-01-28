@@ -1,3 +1,4 @@
+import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AppButton } from '@/src/components/core/AppButton';
 import { AppCard } from '@/src/components/core/AppCard';
 import { AppInput } from '@/src/components/core/AppInput';
@@ -16,6 +17,7 @@ import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
+import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -69,6 +71,7 @@ export const SimpleForm = ({
     const [journalTime, setJournalTime] = useState(initialTime);
     const [description, setDescription] = useState(initialDescription);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const [exchangeRate, setExchangeRate] = useState<number | null>(null);
     const [isLoadingRate, setIsLoadingRate] = useState(false);
@@ -401,26 +404,32 @@ export const SimpleForm = ({
                 <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: Spacing.xs, marginBottom: Spacing.sm }}>
                     SCHEDULE
                 </AppText>
-                <AppCard elevation="none" padding="none" style={{ backgroundColor: theme.surfaceSecondary, borderColor: theme.border, borderWidth: 1 }}>
-                    <Stack horizontal align="center" paddingHorizontal="lg">
-                        <AppInput
-                            variant="minimal"
-                            placeholder="Date"
-                            value={journalDate}
-                            onChangeText={setJournalDate}
-                            containerStyle={{ flex: 1 }}
-                        />
-                        <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
-                        <AppInput
-                            variant="minimal"
-                            placeholder="Time"
-                            value={journalTime}
-                            onChangeText={setJournalTime}
-                            containerStyle={{ flex: 1 }}
-                        />
-                    </Stack>
-                </AppCard>
+                <TouchableOpacity
+                    activeOpacity={Opacity.soft}
+                    onPress={() => setShowDatePicker(true)}
+                >
+                    <AppCard elevation="none" padding="none" style={{ backgroundColor: theme.surfaceSecondary, borderColor: theme.border, borderWidth: 1 }}>
+                        <Stack horizontal align="center" paddingHorizontal="lg" paddingVertical="md" space="md">
+                            <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
+                            <AppText variant="body" style={{ flex: 1 }}>
+                                {dayjs(`${journalDate}T${journalTime}`).format('DD MMM YYYY, HH:mm')}
+                            </AppText>
+                            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                        </Stack>
+                    </AppCard>
+                </TouchableOpacity>
             </Box>
+
+            <DateTimePickerModal
+                visible={showDatePicker}
+                date={journalDate}
+                time={journalTime}
+                onClose={() => setShowDatePicker(false)}
+                onSelect={(d, t) => {
+                    setJournalDate(d);
+                    setJournalTime(t);
+                }}
+            />
 
             {/* Actions */}
             <Box style={{ marginTop: Spacing.md }}>

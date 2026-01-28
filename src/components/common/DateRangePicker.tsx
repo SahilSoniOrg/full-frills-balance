@@ -1,7 +1,7 @@
 import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
-import { Shape, Size, Spacing, Typography } from '@/src/constants';
+import { getDatePickerStyles, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { DateRange, PeriodFilter, getLastNRange, getMonthRange } from '@/src/utils/dateUtils';
+import { DateRange, getLastNRange, getMonthRange, PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -200,15 +200,7 @@ export function DateRangePicker({ visible, onClose, onSelect, currentFilter }: D
                 mode="single"
                 date={view === 'START_DATE' ? (customRange.startDate || dayjs()) : (customRange.endDate || dayjs())}
                 onChange={handleDateSelect}
-                styles={{
-                    selected: { backgroundColor: theme.primary },
-                    selected_label: { color: theme.onPrimary },
-                    header: { backgroundColor: 'transparent' },
-                    month_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
-                    year_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
-                    day_label: { color: theme.text, fontFamily: Typography.fonts.medium },
-                    weekday_label: { color: theme.textSecondary, fontFamily: Typography.fonts.regular },
-                }}
+                styles={getDatePickerStyles(theme)}
             />
         </View>
     );

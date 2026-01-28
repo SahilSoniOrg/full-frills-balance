@@ -1,10 +1,12 @@
+import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AppButton, AppCard, AppInput, AppText, Box, Stack } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
-import React from 'react';
+import dayjs from 'dayjs';
+import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 
 interface AdvancedFormProps {
@@ -22,7 +24,7 @@ export const AdvancedForm = ({
     editor,
     onSelectAccountRequest,
 }: AdvancedFormProps) => {
-    // const { theme } = useTheme(); // Unused
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const getDomainLines = (): JournalLineInput[] => {
         return editor.lines.map(line => ({
@@ -43,22 +45,29 @@ export const AdvancedForm = ({
 
             <AppCard elevation="sm" padding="lg">
                 <Stack space="md">
-                    <Stack horizontal space="md">
+                    <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => setShowDatePicker(true)}
+                        style={{ flex: 1 }}
+                    >
                         <AppInput
-                            label="Date"
-                            value={editor.journalDate}
-                            onChangeText={editor.setJournalDate}
-                            placeholder="YYYY-MM-DD"
-                            containerStyle={{ flex: 1 }}
+                            label="Date & Time"
+                            value={dayjs(`${editor.journalDate}T${editor.journalTime}`).format('DD MMM YYYY, HH:mm')}
+                            editable={false}
+                            pointerEvents="none"
                         />
-                        <AppInput
-                            label="Time"
-                            value={editor.journalTime}
-                            onChangeText={editor.setJournalTime}
-                            placeholder="HH:mm"
-                            containerStyle={{ flex: 1 }}
-                        />
-                    </Stack>
+                    </TouchableOpacity>
+
+                    <DateTimePickerModal
+                        visible={showDatePicker}
+                        date={editor.journalDate}
+                        time={editor.journalTime}
+                        onClose={() => setShowDatePicker(false)}
+                        onSelect={(d, t) => {
+                            editor.setJournalDate(d);
+                            editor.setJournalTime(t);
+                        }}
+                    />
 
                     <AppInput
                         label="Description"

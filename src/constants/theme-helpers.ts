@@ -3,8 +3,41 @@
  * Provides access to design tokens with proper TypeScript support
  */
 
-import { Colors, ThemeMode } from '@/src/constants/design-tokens'
-import { useColorScheme } from 'react-native'
+import { Colors, Shape, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens';
+import { useColorScheme } from 'react-native';
+
+/**
+ * Common styles for react-native-ui-datepicker to ensure consistent appearance
+ * across DateTimePickerModal and DateRangePicker.
+ */
+export const getDatePickerStyles = (theme: any) => ({
+  selected: { backgroundColor: theme.primary },
+  selected_label: { color: theme.onPrimary },
+  header: { backgroundColor: 'transparent' },
+  month_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
+  year_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
+  month_label: { color: theme.text, fontFamily: Typography.fonts.medium },
+  year_label: { color: theme.text, fontFamily: Typography.fonts.medium },
+  day_label: { color: theme.text, fontFamily: Typography.fonts.medium },
+  weekday_label: { color: theme.textSecondary, fontFamily: Typography.fonts.regular },
+  time_label: { color: theme.text, fontFamily: Typography.fonts.bold },
+  time_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
+  time_selector: {
+    backgroundColor: theme.surfaceSecondary,
+    borderRadius: Shape.radius.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  time_selected_indicator: {
+    backgroundColor: theme.primary,
+    borderRadius: Shape.radius.md,
+    marginVertical: 1,
+  },
+});
 
 // Enhanced theme colors with semantic naming
 export const useThemeColors = (mode?: ThemeMode | 'system') => {
