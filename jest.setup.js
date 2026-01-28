@@ -31,6 +31,30 @@ jest.mock('expo-sharing', () => ({
     shareAsync: jest.fn().mockResolvedValue({}),
 }));
 
+// Mock native crypto and nitro modules
+jest.mock('react-native-quick-crypto', () => ({
+    randomUUID: () => 'test-uuid-' + Math.random(),
+    default: {
+        randomUUID: () => 'test-uuid-' + Math.random(),
+    }
+}));
+
+// Mock NitroModules TurboModule
+jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
+    getEnforcing: (name) => {
+        if (name === 'NitroModules') return {};
+        return {};
+    },
+    get: (name) => {
+        if (name === 'NitroModules') return {};
+        return null;
+    }
+}));
+
+jest.mock('react-native-nitro-modules', () => ({
+    NitroModules: {},
+}));
+
 // Ensure rebuild queue is flushed after each test to prevent state leakage
 afterEach(async () => {
     try {

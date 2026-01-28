@@ -51,11 +51,11 @@ export default function EntryScreen() {
     setActiveLineId(null);
   };
 
-  if (isLoadingAccounts) {
+  if (isLoadingAccounts || editor.isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <AppText variant="body">Loading accounts...</AppText>
+          <AppText variant="body">Loading...</AppText>
         </View>
       </View>
     );
@@ -95,8 +95,15 @@ export default function EntryScreen() {
           {editor.isGuidedMode ? (
             <SimpleForm
               accounts={accounts}
+              journalId={params.journalId as string}
               onSuccess={() => router.back()}
               initialType={editor.transactionType}
+              initialAmount={editor.lines[0]?.amount}
+              initialDestinationId={editor.lines[0]?.accountId}
+              initialSourceId={editor.lines[1]?.accountId}
+              initialDate={editor.journalDate}
+              initialTime={editor.journalTime}
+              initialDescription={editor.description}
             />
           ) : (
             <AdvancedForm

@@ -15,7 +15,7 @@ import { logger } from '@/src/utils/logger'
 import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
-interface CreateJournalData {
+export interface CreateJournalData {
   journalDate: number
   description?: string
   currencyCode: string
@@ -404,6 +404,7 @@ export class JournalRepository {
       runningBalance: tx.runningBalance,
       displayTitle,
       isIncrease,
+      exchangeRate: tx.exchangeRate,
       displayType: legDisplayType,
       semanticType,
       semanticLabel
@@ -610,6 +611,26 @@ export class JournalRepository {
     }
 
     return updatedJournal
+  }
+
+  async duplicateJournal(journalId: string): Promise<Journal> {
+    const journal = await this.find(journalId)
+    if (!journal) throw new Error('Journal not found')
+
+    const transactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch()
+
+    return this.createJournalWithTransactions({
+      journalDate: Date.now(),
+      description: journal.description ? `Copy of ${journal.description}` : undefined,
+      currencyCode: journal.currencyCode,
+      transactions: transactions.map(tx => ({
+        accountId: tx.accountId,
+        amount: tx.amount,
+        transactionType: tx.transactionType as TransactionType,
+        notes: tx.notes,
+        exchangeRate: tx.exchangeRate
+      }))
+    })
   }
 
   async createReversalJournal(

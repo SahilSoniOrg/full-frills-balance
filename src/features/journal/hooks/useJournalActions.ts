@@ -8,16 +8,26 @@ export function useJournalActions() {
     }, []);
 
     const deleteJournal = useCallback(async (journal: Journal) => {
-        return journalRepository.delete(journal);
+        return journalRepository.deleteJournal(journal.id);
     }, []);
 
     const findJournal = useCallback(async (journalId: string) => {
         return journalRepository.find(journalId);
     }, []);
 
+    const updateJournal = useCallback(async (journalId: string, data: CreateJournalData) => {
+        return journalRepository.updateJournalWithTransactions(journalId, data);
+    }, []);
+
+    const duplicateJournal = useCallback(async (journalId: string) => {
+        return journalRepository.duplicateJournal(journalId);
+    }, []);
+
     return {
         createJournal,
+        updateJournal,
         deleteJournal,
         findJournal,
+        duplicateJournal,
     };
 }

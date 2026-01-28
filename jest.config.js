@@ -16,6 +16,8 @@ module.exports = {
     ],
     moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
     moduleNameMapper: {
+        '^@/src/(.*)$': '<rootDir>/src/$1',
         '^\\./adapter$': '<rootDir>/src/data/database/adapter.ts',
+        'idGenerator$': '<rootDir>/src/data/database/idGenerator.ts',
     },
 };

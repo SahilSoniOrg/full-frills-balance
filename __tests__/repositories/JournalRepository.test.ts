@@ -145,7 +145,41 @@ describe('JournalRepository', () => {
     })
 
 
-    describe('delete', () => {
+    describe('duplicateJournal', () => {
+        it('should duplicate a journal and its transactions', async () => {
+            const originalJournal = await journalRepository.createJournalWithTransactions({
+                description: 'Original Transaction',
+                journalDate: Date.now() - 86400000, // Yesterday
+                currencyCode: 'USD',
+                transactions: [
+                    { accountId: cashAccountId, amount: 123.45, transactionType: TransactionType.CREDIT },
+                    { accountId: expenseAccountId, amount: 123.45, transactionType: TransactionType.DEBIT },
+                ],
+            })
+
+            const duplicatedJournal = await journalRepository.duplicateJournal(originalJournal.id)
+
+            expect(duplicatedJournal).toBeDefined()
+            expect(duplicatedJournal.id).not.toBe(originalJournal.id)
+            expect(duplicatedJournal.description).toBe(`Copy of ${originalJournal.description}`)
+            expect(duplicatedJournal.totalAmount).toBe(originalJournal.totalAmount)
+            expect(duplicatedJournal.transactionCount).toBe(originalJournal.transactionCount)
+
+            // Transactions should be duplicated faithfully
+            const duplicatedTransactions = await journalRepository.findEnrichedTransactionsByJournal(duplicatedJournal.id)
+            expect(duplicatedTransactions).toHaveLength(2)
+
+            const cashTx = duplicatedTransactions.find(t => t.accountId === cashAccountId)
+            const expenseTx = duplicatedTransactions.find(t => t.accountId === expenseAccountId)
+
+            expect(cashTx?.amount).toBe(123.45)
+            expect(cashTx?.transactionType).toBe(TransactionType.CREDIT)
+            expect(expenseTx?.amount).toBe(123.45)
+            expect(expenseTx?.transactionType).toBe(TransactionType.DEBIT)
+        })
+    })
+
+    describe('deleteJournal', () => {
         // TODO: Fix rebuild queue singleton timing issue in test environment
         it.skip('should soft-delete journal and its transactions', async () => {
             const journal = await journalRepository.createJournalWithTransactions({
@@ -158,7 +192,7 @@ describe('JournalRepository', () => {
                 ],
             })
 
-            await journalRepository.delete(journal)
+            await journalRepository.deleteJournal(journal.id)
 
             // Don't wait for rebuild queue - this test only verifies soft-delete
             const deletedJournal = await journalRepository.find(journal.id)

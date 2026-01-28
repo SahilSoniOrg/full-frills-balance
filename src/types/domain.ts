@@ -139,6 +139,7 @@ export interface EnrichedTransaction {
     displayTitle: string;
     displayType: JournalDisplayType;
     isIncrease: boolean;
+    exchangeRate?: number;
     semanticType?: string;
     semanticLabel?: string;
 }

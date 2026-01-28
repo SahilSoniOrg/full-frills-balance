@@ -26,7 +26,7 @@ export default function TransactionDetailsScreen() {
     const router = useRouter()
     const { journalId } = useLocalSearchParams<{ journalId: string }>()
     const { theme } = useTheme()
-    const { deleteJournal, findJournal } = useJournalActions()
+    const { deleteJournal, findJournal, duplicateJournal } = useJournalActions()
     const { transactions, isLoading: isLoadingTransactions } = useJournalTransactionsWithAccountInfo(journalId)
 
     const [journalInfo, setJournalInfo] = useState<{ description?: string; date: number; status: string; currency: string; displayType?: string } | null>(null);
@@ -92,8 +92,28 @@ export default function TransactionDetailsScreen() {
         );
     };
 
+    const handleCopy = async () => {
+        try {
+            const newJournal = await duplicateJournal(journalId);
+            showSuccessAlert('Copied', 'New transaction created from copy.');
+            // Navigate to edit the new copy
+            router.push({ pathname: '/journal-entry', params: { journalId: newJournal.id } });
+        } catch (error) {
+            logger.error('Failed to copy transaction:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            showErrorAlert(`Could not copy transaction: ${errorMessage}`);
+        }
+    };
+
     const HeaderActions = (
         <View style={styles.headerActions}>
+            <IconButton
+                name="copy-outline"
+                onPress={handleCopy}
+                variant="clear"
+                size={Typography.sizes.xl}
+                iconColor={theme.text}
+            />
             <IconButton
                 name="create-outline"
                 onPress={() => router.push({ pathname: '/journal-entry', params: { journalId } })}

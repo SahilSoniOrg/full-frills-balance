@@ -22,7 +22,14 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 interface SimpleFormProps {
     accounts: Account[];
     onSuccess: () => void;
+    journalId?: string;
     initialType?: 'expense' | 'income' | 'transfer';
+    initialAmount?: string;
+    initialSourceId?: string;
+    initialDestinationId?: string;
+    initialDate?: string;
+    initialTime?: string;
+    initialDescription?: string;
 }
 
 type TabType = 'expense' | 'income' | 'transfer';
@@ -31,9 +38,20 @@ type TabType = 'expense' | 'income' | 'transfer';
  * SimpleForm - Guided entry mode for basic transactions.
  * Uses AccountingService to handle ledger construction.
  */
-export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: SimpleFormProps) => {
+export const SimpleForm = ({
+    accounts,
+    onSuccess,
+    journalId,
+    initialType = 'expense',
+    initialAmount = '',
+    initialSourceId = '',
+    initialDestinationId = '',
+    initialDate = new Date().toISOString().split('T')[0],
+    initialTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+    initialDescription = '',
+}: SimpleFormProps) => {
     const { theme } = useTheme();
-    const { createJournal } = useJournalActions();
+    const { createJournal, updateJournal } = useJournalActions();
 
     // Filter accounts by type
     const transactionAccounts = accounts.filter(a =>
@@ -44,11 +62,12 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
     const incomeAccounts = accounts.filter(a => a.accountType === AccountType.INCOME);
 
     const [type, setType] = useState<TabType>(initialType);
-    const [amount, setAmount] = useState('');
-    const [sourceId, setSourceId] = useState<string>('');
-    const [destinationId, setDestinationId] = useState<string>('');
-    const [journalDate, setJournalDate] = useState(new Date().toISOString().split('T')[0]);
-    const [journalTime, setJournalTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+    const [amount, setAmount] = useState(initialAmount);
+    const [sourceId, setSourceId] = useState<string>(initialSourceId);
+    const [destinationId, setDestinationId] = useState<string>(initialDestinationId);
+    const [journalDate, setJournalDate] = useState(initialDate);
+    const [journalTime, setJournalTime] = useState(initialTime);
+    const [description, setDescription] = useState(initialDescription);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -104,7 +123,9 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
             // Expenses: Pay FROM (Asset/Liability) -> TO (Expense)
             const isSourceValid = sourceId && transactionAccounts.some(a => a.id === sourceId);
             if (!isSourceValid) {
-                if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
+                if (initialSourceId && transactionAccounts.some(a => a.id === initialSourceId)) {
+                    setSourceId(initialSourceId);
+                } else if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
                     setSourceId(lastSourceId);
                 } else if (transactionAccounts.length > 0) {
                     setSourceId(transactionAccounts[0].id);
@@ -115,13 +136,21 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
 
             const isDestValid = destinationId && accounts.find(a => a.id === destinationId)?.accountType === AccountType.EXPENSE;
             if (!isDestValid) {
-                setDestinationId('');
+                if (initialDestinationId && accounts.find(a => a.id === initialDestinationId)?.accountType === AccountType.EXPENSE) {
+                    setDestinationId(initialDestinationId);
+                } else if (expenseAccounts.length > 0) {
+                    setDestinationId(expenseAccounts[0].id);
+                } else {
+                    setDestinationId('');
+                }
             }
         } else if (type === 'income') {
             // Income: Receive FROM (Income) -> TO (Asset/Liability)
             const isDestValid = destinationId && transactionAccounts.some(a => a.id === destinationId);
             if (!isDestValid) {
-                if (lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
+                if (initialDestinationId && transactionAccounts.some(a => a.id === initialDestinationId)) {
+                    setDestinationId(initialDestinationId);
+                } else if (lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
                     setDestinationId(lastDestId);
                 } else if (transactionAccounts.length > 0) {
                     setDestinationId(transactionAccounts[0].id);
@@ -132,18 +161,38 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
 
             const isSourceValid = sourceId && accounts.find(a => a.id === sourceId)?.accountType === AccountType.INCOME;
             if (!isSourceValid) {
-                setSourceId('');
+                if (initialSourceId && accounts.find(a => a.id === initialSourceId)?.accountType === AccountType.INCOME) {
+                    setSourceId(initialSourceId);
+                } else if (incomeAccounts.length > 0) {
+                    setSourceId(incomeAccounts[0].id);
+                } else {
+                    setSourceId('');
+                }
             }
         } else {
             // Transfer: Asset/Liability -> Asset/Liability (usually)
             const isSourceValid = sourceId && accounts.some(a => a.id === sourceId);
-            if (!isSourceValid && lastSourceId && accounts.some(a => a.id === lastSourceId)) {
-                setSourceId(lastSourceId);
+            if (!isSourceValid) {
+                if (initialSourceId && accounts.some(a => a.id === initialSourceId)) {
+                    setSourceId(initialSourceId);
+                } else if (lastSourceId && accounts.some(a => a.id === lastSourceId)) {
+                    setSourceId(lastSourceId);
+                } else if (transactionAccounts.length > 0) {
+                    setSourceId(transactionAccounts[0].id);
+                }
             }
 
             const isDestValid = destinationId && accounts.some(a => a.id === destinationId);
-            if (!isDestValid && lastDestId && accounts.some(a => a.id === lastDestId)) {
-                setDestinationId(lastDestId);
+            if (!isDestValid) {
+                if (initialDestinationId && accounts.some(a => a.id === initialDestinationId)) {
+                    setDestinationId(initialDestinationId);
+                } else if (lastDestId && accounts.some(a => a.id === lastDestId)) {
+                    setDestinationId(lastDestId);
+                } else if (transactionAccounts.length > 1) {
+                    // Pick a different one from source if possible
+                    const otherAccount = transactionAccounts.find(a => a.id !== sourceId);
+                    if (otherAccount) setDestinationId(otherAccount.id);
+                }
             }
         }
     }, [type, accounts, transactionAccounts, sourceId, destinationId]);
@@ -183,7 +232,11 @@ export const SimpleForm = ({ accounts, onSuccess, initialType = 'expense' }: Sim
                 }
             }
 
-            await createJournal(journalData);
+            if (journalId) {
+                await updateJournal(journalId, journalData);
+            } else {
+                await createJournal(journalData);
+            }
 
             if (type === 'expense' || type === 'transfer') await preferences.setLastUsedSourceAccountId(sourceId);
             if (type === 'income' || type === 'transfer') await preferences.setLastUsedDestinationAccountId(destinationId);
