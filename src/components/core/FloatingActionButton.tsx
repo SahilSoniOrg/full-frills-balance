@@ -1,8 +1,8 @@
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { AppIcon } from './AppIcon';
 
 interface FABProps {
     onPress: () => void;
@@ -25,7 +25,7 @@ export const FloatingActionButton = ({ onPress, style }: FABProps) => {
             activeOpacity={Opacity.heavy}
             testID="fab-button"
         >
-            <Ionicons name="add" size={Size.buttonSm} color={theme.pureInverse} />
+            <AppIcon name="add" size={Size.buttonSm} color={theme.pureInverse} />
         </TouchableOpacity>
     );
 };

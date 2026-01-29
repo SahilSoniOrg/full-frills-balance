@@ -1,10 +1,9 @@
-import { AppCard, AppText } from '@/src/components/core'
+import { AppCard, AppIcon, AppText, IconName } from '@/src/components/core'
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants'
-import { useTheme } from '@/src/hooks/use-theme'
 import { AuditAction } from '@/src/data/models/AuditLog'
+import { useTheme } from '@/src/hooks/use-theme'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { formatDate } from '@/src/utils/dateUtils'
-import { Ionicons } from '@expo/vector-icons'
 import React from 'react'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 
@@ -46,16 +45,16 @@ export const AuditLogItem = ({ item, isExpanded, onToggle, accountMap }: AuditLo
         }
     };
 
-    const getActionIcon = (action: AuditAction): keyof typeof Ionicons.glyphMap => {
+    const getActionIcon = (action: AuditAction): IconName => {
         switch (action) {
             case AuditAction.CREATE:
-                return 'add-circle-outline';
+                return 'plusCircle';
             case AuditAction.UPDATE:
-                return 'pencil-outline';
+                return 'edit';
             case AuditAction.DELETE:
-                return 'trash-outline';
+                return 'delete';
             default:
-                return 'ellipse-outline';
+                return 'circle';
         }
     };
 
@@ -238,7 +237,7 @@ export const AuditLogItem = ({ item, isExpanded, onToggle, accountMap }: AuditLo
                                         {renderChangeValue(key, beforeVal, beforeCurrency, false, afterVal)}
                                     </View>
                                     <View style={styles.arrowCol}>
-                                        <Ionicons name="arrow-forward" size={12} color={theme.textTertiary} />
+                                        <AppIcon name="arrowRight" size={12} color={theme.textTertiary} />
                                     </View>
                                     <View style={styles.afterCol}>
                                         {renderChangeValue(key, afterVal, afterCurrency, true, beforeVal)}
@@ -271,7 +270,7 @@ export const AuditLogItem = ({ item, isExpanded, onToggle, accountMap }: AuditLo
             <TouchableOpacity onPress={onToggle}>
                 <View style={styles.row}>
                     <View style={[styles.iconContainer, { backgroundColor: withOpacity(actionColor, Opacity.soft) }]}>
-                        <Ionicons name={getActionIcon(item.action)} size={Size.sm} color={actionColor} />
+                        <AppIcon name={getActionIcon(item.action)} size={Size.sm} color={actionColor} />
                     </View>
                     <View style={styles.content}>
                         <View style={styles.headerRow}>
@@ -289,8 +288,8 @@ export const AuditLogItem = ({ item, isExpanded, onToggle, accountMap }: AuditLo
                             ID: {item.entityId.substring(0, 12)}...
                         </AppText>
                     </View>
-                    <Ionicons
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    <AppIcon
+                        name={isExpanded ? 'chevronUp' : 'chevronDown'}
                         size={Size.sm}
                         color={theme.textSecondary}
                     />

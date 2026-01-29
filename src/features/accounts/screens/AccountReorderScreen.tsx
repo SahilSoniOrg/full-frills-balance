@@ -1,11 +1,10 @@
-import { AppCard, AppText, Stack } from '@/src/components/core';
+import { AppCard, AppIcon, AppText, Stack } from '@/src/components/core';
 import { Palette, Shape, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { logger } from '@/src/utils/logger';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -73,7 +72,7 @@ export default function AccountReorderScreen() {
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: theme.border }]}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="close" size={24} color={theme.text} />
+                    <AppIcon name="close" size={24} color={theme.text} />
                 </TouchableOpacity>
                 <AppText variant="subheading" weight="bold">Reorder Accounts</AppText>
                 <View style={{ width: 40 }} />
@@ -89,7 +88,7 @@ export default function AccountReorderScreen() {
                         <AppCard key={account.id} padding="none" style={styles.itemCard}>
                             <View style={styles.itemContent}>
                                 <View style={styles.dragHandle}>
-                                    <Ionicons name="menu" size={20} color={theme.textSecondary} />
+                                    <AppIcon name="menu" size={20} color={theme.textSecondary} />
                                 </View>
 
                                 <View style={styles.accountInfo}>
@@ -107,14 +106,14 @@ export default function AccountReorderScreen() {
                                         disabled={index === 0}
                                         style={[styles.actionButton, index === 0 && { opacity: 0.3 }]}
                                     >
-                                        <Ionicons name="chevron-up" size={20} color={theme.text} />
+                                        <AppIcon name="chevronUp" size={20} color={theme.text} />
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         onPress={() => handleMove(index, 'down')}
                                         disabled={index === accounts.length - 1}
                                         style={[styles.actionButton, index === accounts.length - 1 && { opacity: 0.3 }]}
                                     >
-                                        <Ionicons name="chevron-down" size={20} color={theme.text} />
+                                        <AppIcon name="chevronDown" size={20} color={theme.text} />
                                     </TouchableOpacity>
                                 </View>
                             </View>

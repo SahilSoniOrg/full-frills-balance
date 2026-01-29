@@ -1,6 +1,6 @@
+import { AppIcon } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -23,7 +23,7 @@ export const SearchField = ({ value, onChangeText, placeholder = "Search transac
 
     return (
         <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Ionicons name="search" size={Size.sm} color={theme.textSecondary} style={styles.icon} />
+            <AppIcon name="search" size={Size.sm} color={theme.textSecondary} style={styles.icon} />
             <TextInput
                 style={[styles.input, { color: theme.text }]}
                 value={value}
@@ -34,7 +34,7 @@ export const SearchField = ({ value, onChangeText, placeholder = "Search transac
             />
             {value.length > 0 && (
                 <TouchableOpacity onPress={() => onChangeText('')} style={styles.clearButton}>
-                    <Ionicons name="close-circle" size={Typography.sizes.lg} color={theme.textTertiary} />
+                    <AppIcon name="closeCircle" size={Typography.sizes.lg} color={theme.textTertiary} />
                 </TouchableOpacity>
             )}
         </View>

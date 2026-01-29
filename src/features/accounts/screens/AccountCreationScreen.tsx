@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppInput, AppText } from '@/src/components/core';
+import { AppButton, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
@@ -11,7 +11,6 @@ import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { sanitizeInput, validateAccountName } from '@/src/utils/validation';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -288,7 +287,7 @@ export default function AccountCreationScreen() {
                         <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
                             <AppText variant="heading">Select Currency</AppText>
                             <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
-                                <Ionicons name="close" size={Typography.sizes.xxl} color={theme.text} />
+                                <AppIcon name="close" size={Typography.sizes.xxl} color={theme.text} />
                             </TouchableOpacity>
                         </View>
                         <FlatList

@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppText, Badge, IconButton } from '@/src/components/core'
+import { AppButton, AppCard, AppIcon, AppText, Badge, IconButton } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants'
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions'
@@ -9,7 +9,6 @@ import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/u
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { formatDate } from '@/src/utils/dateUtils'
 import { logger } from '@/src/utils/logger'
-import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
@@ -108,21 +107,21 @@ export default function TransactionDetailsScreen() {
     const HeaderActions = (
         <View style={styles.headerActions}>
             <IconButton
-                name="copy-outline"
+                name="copy"
                 onPress={handleCopy}
                 variant="clear"
                 size={Typography.sizes.xl}
                 iconColor={theme.text}
             />
             <IconButton
-                name="create-outline"
+                name="edit"
                 onPress={() => router.push({ pathname: '/journal-entry', params: { journalId } })}
                 variant="clear"
                 size={Typography.sizes.xl}
                 iconColor={theme.text}
             />
             <IconButton
-                name="trash-outline"
+                name="delete"
                 onPress={handleDelete}
                 variant="clear"
                 size={Typography.sizes.xl}
@@ -140,7 +139,7 @@ export default function TransactionDetailsScreen() {
     if (error || !journalInfo) return (
         <Screen title="Details" backIcon="close">
             <View style={styles.center}>
-                <Ionicons name="alert-circle-outline" size={48} color={theme.textSecondary} />
+                <AppIcon name="error" size={48} color={theme.textSecondary} />
                 <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Transaction not found</AppText>
                 <AppButton
                     variant="ghost"
@@ -168,7 +167,7 @@ export default function TransactionDetailsScreen() {
                     {/* Big Icon */}
                     <View style={styles.iconContainer}>
                         <View style={[styles.bigIcon, { backgroundColor: withOpacity(theme.primary, Opacity.soft) }]}>
-                            <Ionicons name="receipt" size={32} color={theme.primary} />
+                            <AppIcon name="receipt" size={32} color={theme.primary} />
                         </View>
                     </View>
 
@@ -205,7 +204,7 @@ export default function TransactionDetailsScreen() {
                             <AppText variant="caption" color="secondary" style={styles.infoLabel}>History</AppText>
                             <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: Spacing.xs }}>
                                 <AppText variant="body" color="primary">View Edit History</AppText>
-                                <Ionicons name="chevron-forward" size={Typography.sizes.sm} color={theme.primary} />
+                                <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.primary} />
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -230,8 +229,8 @@ export default function TransactionDetailsScreen() {
                                         styles.directionIcon,
                                         { backgroundColor: withOpacity(isIn ? theme.income : theme.error, Opacity.soft) }
                                     ]}>
-                                        <Ionicons
-                                            name={isIn ? 'arrow-down' : 'arrow-up'}
+                                        <AppIcon
+                                            name={isIn ? 'arrowDown' : 'arrowUp'}
                                             size={16}
                                             color={isIn ? theme.income : theme.error}
                                         />
@@ -245,7 +244,7 @@ export default function TransactionDetailsScreen() {
                                     <AppText variant="subheading" style={{ color: isIn ? theme.income : theme.error }}>
                                         {isIn ? '+' : '-'}{CurrencyFormatter.format(item.amount, item.currencyCode)}
                                     </AppText>
-                                    <Ionicons name="chevron-forward" size={Typography.sizes.sm} color={theme.textSecondary} />
+                                    <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.textSecondary} />
                                 </View>
                             </TouchableOpacity>
                         );

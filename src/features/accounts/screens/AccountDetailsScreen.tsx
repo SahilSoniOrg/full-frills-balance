@@ -6,7 +6,7 @@
 
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter'
 import { DateRangePicker } from '@/src/components/common/DateRangePicker'
-import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/src/components/core'
+import { AppButton, AppCard, AppIcon, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
 import { Shape, Spacing } from '@/src/constants'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
@@ -18,7 +18,6 @@ import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/u
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils'
 import { logger } from '@/src/utils/logger'
-import Ionicons from '@expo/vector-icons/Ionicons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native'
@@ -94,7 +93,7 @@ export default function AccountDetailsScreen() {
         <View style={styles.headerActions}>
             {isDeleted ? (
                 <IconButton
-                    name="refresh-outline"
+                    name="refresh"
                     onPress={handleRecover}
                     variant="surface"
                     iconColor={theme.income}
@@ -102,13 +101,13 @@ export default function AccountDetailsScreen() {
             ) : (
                 <>
                     <IconButton
-                        name="create-outline"
+                        name="edit"
                         onPress={() => router.push(`/account-creation?accountId=${accountId}` as any)}
                         variant="surface"
                         iconColor={theme.text}
                     />
                     <IconButton
-                        name="trash-outline"
+                        name="delete"
                         onPress={handleDelete}
                         variant="surface"
                         iconColor={theme.error}
@@ -196,7 +195,7 @@ export default function AccountDetailsScreen() {
                         onPress={() => router.push(`/audit-log?entityType=account&entityId=${accountId}` as any)}
                     >
                         <AppText variant="caption" color="primary" weight="semibold">View Edit History</AppText>
-                        <Ionicons name="chevron-forward" size={14} color={theme.primary} />
+                        <AppIcon name="chevronRight" size={14} color={theme.primary} />
                     </TouchableOpacity>
                 </View>
             </AppCard>

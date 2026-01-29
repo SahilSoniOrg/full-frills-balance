@@ -3,10 +3,9 @@
  * 
  * Reusable component for displaying error states with consistent styling.
  */
-import { AppButton, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -31,8 +30,8 @@ export function ErrorState({
 
     return (
         <View style={styles.container}>
-            <Ionicons
-                name="alert-circle-outline"
+            <AppIcon
+                name="error"
                 size={48}
                 color={theme.textSecondary}
                 style={styles.icon}

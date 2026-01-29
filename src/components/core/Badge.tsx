@@ -1,9 +1,9 @@
+import { AppIcon, IconName } from '@/src/components/core/AppIcon'
 import { AppText } from '@/src/components/core/AppText'
 import { Shape, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
 import { useThemeColors } from '@/src/constants/theme-helpers'
 import { useTheme } from '@/src/hooks/use-theme'
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
-import { Ionicons } from '@expo/vector-icons'
 import { useMemo } from 'react'
 import { StyleSheet, View, type ViewProps } from 'react-native'
 
@@ -19,7 +19,7 @@ export type BadgeProps = ViewProps & {
   // Theme mode override (for design preview)
   themeMode?: ThemeMode
   // Optional Icon
-  icon?: keyof typeof Ionicons.glyphMap
+  icon?: IconName
   // Color overrides
   backgroundColor?: string
   textColor?: string
@@ -70,7 +70,7 @@ export function Badge({
     <View style={badgeStyle} {...props}>
       <View style={styles.content}>
         {icon && (
-          <Ionicons
+          <AppIcon
             name={icon}
             size={iconSize}
             color={finalTextColor}

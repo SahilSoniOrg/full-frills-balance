@@ -5,7 +5,6 @@
 
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens'
 import { useTheme } from '@/src/hooks/use-theme'
-import Ionicons from '@expo/vector-icons/Ionicons'
 import React from 'react'
 import {
     StyleSheet,
@@ -13,11 +12,12 @@ import {
     type TouchableOpacityProps,
     type ViewStyle
 } from 'react-native'
+import { AppIcon, IconName } from './AppIcon'
 
 export type IconButtonVariant = 'primary' | 'surface' | 'clear' | 'error' | 'success'
 
 export type IconButtonProps = Omit<TouchableOpacityProps, 'children'> & {
-    name: keyof typeof Ionicons.glyphMap
+    name: IconName
     size?: number
     variant?: IconButtonVariant
     iconColor?: string
@@ -90,7 +90,7 @@ export function IconButton({
             hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
             {...props}
         >
-            <Ionicons name={name} size={size} color={getIconColor()} />
+            <AppIcon name={name} size={size} color={getIconColor()} />
         </TouchableOpacity>
     )
 }

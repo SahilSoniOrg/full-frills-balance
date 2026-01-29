@@ -1,6 +1,7 @@
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
 import { AppButton } from '@/src/components/core/AppButton';
 import { AppCard } from '@/src/components/core/AppCard';
+import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppInput } from '@/src/components/core/AppInput';
 import { AppText } from '@/src/components/core/AppText';
 import { Box } from '@/src/components/core/Box';
@@ -15,7 +16,6 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
-import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
@@ -289,7 +289,7 @@ export const SimpleForm = ({
                                     {account.name}
                                 </AppText>
                                 {selectedId === account.id && (
-                                    <Ionicons name="checkmark-circle" size={18} color={selectorColor} />
+                                    <AppIcon name="checkCircle" size={18} color={selectorColor} />
                                 )}
                             </TouchableOpacity>
                         )}
@@ -413,11 +413,11 @@ export const SimpleForm = ({
                 >
                     <AppCard elevation="none" padding="none" style={{ backgroundColor: theme.surfaceSecondary, borderColor: theme.border, borderWidth: 1 }}>
                         <Stack horizontal align="center" paddingHorizontal="lg" paddingVertical="md" space="md">
-                            <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
+                            <AppIcon name="calendar" size={20} color={theme.textSecondary} />
                             <AppText variant="body" style={{ flex: 1 }}>
                                 {dayjs(`${journalDate}T${journalTime}`).format('DD MMM YYYY, HH:mm')}
                             </AppText>
-                            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                            <AppIcon name="chevronRight" size={16} color={theme.textSecondary} />
                         </Stack>
                     </AppCard>
                 </TouchableOpacity>

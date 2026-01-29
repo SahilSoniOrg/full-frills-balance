@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppInput, AppText } from '@/src/components/core';
+import { AppButton, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext'; // Fixed relative import
 import Currency from '@/src/data/models/Currency';
@@ -6,7 +6,6 @@ import { useImport } from '@/src/hooks/use-import';
 import { useTheme } from '@/src/hooks/use-theme';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { logger } from '@/src/utils/logger';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -125,7 +124,7 @@ export default function OnboardingScreen() {
                             <View style={styles.currencyRight}>
                                 <AppText variant="subheading">{item.symbol}</AppText>
                                 {selectedCurrency === item.code && (
-                                    <Ionicons name="checkmark-circle" size={Size.sm} color={theme.primary} style={{ marginLeft: Spacing.sm }} />
+                                    <AppIcon name="checkCircle" size={Size.sm} color={theme.primary} style={{ marginLeft: Spacing.sm }} />
                                 )}
                             </View>
                         </TouchableOpacity>

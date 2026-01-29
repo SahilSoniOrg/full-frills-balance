@@ -1,6 +1,6 @@
+import { AppIcon } from '@/src/components/core';
 import { Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
@@ -35,7 +35,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Dashboard',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home-outline" size={size} color={color} />
+                        <AppIcon name="home" size={size} color={color} />
                     ),
                 }}
             />
@@ -44,7 +44,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Accounts',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="wallet-outline" size={size} color={color} />
+                        <AppIcon name="wallet" size={size} color={color} />
                     ),
                 }}
             />
@@ -53,7 +53,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Reports',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="stats-chart-outline" size={size} color={color} />
+                        <AppIcon name="reports" size={size} color={color} />
                     ),
                 }}
             />
@@ -62,7 +62,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Settings',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="settings-outline" size={size} color={color} />
+                        <AppIcon name="settings" size={size} color={color} />
                     ),
                 }}
             />

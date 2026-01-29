@@ -1,9 +1,8 @@
-import { AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -33,7 +32,7 @@ export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }
             <AppCard elevation="sm" padding="md" style={styles.column}>
                 <View style={styles.row}>
                     <View style={[styles.iconBox, { backgroundColor: withOpacity(theme.income, Opacity.soft) }]}>
-                        <Ionicons name="arrow-down-outline" size={Size.xs} color={theme.income} />
+                        <AppIcon name="arrowDown" size={Size.xs} color={theme.income} />
                     </View>
                     <AppText variant="caption" color="secondary">INCOME</AppText>
                 </View>
@@ -46,7 +45,7 @@ export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }
             <AppCard elevation="sm" padding="md" style={styles.column}>
                 <View style={styles.row}>
                     <View style={[styles.iconBox, { backgroundColor: withOpacity(theme.expense, Opacity.soft) }]}>
-                        <Ionicons name="arrow-up-outline" size={Size.xs} color={theme.expense} />
+                        <AppIcon name="arrowUp" size={Size.xs} color={theme.expense} />
                     </View>
                     <AppText variant="caption" color="secondary">EXPENSE</AppText>
                 </View>

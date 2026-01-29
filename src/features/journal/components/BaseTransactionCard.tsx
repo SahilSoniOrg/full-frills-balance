@@ -1,10 +1,9 @@
-import { AppCard, AppText, Badge } from '@/src/components/core';
+import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalDisplayType, JournalPresenter } from '@/src/services/accounting/JournalPresenter';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -50,17 +49,17 @@ export const BaseTransactionCard = ({
 
     // Determine icon and colors based on display type
     const presentation = JournalPresenter.getPresentation(displayType, theme, semanticLabel);
-    let typeIcon: keyof typeof Ionicons.glyphMap = 'document-text';
+    let typeIcon: IconName = 'document';
     let typeColor: string = theme.textSecondary;
 
     if (displayType === JournalDisplayType.INCOME) {
-        typeIcon = 'arrow-up';
+        typeIcon = 'arrowUp';
         typeColor = theme.income;
     } else if (displayType === JournalDisplayType.EXPENSE) {
-        typeIcon = 'arrow-down';
+        typeIcon = 'arrowDown';
         typeColor = theme.expense;
     } else if (displayType === JournalDisplayType.TRANSFER) {
-        typeIcon = 'swap-horizontal';
+        typeIcon = 'swapHorizontal';
         typeColor = theme.primary;
     }
 
@@ -93,7 +92,7 @@ export const BaseTransactionCard = ({
                             key={acc.id}
                             variant={acc.accountType.toLowerCase() as any}
                             size="sm"
-                            icon={acc.accountType === 'EXPENSE' ? 'pricetag' : 'wallet'}
+                            icon={acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'}
                         >
                             {showPrefix}{acc.name}
                         </Badge>
@@ -122,7 +121,7 @@ export const BaseTransactionCard = ({
             <View style={styles.footerRow}>
                 <View style={styles.amountContainer}>
                     <View style={[styles.iconCircle, { backgroundColor: withOpacity(typeColor, Opacity.soft) }]}>
-                        <Ionicons name={typeIcon} size={16} color={typeColor} />
+                        <AppIcon name={typeIcon} size={16} color={typeColor} />
                     </View>
                     <AppText
                         variant="subheading"

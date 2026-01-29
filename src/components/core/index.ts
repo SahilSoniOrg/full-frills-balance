@@ -38,6 +38,8 @@ export type { BoxProps } from './Box'
 export { Stack } from './Stack'
 export type { StackProps } from './Stack'
 
+export { AppIcon } from './AppIcon'
+export type { IconName } from './AppIcon'
 export { ErrorBoundary } from './ErrorBoundary'
 export { FloatingActionButton } from './FloatingActionButton'
 export { IconButton } from './IconButton'

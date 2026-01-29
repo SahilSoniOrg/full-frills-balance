@@ -1,7 +1,6 @@
+import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -14,7 +13,7 @@ export default function ReportsScreen() {
         <View style={[styles.container, { backgroundColor: theme.background }]}>
             <AppCard elevation="sm" padding="lg" style={styles.section}>
                 <View style={styles.iconContainer}>
-                    <Ionicons name="bar-chart-outline" size={64} color={theme.primary} />
+                    <AppIcon name="reports" size={64} color={theme.primary} />
                 </View>
                 <AppText variant="heading" style={styles.heading}>Reports Coming Soon</AppText>
                 <AppText variant="body" color="secondary" style={styles.description}>

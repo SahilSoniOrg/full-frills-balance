@@ -1,11 +1,11 @@
 import { AppText } from '@/src/components/core/AppText';
 import { getContrastColor } from '@/src/constants/theme-helpers';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
+import { AppIcon, IconName } from './AppIcon';
 
 interface IvyIconProps {
-    name?: keyof typeof Ionicons.glyphMap;
+    name?: IconName;
     label?: string;
     color: string;
     size?: number;
@@ -33,7 +33,7 @@ export const IvyIcon = ({ name, label, color, size = 40, style }: IvyIconProps) 
             style
         ]}>
             {name ? (
-                <Ionicons name={name} size={iconSize} color={textColor} />
+                <AppIcon name={name} size={iconSize} color={textColor} />
             ) : label ? (
                 <AppText
                     style={{

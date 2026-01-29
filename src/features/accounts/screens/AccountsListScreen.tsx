@@ -1,11 +1,10 @@
-import { AppText, Box, FloatingActionButton } from '@/src/components/core';
+import { AppIcon, AppText, Box, FloatingActionButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountSections } from '@/src/utils/accountUtils';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import { SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -47,7 +46,7 @@ export default function AccountsScreen() {
                 onPress={() => router.push('/account-reorder' as any)}
                 style={[styles.reorderButton, { borderColor: theme.border }]}
             >
-                <Ionicons name="swap-vertical" size={Size.iconXs} color={theme.primary} />
+                <AppIcon name="reorder" size={Size.iconXs} color={theme.primary} />
                 <AppText variant="caption" weight="bold" color="primary">REORDER</AppText>
             </TouchableOpacity>
         </Box>
@@ -83,8 +82,8 @@ export default function AccountsScreen() {
                                         </AppText>
                                     </View>
                                 </Box>
-                                <Ionicons
-                                    name={isCollapsed ? "chevron-forward" : "chevron-down"}
+                                <AppIcon
+                                    name={isCollapsed ? "chevronRight" : "chevronDown"}
                                     size={Size.iconSm}
                                     color={theme.textSecondary}
                                 />

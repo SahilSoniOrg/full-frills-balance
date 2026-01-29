@@ -1,9 +1,8 @@
-import { AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -64,8 +63,8 @@ export const NetWorthCard = ({
                     Net Worth
                 </AppText>
                 <TouchableOpacity onPress={handleToggle} hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}>
-                    <Ionicons
-                        name={isActuallyHidden ? "eye-off" : "eye"}
+                    <AppIcon
+                        name={isActuallyHidden ? "eyeOff" : "eye"}
                         size={Size.sm}
                         color={theme.textTertiary}
                     />

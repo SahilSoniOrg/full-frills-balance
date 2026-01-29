@@ -1,4 +1,4 @@
-import { AppText } from '@/src/components/core'
+import { AppIcon, AppText } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
 import { Spacing } from '@/src/constants'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
@@ -6,7 +6,6 @@ import { AuditLogItem, type AuditLogEntry } from '@/src/features/audit/component
 import { useTheme } from '@/src/hooks/use-theme'
 import { auditService } from '@/src/services/audit-service'
 import { logger } from '@/src/utils/logger'
-import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
@@ -87,7 +86,7 @@ export default function AuditLogScreen() {
                     </View>
                 ) : logs.length === 0 ? (
                     <View style={styles.emptyContainer}>
-                        <Ionicons name="document-text-outline" size={64} color={theme.textSecondary} />
+                        <AppIcon name="document" size={64} color={theme.textSecondary} />
                         <AppText variant="body" color="secondary" style={styles.emptyText}>
                             No audit logs found
                         </AppText>

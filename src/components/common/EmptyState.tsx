@@ -3,16 +3,15 @@
  * 
  * Reusable component for displaying empty list states with consistent styling.
  */
-import { AppButton, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, IconName } from '@/src/components/core';
 import { Opacity, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export interface EmptyStateProps {
-    /** Icon name from Ionicons */
-    icon?: keyof typeof Ionicons.glyphMap;
+    /** Icon name from AppIcon */
+    icon?: IconName;
     /** Main title text */
     title: string;
     /** Optional subtitle/description text */
@@ -25,7 +24,7 @@ export interface EmptyStateProps {
 }
 
 export function EmptyState({
-    icon = 'folder-open-outline',
+    icon = 'folderOpen',
     title,
     subtitle,
     action,
@@ -34,7 +33,7 @@ export function EmptyState({
 
     return (
         <View style={styles.container}>
-            <Ionicons
+            <AppIcon
                 name={icon}
                 size={48}
                 color={theme.textSecondary}

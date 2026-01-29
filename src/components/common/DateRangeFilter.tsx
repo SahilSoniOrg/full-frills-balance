@@ -24,7 +24,7 @@ export function DateRangeFilter({ range, onPress, onPrevious, onNext }: DateRang
                     style={[styles.navButton, { backgroundColor: theme.surface }]}
                     activeOpacity={Opacity.heavy}
                 >
-                    <IvyIcon name="chevron-back" size={Size.sm} color={theme.textSecondary} />
+                    <IvyIcon name="chevronLeft" size={Size.sm} color={theme.textSecondary} />
                 </TouchableOpacity>
             )}
 
@@ -37,7 +37,7 @@ export function DateRangeFilter({ range, onPress, onPrevious, onNext }: DateRang
                 <AppText variant="body" style={styles.text}>
                     {range?.label || 'All Time'}
                 </AppText>
-                <IvyIcon name="chevron-down" size={Size.xs} color={theme.textSecondary} />
+                <IvyIcon name="chevronDown" size={Size.xs} color={theme.textSecondary} />
             </TouchableOpacity>
 
             {showNavigation && (
@@ -46,7 +46,7 @@ export function DateRangeFilter({ range, onPress, onPrevious, onNext }: DateRang
                     style={[styles.navButton, { backgroundColor: theme.surface }]}
                     activeOpacity={Opacity.heavy}
                 >
-                    <IvyIcon name="chevron-forward" size={Size.sm} color={theme.textSecondary} />
+                    <IvyIcon name="chevronRight" size={Size.sm} color={theme.textSecondary} />
                 </TouchableOpacity>
             )}
         </View>
