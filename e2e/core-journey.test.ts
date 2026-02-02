@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clearAppState, ensureOnboarded } from './utils';
+import { clearAppState, clickPlusButton, ensureOnboarded } from './utils';
 
 test.describe('User Journey: Core Usage', () => {
     test.beforeEach(async ({ page }) => {
@@ -27,16 +27,17 @@ test.describe('User Journey: Core Usage', () => {
         await expect(page.getByText('Main Checking')).toBeVisible({ timeout: 15000 });
 
         // Tap FAB (The big '+' button)
-        const fab = page.getByText('+', { exact: true });
-        await fab.waitFor({ state: 'visible' });
-        await fab.click({ force: true });
+        await clickPlusButton(page);
+
+        // Wait for entry screen to load
+        await page.getByTestId('amount-input').first().waitFor({ state: 'visible', timeout: 15000 });
 
         // Fill Transaction
         await page.getByTestId('amount-input').first().fill('50');
-        await page.getByPlaceholder(/What is this for/i).fill('Groceries');
+        await page.getByTestId('description-input').fill('Groceries');
 
         // Save Transaction
-        const saveBtn = page.getByText('Save', { exact: true });
+        const saveBtn = page.getByTestId('save-button');
         await saveBtn.scrollIntoViewIfNeeded();
         await saveBtn.click({ force: true });
 

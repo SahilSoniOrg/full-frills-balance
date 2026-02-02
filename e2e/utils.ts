@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 
 /**
  * Resets the application state by clearing all local storage and IndexedDB.
@@ -6,13 +6,39 @@ import { Page, expect } from '@playwright/test';
  */
 export async function clearAppState(page: Page) {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await page.evaluate(() => {
+
+    // Clear storage and IndexedDB databases
+    await page.evaluate(async () => {
         localStorage.clear();
         sessionStorage.clear();
+
+        // Delete all IndexedDB databases
+        if (window.indexedDB && window.indexedDB.databases) {
+            const databases = await window.indexedDB.databases();
+            await Promise.all(
+                databases.map(db => {
+                    if (db.name) {
+                        return new Promise<void>((resolve, reject) => {
+                            const request = window.indexedDB.deleteDatabase(db.name!);
+                            request.onsuccess = () => resolve();
+                            request.onerror = () => reject(request.error);
+                            request.onblocked = () => {
+                                console.warn(`Database ${db.name} deletion blocked`);
+                                resolve(); // Continue anyway
+                            };
+                        });
+                    }
+                    return Promise.resolve();
+                })
+            );
+        }
     });
-    // For WatermelonDB/IndexedDB, we rely on the app's own reset or automated clearing if possible.
-    // But since we can't easily trigger it from outside, we'll just reload.
+
+    // Reload to ensure clean state
     await page.reload({ waitUntil: 'domcontentloaded' });
+
+    // Wait a bit for the app to reinitialize
+    await page.waitForTimeout(500);
 }
 
 /**
@@ -21,14 +47,20 @@ export async function clearAppState(page: Page) {
  */
 export async function ensureOnboarded(page: Page, userName: string = 'Test User') {
     await page.goto('/');
-    // Check if we need to onboard. The "Welcome" text is a good indicator.
-    const isWelcomeVisible = await page.getByText('Welcome to Balance').isVisible({ timeout: 30000 }).catch(() => false);
 
-    if (isWelcomeVisible) {
+    // Check if we need to onboard. Wait for either Welcome or Dashboard content.
+    const welcome = page.getByText('Welcome to Balance');
+    const dashboard = page.getByText(/Hello,|Dashboard|Journal/i);
+
+    // Explicit wait for the app to decide its state
+    await Promise.race([
+        welcome.waitFor({ state: 'visible', timeout: 15000 }).catch(() => { }),
+        dashboard.waitFor({ state: 'visible', timeout: 15000 }).catch(() => { })
+    ]);
+
+    if (await welcome.isVisible()) {
         // Complete Name Step
         await page.getByPlaceholder('Enter your name').fill(userName);
-        // Buttons in React Native Web often lack role="button" or are tricky.
-        // We use text-based selection which is more resilient to RN-Web's DOM structure.
         await page.getByText('Continue', { exact: true }).click({ force: true });
 
         // Complete Currency Step
@@ -42,14 +74,45 @@ export async function ensureOnboarded(page: Page, userName: string = 'Test User'
 }
 
 /**
- * Click the main FAB + button robustly.
+ * Click the main FAB + button robustly using multiple selector strategies.
  */
 export async function clickPlusButton(page: Page) {
-    // Try testID first
-    const fab = page.locator('[data-testid="fab-button"], [testID="fab-button"]').first();
-    // 15s is better for slow CI/Dev environments with navigation transitions
-    await fab.waitFor({ state: 'visible', timeout: 15000 });
-    await fab.click({ force: true });
+    // Try multiple strategies to find the FAB button
+    let fab: Locator | null = null;
+
+    // Strategy 1: Try testID first
+    fab = page.getByTestId('fab-button').first();
+    if (await fab.count() > 0) {
+        await fab.waitFor({ state: 'visible', timeout: 15000 });
+        await fab.click();
+        return;
+    }
+
+    // Strategy 2: Look for the '+' text (might be in an icon or button)
+    fab = page.getByText('+', { exact: true }).first();
+    if (await fab.count() > 0) {
+        await fab.waitFor({ state: 'visible', timeout: 15000 });
+        await fab.click({ force: true });
+        return;
+    }
+
+    // Strategy 3: Look for common FAB button patterns
+    fab = page.locator('button:has-text("+")').first();
+    if (await fab.count() > 0) {
+        await fab.waitFor({ state: 'visible', timeout: 15000 });
+        await fab.click({ force: true });
+        return;
+    }
+
+    // Strategy 4: Look for floating action button by role or aria-label
+    fab = page.locator('[role="button"][aria-label*="add"], [role="button"][aria-label*="Add"]').first();
+    if (await fab.count() > 0) {
+        await fab.waitFor({ state: 'visible', timeout: 15000 });
+        await fab.click({ force: true });
+        return;
+    }
+
+    throw new Error('Could not find FAB button using any selector strategy');
 }
 
 /**
@@ -59,4 +122,34 @@ export async function selectAccount(page: Page, accountName: string) {
     const selector = page.getByText(accountName, { exact: true });
     await selector.scrollIntoViewIfNeeded();
     await selector.click({ force: true });
+}
+
+/**
+ * Wait for navigation to complete after an action.
+ * Useful after clicking buttons that trigger route changes.
+ */
+export async function waitForNavigation(page: Page, timeout: number = 5000) {
+    await page.waitForTimeout(timeout);
+}
+
+/**
+ * Wait for an element with automatic retries and better error messages.
+ */
+export async function waitForElement(
+    page: Page,
+    selector: string,
+    options: { timeout?: number; visible?: boolean } = {}
+): Promise<Locator> {
+    const timeout = options.timeout ?? 15000;
+    const visible = options.visible ?? true;
+
+    const locator = page.locator(selector);
+
+    if (visible) {
+        await locator.waitFor({ state: 'visible', timeout });
+    } else {
+        await locator.waitFor({ state: 'attached', timeout });
+    }
+
+    return locator;
 }

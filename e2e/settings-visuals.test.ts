@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clearAppState, ensureOnboarded } from './utils';
+import { clearAppState, clickPlusButton, ensureOnboarded } from './utils';
 
 test.describe('User Journey: Settings & Visuals', () => {
     test.beforeEach(async ({ page }) => {
@@ -13,9 +13,10 @@ test.describe('User Journey: Settings & Visuals', () => {
         await page.getByPlaceholder(/Account Name|e\.g\./i).fill('Secret stash');
         await page.getByText('Create Account', { exact: true }).click({ force: true });
 
-        await page.getByText('+', { exact: true }).click({ force: true });
+        await clickPlusButton(page);
+        await page.getByTestId('amount-input').first().waitFor({ state: 'visible', timeout: 15000 });
         await page.getByTestId('amount-input').first().fill('1000000');
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('save-button').click();
 
         await expect(page.getByText(/\$1,000,000/)).toBeVisible();
 

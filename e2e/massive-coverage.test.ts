@@ -30,8 +30,8 @@ test.describe('Massive Coverage: 23 Specialized Scenarios', () => {
         for (const amt of amounts) {
             await clickPlusButton(page);
             await page.getByTestId('amount-input').first().fill(amt);
-            await page.getByPlaceholder(/What is this for/i).fill(`Amt ${amt}`);
-            await page.getByText('Save', { exact: true }).click({ force: true });
+            await page.getByTestId('description-input').fill(`Amt ${amt}`);
+            await page.getByTestId('save-button').click();
             await expect(page.getByText(`Amt ${amt}`)).toBeVisible();
         }
     });

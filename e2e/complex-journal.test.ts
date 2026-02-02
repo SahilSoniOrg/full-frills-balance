@@ -57,7 +57,7 @@ test.describe('User Journey: Complex Journaling', () => {
         await clickPlusButton(page);
         await page.getByTestId('amount-input').first().fill('1000000.01');
         await page.getByText('Checking', { exact: true }).click({ force: true });
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('save-button').click();
         await expect(page.getByText('$1,000,000.01')).toBeVisible();
     });
 

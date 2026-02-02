@@ -19,7 +19,7 @@ test.describe('User Journey: Miscellaneous Edge Cases', () => {
     test('Empty description allowed but warned?', async ({ page }) => {
         await clickPlusButton(page);
         await page.getByTestId('amount-input').first().fill('10');
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('save-button').click();
         // Should default to "Transaction" or similar if empty
         await expect(page.getByText(/Transaction|Expense/i)).toBeVisible();
     });

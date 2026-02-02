@@ -6,19 +6,16 @@ import { AppInput } from '@/src/components/core/AppInput';
 import { AppText } from '@/src/components/core/AppText';
 import { Box } from '@/src/components/core/Box';
 import { Stack } from '@/src/components/core/Stack';
-import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
-import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
-import { useJournalActions } from '@/src/features/journal';
+import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useTheme } from '@/src/hooks/use-theme';
-import { accountingService } from '@/src/services/AccountingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { sanitizeAmount } from '@/src/utils/validation';
 import { FlashList } from '@shopify/flash-list';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SimpleFormProps {
@@ -36,10 +33,6 @@ interface SimpleFormProps {
 
 type TabType = 'expense' | 'income' | 'transfer';
 
-/**
- * SimpleForm - Guided entry mode for basic transactions.
- * Uses AccountingService to handle ledger construction.
- */
 export const SimpleForm = ({
     accounts,
     onSuccess,
@@ -55,11 +48,12 @@ export const SimpleForm = ({
     const { theme } = useTheme();
     const { createJournal, updateJournal } = useJournalActions();
 
-    // Filter accounts by type
-    const transactionAccounts = accounts.filter(a =>
-        a.accountType === AccountType.ASSET ||
-        a.accountType === AccountType.LIABILITY
-    );
+    const transactionAccounts = useMemo(() => {
+        const filtered = accounts.filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY);
+        // Debugging logs disabled for now to avoid polluting stdout unless needed
+        return filtered;
+    }, [accounts]);
+
     const expenseAccounts = accounts.filter(a => a.accountType === AccountType.EXPENSE);
     const incomeAccounts = accounts.filter(a => a.accountType === AccountType.INCOME);
 
@@ -79,18 +73,15 @@ export const SimpleForm = ({
 
     const sourceAccount = accounts.find(a => a.id === sourceId);
     const destAccount = accounts.find(a => a.id === destinationId);
-    const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-    const sourceCurrency = sourceAccount?.currencyCode || defaultCurrency;
-    const destCurrency = destAccount?.currencyCode || defaultCurrency;
-    const isCrossCurrency = sourceCurrency !== destCurrency;
+    const sourceCurrency = sourceAccount?.currencyCode;
+    const destCurrency = destAccount?.currencyCode;
+    const isCrossCurrency = sourceCurrency && destCurrency && sourceCurrency !== destCurrency;
 
-    const numAmount = sanitizeAmount(amount) || 0;
-    const convertedAmount = isCrossCurrency && exchangeRate
-        ? Math.round(numAmount * exchangeRate * 100) / 100
-        : numAmount;
+    const numAmount = parseFloat(amount.replace(',', '.'));
+    const convertedAmount = (numAmount && exchangeRate) ? numAmount * exchangeRate : numAmount;
 
     useEffect(() => {
-        if (!isCrossCurrency || !sourceId || !destinationId) {
+        if (!isCrossCurrency) {
             setExchangeRate(null);
             setRateError(null);
             return;
@@ -123,7 +114,6 @@ export const SimpleForm = ({
         const lastDestId = preferences.lastUsedDestinationAccountId;
 
         if (type === 'expense') {
-            // Expenses: Pay FROM (Asset/Liability) -> TO (Expense)
             const isSourceValid = sourceId && transactionAccounts.some(a => a.id === sourceId);
             if (!isSourceValid) {
                 if (initialSourceId && transactionAccounts.some(a => a.id === initialSourceId)) {
@@ -148,7 +138,6 @@ export const SimpleForm = ({
                 }
             }
         } else if (type === 'income') {
-            // Income: Receive FROM (Income) -> TO (Asset/Liability)
             const isDestValid = destinationId && transactionAccounts.some(a => a.id === destinationId);
             if (!isDestValid) {
                 if (initialDestinationId && transactionAccounts.some(a => a.id === initialDestinationId)) {
@@ -173,7 +162,6 @@ export const SimpleForm = ({
                 }
             }
         } else {
-            // Transfer: Asset/Liability -> Asset/Liability (usually)
             const isSourceValid = sourceId && accounts.some(a => a.id === sourceId);
             if (!isSourceValid) {
                 if (initialSourceId && accounts.some(a => a.id === initialSourceId)) {
@@ -192,7 +180,6 @@ export const SimpleForm = ({
                 } else if (lastDestId && accounts.some(a => a.id === lastDestId)) {
                     setDestinationId(lastDestId);
                 } else if (transactionAccounts.length > 1) {
-                    // Pick a different one from source if possible
                     const otherAccount = transactionAccounts.find(a => a.id !== sourceId);
                     if (otherAccount) setDestinationId(otherAccount.id);
                 }
@@ -200,45 +187,45 @@ export const SimpleForm = ({
         }
     }, [type, accounts, transactionAccounts, sourceId, destinationId]);
 
-
     const handleSave = async () => {
         if (!numAmount || numAmount <= 0) return;
-        if (!sourceAccount || !destAccount) return;
-        if (sourceId === destinationId) {
-            logger.warn('Source and destination accounts must be different');
-            return;
-        }
+        if (!sourceId || !destinationId) return;
 
         setIsSubmitting(true);
         try {
-            const getRate = async (cur: string) => cur === defaultCurrency ? 1 : await exchangeRateService.getRate(cur, defaultCurrency);
-            const sRate = await getRate(sourceCurrency);
-            const dRate = await getRate(destCurrency);
-
-            const journalData: CreateJournalData = {
-                ...accountingService.constructSimpleJournal({
-                    type,
-                    amount: type === 'transfer' ? convertedAmount : numAmount,
-                    sourceAccount: { id: sourceId, type: sourceAccount.accountType, rate: sRate },
-                    destinationAccount: { id: destinationId, type: destAccount.accountType, rate: dRate },
-                    description: type === 'expense' ? destAccount.name : type === 'income' ? sourceAccount.name : 'Transfer',
-                    date: new Date(`${journalDate}T${journalTime}`).getTime()
-                }),
-                currencyCode: defaultCurrency
+            const entryData: any = {
+                journalDate: new Date(`${journalDate}T${journalTime}`).getTime(),
+                description: description || undefined,
+                currencyCode: sourceCurrency || 'USD',
+                transactions: [
+                    {
+                        accountId: sourceId,
+                        amount: numAmount,
+                        transactionType: 'CREDIT',
+                        notes: description
+                    },
+                    {
+                        accountId: destinationId,
+                        amount: numAmount,
+                        transactionType: 'DEBIT',
+                        notes: description,
+                        exchangeRate: exchangeRate || undefined
+                    }
+                ]
             };
 
-            // Adjust for transfer source amount
-            if (type === 'transfer') {
-                journalData.transactions[1].amount = numAmount;
-                if (isCrossCurrency) {
-                    journalData.description = `Transfer: ${sourceCurrency} → ${destCurrency}`;
-                }
+            if (type === 'income') {
+                entryData.transactions[0].transactionType = 'CREDIT'; // Income
+                entryData.transactions[1].transactionType = 'DEBIT';  // Asset
+            } else if (type === 'transfer') {
+                entryData.transactions[0].transactionType = 'CREDIT'; // Asset
+                entryData.transactions[1].transactionType = 'DEBIT';  // Asset
             }
 
             if (journalId) {
-                await updateJournal(journalId, journalData);
+                await updateJournal(journalId, entryData as any);
             } else {
-                await createJournal(journalData);
+                await createJournal(entryData as any);
             }
 
             if (type === 'expense' || type === 'transfer') await preferences.setLastUsedSourceAccountId(sourceId);
@@ -305,7 +292,6 @@ export const SimpleForm = ({
 
     return (
         <Box padding="lg">
-            {/* Amount Section */}
             <Stack align="center" marginVertical="lg" space="md">
                 <AppText variant="caption" weight="bold" color="tertiary" style={{ letterSpacing: 2 }}>
                     AMOUNT
@@ -313,7 +299,7 @@ export const SimpleForm = ({
                 <Stack horizontal align="center" justify="center">
                     <Box marginVertical="sm" style={{ marginTop: Spacing.md }}>
                         <AppText variant="title" weight="bold" style={{ color: theme.textSecondary, opacity: Opacity.heavy }}>
-                            {sourceAccount?.currencyCode || defaultCurrency}
+                            {sourceAccount?.currencyCode || 'USD'}
                         </AppText>
                     </Box>
                     <AppInput
@@ -321,7 +307,6 @@ export const SimpleForm = ({
                         style={{ color: activeColor }}
                         value={amount}
                         onChangeText={setAmount}
-                        placeholder="0.00"
                         keyboardType="decimal-pad"
                         autoFocus
                         cursorColor={activeColor}
@@ -331,7 +316,6 @@ export const SimpleForm = ({
                 </Stack>
             </Stack>
 
-            {/* Type Selector */}
             <Box direction="row" padding="xs" backgroundColor={theme.surfaceSecondary} borderRadius={Shape.radius.r4} marginVertical="xl">
                 {(['expense', 'income', 'transfer'] as const).map(t => (
                     <TouchableOpacity
@@ -353,7 +337,6 @@ export const SimpleForm = ({
                 ))}
             </Box>
 
-            {/* Account Selection */}
             <AppCard elevation="none" variant="secondary" style={styles.mainCard}>
                 {type === 'expense' && (
                     <>
@@ -380,7 +363,6 @@ export const SimpleForm = ({
                 )}
             </AppCard>
 
-            {/* Exchange Rate / Conversion */}
             {isCrossCurrency && sourceId && destinationId && (
                 <Box align="center" padding="md" borderRadius={Shape.radius.sm} backgroundColor={withOpacity(theme.primary, Opacity.soft)} marginVertical="lg">
                     {isLoadingRate ? (
@@ -402,7 +384,6 @@ export const SimpleForm = ({
                 </Box>
             )}
 
-            {/* Schedule Section */}
             <Box marginVertical="lg">
                 <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: Spacing.xs, marginBottom: Spacing.sm }}>
                     SCHEDULE
@@ -434,18 +415,31 @@ export const SimpleForm = ({
                 }}
             />
 
-            {/* Actions */}
+            <Box marginVertical="lg">
+                <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: Spacing.xs, marginBottom: Spacing.sm }}>
+                    DESCRIPTION (OPTIONAL)
+                </AppText>
+                <AppInput
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder={
+                        type === 'expense'
+                            ? destAccount?.name || 'Expense'
+                            : type === 'income'
+                                ? sourceAccount?.name || 'Income'
+                                : 'Transfer'
+                    }
+                    testID="description-input"
+                    style={{ backgroundColor: theme.surfaceSecondary }}
+                />
+            </Box>
+
             <Box style={{ marginTop: Spacing.md }}>
                 <AppButton
                     variant="primary"
                     onPress={handleSave}
                     disabled={!amount || !sourceId || !destinationId || (sourceId === destinationId) || isSubmitting || isLoadingRate || !!rateError}
-                    style={[
-                        { height: Size.buttonXl, borderRadius: Shape.radius.r4 },
-                        (!amount || !sourceId || !destinationId || (sourceId === destinationId) || isSubmitting || isLoadingRate || !!rateError)
-                            ? { backgroundColor: theme.surfaceSecondary }
-                            : { backgroundColor: activeColor }
-                    ]}
+                    testID="save-button"
                 >
                     {isSubmitting ? 'SAVING...' : sourceId === destinationId ? 'CHOOSE DIFFERENT ACCOUNTS' : `SAVE ${type.toUpperCase()}`}
                 </AppButton>
@@ -455,7 +449,6 @@ export const SimpleForm = ({
 };
 
 const styles = StyleSheet.create({
-    accountScroll: { paddingVertical: Spacing.xs },
     accountCard: {
         paddingHorizontal: Spacing.lg,
         paddingVertical: Spacing.md,
@@ -485,5 +478,4 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     cardDivider: { height: 1, marginVertical: Spacing.md, opacity: Opacity.muted },
-    verticalDivider: { width: 1, height: Size.md, marginHorizontal: Spacing.md },
 });

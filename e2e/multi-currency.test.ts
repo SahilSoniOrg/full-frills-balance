@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { clearAppState, ensureOnboarded } from './utils';
+import { clearAppState, clickPlusButton, ensureOnboarded } from './utils';
 
 test.describe('User Journey: Multi-Currency', () => {
     test.beforeEach(async ({ page }) => {
@@ -16,10 +16,11 @@ test.describe('User Journey: Multi-Currency', () => {
 
         await page.getByText('Create Account', { exact: true }).click({ force: true });
 
-        await page.getByText('+', { exact: true }).click({ force: true });
+        await clickPlusButton(page);
+        await page.getByTestId('amount-input').first().waitFor({ state: 'visible', timeout: 15000 });
         await page.getByTestId('amount-input').first().fill('15');
         await page.getByText('Euro Wallet', { exact: true }).click();
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('save-button').click();
 
         // Verify currency symbol or formatting
         await expect(page.getByText(/€|EUR/)).toBeVisible();

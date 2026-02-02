@@ -110,6 +110,55 @@ export class TransactionRepository {
   }
 
   /**
+   * Reactive version of findByJournalWithAccountInfo
+   * @param journalId Journal ID to observe
+   */
+  observeByJournalWithAccountInfo(journalId: string) {
+    const { switchMap } = require('rxjs/operators');
+    const { from } = require('rxjs');
+
+    return this.transactions
+      .query(
+        Q.and(
+          Q.where('journal_id', journalId),
+          Q.where('deleted_at', Q.eq(null))
+        )
+      )
+      .extend(Q.sortBy('created_at', 'asc'))
+      .observe()
+      .pipe(
+        switchMap((txs: Transaction[]) => {
+          return from((async () => {
+            const accountIds = [...new Set(txs.map(t => t.accountId))]
+            const { accountRepository } = require('./AccountRepository')
+            const accounts = await Promise.all(accountIds.map(id => accountRepository.find(id)))
+            const accountMap = new Map(accounts.filter(Boolean).map(a => [a!.id, a!]))
+
+            return txs.map(tx => {
+              const account = accountMap.get(tx.accountId)
+              return {
+                id: tx.id,
+                amount: tx.amount,
+                transactionType: tx.transactionType,
+                currencyCode: tx.currencyCode,
+                transactionDate: tx.transactionDate,
+                notes: tx.notes,
+                accountId: tx.accountId,
+                exchangeRate: tx.exchangeRate,
+                accountName: account?.name || 'Unknown Account',
+                accountType: account?.accountType as AccountType,
+                flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
+                balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE',
+                createdAt: tx.createdAt,
+                updatedAt: tx.updatedAt,
+              } as TransactionWithAccountInfo
+            })
+          })());
+        })
+      )
+  }
+
+  /**
    * Rebuilds running balances for an account
    * Uses journalDate for ordering to maintain accounting correctness
    * @param accountId The account ID to rebuild balances for

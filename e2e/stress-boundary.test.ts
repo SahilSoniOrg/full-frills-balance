@@ -13,8 +13,8 @@ test.describe('User Journey: Stress & Boundary', () => {
         for (let i = 1; i <= 10; i++) {
             await clickPlusButton(page);
             await page.getByTestId('amount-input').first().fill(`${i * 10}`);
-            await page.getByPlaceholder(/What is this for/i).fill(`Stress Test Item ${i}`);
-            await page.getByText('Save', { exact: true }).click({ force: true });
+            await page.getByTestId('description-input').fill(`Stress Test Item ${i}`);
+            await page.getByTestId('save-button').click();
             await expect(page.getByText(`Stress Test Item ${i}`)).toBeVisible({ timeout: 10000 });
         }
     });
@@ -40,8 +40,8 @@ test.describe('User Journey: Stress & Boundary', () => {
         const longText = 'A'.repeat(500);
         await clickPlusButton(page);
         await page.getByTestId('amount-input').first().fill('100');
-        await page.getByPlaceholder(/What is this for/i).fill(longText);
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('description-input').fill(longText);
+        await page.getByTestId('save-button').click();
         await expect(page.getByText(longText.substring(0, 50))).toBeVisible();
     });
 
@@ -63,7 +63,7 @@ test.describe('User Journey: Stress & Boundary', () => {
         await clickPlusButton(page);
         await page.getByTestId('amount-input').first().fill('10');
         await page.getByText('Locked', { exact: true }).click({ force: true });
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('save-button').click();
 
         await page.goto('/(tabs)/accounts');
         await page.getByText('Locked').click({ force: true });

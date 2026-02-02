@@ -15,7 +15,7 @@ test.describe('User Journey: Edge Cases', () => {
         await page.locator('div[role="button"]').filter({ hasText: '+' }).click();
         await page.getByTestId('amount-input').first().fill('10');
         await page.getByText('Doomed Account', { exact: true }).click();
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('save-button').click();
 
         await page.goto('/(tabs)/accounts');
         await page.getByText('Doomed Account').click();

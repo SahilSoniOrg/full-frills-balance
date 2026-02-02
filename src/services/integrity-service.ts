@@ -3,10 +3,11 @@
  * 
  * Handles balance verification and crash recovery.
  * Ensures data integrity by detecting and repairing stale running balances.
+ * This service is responsible for checking if the account balances match the transaction history.
  */
 
 import { database } from '@/src/data/database/Database'
-import Account from '@/src/data/models/Account'
+import Account, { AccountType } from '@/src/data/models/Account'
 import { JournalStatus } from '@/src/data/models/Journal'
 import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
@@ -35,10 +36,13 @@ export interface IntegrityCheckResult {
     results: BalanceVerificationResult[]
 }
 
+const DEFAULT_EXPENSE_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Housing', 'Other Expense'];
+const DEFAULT_INCOME_CATEGORIES = ['Salary', 'Gifts', 'Interest', 'Other Income'];
+const DEFAULT_ASSET_ACCOUNTS = ['Wallet'];
+
 export class IntegrityService {
     /**
      * Computes account balance from scratch by iterating all transactions.
-     * This is the source of truth for balance verification.
      */
     async computeBalanceFromTransactions(accountId: string, cutoffDate?: number): Promise<number> {
         const account = await accountRepository.find(accountId)
@@ -46,7 +50,6 @@ export class IntegrityService {
             throw new Error(`Account ${accountId} not found`)
         }
 
-        // Fetch all posted, non-deleted transactions for this account
         let query = database.collections.get<Transaction>('transactions')
             .query(
                 Q.where('account_id', accountId),
@@ -62,10 +65,8 @@ export class IntegrityService {
         }
 
         const transactions = await query.fetch()
-
         const precision = await currencyRepository.getPrecision(account.currencyCode)
 
-        // Sum up all transactions with precision-aware rounding at each step
         let balance = 0
         for (const tx of transactions) {
             const multiplier = accountingService.getImpactMultiplier(account.accountType as any, tx.transactionType)
@@ -76,7 +77,7 @@ export class IntegrityService {
     }
 
     /**
-     * Verifies a single account's balance against computed value.
+     * Verifies a single account's balance.
      */
     async verifyAccountBalance(accountId: string, cutoffDate: number = Date.now()): Promise<BalanceVerificationResult> {
         const account = await accountRepository.find(accountId)
@@ -100,7 +101,7 @@ export class IntegrityService {
     }
 
     /**
-     * Verifies all account balances and returns detailed results.
+     * Verifies all account balances.
      */
     async verifyAllAccountBalances(): Promise<BalanceVerificationResult[]> {
         const accounts = await database.collections.get<Account>('accounts')
@@ -122,7 +123,7 @@ export class IntegrityService {
     }
 
     /**
-     * Repairs a single account's running balances by forcing rebuild.
+     * Repairs a single account's running balances.
      */
     async repairAccountBalance(accountId: string): Promise<boolean> {
         try {
@@ -136,12 +137,19 @@ export class IntegrityService {
     }
 
     /**
-     * Runs startup integrity check.
-     * Called on app initialization to detect and repair stale balances.
-     * Non-blocking - logs results but does not throw.
+     * Runs startup integrity check and seeds defaults if database is empty.
      */
     async runStartupCheck(): Promise<IntegrityCheckResult> {
-        logger.info('[IntegrityService] Starting integrity check...')
+        logger.info('[IntegrityService] Starting startup integrity check...')
+
+        const existingAccountsCount = await database.collections.get<Account>('accounts')
+            .query(Q.where('deleted_at', Q.eq(null)))
+            .fetchCount()
+
+        if (existingAccountsCount === 0) {
+            logger.info('[IntegrityService] No accounts found. Seeding default accounts/categories...')
+            await this.seedDefaultAccounts()
+        }
 
         const results = await this.verifyAllAccountBalances()
         const discrepancies = results.filter(r => !r.matches)
@@ -149,7 +157,6 @@ export class IntegrityService {
         let repairsAttempted = 0
         let repairsSuccessful = 0
 
-        // Auto-repair discrepancies
         for (const discrepancy of discrepancies) {
             logger.warn(
                 `[IntegrityService] Balance discrepancy for ${discrepancy.accountName}: ` +
@@ -172,30 +179,20 @@ export class IntegrityService {
             results,
         }
 
-        if (discrepancies.length === 0) {
-            logger.info(`[IntegrityService] Integrity check passed. ${results.length} accounts verified.`)
-        } else {
-            logger.warn(
-                `[IntegrityService] Integrity check found ${discrepancies.length} discrepancies. ` +
-                `Repairs: ${repairsSuccessful}/${repairsAttempted} successful.`
-            )
-        }
-
         return summary
     }
 
     /**
-     * Factory Reset: Deletes all data from all collections.
-     * WARNING: Irreversible action.
+     * Factory Reset.
      */
     async resetDatabase(): Promise<void> {
         logger.warn('[IntegrityService] STARTING FACTORY RESET...')
         try {
-            logger.debug('[IntegrityService] Calling database.unsafeResetDatabase() inside writer...')
             await database.write(async () => {
                 await database.unsafeResetDatabase()
             })
-            logger.info('[IntegrityService] Database reset successful.')
+            logger.info('[IntegrityService] Database reset successful. Seeding defaults...')
+            await this.seedDefaultAccounts()
         } catch (error) {
             logger.error('[IntegrityService] CRITICAL: Factory reset failed:', error)
             throw error
@@ -203,33 +200,67 @@ export class IntegrityService {
     }
 
     /**
-     * Data Cleanup: Permanently removes all records marked as soft-deleted.
+     * Seeds default accounts and categories.
+     */
+    async seedDefaultAccounts(): Promise<void> {
+        const defaultCurrency = 'USD';
+
+        await database.write(async () => {
+            const accountsCollection = database.collections.get<Account>('accounts');
+
+            // Create Expense Categories
+            for (const name of DEFAULT_EXPENSE_CATEGORIES) {
+                await accountsCollection.create((account) => {
+                    account.name = name;
+                    account.accountType = AccountType.EXPENSE;
+                    account.currencyCode = defaultCurrency;
+                });
+            }
+
+            // Create Income Categories
+            for (const name of DEFAULT_INCOME_CATEGORIES) {
+                await accountsCollection.create((account) => {
+                    account.name = name;
+                    account.accountType = AccountType.INCOME;
+                    account.currencyCode = defaultCurrency;
+                });
+            }
+
+            // Create Default Asset Accounts
+            for (const name of DEFAULT_ASSET_ACCOUNTS) {
+                await accountsCollection.create((account) => {
+                    account.name = name;
+                    account.accountType = AccountType.ASSET;
+                    account.currencyCode = defaultCurrency;
+                });
+            }
+        });
+
+        logger.info(`[IntegrityService] Seeded default accounts and categories.`);
+    }
+
+    /**
+     * Data Cleanup.
      */
     async cleanupDatabase(): Promise<{ deletedCount: number }> {
         logger.info('[IntegrityService] Starting database cleanup...')
         let totalDeleted = 0
-
         const collections = ['journals', 'transactions', 'accounts']
 
         try {
             await database.write(async () => {
                 for (const table of collections) {
-                    logger.debug(`[IntegrityService] Cleaning table: ${table}...`)
                     const deletedRecords = await database.collections.get(table)
                         .query(Q.where('deleted_at', Q.notEq(null)))
                         .fetch()
 
-                    logger.debug(`[IntegrityService] Found ${deletedRecords.length} records to delete in ${table}`)
                     totalDeleted += deletedRecords.length
-
                     for (const record of deletedRecords) {
-                        // Using destroyPermanently to fully purge from DB
                         await record.destroyPermanently()
                     }
-                    logger.debug(`[IntegrityService] Table ${table} cleanup complete.`)
                 }
             })
-            logger.info(`[IntegrityService] Cleanup complete. Removed ${totalDeleted} records permanently.`)
+            logger.info(`[IntegrityService] Cleanup complete. Removed ${totalDeleted} records.`)
         } catch (error) {
             logger.error('[IntegrityService] Cleanup failed:', error)
             throw error

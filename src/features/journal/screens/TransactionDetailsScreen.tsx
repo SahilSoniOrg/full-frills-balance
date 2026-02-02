@@ -112,6 +112,7 @@ export default function TransactionDetailsScreen() {
                 variant="clear"
                 size={Typography.sizes.xl}
                 iconColor={theme.text}
+                testID="copy-button"
             />
             <IconButton
                 name="edit"
@@ -119,6 +120,7 @@ export default function TransactionDetailsScreen() {
                 variant="clear"
                 size={Typography.sizes.xl}
                 iconColor={theme.text}
+                testID="edit-button"
             />
             <IconButton
                 name="delete"
@@ -126,6 +128,7 @@ export default function TransactionDetailsScreen() {
                 variant="clear"
                 size={Typography.sizes.xl}
                 iconColor={theme.error}
+                testID="delete-button"
             />
         </View>
     );

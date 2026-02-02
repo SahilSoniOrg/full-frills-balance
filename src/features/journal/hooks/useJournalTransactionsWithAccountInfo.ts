@@ -1,36 +1,21 @@
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { TransactionWithAccountInfo } from '@/src/types/domain';
-import { logger } from '@/src/utils/logger';
-import { useEffect, useState } from 'react';
+import { useObservable } from '@/src/hooks/useObservable';
 
 /**
  * Hook to fetch transactions for a specific journal with account information
+ * This version is reactive and will update when transactions are modified.
  */
 export function useJournalTransactionsWithAccountInfo(journalId: string | null) {
-    const [transactions, setTransactions] = useState<TransactionWithAccountInfo[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { data: transactions, isLoading } = useObservable(
+        () => {
+            return transactionRepository.observeByJournalWithAccountInfo(journalId || '');
+        },
+        [journalId],
+        [] as any[]
+    );
 
-    useEffect(() => {
-        if (!journalId) {
-            setTransactions([]);
-            setIsLoading(false);
-            return;
-        }
-
-        const loadTransactions = async () => {
-            try {
-                setIsLoading(true);
-                const data = await transactionRepository.findByJournalWithAccountInfo(journalId);
-                setTransactions(data);
-            } catch (error) {
-                logger.error('Failed to load journal transactions:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadTransactions();
-    }, [journalId]);
-
-    return { transactions, isLoading };
+    return {
+        transactions,
+        isLoading: !journalId ? false : isLoading
+    };
 }

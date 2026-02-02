@@ -43,13 +43,13 @@ test.describe('User Journey: Visuals & Accessibility', () => {
     test('Filtering Journal by keyword', async ({ page }) => {
         await clickPlusButton(page);
         await page.getByTestId('amount-input').first().fill('10');
-        await page.getByPlaceholder(/What is this for/i).fill('Pizza');
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('description-input').fill('Pizza');
+        await page.getByTestId('save-button').click();
 
         await clickPlusButton(page);
         await page.getByTestId('amount-input').first().fill('20');
-        await page.getByPlaceholder(/What is this for/i).fill('Burger');
-        await page.getByText('Save', { exact: true }).click({ force: true });
+        await page.getByTestId('description-input').fill('Burger');
+        await page.getByTestId('save-button').click();
 
         await page.goto('/(tabs)/journal');
         const searchInput = page.getByPlaceholder(/Search|Filter/i);
