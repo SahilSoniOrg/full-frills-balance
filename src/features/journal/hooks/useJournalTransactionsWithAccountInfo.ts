@@ -1,5 +1,5 @@
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useObservable } from '@/src/hooks/useObservable';
+import { transactionService } from '@/src/services/TransactionService';
 
 /**
  * Hook to fetch transactions for a specific journal with account information
@@ -8,7 +8,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 export function useJournalTransactionsWithAccountInfo(journalId: string | null) {
     const { data: transactions, isLoading } = useObservable(
         () => {
-            return transactionRepository.observeByJournalWithAccountInfo(journalId || '');
+            return transactionService.observeTransactionsWithAccountInfo(journalId || '');
         },
         [journalId],
         [] as any[]

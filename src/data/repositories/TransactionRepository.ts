@@ -1,8 +1,7 @@
 import { database } from '@/src/data/database/Database'
 import Transaction from '@/src/data/models/Transaction'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
-import { AccountType, TransactionType, TransactionWithAccountInfo } from '@/src/types/domain'
-import { isBalanceIncrease, isValueEntering } from '@/src/utils/accounting-utils'
+import { TransactionType } from '@/src/types/domain'
 import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
@@ -59,104 +58,13 @@ export class TransactionRepository {
    * @param journalId Journal ID to fetch transactions for
    * @returns Array of transactions with account information
    */
-  async findByJournalWithAccountInfo(journalId: string): Promise<TransactionWithAccountInfo[]> {
-    // Get transactions for the journal
-    const transactions = await this.transactions
-      .query(
-        Q.and(
-          Q.where('journal_id', journalId),
-          Q.where('deleted_at', Q.eq(null))
-        )
-      )
-      .extend(Q.sortBy('created_at', 'asc')) // Use creation order within journal
-      .fetch()
 
-    // Get unique account IDs to fetch account information
-    const accountIds = [...new Set(transactions.map(tx => tx.accountId))]
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { accountRepository } = require('./AccountRepository')
-    const accounts = await Promise.all(
-      accountIds.map(id => accountRepository.find(id))
-    )
-
-    // Create account lookup map
-    const accountMap = new Map(
-      accounts.filter(Boolean).map(acc => [acc!.id, acc!])
-    )
-
-    // Build read model with account information and running balance
-    return transactions.map(tx => {
-      const account = accountMap.get(tx.accountId)
-      const flowDirection = isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT'
-      const balanceImpact = isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE'
-
-      return {
-        id: tx.id,
-        amount: tx.amount,
-        transactionType: tx.transactionType,
-        currencyCode: tx.currencyCode,
-        transactionDate: tx.transactionDate, // Keep for display, but journalDate determines ordering
-        notes: tx.notes,
-        accountId: tx.accountId,
-        exchangeRate: tx.exchangeRate,
-        accountName: account?.name || 'Unknown Account',
-        accountType: account?.accountType as AccountType, // Fallback for safety
-        flowDirection,
-        balanceImpact,
-        createdAt: tx.createdAt,
-        updatedAt: tx.updatedAt,
-      } as TransactionWithAccountInfo
-    })
-  }
 
   /**
    * Reactive version of findByJournalWithAccountInfo
    * @param journalId Journal ID to observe
    */
-  observeByJournalWithAccountInfo(journalId: string) {
-    const { switchMap } = require('rxjs/operators');
-    const { from } = require('rxjs');
 
-    return this.transactions
-      .query(
-        Q.and(
-          Q.where('journal_id', journalId),
-          Q.where('deleted_at', Q.eq(null))
-        )
-      )
-      .extend(Q.sortBy('created_at', 'asc'))
-      .observe()
-      .pipe(
-        switchMap((txs: Transaction[]) => {
-          return from((async () => {
-            const accountIds = [...new Set(txs.map(t => t.accountId))]
-            const { accountRepository } = require('./AccountRepository')
-            const accounts = await Promise.all(accountIds.map(id => accountRepository.find(id)))
-            const accountMap = new Map(accounts.filter(Boolean).map(a => [a!.id, a!]))
-
-            return txs.map(tx => {
-              const account = accountMap.get(tx.accountId)
-              return {
-                id: tx.id,
-                amount: tx.amount,
-                transactionType: tx.transactionType,
-                currencyCode: tx.currencyCode,
-                transactionDate: tx.transactionDate,
-                notes: tx.notes,
-                accountId: tx.accountId,
-                exchangeRate: tx.exchangeRate,
-                accountName: account?.name || 'Unknown Account',
-                accountType: account?.accountType as AccountType,
-                flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
-                balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE',
-                createdAt: tx.createdAt,
-                updatedAt: tx.updatedAt,
-              } as TransactionWithAccountInfo
-            })
-          })());
-        })
-      )
-  }
 
   /**
    * Rebuilds running balances for an account
@@ -280,6 +188,22 @@ export class TransactionRepository {
       .extend(Q.sortBy('transaction_date', 'desc'))
       .extend(Q.sortBy('created_at', 'desc'))
       .fetch()
+  }
+
+  /**
+   * Observe transactions for a specific journal
+   */
+  observeByJournal(journalId: string) {
+    return this.transactions
+      .query(
+        Q.and(
+          Q.where('journal_id', journalId),
+          Q.where('deleted_at', Q.eq(null))
+        )
+      )
+      .extend(Q.sortBy('transaction_date', 'asc'))
+      .extend(Q.sortBy('created_at', 'asc'))
+      .observe()
   }
 
   /**

@@ -1,7 +1,7 @@
 import { AppText, Badge } from '@/src/components/core';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { useAccounts } from '@/src/features/accounts';
-import { AccountSelector } from '@/src/features/journal';
+import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
 import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';

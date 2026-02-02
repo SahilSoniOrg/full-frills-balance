@@ -1,8 +1,10 @@
-import { AppButton, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { AppButton, AppCard, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountType } from '@/src/data/models/Account';
+import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
+import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccount, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useCurrencies } from '@/src/hooks/use-currencies';
@@ -13,7 +15,7 @@ import { logger } from '@/src/utils/logger';
 import { sanitizeInput, validateAccountName } from '@/src/utils/validation';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function AccountCreationScreen() {
     const router = useRouter()
@@ -45,7 +47,6 @@ export default function AccountCreationScreen() {
     const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType())
     const [selectedCurrency, setSelectedCurrency] = useState<string>(defaultCurrency || AppConfig.defaultCurrency)
     const [initialBalance, setInitialBalance] = useState('')
-    const [showCurrencyModal, setShowCurrencyModal] = useState(false)
     const [isCreating, setIsCreating] = useState(false)
     const [hasExistingAccounts, setHasExistingAccounts] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
@@ -163,13 +164,7 @@ export default function AccountCreationScreen() {
         }
     }
 
-    const accountTypes = [
-        { key: AccountType.ASSET, label: 'Asset' },
-        { key: AccountType.LIABILITY, label: 'Liability' },
-        { key: AccountType.EQUITY, label: 'Equity' },
-        { key: AccountType.INCOME, label: 'Income' },
-        { key: AccountType.EXPENSE, label: 'Expense' },
-    ]
+
 
     return (
         <Screen
@@ -222,66 +217,19 @@ export default function AccountCreationScreen() {
 
                     <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
                         <AppText variant="body" style={styles.label}>Account Type</AppText>
-                        <View style={styles.accountTypeContainer}>
-                            {accountTypes.map((type) => (
-                                <TouchableOpacity
-                                    key={type.key}
-                                    style={[
-                                        styles.accountTypeButton,
-                                        accountType === type.key && styles.accountTypeButtonSelected,
-                                        {
-                                            borderColor: theme.border,
-                                            backgroundColor: accountType === type.key
-                                                ? theme.primary
-                                                : theme.surface,
-                                            opacity: Opacity.solid
-                                        }
-                                    ]}
-                                    onPress={() => setAccountType(type.key as AccountType)}
-                                >
-                                    <AppText
-                                        variant="body"
-                                        style={[
-                                            styles.accountTypeText,
-                                            accountType === type.key && styles.accountTypeTextSelected,
-                                            {
-                                                color: accountType === type.key
-                                                    ? theme.pureInverse
-                                                    : theme.text
-                                            }
-                                        ]}
-                                    >
-                                        {type.label}
-                                    </AppText>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                        <AccountTypeSelector
+                            value={accountType}
+                            onChange={setAccountType}
+                        />
                     </AppCard>
 
                     <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
                         <AppText variant="body" style={styles.label}>Currency{isEditMode && ' (cannot be changed)'}</AppText>
-                        <TouchableOpacity
-                            style={[
-                                styles.input,
-                                {
-                                    borderColor: theme.border,
-                                    backgroundColor: theme.surface,
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    opacity: isEditMode ? Opacity.medium : Opacity.solid
-                                }
-                            ]}
-                            onPress={() => !isEditMode && setShowCurrencyModal(true)}
+                        <CurrencySelector
+                            selectedCurrency={selectedCurrency}
+                            onSelect={setSelectedCurrency}
                             disabled={isEditMode}
-                        >
-                            <AppText variant="body">
-                                {currencies.find(c => c.code === selectedCurrency)?.name || selectedCurrency}
-                            </AppText>
-                            <AppText variant="body" color="secondary">
-                                {selectedCurrency} {currencies.find(c => c.code === selectedCurrency)?.symbol}
-                            </AppText>
-                        </TouchableOpacity>
+                        />
                     </AppCard>
 
                     <AppButton
@@ -296,49 +244,6 @@ export default function AccountCreationScreen() {
                     <View style={{ height: Spacing.xxxl }} />
                 </ScrollView>
             </KeyboardAvoidingView>
-
-            <Modal
-                visible={showCurrencyModal}
-                animationType="slide"
-                transparent
-                onRequestClose={() => setShowCurrencyModal(false)}
-            >
-                <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
-                    <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
-                        <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-                            <AppText variant="heading">Select Currency</AppText>
-                            <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
-                                <AppIcon name="close" size={Typography.sizes.xxl} color={theme.text} />
-                            </TouchableOpacity>
-                        </View>
-                        <FlatList
-                            data={currencies}
-                            keyExtractor={(item) => item.code}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[
-                                        styles.currencyItem,
-                                        { borderBottomColor: theme.border },
-                                        selectedCurrency === item.code && { backgroundColor: theme.primaryLight }
-                                    ]}
-                                    onPress={() => {
-                                        setSelectedCurrency(item.code)
-                                        setShowCurrencyModal(false)
-                                    }}
-                                >
-                                    <View>
-                                        <AppText variant="body">{item.name}</AppText>
-                                        <AppText variant="caption" color="secondary">
-                                            {item.code}
-                                        </AppText>
-                                    </View>
-                                    <AppText variant="subheading">{item.symbol}</AppText>
-                                </TouchableOpacity>
-                            )}
-                        />
-                    </View>
-                </View>
-            </Modal>
         </Screen>
     )
 }
@@ -365,62 +270,8 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.sm,
         fontFamily: Typography.fonts.semibold,
     },
-    input: {
-        borderWidth: 1,
-        borderRadius: Shape.radius.r3,
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        fontSize: Typography.sizes.base,
-        minHeight: 48,
-    },
-    accountTypeContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: Spacing.sm,
-    },
-    accountTypeButton: {
-        borderWidth: 1,
-        borderRadius: Shape.radius.full,
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        minWidth: 96,
-    },
-    accountTypeButtonSelected: {
-        borderWidth: 2,
-    },
-    accountTypeText: {
-        textAlign: 'center',
-        fontFamily: Typography.fonts.medium,
-    },
-    accountTypeTextSelected: {
-        fontFamily: Typography.fonts.bold,
-    },
     createButton: {
         marginTop: Spacing.xl,
-    },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        height: '70%',
-        borderTopLeftRadius: Shape.radius.r1,
-        borderTopRightRadius: Shape.radius.r1,
-        overflow: 'hidden',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: Spacing.lg,
-        borderBottomWidth: 1,
-    },
-    currencyItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: Spacing.lg,
-        borderBottomWidth: 1,
     },
     errorContainer: {
         padding: Spacing.md,

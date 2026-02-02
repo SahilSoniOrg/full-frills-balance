@@ -4,7 +4,7 @@
  * Handles loading state and renders JournalListScreen content.
  */
 import { useUI } from '@/src/contexts/UIContext';
-import { JournalListScreen } from '@/src/features/journal';
+import { JournalListScreen } from '@/src/features/journal/list/JournalListScreen';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 

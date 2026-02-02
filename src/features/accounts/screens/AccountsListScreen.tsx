@@ -3,7 +3,7 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
-import { useSummary } from '@/src/features/dashboard';
+import { useSummary } from '@/src/features/dashboard/hooks/useSummary';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountSections } from '@/src/utils/accountUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';

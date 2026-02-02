@@ -3,7 +3,8 @@ import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { AppText, FloatingActionButton, SearchField } from '@/src/components/core';
 import { Opacity, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { NetWorthCard, useSummary } from '@/src/features/dashboard';
+import { NetWorthCard } from '@/src/features/dashboard/components/NetWorthCard';
+import { useSummary } from '@/src/features/dashboard/hooks/useSummary';
 import { DashboardSummary } from '@/src/features/journal/components/DashboardSummary';
 import { JournalCard } from '@/src/features/journal/components/JournalCard';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
@@ -42,9 +43,7 @@ export function JournalListScreen() {
         setIsDashboardHidden(isPrivacyMode)
     }, [isPrivacyMode])
 
-    // WORKAROUND: FlashList 2.0.2 types are currently incompatible with React 19/RN 0.81 JSX checks.
-    // We use 'any' here to unblock the build while keeping the core logic intact.
-    const TypedFlashList = FlashList as any
+
 
     const handleJournalPress = (journal: EnrichedJournal) => {
         router.push(`/transaction-details?journalId=${journal.id}`);
@@ -60,6 +59,10 @@ export function JournalListScreen() {
         );
     });
 
+
+    // WORKAROUND: FlashList 2.0.2 types are currently incompatible with React 19/RN 0.81 JSX checks.
+    // We use 'any' here to unblock the build while keeping the core logic intact.
+    const TypedFlashList = FlashList as any
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>

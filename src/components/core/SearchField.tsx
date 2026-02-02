@@ -1,4 +1,4 @@
-import { AppIcon } from '@/src/components/core';
+import { AppIcon } from '@/src/components/core/AppIcon';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
