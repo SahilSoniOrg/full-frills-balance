@@ -4,7 +4,7 @@ import {
     validateAccountName,
     validateCurrencyCode,
     validateDescription
-} from '../validation';
+} from '@/src/utils/validation';
 
 describe('validation', () => {
     describe('sanitizeInput', () => {

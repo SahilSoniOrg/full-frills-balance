@@ -3,8 +3,8 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { ReportService } from '@/src/services/report-service';
 import dayjs from 'dayjs';
-import { ReportService } from '../report-service';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');

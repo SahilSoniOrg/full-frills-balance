@@ -1,8 +1,8 @@
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { accountingService } from '@/src/services/AccountingService';
+import { JournalEntryService } from '@/src/services/journal-entry-service';
 import { logger } from '@/src/utils/logger';
-import { JournalEntryService } from '../journal-entry-service';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/JournalRepository');

@@ -20,4 +20,7 @@ module.exports = {
         'idGenerator$': '<rootDir>/src/data/database/idGenerator.ts',
         '^@/src/(.*)$': '<rootDir>/src/$1',
     },
+    setupFiles: [
+        '<rootDir>/jest.platform-mock.js'
+    ],
 };

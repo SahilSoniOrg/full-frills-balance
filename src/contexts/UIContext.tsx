@@ -59,7 +59,7 @@ interface UIContextType extends UIState {
   requireRestart: (stats?: { accounts: number; journals: number; transactions: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] }) => void
 }
 
-const UIContext = createContext<UIContextType | undefined>(undefined)
+export const UIContext = createContext<UIContextType | undefined>(undefined)
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme()

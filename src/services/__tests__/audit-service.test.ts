@@ -1,6 +1,6 @@
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { auditService } from '../audit-service';
+import { auditService } from '@/src/services/audit-service';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AuditRepository');

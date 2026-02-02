@@ -1,5 +1,5 @@
+import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { act, renderHook } from '@testing-library/react-native';
-import { useDateRangeFilter } from '../useDateRangeFilter';
 
 describe('useDateRangeFilter', () => {
     beforeEach(() => {

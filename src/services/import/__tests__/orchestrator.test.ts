@@ -1,7 +1,7 @@
+import * as Orchestrator from '@/src/services/import/orchestrator';
 import * as FileSystem from 'expo-file-system/legacy';
 import JSZip from 'jszip';
 import { Platform } from 'react-native';
-import * as Orchestrator from '../orchestrator';
 
 // Mock dependencies
 jest.mock('expo-file-system/legacy');

@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
+import { exportService } from '@/src/services/export-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { exportService } from '../export-service';
 
 // Mock dependencies
 jest.mock('@/src/data/database/Database');

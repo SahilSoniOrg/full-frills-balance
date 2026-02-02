@@ -17,7 +17,7 @@ import {
     getStartOfMonth,
     getStartOfWeek,
     isDateInRange
-} from '../dateUtils';
+} from '@/src/utils/dateUtils';
 
 describe('dateUtils', () => {
     const mockTimestamp = new Date('2024-03-15T12:00:00Z').getTime();

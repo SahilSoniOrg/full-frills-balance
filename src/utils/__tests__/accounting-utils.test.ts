@@ -6,7 +6,7 @@ import {
     isValueEntering,
     isValueLeaving,
     validateBalance
-} from '../accounting-utils';
+} from '@/src/utils/accounting-utils';
 
 describe('accounting-utils', () => {
     describe('getBalanceImpactMultiplier', () => {

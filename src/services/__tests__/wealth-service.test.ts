@@ -1,6 +1,6 @@
 import { AccountType } from '@/src/data/models/Account';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { wealthService } from '../wealth-service';
+import { wealthService } from '@/src/services/wealth-service';
 
 // Mock dependencies
 jest.mock('@/src/services/exchange-rate-service');

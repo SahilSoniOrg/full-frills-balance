@@ -1,8 +1,8 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { journalEntryService } from '@/src/services/journal-entry-service';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
-import { useJournalEditor } from '../useJournalEditor';
 
 // Mock dependencies
 jest.mock('@/src/services/journal-entry-service');

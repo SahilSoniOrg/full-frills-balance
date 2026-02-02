@@ -1,6 +1,6 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { act, renderHook } from '@testing-library/react-native';
-import { useJournalActions } from '../useJournalActions';
 
 
 // Mock dependencies
