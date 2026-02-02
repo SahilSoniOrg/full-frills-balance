@@ -1,11 +1,17 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
-import { AppText, ExpandableSearchButton } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { AppIcon, AppText, ExpandableSearchButton } from '@/src/components/core';
+import { Size, Spacing } from '@/src/constants';
 import { NetWorthCard } from '@/src/features/dashboard/components/NetWorthCard';
 import { DashboardSummary } from '@/src/features/journal/components/DashboardSummary';
+import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange } from '@/src/utils/dateUtils';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { LayoutAnimation, Platform, StyleSheet, TouchableOpacity, UIManager, View } from 'react-native';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface DashboardHeaderProps {
     greeting: string;
@@ -42,6 +48,14 @@ export function DashboardHeader({
     navigatePrevious,
     navigateNext,
 }: DashboardHeaderProps) {
+    const { theme } = useTheme();
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    const handleToggleCollapse = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setIsCollapsed(!isCollapsed);
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.headerRow}>
@@ -52,6 +66,18 @@ export function DashboardHeader({
                 </View>
 
                 <View style={styles.headerActions}>
+                    <TouchableOpacity
+                        onPress={handleToggleCollapse}
+                        hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
+                        style={styles.collapseButton}
+                    >
+                        <AppIcon
+                            name={isCollapsed ? 'chevronDown' : 'chevronUp'}
+                            size={Size.sm}
+                            color={theme.textSecondary}
+                        />
+                    </TouchableOpacity>
+
                     <DateRangeFilter
                         range={dateRange}
                         onPress={showDatePicker}
@@ -69,20 +95,24 @@ export function DashboardHeader({
                 </View>
             </View>
 
-            <NetWorthCard
-                netWorth={netWorth}
-                totalAssets={totalAssets}
-                totalLiabilities={totalLiabilities}
-                isLoading={isSummaryLoading}
-                hidden={isDashboardHidden}
-                onToggleHidden={onToggleHidden}
-            />
+            {!isCollapsed && (
+                <>
+                    <NetWorthCard
+                        netWorth={netWorth}
+                        totalAssets={totalAssets}
+                        totalLiabilities={totalLiabilities}
+                        isLoading={isSummaryLoading}
+                        hidden={isDashboardHidden}
+                        onToggleHidden={onToggleHidden}
+                    />
 
-            <DashboardSummary
-                income={income}
-                expense={expense}
-                isHidden={isDashboardHidden}
-            />
+                    <DashboardSummary
+                        income={income}
+                        expense={expense}
+                        isHidden={isDashboardHidden}
+                    />
+                </>
+            )}
 
             <AppText variant="subheading" style={styles.sectionTitle}>
                 {searchQuery ? 'Search Results' : 'Recent Transactions'}
@@ -111,6 +141,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing.sm,
         flexShrink: 0,
+    },
+    collapseButton: {
+        padding: Spacing.xs,
     },
     dateFilter: {
         marginBottom: 0,
