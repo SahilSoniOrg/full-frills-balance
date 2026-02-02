@@ -1,7 +1,9 @@
 import { Page } from '@playwright/test';
 
 export class BasePage {
-    constructor(protected readonly page: Page) { }
+    constructor(public readonly page: Page) {
+        this.page.on('console', msg => console.log(`[Browser] ${msg.type()}: ${msg.text()}`));
+    }
 
     async goto(path: string = '/') {
         await this.page.goto(path);
@@ -65,5 +67,26 @@ export class BasePage {
 
     async waitForNavigation(timeout: number = 2000) {
         await this.page.waitForTimeout(timeout);
+    }
+
+    async switchToDashboard() {
+        console.log('Current URL:', this.page.url());
+        await this.page.locator('[role="tablist"]').getByText('Dashboard').click({ force: true });
+    }
+
+    async switchToAccounts() {
+        await this.page.locator('[role="tablist"]').getByText('Accounts').click({ force: true });
+    }
+
+    async switchToReports() {
+        await this.page.locator('[role="tablist"]').getByText('Reports').click({ force: true });
+    }
+
+    async switchToSettings() {
+        await this.page.locator('[role="tablist"]').getByText('Settings').click({ force: true });
+    }
+
+    async clickButton(text: string) {
+        await this.page.getByRole('button', { name: text, exact: true }).click({ force: true });
     }
 }

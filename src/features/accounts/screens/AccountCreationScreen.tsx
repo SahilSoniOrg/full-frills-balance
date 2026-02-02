@@ -12,7 +12,7 @@ import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { sanitizeInput, validateAccountName } from '@/src/utils/validation';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function AccountCreationScreen() {
@@ -72,10 +72,18 @@ export default function AccountCreationScreen() {
         }
     }
 
+    const isSubmitting = useRef(false)
+
     const handleSaveAccount = async () => {
+        if (isSubmitting.current) return
+        isSubmitting.current = true
+
+        logger.info(`[AccountCreation] handleSaveAccount for ${accountName}`)
         const nameValidation = validateAccountName(accountName)
         if (!nameValidation.isValid) {
+            logger.warn(`[AccountCreation] Validation failed: ${nameValidation.error}`)
             showErrorAlert(new ValidationError(nameValidation.error!))
+            isSubmitting.current = false
             return
         }
 
@@ -84,7 +92,9 @@ export default function AccountCreationScreen() {
         // Check for duplicates
         const existing = accounts.find(a => a.name.toLowerCase() === sanitizedName.toLowerCase());
         if (existing && existing.id !== accountId) {
+            logger.warn(`[AccountCreation] Duplicate found: ${sanitizedName}`)
             setFormError(`Account with name "${sanitizedName}" already exists`)
+            isSubmitting.current = false
             return
         }
         setFormError(null)
@@ -106,8 +116,10 @@ export default function AccountCreationScreen() {
                         `"${sanitizedName}" has been updated successfully!`
                     )
                 }
+                logger.info('[AccountCreation] Account updated, calling back()')
                 router.back()
             } else {
+                logger.info(`[AccountCreation] Creating account ${sanitizedName}...`)
                 await createAccount({
                     name: sanitizedName,
                     accountType: accountType,
@@ -132,13 +144,22 @@ export default function AccountCreationScreen() {
                 setSelectedCurrency(defaultCurrency || AppConfig.defaultCurrency)
                 setInitialBalance('')
 
-                router.push('/(tabs)/accounts' as any)
+                if (hasExistingAccounts) {
+                    if (router.canGoBack()) {
+                        router.back()
+                    } else {
+                        router.replace('/(tabs)/accounts' as any)
+                    }
+                } else {
+                    router.replace('/(tabs)/accounts' as any)
+                }
             }
         } catch (error) {
             logger.error('Error saving account:', error)
             showErrorAlert(error, isEditMode ? 'Failed to Update Account' : 'Failed to Create Account')
         } finally {
             setIsCreating(false)
+            isSubmitting.current = false
         }
     }
 
