@@ -3,21 +3,30 @@ import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange } from '@/src/utils/dateUtils';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface DateRangeFilterProps {
     range: DateRange | null;
     onPress: () => void;
     onPrevious?: () => void;
     onNext?: () => void;
+    style?: StyleProp<ViewStyle>;
+    showNavigationArrows?: boolean;
 }
 
-export function DateRangeFilter({ range, onPress, onPrevious, onNext }: DateRangeFilterProps) {
+export function DateRangeFilter({
+    range,
+    onPress,
+    onPrevious,
+    onNext,
+    style,
+    showNavigationArrows = true
+}: DateRangeFilterProps) {
     const { theme } = useTheme();
-    const showNavigation = !!(onPrevious && onNext);
+    const showNavigation = !!(onPrevious && onNext) && showNavigationArrows;
 
     return (
-        <View style={styles.wrapper}>
+        <View style={[styles.wrapper, style]}>
             {showNavigation && (
                 <TouchableOpacity
                     onPress={onPrevious}
@@ -67,19 +76,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     container: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
+        height: Size.xxl,
+        paddingHorizontal: Spacing.sm,
         borderRadius: Shape.radius.md,
-        gap: Spacing.sm,
+        gap: Spacing.xs,
     },
     text: {
         fontSize: Typography.sizes.sm,
         fontFamily: Typography.fonts.medium,
-        flex: 1,
-        textAlign: 'center',
     },
 });

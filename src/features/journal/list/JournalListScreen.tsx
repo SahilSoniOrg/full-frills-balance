@@ -1,11 +1,10 @@
-import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { AppText, FloatingActionButton, SearchField } from '@/src/components/core';
-import { Opacity, Spacing, Typography } from '@/src/constants';
+import { AppText, FloatingActionButton } from '@/src/components/core';
+import { Spacing } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { NetWorthCard } from '@/src/features/dashboard/components/NetWorthCard';
+// Direct import to avoid require cycle through dashboard/index.ts (which exports DashboardScreen)
+import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { useSummary } from '@/src/features/dashboard/hooks/useSummary';
-import { DashboardSummary } from '@/src/features/journal/components/DashboardSummary';
 import { JournalCard } from '@/src/features/journal/components/JournalCard';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -13,7 +12,7 @@ import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedJournal } from '@/src/types/domain';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function JournalListScreen() {
@@ -43,31 +42,65 @@ export function JournalListScreen() {
         setIsDashboardHidden(isPrivacyMode)
     }, [isPrivacyMode])
 
-
-
-    const handleJournalPress = (journal: EnrichedJournal) => {
+    const handleJournalPress = useCallback((journal: EnrichedJournal) => {
         router.push(`/transaction-details?journalId=${journal.id}`);
-    }
+    }, [router]);
+
+    const greeting = useMemo(() => `Hello, ${userName || 'there'}!`, [userName]);
 
     // Filter journals based on search query
-    const filteredJournals = journals.filter(j => {
-        if (!searchQuery) return true;
+    const filteredJournals = useMemo(() => {
+        if (!searchQuery) return journals;
         const q = searchQuery.toLowerCase();
-        return (
+        return journals.filter(j =>
             (j.description?.toLowerCase() || '').includes(q) ||
             (j.currencyCode.toLowerCase()).includes(q)
         );
-    });
-
+    }, [journals, searchQuery]);
 
     // WORKAROUND: FlashList 2.0.2 types are currently incompatible with React 19/RN 0.81 JSX checks.
     // We use 'any' here to unblock the build while keeping the core logic intact.
-    const TypedFlashList = FlashList as any
+    const TypedFlashList = FlashList as any;
+
+    const ListEmpty = useMemo(() => (
+        isLoading ? (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" />
+                <AppText variant="body" color="secondary" style={{ marginTop: Spacing.sm }}>
+                    Loading journals...
+                </AppText>
+            </View>
+        ) : (
+            <View style={styles.emptyContainer}>
+                <AppText variant="heading" style={styles.emptyText}>
+                    No transactions yet
+                </AppText>
+                <AppText
+                    variant="body"
+                    color="secondary"
+                    style={styles.emptySubtext}
+                >
+                    Tap the + button to add your first transaction
+                </AppText>
+            </View>
+        )
+    ), [isLoading]);
+
+    const ListFooter = useMemo(() => (
+        isLoadingMore ? (
+            <View style={styles.loadingMore}>
+                <ActivityIndicator size="small" />
+                <AppText variant="caption" color="secondary">
+                    Loading more...
+                </AppText>
+            </View>
+        ) : null
+    ), [isLoadingMore]);
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
             <TypedFlashList
-                data={journals}
+                data={filteredJournals}
                 renderItem={({ item }: { item: EnrichedJournal }) => (
                     <JournalCard
                         journal={item}
@@ -78,76 +111,26 @@ export function JournalListScreen() {
                 estimatedItemSize={120}
                 contentContainerStyle={styles.listContent}
                 ListHeaderComponent={
-                    <>
-                        <View style={{ marginBottom: Spacing.lg }}>
-                            <AppText variant="title">
-                                Hello, {userName || 'there'}!
-                            </AppText>
-                            <AppText variant="body" color="secondary">
-                                Here&apos;s your financial overview
-                            </AppText>
-                        </View>
-                        <NetWorthCard
-                            netWorth={netWorth}
-                            totalAssets={totalAssets}
-                            totalLiabilities={totalLiabilities}
-                            isLoading={isSummaryLoading}
-                            hidden={isDashboardHidden}
-                            onToggleHidden={setIsDashboardHidden}
-                        />
-                        <DashboardSummary
-                            income={income}
-                            expense={expense}
-                            isHidden={isDashboardHidden}
-                        />
-                        <SearchField
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                        <DateRangeFilter
-                            range={dateRange}
-                            onPress={showDatePicker}
-                            onPrevious={navigatePrevious}
-                            onNext={navigateNext}
-                        />
-                        <AppText variant="subheading" style={styles.sectionTitle}>
-                            {searchQuery ? 'Search Results' : 'Recent Transactions'}
-                        </AppText>
-                    </>
+                    <DashboardHeader
+                        greeting={greeting}
+                        netWorth={netWorth}
+                        totalAssets={totalAssets}
+                        totalLiabilities={totalLiabilities}
+                        isSummaryLoading={isSummaryLoading}
+                        isDashboardHidden={isDashboardHidden}
+                        onToggleHidden={setIsDashboardHidden}
+                        income={income}
+                        expense={expense}
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        dateRange={dateRange}
+                        showDatePicker={showDatePicker}
+                        navigatePrevious={navigatePrevious}
+                        navigateNext={navigateNext}
+                    />
                 }
-                ListEmptyComponent={
-                    isLoading ? (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="small" />
-                            <AppText variant="body" color="secondary" style={{ marginTop: Spacing.sm }}>
-                                Loading journals...
-                            </AppText>
-                        </View>
-                    ) : (
-                        <View style={styles.emptyContainer}>
-                            <AppText variant="heading" style={styles.emptyText}>
-                                No transactions yet
-                            </AppText>
-                            <AppText
-                                variant="body"
-                                color="secondary"
-                                style={styles.emptySubtext}
-                            >
-                                Tap the + button to add your first transaction
-                            </AppText>
-                        </View>
-                    )
-                }
-                ListFooterComponent={
-                    isLoadingMore ? (
-                        <View style={styles.loadingMore}>
-                            <ActivityIndicator size="small" />
-                            <AppText variant="caption" color="secondary">
-                                Loading more...
-                            </AppText>
-                        </View>
-                    ) : null
-                }
+                ListEmptyComponent={ListEmpty}
+                ListFooterComponent={ListFooter}
                 onEndReached={!searchQuery ? loadMore : undefined}
                 onEndReachedThreshold={0.5}
             />
@@ -171,10 +154,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    sectionTitle: {
-        marginBottom: Spacing.md,
-        marginTop: Spacing.sm,
-    },
     listContent: {
         padding: Spacing.lg,
     },
@@ -190,13 +169,9 @@ const styles = StyleSheet.create({
         paddingTop: Spacing.xxxxl * 2,
     },
     emptyText: {
-        fontSize: Typography.sizes.lg,
-        fontFamily: Typography.fonts.bold,
         marginBottom: Spacing.sm,
     },
     emptySubtext: {
-        fontSize: Typography.sizes.sm,
-        opacity: Opacity.medium,
         textAlign: 'center',
     },
     loadingMore: {
