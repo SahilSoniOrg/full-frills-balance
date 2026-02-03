@@ -1,7 +1,7 @@
 import { AppIcon, AppText } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
 import { Spacing } from '@/src/constants'
-import { AuditLogItem, type AuditLogEntry } from '@/src/features/audit/components/AuditLogItem'
+import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem'
 import { useAuditAccounts } from '@/src/features/audit/hooks/useAuditData'
 import { useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs'
 import { useTheme } from '@/src/hooks/use-theme'
@@ -17,6 +17,8 @@ export default function AuditLogScreen() {
 
     const { accountMap, isLoading: accountsLoading } = useAuditAccounts();
     const { logs, isLoading } = useAuditLogs({ entityType, entityId });
+
+    const isFiltered = !!entityId;
 
     const toggleExpanded = (id: string) => {
         setExpandedIds(prev => {

@@ -9,8 +9,8 @@ import { Stack } from '@/src/components/core/Stack';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
-import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { FlashList } from '@shopify/flash-list';
@@ -58,6 +58,10 @@ export const SimpleForm = ({
     const expenseAccounts = accounts.filter(a => a.accountType === AccountType.EXPENSE);
     const incomeAccounts = accounts.filter(a => a.accountType === AccountType.INCOME);
 
+    console.log('[SimpleForm] All accounts:', accounts.map(a => `${a.name} (${a.accountType})`));
+    console.log('[SimpleForm] Transaction accounts:', transactionAccounts.map(a => `${a.name}`));
+    console.log('[SimpleForm] Expense accounts:', expenseAccounts.map(a => `${a.name}`));
+
     const [type, setType] = useState<TabType>(initialType);
     const [amount, setAmount] = useState(initialAmount);
     const [sourceId, setSourceId] = useState<string>(initialSourceId);
@@ -88,7 +92,7 @@ export const SimpleForm = ({
             return;
         }
 
-        const fetchRate = async () => {
+        const updateExchangeRate = async () => {
             setIsLoadingRate(true);
             setRateError(null);
             try {
@@ -107,7 +111,7 @@ export const SimpleForm = ({
             }
         };
 
-        fetchRate();
+        updateExchangeRate();
     }, [sourceId, destinationId, sourceCurrency, destCurrency, isCrossCurrency]);
 
     useEffect(() => {
@@ -194,6 +198,32 @@ export const SimpleForm = ({
 
         setIsSubmitting(true);
         try {
+            // Calculate cross-currency values if needed
+            let destAmount = numAmount;
+            let destRate = undefined;
+
+            if (isCrossCurrency && exchangeRate) {
+                // 1. Get destination currency precision
+                const precision = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: destCurrency || 'USD'
+                }).resolvedOptions().maximumFractionDigits;
+
+                // 2. Calculate rounded destination amount
+                // We must round FIRST, then calculate the rate that gets us back to source amount
+                // otherwise the journal won't balance due to rounding errors
+                const rawDestAmount = numAmount * exchangeRate;
+                const roundedDestAmount = parseFloat(rawDestAmount.toFixed(precision));
+
+                if (roundedDestAmount <= 0) {
+                    throw new Error("Converted amount is too small to process");
+                }
+
+                destAmount = roundedDestAmount;
+                // 3. Calculate the implied rate that validates: Dest * Rate = Source
+                destRate = numAmount / roundedDestAmount;
+            }
+
             const entryData: any = {
                 journalDate: new Date(`${journalDate}T${journalTime}`).getTime(),
                 description: description || undefined,
@@ -207,10 +237,10 @@ export const SimpleForm = ({
                     },
                     {
                         accountId: destinationId,
-                        amount: numAmount,
+                        amount: destAmount,
                         transactionType: 'DEBIT',
                         notes: description,
-                        exchangeRate: exchangeRate || undefined
+                        exchangeRate: destRate
                     }
                 ]
             };
@@ -236,6 +266,7 @@ export const SimpleForm = ({
             onSuccess();
         } catch (error) {
             logger.error('Failed to save:', error);
+            // Ideally show a toast here, but for now we log
         } finally {
             setIsSubmitting(false);
         }
@@ -254,10 +285,9 @@ export const SimpleForm = ({
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         // @ts-ignore: estimatedItemSize missing in v2 types
-                        estimatedItemSize={200}
-                        extraData={selectedId}
                         renderItem={({ item: account }) => (
                             <TouchableOpacity
+                                testID={`account-option-${account.name.replace(/\s+/g, '-')}`}
                                 style={[
                                     styles.accountCard,
                                     { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
@@ -321,6 +351,7 @@ export const SimpleForm = ({
                 {(['expense', 'income', 'transfer'] as const).map(t => (
                     <TouchableOpacity
                         key={t}
+                        testID={`tab-${t}`}
                         style={[
                             styles.typeTab,
                             type === t && { backgroundColor: theme.surface, ...Shape.elevation.sm }

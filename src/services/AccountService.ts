@@ -23,13 +23,16 @@ export class AccountService {
      * Creates a new account, handles audit logging, and sets up initial balance if needed.
      */
     async createAccount(data: CreateAccountData): Promise<Account> {
+        // Default order to end of list
+        const orderNum = data.orderNum ?? await accountRepository.countNonDeleted();
+
         // 1. Create account
         const account = await accountRepository.create({
             name: data.name,
             accountType: data.accountType as AccountType,
             currencyCode: data.currencyCode,
             description: data.description,
-            orderNum: data.orderNum,
+            orderNum: orderNum,
             parentAccountId: data.parentAccountId
         });
 
