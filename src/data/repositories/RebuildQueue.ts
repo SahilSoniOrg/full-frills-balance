@@ -11,11 +11,15 @@ import { logger } from '@/src/utils/logger'
 interface RebuildQueueConfig {
     debounceMs: number
     maxBatchSize: number
+    retryLimit: number
+    retryDelayMs: number
 }
 
 const DEFAULT_CONFIG: RebuildQueueConfig = {
     debounceMs: process.env.NODE_ENV === 'test' ? 0 : 500,
     maxBatchSize: 10,
+    retryLimit: 3,
+    retryDelayMs: process.env.NODE_ENV === 'test' ? 0 : 2000,
 }
 
 
@@ -25,6 +29,7 @@ class RebuildQueueService {
     private isProcessing: boolean = false
     private currentProcessingPromise: Promise<void> | null = null
     private config: RebuildQueueConfig
+    private retryCounts: Map<string, number> = new Map()
 
     constructor(config: Partial<RebuildQueueConfig> = {}) {
         this.config = { ...DEFAULT_CONFIG, ...config }
@@ -84,6 +89,7 @@ class RebuildQueueService {
             this.timeoutId = null
         }
         this.queue.clear()
+        this.retryCounts.clear()
     }
 
     /**
@@ -144,10 +150,35 @@ class RebuildQueueService {
                 )
 
                 // Log any failures
-                const failures = results.filter(r => r.status === 'rejected')
+                const failures = results
+                    .map((result, index) => ({ result, item: batch[index] }))
+                    .filter(entry => entry.result.status === 'rejected')
+
                 if (failures.length > 0) {
                     logger.warn(`[RebuildQueue] ${failures.length}/${batch.length} rebuilds failed`)
+
+                    for (const failure of failures) {
+                        const { item } = failure
+                        const retryCount = (this.retryCounts.get(item.id) || 0) + 1
+                        this.retryCounts.set(item.id, retryCount)
+
+                        if (retryCount <= this.config.retryLimit) {
+                            const delay = this.config.retryDelayMs * retryCount
+                            setTimeout(() => {
+                                this.enqueue(item.id, item.fromDate)
+                            }, delay)
+                        } else {
+                            logger.error(`[RebuildQueue] Giving up on account ${item.id} after ${retryCount} attempts`)
+                        }
+                    }
                 }
+
+                // Clear retry counts for successes
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled') {
+                        this.retryCounts.delete(batch[index].id)
+                    }
+                })
 
                 logger.debug(`[RebuildQueue] Batch complete. ${this.queue.size} remaining in queue.`)
 

@@ -140,12 +140,56 @@ export class AccountRepository {
 
   /**
    * Gets balances for all accounts in batch
-   * Optimized to avoid fetching all transactions
+   * Optimized: queries only the latest transaction per account (not all transactions)
    */
   async getAccountBalances(asOfDate?: number): Promise<AccountBalance[]> {
     const accounts = await this.findAll()
-    // Process in parallel
-    return Promise.all(accounts.map(acc => this.getAccountBalance(acc.id, asOfDate)))
+    if (accounts.length === 0) return []
+
+    const cutoffDate = asOfDate ?? Date.now()
+
+    // Query each account's latest transaction in parallel (1 tx per account max)
+    const balancePromises = accounts.map(async (account): Promise<AccountBalance> => {
+      // Get latest transaction for this account
+      const latestTxs = await this.transactions
+        .query(
+          Q.on('journals', Q.and(
+            Q.where('status', JournalStatus.POSTED),
+            Q.where('deleted_at', Q.eq(null))
+          )),
+          Q.where('account_id', account.id),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('transaction_date', Q.lte(cutoffDate))
+        )
+        .extend(Q.sortBy('transaction_date', 'desc'))
+        .extend(Q.sortBy('created_at', 'desc'))
+        .extend(Q.take(1))
+        .fetch()
+
+      // Get transaction count (fast count query)
+      const transactionCount = await this.transactions
+        .query(
+          Q.on('journals', Q.and(
+            Q.where('status', JournalStatus.POSTED),
+            Q.where('deleted_at', Q.eq(null))
+          )),
+          Q.where('account_id', account.id),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('transaction_date', Q.lte(cutoffDate))
+        )
+        .fetchCount()
+
+      return {
+        accountId: account.id,
+        balance: latestTxs.length > 0 ? (latestTxs[0].runningBalance || 0) : 0,
+        currencyCode: account.currencyCode,
+        transactionCount,
+        asOfDate: cutoffDate,
+        accountType: account.accountType
+      }
+    })
+
+    return Promise.all(balancePromises)
   }
 
   /**
@@ -361,7 +405,7 @@ export class AccountRepository {
     })
 
     await auditRepository.log({
-      entityType: 'Account',
+      entityType: 'account',
       entityId: account.id,
       action: AuditAction.UPDATE,
       changes: { orderNum: newOrderNum }
@@ -390,9 +434,10 @@ export class AccountRepository {
   }
 
   async recover(accountId: string): Promise<void> {
-    await this.db.write(async () => {
-      const account = await this.accounts.find(accountId)
+    const account = await this.accounts.find(accountId)
+    const accountName = account.name
 
+    await this.db.write(async () => {
       // Clear deletion status and timestamp in raw record
       const raw = {
         ...(account as any)._raw,
@@ -403,17 +448,17 @@ export class AccountRepository {
       // Bypasses Model level restrictions by going to the adapter directly.
       // Cast to any to handle potential signature variations across adapters.
       await (this.db.adapter.batch as any)([['update', 'accounts', raw]])
+    })
 
-      // Log recovery
-      await auditRepository.log({
-        entityType: 'account',
-        entityId: accountId,
-        action: AuditAction.UPDATE,
-        changes: {
-          action: 'RECOVERED',
-          name: account.name
-        }
-      })
+    // Log recovery outside the write transaction
+    await auditRepository.log({
+      entityType: 'account',
+      entityId: accountId,
+      action: AuditAction.UPDATE,
+      changes: {
+        action: 'RECOVERED',
+        name: accountName
+      }
     })
   }
 }

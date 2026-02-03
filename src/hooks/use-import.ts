@@ -25,6 +25,7 @@ export function useImport() {
     const [isImporting, setIsImporting] = useState(false);
 
     const handleImport = async (expectedType?: ImportFormat) => {
+        let didSetImporting = false;
         try {
             const result = await DocumentPicker.getDocumentAsync({
                 type: [
@@ -57,6 +58,7 @@ export function useImport() {
             if (!proceed) return;
 
             setIsImporting(true);
+            didSetImporting = true;
 
             // 1. Read file as bytes
             let rawBytes = await readFileAsBytes(file.uri);
@@ -93,7 +95,6 @@ export function useImport() {
                             );
                         });
                     if (!confirmMismatch) {
-                        setIsImporting(false);
                         return;
                     }
                 }
@@ -117,7 +118,10 @@ export function useImport() {
         } catch (error) {
             logger.error('[useImport] Import failed', error);
             Alert.alert('Import Failed', 'Could not parse or import the selected file.');
-            setIsImporting(false);
+        } finally {
+            if (didSetImporting) {
+                setIsImporting(false);
+            }
         }
     };
 

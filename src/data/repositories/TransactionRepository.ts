@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database'
+import { JournalStatus } from '@/src/data/models/Journal'
 import Transaction from '@/src/data/models/Transaction'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { TransactionType } from '@/src/types/domain'
@@ -244,14 +245,14 @@ export class TransactionRepository {
    * Soft deletes a transaction
    */
   async delete(transaction: Transaction): Promise<void> {
-    return database.write(async () => {
+    await database.write(async () => {
       await transaction.update((t) => {
         t.deletedAt = new Date()
       })
-
-      // Trigger rebuild for balance integrity
-      await this.rebuildRunningBalances(transaction.accountId)
     })
+
+    // Trigger rebuild for balance integrity outside the write transaction.
+    await this.rebuildRunningBalances(transaction.accountId)
   }
 
   /**
@@ -264,6 +265,10 @@ export class TransactionRepository {
   ): Promise<Transaction | null> {
     const transactions = await this.transactions
       .query(
+        Q.on('journals', Q.and(
+          Q.where('status', JournalStatus.POSTED),
+          Q.where('deleted_at', Q.eq(null))
+        )),
         Q.where('account_id', accountId),
         Q.where('transaction_date', Q.lt(date)),
         Q.where('deleted_at', Q.eq(null)),
