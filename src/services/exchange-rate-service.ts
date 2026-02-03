@@ -23,6 +23,7 @@ const CACHE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 export class ExchangeRateService {
     private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> = new Map()
+    private inFlightRequests: Map<string, Promise<Record<string, number>>> = new Map()
 
     /**
      * Get exchange rate, using cache if available and recent
@@ -31,6 +32,11 @@ export class ExchangeRateService {
         // Same currency = rate of 1
         if (fromCurrency === toCurrency) {
             return 1.0
+        }
+
+        // Validate currency codes
+        if (!fromCurrency || !toCurrency) {
+            throw new Error(`Invalid currency codes: from=${fromCurrency}, to=${toCurrency}`)
         }
 
         // 1. Check Memory Cache
@@ -82,29 +88,61 @@ export class ExchangeRateService {
 
     /**
      * Fetch all rates for a base currency and cache them
+     * Prevents "thundering herd" by deduplicating concurrent requests for the same base.
      */
     async fetchRatesForBase(fromCurrency: string): Promise<Record<string, number>> {
+        if (!fromCurrency) {
+            throw new Error('Base currency is required for fetching rates')
+        }
+
+        // 1. Check for existing in-flight request
+        const existingRequest = this.inFlightRequests.get(fromCurrency)
+        if (existingRequest) {
+            return existingRequest
+        }
+
+        // 2. Start new request and track it
+        const requestPromise = (async () => {
+            try {
+                const url = `${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`
+                const response = await fetch(url)
+
+                if (!response.ok) {
+                    const errorBody = await response.text().catch(() => 'No body')
+                    throw new Error(`Exchange rate API error (${response.status}): ${response.statusText}. Body: ${errorBody.substring(0, 100)}`)
+                }
+
+                // Verify content type before parsing
+                const contentType = response.headers.get('content-type')
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text()
+                    throw new Error(`Expected JSON response but got ${contentType || 'unknown'}. First 100 chars: ${text.substring(0, 100)}`)
+                }
+
+                const data = await response.json()
+                const rates = data.rates as Record<string, number>
+
+                if (!rates) {
+                    throw new Error(`Malformed API response: 'rates' field missing for base ${fromCurrency}`)
+                }
+
+                // Update memory cache
+                this.memoryCache.set(fromCurrency, {
+                    rates,
+                    timestamp: Date.now()
+                })
+
+                return rates
+            } finally {
+                // Clear from in-flight regardless of outcome
+                this.inFlightRequests.delete(fromCurrency)
+            }
+        })()
+
+        this.inFlightRequests.set(fromCurrency, requestPromise)
+
         try {
-            const response = await fetch(`${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`)
-
-            if (!response.ok) {
-                throw new Error(`Exchange rate API error: ${response.statusText}`)
-            }
-
-            const data = await response.json()
-            const rates = data.rates as Record<string, number>
-
-            if (!rates) {
-                throw new Error(`No rates found for base ${fromCurrency}`)
-            }
-
-            // Update memory cache
-            this.memoryCache.set(fromCurrency, {
-                rates,
-                timestamp: Date.now()
-            })
-
-            return rates
+            return await requestPromise
         } catch (error) {
             logger.error('Failed to fetch exchange rates:', error)
 
