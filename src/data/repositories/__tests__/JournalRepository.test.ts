@@ -8,7 +8,8 @@ import { AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { rebuildQueueService } from '@/src/data/repositories/RebuildQueue'
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { journalService } from '@/src/services/JournalService'
 
 describe('JournalRepository', () => {
     let cashAccountId: string
@@ -157,7 +158,7 @@ describe('JournalRepository', () => {
                 ],
             })
 
-            const duplicatedJournal = await journalRepository.duplicateJournal(originalJournal.id)
+            const duplicatedJournal = await journalService.duplicateJournal(originalJournal.id)
 
             expect(duplicatedJournal).toBeDefined()
             expect(duplicatedJournal.id).not.toBe(originalJournal.id)
@@ -166,7 +167,7 @@ describe('JournalRepository', () => {
             expect(duplicatedJournal.transactionCount).toBe(originalJournal.transactionCount)
 
             // Transactions should be duplicated faithfully
-            const duplicatedTransactions = await journalRepository.findEnrichedTransactionsByJournal(duplicatedJournal.id)
+            const duplicatedTransactions = await transactionRepository.findEnrichedByJournal(duplicatedJournal.id)
             expect(duplicatedTransactions).toHaveLength(2)
 
             const cashTx = duplicatedTransactions.find(t => t.accountId === cashAccountId)

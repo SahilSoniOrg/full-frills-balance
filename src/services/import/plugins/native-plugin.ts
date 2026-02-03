@@ -5,11 +5,7 @@
  * Refactored from import-service.ts to implement ImportPlugin interface.
  */
 
-import { database } from '@/src/data/database/Database';
-import Account from '@/src/data/models/Account';
-import AuditLog from '@/src/data/models/AuditLog';
-import Journal from '@/src/data/models/Journal';
-import Transaction from '@/src/data/models/Transaction';
+import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
@@ -90,78 +86,49 @@ export const nativePlugin: ImportPlugin = {
             }
 
             // 3. Import Data in Batch
-            await database.write(async () => {
-                const accountsCollection = database.collections.get<Account>('accounts');
-                const journalsCollection = database.collections.get<Journal>('journals');
-                const transactionsCollection = database.collections.get<Transaction>('transactions');
-                const auditLogsCollection = database.collections.get<AuditLog>('audit_logs');
-
-                logger.debug(`[NativePlugin] creating ${data.accounts.length} accounts...`);
-
-                const accountPrepares = data.accounts.map(acc =>
-                    accountsCollection.prepareCreate(record => {
-                        record._raw.id = acc.id;
-                        record.name = acc.name;
-                        record.accountType = acc.accountType;
-                        record.currencyCode = acc.currencyCode;
-                        record.parentAccountId = acc.parentAccountId;
-                        record.description = acc.description;
-                        record._raw._status = 'synced';
-                        if (acc.createdAt) (record as any)._raw.created_at = new Date(acc.createdAt).getTime();
-                    })
-                );
-
-                const journalPrepares = data.journals.map(j =>
-                    journalsCollection.prepareCreate(record => {
-                        record._raw.id = j.id;
-                        record.journalDate = new Date(j.journalDate).getTime();
-                        record.description = j.description;
-                        record.currencyCode = j.currencyCode;
-                        record.status = j.status;
-                        record.totalAmount = j.totalAmount;
-                        record.transactionCount = j.transactionCount;
-                        record.displayType = j.displayType;
-                        record._raw._status = 'synced';
-                        if (j.createdAt) (record as any)._raw.created_at = new Date(j.createdAt).getTime();
-                    })
-                );
-
-                const transactionPrepares = data.transactions.map(t =>
-                    transactionsCollection.prepareCreate(record => {
-                        record._raw.id = t.id;
-                        record.journalId = t.journalId;
-                        record.accountId = t.accountId;
-                        record.amount = t.amount;
-                        record.transactionType = t.transactionType;
-                        record.currencyCode = t.currencyCode;
-                        record.transactionDate = new Date(t.transactionDate).getTime();
-                        record.notes = t.notes;
-                        record.exchangeRate = t.exchangeRate;
-                        record._raw._status = 'synced';
-                        if (t.createdAt) (record as any)._raw.created_at = new Date(t.createdAt).getTime();
-                    })
-                );
-
-                const auditLogPrepares = (data.auditLogs || []).map((log: any) =>
-                    auditLogsCollection.prepareCreate(record => {
-                        record._raw.id = log.id;
-                        record.entityType = log.entityType;
-                        record.entityId = log.entityId;
-                        record.action = log.action;
-                        record.changes = log.changes;
-                        record.timestamp = log.timestamp;
-                        record._raw._status = 'synced';
-                        if (log.createdAt) (record as any)._raw.created_at = new Date(log.createdAt).getTime();
-                    })
-                );
-
-                logger.info('[NativePlugin] Executing batch insert...');
-                await database.batch(
-                    ...accountPrepares,
-                    ...journalPrepares,
-                    ...transactionPrepares,
-                    ...auditLogPrepares
-                );
+            logger.info('[NativePlugin] Executing batch insert...');
+            await importRepository.batchInsert({
+                accounts: data.accounts.map(acc => ({
+                    id: acc.id,
+                    name: acc.name,
+                    accountType: acc.accountType,
+                    currencyCode: acc.currencyCode,
+                    parentAccountId: acc.parentAccountId,
+                    description: acc.description,
+                    createdAt: acc.createdAt ? new Date(acc.createdAt).getTime() : undefined
+                })),
+                journals: data.journals.map(j => ({
+                    id: j.id,
+                    journalDate: new Date(j.journalDate).getTime(),
+                    description: j.description,
+                    currencyCode: j.currencyCode,
+                    status: j.status,
+                    totalAmount: j.totalAmount,
+                    transactionCount: j.transactionCount,
+                    displayType: j.displayType,
+                    createdAt: j.createdAt ? new Date(j.createdAt).getTime() : undefined
+                })),
+                transactions: data.transactions.map(t => ({
+                    id: t.id,
+                    journalId: t.journalId,
+                    accountId: t.accountId,
+                    amount: t.amount,
+                    transactionType: t.transactionType,
+                    currencyCode: t.currencyCode,
+                    transactionDate: new Date(t.transactionDate).getTime(),
+                    notes: t.notes,
+                    exchangeRate: t.exchangeRate,
+                    createdAt: t.createdAt ? new Date(t.createdAt).getTime() : undefined
+                })),
+                auditLogs: (data.auditLogs || []).map((log: any) => ({
+                    id: log.id,
+                    entityType: log.entityType,
+                    entityId: log.entityId,
+                    action: log.action,
+                    changes: log.changes,
+                    timestamp: log.timestamp,
+                    createdAt: log.createdAt ? new Date(log.createdAt).getTime() : undefined
+                }))
             });
 
             logger.info('[NativePlugin] Import successful.');

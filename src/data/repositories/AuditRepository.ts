@@ -84,6 +84,24 @@ export class AuditRepository {
             )
             .fetch()
     }
+
+    /**
+     * Fetch all audit logs
+     */
+    async findAll(): Promise<AuditLog[]> {
+        return this.auditLogs
+            .query(Q.sortBy('timestamp', Q.desc))
+            .fetch()
+    }
+
+    /**
+     * Count all audit logs
+     */
+    async countAll(): Promise<number> {
+        return this.auditLogs
+            .query()
+            .fetchCount()
+    }
 }
 
 export const auditRepository = new AuditRepository()

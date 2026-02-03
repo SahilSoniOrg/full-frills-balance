@@ -5,14 +5,12 @@
  * Exports mandatory per project principles.
  */
 
-import { database } from '@/src/data/database/Database';
-import Account from '@/src/data/models/Account';
-import AuditLog from '@/src/data/models/AuditLog';
-import Journal from '@/src/data/models/Journal';
-import Transaction from '@/src/data/models/Transaction';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { Q } from '@nozbe/watermelondb';
 
 export interface ExportData {
     exportDate: string;
@@ -77,21 +75,10 @@ class ExportService {
         logger.info('[ExportService] Starting JSON export...');
 
         try {
-            const accounts = await database.collections.get<Account>('accounts')
-                .query(Q.where('deleted_at', Q.eq(null)))
-                .fetch();
-
-            const journals = await database.collections.get<Journal>('journals')
-                .query(Q.where('deleted_at', Q.eq(null)))
-                .fetch();
-
-            const transactions = await database.collections.get<Transaction>('transactions')
-                .query(Q.where('deleted_at', Q.eq(null)))
-                .fetch();
-
-            const auditLogs = await database.collections.get<AuditLog>('audit_logs')
-                .query()
-                .fetch();
+            const accounts = await accountRepository.findAll();
+            const journals = await journalRepository.findAllNonDeleted();
+            const transactions = await transactionRepository.findAllNonDeleted();
+            const auditLogs = await auditRepository.findAll();
 
             const userPreferences = await preferences.loadPreferences();
 
@@ -162,21 +149,12 @@ class ExportService {
      * Get a summary of exportable data counts
      */
     async getExportSummary(): Promise<{ accounts: number; journals: number; transactions: number; auditLogs: number }> {
-        const accounts = await database.collections.get<Account>('accounts')
-            .query(Q.where('deleted_at', Q.eq(null)))
-            .fetchCount();
-
-        const journals = await database.collections.get<Journal>('journals')
-            .query(Q.where('deleted_at', Q.eq(null)))
-            .fetchCount();
-
-        const transactions = await database.collections.get<Transaction>('transactions')
-            .query(Q.where('deleted_at', Q.eq(null)))
-            .fetchCount();
-
-        const auditLogs = await database.collections.get<AuditLog>('audit_logs')
-            .query()
-            .fetchCount();
+        const [accounts, journals, transactions, auditLogs] = await Promise.all([
+            accountRepository.countNonDeleted(),
+            journalRepository.countNonDeleted(),
+            transactionRepository.countNonDeleted(),
+            auditRepository.countAll()
+        ]);
 
         return { accounts, journals, transactions, auditLogs };
     }

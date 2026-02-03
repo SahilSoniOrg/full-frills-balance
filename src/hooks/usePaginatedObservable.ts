@@ -61,6 +61,10 @@ export function usePaginatedObservable<T, E = T>(
     const prevDateRangeKeyRef = useRef(dateRangeKey);
 
     useEffect(() => {
+        let isActive = true;
+        let sequence = 0;
+        let latestPrimary: T[] | null = null;
+
         // Only show full loading state when date range changes (not on pagination)
         const isFilterChange = prevDateRangeKeyRef.current !== dateRangeKey;
         if (isFilterChange) {
@@ -72,36 +76,48 @@ export function usePaginatedObservable<T, E = T>(
         const observable = observe(currentLimit, dateRange);
 
         const subscription = observable.subscribe(async (loaded) => {
-            if (enrich) {
-                const enriched = await enrich(loaded, currentLimit, dateRange);
-                setItems(enriched as E[]);
-            } else {
-                setItems(loaded as unknown as E[]);
+            const current = ++sequence;
+            latestPrimary = loaded;
+            try {
+                if (enrich) {
+                    const enriched = await enrich(loaded, currentLimit, dateRange);
+                    if (!isActive || current !== sequence) return;
+                    setItems(enriched as E[]);
+                } else {
+                    if (!isActive || current !== sequence) return;
+                    setItems(loaded as unknown as E[]);
+                }
+                setHasMore(loaded.length >= currentLimit);
+                setVersion(v => v + 1);
+                setIsLoading(false);
+                setIsLoadingMore(false);
+            } catch {
+                if (!isActive || current !== sequence) return;
+                setIsLoading(false);
+                setIsLoadingMore(false);
             }
-            setHasMore(loaded.length >= currentLimit);
-            setVersion(v => v + 1);
-            setIsLoading(false);
-            setIsLoadingMore(false);
         });
 
         // Secondary subscription for re-enrichment (e.g., when transactions change)
         let secondarySubscription: { unsubscribe: () => void } | undefined;
         if (secondaryObserve && enrich) {
             secondarySubscription = secondaryObserve().subscribe(async () => {
-                // Re-fetch enriched data when secondary observable fires
-                const primaryData = await new Promise<T[]>((resolve) => {
-                    const innerSub = observe(currentLimit, dateRange).subscribe((data) => {
-                        resolve(data);
-                        setTimeout(() => innerSub.unsubscribe(), 0);
-                    });
-                });
-                const enriched = await enrich(primaryData, currentLimit, dateRange);
-                setItems(enriched as E[]);
-                setVersion(v => v + 1);
+                const current = ++sequence;
+                const primaryData = latestPrimary;
+                if (!primaryData) return;
+                try {
+                    const enriched = await enrich(primaryData, currentLimit, dateRange);
+                    if (!isActive || current !== sequence) return;
+                    setItems(enriched as E[]);
+                    setVersion(v => v + 1);
+                } catch {
+                    if (!isActive || current !== sequence) return;
+                }
             });
         }
 
         return () => {
+            isActive = false;
             subscription.unsubscribe();
             secondarySubscription?.unsubscribe();
         };

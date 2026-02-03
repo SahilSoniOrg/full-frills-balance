@@ -3,6 +3,7 @@ import Account, { AccountType } from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
+import { map, of } from 'rxjs'
 
 export interface AccountPersistenceInput {
   name: string
@@ -26,11 +27,10 @@ export class AccountRepository {
    * Reactive Observation Methods
    */
 
-  observeAll(includeDeleted = false) {
-    const query = includeDeleted
-      ? this.accounts.query(Q.sortBy('order_num', Q.asc))
-      : this.accounts.query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
-    return query.observeWithColumns(['account_type', 'name', 'order_num', 'currency_code'])
+  observeAll() {
+    return this.accounts
+      .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
+      .observeWithColumns(['account_type', 'name', 'order_num', 'currency_code'])
   }
 
   observeByType(accountType: string) {
@@ -43,8 +43,29 @@ export class AccountRepository {
     return query.observeWithColumns(['name', 'order_num', 'currency_code'])
   }
 
+  observeByIds(accountIds: string[]) {
+    if (accountIds.length === 0) {
+      return of([] as Account[])
+    }
+
+    return this.accounts
+      .query(
+        Q.where('id', Q.oneOf(accountIds)),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .observeWithColumns(['name', 'account_type', 'currency_code', 'order_num'])
+  }
+
   observeById(accountId: string) {
-    return this.accounts.findAndObserve(accountId)
+    return this.accounts
+      .query(
+        Q.where('id', accountId),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .observe()
+      .pipe(
+        map((accounts) => accounts[0] || null)
+      )
   }
 
   /**
@@ -56,6 +77,7 @@ export class AccountRepository {
       .query(
         Q.experimentalJoinTables(['journals']),
         Q.where('account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
         Q.on('journals', [
           Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.where('deleted_at', Q.eq(null))
@@ -100,6 +122,101 @@ export class AccountRepository {
         Q.sortBy('order_num', Q.asc)
       )
       .fetch()
+  }
+
+  async findByType(accountType: AccountType): Promise<Account[]> {
+    return this.accounts
+      .query(
+        Q.where('account_type', accountType),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('order_num', Q.asc)
+      )
+      .fetch()
+  }
+
+  async exists(): Promise<boolean> {
+    const count = await this.accounts
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .fetchCount()
+    return count > 0
+  }
+
+  async countNonDeleted(): Promise<number> {
+    return this.accounts
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .fetchCount()
+  }
+
+  async seedDefaults(defaults: AccountPersistenceInput[]): Promise<void> {
+    await this.db.write(async () => {
+      const creates = defaults.map((data) =>
+        this.accounts.prepareCreate((account) => {
+          Object.assign(account, data)
+        })
+      )
+      if (creates.length > 0) {
+        await this.db.batch(...creates)
+      }
+    })
+  }
+
+  async getAccountBalance(accountId: string, cutoffDate: number = Date.now()) {
+    const account = await this.find(accountId)
+    if (!account) {
+      throw new Error(`Account ${accountId} not found`)
+    }
+
+    const latestTx = await this.db.collections.get<Transaction>('transactions')
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.where('account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.where('deleted_at', Q.eq(null))
+        ]),
+        Q.where('transaction_date', Q.lte(cutoffDate)),
+        Q.sortBy('transaction_date', Q.desc),
+        Q.sortBy('created_at', Q.desc),
+        Q.take(1)
+      )
+      .fetch()
+
+    const balance = latestTx[0]?.runningBalance || 0
+
+    const transactionCount = await this.db.collections.get<Transaction>('transactions')
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.on('journals', [
+          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.where('deleted_at', Q.eq(null))
+        ]),
+        Q.where('account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('transaction_date', Q.lte(cutoffDate))
+      )
+      .fetchCount()
+
+    return {
+      accountId: account.id,
+      balance,
+      currencyCode: account.currencyCode,
+      transactionCount,
+      asOfDate: cutoffDate,
+      accountType: account.accountType as AccountType
+    }
+  }
+
+  async getAccountBalances(asOfDate?: number) {
+    const accounts = await this.findAll()
+    if (accounts.length === 0) return []
+    const cutoffDate = asOfDate ?? Date.now()
+    const balances = await Promise.all(
+      accounts.map(async (account) => {
+        return this.getAccountBalance(account.id, cutoffDate)
+      })
+    )
+    return balances
   }
 
   async create(data: AccountPersistenceInput): Promise<Account> {

@@ -1,10 +1,16 @@
-import { database } from '@/src/data/database/Database';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exportService } from '@/src/services/export-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
 // Mock dependencies
-jest.mock('@/src/data/database/Database');
+jest.mock('@/src/data/repositories/AccountRepository');
+jest.mock('@/src/data/repositories/AuditRepository');
+jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/utils/preferences');
 jest.mock('@/src/utils/logger');
 
@@ -55,17 +61,10 @@ describe('ExportService', () => {
                 createdAt: FIXED_DATE,
             }];
 
-            const mockQuery = {
-                fetch: jest.fn()
-                    .mockResolvedValueOnce(mockAccounts)      // accounts
-                    .mockResolvedValueOnce(mockJournals)      // journals
-                    .mockResolvedValueOnce(mockTransactions)  // transactions
-                    .mockResolvedValueOnce(mockAuditLogs)     // audit logs
-            };
-
-            (database.collections.get as jest.Mock).mockReturnValue({
-                query: jest.fn().mockReturnValue(mockQuery)
-            });
+            (accountRepository.findAll as jest.Mock).mockResolvedValue(mockAccounts);
+            (journalRepository.findAllNonDeleted as jest.Mock).mockResolvedValue(mockJournals);
+            (transactionRepository.findAllNonDeleted as jest.Mock).mockResolvedValue(mockTransactions);
+            (auditRepository.findAll as jest.Mock).mockResolvedValue(mockAuditLogs);
 
             (preferences.loadPreferences as jest.Mock).mockResolvedValue({ theme: 'dark' });
 
@@ -82,9 +81,7 @@ describe('ExportService', () => {
         });
 
         it('should handle errors', async () => {
-            (database.collections.get as jest.Mock).mockImplementation(() => {
-                throw new Error('DB Fail');
-            });
+            (accountRepository.findAll as jest.Mock).mockRejectedValue(new Error('DB Fail'));
 
             await expect(exportService.exportToJSON()).rejects.toThrow('DB Fail');
             expect(logger.error).toHaveBeenCalled();
@@ -93,17 +90,10 @@ describe('ExportService', () => {
 
     describe('getExportSummary', () => {
         it('should return counts', async () => {
-            const mockQuery = {
-                fetchCount: jest.fn()
-                    .mockResolvedValueOnce(5)  // accounts
-                    .mockResolvedValueOnce(10) // journals
-                    .mockResolvedValueOnce(20) // transactions
-                    .mockResolvedValueOnce(3)  // audit logs
-            };
-
-            (database.collections.get as jest.Mock).mockReturnValue({
-                query: jest.fn().mockReturnValue(mockQuery)
-            });
+            (accountRepository.countNonDeleted as jest.Mock).mockResolvedValue(5);
+            (journalRepository.countNonDeleted as jest.Mock).mockResolvedValue(10);
+            (transactionRepository.countNonDeleted as jest.Mock).mockResolvedValue(20);
+            (auditRepository.countAll as jest.Mock).mockResolvedValue(3);
 
             const summary = await exportService.getExportSummary();
 

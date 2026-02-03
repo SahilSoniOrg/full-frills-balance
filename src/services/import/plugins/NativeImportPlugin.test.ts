@@ -1,16 +1,12 @@
-import { database } from '@/src/data/database/Database';
+import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
 
 // Mock dependencies
-jest.mock('@/src/data/database/Database', () => ({
-    database: {
-        collections: {
-            get: jest.fn().mockReturnThis(),
-        },
-        write: jest.fn().mockImplementation(cb => cb()),
-        batch: jest.fn().mockResolvedValue(true),
+jest.mock('@/src/data/repositories/ImportRepository', () => ({
+    importRepository: {
+        batchInsert: jest.fn().mockResolvedValue(true),
     }
 }));
 
@@ -59,17 +55,8 @@ describe('NativeImportPlugin', () => {
     });
 
     describe('import', () => {
-        const mockCollection = {
-            prepareCreate: jest.fn().mockImplementation(cb => {
-                const record = { _raw: {} };
-                cb(record);
-                return record;
-            })
-        };
-
         beforeEach(() => {
             jest.clearAllMocks();
-            (database.collections.get as jest.Mock).mockReturnValue(mockCollection);
         });
 
         it('performs full import process', async () => {
@@ -78,7 +65,7 @@ describe('NativeImportPlugin', () => {
             expect(integrityService.resetDatabase).toHaveBeenCalledWith({ seedDefaults: false });
             expect(preferences.clearPreferences).toHaveBeenCalled();
             expect(preferences.setUserName).toHaveBeenCalledWith('Test User');
-            expect(database.batch).toHaveBeenCalled();
+            expect(importRepository.batchInsert).toHaveBeenCalled();
 
             expect(stats.accounts).toBe(1);
             expect(stats.journals).toBe(1);

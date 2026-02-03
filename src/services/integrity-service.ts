@@ -8,17 +8,15 @@
  * All database writes are delegated to repositories.
  */
 
-import { database } from '@/src/data/database/Database'
 import Account, { AccountType } from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
+import { databaseRepository } from '@/src/data/repositories/DatabaseRepository'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { accountingService } from '@/src/utils/accountingService'
 import { logger } from '@/src/utils/logger'
 import { amountsAreEqual, roundToPrecision } from '@/src/utils/money'
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
-import { Q } from '@nozbe/watermelondb'
 
 export interface BalanceVerificationResult {
     accountId: string
@@ -77,21 +75,8 @@ export class IntegrityService {
             throw new Error(`Account ${accountId} not found`)
         }
 
-        let query = database.collections.get<Transaction>('transactions')
-            .query(
-                Q.where('account_id', accountId),
-                Q.where('deleted_at', Q.eq(null)),
-                Q.on('journals', Q.and(
-                    Q.where('status', Q.oneOf(ACTIVE_JOURNAL_STATUSES)),
-                    Q.where('deleted_at', Q.eq(null))
-                ))
-            )
-
-        if (cutoffDate !== undefined) {
-            query = query.extend(Q.where('transaction_date', Q.lte(cutoffDate)))
-        }
-
-        const transactions = await query.fetch()
+        const effectiveCutoff = cutoffDate ?? Date.now()
+        const transactions = await transactionRepository.findForAccountUpToDate(accountId, effectiveCutoff)
         const precision = await currencyRepository.getPrecision(account.currencyCode)
 
         let balance = 0
@@ -131,9 +116,7 @@ export class IntegrityService {
      * Verifies all account balances.
      */
     async verifyAllAccountBalances(): Promise<BalanceVerificationResult[]> {
-        const accounts = await database.collections.get<Account>('accounts')
-            .query(Q.where('deleted_at', Q.eq(null)))
-            .fetch()
+        const accounts = await accountRepository.findAll()
 
         const results: BalanceVerificationResult[] = []
 
@@ -213,9 +196,7 @@ export class IntegrityService {
     async resetDatabase(options?: { seedDefaults?: boolean }): Promise<void> {
         logger.warn('[IntegrityService] STARTING FACTORY RESET...')
         try {
-            await database.write(async () => {
-                await database.unsafeResetDatabase()
-            })
+            await databaseRepository.resetDatabase()
             const shouldSeed = options?.seedDefaults !== false
             if (shouldSeed) {
                 logger.info('[IntegrityService] Database reset successful. Seeding defaults...')
@@ -249,29 +230,14 @@ export class IntegrityService {
      */
     async cleanupDatabase(): Promise<{ deletedCount: number }> {
         logger.info('[IntegrityService] Starting database cleanup...')
-        let totalDeleted = 0
-        const collections = ['journals', 'transactions', 'accounts']
-
         try {
-            await database.write(async () => {
-                for (const table of collections) {
-                    const deletedRecords = await database.collections.get(table)
-                        .query(Q.where('deleted_at', Q.notEq(null)))
-                        .fetch()
-
-                    totalDeleted += deletedRecords.length
-                    for (const record of deletedRecords) {
-                        await record.destroyPermanently()
-                    }
-                }
-            })
+            const totalDeleted = await databaseRepository.cleanupDeletedRecords(['journals', 'transactions', 'accounts'])
             logger.info(`[IntegrityService] Cleanup complete. Removed ${totalDeleted} records.`)
+            return { deletedCount: totalDeleted }
         } catch (error) {
             logger.error('[IntegrityService] Cleanup failed:', error)
             throw error
         }
-
-        return { deletedCount: totalDeleted }
     }
 }
 

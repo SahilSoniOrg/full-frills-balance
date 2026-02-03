@@ -1,10 +1,14 @@
 import { database } from '@/src/data/database/Database'
 import Transaction from '@/src/data/models/Transaction'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
-import { TransactionType } from '@/src/types/domain'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { EnrichedTransaction, TransactionType, TransactionWithAccountInfo } from '@/src/types/domain'
+import { isBalanceIncrease, isValueEntering } from '@/src/utils/accounting-utils'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
+import { combineLatest, map, of, switchMap } from 'rxjs'
 
 export class TransactionRepository {
   private get transactions() {
@@ -191,12 +195,12 @@ export class TransactionRepository {
       clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)))
     }
 
-    const query = this.transactions.query(...clauses)
+    let query = this.transactions.query(...clauses)
       .extend(Q.sortBy('transaction_date', 'desc'))
       .extend(Q.sortBy('created_at', 'desc'))
 
     if (limit) {
-      query.extend(Q.take(limit))
+      query = query.extend(Q.take(limit))
     }
 
     return query.fetch()
@@ -228,6 +232,78 @@ export class TransactionRepository {
       .observe()
   }
 
+  observeByJournalWithAccountInfo(journalId: string) {
+    if (!journalId) return of([] as TransactionWithAccountInfo[])
+
+    const journal$ = journalRepository.observeById(journalId)
+    const transactions$ = this.observeByJournal(journalId)
+
+    return combineLatest([transactions$, journal$]).pipe(
+      switchMap(([transactions, journal]) => {
+        const accountIds = Array.from(new Set(transactions.map(t => t.accountId)))
+        return accountRepository.observeByIds(accountIds).pipe(
+          map((accounts) => {
+            const accountMap = new Map(accounts.map(a => [a.id, a]))
+            return transactions.map(tx => {
+              const account = accountMap.get(tx.accountId)
+              return {
+                id: tx.id,
+                amount: tx.amount,
+                transactionType: tx.transactionType as any,
+                currencyCode: tx.currencyCode,
+                transactionDate: tx.transactionDate,
+                notes: tx.notes,
+                accountId: tx.accountId,
+                exchangeRate: tx.exchangeRate,
+                accountName: account?.name || 'Unknown Account',
+                accountType: account?.accountType as any,
+                flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
+                balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE',
+                createdAt: tx.createdAt,
+                updatedAt: tx.updatedAt,
+                journalDescription: journal?.description
+              } as TransactionWithAccountInfo
+            })
+          })
+        )
+      })
+    )
+  }
+
+  async findByJournalWithAccountInfo(journalId: string): Promise<TransactionWithAccountInfo[]> {
+    const [journal, transactions] = await Promise.all([
+      journalRepository.find(journalId),
+      this.findByJournal(journalId)
+    ])
+
+    if (!transactions.length) return []
+
+    const accountIds = Array.from(new Set(transactions.map(t => t.accountId)))
+    const accounts = await accountRepository.findAllByIds(accountIds)
+    const accountMap = new Map(accounts.map(a => [a.id, a]))
+
+    return transactions.map(tx => {
+      const account = accountMap.get(tx.accountId)
+      return {
+        id: tx.id,
+        amount: tx.amount,
+        transactionType: tx.transactionType as any,
+        currencyCode: tx.currencyCode,
+        transactionDate: tx.transactionDate,
+        notes: tx.notes,
+        accountId: tx.accountId,
+        exchangeRate: tx.exchangeRate,
+        accountName: account?.name || 'Unknown Account',
+        accountType: account?.accountType as any,
+        flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
+        balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE',
+        createdAt: tx.createdAt,
+        updatedAt: tx.updatedAt,
+        journalDescription: journal?.description
+      } as TransactionWithAccountInfo
+    })
+  }
+
   /**
    * Observe all active (non-deleted) transactions
    * Useful for dashboard summary reactive updates
@@ -243,6 +319,124 @@ export class TransactionRepository {
         ])
       )
       .observe()
+  }
+
+  observeEnrichedByJournal(journalId: string) {
+    if (!journalId) return of([] as EnrichedTransaction[])
+
+    const journal$ = journalRepository.observeById(journalId)
+    const transactions$ = this.observeByJournal(journalId)
+
+    return combineLatest([transactions$, journal$]).pipe(
+      switchMap(([transactions, journal]) => {
+        const accountIds = Array.from(new Set(transactions.map(t => t.accountId)))
+        return accountRepository.observeByIds(accountIds).pipe(
+          map((accounts) => {
+            const accountMap = new Map(accounts.map(a => [a.id, a]))
+            return transactions.map(tx => {
+              const account = accountMap.get(tx.accountId)
+              return {
+                id: tx.id,
+                journalId: tx.journalId,
+                accountId: tx.accountId,
+                amount: tx.amount,
+                currencyCode: tx.currencyCode,
+                transactionType: tx.transactionType as any,
+                transactionDate: tx.transactionDate,
+                notes: tx.notes,
+                journalDescription: journal?.description,
+                accountName: account?.name,
+                accountType: account?.accountType as any,
+                runningBalance: tx.runningBalance,
+                displayTitle: journal?.description || 'Transaction',
+                displayType: journal?.displayType as any,
+                isIncrease: ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
+                  ? tx.transactionType === 'DEBIT'
+                  : tx.transactionType === 'CREDIT',
+                exchangeRate: tx.exchangeRate
+              } as EnrichedTransaction
+            })
+          })
+        )
+      })
+    )
+  }
+
+  observeEnrichedForAccount(accountId: string, limit: number, dateRange?: { startDate: number, endDate: number }) {
+    if (!accountId) return of([] as EnrichedTransaction[])
+
+    const transactions$ = journalRepository.observeAccountTransactions(accountId, limit, dateRange)
+    const account$ = accountRepository.observeById(accountId)
+
+    return combineLatest([transactions$, account$]).pipe(
+      switchMap(([transactions, account]) => {
+        const journalIds = Array.from(new Set(transactions.map(t => t.journalId)))
+        return journalRepository.observeByIds(journalIds).pipe(
+          map((journals) => {
+            const journalMap = new Map(journals.map(j => [j.id, j]))
+            return transactions.map(tx => {
+              const journal = journalMap.get(tx.journalId)
+              return {
+                id: tx.id,
+                journalId: tx.journalId,
+                accountId: tx.accountId,
+                amount: tx.amount,
+                currencyCode: tx.currencyCode,
+                transactionType: tx.transactionType as any,
+                transactionDate: tx.transactionDate,
+                notes: tx.notes,
+                journalDescription: journal?.description,
+                accountName: account?.name,
+                accountType: account?.accountType as any,
+                runningBalance: tx.runningBalance,
+                displayTitle: journal?.description || 'Transaction',
+                displayType: journal?.displayType as any,
+                isIncrease: ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
+                  ? tx.transactionType === 'DEBIT'
+                  : tx.transactionType === 'CREDIT',
+                exchangeRate: tx.exchangeRate
+              } as EnrichedTransaction
+            })
+          })
+        )
+      })
+    )
+  }
+
+  async findEnrichedByJournal(journalId: string): Promise<EnrichedTransaction[]> {
+    const [journal, transactions] = await Promise.all([
+      journalRepository.find(journalId),
+      this.findByJournal(journalId)
+    ])
+    if (!journal || transactions.length === 0) return []
+
+    const accountIds = Array.from(new Set(transactions.map(t => t.accountId)))
+    const accounts = await accountRepository.findAllByIds(accountIds)
+    const accountMap = new Map(accounts.map(a => [a.id, a]))
+
+    return transactions.map(tx => {
+      const account = accountMap.get(tx.accountId)
+      return {
+        id: tx.id,
+        journalId: tx.journalId,
+        accountId: tx.accountId,
+        amount: tx.amount,
+        currencyCode: tx.currencyCode,
+        transactionType: tx.transactionType as any,
+        transactionDate: tx.transactionDate,
+        notes: tx.notes,
+        journalDescription: journal.description,
+        accountName: account?.name,
+        accountType: account?.accountType as any,
+        runningBalance: tx.runningBalance,
+        displayTitle: journal.description || 'Transaction',
+        displayType: journal.displayType as any,
+        isIncrease: ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
+          ? tx.transactionType === 'DEBIT'
+          : tx.transactionType === 'CREDIT',
+        exchangeRate: tx.exchangeRate
+      } as EnrichedTransaction
+    })
   }
 
   /**
@@ -263,6 +457,18 @@ export class TransactionRepository {
       .extend(Q.sortBy('transaction_date', 'asc'))
       .extend(Q.sortBy('created_at', 'asc'))
       .fetch()
+  }
+
+  async findAllNonDeleted(): Promise<Transaction[]> {
+    return this.transactions
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .fetch()
+  }
+
+  async countNonDeleted(): Promise<number> {
+    return this.transactions
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .fetchCount()
   }
 
   /**
@@ -371,11 +577,31 @@ export class TransactionRepository {
   observeCountByDateRange(startDate: number, endDate: number) {
     return this.transactions
       .query(
+        Q.experimentalJoinTables(['journals']),
         Q.where('transaction_date', Q.gte(startDate)),
         Q.where('transaction_date', Q.lte(endDate)),
-        Q.where('deleted_at', Q.eq(null))
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.where('deleted_at', Q.eq(null))
+        ])
       )
       .observeCount()
+  }
+
+  async findForAccountUpToDate(accountId: string, cutoffDate: number): Promise<Transaction[]> {
+    return this.transactions
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.where('account_id', accountId),
+        Q.where('transaction_date', Q.lte(cutoffDate)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.where('deleted_at', Q.eq(null))
+        ])
+      )
+      .fetch()
   }
 }
 

@@ -5,11 +5,11 @@
  * Refactored from ivy-import-service.ts to implement ImportPlugin interface.
  */
 
-import { database } from '@/src/data/database/Database';
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import Account, { AccountType } from '@/src/data/models/Account';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import { AccountType } from '@/src/data/models/Account';
+import { JournalStatus } from '@/src/data/models/Journal';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
@@ -87,7 +87,7 @@ export const ivyPlugin: ImportPlugin = {
         // 1. Wipe existing data for clean import
         logger.warn('[IvyPlugin] Wiping database before import...');
         await integrityService.resetDatabase({ seedDefaults: false });
-        const accountActions: any[] = [];
+        const accountImports: any[] = [];
 
         // 2. Pre-Scan Transactions for Category Usage (Per Currency)
         interface CategoryStat {
@@ -133,8 +133,6 @@ export const ivyPlugin: ImportPlugin = {
         const accountMap = new Map<string, string>();
         const accountCurrencyMap = new Map<string, string>();
         const categoryAccountMap = new Map<string, string>();
-
-        const accountsCollection = database.collections.get<Account>('accounts');
 
         data.accounts.forEach(a => {
             const balanceId = generateId();
@@ -224,23 +222,19 @@ export const ivyPlugin: ImportPlugin = {
 
         // Create account actions
         allPendingAccounts.forEach((acc, index) => {
-            accountActions.push(
-                accountsCollection.prepareCreate(record => {
-                    record._raw.id = acc.id;
-                    record.name = acc.name;
-                    record.accountType = acc.type;
-                    record.currencyCode = acc.currency;
-                    record.description = acc.description;
-                    record.orderNum = index + 1;
-                })
-            );
+            accountImports.push({
+                id: acc.id,
+                name: acc.name,
+                accountType: acc.type,
+                currencyCode: acc.currency,
+                description: acc.description,
+                orderNum: index + 1
+            });
         });
 
         // 5. Create Journals & Transactions
-        const journalsCollection = database.collections.get<Journal>('journals');
-        const transactionsCollection = database.collections.get<Transaction>('transactions');
-        const journalActions: any[] = [];
-        const transactionActions: any[] = [];
+        const journalImports: any[] = [];
+        const transactionImports: any[] = [];
         const skippedItems: { id: string; reason: string; description?: string }[] = [];
 
         data.transactions.forEach(tx => {
@@ -301,67 +295,60 @@ export const ivyPlugin: ImportPlugin = {
             const amount = Math.abs(tx.amount);
             const toAmount = tx.toAmount !== undefined ? Math.abs(tx.toAmount) : amount;
 
-            journalActions.push(
-                journalsCollection.prepareCreate(record => {
-                    record._raw.id = journalId;
-                    record.journalDate = timestamp;
-                    record.description = description;
-                    record.currencyCode = currencyCode;
-                    record.status = JournalStatus.POSTED;
-                    record.totalAmount = amount;
-                    record.transactionCount = 2;
-                    record.displayType = displayType;
-                })
-            );
+            journalImports.push({
+                id: journalId,
+                journalDate: timestamp,
+                description,
+                currencyCode,
+                status: JournalStatus.POSTED,
+                totalAmount: amount,
+                transactionCount: 2,
+                displayType
+            });
 
             // Transaction 1: SOURCE (Credit)
-            transactionActions.push(
-                transactionsCollection.prepareCreate(record => {
-                    record._raw.id = generateId();
-                    record.journalId = journalId;
-                    record.transactionDate = timestamp;
-                    record.accountId = sourceId!;
-                    record.amount = amount;
-                    record.transactionType = TransactionType.CREDIT;
-                    record.currencyCode = currencyCode;
-                })
-            );
+            transactionImports.push({
+                id: generateId(),
+                journalId,
+                transactionDate: timestamp,
+                accountId: sourceId!,
+                amount,
+                transactionType: TransactionType.CREDIT,
+                currencyCode
+            });
 
             // Transaction 2: DEST (Debit)
-            transactionActions.push(
-                transactionsCollection.prepareCreate(record => {
-                    record._raw.id = generateId();
-                    record.journalId = journalId;
-                    record.transactionDate = timestamp;
-                    record.accountId = destId!;
-                    record.amount = toAmount;
-                    record.transactionType = TransactionType.DEBIT;
+            const txRecord: any = {
+                id: generateId(),
+                journalId,
+                transactionDate: timestamp,
+                accountId: destId!,
+                amount: toAmount,
+                transactionType: TransactionType.DEBIT,
+                currencyCode
+            };
 
-                    // Handle multi-currency transfers
-                    if (tx.type === 'TRANSFER' && tx.toAccountId) {
-                        const destAccId = accountMap.get(tx.toAccountId);
-                        const destCurr = accountCurrencyMap.get(destAccId!);
-                        if (destCurr) {
-                            record.currencyCode = destCurr;
-                            if (amount !== 0 && toAmount !== 0) {
-                                record.exchangeRate = amount / toAmount;
-                            }
-                        }
-                    } else {
-                        record.currencyCode = currencyCode;
+            // Handle multi-currency transfers
+            if (tx.type === 'TRANSFER' && tx.toAccountId) {
+                const destAccId = accountMap.get(tx.toAccountId);
+                const destCurr = accountCurrencyMap.get(destAccId!);
+                if (destCurr) {
+                    txRecord.currencyCode = destCurr;
+                    if (amount !== 0 && toAmount !== 0) {
+                        txRecord.exchangeRate = amount / toAmount;
                     }
-                })
-            );
+                }
+            }
+
+            transactionImports.push(txRecord);
         });
 
         // 6. Write to DB
         logger.info('[IvyPlugin] Writing mapped data to database...');
-        await database.write(async () => {
-            await database.batch(
-                ...accountActions,
-                ...journalActions,
-                ...transactionActions
-            );
+        await importRepository.batchInsert({
+            accounts: accountImports,
+            journals: journalImports,
+            transactions: transactionImports
         });
 
         // 7. Run integrity check to repair account balances
@@ -387,9 +374,9 @@ export const ivyPlugin: ImportPlugin = {
         }
 
         return {
-            accounts: accountActions.length,
-            journals: journalActions.length,
-            transactions: transactionActions.length,
+            accounts: accountImports.length,
+            journals: journalImports.length,
+            transactions: transactionImports.length,
             auditLogs: 0,
             skippedTransactions: skippedItems.length,
             skippedItems

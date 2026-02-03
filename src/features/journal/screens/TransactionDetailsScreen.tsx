@@ -1,6 +1,7 @@
 import { AppButton, AppCard, AppIcon, AppText, Badge, IconButton } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants'
+import { useJournal } from '@/src/features/journal/hooks/useJournal'
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions'
 import { useJournalTransactionsWithAccountInfo } from '@/src/features/journal/hooks/useJournalTransactionsWithAccountInfo'
 import { useTheme } from '@/src/hooks/use-theme'
@@ -10,7 +11,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { formatDate } from '@/src/utils/dateUtils'
 import { logger } from '@/src/utils/logger'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 
 // Reusable info row component
@@ -27,37 +28,15 @@ export default function TransactionDetailsScreen() {
     const { theme } = useTheme()
     const { deleteJournal, findJournal, duplicateJournal } = useJournalActions()
     const { transactions, isLoading: isLoadingTransactions } = useJournalTransactionsWithAccountInfo(journalId)
+    const { journal, isLoading: isLoadingJournal } = useJournal(journalId)
 
-    const [journalInfo, setJournalInfo] = useState<{ description?: string; date: number; status: string; currency: string; displayType?: string } | null>(null);
-    const [isLoadingJournal, setIsLoadingJournal] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const loadJournal = async () => {
-            if (!journalId) return;
-            try {
-                setIsLoadingJournal(true);
-                setError(null);
-                const journal = await findJournal(journalId);
-
-                if (journal) {
-                    setJournalInfo({
-                        description: journal.description,
-                        date: journal.journalDate,
-                        status: journal.status,
-                        currency: journal.currencyCode,
-                        displayType: journal.displayType
-                    });
-                }
-            } catch (error) {
-                logger.error('Error loading journal:', error);
-                setError('Journal not found or deleted');
-            } finally {
-                setIsLoadingJournal(false);
-            }
-        };
-        loadJournal();
-    }, [journalId, findJournal]);
+    const journalInfo = journal ? {
+        description: journal.description,
+        date: journal.journalDate,
+        status: journal.status,
+        currency: journal.currencyCode,
+        displayType: journal.displayType
+    } : null;
 
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
@@ -139,7 +118,7 @@ export default function TransactionDetailsScreen() {
         </Screen>
     );
 
-    if (error || !journalInfo) return (
+    if (!journalInfo) return (
         <Screen title="Details" backIcon="close">
             <View style={styles.center}>
                 <AppIcon name="error" size={48} color={theme.textSecondary} />

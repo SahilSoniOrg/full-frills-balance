@@ -52,6 +52,7 @@ export class ReconciliationRepository {
     const journals = await database.collections.get<Journal>('journals')
       .query(
         Q.and(
+          Q.experimentalJoinTables(['transactions']),
           Q.on('transactions', 'account_id', accountId),
           Q.where('deleted_at', Q.eq(null)),
           Q.where('status', Q.eq('POSTED'))

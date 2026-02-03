@@ -1,8 +1,11 @@
 import { database } from '@/src/data/database/Database'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
+import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { EnrichedJournal } from '@/src/types/domain'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
+import { map, of, switchMap } from 'rxjs'
 
 export interface CreateJournalData {
   journalDate: number
@@ -47,18 +50,63 @@ export class JournalRepository {
       .query(...clauses)
       .observe()
 
-    const transactionsObservable = this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null))
-        ])
-      )
-      .observe()
+    return journalsObservable.pipe(
+      switchMap((journals) => {
+        if (journals.length === 0) return of([] as EnrichedJournal[])
 
-    return { journalsObservable, transactionsObservable }
+        const journalIds = journals.map(j => j.id)
+
+        const transactionsObservable = this.transactions
+          .query(
+            Q.experimentalJoinTables(['journals']),
+            Q.where('journal_id', Q.oneOf(journalIds)),
+            Q.where('deleted_at', Q.eq(null)),
+            Q.on('journals', [
+              Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+              Q.where('deleted_at', Q.eq(null))
+            ])
+          )
+          .observe()
+
+        return transactionsObservable.pipe(
+          switchMap((transactions) => {
+            const accountIds = Array.from(new Set(transactions.map(t => t.accountId)))
+            return accountRepository.observeByIds(accountIds).pipe(
+              map((accounts) => {
+                const accountMap = new Map(accounts.map(a => [a.id, a]))
+                return journals.map(j => {
+                  const jTxs = transactions.filter(t => t.journalId === j.id)
+                  const enrichedAccounts = Array.from(new Set(jTxs.map(t => t.accountId))).map(id => {
+                    const acc = accountMap.get(id)
+                    const role = jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT
+                      ? 'SOURCE'
+                      : 'DESTINATION'
+                    return {
+                      id,
+                      name: acc?.name || 'Unknown',
+                      accountType: acc?.accountType || 'ASSET',
+                      role
+                    }
+                  })
+
+                  return {
+                    id: j.id,
+                    journalDate: j.journalDate,
+                    description: j.description,
+                    currencyCode: j.currencyCode,
+                    status: j.status as any,
+                    totalAmount: j.totalAmount || 0,
+                    transactionCount: j.transactionCount || 0,
+                    displayType: j.displayType as any,
+                    accounts: enrichedAccounts
+                  } as EnrichedJournal
+                })
+              })
+            )
+          })
+        )
+      })
+    )
   }
 
   observeAccountTransactions(accountId: string, limit: number, dateRange?: { startDate: number, endDate: number }) {
@@ -98,6 +146,36 @@ export class JournalRepository {
       .observe()
   }
 
+  observeById(journalId: string) {
+    return this.journals
+      .query(
+        Q.where('id', journalId),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .observe()
+      .pipe(
+        map((journals) => journals[0] || null)
+      )
+  }
+
+  observeByIds(journalIds: string[]) {
+    if (journalIds.length === 0) return of([] as Journal[])
+    return this.journals
+      .query(
+        Q.where('id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .observeWithColumns([
+        'journal_date',
+        'description',
+        'currency_code',
+        'status',
+        'total_amount',
+        'transaction_count',
+        'display_type'
+      ])
+  }
+
   /**
    * PURE PERSISTENCE METHODS
    */
@@ -118,6 +196,21 @@ export class JournalRepository {
       )
       .extend(Q.sortBy('journal_date', 'desc'))
       .fetch()
+  }
+
+  async findAllNonDeleted(): Promise<Journal[]> {
+    return this.journals
+      .query(
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('journal_date', 'desc')
+      )
+      .fetch()
+  }
+
+  async countNonDeleted(): Promise<number> {
+    return this.journals
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .fetchCount()
   }
 
   async createJournalWithTransactions(
@@ -212,6 +305,18 @@ export class JournalRepository {
           t.deletedAt = new Date()
         })
       }))
+    })
+  }
+
+  async markReversed(originalJournalId: string, reversingJournalId: string): Promise<void> {
+    const journal = await this.find(originalJournalId)
+    if (!journal) return
+
+    await database.write(async () => {
+      await journal.update((record) => {
+        record.reversingJournalId = reversingJournalId
+        record.status = JournalStatus.REVERSED
+      })
     })
   }
 }

@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
@@ -228,15 +227,7 @@ export class JournalService {
         });
 
         // Link them
-        await database.write(async () => {
-            const j = await journalRepository.find(originalJournalId);
-            if (j) {
-                await j.update(record => {
-                    record.reversingJournalId = reversalJournal.id;
-                    record.status = JournalStatus.REVERSED;
-                });
-            }
-        });
+        await journalRepository.markReversed(originalJournalId, reversalJournal.id);
 
         return reversalJournal;
     }

@@ -45,6 +45,7 @@ export function useObservable<T>(
     const [version, setVersion] = useState(0);
 
     useEffect(() => {
+        let isActive = true;
         if (!keepPreviousData) {
             setData(initialValue);
         }
@@ -53,6 +54,7 @@ export function useObservable<T>(
 
         const subscription = observableFactory().subscribe({
             next: (result) => {
+                if (!isActive) return;
                 // For arrays, always create a new reference to ensure React notices the change
                 // even if the contents are identical (identity persistence in WatermelonDB)
                 setData(Array.isArray(result) ? [...result] : result as any);
@@ -60,12 +62,16 @@ export function useObservable<T>(
                 setIsLoading(false);
             },
             error: (err) => {
+                if (!isActive) return;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setIsLoading(false);
             },
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            isActive = false;
+            subscription.unsubscribe();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, deps);
 
@@ -95,28 +101,37 @@ export function useObservableWithEnrichment<T, E>(
     const [version, setVersion] = useState(0);
 
     useEffect(() => {
+        let isActive = true;
+        let sequence = 0;
         setIsLoading(true);
         setError(null);
 
         const subscription = observableFactory().subscribe({
             next: async (result) => {
+                const current = ++sequence;
                 try {
                     const enriched = await enricher(result);
+                    if (!isActive || current !== sequence) return;
                     setData(enriched);
                     setVersion(v => v + 1);
                     setIsLoading(false);
                 } catch (err) {
+                    if (!isActive || current !== sequence) return;
                     setError(err instanceof Error ? err : new Error(String(err)));
                     setIsLoading(false);
                 }
             },
             error: (err) => {
+                if (!isActive) return;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setIsLoading(false);
             },
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            isActive = false;
+            subscription.unsubscribe();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, deps);
 

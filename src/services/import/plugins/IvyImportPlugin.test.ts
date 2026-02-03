@@ -1,15 +1,11 @@
-import { database } from '@/src/data/database/Database';
+import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { integrityService } from '@/src/services/integrity-service';
 
 // Mock dependencies
-jest.mock('@/src/data/database/Database', () => ({
-    database: {
-        collections: {
-            get: jest.fn().mockReturnThis(),
-        },
-        write: jest.fn().mockImplementation(cb => cb()),
-        batch: jest.fn().mockResolvedValue(true),
+jest.mock('@/src/data/repositories/ImportRepository', () => ({
+    importRepository: {
+        batchInsert: jest.fn().mockResolvedValue(true),
     }
 }));
 
@@ -58,24 +54,15 @@ describe('IvyImportPlugin', () => {
     });
 
     describe('import', () => {
-        const mockCollection = {
-            prepareCreate: jest.fn().mockImplementation(cb => {
-                const record = { _raw: {} };
-                cb(record);
-                return record;
-            })
-        };
-
         beforeEach(() => {
             jest.clearAllMocks();
-            (database.collections.get as jest.Mock).mockReturnValue(mockCollection);
         });
 
         it('transforms and imports Ivy data correctly', async () => {
             const stats = await ivyPlugin.import(JSON.stringify(validIvyData));
 
             expect(integrityService.resetDatabase).toHaveBeenCalledWith({ seedDefaults: false });
-            expect(database.batch).toHaveBeenCalled();
+            expect(importRepository.batchInsert).toHaveBeenCalled();
 
             // Should create 2 accounts (1 original + 1 category-currency specific)
             expect(stats.accounts).toBe(2);
@@ -102,8 +89,8 @@ describe('IvyImportPlugin', () => {
             expect(stats.transactions).toBe(2);
 
             // Check if exchange rate was calculated (100 USD / 85 EUR)
-            const lastBatch = (database.batch as jest.Mock).mock.calls[0];
-            const debitTx = lastBatch.find((t: any) => t.transactionType === 'DEBIT' && t.exchangeRate !== undefined);
+            const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][0];
+            const debitTx = lastBatch.transactions.find((t: any) => t.transactionType === 'DEBIT' && t.exchangeRate !== undefined);
             expect(debitTx.exchangeRate).toBeCloseTo(100 / 85);
             expect(debitTx.currencyCode).toBe('EUR');
         });
