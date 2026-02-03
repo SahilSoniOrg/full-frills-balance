@@ -3,7 +3,7 @@ import { Screen } from '@/src/components/layout'
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants'
 import { useJournal } from '@/src/features/journal/hooks/useJournal'
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions'
-import { useJournalTransactionsWithAccountInfo } from '@/src/features/journal/hooks/useJournalTransactionsWithAccountInfo'
+import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals'
 import { useTheme } from '@/src/hooks/use-theme'
 import { TransactionWithAccountInfo } from '@/src/types/domain'
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts'
@@ -27,7 +27,7 @@ export default function TransactionDetailsScreen() {
     const { journalId } = useLocalSearchParams<{ journalId: string }>()
     const { theme } = useTheme()
     const { deleteJournal, findJournal, duplicateJournal } = useJournalActions()
-    const { transactions, isLoading: isLoadingTransactions } = useJournalTransactionsWithAccountInfo(journalId)
+    const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId)
     const { journal, isLoading: isLoadingJournal } = useJournal(journalId)
 
     const journalInfo = journal ? {
@@ -41,7 +41,7 @@ export default function TransactionDetailsScreen() {
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
     const totalAmount = transactions
-        .filter(t => t.flowDirection === 'IN')
+        .filter((t: TransactionWithAccountInfo) => t.flowDirection === 'IN')
         .reduce((sum: number, t: TransactionWithAccountInfo) => sum + (t.amount || 0), 0);
 
     const formattedDate = journalInfo ? formatDate(journalInfo.date, { includeTime: true }) : '';
@@ -198,7 +198,7 @@ export default function TransactionDetailsScreen() {
                         BREAKDOWN
                     </AppText>
 
-                    {transactions.map(item => {
+                    {transactions.map((item: TransactionWithAccountInfo) => {
                         const isIn = item.flowDirection === 'IN';
                         return (
                             <TouchableOpacity

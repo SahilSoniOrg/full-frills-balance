@@ -2,6 +2,7 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ReportService } from '@/src/services/report-service';
 import dayjs from 'dayjs';
@@ -9,6 +10,7 @@ import dayjs from 'dayjs';
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/utils/preferences', () => ({
     preferences: { defaultCurrencyCode: 'USD' }
@@ -31,35 +33,16 @@ describe('ReportService', () => {
 
     describe('getNetWorthHistory', () => {
         it('should return empty array if no assets/liabilities', async () => {
-            (accountRepository.getAccountBalances as jest.Mock).mockResolvedValue([]);
+            (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
             const result = await service.getNetWorthHistory(START_DATE, END_DATE);
             expect(result).toEqual([]);
         });
 
         it('should correctly calculating history by rewinding transactions', async () => {
-            // Setup: 
-            // Current Balance (Jan 31): Asset = 1000
-            // Transaction (Jan 15): Debit 500 (Purchase) -> Balance was 500 before this? 
-            // Wait, logic check:
-            // Rewind logic: 
-            // If Asset DEBIT (+), we SUBTRACT to go back.
-            // If Asset CREDIT (-), we ADD to go back.
-
-            // Scenario:
-            // Jan 1: Balance 0
-            // Jan 15: Income 1000 (Asset DEBIT 1000) -> Balance 1000
-            // Jan 31 (Now): Balance 1000
-
-            // Test asks for Jan 1 to Jan 31.
-            // Start rewinding from NOW (Jan 31). Balance 1000.
-            // ...
-            // Jan 15: Encounter Asset DEBIT 1000. Reverse it (-1000). Balance becomes 0.
-            // Jan 1: Balance 0.
-
             const mockBalances = [
                 { accountId: 'acc1', accountType: AccountType.ASSET, balance: 1000, currencyCode: 'USD' }
             ];
-            (accountRepository.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
+            (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
 
             const mockTransactions = [
                 {
@@ -72,9 +55,6 @@ describe('ReportService', () => {
             ];
             (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(mockTransactions);
 
-            // We mock "NOW" inside the service using dayjs, but jest.useFakeTimers might be safer if the service uses dayjs()
-            // The service uses dayjs() for "now". 
-            // Ideally we pass "now" or mock system time.
             const MOCK_NOW = dayjs('2024-01-31').valueOf();
             jest.useFakeTimers();
             jest.setSystemTime(MOCK_NOW);

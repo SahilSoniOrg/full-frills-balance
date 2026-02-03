@@ -160,65 +160,6 @@ export class AccountRepository {
     })
   }
 
-  async getAccountBalance(accountId: string, cutoffDate: number = Date.now()) {
-    const account = await this.find(accountId)
-    if (!account) {
-      throw new Error(`Account ${accountId} not found`)
-    }
-
-    const latestTx = await this.db.collections.get<Transaction>('transactions')
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('account_id', accountId),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null))
-        ]),
-        Q.where('transaction_date', Q.lte(cutoffDate)),
-        Q.sortBy('transaction_date', Q.desc),
-        Q.sortBy('created_at', Q.desc),
-        Q.take(1)
-      )
-      .fetch()
-
-    const balance = latestTx[0]?.runningBalance || 0
-
-    const transactionCount = await this.db.collections.get<Transaction>('transactions')
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null))
-        ]),
-        Q.where('account_id', accountId),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('transaction_date', Q.lte(cutoffDate))
-      )
-      .fetchCount()
-
-    return {
-      accountId: account.id,
-      balance,
-      currencyCode: account.currencyCode,
-      transactionCount,
-      asOfDate: cutoffDate,
-      accountType: account.accountType as AccountType
-    }
-  }
-
-  async getAccountBalances(asOfDate?: number) {
-    const accounts = await this.findAll()
-    if (accounts.length === 0) return []
-    const cutoffDate = asOfDate ?? Date.now()
-    const balances = await Promise.all(
-      accounts.map(async (account) => {
-        return this.getAccountBalance(account.id, cutoffDate)
-      })
-    )
-    return balances
-  }
-
   async create(data: AccountPersistenceInput): Promise<Account> {
     return await this.db.write(async () => {
       return this.accounts.create((account) => {

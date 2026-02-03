@@ -8,8 +8,10 @@ import { AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { balanceService } from '@/src/services/BalanceService'
 import { journalService } from '@/src/services/JournalService'
+import { rebuildQueueService } from '@/src/services/RebuildQueueService'
+import { transactionService } from '@/src/services/TransactionService'
 
 describe('JournalRepository', () => {
     let cashAccountId: string
@@ -46,7 +48,7 @@ describe('JournalRepository', () => {
 
     describe('createJournalWithTransactions', () => {
         it('should create a balanced journal successfully', async () => {
-            const journal = await journalRepository.createJournalWithTransactions({
+            const journal = await journalService.createJournal({
                 description: 'Lunch expense',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -64,7 +66,7 @@ describe('JournalRepository', () => {
 
         it('should reject unbalanced journals', async () => {
             await expect(
-                journalRepository.createJournalWithTransactions({
+                journalService.createJournal({
                     description: 'Unbalanced',
                     journalDate: Date.now(),
                     currencyCode: 'USD',
@@ -73,12 +75,12 @@ describe('JournalRepository', () => {
                         { accountId: expenseAccountId, amount: 50, transactionType: TransactionType.DEBIT },
                     ],
                 })
-            ).rejects.toThrow(/unbalanced by/)
+            ).rejects.toThrow(/Unbalanced journal/)
         })
 
         it('should handle multi-leg journals', async () => {
             // Receive salary and immediately pay some expense
-            const journal = await journalRepository.createJournalWithTransactions({
+            const journal = await journalService.createJournal({
                 description: 'Salary with immediate expense',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -94,7 +96,7 @@ describe('JournalRepository', () => {
         })
 
         it('should update account balances correctly', async () => {
-            await journalRepository.createJournalWithTransactions({
+            await journalService.createJournal({
                 description: 'Deposit',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -107,17 +109,17 @@ describe('JournalRepository', () => {
             // Ensure rebuilds complete
             await rebuildQueueService.flush()
 
-            const cashBalance = await accountRepository.getAccountBalance(cashAccountId)
+            const cashBalance = await balanceService.getAccountBalance(cashAccountId)
             expect(cashBalance.balance).toBe(500)
 
-            const incomeBalance = await accountRepository.getAccountBalance(incomeAccountId)
+            const incomeBalance = await balanceService.getAccountBalance(incomeAccountId)
             expect(incomeBalance.balance).toBe(500)
         })
     })
 
     describe('updateJournalWithTransactions', () => {
         it('should update journal and recalculate balances', async () => {
-            const journal = await journalRepository.createJournalWithTransactions({
+            const journal = await journalService.createJournal({
                 description: 'Original',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -127,7 +129,7 @@ describe('JournalRepository', () => {
                 ],
             })
 
-            await journalRepository.updateJournalWithTransactions(journal.id, {
+            await journalService.updateJournal(journal.id, {
                 description: 'Updated',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -148,7 +150,7 @@ describe('JournalRepository', () => {
 
     describe('duplicateJournal', () => {
         it('should duplicate a journal and its transactions', async () => {
-            const originalJournal = await journalRepository.createJournalWithTransactions({
+            const originalJournal = await journalService.createJournal({
                 description: 'Original Transaction',
                 journalDate: Date.now() - 86400000, // Yesterday
                 currencyCode: 'USD',
@@ -167,7 +169,7 @@ describe('JournalRepository', () => {
             expect(duplicatedJournal.transactionCount).toBe(originalJournal.transactionCount)
 
             // Transactions should be duplicated faithfully
-            const duplicatedTransactions = await transactionRepository.findEnrichedByJournal(duplicatedJournal.id)
+            const duplicatedTransactions = await transactionService.getEnrichedByJournal(duplicatedJournal.id)
             expect(duplicatedTransactions).toHaveLength(2)
 
             const cashTx = duplicatedTransactions.find(t => t.accountId === cashAccountId)
@@ -183,7 +185,7 @@ describe('JournalRepository', () => {
     describe('deleteJournal', () => {
         // TODO: Fix rebuild queue singleton timing issue in test environment
         it('should soft-delete journal and its transactions', async () => {
-            const journal = await journalRepository.createJournalWithTransactions({
+            const journal = await journalService.createJournal({
                 description: 'To be deleted',
                 journalDate: Date.now(),
                 currencyCode: 'USD',

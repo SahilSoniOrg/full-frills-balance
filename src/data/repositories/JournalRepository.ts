@@ -1,11 +1,9 @@
 import { database } from '@/src/data/database/Database'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
-import { accountRepository } from '@/src/data/repositories/AccountRepository'
-import { EnrichedJournal } from '@/src/types/domain'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
-import { map, of, switchMap } from 'rxjs'
+import { map, of } from 'rxjs'
 
 export interface CreateJournalData {
   journalDate: number
@@ -29,85 +27,17 @@ export class JournalRepository {
     return database.collections.get<Transaction>('transactions')
   }
 
+  journalsQuery(...clauses: any[]) {
+    return this.journals.query(...clauses)
+  }
+
+  transactionsQuery(...clauses: any[]) {
+    return this.transactions.query(...clauses)
+  }
+
   /**
    * Reactive Observation Methods
    */
-
-  observeEnrichedJournals(limit: number, dateRange?: { startDate: number, endDate: number }) {
-    const clauses: any[] = [
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-      Q.sortBy('journal_date', 'desc'),
-      Q.take(limit)
-    ]
-
-    if (dateRange) {
-      clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)))
-      clauses.push(Q.where('journal_date', Q.lte(dateRange.endDate)))
-    }
-
-    const journalsObservable = this.journals
-      .query(...clauses)
-      .observe()
-
-    return journalsObservable.pipe(
-      switchMap((journals) => {
-        if (journals.length === 0) return of([] as EnrichedJournal[])
-
-        const journalIds = journals.map(j => j.id)
-
-        const transactionsObservable = this.transactions
-          .query(
-            Q.experimentalJoinTables(['journals']),
-            Q.where('journal_id', Q.oneOf(journalIds)),
-            Q.where('deleted_at', Q.eq(null)),
-            Q.on('journals', [
-              Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-              Q.where('deleted_at', Q.eq(null))
-            ])
-          )
-          .observe()
-
-        return transactionsObservable.pipe(
-          switchMap((transactions) => {
-            const accountIds = Array.from(new Set(transactions.map(t => t.accountId)))
-            return accountRepository.observeByIds(accountIds).pipe(
-              map((accounts) => {
-                const accountMap = new Map(accounts.map(a => [a.id, a]))
-                return journals.map(j => {
-                  const jTxs = transactions.filter(t => t.journalId === j.id)
-                  const enrichedAccounts = Array.from(new Set(jTxs.map(t => t.accountId))).map(id => {
-                    const acc = accountMap.get(id)
-                    const role = jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT
-                      ? 'SOURCE'
-                      : 'DESTINATION'
-                    return {
-                      id,
-                      name: acc?.name || 'Unknown',
-                      accountType: acc?.accountType || 'ASSET',
-                      role
-                    }
-                  })
-
-                  return {
-                    id: j.id,
-                    journalDate: j.journalDate,
-                    description: j.description,
-                    currencyCode: j.currencyCode,
-                    status: j.status as any,
-                    totalAmount: j.totalAmount || 0,
-                    transactionCount: j.transactionCount || 0,
-                    displayType: j.displayType as any,
-                    accounts: enrichedAccounts
-                  } as EnrichedJournal
-                })
-              })
-            )
-          })
-        )
-      })
-    )
-  }
 
   observeAccountTransactions(accountId: string, limit: number, dateRange?: { startDate: number, endDate: number }) {
     const clauses: any[] = [
@@ -188,6 +118,11 @@ export class JournalRepository {
     }
   }
 
+  async findByIds(ids: string[]): Promise<Journal[]> {
+    if (ids.length === 0) return []
+    return this.journals.query(Q.where('id', Q.oneOf(ids))).fetch()
+  }
+
   async findAll(): Promise<Journal[]> {
     return this.journals
       .query(
@@ -214,7 +149,7 @@ export class JournalRepository {
   }
 
   async createJournalWithTransactions(
-    journalData: CreateJournalData & { totalAmount: number; displayType: string; calculatedBalances: Map<string, number> }
+    journalData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
   ): Promise<Journal> {
     const { transactions: transactionData, totalAmount, displayType, calculatedBalances, ...journalFields } = journalData
 
@@ -222,9 +157,9 @@ export class JournalRepository {
       const j = await this.journals.create((j) => {
         Object.assign(j, journalFields)
         j.status = JournalStatus.POSTED
-        j.totalAmount = totalAmount
+        j.totalAmount = totalAmount ?? 0
         j.transactionCount = transactionData.length
-        j.displayType = displayType
+        j.displayType = displayType ?? 'TRANSACTION'
       })
 
       await Promise.all(transactionData.map(txData => {
@@ -237,7 +172,7 @@ export class JournalRepository {
           tx.transactionDate = journalFields.journalDate
           tx.notes = txData.notes
           tx.exchangeRate = txData.exchangeRate
-          tx.runningBalance = calculatedBalances.get(txData.accountId)
+          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0
         })
       }))
 
@@ -247,7 +182,7 @@ export class JournalRepository {
 
   async updateJournalWithTransactions(
     journalId: string,
-    journalData: CreateJournalData & { totalAmount: number; displayType: string; calculatedBalances: Map<string, number> }
+    journalData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
   ): Promise<Journal> {
     const { transactions: transactionData, totalAmount, displayType, calculatedBalances, ...journalFields } = journalData
 
@@ -271,7 +206,7 @@ export class JournalRepository {
           tx.transactionDate = journalFields.journalDate
           tx.notes = txData.notes
           tx.exchangeRate = txData.exchangeRate
-          tx.runningBalance = calculatedBalances.get(txData.accountId)
+          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0
         })
       }))
 
@@ -280,9 +215,9 @@ export class JournalRepository {
         j.journalDate = journalFields.journalDate
         j.description = journalFields.description
         j.currencyCode = journalFields.currencyCode
-        j.totalAmount = totalAmount
+        j.totalAmount = totalAmount ?? j.totalAmount
         j.transactionCount = transactionData.length
-        j.displayType = displayType
+        j.displayType = displayType ?? j.displayType
       })
 
       return existingJournal

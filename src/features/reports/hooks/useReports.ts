@@ -2,16 +2,13 @@ import { AppConfig } from '@/src/constants/app-config';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
-import { DailyNetWorth, ExpenseCategory, reportService } from '@/src/services/report-service';
+import { reportService } from '@/src/services/report-service';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useMemo, useState } from 'react';
 
 export function useReports() {
     const { theme } = useTheme();
-    const [netWorthHistory, setNetWorthHistory] = useState<DailyNetWorth[]>([]);
-    const [expenseBreakdown, setExpenseBreakdown] = useState<ExpenseCategory[]>([]);
-    const [incomeVsExpense, setIncomeVsExpense] = useState<{ income: number, expense: number }>({ income: 0, expense: 0 });
 
     const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
         type: 'LAST_N',
@@ -21,10 +18,10 @@ export function useReports() {
     const [dateRange, setDateRange] = useState<DateRange>(getLastNRange(30, 'days'));
 
     const triggerObservable = useMemo(() => {
-        return transactionRepository.observeCountByDateRange(dateRange.startDate, dateRange.endDate);
+        return transactionRepository.observeCountByDateRange(dateRange.startDate, dateRange.endDate, false);
     }, [dateRange.startDate, dateRange.endDate]);
 
-    const { isLoading: loading, error, version } = useObservableWithEnrichment(
+    const { data, isLoading: loading, error } = useObservableWithEnrichment(
         () => triggerObservable,
         async () => {
             const { startDate, endDate } = dateRange;
@@ -36,13 +33,14 @@ export function useReports() {
                 reportService.getIncomeVsExpense(startDate, endDate, targetCurrency)
             ]);
 
-            setNetWorthHistory(history);
-            setIncomeVsExpense(incVsExp);
-            setExpenseBreakdown(breakdown);
-            return true;
+            return {
+                netWorthHistory: history,
+                expenseBreakdown: breakdown,
+                incomeVsExpense: incVsExp
+            };
         },
         [dateRange, triggerObservable],
-        false
+        { netWorthHistory: [], expenseBreakdown: [], incomeVsExpense: { income: 0, expense: 0 } }
     );
 
     const expenses = useMemo(() => {
@@ -54,8 +52,8 @@ export function useReports() {
             theme.asset,
             theme.primaryLight
         ];
-        return expenseBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
-    }, [expenseBreakdown, theme.asset, theme.error, theme.primary, theme.primaryLight, theme.success, theme.warning]);
+        return data.expenseBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
+    }, [data.expenseBreakdown, theme.asset, theme.error, theme.primary, theme.primaryLight, theme.success, theme.warning]);
 
     const updateFilter = useCallback((range: DateRange, filter: PeriodFilter) => {
         setDateRange(range);
@@ -63,9 +61,9 @@ export function useReports() {
     }, []);
 
     return {
-        netWorthHistory,
+        netWorthHistory: data.netWorthHistory,
         expenses,
-        incomeVsExpense,
+        incomeVsExpense: data.incomeVsExpense,
         loading,
         error,
         dateRange,

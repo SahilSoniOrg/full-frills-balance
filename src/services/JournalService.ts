@@ -1,6 +1,6 @@
 import { AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Journal from '@/src/data/models/Journal';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
@@ -8,10 +8,13 @@ import { CreateJournalData, journalRepository } from '@/src/data/repositories/Jo
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { auditService } from '@/src/services/audit-service';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { EnrichedJournal, EnrichedTransaction } from '@/src/types/domain';
+import { EnrichedJournal } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { roundToPrecision } from '@/src/utils/money';
+import { Q } from '@nozbe/watermelondb';
+import { map, of, switchMap } from 'rxjs';
 
 export class JournalService {
     /**
@@ -233,112 +236,93 @@ export class JournalService {
     }
 
     /**
-     * READS: Enriched models for UI
+     * READS: Enriched models for UI (Reactive)
      */
-    async findEnrichedJournals(limit: number, dateRange?: { startDate: number, endDate: number }): Promise<EnrichedJournal[]> {
-        const journals = await journalRepository.findAll();
-        // dateRange filtering and limit should be handled better, but keeping it simple for now
-        const journalIds = journals.map(j => j.id).slice(0, limit);
 
-        const transactions = await transactionRepository.findByJournals(journalIds);
-        const accountIds = [...new Set(transactions.map(t => t.accountId))];
-        const accounts = await accountRepository.findAllByIds(accountIds);
-        const accountMap = new Map<string, any>(accounts.map(a => [a.id, a]));
-        const accountTypes = new Map<string, AccountType>(accounts.map(a => [a.id, a.accountType as AccountType]));
+    /**
+     * Observe journals with their associated accounts for list display.
+     * Replaces JournalRepository.observeEnrichedJournals.
+     */
+    observeEnrichedJournals(limit: number, dateRange?: { startDate: number, endDate: number }) {
+        const clauses: any[] = [
+            Q.where('deleted_at', Q.eq(null)),
+            Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+            Q.sortBy('journal_date', 'desc'),
+            Q.take(limit)
+        ];
 
-        return journals.slice(0, limit).map(j => {
-            const jTxs = transactions.filter(t => t.journalId === j.id);
-            const enrichedAccounts = Array.from(new Set(jTxs.map(t => t.accountId))).map(id => {
-                const acc = accountMap.get(id);
-                return {
-                    id,
-                    name: acc?.name || 'Unknown',
-                    accountType: acc?.accountType || 'ASSET',
-                    role: jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT ? 'SOURCE' : 'DESTINATION'
-                };
-            });
+        if (dateRange) {
+            clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)));
+            clauses.push(Q.where('journal_date', Q.lte(dateRange.endDate)));
+        }
 
-            return {
-                id: j.id,
-                journalDate: j.journalDate,
-                description: j.description,
-                currencyCode: j.currencyCode,
-                status: j.status as any,
-                totalAmount: j.totalAmount || 0,
-                transactionCount: j.transactionCount || 0,
-                displayType: j.displayType as any,
-                accounts: enrichedAccounts
-            } as EnrichedJournal;
-        });
+        const journalsObservable = journalRepository.journalsQuery(...clauses).observeWithColumns([
+            'journal_date',
+            'description',
+            'currency_code',
+            'status',
+            'total_amount',
+            'transaction_count',
+            'display_type'
+        ]);
+
+        return journalsObservable.pipe(
+            switchMap((journals) => {
+                if (journals.length === 0) return of([] as EnrichedJournal[]);
+
+                const journalIds = journals.map(j => j.id);
+
+                const transactionsObservable = transactionRepository.transactionsQuery(
+                    Q.experimentalJoinTables(['journals']),
+                    Q.where('journal_id', Q.oneOf(journalIds)),
+                    Q.where('deleted_at', Q.eq(null)),
+                    Q.on('journals', [
+                        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+                        Q.where('deleted_at', Q.eq(null))
+                    ])
+                ).observe();
+
+                return transactionsObservable.pipe(
+                    switchMap((transactions) => {
+                        const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
+                        return accountRepository.observeByIds(accountIds).pipe(
+                            map((accounts) => {
+                                const accountMap = new Map(accounts.map(a => [a.id, a]));
+                                return journals.map(j => {
+                                    const jTxs = transactions.filter(t => t.journalId === j.id);
+                                    const enrichedAccounts = Array.from(new Set(jTxs.map(t => t.accountId))).map(id => {
+                                        const acc = accountMap.get(id);
+                                        const role = jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT
+                                            ? 'SOURCE'
+                                            : 'DESTINATION';
+                                        return {
+                                            id,
+                                            name: acc?.name || 'Unknown',
+                                            accountType: acc?.accountType || 'ASSET',
+                                            role: role as any
+                                        };
+                                    });
+
+                                    return {
+                                        id: j.id,
+                                        journalDate: j.journalDate,
+                                        description: j.description,
+                                        currencyCode: j.currencyCode,
+                                        status: j.status as any,
+                                        totalAmount: j.totalAmount || 0,
+                                        transactionCount: j.transactionCount || 0,
+                                        displayType: j.displayType as any,
+                                        accounts: enrichedAccounts
+                                    } as EnrichedJournal;
+                                });
+                            })
+                        );
+                    })
+                );
+            })
+        );
     }
 
-    async findEnrichedTransactionsForAccount(accountId: string, limit: number, dateRange?: { startDate: number, endDate: number }): Promise<EnrichedTransaction[]> {
-        const transactions = await transactionRepository.findByAccount(accountId, limit, dateRange);
-        if (transactions.length === 0) return [];
-
-        const journalIds = Array.from(new Set(transactions.map(t => t.journalId)));
-        const allJournals = await journalRepository.findAll(); // Simple fetch for now
-        const journalMap = new Map<string, any>(allJournals.map(j => [j.id, j]));
-
-        const allJournalTxs = await transactionRepository.findByJournals(journalIds);
-        const allAccIds = Array.from(new Set(allJournalTxs.map(t => t.accountId)));
-        const accounts = await accountRepository.findAllByIds(allAccIds);
-        const accountMap = new Map<string, any>(accounts.map(a => [a.id, a]));
-
-        return transactions.map(tx => {
-            const journal = journalMap.get(tx.journalId);
-            const account = accountMap.get(tx.accountId);
-
-            return {
-                id: tx.id,
-                journalId: tx.journalId,
-                accountId: tx.accountId,
-                amount: tx.amount,
-                currencyCode: tx.currencyCode,
-                transactionType: tx.transactionType as any,
-                transactionDate: tx.transactionDate,
-                notes: tx.notes,
-                journalDescription: journal?.description,
-                accountName: account?.name,
-                accountType: account?.accountType as any,
-                runningBalance: tx.runningBalance,
-                isIncrease: ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
-                    ? tx.transactionType === 'DEBIT'
-                    : tx.transactionType === 'CREDIT'
-            } as EnrichedTransaction;
-        });
-    }
-
-    async findEnrichedTransactionsByJournal(journalId: string): Promise<EnrichedTransaction[]> {
-        const journal = await journalRepository.find(journalId);
-        if (!journal) return [];
-
-        const transactions = await transactionRepository.findByJournal(journalId);
-        const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-        const accounts = await accountRepository.findAllByIds(accountIds);
-        const accountMap = new Map<string, any>(accounts.map(a => [a.id, a]));
-
-        return transactions.map(tx => {
-            const account = accountMap.get(tx.accountId);
-            return {
-                id: tx.id,
-                journalId: tx.journalId,
-                accountId: tx.accountId,
-                amount: tx.amount,
-                currencyCode: tx.currencyCode,
-                transactionType: tx.transactionType as any,
-                transactionDate: tx.transactionDate,
-                notes: tx.notes,
-                journalDescription: journal?.description,
-                accountName: account?.name,
-                accountType: account?.accountType as any,
-                runningBalance: tx.runningBalance,
-                isIncrease: ['ASSET', 'EXPENSE'].includes(account?.accountType || '')
-                    ? tx.transactionType === 'DEBIT'
-                    : tx.transactionType === 'CREDIT'
-            } as EnrichedTransaction;
-        });
-    }
 }
 
 export const journalService = new JournalService();

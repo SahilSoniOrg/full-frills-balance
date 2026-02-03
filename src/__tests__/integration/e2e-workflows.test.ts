@@ -8,9 +8,12 @@ import { AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { rebuildQueueService } from '@/src/data/repositories/RebuildQueue'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { accountService } from '@/src/services/AccountService'
+import { balanceService } from '@/src/services/BalanceService'
 import { IntegrityService } from '@/src/services/integrity-service'
+import { journalService } from '@/src/services/JournalService'
+import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 
 describe('E2E Workflows', () => {
     let integrityService: IntegrityService
@@ -29,7 +32,7 @@ describe('E2E Workflows', () => {
     describe('Daily expense tracking workflow', () => {
         it('should track a full day of expenses with correct balances', async () => {
             // Setup: Create accounts
-            const wallet = await accountRepository.create({
+            const wallet = await accountService.createAccount({
                 name: 'Wallet',
                 accountType: AccountType.ASSET,
                 currencyCode: 'USD',
@@ -50,7 +53,7 @@ describe('E2E Workflows', () => {
             })
 
             // Morning: Coffee
-            await journalRepository.createJournalWithTransactions({
+            await journalService.createJournal({
                 description: 'Morning Coffee',
                 journalDate: Date.now() + 1000,
                 currencyCode: 'USD',
@@ -61,7 +64,7 @@ describe('E2E Workflows', () => {
             })
 
             // Lunch
-            await journalRepository.createJournalWithTransactions({
+            await journalService.createJournal({
                 description: 'Lunch',
                 journalDate: Date.now() + 2000,
                 currencyCode: 'USD',
@@ -72,7 +75,7 @@ describe('E2E Workflows', () => {
             })
 
             // Bus ride
-            await journalRepository.createJournalWithTransactions({
+            await journalService.createJournal({
                 description: 'Bus',
                 journalDate: Date.now() + 3000,
                 currencyCode: 'USD',
@@ -86,9 +89,9 @@ describe('E2E Workflows', () => {
             await rebuildQueueService.flush()
 
             // Verify balances
-            const walletBalance = await accountRepository.getAccountBalance(wallet.id, Date.now() + 5000)
-            const foodBalance = await accountRepository.getAccountBalance(food.id, Date.now() + 5000)
-            const transportBalance = await accountRepository.getAccountBalance(transport.id, Date.now() + 5000)
+            const walletBalance = await balanceService.getAccountBalance(wallet.id, Date.now() + 5000)
+            const foodBalance = await balanceService.getAccountBalance(food.id, Date.now() + 5000)
+            const transportBalance = await balanceService.getAccountBalance(transport.id, Date.now() + 5000)
 
             // 200 - 5.50 - 15.00 - 2.50 = 177.00
             expect(walletBalance.balance).toBe(177)
@@ -105,7 +108,7 @@ describe('E2E Workflows', () => {
         // TODO: Fix rebuild queue singleton timing issue in test environment
         it('should correctly reverse a journal and restore balances', async () => {
             const FIXED_DATE = 1706700000000 // Fixed date for test
-            const cash = await accountRepository.create({
+            const cash = await accountService.createAccount({
                 name: 'Cash',
                 accountType: AccountType.ASSET,
                 currencyCode: 'USD',
@@ -135,7 +138,7 @@ describe('E2E Workflows', () => {
             })
 
             // Make a purchase
-            const journal = await journalRepository.createJournalWithTransactions({
+            const journal = await journalService.createJournal({
                 description: 'Accidental purchase',
                 journalDate: FIXED_DATE + 10000,
                 currencyCode: 'USD',
@@ -147,17 +150,17 @@ describe('E2E Workflows', () => {
 
             // Verify balance after purchase
             await rebuildQueueService.flush()
-            let cashBalance = await accountRepository.getAccountBalance(cash.id)
+            let cashBalance = await balanceService.getAccountBalance(cash.id)
             expect(cashBalance.balance).toBe(400)
 
             // Reverse the journal
-            await journalRepository.createReversalJournal(journal.id, 'Refund')
+            await journalService.createReversalJournal(journal.id, 'Refund')
 
             // Ensure rebuilds complete
             await rebuildQueueService.flush()
 
             // Verify balance is restored
-            cashBalance = await accountRepository.getAccountBalance(cash.id)
+            cashBalance = await balanceService.getAccountBalance(cash.id)
             expect(cashBalance.balance).toBe(500)
         }, 20000)
     })
@@ -177,7 +180,7 @@ describe('E2E Workflows', () => {
             })
 
             // Spend 100 EUR at 1.10 USD/EUR rate (= 110 USD in journal currency)
-            await journalRepository.createJournalWithTransactions({
+            await journalService.createJournal({
                 description: 'Purchase in EUR',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -190,8 +193,8 @@ describe('E2E Workflows', () => {
             // Ensure rebuilds complete
             await rebuildQueueService.flush()
 
-            const usdBalance = await accountRepository.getAccountBalance(usdCash.id)
-            const eurBalance = await accountRepository.getAccountBalance(eurExpense.id)
+            const usdBalance = await balanceService.getAccountBalance(usdCash.id)
+            const eurBalance = await balanceService.getAccountBalance(eurExpense.id)
 
             expect(usdBalance.balance).toBe(-110)
             expect(eurBalance.balance).toBe(100)

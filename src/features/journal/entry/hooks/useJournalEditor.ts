@@ -1,8 +1,8 @@
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { journalEntryService } from '@/src/services/journal-entry-service';
+import { transactionService } from '@/src/services/TransactionService';
 import { JournalEntryLine } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useRouter } from 'expo-router';
@@ -50,7 +50,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                         setJournalDate(dateObj.toISOString().split('T')[0]);
                         setJournalTime(dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
 
-                        const txs = await transactionRepository.findEnrichedByJournal(journalId);
+                        const txs = await transactionService.getEnrichedByJournal(journalId);
                         if (txs.length > 0) {
                             // Auto-switch to advanced mode if more than 2 lines
                             if (txs.length > 2) {

@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database'
 import Journal from '@/src/data/models/Journal'
 import { AccountRepository } from '@/src/data/repositories/AccountRepository'
 import { JournalRepository } from '@/src/data/repositories/JournalRepository'
+import { balanceService } from '@/src/services/BalanceService'
 import { Q } from '@nozbe/watermelondb'
 
 export interface ReconciliationResult {
@@ -40,7 +41,7 @@ export class ReconciliationRepository {
     expectedBalance?: number
   ): Promise<ReconciliationResult> {
     // Get system balance
-    const systemBalanceData = await this.accountRepository.getAccountBalance(accountId)
+    const systemBalanceData = await balanceService.getAccountBalance(accountId)
 
     // Get account details
     const account = await this.accountRepository.find(accountId)
@@ -51,12 +52,10 @@ export class ReconciliationRepository {
     // Get latest journal date for this account
     const journals = await database.collections.get<Journal>('journals')
       .query(
-        Q.and(
-          Q.experimentalJoinTables(['transactions']),
-          Q.on('transactions', 'account_id', accountId),
-          Q.where('deleted_at', Q.eq(null)),
-          Q.where('status', Q.eq('POSTED'))
-        )
+        Q.experimentalJoinTables(['transactions']),
+        Q.on('transactions', Q.where('account_id', accountId)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('status', Q.eq('POSTED'))
       )
       .extend(Q.sortBy('journal_date', 'desc'))
       .fetch()

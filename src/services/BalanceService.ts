@@ -15,8 +15,8 @@ export class BalanceService {
         const account = await accountRepository.find(accountId);
         if (!account) throw new Error(`Account ${accountId} not found`);
 
-        // 1. Get running balance from latest transaction before cutoff
-        const latestTxs = await transactionRepository.findLatestForAccountBeforeDate(accountId, cutoffDate);
+        // 1. Get running balance from latest transaction before or at cutoff
+        const latestTxs = await transactionRepository.findLatestForAccount(accountId, cutoffDate);
         const balance = latestTxs?.runningBalance || 0;
 
         // 2. Get transaction count (Fast Count)

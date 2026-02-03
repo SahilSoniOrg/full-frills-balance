@@ -5,7 +5,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 
-import { rebuildQueueService } from '@/src/data/repositories/RebuildQueue'
+import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 
 describe('TransactionRepository', () => {
     let accountId: string

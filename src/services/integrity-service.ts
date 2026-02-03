@@ -8,12 +8,12 @@
  * All database writes are delegated to repositories.
  */
 
-import Account, { AccountType } from '@/src/data/models/Account'
-import Transaction from '@/src/data/models/Transaction'
-import { databaseRepository } from '@/src/data/repositories/DatabaseRepository'
+import { AccountType } from '@/src/data/models/Account'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
+import { databaseRepository } from '@/src/data/repositories/DatabaseRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { balanceService } from '@/src/services/BalanceService'
 import { accountingService } from '@/src/utils/accountingService'
 import { logger } from '@/src/utils/logger'
 import { amountsAreEqual, roundToPrecision } from '@/src/utils/money'
@@ -97,7 +97,7 @@ export class IntegrityService {
             throw new Error(`Account ${accountId} not found`)
         }
 
-        const cachedData = await accountRepository.getAccountBalance(accountId, cutoffDate)
+        const cachedData = await balanceService.getAccountBalance(accountId, cutoffDate)
         const computedBalance = await this.computeBalanceFromTransactions(accountId, cutoffDate)
         const precision = await currencyRepository.getPrecision(account.currencyCode)
         const discrepancy = Math.abs(cachedData.balance - computedBalance)

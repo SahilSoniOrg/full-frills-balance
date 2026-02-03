@@ -1,9 +1,10 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
+import { journalService } from '@/src/services/JournalService';
 import { act, renderHook } from '@testing-library/react-native';
 
-
 // Mock dependencies
+jest.mock('@/src/services/JournalService');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/data/database/Database', () => ({
     database: {
@@ -17,7 +18,7 @@ describe('useJournalActions', () => {
         jest.clearAllMocks();
     });
 
-    it('should delegate createJournal', async () => {
+    it('should delegate createJournal to journalService', async () => {
         const { result } = renderHook(() => useJournalActions());
         const data = { description: 'test', currencyCode: 'USD', transactions: [] } as any;
 
@@ -25,10 +26,10 @@ describe('useJournalActions', () => {
             await result.current.createJournal(data);
         });
 
-        expect(journalRepository.createJournalWithTransactions).toHaveBeenCalledWith(data);
+        expect(journalService.createJournal).toHaveBeenCalledWith(data);
     });
 
-    it('should delegate updateJournal', async () => {
+    it('should delegate updateJournal to journalService', async () => {
         const { result } = renderHook(() => useJournalActions());
         const data = { description: 'update' } as any;
 
@@ -36,10 +37,10 @@ describe('useJournalActions', () => {
             await result.current.updateJournal('id1', data);
         });
 
-        expect(journalRepository.updateJournalWithTransactions).toHaveBeenCalledWith('id1', data);
+        expect(journalService.updateJournal).toHaveBeenCalledWith('id1', data);
     });
 
-    it('should delegate deleteJournal', async () => {
+    it('should delegate deleteJournal to journalService', async () => {
         const { result } = renderHook(() => useJournalActions());
         const journal = { id: 'id1' } as any;
 
@@ -47,16 +48,26 @@ describe('useJournalActions', () => {
             await result.current.deleteJournal(journal);
         });
 
-        expect(journalRepository.deleteJournal).toHaveBeenCalledWith('id1');
+        expect(journalService.deleteJournal).toHaveBeenCalledWith('id1');
     });
 
-    it('should delegate duplicateJournal', async () => {
+    it('should delegate duplicateJournal to journalService', async () => {
         const { result } = renderHook(() => useJournalActions());
 
         await act(async () => {
             await result.current.duplicateJournal('id1');
         });
 
-        expect(journalRepository.duplicateJournal).toHaveBeenCalledWith('id1');
+        expect(journalService.duplicateJournal).toHaveBeenCalledWith('id1');
+    });
+
+    it('should delegate findJournal to journalRepository', async () => {
+        const { result } = renderHook(() => useJournalActions());
+
+        await act(async () => {
+            await result.current.findJournal('id1');
+        });
+
+        expect(journalRepository.find).toHaveBeenCalledWith('id1');
     });
 });

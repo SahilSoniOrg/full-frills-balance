@@ -1,8 +1,9 @@
-import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { useObservable } from '@/src/hooks/useObservable'
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable'
-import { EnrichedJournal, EnrichedTransaction } from '@/src/types/domain'
-import { useEffect, useState } from 'react'
+import { journalService } from '@/src/services/JournalService'
+import { transactionService } from '@/src/services/TransactionService'
+import { EnrichedJournal, EnrichedTransaction, TransactionWithAccountInfo } from '@/src/types/domain'
+import { of } from 'rxjs'
 
 /**
  * Hook to reactively get journals with pagination and account enrichment
@@ -11,7 +12,7 @@ export function useJournals(pageSize: number = 50, dateRange?: { startDate: numb
     const { items: journals, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<any, EnrichedJournal>({
         pageSize,
         dateRange,
-        observe: (limit, range) => journalRepository.observeEnrichedJournals(limit, range)
+        observe: (limit, range) => journalService.observeEnrichedJournals(limit, range)
     })
 
     return { journals, isLoading, isLoadingMore, hasMore, loadMore }
@@ -27,7 +28,7 @@ export function useAccountTransactions(accountId: string, pageSize: number = 50,
     const { items: transactions, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<any, EnrichedTransaction>({
         pageSize,
         dateRange,
-        observe: (limit, range) => transactionRepository.observeEnrichedForAccount(
+        observe: (limit, range) => transactionService.observeEnrichedForAccount(
             accountId,
             limit,
             range
@@ -42,25 +43,13 @@ export function useAccountTransactions(accountId: string, pageSize: number = 50,
  * Hook to reactively get transactions for a specific journal with account names
  */
 export function useJournalTransactions(journalId: string | null) {
-    const [transactions, setTransactions] = useState<EnrichedTransaction[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-
-    useEffect(() => {
-        if (!journalId) {
-            setTransactions([])
-            setIsLoading(false)
-            return
-        }
-
-        const subscription = transactionRepository
-            .observeEnrichedByJournal(journalId)
-            .subscribe((enrichedTxs) => {
-                setTransactions(enrichedTxs)
-                setIsLoading(false)
-            })
-
-        return () => subscription.unsubscribe()
-    }, [journalId])
+    const { data: transactions, isLoading } = useObservable(
+        () => journalId
+            ? transactionService.observeTransactionsWithAccountInfo(journalId)
+            : of([] as TransactionWithAccountInfo[]),
+        [journalId],
+        [] as TransactionWithAccountInfo[]
+    );
 
     return { transactions, isLoading }
 }

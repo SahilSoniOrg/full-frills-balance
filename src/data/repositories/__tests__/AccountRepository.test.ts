@@ -8,6 +8,8 @@ import { AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { accountService } from '@/src/services/AccountService'
+import { balanceService } from '@/src/services/BalanceService'
 
 describe('AccountRepository', () => {
     beforeEach(async () => {
@@ -30,14 +32,14 @@ describe('AccountRepository', () => {
         })
 
         it('should create account with initial balance', async () => {
-            const account = await accountRepository.create({
+            const account = await accountService.createAccount({
                 name: 'Savings',
                 accountType: AccountType.ASSET,
                 currencyCode: 'USD',
                 initialBalance: 1000,
             })
 
-            const balance = await accountRepository.getAccountBalance(account.id)
+            const balance = await balanceService.getAccountBalance(account.id)
             expect(balance.balance).toBe(1000)
         })
     })
@@ -50,7 +52,7 @@ describe('AccountRepository', () => {
                 currencyCode: 'USD',
             })
 
-            const balance = await accountRepository.getAccountBalance(account.id)
+            const balance = await balanceService.getAccountBalance(account.id)
             expect(balance.balance).toBe(0)
             expect(balance.transactionCount).toBe(0)
         })
@@ -72,10 +74,13 @@ describe('AccountRepository', () => {
                 description: 'Initial',
                 journalDate: Date.now() - 2000,
                 currencyCode: 'USD',
+                totalAmount: 1000,
+                displayType: 'INCOME',
                 transactions: [
                     { accountId: asset.id, amount: 1000, transactionType: TransactionType.DEBIT },
                     { accountId: equity.id, amount: 1000, transactionType: TransactionType.CREDIT },
                 ],
+                calculatedBalances: new Map([[asset.id, 1000], [equity.id, 1000]])
             })
 
             // Withdraw 300
@@ -83,13 +88,16 @@ describe('AccountRepository', () => {
                 description: 'Withdrawal',
                 journalDate: Date.now() - 1000,
                 currencyCode: 'USD',
+                totalAmount: 300,
+                displayType: 'EXPENSE',
                 transactions: [
                     { accountId: asset.id, amount: 300, transactionType: TransactionType.CREDIT },
                     { accountId: equity.id, amount: 300, transactionType: TransactionType.DEBIT },
                 ],
+                calculatedBalances: new Map([[asset.id, 700], [equity.id, 700]])
             })
 
-            const balance = await accountRepository.getAccountBalance(asset.id)
+            const balance = await balanceService.getAccountBalance(asset.id)
             expect(balance.balance).toBe(700)
             expect(balance.transactionCount).toBe(2)
         })
@@ -113,28 +121,34 @@ describe('AccountRepository', () => {
                 description: 'Earlier',
                 journalDate: earlierTime,
                 currencyCode: 'USD',
+                totalAmount: 500,
+                displayType: 'INCOME',
                 transactions: [
                     { accountId: asset.id, amount: 500, transactionType: TransactionType.DEBIT },
                     { accountId: equity.id, amount: 500, transactionType: TransactionType.CREDIT },
                 ],
+                calculatedBalances: new Map([[asset.id, 500], [equity.id, 500]])
             })
 
             await journalRepository.createJournalWithTransactions({
                 description: 'Later',
                 journalDate: laterTime,
                 currencyCode: 'USD',
+                totalAmount: 200,
+                displayType: 'INCOME',
                 transactions: [
                     { accountId: asset.id, amount: 200, transactionType: TransactionType.DEBIT },
                     { accountId: equity.id, amount: 200, transactionType: TransactionType.CREDIT },
                 ],
+                calculatedBalances: new Map([[asset.id, 700], [equity.id, 700]])
             })
 
             // Balance at earlier point
-            const earlierBalance = await accountRepository.getAccountBalance(asset.id, earlierTime + 1)
+            const earlierBalance = await balanceService.getAccountBalance(asset.id, earlierTime + 1)
             expect(earlierBalance.balance).toBe(500)
 
             // Current balance
-            const currentBalance = await accountRepository.getAccountBalance(asset.id)
+            const currentBalance = await balanceService.getAccountBalance(asset.id)
             expect(currentBalance.balance).toBe(700)
         })
     })

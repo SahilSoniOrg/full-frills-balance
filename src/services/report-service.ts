@@ -3,6 +3,7 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
@@ -47,7 +48,7 @@ export class ReportService {
         const now = dayjs().endOf('day');
 
         // 1. Get current balances
-        const allBalances = await accountRepository.getAccountBalances();
+        const allBalances = await balanceService.getAccountBalances();
         const relevantBalances = allBalances.filter(a =>
             a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY
         );

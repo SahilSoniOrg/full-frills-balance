@@ -1,12 +1,13 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { journalEntryService } from '@/src/services/journal-entry-service';
+import { transactionService } from '@/src/services/TransactionService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 
 // Mock dependencies
 jest.mock('@/src/services/journal-entry-service');
+jest.mock('@/src/services/TransactionService');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('expo-router', () => ({
@@ -91,12 +92,12 @@ describe('useJournalEditor', () => {
             description: 'Test Load'
         };
         const mockTxs = [
-            { id: '1', accountId: 'a1', amount: 10 },
-            { id: '2', accountId: 'a2', amount: 10 }
+            { id: '1', accountId: 'a1', amount: 10, currencyCode: 'USD', transactionType: 'DEBIT' },
+            { id: '2', accountId: 'a2', amount: 10, currencyCode: 'USD', transactionType: 'CREDIT' }
         ];
 
         (journalRepository.find as jest.Mock).mockResolvedValue(mockJournal);
-        (transactionRepository.findEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
+        (transactionService.getEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
 
         const { result } = renderHook(() => useJournalEditor({ journalId: 'j1' }));
 

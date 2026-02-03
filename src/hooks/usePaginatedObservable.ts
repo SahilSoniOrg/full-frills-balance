@@ -26,8 +26,6 @@ export interface UsePaginatedObservableOptions<T, E = T> {
     observe: (limit: number, dateRange?: DateRange) => Observable<T[]>;
     /** Optional enrichment function to transform raw items */
     enrich?: (items: T[], limit: number, dateRange?: DateRange) => Promise<E[]>;
-    /** Optional secondary observable for triggering re-enrichment (e.g., transactions) */
-    secondaryObserve?: () => Observable<unknown>;
 }
 
 export interface UsePaginatedObservableResult<E> {
@@ -42,7 +40,7 @@ export interface UsePaginatedObservableResult<E> {
 export function usePaginatedObservable<T, E = T>(
     options: UsePaginatedObservableOptions<T, E>
 ): UsePaginatedObservableResult<E> {
-    const { pageSize, dateRange, observe, enrich, secondaryObserve } = options;
+    const { pageSize, dateRange, observe, enrich } = options;
 
     const [items, setItems] = useState<E[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +61,6 @@ export function usePaginatedObservable<T, E = T>(
     useEffect(() => {
         let isActive = true;
         let sequence = 0;
-        let latestPrimary: T[] | null = null;
 
         // Only show full loading state when date range changes (not on pagination)
         const isFilterChange = prevDateRangeKeyRef.current !== dateRangeKey;
@@ -77,7 +74,6 @@ export function usePaginatedObservable<T, E = T>(
 
         const subscription = observable.subscribe(async (loaded) => {
             const current = ++sequence;
-            latestPrimary = loaded;
             try {
                 if (enrich) {
                     const enriched = await enrich(loaded, currentLimit, dateRange);
@@ -98,28 +94,9 @@ export function usePaginatedObservable<T, E = T>(
             }
         });
 
-        // Secondary subscription for re-enrichment (e.g., when transactions change)
-        let secondarySubscription: { unsubscribe: () => void } | undefined;
-        if (secondaryObserve && enrich) {
-            secondarySubscription = secondaryObserve().subscribe(async () => {
-                const current = ++sequence;
-                const primaryData = latestPrimary;
-                if (!primaryData) return;
-                try {
-                    const enriched = await enrich(primaryData, currentLimit, dateRange);
-                    if (!isActive || current !== sequence) return;
-                    setItems(enriched as E[]);
-                    setVersion(v => v + 1);
-                } catch {
-                    if (!isActive || current !== sequence) return;
-                }
-            });
-        }
-
         return () => {
             isActive = false;
             subscription.unsubscribe();
-            secondarySubscription?.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentLimit, dateRangeKey]);

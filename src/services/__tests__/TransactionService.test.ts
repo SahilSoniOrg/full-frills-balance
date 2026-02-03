@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database'
 import { AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
-import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { journalService } from '@/src/services/JournalService'
 import { transactionService } from '@/src/services/TransactionService'
 
 describe('TransactionService', () => {
@@ -30,7 +30,7 @@ describe('TransactionService', () => {
 
     describe('getTransactionsWithAccountInfo', () => {
         it('should return transactions with joined account info', async () => {
-            const journal = await journalRepository.createJournalWithTransactions({
+            const journal = await journalService.createJournal({
                 description: 'Test Journal',
                 journalDate: Date.now(),
                 currencyCode: 'USD',

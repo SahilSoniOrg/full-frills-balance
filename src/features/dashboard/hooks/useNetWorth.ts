@@ -1,9 +1,13 @@
+import { AppConfig } from '@/src/constants/app-config'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { useObservable } from '@/src/hooks/useObservable'
+import { balanceService } from '@/src/services/BalanceService'
 import { wealthService } from '@/src/services/wealth-service'
 import { AccountBalance } from '@/src/types/domain'
 import { logger } from '@/src/utils/logger'
-import { useEffect, useRef, useState } from 'react'
+import { preferences } from '@/src/utils/preferences'
+import { combineLatest, debounceTime, startWith, switchMap } from 'rxjs'
 
 /**
  * Hook to reactively get all account balances and net worth
@@ -14,69 +18,44 @@ import { useEffect, useRef, useState } from 'react'
  * - Also subscribes to transactions to catch balance changes
  */
 export function useNetWorth() {
-    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const [data, setData] = useState<{
-        balances: AccountBalance[]
-        netWorth: number
-        totalAssets: number
-        totalLiabilities: number
-        isLoading: boolean
-    }>({
-        balances: [],
-        netWorth: 0,
-        totalAssets: 0,
-        totalLiabilities: 0,
-        isLoading: true
-    })
+    const { data, isLoading } = useObservable(
+        () => combineLatest([
+            accountRepository.observeAll(),
+            transactionRepository.observeActiveCount(false).pipe(startWith(0))
+        ]).pipe(
+            debounceTime(300),
+            switchMap(async () => {
+                try {
+                    const targetCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency
+                    const balances = await balanceService.getAccountBalances()
+                    const wealth = await wealthService.calculateSummary(balances, targetCurrency)
 
-    useEffect(() => {
-        // Calculate net worth with debouncing
-        const calculateNetWorth = async () => {
-            try {
-                const balances = await accountRepository.getAccountBalances()
-                const wealth = wealthService.calculateSummary(balances)
-
-                setData({
-                    balances,
-                    ...wealth,
-                    isLoading: false
-                })
-            } catch (error) {
-                logger.error('Failed to calculate net worth:', error)
-                setData(prev => ({ ...prev, isLoading: false }))
-            }
+                    return {
+                        balances,
+                        ...wealth,
+                    }
+                } catch (error) {
+                    logger.error('Failed to calculate net worth:', error)
+                    return {
+                        balances: [] as AccountBalance[],
+                        netWorth: 0,
+                        totalAssets: 0,
+                        totalLiabilities: 0
+                    }
+                }
+            })
+        ),
+        [],
+        {
+            balances: [] as AccountBalance[],
+            netWorth: 0,
+            totalAssets: 0,
+            totalLiabilities: 0
         }
+    )
 
-        // Debounced calculation
-        const debouncedCalculate = () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current)
-            }
-            timeoutRef.current = setTimeout(calculateNetWorth, 300)
-        }
-
-        // Subscribe to account changes (account creation/deletion)
-        const accountSubscription = accountRepository
-            .observeAll()
-            .subscribe(debouncedCalculate)
-
-        // Subscribe to transaction changes (balance updates)
-        // This is more targeted than journals - only fires when transactions change
-        const transactionSubscription = transactionRepository
-            .observeActive()
-            .subscribe(debouncedCalculate)
-
-        // Initial load (immediate, no debounce)
-        calculateNetWorth()
-
-        return () => {
-            accountSubscription.unsubscribe()
-            transactionSubscription.unsubscribe()
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current)
-            }
-        }
-    }, [])
-
-    return data
+    return {
+        ...data,
+        isLoading
+    }
 }
