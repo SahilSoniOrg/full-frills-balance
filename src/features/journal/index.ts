@@ -5,4 +5,6 @@ export * from './hooks/useJournalActions'
 export * from './hooks/useJournals'
 export { JournalListScreen } from './list/JournalListScreen'
 export { default as TransactionDetailsScreen } from './screens/TransactionDetailsScreen'
-
+export { journalService } from './services/JournalService'
+export { transactionService } from './services/TransactionService'
+export { JournalEntryService, journalEntryService } from './services/JournalEntryService'

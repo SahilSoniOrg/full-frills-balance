@@ -1,12 +1,18 @@
 import { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountBalance } from '@/src/types/domain';
+import { accountingService } from '@/src/utils/accountingService';
+import { roundToPrecision } from '@/src/utils/money';
 
 export class BalanceService {
     /**
      * Returns an account's balance and transaction count as of a given date.
      * Logic migrated from AccountRepository to centralize balance management.
+     * 
+     * ⚠️ WARNING: DO NOT USE FOR UI. This is an imperative snapshot. 
+     * Use `useAccountBalance` hook for reactive UI updates.
      */
     async getAccountBalance(
         accountId: string,
@@ -15,12 +21,16 @@ export class BalanceService {
         const account = await accountRepository.find(accountId);
         if (!account) throw new Error(`Account ${accountId} not found`);
 
-        // 1. Get running balance from latest transaction before or at cutoff
-        const latestTxs = await transactionRepository.findLatestForAccount(accountId, cutoffDate);
-        const balance = latestTxs?.runningBalance || 0;
+        const transactions = await transactionRepository.findForAccountUpToDate(accountId, cutoffDate);
+        const precision = await currencyRepository.getPrecision(account.currencyCode);
 
-        // 2. Get transaction count (Fast Count)
-        const transactionCount = await transactionRepository.getCountForAccount(accountId, cutoffDate);
+        let balance = 0;
+        for (const tx of transactions) {
+            const multiplier = accountingService.getImpactMultiplier(account.accountType as AccountType, tx.transactionType as any);
+            balance = roundToPrecision(balance + (tx.amount * multiplier), precision);
+        }
+
+        const transactionCount = transactions.length;
 
         return {
             accountId: account.id,

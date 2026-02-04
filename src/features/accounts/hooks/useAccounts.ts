@@ -2,11 +2,18 @@
  * Reactive Data Hooks for Accounts
  */
 import Account, { AccountType } from '@/src/data/models/Account'
+import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
-import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable'
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
+import { useObservable } from '@/src/hooks/useObservable'
+import { AccountService } from '@/src/features/accounts/services/AccountService'
 import { AccountBalance } from '@/src/types/domain'
+import { accountingService } from '@/src/utils/accountingService'
 import { useCallback, useMemo } from 'react'
-import { combineLatest, of } from 'rxjs'
+import { from, map, of, switchMap } from 'rxjs'
+
+// Instantiate service outside hook (assuming singleton pattern)
+const accountService = new AccountService()
 
 /**
  * Hook to reactively get all accounts
@@ -45,26 +52,56 @@ export function useAccount(accountId: string | null) {
 }
 
 /**
- * Hook to reactively get account balance
+ * Hook to reactively get account balance.
+ * Uses PURE REACTIVITY: No async enrichment, no race conditions.
+ * Calculates sum in-memory for instant consistency.
  */
 export function useAccountBalance(accountId: string | null) {
-    // Use a stable empty observable when accountId is null
-    const stableAccountId = useMemo(() => accountId, [accountId])
+    const query$ = useMemo(() => {
+        if (!accountId) return of(null)
 
-    const { data: balanceData, isLoading, version } = useObservableWithEnrichment(
-        () => stableAccountId ? combineLatest([
-            accountRepository.observeById(stableAccountId),
-            accountRepository.observeBalance(stableAccountId)
-        ]) : of(null),
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        async () => {
-            if (!stableAccountId) return null;
-            const { balanceService } = require('@/src/services/BalanceService');
-            return balanceService.getAccountBalance(stableAccountId);
-        },
-        [stableAccountId],
+        return accountRepository.observeById(accountId).pipe(
+            switchMap(account => {
+                if (!account) return of(null)
+
+                // Observe all active transactions for this account
+                return accountRepository.observeTransactionsForBalance(account.id).pipe(
+                    switchMap((transactions: Transaction[]) =>
+                        from(currencyRepository.getPrecision(account.currencyCode)).pipe(
+                            map((precision) => {
+                                let balance = 0
+                                for (const tx of transactions) {
+                                    balance = accountingService.calculateNewBalance(
+                                        balance,
+                                        tx.amount,
+                                        account.accountType as AccountType,
+                                        tx.transactionType as any,
+                                        precision
+                                    )
+                                }
+
+                                return {
+                                    accountId: account.id,
+                                    balance,
+                                    currencyCode: account.currencyCode,
+                                    transactionCount: transactions.length,
+                                    asOfDate: Date.now(),
+                                    accountType: account.accountType as AccountType
+                                } as AccountBalance
+                            })
+                        )
+                    )
+                )
+            })
+        )
+    }, [accountId])
+
+    const { data: balanceData, isLoading, version } = useObservable(
+        () => query$,
+        [query$],
         null as AccountBalance | null
     )
+
     return { balanceData, isLoading, version }
 }
 
@@ -79,7 +116,6 @@ export function useAccountActions() {
         currencyCode: string;
         initialBalance?: number;
     }) => {
-        const { accountService } = require('@/src/services/AccountService');
         return accountService.createAccount(data)
     }, [])
 
@@ -89,22 +125,18 @@ export function useAccountActions() {
         currencyCode?: string;
         description?: string;
     }) => {
-        const { accountService } = require('@/src/services/AccountService');
         return accountService.updateAccount(account.id, data)
     }, [])
 
     const deleteAccount = useCallback(async (account: Account) => {
-        const { accountService } = require('@/src/services/AccountService');
         return accountService.deleteAccount(account)
     }, [])
 
     const recoverAccount = useCallback(async (accountId: string) => {
-        const { accountService } = require('@/src/services/AccountService');
         return accountService.recoverAccount(accountId)
     }, [])
 
     const updateAccountOrder = useCallback(async (account: Account, newOrder: number) => {
-        const { accountService } = require('@/src/services/AccountService');
         return accountService.updateAccountOrder(account, newOrder)
     }, [])
 

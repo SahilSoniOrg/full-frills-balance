@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { useObservable } from '@/src/hooks/useObservable'
 import { balanceService } from '@/src/services/BalanceService'
@@ -7,7 +8,7 @@ import { wealthService } from '@/src/services/wealth-service'
 import { AccountBalance } from '@/src/types/domain'
 import { logger } from '@/src/utils/logger'
 import { preferences } from '@/src/utils/preferences'
-import { combineLatest, debounceTime, startWith, switchMap } from 'rxjs'
+import { combineLatest, debounceTime, switchMap } from 'rxjs'
 
 /**
  * Hook to reactively get all account balances and net worth
@@ -21,7 +22,17 @@ export function useNetWorth() {
     const { data, isLoading } = useObservable(
         () => combineLatest([
             accountRepository.observeAll(),
-            transactionRepository.observeActiveCount(false).pipe(startWith(0))
+            transactionRepository.observeActiveWithColumns([
+                'amount',
+                'transaction_type',
+                'transaction_date',
+                'deleted_at',
+                'account_id',
+                'journal_id',
+                'currency_code',
+                'exchange_rate'
+            ]),
+            journalRepository.observeStatusMeta()
         ]).pipe(
             debounceTime(300),
             switchMap(async () => {

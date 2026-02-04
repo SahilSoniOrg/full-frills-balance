@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
+import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
+import { journalService } from '@/src/features/journal/services/JournalService';
 import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
 import { accountingService } from '@/src/utils/accountingService';
 import { JournalEntryLine } from '@/src/types/domain';
@@ -64,10 +65,10 @@ export class JournalEntryService {
             };
 
             if (journalId) {
-                await journalRepository.updateJournalWithTransactions(journalId, journalData);
+                await journalService.updateJournal(journalId, journalData);
                 return { success: true, action: 'updated' };
             } else {
-                await journalRepository.createJournalWithTransactions(journalData);
+                await journalService.createJournal(journalData);
                 return { success: true, action: 'created' };
             }
         } catch (error) {

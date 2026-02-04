@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
@@ -8,7 +9,7 @@ import { reportService } from '@/src/services/report-service';
 import { WealthSummary, wealthService } from '@/src/services/wealth-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { combineLatest, debounceTime, startWith, switchMap } from 'rxjs';
+import { combineLatest, debounceTime, switchMap } from 'rxjs';
 
 export interface DashboardSummaryData extends WealthSummary {
     income: number;
@@ -36,7 +37,17 @@ export const useSummary = () => {
     const { data, isLoading, version } = useObservable(
         () => combineLatest([
             accountRepository.observeAll(),
-            transactionRepository.observeActiveCount(false).pipe(startWith(0))
+            transactionRepository.observeActiveWithColumns([
+                'amount',
+                'transaction_type',
+                'transaction_date',
+                'deleted_at',
+                'account_id',
+                'journal_id',
+                'currency_code',
+                'exchange_rate'
+            ]),
+            journalRepository.observeStatusMeta()
         ]).pipe(
             debounceTime(300),
             switchMap(async () => {

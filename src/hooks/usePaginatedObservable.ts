@@ -55,19 +55,27 @@ export function usePaginatedObservable<T, E = T>(
         [dateRange]
     );
 
-    // Track previous dateRangeKey to detect filter changes vs pagination
-    const prevDateRangeKeyRef = useRef(dateRangeKey);
+    // Track previous filter inputs to detect filter changes vs pagination
+    const prevFilterRef = useRef({
+        dateRangeKey,
+        observe,
+        pageSize
+    });
 
     useEffect(() => {
         let isActive = true;
         let sequence = 0;
 
-        // Only show full loading state when date range changes (not on pagination)
-        const isFilterChange = prevDateRangeKeyRef.current !== dateRangeKey;
+        // Only show full loading state when filters change (not on pagination)
+        const prev = prevFilterRef.current;
+        const isFilterChange = prev.dateRangeKey !== dateRangeKey || prev.observe !== observe || prev.pageSize !== pageSize;
         if (isFilterChange) {
             setIsLoading(true);
-            setCurrentLimit(pageSize); // Reset pagination
-            prevDateRangeKeyRef.current = dateRangeKey;
+            prevFilterRef.current = { dateRangeKey, observe, pageSize };
+            if (currentLimit !== pageSize) {
+                setCurrentLimit(pageSize); // Reset pagination
+                return;
+            }
         }
 
         const observable = observe(currentLimit, dateRange);
@@ -99,7 +107,7 @@ export function usePaginatedObservable<T, E = T>(
             subscription.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentLimit, dateRangeKey]);
+    }, [currentLimit, dateRangeKey, observe, pageSize]);
 
     const loadMore = () => {
         if (isLoadingMore || !hasMore) return;

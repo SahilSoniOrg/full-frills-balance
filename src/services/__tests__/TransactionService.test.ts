@@ -2,8 +2,7 @@ import { database } from '@/src/data/database/Database'
 import { AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
-import { journalService } from '@/src/services/JournalService'
-import { transactionService } from '@/src/services/TransactionService'
+import { journalService, transactionService } from '@/src/features/journal'
 
 describe('TransactionService', () => {
     let accountId: string

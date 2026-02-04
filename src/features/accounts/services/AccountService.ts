@@ -3,7 +3,7 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { journalService } from '@/src/services/JournalService';
+import { journalService } from '@/src/features/journal';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { auditService } from '@/src/services/audit-service';
 import { getEpsilon, roundToPrecision } from '@/src/utils/money';
@@ -115,6 +115,7 @@ export class AccountService {
         // Rebuild if account type changed
         if (updates.accountType && updates.accountType !== beforeState.accountType) {
             rebuildQueueService.enqueue(account.id, 0);
+            await rebuildQueueService.flush();
         }
 
         return updatedAccount;

@@ -1,11 +1,17 @@
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { JournalEntryService } from '@/src/features/journal/services/JournalEntryService';
+import { journalService } from '@/src/features/journal/services/JournalService';
 import { accountingService } from '@/src/utils/accountingService';
-import { JournalEntryService } from '@/src/services/journal-entry-service';
 import { logger } from '@/src/utils/logger';
 
 // Mock dependencies
-jest.mock('@/src/data/repositories/JournalRepository');
+// Mock dependencies
+jest.mock('@/src/features/journal/services/JournalService', () => ({
+    journalService: {
+        createJournal: jest.fn(),
+        updateJournal: jest.fn()
+    }
+}));
 jest.mock('@/src/utils/accountingService');
 jest.mock('@/src/utils/logger');
 jest.mock('@/src/utils/preferences', () => ({
@@ -40,8 +46,8 @@ describe('JournalEntryService', () => {
 
             expect(result.success).toBe(true);
             expect(result.action).toBe('created');
-            expect(journalRepository.createJournalWithTransactions).toHaveBeenCalled();
-            expect(journalRepository.updateJournalWithTransactions).not.toHaveBeenCalled();
+            expect(journalService.createJournal).toHaveBeenCalled();
+            expect(journalService.updateJournal).not.toHaveBeenCalled();
         });
 
         it('should update existing journal if ID provided', async () => {
@@ -55,8 +61,8 @@ describe('JournalEntryService', () => {
 
             expect(result.success).toBe(true);
             expect(result.action).toBe('updated');
-            expect(journalRepository.updateJournalWithTransactions).toHaveBeenCalled();
-            expect(journalRepository.createJournalWithTransactions).not.toHaveBeenCalled();
+            expect(journalService.updateJournal).toHaveBeenCalled();
+            expect(journalService.createJournal).not.toHaveBeenCalled();
         });
 
         it('should fail if description is empty', async () => {
@@ -100,7 +106,7 @@ describe('JournalEntryService', () => {
         });
 
         it('should handle repository errors gracefully', async () => {
-            (journalRepository.createJournalWithTransactions as jest.Mock).mockRejectedValue(new Error('DB Error'));
+            (journalService.createJournal as jest.Mock).mockRejectedValue(new Error('DB Error'));
 
             const result = await service.submitJournalEntry(
                 validLines as any,

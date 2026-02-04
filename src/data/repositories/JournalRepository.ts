@@ -59,7 +59,18 @@ export class JournalRepository {
 
     return this.transactions
       .query(...clauses)
-      .observe()
+      .observeWithColumns([
+        'amount',
+        'currency_code',
+        'transaction_type',
+        'transaction_date',
+        'notes',
+        'running_balance',
+        'exchange_rate',
+        'account_id',
+        'journal_id',
+        'deleted_at'
+      ])
   }
 
   observeJournalTransactions(journalId: string) {
@@ -102,8 +113,15 @@ export class JournalRepository {
         'status',
         'total_amount',
         'transaction_count',
-        'display_type'
+        'display_type',
+        'deleted_at'
       ])
+  }
+
+  observeStatusMeta() {
+    return this.journals
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .observeWithColumns(['status', 'deleted_at', 'journal_date'])
   }
 
   /**

@@ -259,6 +259,19 @@ export class TransactionRepository {
       .observe()
   }
 
+  observeActiveWithColumns(columns: string[]) {
+    return this.transactions
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.where('deleted_at', Q.eq(null))
+        ])
+      )
+      .observeWithColumns(columns)
+  }
+
   observeActiveCount(shouldThrottle: boolean = true) {
     return this.transactions
       .query(
@@ -435,6 +448,21 @@ export class TransactionRepository {
         ])
       )
       .observeCount(shouldThrottle)
+  }
+
+  observeByDateRangeWithColumns(startDate: number, endDate: number, columns: string[]) {
+    return this.transactions
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.where('transaction_date', Q.gte(startDate)),
+        Q.where('transaction_date', Q.lte(endDate)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.where('deleted_at', Q.eq(null))
+        ])
+      )
+      .observeWithColumns(columns)
   }
 
   async findForAccountUpToDate(accountId: string, cutoffDate: number): Promise<Transaction[]> {

@@ -9,4 +9,4 @@ export { default as AccountCreationScreen } from './screens/AccountCreationScree
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';
 export { default as AccountReorderScreen } from './screens/AccountReorderScreen';
 export { default as AccountsListScreen } from './screens/AccountsListScreen';
-
+export { accountService } from './services/AccountService';

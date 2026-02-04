@@ -30,7 +30,7 @@ export class AccountRepository {
   observeAll() {
     return this.accounts
       .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
-      .observeWithColumns(['account_type', 'name', 'order_num', 'currency_code'])
+      .observeWithColumns(['account_type', 'name', 'order_num', 'currency_code', 'deleted_at'])
   }
 
   observeByType(accountType: string) {
@@ -40,7 +40,7 @@ export class AccountRepository {
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('order_num', Q.asc)
       )
-    return query.observeWithColumns(['name', 'order_num', 'currency_code'])
+    return query.observeWithColumns(['name', 'order_num', 'currency_code', 'deleted_at'])
   }
 
   observeByIds(accountIds: string[]) {
@@ -53,7 +53,7 @@ export class AccountRepository {
         Q.where('id', Q.oneOf(accountIds)),
         Q.where('deleted_at', Q.eq(null))
       )
-      .observeWithColumns(['name', 'account_type', 'currency_code', 'order_num'])
+      .observeWithColumns(['name', 'account_type', 'currency_code', 'order_num', 'deleted_at'])
   }
 
   observeById(accountId: string) {
@@ -69,10 +69,10 @@ export class AccountRepository {
   }
 
   /**
-   * Observe account balance.
-   * Re-emits whenever transactions for this account change OR their parent journals change status.
+   * Observe all active transactions for an account.
+   * Used for reactive in-memory balance calculation.
    */
-  observeBalance(accountId: string) {
+  observeTransactionsForBalance(accountId: string) {
     return database.collections.get<Transaction>('transactions')
       .query(
         Q.experimentalJoinTables(['journals']),

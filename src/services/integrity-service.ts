@@ -13,7 +13,6 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
-import { balanceService } from '@/src/services/BalanceService'
 import { accountingService } from '@/src/utils/accountingService'
 import { logger } from '@/src/utils/logger'
 import { amountsAreEqual, roundToPrecision } from '@/src/utils/money'
@@ -97,17 +96,21 @@ export class IntegrityService {
             throw new Error(`Account ${accountId} not found`)
         }
 
-        const cachedData = await balanceService.getAccountBalance(accountId, cutoffDate)
+        // 1. Get the "Cached" balance (the running_balance of the latest transaction)
+        const latestTx = await transactionRepository.findLatestForAccount(accountId, cutoffDate)
+        const cachedBalance = latestTx?.runningBalance || 0
+
+        // 2. Compute the "Real" balance (sum of all transactions)
         const computedBalance = await this.computeBalanceFromTransactions(accountId, cutoffDate)
         const precision = await currencyRepository.getPrecision(account.currencyCode)
-        const discrepancy = Math.abs(cachedData.balance - computedBalance)
+        const discrepancy = Math.abs(cachedBalance - computedBalance)
 
         return {
             accountId,
             accountName: account.name,
-            cachedBalance: cachedData.balance,
+            cachedBalance: cachedBalance,
             computedBalance,
-            matches: amountsAreEqual(cachedData.balance, computedBalance, precision),
+            matches: amountsAreEqual(cachedBalance, computedBalance, precision),
             discrepancy,
         }
     }

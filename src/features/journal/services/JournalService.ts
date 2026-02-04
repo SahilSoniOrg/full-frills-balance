@@ -95,6 +95,7 @@ export class JournalService {
 
         if (accountsToRebuild.size > 0) {
             rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate);
+            await rebuildQueueService.flush();
         }
 
         return journal;
@@ -166,6 +167,7 @@ export class JournalService {
 
         // For updates, we rebuild all involved accounts to be safe
         rebuildQueueService.enqueueMany(accountIds, data.journalDate);
+        await rebuildQueueService.flush();
 
         return journal;
     }
@@ -187,6 +189,7 @@ export class JournalService {
 
         const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
         rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
+        await rebuildQueueService.flush();
     }
 
     async duplicateJournal(journalId: string): Promise<Journal> {
@@ -280,7 +283,12 @@ export class JournalService {
                         Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
                         Q.where('deleted_at', Q.eq(null))
                     ])
-                ).observe();
+                ).observeWithColumns([
+                    'account_id',
+                    'journal_id',
+                    'transaction_type',
+                    'deleted_at'
+                ]);
 
                 return transactionsObservable.pipe(
                     switchMap((transactions) => {

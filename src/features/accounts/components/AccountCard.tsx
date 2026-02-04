@@ -31,13 +31,13 @@ export const AccountCard = ({ account, onPress, initialBalanceData }: AccountCar
     const transactionCount = balanceData?.transactionCount || 0;
 
     // Account type colors for card background/accent
-    let accentColor = theme.asset;
+    let accentColor = theme.asset
     const typeLower = account.accountType.toLowerCase();
 
-    if (typeLower === 'liability') accentColor = theme.liability as any;
-    else if (typeLower === 'equity') accentColor = theme.equity as any;
-    else if (typeLower === 'income') accentColor = theme.income as any;
-    else if (typeLower === 'expense') accentColor = theme.expense as any;
+    if (typeLower === 'liability') accentColor = theme.liability;
+    else if (typeLower === 'equity') accentColor = theme.equity;
+    else if (typeLower === 'income') accentColor = theme.income;
+    else if (typeLower === 'expense') accentColor = theme.expense;
 
     const contrastColor = getContrastColor(accentColor);
     const textColor = contrastColor === 'white' ? Palette.pureWhite : Palette.trueBlack;

@@ -1,8 +1,8 @@
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { journalEntryService } from '@/src/services/journal-entry-service';
-import { transactionService } from '@/src/services/TransactionService';
+import { journalEntryService } from '@/src/features/journal/services/JournalEntryService';
+import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { JournalEntryLine } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useRouter } from 'expo-router';

@@ -1,6 +1,6 @@
 import Journal from '@/src/data/models/Journal';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
-import { journalService } from '@/src/services/JournalService';
+import { journalService } from '@/src/features/journal/services/JournalService';
 import { useCallback } from 'react';
 
 export function useJournalActions() {

@@ -1,4 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
@@ -6,6 +8,7 @@ import { reportService } from '@/src/services/report-service';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useMemo, useState } from 'react';
+import { combineLatest, map } from 'rxjs';
 
 export function useReports() {
     const { theme } = useTheme();
@@ -18,7 +21,24 @@ export function useReports() {
     const [dateRange, setDateRange] = useState<DateRange>(getLastNRange(30, 'days'));
 
     const triggerObservable = useMemo(() => {
-        return transactionRepository.observeCountByDateRange(dateRange.startDate, dateRange.endDate, false);
+        return combineLatest([
+            accountRepository.observeAll(),
+            transactionRepository.observeByDateRangeWithColumns(
+                dateRange.startDate,
+                dateRange.endDate,
+                [
+                    'amount',
+                    'transaction_type',
+                    'transaction_date',
+                    'deleted_at',
+                    'account_id',
+                    'journal_id',
+                    'currency_code',
+                    'exchange_rate'
+                ]
+            ),
+            journalRepository.observeStatusMeta()
+        ]).pipe(map(() => 0));
     }, [dateRange.startDate, dateRange.endDate]);
 
     const { data, isLoading: loading, error } = useObservableWithEnrichment(

@@ -1,13 +1,13 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { journalEntryService } from '@/src/services/journal-entry-service';
-import { transactionService } from '@/src/services/TransactionService';
+import { journalEntryService } from '@/src/features/journal/services/JournalEntryService';
+import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 
 // Mock dependencies
-jest.mock('@/src/services/journal-entry-service');
-jest.mock('@/src/services/TransactionService');
+jest.mock('@/src/features/journal/services/JournalEntryService');
+jest.mock('@/src/features/journal/services/TransactionService');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('expo-router', () => ({

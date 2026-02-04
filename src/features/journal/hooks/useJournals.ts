@@ -1,18 +1,23 @@
 import { useObservable } from '@/src/hooks/useObservable'
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable'
-import { journalService } from '@/src/services/JournalService'
-import { transactionService } from '@/src/services/TransactionService'
+import { journalService } from '@/src/features/journal/services/JournalService'
+import { transactionService } from '@/src/features/journal/services/TransactionService'
 import { EnrichedJournal, EnrichedTransaction, TransactionWithAccountInfo } from '@/src/types/domain'
+import { useCallback } from 'react'
 import { of } from 'rxjs'
 
 /**
  * Hook to reactively get journals with pagination and account enrichment
  */
 export function useJournals(pageSize: number = 50, dateRange?: { startDate: number, endDate: number }) {
+    const observe = useCallback((limit: number, range?: { startDate: number, endDate: number }) => {
+        return journalService.observeEnrichedJournals(limit, range)
+    }, [])
+
     const { items: journals, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<any, EnrichedJournal>({
         pageSize,
         dateRange,
-        observe: (limit, range) => journalService.observeEnrichedJournals(limit, range)
+        observe
     })
 
     return { journals, isLoading, isLoadingMore, hasMore, loadMore }
@@ -25,14 +30,18 @@ export function useJournals(pageSize: number = 50, dateRange?: { startDate: numb
  * Note: This hook uses repository-owned enriched observables to react to account changes.
  */
 export function useAccountTransactions(accountId: string, pageSize: number = 50, dateRange?: { startDate: number, endDate: number }) {
-    const { items: transactions, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<any, EnrichedTransaction>({
-        pageSize,
-        dateRange,
-        observe: (limit, range) => transactionService.observeEnrichedForAccount(
+    const observe = useCallback((limit: number, range?: { startDate: number, endDate: number }) => {
+        return transactionService.observeEnrichedForAccount(
             accountId,
             limit,
             range
         )
+    }, [accountId])
+
+    const { items: transactions, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<any, EnrichedTransaction>({
+        pageSize,
+        dateRange,
+        observe
     })
 
     return { transactions, isLoading, isLoadingMore, hasMore, loadMore, version }

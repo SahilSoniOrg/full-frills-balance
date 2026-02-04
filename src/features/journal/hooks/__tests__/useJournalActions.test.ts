@@ -1,10 +1,10 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
-import { journalService } from '@/src/services/JournalService';
+import { journalService } from '@/src/features/journal/services/JournalService';
 import { act, renderHook } from '@testing-library/react-native';
 
 // Mock dependencies
-jest.mock('@/src/services/JournalService');
+jest.mock('@/src/features/journal/services/JournalService');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/data/database/Database', () => ({
     database: {

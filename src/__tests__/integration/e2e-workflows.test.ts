@@ -9,10 +9,10 @@ import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
-import { accountService } from '@/src/services/AccountService'
+import { accountService } from '@/src/features/accounts'
 import { balanceService } from '@/src/services/BalanceService'
 import { IntegrityService } from '@/src/services/integrity-service'
-import { journalService } from '@/src/services/JournalService'
+import { journalService } from '@/src/features/journal'
 import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 
 describe('E2E Workflows', () => {
