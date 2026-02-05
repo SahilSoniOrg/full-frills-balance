@@ -20,7 +20,7 @@ export function useSettingsActions() {
     }, []);
 
     const resetApp = useCallback(async () => {
-        await integrityService.resetDatabase({ seedDefaults: true });
+        await integrityService.resetDatabase();
         await preferences.clearPreferences();
         requireRestart({ type: 'RESET' });
     }, [requireRestart]);

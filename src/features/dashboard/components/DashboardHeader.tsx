@@ -5,13 +5,8 @@ import { DashboardSummary } from '@/src/features/dashboard/components/DashboardS
 import { NetWorthCard } from '@/src/features/dashboard/components/NetWorthCard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange } from '@/src/utils/dateUtils';
-import React, { useCallback, useState } from 'react';
-import { LayoutAnimation, Platform, StyleSheet, TouchableOpacity, UIManager, View } from 'react-native';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface DashboardHeaderProps {
     greeting: string;
@@ -29,6 +24,9 @@ interface DashboardHeaderProps {
     showDatePicker: () => void;
     navigatePrevious?: () => void;
     navigateNext?: () => void;
+    isCollapsed: boolean;
+    onToggleCollapse: () => void;
+    sectionTitle: string;
 }
 
 export function DashboardHeader({
@@ -47,14 +45,11 @@ export function DashboardHeader({
     showDatePicker,
     navigatePrevious,
     navigateNext,
+    isCollapsed,
+    onToggleCollapse,
+    sectionTitle,
 }: DashboardHeaderProps) {
     const { theme } = useTheme();
-    const [isCollapsed, setIsCollapsed] = useState(false);
-
-    const handleToggleCollapse = useCallback(() => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setIsCollapsed(!isCollapsed);
-    }, [isCollapsed]);
 
     return (
         <View style={styles.container}>
@@ -67,7 +62,7 @@ export function DashboardHeader({
 
                 <View style={styles.headerActions}>
                     <TouchableOpacity
-                        onPress={handleToggleCollapse}
+                        onPress={onToggleCollapse}
                         hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
                         style={styles.collapseButton}
                     >
@@ -115,7 +110,7 @@ export function DashboardHeader({
             )}
 
             <AppText variant="subheading" style={styles.sectionTitle}>
-                {searchQuery ? 'Search Results' : 'Recent Transactions'}
+                {sectionTitle}
             </AppText>
         </View>
     );

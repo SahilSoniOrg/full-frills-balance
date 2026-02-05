@@ -13,7 +13,7 @@ export interface TransactionPresentation {
     amountPrefix?: string;
 }
 
-export interface BaseTransactionCardProps {
+export interface TransactionCardProps {
     title: string;
     amount: number;
     currencyCode: string;
@@ -31,10 +31,9 @@ export interface BaseTransactionCardProps {
 }
 
 /**
- * BaseTransactionCard - Unified layout for all transaction-like items
- * Inspired by Ivy Wallet's premium card aesthetic.
+ * TransactionCard - Unified layout for all transaction-like items
  */
-export const BaseTransactionCard = ({
+export const TransactionCard = ({
     title,
     amount,
     currencyCode,
@@ -43,16 +42,14 @@ export const BaseTransactionCard = ({
     accounts,
     notes,
     onPress,
-}: BaseTransactionCardProps) => {
+}: TransactionCardProps) => {
     const { theme, themeMode } = useTheme();
     const formattedDate = formatDate(transactionDate, { includeTime: true });
     const formattedAmount = CurrencyFormatter.format(amount, currencyCode);
 
     const content = (
         <View style={styles.cardContent}>
-            {/* Header: Badges */}
             <View style={styles.badgeRow}>
-                {/* Semantic Primary Badge */}
                 <Badge
                     variant="default"
                     size="sm"
@@ -64,12 +61,9 @@ export const BaseTransactionCard = ({
                     {presentation.label}
                 </Badge>
 
-                {/* Account Badges */}
                 {accounts.slice(0, 2).map((acc) => {
                     const isSource = acc.role === 'SOURCE';
                     const isDest = acc.role === 'DESTINATION';
-
-                    // Always show From/To for consistency as per user feedback
                     const showPrefix = isSource ? 'From: ' : (isDest ? 'To: ' : '');
 
                     return (
@@ -90,7 +84,6 @@ export const BaseTransactionCard = ({
                 )}
             </View>
 
-            {/* Content: Title & Notes */}
             <View style={styles.textSection}>
                 <AppText variant="body" weight="bold" style={styles.title} numberOfLines={1}>
                     {title}
@@ -102,7 +95,6 @@ export const BaseTransactionCard = ({
                 )}
             </View>
 
-            {/* Footer: Icon + Amount + Date */}
             <View style={styles.footerRow}>
                 <View style={styles.amountContainer}>
                     <View style={[styles.iconCircle, { backgroundColor: withOpacity(presentation.typeColor, Opacity.soft) }]}>

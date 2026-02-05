@@ -86,7 +86,7 @@ export const ivyPlugin: ImportPlugin = {
 
         // 1. Wipe existing data for clean import
         logger.warn('[IvyPlugin] Wiping database before import...');
-        await integrityService.resetDatabase({ seedDefaults: false });
+        await integrityService.resetDatabase();
         const accountImports: any[] = [];
 
         // 2. Pre-Scan Transactions for Category Usage (Per Currency)

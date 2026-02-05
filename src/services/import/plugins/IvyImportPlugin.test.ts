@@ -61,7 +61,7 @@ describe('IvyImportPlugin', () => {
         it('transforms and imports Ivy data correctly', async () => {
             const stats = await ivyPlugin.import(JSON.stringify(validIvyData));
 
-            expect(integrityService.resetDatabase).toHaveBeenCalledWith({ seedDefaults: false });
+            expect(integrityService.resetDatabase).toHaveBeenCalled();
             expect(importRepository.batchInsert).toHaveBeenCalled();
 
             const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][0];

@@ -29,9 +29,10 @@ export const wealthService = {
 
         // Process conversions in parallel for better performance
         await Promise.all(balances.map(async b => {
+            const balanceCurrency = b.currencyCode || targetCurrency;
             const { convertedAmount } = await exchangeRateService.convert(
                 b.balance,
-                b.currencyCode,
+                balanceCurrency,
                 targetCurrency
             );
 

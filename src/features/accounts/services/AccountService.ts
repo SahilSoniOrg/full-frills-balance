@@ -1,12 +1,16 @@
+import { AppConfig } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalService } from '@/src/features/journal';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { auditService } from '@/src/services/audit-service';
+import { balanceService } from '@/src/services/BalanceService';
+import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { logger } from '@/src/utils/logger';
 import { getEpsilon, roundToPrecision } from '@/src/utils/money';
+import { preferences } from '@/src/utils/preferences';
 
 export interface CreateAccountData {
     name: string;
@@ -27,11 +31,13 @@ export class AccountService {
         // Default order to end of list
         const orderNum = data.orderNum ?? await accountRepository.countNonDeleted();
 
+        const currencyCode = data.currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+
         // 1. Create account
         const account = await accountRepository.create({
             name: data.name,
             accountType: data.accountType as AccountType,
-            currencyCode: data.currencyCode,
+            currencyCode: currencyCode,
             description: data.description,
             icon: data.icon,
             orderNum: orderNum,
@@ -162,7 +168,7 @@ export class AccountService {
 
     private async getOpeningBalancesAccountId(currencyCode: string): Promise<string> {
         const name = `Opening Balances (${currencyCode})`;
-        const existing = await accountRepository.findByName(name);
+        const existing = await this.findAccountByName(name);
         if (existing) return existing.id;
 
         return (await accountRepository.create({
@@ -170,6 +176,98 @@ export class AccountService {
             accountType: AccountType.EQUITY,
             currencyCode,
             description: 'System account for initial balances'
+        })).id;
+    }
+
+    async findAccountByName(name: string): Promise<Account | null> {
+        return accountRepository.findByName(name);
+    }
+
+    /**
+     * Adjusts the balance of an account by creating a correction journal entry.
+     */
+    async adjustBalance(account: Account, targetBalance: number): Promise<void> {
+        const precision = await currencyRepository.getPrecision(account.currencyCode);
+        const currentBalanceData = await balanceService.getAccountBalance(account.id);
+        const currentBalance = currentBalanceData.balance;
+
+        const discrepancy = roundToPrecision(targetBalance - currentBalance, precision);
+        if (Math.abs(discrepancy) < getEpsilon(precision)) {
+            logger.info(`[AccountService] No adjustment needed for account ${account.name}. Discrepancy within epsilon.`);
+            return;
+        }
+
+        logger.info(`[AccountService] Adjusting balance for ${account.name}: ${currentBalance} -> ${targetBalance} (diff: ${discrepancy})`);
+
+        const correctionAccountId = await this.findOrCreateBalanceCorrectionAccount(account.currencyCode);
+
+        // Direction: Assets/Expenses are DR+, Liabilities/Equity/Income are CR+
+        const isDRType = [AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType as AccountType);
+
+        // If we need to INCREASE the balance:
+        // For ASSET (DR+): DEBIT account, CREDIT Balance Correction
+        // For EQUITY (CR+): CREDIT account, DEBIT Balance Correction
+
+        const amount = Math.abs(discrepancy);
+        const accountTxType = discrepancy > 0
+            ? (isDRType ? TransactionType.DEBIT : TransactionType.CREDIT)
+            : (isDRType ? TransactionType.CREDIT : TransactionType.DEBIT);
+
+        const balancingTxType = accountTxType === TransactionType.DEBIT ? TransactionType.CREDIT : TransactionType.DEBIT;
+
+        await journalService.createJournal({
+            journalDate: Date.now(),
+            description: `Balance Adjustment: ${account.name}`,
+            currencyCode: account.currencyCode,
+            transactions: [
+                {
+                    accountId: account.id,
+                    amount: amount,
+                    transactionType: accountTxType as any
+                },
+                {
+                    accountId: correctionAccountId,
+                    amount: amount,
+                    transactionType: balancingTxType as any
+                }
+            ]
+        });
+    }
+
+    private async findOrCreateBalanceCorrectionAccount(currencyCode: string): Promise<string> {
+        const targetCurrency = currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+        const legacyNames = ['Balance Corrections', 'Balance Correction', 'Balance Corrections ()'];
+
+        // 1. Check legacy names with matching currency
+        for (const legacyName of legacyNames) {
+            const legacy = await this.findAccountByName(legacyName);
+            // Match if currency is correct, OR if we're looking for default currency and the legacy one has NO currency
+            if (legacy && (legacy.currencyCode === targetCurrency || (!legacy.currencyCode && targetCurrency === preferences.defaultCurrencyCode))) {
+                return legacy.id;
+            }
+        }
+
+        // 2. Check for standard name
+        const name = `Balance Corrections (${targetCurrency})`;
+        const existing = await this.findAccountByName(name);
+        if (existing) return existing.id;
+
+        // 3. Last chance: find ANY account with 'Balance Correction' in the name and right currency
+        // This handles cases where currency might be slightly different in name but correct in field
+        const allAccounts = await accountRepository.findAll();
+        const fallback = allAccounts.find(a =>
+            a.name.includes('Balance Correction') &&
+            a.currencyCode === targetCurrency &&
+            !a.deletedAt
+        );
+        if (fallback) return fallback.id;
+
+        return (await accountRepository.create({
+            name,
+            accountType: AccountType.EQUITY,
+            currencyCode: targetCurrency,
+            description: 'System account for balance corrections',
+            icon: 'construct'
         })).id;
     }
 }

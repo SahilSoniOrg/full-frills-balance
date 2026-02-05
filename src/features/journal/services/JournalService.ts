@@ -374,7 +374,7 @@ export class JournalService {
      * Observe journals with their associated accounts for list display.
      * Replaces JournalRepository.observeEnrichedJournals.
      */
-    observeEnrichedJournals(limit: number, dateRange?: { startDate: number, endDate: number }) {
+    observeEnrichedJournals(limit: number, dateRange?: { startDate: number, endDate: number }, searchQuery?: string) {
         const clauses: any[] = [
             Q.where('deleted_at', Q.eq(null)),
             Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
@@ -385,6 +385,13 @@ export class JournalService {
         if (dateRange) {
             clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)));
             clauses.push(Q.where('journal_date', Q.lte(dateRange.endDate)));
+        }
+
+        if (searchQuery) {
+            const q = searchQuery.trim();
+            if (q) {
+                clauses.push(Q.where('description', Q.like(`%${Q.sanitizeLikeString(q)}%`)));
+            }
         }
 
         const journalsObservable = journalRepository.journalsQuery(...clauses).observeWithColumns([
@@ -447,7 +454,7 @@ export class JournalService {
                             id,
                             name: acc?.name || 'Unknown',
                             accountType: acc?.accountType || 'ASSET',
-                            role: role as any
+                            role: role as 'SOURCE' | 'DESTINATION' | 'NEUTRAL'
                         };
                     });
 
@@ -456,10 +463,10 @@ export class JournalService {
                         journalDate: j.journalDate,
                         description: j.description,
                         currencyCode: j.currencyCode,
-                        status: j.status as any,
+                        status: j.status,
                         totalAmount: j.totalAmount || 0,
                         transactionCount: j.transactionCount || 0,
-                        displayType: j.displayType as any,
+                        displayType: j.displayType as string,
                         accounts: enrichedAccounts
                     } as EnrichedJournal;
                 });

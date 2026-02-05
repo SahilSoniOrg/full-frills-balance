@@ -195,36 +195,15 @@ export class IntegrityService {
     /**
      * Factory Reset.
      */
-    async resetDatabase(options?: { seedDefaults?: boolean }): Promise<void> {
+    async resetDatabase(): Promise<void> {
         logger.warn('[IntegrityService] STARTING FACTORY RESET...')
         try {
             await databaseRepository.resetDatabase()
-            const shouldSeed = options?.seedDefaults !== false
-            if (shouldSeed) {
-                logger.info('[IntegrityService] Database reset successful. Seeding defaults...')
-                await this.seedDefaultAccounts()
-            } else {
-                logger.info('[IntegrityService] Database reset successful. Skipping default seed...')
-            }
+            logger.info('[IntegrityService] Database reset successful.')
         } catch (error) {
             logger.error('[IntegrityService] CRITICAL: Factory reset failed:', error)
             throw error
         }
-    }
-
-    /**
-     * Seeds default accounts and categories via repository.
-     */
-    async seedDefaultAccounts(): Promise<void> {
-        const allDefaults = [
-            ...DEFAULT_EXPENSE_CATEGORIES,
-            ...DEFAULT_INCOME_CATEGORIES,
-            ...DEFAULT_ASSET_ACCOUNTS,
-        ]
-
-        await accountRepository.seedDefaults(allDefaults)
-
-        logger.info(`[IntegrityService] Seeded ${allDefaults.length} default accounts and categories.`)
     }
 
     /**

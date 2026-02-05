@@ -106,23 +106,28 @@ export class ReportService {
                 });
             }
 
-            // Undo transactions for this day
+            // Undo transactions for this day in parallel
             const dayTxs = txByDay.get(dayKey) || [];
-            for (const tx of dayTxs) {
-                const acc = relevantBalances.find(a => a.accountId === tx.accountId);
-                if (acc) {
+            if (dayTxs.length > 0) {
+                const dayConversions = await Promise.all(dayTxs.map(async (tx) => {
+                    const acc = relevantBalances.find(a => a.accountId === tx.accountId);
+                    if (!acc) return null;
+
+                    const txCurrency = tx.currencyCode || acc.currencyCode || currency;
                     const { convertedAmount } = await exchangeRateService.convert(
                         tx.amount,
-                        tx.currencyCode,
+                        txCurrency,
                         currency
                     );
+                    return { convertedAmount, type: acc.accountType, transactionType: tx.transactionType };
+                }));
 
-                    if (acc.accountType === AccountType.ASSET) {
-                        // ASSET: DEBIT (+), CREDIT (-) -> Reverse: DEBIT (-), CREDIT (+)
-                        runningAssets += tx.transactionType === TransactionType.DEBIT ? -convertedAmount : convertedAmount;
+                for (const conv of dayConversions) {
+                    if (!conv) continue;
+                    if (conv.type === AccountType.ASSET) {
+                        runningAssets += conv.transactionType === TransactionType.DEBIT ? -conv.convertedAmount : conv.convertedAmount;
                     } else {
-                        // LIABILITY: DEBIT (-), CREDIT (+) -> Reverse: DEBIT (+), CREDIT (-)
-                        runningLiabilities += tx.transactionType === TransactionType.CREDIT ? -convertedAmount : convertedAmount;
+                        runningLiabilities += conv.transactionType === TransactionType.CREDIT ? -conv.convertedAmount : conv.convertedAmount;
                     }
                 }
             }
@@ -148,9 +153,10 @@ export class ReportService {
         let totalExpense = 0;
 
         for (const tx of transactions) {
+            const txCurrency = tx.currencyCode || currency;
             const { convertedAmount } = await exchangeRateService.convert(
                 tx.amount,
-                tx.currencyCode,
+                txCurrency,
                 currency
             );
 
@@ -209,22 +215,32 @@ export class ReportService {
         let income = 0;
         let expense = 0;
 
-        for (const tx of transactions) {
-            if (tx.transactionDate < startDate || tx.transactionDate > endDate) continue;
+        const conversions = await Promise.all(transactions.map(async (tx) => {
+            if (tx.transactionDate < startDate || tx.transactionDate > endDate) return null;
             const acc = accountMap.get(tx.accountId);
-            if (!acc) continue;
-            if (acc.accountType !== AccountType.INCOME && acc.accountType !== AccountType.EXPENSE) continue;
+            if (!acc) return null;
+            if (acc.accountType !== AccountType.INCOME && acc.accountType !== AccountType.EXPENSE) return null;
 
+            const txCurrency = tx.currencyCode || acc.currencyCode || currency;
             const { convertedAmount } = await exchangeRateService.convert(
                 tx.amount,
-                tx.currencyCode,
+                txCurrency,
                 currency
             );
 
-            if (acc.accountType === AccountType.INCOME) {
-                income += tx.transactionType === TransactionType.CREDIT ? convertedAmount : -convertedAmount;
+            return {
+                amount: convertedAmount,
+                type: acc.accountType,
+                transactionType: tx.transactionType
+            };
+        }));
+
+        for (const conv of conversions) {
+            if (!conv) continue;
+            if (conv.type === AccountType.INCOME) {
+                income += conv.transactionType === TransactionType.CREDIT ? conv.amount : -conv.amount;
             } else {
-                expense += tx.transactionType === TransactionType.DEBIT ? convertedAmount : -convertedAmount;
+                expense += conv.transactionType === TransactionType.DEBIT ? conv.amount : -conv.amount;
             }
         }
 

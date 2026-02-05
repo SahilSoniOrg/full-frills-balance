@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
+import Account from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -8,15 +9,18 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
 import { reportService } from '@/src/services/report-service';
 import { WealthSummary, wealthService } from '@/src/services/wealth-service';
+import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { combineLatest, debounceTime, switchMap } from 'rxjs';
 
-export interface DashboardSummaryData extends WealthSummary {
+export interface SummaryData extends WealthSummary {
     income: number;
     expense: number;
-    totalEquity: number;
-    totalIncome: number;
-    totalExpense: number;
+    accounts: Account[];
+    balancesByAccountId: Map<string, AccountBalance>;
+}
+
+export interface DashboardSummaryData extends SummaryData {
     isPrivacyMode: boolean;
     isLoading: boolean;
     version: number;
@@ -34,7 +38,7 @@ export interface DashboardSummaryData extends WealthSummary {
 export const useSummary = () => {
     const { isPrivacyMode, setPrivacyMode, defaultCurrency } = useUI();
 
-    const { data, isLoading, version } = useObservable(
+    const { data, isLoading, version } = useObservable<SummaryData>(
         () => combineLatest([
             accountRepository.observeAll(),
             transactionRepository.observeActiveWithColumns([
@@ -77,6 +81,8 @@ export const useSummary = () => {
                     return {
                         income: monthly.income,
                         expense: monthly.expense,
+                        balancesByAccountId: balancesMap,
+                        accounts: accounts,
                         ...wealth,
                     };
                 } catch (error) {
@@ -90,7 +96,9 @@ export const useSummary = () => {
                         totalEquity: 0,
                         totalIncome: 0,
                         totalExpense: 0,
-                    };
+                        accounts: [],
+                        balancesByAccountId: new Map(),
+                    } as SummaryData;
                 }
             })
         ),
@@ -104,7 +112,9 @@ export const useSummary = () => {
             totalEquity: 0,
             totalIncome: 0,
             totalExpense: 0,
-        }
+            accounts: [],
+            balancesByAccountId: new Map(),
+        } as SummaryData
     );
 
     const togglePrivacyMode = () => setPrivacyMode(!isPrivacyMode);

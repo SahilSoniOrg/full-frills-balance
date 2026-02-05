@@ -70,7 +70,7 @@ export const nativePlugin: ImportPlugin = {
         try {
             // 1. Wipe existing data
             logger.warn('[NativePlugin] Wiping database for import...');
-            await integrityService.resetDatabase({ seedDefaults: false });
+            await integrityService.resetDatabase();
 
             // 2. Clear and restore preferences
             await preferences.clearPreferences();
@@ -92,7 +92,7 @@ export const nativePlugin: ImportPlugin = {
                     id: acc.id,
                     name: acc.name,
                     accountType: acc.accountType,
-                    currencyCode: acc.currencyCode,
+                    currencyCode: acc.currencyCode || data.preferences?.defaultCurrencyCode,
                     parentAccountId: acc.parentAccountId,
                     description: acc.description,
                     createdAt: acc.createdAt ? new Date(acc.createdAt).getTime() : undefined
@@ -114,7 +114,7 @@ export const nativePlugin: ImportPlugin = {
                     accountId: t.accountId,
                     amount: t.amount,
                     transactionType: t.transactionType,
-                    currencyCode: t.currencyCode,
+                    currencyCode: t.currencyCode || data.accounts.find(a => a.id === t.accountId)?.currencyCode || data.preferences?.defaultCurrencyCode,
                     transactionDate: new Date(t.transactionDate).getTime(),
                     notes: t.notes,
                     exchangeRate: t.exchangeRate,

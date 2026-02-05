@@ -62,7 +62,7 @@ describe('NativeImportPlugin', () => {
         it('performs full import process', async () => {
             const stats = await nativePlugin.import(JSON.stringify(validNativeData));
 
-            expect(integrityService.resetDatabase).toHaveBeenCalledWith({ seedDefaults: false });
+            expect(integrityService.resetDatabase).toHaveBeenCalled();
             expect(preferences.clearPreferences).toHaveBeenCalled();
             expect(preferences.setUserName).toHaveBeenCalledWith('Test User');
             expect(importRepository.batchInsert).toHaveBeenCalled();

@@ -170,11 +170,21 @@ export function useAccountActions() {
         return accountService.updateAccountOrder(account, newOrder)
     }, [])
 
+    const findAccountByName = useCallback(async (name: string) => {
+        return accountService.findAccountByName(name)
+    }, [])
+
+    const adjustBalance = useCallback(async (account: Account, targetBalance: number) => {
+        return accountService.adjustBalance(account, targetBalance)
+    }, [])
+
     return {
         createAccount,
         updateAccount,
         deleteAccount,
         recoverAccount,
-        updateAccountOrder
+        updateAccountOrder,
+        findAccountByName,
+        adjustBalance
     }
 }
