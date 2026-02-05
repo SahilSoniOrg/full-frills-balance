@@ -81,15 +81,15 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     }, []);
 
     const onAccountPress = useCallback((accountId: string) => {
-        router.push(`/account-details?accountId=${accountId}` as any);
+        router.push(`/account-details?accountId=${accountId}`);
     }, [router]);
 
     const onCreateAccount = useCallback(() => {
-        router.push('/account-creation' as any);
+        router.push('/account-creation');
     }, [router]);
 
     const onReorderPress = useCallback(() => {
-        router.push('/account-reorder' as any);
+        router.push('/account-reorder');
     }, [router]);
 
     const onTogglePrivacy = useCallback(() => {

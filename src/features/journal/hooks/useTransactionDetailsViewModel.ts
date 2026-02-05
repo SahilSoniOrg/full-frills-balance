@@ -1,4 +1,5 @@
 import { IconName } from '@/src/components/core';
+import { Opacity, withOpacity } from '@/src/constants';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
@@ -10,7 +11,6 @@ import { formatDate } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { Opacity, withOpacity } from '@/src/constants';
 
 export interface TransactionSplitItemViewModel {
     id: string;
@@ -118,7 +118,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     }, [journalId, router]);
 
     const onHistoryPress = useCallback(() => {
-        router.push(`/audit-log?entityType=journal&entityId=${journalId}` as any);
+        router.push(`/audit-log?entityType=journal&entityId=${journalId}`);
     }, [journalId, router]);
 
     const onBack = useCallback(() => {
@@ -139,7 +139,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 iconName: (isIn ? 'arrowDown' : 'arrowUp') as IconName,
                 iconColor: color,
                 iconBackground: withOpacity(color, Opacity.soft),
-                onPress: () => router.push(`/account-details?accountId=${item.accountId}` as any),
+                onPress: () => router.push(`/account-details?accountId=${item.accountId}`),
             };
         });
     }, [router, theme.error, theme.income, transactions]);

@@ -119,7 +119,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         if (router.canGoBack()) {
             router.back();
         } else {
-            router.push('/accounts' as any);
+            router.push('/accounts');
         }
     };
 
@@ -211,10 +211,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
                     if (router.canGoBack()) {
                         router.back();
                     } else {
-                        router.replace('/(tabs)/accounts' as any);
+                        router.replace('/(tabs)/accounts');
                     }
                 } else {
-                    router.replace('/(tabs)/accounts' as any);
+                    router.replace('/(tabs)/accounts');
                 }
             }
         } catch (error) {
