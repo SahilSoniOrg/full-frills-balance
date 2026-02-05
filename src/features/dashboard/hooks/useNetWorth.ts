@@ -1,13 +1,14 @@
 import { AppConfig } from '@/src/constants/app-config'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { useUI } from '@/src/contexts/UIContext'
 import { useObservable } from '@/src/hooks/useObservable'
 import { balanceService } from '@/src/services/BalanceService'
 import { wealthService } from '@/src/services/wealth-service'
 import { AccountBalance } from '@/src/types/domain'
 import { logger } from '@/src/utils/logger'
-import { preferences } from '@/src/utils/preferences'
 import { combineLatest, debounceTime, switchMap } from 'rxjs'
 
 /**
@@ -19,6 +20,7 @@ import { combineLatest, debounceTime, switchMap } from 'rxjs'
  * - Also subscribes to transactions to catch balance changes
  */
 export function useNetWorth() {
+    const { defaultCurrency } = useUI()
     const { data, isLoading } = useObservable(
         () => combineLatest([
             accountRepository.observeAll(),
@@ -32,13 +34,16 @@ export function useNetWorth() {
                 'currency_code',
                 'exchange_rate'
             ]),
-            journalRepository.observeStatusMeta()
+            journalRepository.observeStatusMeta(),
+            currencyRepository.observeAll()
         ]).pipe(
             debounceTime(300),
-            switchMap(async () => {
+            switchMap(async ([accounts, transactions, _status, currencies]) => {
                 try {
-                    const targetCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency
-                    const balances = await balanceService.getAccountBalances()
+                    const targetCurrency = defaultCurrency || AppConfig.defaultCurrency
+                    const precisionMap = new Map(currencies.map((currency) => [currency.code, currency.precision]))
+                    const balancesMap = balanceService.calculateBalancesFromTransactions(accounts, transactions, precisionMap)
+                    const balances = Array.from(balancesMap.values())
                     const wealth = await wealthService.calculateSummary(balances, targetCurrency)
 
                     return {
@@ -56,7 +61,7 @@ export function useNetWorth() {
                 }
             })
         ),
-        [],
+        [defaultCurrency],
         {
             balances: [] as AccountBalance[],
             netWorth: 0,

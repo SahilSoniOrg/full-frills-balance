@@ -3,7 +3,7 @@ import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
-import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useSummary } from '@/src/hooks/useSummary';
 import { getAccountSections } from '@/src/utils/accountUtils';
@@ -17,6 +17,7 @@ export default function AccountsScreen() {
     const { theme } = useTheme()
 
     const { accounts, isLoading: accountsLoading, version: accountsVersion } = useAccounts()
+    const { balancesByAccountId, isLoading: balancesLoading } = useAccountBalances(accounts)
 
     const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set())
 
@@ -157,13 +158,16 @@ export default function AccountsScreen() {
 
     const renderItem = useCallback(({ item, section }: { item: Account; section: { title: string } }) => {
         if (collapsedSections.has(section.title)) return null
+        const balanceData = balancesByAccountId.get(item.id) || null
         return (
             <AccountCard
                 account={item}
                 onPress={handleAccountPress}
+                balanceData={balanceData}
+                isLoading={balancesLoading}
             />
         )
-    }, [collapsedSections, handleAccountPress])
+    }, [balancesByAccountId, balancesLoading, collapsedSections, handleAccountPress])
 
     const keyExtractor = useCallback((item: Account) => item.id, [])
 

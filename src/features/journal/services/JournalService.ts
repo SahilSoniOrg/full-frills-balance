@@ -18,7 +18,7 @@ import { roundToPrecision } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Q } from '@nozbe/watermelondb';
-import { map, of, switchMap } from 'rxjs';
+import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export interface SubmitJournalResult {
     success: boolean;
@@ -383,13 +383,15 @@ export class JournalService {
             'display_type'
         ]);
 
-        return journalsObservable.pipe(
-            switchMap((journals) => {
-                if (journals.length === 0) return of([] as EnrichedJournal[]);
+        const journalIds$ = journalsObservable.pipe(
+            map((journals) => journals.map(j => j.id).sort()),
+            distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx]))
+        );
 
-                const journalIds = journals.map(j => j.id);
-
-                const transactionsObservable = transactionRepository.transactionsQuery(
+        const transactions$ = journalIds$.pipe(
+            switchMap((journalIds) => {
+                if (journalIds.length === 0) return of([] as Transaction[]);
+                return transactionRepository.transactionsQuery(
                     Q.experimentalJoinTables(['journals']),
                     Q.where('journal_id', Q.oneOf(journalIds)),
                     Q.where('deleted_at', Q.eq(null)),
@@ -403,44 +405,50 @@ export class JournalService {
                     'transaction_type',
                     'deleted_at'
                 ]);
+            })
+        );
 
-                return transactionsObservable.pipe(
-                    switchMap((transactions) => {
-                        const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-                        return accountRepository.observeByIds(accountIds).pipe(
-                            map((accounts) => {
-                                const accountMap = new Map(accounts.map(a => [a.id, a]));
-                                return journals.map(j => {
-                                    const jTxs = transactions.filter(t => t.journalId === j.id);
-                                    const enrichedAccounts = Array.from(new Set(jTxs.map(t => t.accountId))).map(id => {
-                                        const acc = accountMap.get(id);
-                                        const role = jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT
-                                            ? 'SOURCE'
-                                            : 'DESTINATION';
-                                        return {
-                                            id,
-                                            name: acc?.name || 'Unknown',
-                                            accountType: acc?.accountType || 'ASSET',
-                                            role: role as any
-                                        };
-                                    });
+        const accountIds$ = transactions$.pipe(
+            map((transactions) => Array.from(new Set(transactions.map(t => t.accountId))).sort()),
+            distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx]))
+        );
 
-                                    return {
-                                        id: j.id,
-                                        journalDate: j.journalDate,
-                                        description: j.description,
-                                        currencyCode: j.currencyCode,
-                                        status: j.status as any,
-                                        totalAmount: j.totalAmount || 0,
-                                        transactionCount: j.transactionCount || 0,
-                                        displayType: j.displayType as any,
-                                        accounts: enrichedAccounts
-                                    } as EnrichedJournal;
-                                });
-                            })
-                        );
-                    })
-                );
+        const accounts$ = accountIds$.pipe(
+            switchMap((accountIds) => accountRepository.observeByIds(accountIds))
+        );
+
+        return combineLatest([journalsObservable, transactions$, accounts$]).pipe(
+            map(([journals, transactions, accounts]) => {
+                if (journals.length === 0) return [] as EnrichedJournal[];
+
+                const accountMap = new Map(accounts.map(a => [a.id, a]));
+                return journals.map(j => {
+                    const jTxs = transactions.filter(t => t.journalId === j.id);
+                    const enrichedAccounts = Array.from(new Set(jTxs.map(t => t.accountId))).map(id => {
+                        const acc = accountMap.get(id);
+                        const role = jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT
+                            ? 'SOURCE'
+                            : 'DESTINATION';
+                        return {
+                            id,
+                            name: acc?.name || 'Unknown',
+                            accountType: acc?.accountType || 'ASSET',
+                            role: role as any
+                        };
+                    });
+
+                    return {
+                        id: j.id,
+                        journalDate: j.journalDate,
+                        description: j.description,
+                        currencyCode: j.currencyCode,
+                        status: j.status as any,
+                        totalAmount: j.totalAmount || 0,
+                        transactionCount: j.transactionCount || 0,
+                        displayType: j.displayType as any,
+                        accounts: enrichedAccounts
+                    } as EnrichedJournal;
+                });
             })
         );
     }

@@ -2,7 +2,6 @@ import { AppCard, AppText, IvyIcon } from '@/src/components/core';
 import { Opacity, Palette, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import Account from '@/src/data/models/Account';
-import { useAccountBalance } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getContrastColor } from '@/src/utils/colorUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -14,17 +13,15 @@ import { AccountBalance } from '@/src/types/domain';
 interface AccountCardProps {
     account: Account;
     onPress: (account: Account) => void;
-    initialBalanceData?: AccountBalance;
+    balanceData?: AccountBalance | null;
+    isLoading?: boolean;
 }
 
 /**
  * AccountCard - High-fidelity card for accounts
  * Inspired by Ivy Wallet's Account cards
  */
-export const AccountCard = ({ account, onPress, initialBalanceData }: AccountCardProps) => {
-    const hookData = useAccountBalance(initialBalanceData ? null : account.id);
-    const balanceData = initialBalanceData || hookData.balanceData;
-    const isLoading = initialBalanceData ? false : hookData.isLoading;
+export const AccountCard = ({ account, onPress, balanceData, isLoading = false }: AccountCardProps) => {
 
     const { theme } = useTheme();
     const ui = useUI();

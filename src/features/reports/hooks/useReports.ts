@@ -2,16 +2,17 @@ import { AppConfig } from '@/src/constants/app-config';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
-import { preferences } from '@/src/utils/preferences';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
 
 export function useReports() {
     const { theme } = useTheme();
+    const { defaultCurrency } = useUI();
 
     const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
         type: 'LAST_N',
@@ -45,7 +46,7 @@ export function useReports() {
         () => triggerObservable,
         async () => {
             const { startDate, endDate } = dateRange;
-            const targetCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+            const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
 
             const [history, breakdown, incVsExp] = await Promise.all([
                 reportService.getNetWorthHistory(startDate, endDate, targetCurrency),
@@ -59,7 +60,7 @@ export function useReports() {
                 incomeVsExpense: incVsExp
             };
         },
-        [dateRange, triggerObservable],
+        [dateRange, triggerObservable, defaultCurrency],
         { netWorthHistory: [], expenseBreakdown: [], incomeVsExpense: { income: 0, expense: 0 } }
     );
 

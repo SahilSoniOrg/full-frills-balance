@@ -3,7 +3,7 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { EnrichedTransaction, TransactionWithAccountInfo } from '@/src/types/domain';
 import { isBalanceIncrease, isValueEntering } from '@/src/utils/accounting-utils';
-import { combineLatest, map, of, switchMap } from 'rxjs';
+import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class TransactionService {
     /**
@@ -63,34 +63,38 @@ export class TransactionService {
         const journal$ = journalRepository.observeById(journalId);
         const transactions$ = transactionRepository.observeByJournal(journalId);
 
-        return combineLatest([transactions$, journal$]).pipe(
-            switchMap(([transactions, journal]) => {
-                const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-                return accountRepository.observeByIds(accountIds).pipe(
-                    map((accounts) => {
-                        const accountMap = new Map(accounts.map(a => [a.id, a]));
-                        return transactions.map(tx => {
-                            const account = accountMap.get(tx.accountId);
-                            return {
-                                id: tx.id,
-                                amount: tx.amount,
-                                transactionType: tx.transactionType as any,
-                                currencyCode: tx.currencyCode,
-                                transactionDate: tx.transactionDate,
-                                notes: tx.notes,
-                                accountId: tx.accountId,
-                                exchangeRate: tx.exchangeRate,
-                                accountName: account?.name || 'Unknown Account',
-                                accountType: account?.accountType as any,
-                                flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
-                                balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE',
-                                createdAt: tx.createdAt,
-                                updatedAt: tx.updatedAt,
-                                journalDescription: journal?.description
-                            } as TransactionWithAccountInfo;
-                        });
-                    })
-                );
+        const accountIds$ = transactions$.pipe(
+            map((transactions) => Array.from(new Set(transactions.map(t => t.accountId))).sort()),
+            distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx]))
+        );
+
+        const accounts$ = accountIds$.pipe(
+            switchMap((accountIds) => accountRepository.observeByIds(accountIds))
+        );
+
+        return combineLatest([transactions$, journal$, accounts$]).pipe(
+            map(([transactions, journal, accounts]) => {
+                const accountMap = new Map(accounts.map(a => [a.id, a]));
+                return transactions.map(tx => {
+                    const account = accountMap.get(tx.accountId);
+                    return {
+                        id: tx.id,
+                        amount: tx.amount,
+                        transactionType: tx.transactionType as any,
+                        currencyCode: tx.currencyCode,
+                        transactionDate: tx.transactionDate,
+                        notes: tx.notes,
+                        accountId: tx.accountId,
+                        exchangeRate: tx.exchangeRate,
+                        accountName: account?.name || 'Unknown Account',
+                        accountType: account?.accountType as any,
+                        flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
+                        balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any) ? 'INCREASE' : 'DECREASE',
+                        createdAt: tx.createdAt,
+                        updatedAt: tx.updatedAt,
+                        journalDescription: journal?.description
+                    } as TransactionWithAccountInfo;
+                });
             })
         );
     }
@@ -101,15 +105,19 @@ export class TransactionService {
         const journal$ = journalRepository.observeById(journalId);
         const transactions$ = transactionRepository.observeByJournal(journalId);
 
-        return combineLatest([transactions$, journal$]).pipe(
-            switchMap(([transactions, journal]) => {
-                const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-                return accountRepository.observeByIds(accountIds).pipe(
-                    map((accounts) => {
-                        const accountMap = new Map(accounts.map(a => [a.id, a]));
-                        return transactions.map(tx => this.mapToEnriched(tx, transactions, accountMap, journal));
-                    })
-                );
+        const accountIds$ = transactions$.pipe(
+            map((transactions) => Array.from(new Set(transactions.map(t => t.accountId))).sort()),
+            distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx]))
+        );
+
+        const accounts$ = accountIds$.pipe(
+            switchMap((accountIds) => accountRepository.observeByIds(accountIds))
+        );
+
+        return combineLatest([transactions$, journal$, accounts$]).pipe(
+            map(([transactions, journal, accounts]) => {
+                const accountMap = new Map(accounts.map(a => [a.id, a]));
+                return transactions.map(tx => this.mapToEnriched(tx, transactions, accountMap, journal));
             })
         );
     }
@@ -120,39 +128,43 @@ export class TransactionService {
         const transactions$ = journalRepository.observeAccountTransactions(accountId, limit, dateRange);
         const account$ = accountRepository.observeById(accountId);
 
-        return combineLatest([transactions$, account$]).pipe(
-            switchMap(([transactions, account]) => {
-                const journalIds = Array.from(new Set(transactions.map(t => t.journalId)));
-                return journalRepository.observeByIds(journalIds).pipe(
-                    map((journals) => {
-                        const journalMap = new Map(journals.map(j => [j.id, j]));
-                        return transactions.map(tx => {
-                            const journal = journalMap.get(tx.journalId);
-                            // Note: for a single account view, we don't always have the full journal transactions here for counter-account
-                            // but we can at least return the basic enrichment
-                            const isIncrease = isBalanceIncrease(account?.accountType as any, tx.transactionType as any);
-                            return {
-                                id: tx.id,
-                                journalId: tx.journalId,
-                                accountId: tx.accountId,
-                                amount: tx.amount,
-                                currencyCode: tx.currencyCode,
-                                transactionType: tx.transactionType as any,
-                                transactionDate: tx.transactionDate,
-                                notes: tx.notes,
-                                journalDescription: journal?.description,
-                                accountName: account?.name,
-                                accountType: account?.accountType as any,
-                                icon: account?.icon,
-                                runningBalance: tx.runningBalance,
-                                displayTitle: journal?.description || 'Transaction',
-                                displayType: journal?.displayType as any,
-                                isIncrease,
-                                exchangeRate: tx.exchangeRate
-                            } as EnrichedTransaction;
-                        });
-                    })
-                );
+        const journalIds$ = transactions$.pipe(
+            map((transactions) => Array.from(new Set(transactions.map(t => t.journalId))).sort()),
+            distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx]))
+        );
+
+        const journals$ = journalIds$.pipe(
+            switchMap((journalIds) => journalRepository.observeByIds(journalIds))
+        );
+
+        return combineLatest([transactions$, account$, journals$]).pipe(
+            map(([transactions, account, journals]) => {
+                const journalMap = new Map(journals.map(j => [j.id, j]));
+                return transactions.map(tx => {
+                    const journal = journalMap.get(tx.journalId);
+                    // Note: for a single account view, we don't always have the full journal transactions here for counter-account
+                    // but we can at least return the basic enrichment
+                    const isIncrease = isBalanceIncrease(account?.accountType as any, tx.transactionType as any);
+                    return {
+                        id: tx.id,
+                        journalId: tx.journalId,
+                        accountId: tx.accountId,
+                        amount: tx.amount,
+                        currencyCode: tx.currencyCode,
+                        transactionType: tx.transactionType as any,
+                        transactionDate: tx.transactionDate,
+                        notes: tx.notes,
+                        journalDescription: journal?.description,
+                        accountName: account?.name,
+                        accountType: account?.accountType as any,
+                        icon: account?.icon,
+                        runningBalance: tx.runningBalance,
+                        displayTitle: journal?.description || 'Transaction',
+                        displayType: journal?.displayType as any,
+                        isIncrease,
+                        exchangeRate: tx.exchangeRate
+                    } as EnrichedTransaction;
+                });
             })
         );
     }

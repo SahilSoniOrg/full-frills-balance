@@ -31,7 +31,7 @@ export class AccountRepository {
   observeAll() {
     return this.accounts
       .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
-      .observeWithColumns(['account_type', 'name', 'order_num', 'currency_code', 'deleted_at'])
+      .observeWithColumns(['account_type', 'name', 'order_num', 'currency_code', 'icon', 'description', 'deleted_at'])
   }
 
   observeByType(accountType: string) {
@@ -41,7 +41,7 @@ export class AccountRepository {
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('order_num', Q.asc)
       )
-    return query.observeWithColumns(['name', 'order_num', 'currency_code', 'deleted_at'])
+    return query.observeWithColumns(['name', 'order_num', 'currency_code', 'icon', 'description', 'deleted_at'])
   }
 
   observeByIds(accountIds: string[]) {
@@ -54,7 +54,7 @@ export class AccountRepository {
         Q.where('id', Q.oneOf(accountIds)),
         Q.where('deleted_at', Q.eq(null))
       )
-      .observeWithColumns(['name', 'account_type', 'currency_code', 'order_num', 'deleted_at'])
+      .observeWithColumns(['name', 'account_type', 'currency_code', 'order_num', 'icon', 'description', 'deleted_at'])
   }
 
   observeById(accountId: string) {

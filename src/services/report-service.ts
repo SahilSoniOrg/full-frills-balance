@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { AccountType } from '@/src/data/models/Account';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Account, { AccountType } from '@/src/data/models/Account';
+import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
@@ -189,12 +189,31 @@ export class ReportService {
 
         const transactions = await transactionRepository.findByAccountsAndDateRange(accountIds, startDate, endDate);
 
+        return this.getIncomeVsExpenseFromTransactions(transactions, allReportAccounts, startDate, endDate, currency);
+    }
+
+    /**
+     * Calculates Income vs Expense from an in-memory transaction list.
+     * Useful for reactive hooks that already subscribe to transactions.
+     */
+    async getIncomeVsExpenseFromTransactions(
+        transactions: Transaction[],
+        accounts: Account[],
+        startDate: number,
+        endDate: number,
+        targetCurrency?: string
+    ): Promise<{ income: number, expense: number }> {
+        const currency = targetCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+        const accountMap = new Map(accounts.map(a => [a.id, a]));
+
         let income = 0;
         let expense = 0;
 
         for (const tx of transactions) {
-            const acc = allReportAccounts.find(a => a.id === tx.accountId);
+            if (tx.transactionDate < startDate || tx.transactionDate > endDate) continue;
+            const acc = accountMap.get(tx.accountId);
             if (!acc) continue;
+            if (acc.accountType !== AccountType.INCOME && acc.accountType !== AccountType.EXPENSE) continue;
 
             const { convertedAmount } = await exchangeRateService.convert(
                 tx.amount,

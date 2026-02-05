@@ -59,6 +59,7 @@ export function usePaginatedObservable<T, E = T>(
     const prevFilterRef = useRef({
         dateRangeKey,
         observe,
+        enrich,
         pageSize
     });
 
@@ -68,10 +69,10 @@ export function usePaginatedObservable<T, E = T>(
 
         // Only show full loading state when filters change (not on pagination)
         const prev = prevFilterRef.current;
-        const isFilterChange = prev.dateRangeKey !== dateRangeKey || prev.observe !== observe || prev.pageSize !== pageSize;
+        const isFilterChange = prev.dateRangeKey !== dateRangeKey || prev.observe !== observe || prev.enrich !== enrich || prev.pageSize !== pageSize;
         if (isFilterChange) {
             setIsLoading(true);
-            prevFilterRef.current = { dateRangeKey, observe, pageSize };
+            prevFilterRef.current = { dateRangeKey, observe, enrich, pageSize };
             if (currentLimit !== pageSize) {
                 setCurrentLimit(pageSize); // Reset pagination
                 return;
@@ -107,7 +108,7 @@ export function usePaginatedObservable<T, E = T>(
             subscription.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentLimit, dateRangeKey, observe, pageSize]);
+    }, [currentLimit, dateRangeKey, observe, enrich, pageSize]);
 
     const loadMore = () => {
         if (isLoadingMore || !hasMore) return;

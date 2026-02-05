@@ -2,16 +2,18 @@
  * Reactive Data Hooks for Accounts
  */
 import Account, { AccountType } from '@/src/data/models/Account'
-import Transaction, { TransactionType } from '@/src/data/models/Transaction'
+import Currency from '@/src/data/models/Currency'
+import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { accountService } from '@/src/features/accounts/services/AccountService'
 import { useObservable } from '@/src/hooks/useObservable'
+import { balanceService } from '@/src/services/BalanceService'
 import { AccountBalance } from '@/src/types/domain'
-import { accountingService } from '@/src/utils/accountingService'
-import { roundToPrecision } from '@/src/utils/money'
 import { useCallback, useMemo } from 'react'
-import { from, map, of, switchMap } from 'rxjs'
+import { combineLatest, from, map, of, switchMap } from 'rxjs'
 
 /**
  * Hook to reactively get all accounts
@@ -63,48 +65,19 @@ export function useAccountBalance(accountId: string | null) {
                 if (!account) return of(null)
 
                 // Observe all active transactions for this account
-                return accountRepository.observeTransactionsForBalance(account.id).pipe(
+                return combineLatest([
+                    accountRepository.observeTransactionsForBalance(account.id),
+                    journalRepository.observeStatusMeta()
+                ]).pipe(
+                    map(([transactions]) => transactions),
                     switchMap((transactions: Transaction[]) =>
                         from(currencyRepository.getPrecision(account.currencyCode)).pipe(
                             map((precision) => {
-                                let balance = 0
-                                let monthlyIncome = 0
-                                let monthlyExpenses = 0
-                                const startOfMonth = new Date()
-                                startOfMonth.setDate(1)
-                                startOfMonth.setHours(0, 0, 0, 0)
-                                const startOfMonthTs = startOfMonth.getTime()
-
-                                const multiplierMap: Record<string, number> = {
-                                    [TransactionType.DEBIT]: accountingService.getImpactMultiplier(account.accountType as AccountType, TransactionType.DEBIT),
-                                    [TransactionType.CREDIT]: accountingService.getImpactMultiplier(account.accountType as AccountType, TransactionType.CREDIT)
-                                }
-
-                                for (const tx of transactions) {
-                                    const multiplier = multiplierMap[tx.transactionType] || 0
-                                    const impact = tx.amount * multiplier
-
-                                    balance = roundToPrecision(balance + impact, precision)
-
-                                    if (tx.transactionDate >= startOfMonthTs) {
-                                        if (impact > 0) {
-                                            monthlyIncome = roundToPrecision(monthlyIncome + tx.amount, precision)
-                                        } else if (impact < 0) {
-                                            monthlyExpenses = roundToPrecision(monthlyExpenses + tx.amount, precision)
-                                        }
-                                    }
-                                }
-
-                                return {
-                                    accountId: account.id,
-                                    balance,
-                                    currencyCode: account.currencyCode,
-                                    transactionCount: transactions.length,
-                                    asOfDate: Date.now(),
-                                    accountType: account.accountType as AccountType,
-                                    monthlyIncome,
-                                    monthlyExpenses
-                                } as AccountBalance
+                                return balanceService.calculateAccountBalanceFromTransactions(
+                                    account,
+                                    transactions,
+                                    precision
+                                )
                             })
                         )
                     )
@@ -120,6 +93,44 @@ export function useAccountBalance(accountId: string | null) {
     )
 
     return { balanceData, isLoading, version }
+}
+
+/**
+ * Hook to reactively compute balances for a list of accounts.
+ * Uses a single transaction subscription to avoid N+1 observers.
+ */
+export function useAccountBalances(accounts: Account[]) {
+    const { data: currencies, isLoading: currenciesLoading } = useObservable(
+        () => currencyRepository.observeAll(),
+        [],
+        [] as Currency[]
+    )
+
+    const { data: transactions, isLoading: transactionsLoading } = useObservable(
+        () => combineLatest([
+            transactionRepository.observeActiveWithColumns([
+                'amount',
+                'transaction_type',
+                'transaction_date',
+                'account_id',
+                'deleted_at',
+            ]),
+            journalRepository.observeStatusMeta()
+        ]).pipe(map(([txs]) => txs)),
+        [],
+        [] as Transaction[]
+    )
+
+    const balancesByAccountId = useMemo(() => {
+        if (!accounts.length) return new Map<string, AccountBalance>()
+        const precisionMap = new Map(currencies.map((currency) => [currency.code, currency.precision]))
+        return balanceService.calculateBalancesFromTransactions(accounts, transactions, precisionMap)
+    }, [accounts, currencies, transactions])
+
+    return {
+        balancesByAccountId,
+        isLoading: currenciesLoading || transactionsLoading
+    }
 }
 
 /**
