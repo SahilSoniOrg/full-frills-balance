@@ -2,6 +2,7 @@ import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { CurrencyPreference } from '@/src/features/settings/components/CurrencyPreference';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -87,11 +88,11 @@ export default function SettingsScreen() {
 
     const handleCleanup = async () => {
         const proceed = Platform.OS === 'web'
-            ? confirm('This will permanently delete all records marked as deleted (journals, transactions, accounts). This action is irreversible. Continue?')
+            ? confirm('This will permanently delete synced records marked as deleted (journals, transactions, accounts). Unsynced deletions are preserved for sync. This action is irreversible. Continue?')
             : await new Promise<boolean>(resolve => {
                 Alert.alert(
                     'Cleanup Database',
-                    'This will permanently delete all records marked as deleted (journals, transactions, accounts). This action is irreversible. Continue?',
+                    'This will permanently delete synced records marked as deleted (journals, transactions, accounts). Unsynced deletions are preserved for sync. This action is irreversible. Continue?',
                     [
                         { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
                         { text: 'Cleanup', style: 'destructive', onPress: () => resolve(true) }
@@ -104,7 +105,7 @@ export default function SettingsScreen() {
         try {
             setIsCleaning(true);
             const result = await cleanupDatabase();
-            Alert.alert('Cleanup Complete', `Permanently removed ${result.deletedCount} records.`);
+            Alert.alert('Cleanup Complete', `Permanently removed ${result.deletedCount} synced records.`);
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             Alert.alert('Error', `Cleanup failed: ${msg}`);
@@ -148,6 +149,14 @@ export default function SettingsScreen() {
             withPadding
         >
             <View style={styles.inner}>
+                {/* General Section */}
+                <AppText variant="subheading" style={styles.sectionTitle}>
+                    General
+                </AppText>
+                <AppCard elevation="sm" padding="md" style={styles.card}>
+                    <CurrencyPreference />
+                </AppCard>
+
                 {/* Appearance Section */}
                 <AppText variant="subheading" style={styles.sectionTitle}>
                     Appearance

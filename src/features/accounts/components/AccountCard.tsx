@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
     },
     headerSection: {
         paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.xl,
-        paddingBottom: Spacing.xxxxl,
+        paddingTop: Spacing.lg,
+        paddingBottom: Spacing.xxl,
     },
     headerTop: {
         flexDirection: 'row',
@@ -159,8 +159,8 @@ const styles = StyleSheet.create({
         fontSize: Typography.sizes.sm,
     },
     divider: {
-        width: 2,
-        height: 32,
+        width: Spacing.xs,
+        height: Spacing.xxl,
         borderRadius: 1,
     },
 });

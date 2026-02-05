@@ -76,6 +76,23 @@ export default function AccountCreationScreen() {
         setHasExistingAccounts(accounts.length > 0)
     }, [accounts])
 
+    // Real-time validation for duplicate names
+    React.useEffect(() => {
+        if (!accountName.trim()) {
+            setFormError(null)
+            return
+        }
+
+        const sanitizedName = sanitizeInput(accountName)
+        const existing = accounts.find(a => a.name.toLowerCase() === sanitizedName.toLowerCase())
+
+        if (existing && existing.id !== accountId) {
+            setFormError(`Account with name "${sanitizedName}" already exists`)
+        } else {
+            setFormError(null)
+        }
+    }, [accountName, accounts, accountId])
+
     const handleCancel = () => {
         if (router.canGoBack()) {
             router.back()
@@ -101,7 +118,7 @@ export default function AccountCreationScreen() {
 
         const sanitizedName = sanitizeInput(accountName)
 
-        // Check for duplicates
+        // Check for duplicates (should be caught by real-time check, but double check)
         const existing = accounts.find(a => a.name.toLowerCase() === sanitizedName.toLowerCase());
         if (existing && existing.id !== accountId) {
             logger.warn(`[AccountCreation] Duplicate found: ${sanitizedName}`)
@@ -264,7 +281,7 @@ export default function AccountCreationScreen() {
                         variant="primary"
                         size="lg"
                         onPress={handleSaveAccount}
-                        disabled={!accountName.trim() || isCreating}
+                        disabled={!accountName.trim() || isCreating || !!formError}
                         style={styles.createButton}
                         testID="save-button"
                     >

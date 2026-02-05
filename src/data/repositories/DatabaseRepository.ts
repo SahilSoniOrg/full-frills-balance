@@ -16,9 +16,12 @@ export class DatabaseRepository {
           .get(table)
           .query(Q.where('deleted_at', Q.notEq(null)))
           .fetch()
-        totalDeleted += deletedRecords.length
-        for (const record of deletedRecords) {
-          await record.destroyPermanently()
+        const purgeable = deletedRecords.filter(
+          (record: any) => record?._raw?._status === 'synced'
+        )
+        totalDeleted += purgeable.length
+        if (purgeable.length > 0) {
+          await database.batch(...purgeable.map((record: any) => record.prepareDestroyPermanently()))
         }
       }
     })

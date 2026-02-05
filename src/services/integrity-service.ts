@@ -157,10 +157,8 @@ export class IntegrityService {
         logger.info('[IntegrityService] Starting startup integrity check...')
 
         const accountsExist = await accountRepository.exists()
-
         if (!accountsExist) {
-            logger.info('[IntegrityService] No accounts found. Seeding default accounts/categories...')
-            await this.seedDefaultAccounts()
+            logger.info('[IntegrityService] No accounts found. Skipping default seeding (onboarding handles data creation).')
         }
 
         const results = await this.verifyAllAccountBalances()

@@ -32,10 +32,24 @@ export class JournalService {
      * Handles account lookup, validation, persistence, and post-write side effects (Audit, Rebuild).
      */
     async createJournal(data: CreateJournalData): Promise<Journal> {
-        const { journal, accountsToRebuild } = await this.prepareAndSave(data);
+        const prepared = await this.prepareJournalData(data);
+        const journal = await journalRepository.createJournalWithTransactions({
+            ...data,
+            transactions: prepared.transactions,
+            totalAmount: prepared.totalAmount,
+            displayType: prepared.displayType,
+            calculatedBalances: prepared.calculatedBalances
+        });
 
-        if (accountsToRebuild.size > 0) {
-            rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate);
+        await auditService.log({
+            entityType: 'journal',
+            entityId: journal.id,
+            action: AuditAction.CREATE,
+            changes: { description: data.description }
+        });
+
+        if (prepared.accountsToRebuild.size > 0) {
+            rebuildQueueService.enqueueMany(prepared.accountsToRebuild, data.journalDate);
             await rebuildQueueService.flush();
         }
 
@@ -43,10 +57,34 @@ export class JournalService {
     }
 
     async updateJournal(journalId: string, data: CreateJournalData): Promise<Journal> {
-        const { journal, accountsToRebuild } = await this.prepareAndSave(data, journalId);
+        const originalJournal = await journalRepository.find(journalId);
+        if (!originalJournal) throw new Error('Journal not found');
 
-        // For updates, we rebuild all involved accounts to ensure total integrity
-        rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate);
+        const originalTransactions = await transactionRepository.findByJournal(journalId);
+        const prepared = await this.prepareJournalData(data);
+
+        const journal = await journalRepository.updateJournalWithTransactions(journalId, {
+            ...data,
+            transactions: prepared.transactions,
+            totalAmount: prepared.totalAmount,
+            displayType: prepared.displayType,
+            calculatedBalances: prepared.calculatedBalances
+        });
+
+        await auditService.log({
+            entityType: 'journal',
+            entityId: journalId,
+            action: AuditAction.UPDATE,
+            changes: { description: data.description }
+        });
+
+        const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
+        const allAccountsToRebuild = new Set<string>([
+            ...prepared.accountsToRebuild,
+            ...originalAccountIds
+        ]);
+        const rebuildFromDate = Math.min(originalJournal.journalDate, data.journalDate);
+        rebuildQueueService.enqueueMany(allAccountsToRebuild, rebuildFromDate);
         await rebuildQueueService.flush();
 
         return journal;
@@ -55,7 +93,7 @@ export class JournalService {
     /**
      * Internal: Shared logic for validation, rounding, and balance calculation.
      */
-    private async prepareAndSave(data: CreateJournalData, journalId?: string) {
+    private async prepareJournalData(data: CreateJournalData) {
         // 1. Fetch all unique accounts involved
         const accountIds = [...new Set(data.transactions.map(t => t.accountId))];
         const accounts = await accountRepository.findAllByIds(accountIds);
@@ -107,38 +145,13 @@ export class JournalService {
         const totalAmount = Math.max(Math.abs(validation.totalDebits), Math.abs(validation.totalCredits));
         const displayType = journalPresenter.getJournalDisplayType(roundedTransactions, accountTypes);
 
-        let journal: Journal;
-        if (journalId) {
-            journal = await journalRepository.updateJournalWithTransactions(journalId, {
-                ...data,
-                transactions: roundedTransactions,
-                totalAmount,
-                displayType,
-                calculatedBalances
-            });
-            await auditService.log({
-                entityType: 'journal',
-                entityId: journalId,
-                action: AuditAction.UPDATE,
-                changes: { description: data.description }
-            });
-        } else {
-            journal = await journalRepository.createJournalWithTransactions({
-                ...data,
-                transactions: roundedTransactions,
-                totalAmount,
-                displayType,
-                calculatedBalances
-            });
-            await auditService.log({
-                entityType: 'journal',
-                entityId: journal.id,
-                action: AuditAction.CREATE,
-                changes: { description: data.description }
-            });
-        }
-
-        return { journal, accountsToRebuild };
+        return {
+            transactions: roundedTransactions,
+            totalAmount,
+            displayType,
+            calculatedBalances,
+            accountsToRebuild
+        };
     }
 
     async deleteJournal(journalId: string): Promise<void> {
@@ -198,7 +211,8 @@ export class JournalService {
             journalDate: Date.now(),
             description: `Reversal of: ${originalJournal.description || originalJournalId} (${reason})`,
             currencyCode: originalJournal.currencyCode,
-            transactions: reversedTxs
+            transactions: reversedTxs,
+            originalJournalId
         });
 
         // Link them

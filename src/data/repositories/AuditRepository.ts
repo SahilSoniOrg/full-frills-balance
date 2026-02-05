@@ -25,6 +25,7 @@ export class AuditRepository {
                 record.action = entry.action
                 record.changes = JSON.stringify(entry.changes)
                 record.timestamp = Date.now()
+                record.createdAt = new Date()
             })
         })
     }

@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database'
 import Account, { AccountType } from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
+import { ValidationError } from '@/src/utils/errors'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
 import { map, of } from 'rxjs'
@@ -153,6 +154,8 @@ export class AccountRepository {
       const creates = defaults.map((data) =>
         this.accounts.prepareCreate((account) => {
           Object.assign(account, data)
+          account.createdAt = new Date()
+          account.updatedAt = new Date()
         })
       )
       if (creates.length > 0) {
@@ -162,17 +165,24 @@ export class AccountRepository {
   }
 
   async create(data: AccountPersistenceInput): Promise<Account> {
+    await this.ensureUniqueName(data.name)
     return await this.db.write(async () => {
       return this.accounts.create((account) => {
         Object.assign(account, data)
+        account.createdAt = new Date()
+        account.updatedAt = new Date()
       })
     })
   }
 
   async update(account: Account, updates: Partial<AccountPersistenceInput>): Promise<Account> {
+    if (updates.name && updates.name !== account.name) {
+      await this.ensureUniqueName(updates.name, account.id)
+    }
     return await this.db.write(async () => {
       await account.update((acc) => {
         Object.assign(acc, updates)
+        acc.updatedAt = new Date()
       })
       return account
     })
@@ -182,8 +192,28 @@ export class AccountRepository {
     await this.db.write(async () => {
       await account.update(record => {
         record.deletedAt = new Date()
+        record.updatedAt = new Date()
       })
     })
+  }
+
+  private async ensureUniqueName(name: string, excludeId?: string): Promise<void> {
+    const sanitizedName = name.trim().toLowerCase()
+
+    // Fetch all active account names to check case-insensitively
+    // We cannot easily do this with Q.where because of case sensitivity variations in SQLite/adapters
+    const allAccounts = await this.accounts
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .fetch()
+
+    const duplicate = allAccounts.find(account => {
+      if (excludeId && account.id === excludeId) return false
+      return account.name.trim().toLowerCase() === sanitizedName
+    })
+
+    if (duplicate) {
+      throw new ValidationError(`Account with name "${name}" already exists`)
+    }
   }
 }
 

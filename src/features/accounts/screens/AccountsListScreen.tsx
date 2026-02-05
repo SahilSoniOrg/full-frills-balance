@@ -1,6 +1,8 @@
 import { AppIcon, AppText, Box, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
+import { useUI } from '@/src/contexts/UIContext';
 import Account from '@/src/data/models/Account';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
@@ -9,17 +11,18 @@ import { useSummary } from '@/src/hooks/useSummary';
 import { getAccountSections } from '@/src/utils/accountUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo } from 'react';
-import { ScrollView, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function AccountsScreen() {
     const router = useRouter()
     const { theme } = useTheme()
 
+    const { defaultCurrency, setPrivacyMode } = useUI()
     const { accounts, isLoading: accountsLoading, version: accountsVersion } = useAccounts()
     const { balancesByAccountId, isLoading: balancesLoading } = useAccountBalances(accounts)
 
-    const [collapsedSections, setCollapsedSections] = React.useState<Set<string>>(new Set())
+    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']))
 
     const handleAccountPress = useCallback((account: Account) => {
         router.push(`/account-details?accountId=${account.id}` as any)
@@ -57,74 +60,36 @@ export default function AccountsScreen() {
         totalEquity,
         totalIncome,
         totalExpense,
-        isPrivacyMode,
-        version: summaryVersion
+        isPrivacyMode
     } = useSummary()
 
 
 
-    const renderHeader = useMemo(() => {
-        const categories = [
-            { label: 'Assets', value: totalAssets, color: theme.asset },
-            { label: 'Liabilities', value: totalLiabilities, color: theme.liability },
-            { label: 'Equity', value: totalEquity, color: theme.equity },
-            { label: 'Income', value: totalIncome, color: theme.income },
-            { label: 'Expenses', value: totalExpense, color: theme.expense },
-        ]
 
-        return (
-            <View style={styles.header}>
-                <Box direction="row" align="center" justify="space-between" style={styles.headerTop}>
-                    <AppText variant="title" weight="bold">Accounts</AppText>
-                    <TouchableOpacity
-                        onPress={handleReorderPress}
-                        style={[styles.reorderIconButton, { backgroundColor: theme.surfaceSecondary }]}
-                    >
-                        <AppIcon name="reorder" size={Size.iconSm} color={theme.text} />
-                    </TouchableOpacity>
-                </Box>
-
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.summaryScroll}
-                >
-                    {categories.map((cat, index) => (
-                        <React.Fragment key={cat.label}>
-                            <View style={styles.summaryItem}>
-                                <AppText variant="caption" color="secondary" weight="bold">{cat.label.toUpperCase()}</AppText>
-                                <AppText variant="subheading" weight="bold" style={{ color: cat.color }}>
-                                    {isPrivacyMode ? '••••' : CurrencyFormatter.formatShort(cat.value)}
-                                </AppText>
-                            </View>
-                            {index < categories.length - 1 && <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />}
-                        </React.Fragment>
-                    ))}
-                </ScrollView>
-            </View>
-        )
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        handleReorderPress,
-        isPrivacyMode,
-        theme.asset,
-        theme.border,
-        theme.equity,
-        theme.expense,
-        theme.income,
-        theme.liability,
-        theme.surfaceSecondary,
-        theme.text,
-        totalAssets,
-        totalEquity,
-        totalExpense,
-        totalIncome,
-        totalLiabilities,
-        summaryVersion,
-    ])
 
     const renderSectionHeader = useCallback(({ section: { title, data } }: { section: { title: string; data: Account[] } }) => {
         const isCollapsed = collapsedSections.has(title)
+
+        let sectionColor = theme.text
+        let sectionTotal = 0
+
+        if (title === 'Assets') {
+            sectionColor = theme.asset
+            sectionTotal = totalAssets
+        } else if (title === 'Liabilities') {
+            sectionColor = theme.liability
+            sectionTotal = totalLiabilities
+        } else if (title === 'Equity') {
+            sectionColor = theme.equity
+            sectionTotal = totalEquity
+        } else if (title === 'Income') {
+            sectionColor = theme.income
+            sectionTotal = totalIncome
+        } else if (title === 'Expenses') {
+            sectionColor = theme.expense
+            sectionTotal = totalExpense
+        }
+
         return (
             <TouchableOpacity
                 onPress={() => toggleSection(title)}
@@ -146,15 +111,20 @@ export default function AccountsScreen() {
                             </AppText>
                         </View>
                     </Box>
-                    <AppIcon
-                        name={isCollapsed ? "chevronRight" : "chevronDown"}
-                        size={Size.iconSm}
-                        color={theme.textSecondary}
-                    />
+                    <Box direction="row" align="center" gap="md">
+                        <AppText variant="body" weight="bold" style={{ color: sectionColor }}>
+                            {isPrivacyMode ? '••••' : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency || AppConfig.defaultCurrency)}
+                        </AppText>
+                        <AppIcon
+                            name={isCollapsed ? "chevronRight" : "chevronDown"}
+                            size={Size.iconSm}
+                            color={theme.textSecondary}
+                        />
+                    </Box>
                 </Box>
             </TouchableOpacity>
         )
-    }, [collapsedSections, theme.surfaceSecondary, theme.textSecondary, toggleSection])
+    }, [collapsedSections, defaultCurrency, isPrivacyMode, theme.asset, theme.equity, theme.expense, theme.income, theme.liability, theme.surfaceSecondary, theme.text, theme.textSecondary, totalAssets, totalEquity, totalExpense, totalIncome, totalLiabilities, toggleSection])
 
     const renderItem = useCallback(({ item, section }: { item: Account; section: { title: string } }) => {
         if (collapsedSections.has(section.title)) return null
@@ -181,7 +151,31 @@ export default function AccountsScreen() {
                 keyExtractor={keyExtractor}
                 renderSectionHeader={renderSectionHeader}
                 renderItem={renderItem}
-                ListHeaderComponent={renderHeader}
+                ListHeaderComponent={
+                    <View style={styles.header}>
+                        <Box direction="row" align="center" justify="space-between" style={styles.headerTop}>
+                            <AppText variant="title" weight="bold">Accounts</AppText>
+                            <Box direction="row" align="center" gap="sm">
+                                <TouchableOpacity
+                                    onPress={() => setPrivacyMode(!isPrivacyMode)}
+                                    style={[styles.reorderIconButton, { backgroundColor: theme.surfaceSecondary }]}
+                                >
+                                    <AppIcon
+                                        name={isPrivacyMode ? "eyeOff" : "eye"}
+                                        size={Size.iconSm}
+                                        color={theme.text}
+                                    />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleReorderPress}
+                                    style={[styles.reorderIconButton, { backgroundColor: theme.surfaceSecondary }]}
+                                >
+                                    <AppIcon name="reorder" size={Size.iconSm} color={theme.text} />
+                                </TouchableOpacity>
+                            </Box>
+                        </Box>
+                    </View>
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <AppText variant="body" color="secondary">

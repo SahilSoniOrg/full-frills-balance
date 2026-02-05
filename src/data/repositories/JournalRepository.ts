@@ -9,6 +9,7 @@ export interface CreateJournalData {
   journalDate: number
   description?: string
   currencyCode: string
+  originalJournalId?: string
   transactions: {
     accountId: string
     amount: number
@@ -178,6 +179,8 @@ export class JournalRepository {
         j.totalAmount = totalAmount ?? 0
         j.transactionCount = transactionData.length
         j.displayType = displayType ?? 'TRANSACTION'
+        j.createdAt = new Date()
+        j.updatedAt = new Date()
       })
 
       await Promise.all(transactionData.map(txData => {
@@ -191,6 +194,8 @@ export class JournalRepository {
           tx.notes = txData.notes
           tx.exchangeRate = txData.exchangeRate
           tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0
+          tx.createdAt = new Date()
+          tx.updatedAt = new Date()
         })
       }))
 
@@ -210,8 +215,12 @@ export class JournalRepository {
     const oldTransactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch()
 
     return await database.write(async () => {
-      // 1. Clear old transactions
-      await Promise.all(oldTransactions.map(tx => tx.destroyPermanently()))
+      // 1. Soft-delete old transactions (retain tombstones for sync)
+      const now = new Date()
+      await Promise.all(oldTransactions.map(tx => tx.update((t) => {
+        t.deletedAt = now
+        t.updatedAt = now
+      })))
 
       // 2. Create new transactions
       await Promise.all(transactionData.map(txData => {
@@ -225,6 +234,8 @@ export class JournalRepository {
           tx.notes = txData.notes
           tx.exchangeRate = txData.exchangeRate
           tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0
+          tx.createdAt = new Date()
+          tx.updatedAt = new Date()
         })
       }))
 
@@ -236,6 +247,7 @@ export class JournalRepository {
         j.totalAmount = totalAmount ?? j.totalAmount
         j.transactionCount = transactionData.length
         j.displayType = displayType ?? j.displayType
+        j.updatedAt = new Date()
       })
 
       return existingJournal
@@ -249,13 +261,16 @@ export class JournalRepository {
     const associatedTransactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch()
 
     await database.write(async () => {
+      const now = new Date()
       await journal.update((j) => {
-        j.deletedAt = new Date()
+        j.deletedAt = now
+        j.updatedAt = now
       })
 
       await Promise.all(associatedTransactions.map(tx => {
         return tx.update((t) => {
-          t.deletedAt = new Date()
+          t.deletedAt = now
+          t.updatedAt = now
         })
       }))
     })
@@ -269,7 +284,97 @@ export class JournalRepository {
       await journal.update((record) => {
         record.reversingJournalId = reversingJournalId
         record.status = JournalStatus.REVERSED
+        record.updatedAt = new Date()
       })
+    })
+  }
+
+  /**
+   * Atomically replace a journal by creating a reversal + replacement in a single write.
+   */
+  async replaceJournalWithReversal(params: {
+    originalJournal: Journal
+    originalTransactions: Transaction[]
+    replacementData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
+  }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
+    const { originalJournal, originalTransactions, replacementData } = params
+    const {
+      transactions: replacementTransactions,
+      totalAmount,
+      displayType,
+      calculatedBalances,
+      ...journalFields
+    } = replacementData
+
+    return await database.write(async () => {
+      const now = new Date()
+      const reversalDate = originalJournal.journalDate
+
+      // 1) Create reversal journal
+      const reversalJournal = await this.journals.create((j) => {
+        j.journalDate = reversalDate
+        j.description = `Reversal of: ${originalJournal.description || originalJournal.id} (Edit)`
+        j.currencyCode = originalJournal.currencyCode
+        j.status = JournalStatus.POSTED
+        j.originalJournalId = originalJournal.id
+        j.totalAmount = originalJournal.totalAmount
+        j.transactionCount = originalTransactions.length
+        j.displayType = originalJournal.displayType
+        j.createdAt = now
+        j.updatedAt = now
+      })
+
+      await Promise.all(originalTransactions.map(tx => {
+        return this.transactions.create((t) => {
+          t.journalId = reversalJournal.id
+          t.accountId = tx.accountId
+          t.amount = tx.amount
+          t.currencyCode = tx.currencyCode
+          t.transactionType = tx.transactionType === TransactionType.DEBIT ? TransactionType.CREDIT : TransactionType.DEBIT
+          t.transactionDate = reversalDate
+          t.notes = `Reversal: ${tx.notes || ''}`
+          t.exchangeRate = tx.exchangeRate || 1
+          t.runningBalance = 0
+          t.createdAt = now
+          t.updatedAt = now
+        })
+      }))
+
+      // 2) Mark original as reversed
+      await originalJournal.update((record) => {
+        record.reversingJournalId = reversalJournal.id
+        record.status = JournalStatus.REVERSED
+        record.updatedAt = now
+      })
+
+      // 3) Create replacement journal
+      const replacementJournal = await this.journals.create((j) => {
+        Object.assign(j, journalFields)
+        j.status = JournalStatus.POSTED
+        j.totalAmount = totalAmount ?? 0
+        j.transactionCount = replacementTransactions.length
+        j.displayType = displayType ?? 'TRANSACTION'
+        j.createdAt = now
+        j.updatedAt = now
+      })
+
+      await Promise.all(replacementTransactions.map(txData => {
+        return this.transactions.create((tx) => {
+          tx.journalId = replacementJournal.id
+          tx.accountId = txData.accountId
+          tx.amount = txData.amount
+          tx.currencyCode = journalFields.currencyCode
+          tx.transactionType = txData.transactionType
+          tx.transactionDate = journalFields.journalDate
+          tx.notes = txData.notes
+          tx.exchangeRate = txData.exchangeRate
+          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0
+          tx.createdAt = now
+          tx.updatedAt = now
+        })
+      }))
+
+      return { reversalJournal, replacementJournal }
     })
   }
 }

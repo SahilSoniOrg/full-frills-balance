@@ -41,9 +41,9 @@ export function getAccountSections(accounts: Account[]): { title: string; data: 
     const orderedTypes: { type: AccountType; title: string }[] = [
         { type: AccountType.ASSET, title: 'Assets' },
         { type: AccountType.LIABILITY, title: 'Liabilities' },
-        { type: AccountType.EQUITY, title: 'Equity' },
         { type: AccountType.INCOME, title: 'Income' },
         { type: AccountType.EXPENSE, title: 'Expenses' },
+        { type: AccountType.EQUITY, title: 'Equity' },
     ]
 
     orderedTypes.forEach(({ type, title }) => {

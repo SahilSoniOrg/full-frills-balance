@@ -145,22 +145,12 @@ export class BalanceService {
         const transactions = await transactionRepository.findForAccountUpToDate(accountId, cutoffDate);
         const precision = await currencyRepository.getPrecision(account.currencyCode);
 
-        let balance = 0;
-        for (const tx of transactions) {
-            const multiplier = accountingService.getImpactMultiplier(account.accountType as AccountType, tx.transactionType as any);
-            balance = roundToPrecision(balance + (tx.amount * multiplier), precision);
-        }
-
-        const transactionCount = transactions.length;
-
-        return {
-            accountId: account.id,
-            balance,
-            currencyCode: account.currencyCode,
-            transactionCount,
-            asOfDate: cutoffDate,
-            accountType: account.accountType as AccountType
-        };
+        return this.calculateAccountBalanceFromTransactions(
+            account,
+            transactions,
+            precision,
+            cutoffDate
+        );
     }
 
     /**

@@ -1,8 +1,8 @@
+import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountType } from '@/src/data/models/Account';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
-import { useTheme } from '@/src/hooks/use-theme';
 import { logger } from '@/src/utils/logger';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -10,6 +10,7 @@ import { StyleSheet, View } from 'react-native';
 import { StepAccountSuggestions } from '../components/StepAccountSuggestions';
 import { StepCategorySuggestions } from '../components/StepCategorySuggestions';
 import { StepCurrency } from '../components/StepCurrency';
+import { StepFinalize } from '../components/StepFinalize';
 import { StepSplash } from '../components/StepSplash';
 
 const DEFAULT_ACCOUNTS = [
@@ -39,8 +40,6 @@ export default function OnboardingScreen() {
     const [selectedCategories, setSelectedCategories] = useState<string[]>(['Salary', 'Food & Drink', 'Groceries', 'Bills']);
     const [customCategories, setCustomCategories] = useState<{ name: string; type: 'INCOME' | 'EXPENSE'; icon: string }[]>([]);
     const [isCompleting, setIsCompleting] = useState(false);
-
-    const { theme } = useTheme();
     const { completeOnboarding } = useUI();
     const { createAccount } = useAccountActions();
 
@@ -86,7 +85,23 @@ export default function OnboardingScreen() {
             // 1. Complete basic onboarding (prefs)
             await completeOnboarding(name.trim(), selectedCurrency);
 
-            // 2. Create selected accounts (defaults + custom)
+            // 2. Create Default Equity Accounts (Hidden from selection but essential)
+            const equityAccounts = [
+                { name: 'Opening Balance Equity', icon: 'scale', type: AccountType.EQUITY },
+                { name: 'Balance Corrections', icon: 'construct', type: AccountType.EQUITY },
+            ];
+
+            for (const acc of equityAccounts) {
+                await createAccount({
+                    name: acc.name,
+                    accountType: acc.type,
+                    currencyCode: selectedCurrency,
+                    initialBalance: 0,
+                    icon: acc.icon,
+                });
+            }
+
+            // 3. Create selected accounts (defaults + custom)
             for (const accountName of selectedAccounts) {
                 let type = AccountType.ASSET;
                 let icon = 'wallet';
@@ -109,7 +124,7 @@ export default function OnboardingScreen() {
                 });
             }
 
-            // 3. Create selected categories (defaults + custom)
+            // 4. Create selected categories (defaults + custom)
             for (const categoryName of selectedCategories) {
                 // Skip if already created in accounts step (though unlikely with naming conventions)
                 if (selectedAccounts.includes(categoryName)) continue;
@@ -185,8 +200,15 @@ export default function OnboardingScreen() {
                         customCategories={customCategories}
                         onToggleCategory={toggleCategory}
                         onAddCustomCategory={addCustomCategory}
-                        onContinue={handleFinish}
+                        onContinue={handleContinue}
                         onBack={handleBack}
+                        isCompleting={isCompleting}
+                    />
+                );
+            case 5:
+                return (
+                    <StepFinalize
+                        onFinish={handleFinish}
                         isCompleting={isCompleting}
                     />
                 );
@@ -196,11 +218,11 @@ export default function OnboardingScreen() {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Screen showBack={false}>
             <View style={styles.content}>
                 {renderStep()}
             </View>
-        </View>
+        </Screen>
     );
 }
 

@@ -45,6 +45,8 @@ export class TransactionRepository {
           // Never set running_balance during creation
           running_balance: undefined,
         })
+        transaction.createdAt = new Date()
+        transaction.updatedAt = new Date()
       })
     })
   }
@@ -221,6 +223,7 @@ export class TransactionRepository {
     return database.write(async () => {
       return transaction.update((tx) => {
         Object.assign(tx, updates)
+        tx.updatedAt = new Date()
       })
     })
   }
@@ -232,6 +235,7 @@ export class TransactionRepository {
     await database.write(async () => {
       await transaction.update((t) => {
         t.deletedAt = new Date()
+        t.updatedAt = new Date()
       })
     })
 
