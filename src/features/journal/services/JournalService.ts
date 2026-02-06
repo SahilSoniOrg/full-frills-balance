@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal from '@/src/data/models/Journal';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
@@ -7,6 +7,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { auditService } from '@/src/services/audit-service';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { EnrichedJournal, JournalEntryLine } from '@/src/types/domain';
@@ -27,6 +28,7 @@ export interface SubmitJournalResult {
 }
 
 export class JournalService {
+
     /**
      * Orchestrates creation of a journal with multiple transactions.
      * Handles account lookup, validation, persistence, and post-write side effects (Audit, Rebuild).
@@ -369,15 +371,20 @@ export class JournalService {
 
     /**
      * Observe journals with their associated accounts for list display.
-     * Replaces JournalRepository.observeEnrichedJournals.
+     * Uses a reactive pipeline to enrich journals with account info without manual caching.
      */
-    observeEnrichedJournals(limit: number, dateRange?: { startDate: number, endDate: number }, searchQuery?: string) {
+    observeEnrichedJournals(limit: number, dateRange?: AccountDateRange, searchQuery?: string) {
         const clauses: any[] = [
             Q.where('deleted_at', Q.eq(null)),
             Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
             Q.sortBy('journal_date', 'desc'),
             Q.take(limit)
         ];
+
+        if (dateRange?.accountId) {
+            clauses.push(Q.experimentalJoinTables(['transactions']));
+            clauses.push(Q.on('transactions', Q.where('account_id', dateRange.accountId)));
+        }
 
         if (dateRange) {
             clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)));
@@ -401,22 +408,21 @@ export class JournalService {
             'display_type'
         ]);
 
+        // 1. Stable stream of Journal IDs
         const journalIds$ = journalsObservable.pipe(
             map((journals) => journals.map(j => j.id).sort()),
             distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx]))
         );
 
+        // 2. Stable Transaction Stream
+        // Only re-queries if the list of visible journals changes
         const transactions$ = journalIds$.pipe(
             switchMap((journalIds) => {
                 if (journalIds.length === 0) return of([] as Transaction[]);
+
                 return transactionRepository.transactionsQuery(
-                    Q.experimentalJoinTables(['journals']),
                     Q.where('journal_id', Q.oneOf(journalIds)),
-                    Q.where('deleted_at', Q.eq(null)),
-                    Q.on('journals', [
-                        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-                        Q.where('deleted_at', Q.eq(null))
-                    ])
+                    Q.where('deleted_at', Q.eq(null))
                 ).observeWithColumns([
                     'account_id',
                     'journal_id',
@@ -426,32 +432,44 @@ export class JournalService {
             })
         );
 
+        // 3. Stable Helper Stream: Unique Account IDs involved in these transactions
         const accountIds$ = transactions$.pipe(
             map((transactions) => Array.from(new Set(transactions.map(t => t.accountId))).sort()),
             distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx]))
         );
 
+        // 4. Stable Account Stream
         const accounts$ = accountIds$.pipe(
-            switchMap((accountIds) => accountRepository.observeByIds(accountIds))
+            switchMap((accountIds) => {
+                if (accountIds.length === 0) return of([] as Account[]);
+                return accountRepository.observeByIds(accountIds);
+            })
         );
 
+        // 5. Combine everything
         return combineLatest([journalsObservable, transactions$, accounts$]).pipe(
             map(([journals, transactions, accounts]) => {
                 if (journals.length === 0) return [] as EnrichedJournal[];
 
                 const accountMap = new Map(accounts.map(a => [a.id, a]));
+
                 return journals.map(j => {
                     const jTxs = transactions.filter(t => t.journalId === j.id);
-                    const enrichedAccounts = Array.from(new Set(jTxs.map(t => t.accountId))).map(id => {
+                    const journalAccountIds = Array.from(new Set(jTxs.map(t => t.accountId)));
+
+                    const enrichedAccounts = journalAccountIds.map(id => {
                         const acc = accountMap.get(id);
+
                         const role = jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT
                             ? 'SOURCE'
                             : 'DESTINATION';
+
                         return {
                             id,
                             name: acc?.name || 'Unknown',
                             accountType: acc?.accountType || 'ASSET',
-                            role: role as 'SOURCE' | 'DESTINATION' | 'NEUTRAL'
+                            role: role as 'SOURCE' | 'DESTINATION' | 'NEUTRAL',
+                            icon: acc?.icon
                         };
                     });
 
@@ -470,7 +488,5 @@ export class JournalService {
             })
         );
     }
-
 }
-
 export const journalService = new JournalService();

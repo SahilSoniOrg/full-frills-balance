@@ -1,4 +1,4 @@
-import { UIConstants } from '@/src/constants'
+import { Animation } from '@/src/constants'
 import { AppConfig } from '@/src/constants/app-config'
 import { useUI } from '@/src/contexts/UIContext'
 import Account from '@/src/data/models/Account'
@@ -44,7 +44,7 @@ export function useWealthSummary(): WealthSummaryResult {
             currencyRepository.observeAll(),
             journalRepository.observeStatusMeta(),
         ]).pipe(
-            debounceTime(UIConstants.animation.dataRefreshDebounce),
+            debounceTime(Animation.dataRefreshDebounce),
             switchMap(async ([accounts, transactions, currencies, _status]) => {
                 try {
                     const targetCurrency = defaultCurrency || AppConfig.defaultCurrency

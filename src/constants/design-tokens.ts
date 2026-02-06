@@ -120,7 +120,9 @@ export const Spacing = {
 // Consistent transparency for overlays and semantic highlights
 export const Opacity = {
   none: 0,
-  soft: 0.15,    // Selection highlights, secondary surfaces
+  selection: 0.05, // Selection highlights
+  hover: 0.1,      // Hover states
+  soft: 0.15,    // Secondary surfaces
   muted: 0.3,   // Placeholders, disabled states
   medium: 0.5,  // Overlays, inactive tabs
   heavy: 0.7,   // Modal backdrops
@@ -503,7 +505,67 @@ export function withOpacity(color: string, opacity: number): string {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
+
+// === LAYOUT CONSTANTS ===
+// Interaction areas and component-specific dimensions
+export const Layout = {
+  touchTarget: {
+    minHeight: 110,
+    minWidth: 44,
+  },
+  keyboardOffset: {
+    ios: 0,
+    android: 20,
+  },
+  modal: {
+    defaultHeight: '85%',
+    dragHandle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+    },
+  },
+  chart: {
+    donut: {
+      defaultStrokeWidth: 20,
+      defaultSize: 200,
+    },
+    line: {
+      defaultHeight: 200,
+      paddingVertical: 20,
+      strokeWidth: 3,
+    },
+  },
+  datePicker: {
+    monthSlider: {
+      initialIndex: 25,
+      monthsBefore: 25,
+      monthsAfter: 13,
+      itemWidth: 120,
+      totalMonths: 39,
+    },
+    maxLength: {
+      lastN: 3,
+    },
+  },
+  list: {
+    estimatedItemSize: {
+      transactionCard: 120,
+      accountCard: 150,
+      journalCard: 100,
+    },
+  },
+} as const
+
+// === ANIMATION CONSTANTS ===
+// Timing values for interactions
+export const Animation = {
+  scrollDelay: 100,
+  dataRefreshDebounce: 300,
+} as const
+
 // === TYPE DEFINITIONS ===
+
 export type ThemeMode = 'light' | 'dark'
 export type ColorKey = keyof Theme
 export type SpacingKey = keyof typeof Spacing

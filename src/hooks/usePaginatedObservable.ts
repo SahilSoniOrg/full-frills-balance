@@ -17,17 +17,22 @@ export interface DateRange {
     endDate: number;
 }
 
+export interface AccountDateRange extends DateRange {
+    accountId?: string;
+    accountVersion?: number;
+}
+
 export interface UsePaginatedObservableOptions<T, E = T> {
     /** Number of items per page */
     pageSize: number;
     /** Optional date range filter */
-    dateRange?: DateRange;
+    dateRange?: AccountDateRange;
     /** Optional search query filter */
     searchQuery?: string;
     /** Factory function to create the observable */
-    observe: (limit: number, dateRange?: DateRange, searchQuery?: string) => Observable<T[]>;
+    observe: (limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Observable<T[]>;
     /** Optional enrichment function to transform raw items */
-    enrich?: (items: T[], limit: number, dateRange?: DateRange, searchQuery?: string) => Promise<E[]>;
+    enrich?: (items: T[], limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Promise<E[]>;
 }
 
 export interface UsePaginatedObservableResult<E> {
@@ -37,6 +42,8 @@ export interface UsePaginatedObservableResult<E> {
     hasMore: boolean;
     loadMore: () => void;
     version: number;
+    error: Error | null;
+    retry: () => void;
 }
 
 export function usePaginatedObservable<T, E = T>(
@@ -50,17 +57,30 @@ export function usePaginatedObservable<T, E = T>(
     const [hasMore, setHasMore] = useState(true);
     const [currentLimit, setCurrentLimit] = useState(pageSize);
     const [version, setVersion] = useState(0);
+    const [error, setError] = useState<Error | null>(null);
+    const [retryKey, setRetryKey] = useState(0);
 
-    // Stable key for filters to avoid unnecessary effect re-runs
-    const dateRangeKey = useMemo(
-        () => dateRange ? `${dateRange.startDate}-${dateRange.endDate}-${(dateRange as any).accountId || ''}-${(dateRange as any).accountVersion || ''}` : 'none',
-        [dateRange]
+    // Stable key for structural filters (excluding version) to determine when to reset the list
+    const structuralKey = useMemo(
+        () => {
+            const rangePart = dateRange
+                ? `${dateRange.startDate}-${dateRange.endDate}-${dateRange.accountId || ''}`
+                : 'none';
+            return `${rangePart}-${searchQuery || ''}`;
+        },
+        [dateRange, searchQuery]
     );
-    const filterKey = useMemo(() => `${dateRangeKey}-${searchQuery || ''}`, [dateRangeKey, searchQuery]);
+
+    // Version key for re-fetching without clearing
+    const versionKey = dateRange?.accountVersion || 0;
+
+    // Combined key for effect dependency
+    const effectKey = `${structuralKey}-${versionKey}`;
 
     // Track previous filter inputs to detect filter changes vs pagination
     const prevFilterRef = useRef({
-        filterKey,
+        structuralKey,
+        versionKey,
         observe,
         enrich,
         pageSize
@@ -70,17 +90,22 @@ export function usePaginatedObservable<T, E = T>(
         let isActive = true;
         let sequence = 0;
 
-        // Only show full loading state when filters change (not on pagination)
         const prev = prevFilterRef.current;
-        const isFilterChange = prev.filterKey !== filterKey || prev.observe !== observe || prev.enrich !== enrich || prev.pageSize !== pageSize;
+        const isStructuralChange = prev.structuralKey !== structuralKey || prev.observe !== observe || prev.enrich !== enrich || prev.pageSize !== pageSize;
+        const isVersionChange = prev.versionKey !== versionKey;
 
-        if (isFilterChange) {
+        if (isStructuralChange) {
             setIsLoading(true);
-            prevFilterRef.current = { filterKey, observe, enrich, pageSize };
+            setItems([]); // Clear items only on structural changes
+            prevFilterRef.current = { structuralKey, versionKey, observe, enrich, pageSize };
             if (currentLimit !== pageSize) {
                 setCurrentLimit(pageSize); // Reset pagination
                 return;
             }
+        } else if (isVersionChange) {
+            setIsLoading(true);
+            // Do NOT clear items for version changes, just re-fetch
+            prevFilterRef.current = { structuralKey, versionKey, observe, enrich, pageSize };
         }
 
         const observable = observe(currentLimit, dateRange, searchQuery);
@@ -100,8 +125,10 @@ export function usePaginatedObservable<T, E = T>(
                 setVersion(v => v + 1);
                 setIsLoading(false);
                 setIsLoadingMore(false);
-            } catch {
+            } catch (err) {
                 if (!isActive || current !== sequence) return;
+                const normalizedError = err instanceof Error ? err : new Error(String(err));
+                setError(normalizedError);
                 setIsLoading(false);
                 setIsLoadingMore(false);
             }
@@ -112,7 +139,7 @@ export function usePaginatedObservable<T, E = T>(
             subscription.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentLimit, filterKey, observe, enrich, pageSize]);
+    }, [currentLimit, effectKey, observe, enrich, pageSize, retryKey]);
 
     const loadMore = () => {
         if (isLoadingMore || !hasMore) return;
@@ -120,5 +147,19 @@ export function usePaginatedObservable<T, E = T>(
         setCurrentLimit(prev => prev + pageSize);
     };
 
-    return { items, isLoading, isLoadingMore, hasMore, loadMore, version };
+    const retry = () => {
+        setError(null);
+        if (items.length > 0) {
+            // If we already have items, just trigger a re-observation with the current limit.
+            // This is safer for "load more" failures as it doesn't wipe existing pages.
+            setRetryKey(v => v + 1);
+        } else {
+            // Only full reset if we have no data at all
+            setItems([]);
+            setCurrentLimit(pageSize);
+            setRetryKey(v => v + 1);
+        }
+    };
+
+    return { items, isLoading, isLoadingMore, hasMore, loadMore, version, error, retry };
 }

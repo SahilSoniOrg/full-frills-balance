@@ -1,4 +1,4 @@
-import { UIConstants } from '@/src/constants';
+import { Animation, Layout } from '@/src/constants';
 import { DateRange, getLastNRange, getMonthRange, PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -24,7 +24,7 @@ export function useDateRangePicker({ visible, currentFilter, onSelect, onClose }
     const [lastNUnit, setLastNUnit] = useState<'days' | 'weeks' | 'months'>('days');
 
     const flatListRef = useRef<FlatList>(null);
-    const INITIAL_MONTH_INDEX = UIConstants.datePicker.monthSlider.initialIndex;
+    const INITIAL_MONTH_INDEX = Layout.datePicker.monthSlider.initialIndex;
 
     const monthList = useMemo(() => {
         const list = [];
@@ -73,7 +73,7 @@ export function useDateRangePicker({ visible, currentFilter, onSelect, onClose }
                     if (foundIndex !== -1) targetIndex = foundIndex;
                 }
                 flatListRef.current?.scrollToIndex({ index: targetIndex, animated: false, viewPosition: 0.5 });
-            }, UIConstants.animation.scrollDelay);
+            }, Animation.scrollDelay);
         }
     }, [visible, currentFilter, monthList]);
 

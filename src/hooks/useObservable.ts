@@ -12,7 +12,7 @@
  * If passing 'data' to React.memo components, you MUST pass 'version' as a prop or key
  * to ensure re-rendering.
  */
-import { DependencyList, useEffect, useState } from 'react';
+import { DependencyList, useCallback, useEffect, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 
 export interface UseObservableResult<T> {
@@ -43,6 +43,11 @@ export function useObservable<T>(
 ): UseObservableResult<T> {
     const { keepPreviousData = true } = options;
 
+    const factoryRef = useRef(observableFactory);
+    factoryRef.current = observableFactory;
+
+    const stableFactory = useCallback(() => factoryRef.current(), []);
+
     const [data, setData] = useState<T>(initialValue);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -56,7 +61,7 @@ export function useObservable<T>(
         setIsLoading(true);
         setError(null);
 
-        const subscription = observableFactory().subscribe({
+        const subscription = stableFactory().subscribe({
             next: (result) => {
                 if (!isActive) return;
                 // For arrays, always create a new reference to ensure React notices the change
@@ -76,8 +81,7 @@ export function useObservable<T>(
             isActive = false;
             subscription.unsubscribe();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, deps);
+    }, [stableFactory, ...deps]);
 
     return { data, isLoading, error, version };
 }
@@ -99,6 +103,15 @@ export function useObservableWithEnrichment<T, E>(
     deps: DependencyList,
     initialValue: E
 ): UseObservableResult<E> {
+    const factoryRef = useRef(observableFactory);
+    factoryRef.current = observableFactory;
+
+    const enricherRef = useRef(enricher);
+    enricherRef.current = enricher;
+
+    const stableFactory = useCallback(() => factoryRef.current(), []);
+    const stableEnricher = useCallback((d: T) => enricherRef.current(d), []);
+
     const [data, setData] = useState<E>(initialValue);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -110,11 +123,11 @@ export function useObservableWithEnrichment<T, E>(
         setIsLoading(true);
         setError(null);
 
-        const subscription = observableFactory().subscribe({
+        const subscription = stableFactory().subscribe({
             next: async (result) => {
                 const current = ++sequence;
                 try {
-                    const enriched = await enricher(result);
+                    const enriched = await stableEnricher(result);
                     if (!isActive || current !== sequence) return;
                     setData(enriched);
                     setVersion(v => v + 1);
@@ -136,8 +149,7 @@ export function useObservableWithEnrichment<T, E>(
             isActive = false;
             subscription.unsubscribe();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, deps);
+    }, [stableFactory, ...deps]);
 
     return { data, isLoading, error, version };
 }

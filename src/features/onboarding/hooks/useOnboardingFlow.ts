@@ -16,7 +16,7 @@ export interface OnboardingFlowViewModel {
     selectedAccounts: string[];
     customAccounts: { name: string; icon: IconName }[];
     onToggleAccount: (name: string) => void;
-    onAddCustomAccount: (name: string, icon: IconName) => void;
+    onAddCustomAccount: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
     selectedCategories: string[];
     customCategories: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
     onToggleCategory: (name: string) => void;
@@ -56,15 +56,17 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
         });
     }, []);
 
-    const onAddCustomAccount = useCallback((accountName: string, icon: IconName) => {
-        if (!selectedAccounts.includes(accountName)) {
-            setSelectedAccounts(prev => [...prev, accountName]);
-        }
-        if (!customAccounts.some(a => a.name === accountName) && !DEFAULT_ACCOUNTS.some(a => a.name === accountName)) {
-            setCustomAccounts(prev => [...prev, { name: accountName, icon }]);
-            void triggerHaptic('medium');
-        }
-    }, [customAccounts, selectedAccounts]);
+    const onAddCustomAccount = useCallback((accountName: string, _type: 'INCOME' | 'EXPENSE', icon: IconName) => {
+        setSelectedAccounts(prev => {
+            if (prev.includes(accountName)) return prev;
+            return [...prev, accountName];
+        });
+        setCustomAccounts(prev => {
+            if (prev.some(a => a.name === accountName) || DEFAULT_ACCOUNTS.some(a => a.name === accountName)) return prev;
+            return [...prev, { name: accountName, icon }];
+        });
+        void triggerHaptic('medium');
+    }, []);
 
     const onToggleCategory = useCallback((categoryName: string) => {
         setSelectedCategories(prev => {
@@ -75,14 +77,16 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     }, []);
 
     const onAddCustomCategory = useCallback((categoryName: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => {
-        if (!selectedCategories.includes(categoryName)) {
-            setSelectedCategories(prev => [...prev, categoryName]);
-        }
-        if (!customCategories.some(c => c.name === categoryName) && !DEFAULT_CATEGORIES.some(c => c.name === categoryName)) {
-            setCustomCategories(prev => [...prev, { name: categoryName, type, icon }]);
-            void triggerHaptic('medium');
-        }
-    }, [customCategories, selectedCategories]);
+        setSelectedCategories(prev => {
+            if (prev.includes(categoryName)) return prev;
+            return [...prev, categoryName];
+        });
+        setCustomCategories(prev => {
+            if (prev.some(c => c.name === categoryName) || DEFAULT_CATEGORIES.some(c => c.name === categoryName)) return prev;
+            return [...prev, { name: categoryName, type, icon }];
+        });
+        void triggerHaptic('medium');
+    }, []);
 
     const onFinish = useCallback(async () => {
         if (isCompleting) return;

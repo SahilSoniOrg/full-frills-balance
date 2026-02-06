@@ -19,36 +19,36 @@ import { combineLatest, from, map, of, switchMap } from 'rxjs'
  * Hook to reactively get all accounts
  */
 export function useAccounts() {
-    const { data: accounts, isLoading, version } = useObservable(
+    const { data: accounts, isLoading, version, error } = useObservable(
         () => accountRepository.observeAll(),
         [],
         [] as Account[]
     )
-    return { accounts, isLoading, version }
+    return { accounts, isLoading, version, error }
 }
 
 /**
  * Hook to reactively get accounts by type
  */
 export function useAccountsByType(accountType: string) {
-    const { data: accounts, isLoading, version } = useObservable(
+    const { data: accounts, isLoading, version, error } = useObservable(
         () => accountRepository.observeByType(accountType),
         [accountType],
         [] as Account[]
     )
-    return { accounts, isLoading, version }
+    return { accounts, isLoading, version, error }
 }
 
 /**
  * Hook to reactively get a single account by ID
  */
 export function useAccount(accountId: string | null) {
-    const { data: account, isLoading, version } = useObservable(
+    const { data: account, isLoading, version, error } = useObservable(
         () => accountId ? accountRepository.observeById(accountId) : of(null),
         [accountId],
         null as Account | null
     )
-    return { account, isLoading, version }
+    return { account, isLoading, version, error }
 }
 
 /**
@@ -57,42 +57,39 @@ export function useAccount(accountId: string | null) {
  * Calculates sum in-memory for instant consistency.
  */
 export function useAccountBalance(accountId: string | null) {
-    const query$ = useMemo(() => {
-        if (!accountId) return of(null)
+    const { data: balanceData, isLoading, version, error } = useObservable(
+        () => {
+            if (!accountId) return of(null)
 
-        return accountRepository.observeById(accountId).pipe(
-            switchMap(account => {
-                if (!account) return of(null)
+            return accountRepository.observeById(accountId).pipe(
+                switchMap(account => {
+                    if (!account) return of(null)
 
-                // Observe all active transactions for this account
-                return combineLatest([
-                    accountRepository.observeTransactionsForBalance(account.id),
-                    journalRepository.observeStatusMeta()
-                ]).pipe(
-                    map(([transactions]) => transactions),
-                    switchMap((transactions: Transaction[]) =>
-                        from(currencyRepository.getPrecision(account.currencyCode)).pipe(
-                            map((precision) => {
-                                return balanceService.calculateAccountBalanceFromTransactions(
-                                    account,
-                                    transactions,
-                                    precision
-                                )
-                            })
+                    return combineLatest([
+                        accountRepository.observeTransactionsForBalance(account.id),
+                        journalRepository.observeStatusMeta()
+                    ]).pipe(
+                        map(([transactions]) => transactions),
+                        switchMap((transactions: Transaction[]) =>
+                            from(currencyRepository.getPrecision(account.currencyCode)).pipe(
+                                map((precision) => {
+                                    return balanceService.calculateAccountBalanceFromTransactions(
+                                        account,
+                                        transactions,
+                                        precision
+                                    )
+                                })
+                            )
                         )
                     )
-                )
-            })
-        )
-    }, [accountId])
-
-    const { data: balanceData, isLoading, version } = useObservable(
-        () => query$,
-        [query$],
+                })
+            )
+        },
+        [accountId],
         null as AccountBalance | null
     )
 
-    return { balanceData, isLoading, version }
+    return { balanceData, isLoading, version, error }
 }
 
 /**
@@ -100,13 +97,13 @@ export function useAccountBalance(accountId: string | null) {
  * Uses a single transaction subscription to avoid N+1 observers.
  */
 export function useAccountBalances(accounts: Account[]) {
-    const { data: currencies, isLoading: currenciesLoading } = useObservable(
+    const { data: currencies, isLoading: currenciesLoading, error: currenciesError } = useObservable(
         () => currencyRepository.observeAll(),
         [],
         [] as Currency[]
     )
 
-    const { data: transactions, isLoading: transactionsLoading } = useObservable(
+    const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useObservable(
         () => combineLatest([
             transactionRepository.observeActiveWithColumns([
                 'amount',
@@ -127,9 +124,12 @@ export function useAccountBalances(accounts: Account[]) {
         return balanceService.calculateBalancesFromTransactions(accounts, transactions, precisionMap)
     }, [accounts, currencies, transactions])
 
+    const error = currenciesError ?? transactionsError
+
     return {
         balancesByAccountId,
-        isLoading: currenciesLoading || transactionsLoading
+        isLoading: currenciesLoading || transactionsLoading,
+        error
     }
 }
 

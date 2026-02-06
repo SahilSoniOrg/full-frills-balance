@@ -9,5 +9,4 @@ export * from './theme-helpers'
 // App configuration - Behavior and settings only
 export * from './app-config'
 
-// UI Constants - Layout, animation, and interaction values
-export * from './ui-constants'
+
