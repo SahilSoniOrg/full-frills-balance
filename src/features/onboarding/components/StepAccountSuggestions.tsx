@@ -1,32 +1,17 @@
 import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { IconMap, IconName } from '@/src/components/core/AppIcon';
+import { IconName } from '@/src/components/core/AppIcon';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { DEFAULT_ACCOUNTS } from '../constants';
 import { IconPickerModal } from './IconPickerModal';
-
-export interface AccountSuggestion {
-    name: string;
-    icon: string;
-    isCustom?: boolean;
-}
-
-const DEFAULT_ACCOUNTS: AccountSuggestion[] = ([
-    { name: 'Cash', icon: 'wallet' },
-    { name: 'Bank', icon: 'bank' },
-    { name: 'Savings', icon: 'safe' },
-    { name: 'Revolut', icon: 'creditCard' },
-] as const).map(acc => ({
-    ...acc,
-    icon: (IconMap[acc.icon as IconName] ? acc.icon : 'wallet') as string
-}));
 
 interface StepAccountSuggestionsProps {
     selectedAccounts: string[];
-    customAccounts: { name: string; icon: string }[];
+    customAccounts: { name: string; icon: IconName }[];
     onToggleAccount: (name: string) => void;
-    onAddCustomAccount: (name: string, icon: string) => void;
+    onAddCustomAccount: (name: string, icon: IconName) => void;
     onContinue: () => void;
     onBack: () => void;
     isCompleting: boolean;
@@ -90,9 +75,12 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
                                     }
                                 ]}
                                 onPress={() => onToggleAccount(account.name)}
+                                accessibilityLabel={`${account.name} account, ${isSelected ? 'selected' : 'not selected'}`}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: isSelected }}
                             >
                                 <AppIcon
-                                    name={account.icon as any}
+                                    name={account.icon}
                                     size={Size.sm}
                                     color={isSelected ? theme.primary : theme.textSecondary}
                                 />
@@ -107,7 +95,7 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
                                     {account.name}
                                 </AppText>
                                 {isSelected && (
-                                    <View style={styles.checkBadge}>
+                                    <View style={[styles.checkBadge, { backgroundColor: theme.success }]}>
                                         <AppIcon name="checkCircle" size={12} color={theme.surface} />
                                     </View>
                                 )}
@@ -120,6 +108,8 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
                     <TouchableOpacity
                         style={[styles.iconButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
                         onPress={() => setIsIconPickerVisible(true)}
+                        accessibilityLabel="Select icon for custom account"
+                        accessibilityRole="button"
                     >
                         <AppIcon name={selectedIcon} size={Size.sm} color={theme.primary} />
                     </TouchableOpacity>
@@ -129,11 +119,15 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
                         value={customName}
                         onChangeText={setCustomName}
                         containerStyle={styles.customInput}
+                        accessibilityLabel="Custom account name input"
                     />
 
                     <TouchableOpacity
                         style={[styles.addButton, { backgroundColor: theme.primary }]}
                         onPress={handleAddCustom}
+                        accessibilityLabel="Add custom account"
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: !customName.trim() }}
                     >
                         <AppIcon name="add" size={Size.sm} color={theme.surface} />
                     </TouchableOpacity>
@@ -149,8 +143,8 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
 
             <View style={styles.buttonContainer}>
                 <AppButton
-                    variant="primary"
-                    size="lg"
+                    variant="outline"
+                    size="md"
                     onPress={onContinue}
                     disabled={isCompleting}
                     style={styles.continueButton}
@@ -158,8 +152,8 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
                     Continue
                 </AppButton>
                 <AppButton
-                    variant="outline"
-                    size="lg"
+                    variant="ghost"
+                    size="md"
                     onPress={onBack}
                     disabled={isCompleting}
                 >
@@ -188,23 +182,27 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingBottom: Spacing.xl,
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.sm,
     },
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing.sm,
+        gap: Spacing.md,
         justifyContent: 'flex-start',
+        overflow: 'visible',
     },
     suggestionItem: {
         width: '30%',
         aspectRatio: 1,
-        borderRadius: 12,
+        borderRadius: Shape.radius.r3,
         borderWidth: 1.5,
         justifyContent: 'center',
         alignItems: 'center',
         padding: Spacing.sm,
         position: 'relative',
         marginBottom: Spacing.xs,
+        overflow: 'visible',
     },
     itemText: {
         marginTop: Spacing.xs,
@@ -215,7 +213,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: -4,
         right: -4,
-        backgroundColor: '#4CAF50',
         borderRadius: 10,
         padding: 2,
     },

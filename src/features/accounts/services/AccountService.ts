@@ -4,7 +4,7 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { journalService } from '@/src/features/journal';
+import { journalService } from '@/src/features/journal/services/JournalService';
 import { auditService } from '@/src/services/audit-service';
 import { balanceService } from '@/src/services/BalanceService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -164,7 +164,7 @@ export class AccountService {
         });
     }
 
-    private async getOpeningBalancesAccountId(currencyCode: string): Promise<string> {
+    async getOpeningBalancesAccountId(currencyCode: string): Promise<string> {
         const name = `Opening Balances (${currencyCode})`;
         const existing = await this.findAccountByName(name);
         if (existing) return existing.id;
@@ -173,7 +173,8 @@ export class AccountService {
             name,
             accountType: AccountType.EQUITY,
             currencyCode,
-            description: 'System account for initial balances'
+            description: 'System account for initial balances',
+            icon: 'scale'
         })).id;
     }
 
@@ -232,7 +233,7 @@ export class AccountService {
         });
     }
 
-    private async findOrCreateBalanceCorrectionAccount(currencyCode: string): Promise<string> {
+    async findOrCreateBalanceCorrectionAccount(currencyCode: string): Promise<string> {
         const targetCurrency = currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
         const legacyNames = ['Balance Corrections', 'Balance Correction', 'Balance Corrections ()'];
 

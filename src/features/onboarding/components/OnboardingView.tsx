@@ -3,6 +3,7 @@ import { StepAccountSuggestions } from '@/src/features/onboarding/components/Ste
 import { StepCategorySuggestions } from '@/src/features/onboarding/components/StepCategorySuggestions';
 import { StepCurrency } from '@/src/features/onboarding/components/StepCurrency';
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
+import { StepIndicator } from '@/src/features/onboarding/components/StepIndicator';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
 import React from 'react';
@@ -89,6 +90,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
     return (
         <Screen showBack={false} withPadding edges={['top', 'bottom']}>
             <View style={styles.content}>
+                <StepIndicator currentStep={step} totalSteps={5} />
                 {renderStep()}
             </View>
         </Screen>

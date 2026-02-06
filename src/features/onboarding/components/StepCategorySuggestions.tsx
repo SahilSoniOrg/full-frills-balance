@@ -1,37 +1,17 @@
 import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { IconMap, IconName } from '@/src/components/core/AppIcon';
+import { IconName } from '@/src/components/core/AppIcon';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { DEFAULT_CATEGORIES } from '../constants';
 import { IconPickerModal } from './IconPickerModal';
-
-export interface CategorySuggestion {
-    name: string;
-    icon: string;
-    type: 'INCOME' | 'EXPENSE';
-    isCustom?: boolean;
-}
-
-const DEFAULT_CATEGORIES: CategorySuggestion[] = ([
-    { name: 'Salary', icon: 'trendingUp', type: 'INCOME' },
-    { name: 'Work', icon: 'briefcase', type: 'INCOME' },
-    { name: 'Food & Drink', icon: 'coffee', type: 'EXPENSE' },
-    { name: 'Groceries', icon: 'shoppingCart', type: 'EXPENSE' },
-    { name: 'Transportation', icon: 'bus', type: 'EXPENSE' },
-    { name: 'Entertainment', icon: 'film', type: 'EXPENSE' },
-    { name: 'Shopping', icon: 'shoppingBag', type: 'EXPENSE' },
-    { name: 'Bills', icon: 'fileText', type: 'EXPENSE' },
-] as const).map(cat => ({
-    ...cat,
-    icon: (IconMap[cat.icon as IconName] ? cat.icon : 'tag') as string
-}));
 
 interface StepCategorySuggestionsProps {
     selectedCategories: string[];
-    customCategories: { name: string; type: 'INCOME' | 'EXPENSE'; icon: string }[];
+    customCategories: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
     onToggleCategory: (name: string) => void;
-    onAddCustomCategory: (name: string, type: 'INCOME' | 'EXPENSE', icon: string) => void;
+    onAddCustomCategory: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
     onContinue: () => void;
     onBack: () => void;
     isCompleting: boolean;
@@ -108,9 +88,12 @@ export const StepCategorySuggestions: React.FC<StepCategorySuggestionsProps> = (
                                     }
                                 ]}
                                 onPress={() => onToggleCategory(category.name)}
+                                accessibilityLabel={`${category.name} ${category.type.toLowerCase()} category, ${isSelected ? 'selected' : 'not selected'}`}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: isSelected }}
                             >
                                 <AppIcon
-                                    name={category.icon as any}
+                                     name={category.icon}
                                     size={Size.sm}
                                     color={isSelected ? behaviorColor : theme.textSecondary}
                                 />
@@ -139,6 +122,8 @@ export const StepCategorySuggestions: React.FC<StepCategorySuggestionsProps> = (
                         <TouchableOpacity
                             style={[styles.iconButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
                             onPress={() => setIsIconPickerVisible(true)}
+                            accessibilityLabel="Select icon for custom category"
+                            accessibilityRole="button"
                         >
                             <AppIcon name={selectedIcon} size={Size.sm} color={theme.primary} />
                         </TouchableOpacity>
@@ -148,10 +133,14 @@ export const StepCategorySuggestions: React.FC<StepCategorySuggestionsProps> = (
                             value={customName}
                             onChangeText={setCustomName}
                             containerStyle={styles.customInput}
+                            accessibilityLabel="Custom category name input"
                         />
                         <TouchableOpacity
                             style={[styles.addButton, { backgroundColor: theme.primary }]}
                             onPress={handleAddCustom}
+                            accessibilityLabel="Add custom category"
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: !customName.trim() }}
                         >
                             <AppIcon name="add" size={Size.sm} color={theme.surface} />
                         </TouchableOpacity>
@@ -163,6 +152,9 @@ export const StepCategorySuggestions: React.FC<StepCategorySuggestionsProps> = (
                                 styles.typeButton,
                                 customType === 'EXPENSE' && { backgroundColor: theme.error + '20', borderColor: theme.error }
                             ]}
+                            accessibilityLabel="Expense category type"
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: customType === 'EXPENSE' }}
                         >
                             <AppText variant="caption" style={{ color: customType === 'EXPENSE' ? theme.error : theme.textSecondary }}>Expense</AppText>
                         </TouchableOpacity>
@@ -172,6 +164,9 @@ export const StepCategorySuggestions: React.FC<StepCategorySuggestionsProps> = (
                                 styles.typeButton,
                                 customType === 'INCOME' && { backgroundColor: theme.success + '20', borderColor: theme.success }
                             ]}
+                            accessibilityLabel="Income category type"
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: customType === 'INCOME' }}
                         >
                             <AppText variant="caption" style={{ color: customType === 'INCOME' ? theme.success : theme.textSecondary }}>Income</AppText>
                         </TouchableOpacity>
@@ -188,17 +183,17 @@ export const StepCategorySuggestions: React.FC<StepCategorySuggestionsProps> = (
 
             <View style={styles.buttonContainer}>
                 <AppButton
-                    variant="primary"
-                    size="lg"
+                    variant="outline"
+                    size="md"
                     onPress={onContinue}
                     disabled={isCompleting}
                     style={styles.continueButton}
                 >
-                    Get Started
+                    Continue
                 </AppButton>
                 <AppButton
-                    variant="outline"
-                    size="lg"
+                    variant="ghost"
+                    size="md"
                     onPress={onBack}
                     disabled={isCompleting}
                 >
@@ -227,23 +222,27 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingBottom: Spacing.xl,
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.sm,
     },
     grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing.sm,
+        gap: Spacing.md,
         justifyContent: 'flex-start',
+        overflow: 'visible',
     },
     suggestionItem: {
         width: '30%',
         aspectRatio: 1,
-        borderRadius: 12,
+        borderRadius: Shape.radius.r3,
         borderWidth: 1.5,
         justifyContent: 'center',
         alignItems: 'center',
         padding: Spacing.sm,
         position: 'relative',
         marginBottom: Spacing.xs,
+        overflow: 'visible',
     },
     itemText: {
         marginTop: Spacing.xs,
@@ -254,7 +253,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: -4,
         right: -4,
-        backgroundColor: '#4CAF50',
         borderRadius: 10,
         padding: 2,
     },

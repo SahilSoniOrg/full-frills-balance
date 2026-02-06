@@ -1,9 +1,10 @@
-import { AppButton, AppCard, AppIcon, AppText, ListRow } from '@/src/components/core';
-import { Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Shape, Spacing } from '@/src/constants';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { COMMON_CURRENCY_CODES } from '@/src/services/currency-init-service';
+import React, { useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface StepCurrencyProps {
     selectedCurrency: string;
@@ -22,9 +23,25 @@ export const StepCurrency: React.FC<StepCurrencyProps> = ({
 }) => {
     const { currencies } = useCurrencies();
     const { theme } = useTheme();
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredCurrencies = useMemo(() => {
+        if (!searchQuery.trim()) {
+            // Show only first bunch of common ones for clean initial view
+            return currencies.filter(c => COMMON_CURRENCY_CODES.slice(0, 12).includes(c.code));
+        }
+        return currencies.filter(c =>
+            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.code.toLowerCase().includes(searchQuery.toLowerCase())
+        ).slice(0, 50);
+    }, [currencies, searchQuery]);
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.container}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
             <AppText variant="title" style={styles.title}>
                 Default Currency
             </AppText>
@@ -32,38 +49,71 @@ export const StepCurrency: React.FC<StepCurrencyProps> = ({
                 Choose the default currency for your accounts and transactions.
             </AppText>
 
-            <AppCard elevation="sm" padding="none" style={styles.currencyListContainer}>
-                <FlatList
-                    data={currencies}
-                    keyExtractor={(item) => item.code}
-                    renderItem={({ item, index }) => {
-                        const isSelected = selectedCurrency === item.code;
+            <AppInput
+                placeholder="Search currency..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                containerStyle={styles.searchBar}
+                accessibilityLabel="Search currencies"
+            />
+
+            <ScrollView
+                style={styles.scrollContainer}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.grid}>
+                    {filteredCurrencies.map((currency) => {
+                        const isSelected = selectedCurrency === currency.code;
                         return (
-                            <ListRow
-                                title={item.name}
-                                subtitle={item.code}
-                                trailing={
-                                    <View style={styles.currencyRight}>
-                                        <AppText variant="subheading">{item.symbol}</AppText>
-                                        {isSelected && (
-                                            <AppIcon name="checkCircle" size={Size.sm} color={theme.primary} style={{ marginLeft: Spacing.sm }} />
-                                        )}
+                            <TouchableOpacity
+                                key={currency.code}
+                                style={[
+                                    styles.suggestionItem,
+                                    {
+                                        backgroundColor: isSelected ? theme.primary + '20' : theme.surface,
+                                        borderColor: isSelected ? theme.primary : theme.border,
+                                    }
+                                ]}
+                                onPress={() => onSelect(currency.code)}
+                                accessibilityLabel={`${currency.name} (${currency.code}), ${isSelected ? 'selected' : 'not selected'}`}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: isSelected }}
+                            >
+                                <AppText
+                                    variant="subheading"
+                                    style={[
+                                        styles.symbolText,
+                                        { color: isSelected ? theme.primary : theme.text }
+                                    ]}
+                                >
+                                    {currency.symbol}
+                                </AppText>
+                                <AppText
+                                    variant="caption"
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.itemText,
+                                        { color: isSelected ? theme.primary : theme.text }
+                                    ]}
+                                >
+                                    {currency.code}
+                                </AppText>
+                                {isSelected && (
+                                    <View style={[styles.checkBadge, { backgroundColor: theme.success }]}>
+                                        <AppIcon name="checkCircle" size={12} color={theme.surface} />
                                     </View>
-                                }
-                                onPress={() => onSelect(item.code)}
-                                showDivider={index < currencies.length - 1}
-                                padding="lg"
-                                style={isSelected ? { backgroundColor: withOpacity(theme.primary, Opacity.soft / 2) } : undefined}
-                            />
+                                )}
+                            </TouchableOpacity>
                         );
-                    }}
-                />
-            </AppCard>
+                    })}
+                </View>
+            </ScrollView>
 
             <View style={styles.buttonContainer}>
                 <AppButton
-                    variant="primary"
-                    size="lg"
+                    variant="outline"
+                    size="md"
                     onPress={onContinue}
                     disabled={isCompleting}
                     style={styles.continueButton}
@@ -71,21 +121,22 @@ export const StepCurrency: React.FC<StepCurrencyProps> = ({
                     Continue
                 </AppButton>
                 <AppButton
-                    variant="outline"
-                    size="lg"
+                    variant="ghost"
+                    size="md"
                     onPress={onBack}
                     disabled={isCompleting}
                 >
                     Back
                 </AppButton>
             </View>
-        </View>
+        </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         width: '100%',
+        flex: 1,
     },
     title: {
         textAlign: 'center',
@@ -95,27 +146,55 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: Spacing.xl,
     },
-    currencyListContainer: {
-        height: Size.xxl * 6,
-        marginBottom: Spacing.xl,
-        overflow: 'hidden',
+    searchBar: {
+        marginBottom: Spacing.md,
     },
-    currencyItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: Spacing.lg,
-        borderBottomWidth: 1,
-    },
-    currencyInfo: {
+    scrollContainer: {
         flex: 1,
     },
-    currencyRight: {
+    scrollContent: {
+        paddingBottom: Spacing.xl,
+        paddingHorizontal: Spacing.md,
+        paddingTop: Spacing.sm,
+    },
+    grid: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing.md,
+        justifyContent: 'flex-start',
+        overflow: 'visible',
+    },
+    suggestionItem: {
+        width: '30%',
+        aspectRatio: 1,
+        borderRadius: Shape.radius.r3,
+        borderWidth: 1.5,
+        justifyContent: 'center',
         alignItems: 'center',
+        padding: Spacing.sm,
+        position: 'relative',
+        marginBottom: Spacing.xs,
+        overflow: 'visible',
+    },
+    symbolText: {
+        fontSize: 20,
+        marginBottom: 2,
+    },
+    itemText: {
+        textAlign: 'center',
+        fontSize: 10,
+    },
+    checkBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        borderRadius: 10,
+        padding: 2,
     },
     buttonContainer: {
         gap: Spacing.md,
+        paddingTop: Spacing.md,
+        paddingBottom: Spacing.xl,
     },
     continueButton: {
         marginBottom: Spacing.xs,

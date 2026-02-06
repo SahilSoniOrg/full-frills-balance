@@ -37,15 +37,18 @@ export const StepSplash: React.FC<StepSplashProps> = ({
                     value={name}
                     onChangeText={setName}
                     autoFocus
+                    accessibilityLabel="Your name"
                 />
             </AppCard>
 
             <AppButton
-                variant="primary"
-                size="lg"
+                variant="outline"
+                size="md"
                 onPress={onContinue}
                 disabled={!name.trim() || isCompleting}
                 style={styles.continueButton}
+                accessibilityLabel="Continue to next step"
+                accessibilityState={{ disabled: !name.trim() || isCompleting }}
             >
                 Continue
             </AppButton>
@@ -57,11 +60,12 @@ export const StepSplash: React.FC<StepSplashProps> = ({
             </View>
 
             <AppButton
-                variant="outline"
+                variant="ghost"
                 size="md"
                 onPress={() => router.push('/import-selection')}
                 loading={isImporting}
                 disabled={isImporting || isCompleting}
+                accessibilityLabel="Import backup from file"
             >
                 Import Backup
             </AppButton>

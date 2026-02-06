@@ -88,7 +88,8 @@ export const RestartRequiredScreen = () => {
                         A restart is required to finalize changes and re-initialize the application engine.
                     </AppText>
                     <AppButton
-                        variant="primary"
+                        variant="outline"
+                        size="md"
                         onPress={handleRestart}
                         style={styles.restartButton}
                     >
@@ -144,5 +145,6 @@ const styles = StyleSheet.create({
     },
     restartButton: {
         width: '100%',
+        marginTop: Spacing.sm,
     },
 });

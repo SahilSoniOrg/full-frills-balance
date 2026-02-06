@@ -1,6 +1,6 @@
 import { AppButton, AppText } from '@/src/components/core';
 import { AppIcon, IconName } from '@/src/components/core/AppIcon';
-import { Size, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { FlatList, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
         flex: 1,
         aspectRatio: 1,
         margin: 4,
-        borderRadius: 12,
+        borderRadius: Shape.radius.r3,
         borderWidth: 1.5,
         justifyContent: 'center',
         alignItems: 'center',

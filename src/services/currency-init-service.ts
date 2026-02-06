@@ -36,6 +36,8 @@ const COMMON_CURRENCIES: CurrencyData[] = [
     { code: 'ZAR', symbol: 'R', name: 'South African Rand', precision: 2 },
 ]
 
+export const COMMON_CURRENCY_CODES = COMMON_CURRENCIES.map(c => c.code)
+
 export class CurrencyInitService {
     /**
      * Initialize currencies table if empty
