@@ -1,9 +1,8 @@
 import { AppConfig, Palette } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import Account from '@/src/data/models/Account';
+import { useWealthSummary } from '@/src/features/wealth';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useAccountBalances } from '@/src/hooks/useAccountBalances';
-import { useNetWorth } from '@/src/hooks/useNetWorth';
 import { getAccountSections } from '@/src/utils/accountUtils';
 import { getContrastColor } from '@/src/utils/colorUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -52,21 +51,15 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
     const {
         accounts,
-        balancesByAccountId,
-        isLoading: isAccountLoading,
-        version
-    } = useAccountBalances();
-
-    const {
+        balancesMap: balancesByAccountId,
         totalAssets,
         totalLiabilities,
         totalEquity,
         totalIncome,
         totalExpense,
-        isLoading: isWealthLoading,
-    } = useNetWorth();
-
-    const isLoading = isAccountLoading || isWealthLoading;
+        isLoading,
+        version
+    } = useWealthSummary();
     const togglePrivacyMode = useCallback(() => setPrivacyMode(!isPrivacyMode), [isPrivacyMode, setPrivacyMode]);
 
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']));

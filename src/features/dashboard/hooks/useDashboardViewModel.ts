@@ -1,7 +1,7 @@
 import { useUI } from '@/src/contexts/UIContext';
 import { useJournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
+import { useWealthSummary } from '@/src/features/wealth';
 import { useMonthlyFlow } from '@/src/hooks/useMonthlyFlow';
-import { useNetWorth } from '@/src/hooks/useNetWorth';
 import { DateRange } from '@/src/utils/dateUtils';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -49,7 +49,7 @@ export function useDashboardViewModel(): DashboardViewModel {
         totalAssets,
         totalLiabilities,
         isLoading: isWealthLoading,
-    } = useNetWorth();
+    } = useWealthSummary();
 
     const {
         income,

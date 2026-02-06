@@ -1,11 +1,11 @@
-import { TransactionCard } from '@/src/components/common/TransactionCard';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
+import { TransactionCard } from '@/src/components/common/TransactionCard';
+import { TypedFlashList } from '@/src/components/common/TypedFlashList';
 import { AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { JournalListItemViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { FlashList } from '@shopify/flash-list';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -14,7 +14,7 @@ interface JournalListViewProps {
     showBack?: boolean;
     backIcon?: React.ComponentProps<typeof Screen>['backIcon'];
     headerActions?: React.ReactNode;
-    listHeader: React.ReactNode;
+    listHeader: React.ReactElement | null;
     items: JournalListItemViewModel[];
     isLoading: boolean;
     isLoadingMore: boolean;
@@ -55,7 +55,6 @@ export function JournalListView({
     datePicker,
     fab,
 }: JournalListViewProps) {
-    const TypedFlashList = FlashList as any;
 
     const listEmpty = isLoading ? (
         <View style={styles.loadingContainer}>

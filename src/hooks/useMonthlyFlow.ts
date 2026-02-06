@@ -1,3 +1,4 @@
+import { UIConstants } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -29,7 +30,7 @@ export function useMonthlyFlow(): MonthlyFlow & { isLoading: boolean } {
                 'exchange_rate'
             ])
         ]).pipe(
-            debounceTime(300),
+            debounceTime(UIConstants.animation.dataRefreshDebounce),
             switchMap(async ([accounts, transactions]) => {
                 try {
                     const now = new Date();

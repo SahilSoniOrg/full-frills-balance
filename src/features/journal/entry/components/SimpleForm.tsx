@@ -1,4 +1,5 @@
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
+import { TypedFlashList } from '@/src/components/common/TypedFlashList';
 import { AppButton } from '@/src/components/core/AppButton';
 import { AppCard } from '@/src/components/core/AppCard';
 import { AppIcon } from '@/src/components/core/AppIcon';
@@ -6,14 +7,13 @@ import { AppInput } from '@/src/components/core/AppInput';
 import { AppText } from '@/src/components/core/AppText';
 import { Box } from '@/src/components/core/Box';
 import { Stack } from '@/src/components/core/Stack';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants/design-tokens';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { FlashList } from '@shopify/flash-list';
 import dayjs from 'dayjs';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -229,12 +229,12 @@ export const SimpleForm = ({
                     {title.toUpperCase()}
                 </AppText>
                 <View style={{ minHeight: 80 }}>
-                    <FlashList<Account>
+                    <TypedFlashList<Account>
                         data={accountList}
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        // @ts-ignore: estimatedItemSize missing in v2 types
-                        renderItem={({ item: account }) => (
+                        estimatedItemSize={120}
+                        renderItem={({ item: account }: { item: Account }) => (
                             <TouchableOpacity
                                 testID={`account-option-${account.name.replace(/\s+/g, '-')}`}
                                 style={[

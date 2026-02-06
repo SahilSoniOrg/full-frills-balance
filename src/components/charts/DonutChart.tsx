@@ -1,5 +1,6 @@
 
 import { AppText } from '@/src/components/core';
+import { UIConstants } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -36,7 +37,7 @@ const createArc = (x: number, y: number, r: number, startAngle: number, endAngle
     ].join(" ");
 };
 
-export const DonutChart = ({ data, size = 200, strokeWidth = 20 }: DonutChartProps) => {
+export const DonutChart = ({ data, size = UIConstants.chart.donut.defaultSize, strokeWidth = UIConstants.chart.donut.defaultStrokeWidth }: DonutChartProps) => {
     const { theme } = useTheme();
     const radius = (size - strokeWidth) / 2;
     const center = size / 2;

@@ -1,6 +1,6 @@
 
 import { AppText } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { Spacing, UIConstants } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
@@ -18,12 +18,12 @@ interface LineChartProps {
     showGradient?: boolean;
 }
 
-export const LineChart = ({ data, height = 200, color, showGradient = true }: LineChartProps) => {
+export const LineChart = ({ data, height = UIConstants.chart.line.defaultHeight, color, showGradient = true }: LineChartProps) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
     const { width } = Dimensions.get('window');
     const CHART_WIDTH = width - (Spacing.lg * 2); // Padding
-    const PADDING_VERTICAL = 20;
+    const PADDING_VERTICAL = UIConstants.chart.line.paddingVertical;
 
     const { path, gradientPath } = useMemo(() => {
         if (data.length === 0) return { path: "", gradientPath: "" };

@@ -1,5 +1,5 @@
 import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
-import { getDatePickerStyles, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { getDatePickerStyles, Shape, Size, Spacing, Typography, UIConstants } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
@@ -71,7 +71,7 @@ export function DateRangePicker({ visible, onClose, onSelect, currentFilter }: D
                     contentContainerStyle={styles.horizontalScroll}
                     initialScrollIndex={INITIAL_MONTH_INDEX}
                     getItemLayout={(_, index) => (
-                        { length: 120, offset: 120 * index, index }
+                        { length: UIConstants.datePicker.monthSlider.itemWidth, offset: UIConstants.datePicker.monthSlider.itemWidth * index, index }
                     )}
                     renderItem={({ item }: { item: { month: number; year: number; label: string } }) => {
                         const isActive = draftFilter.type === 'MONTH' && draftFilter.month === item.month && draftFilter.year === item.year;
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     content: {
         borderTopLeftRadius: Shape.radius.r2,
         borderTopRightRadius: Shape.radius.r2,
-        height: '85%',
+        height: UIConstants.modal.defaultHeight,
         paddingHorizontal: Spacing.lg,
         paddingTop: Spacing.md,
     },
@@ -261,9 +261,9 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.lg,
     },
     dragHandle: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
+        width: UIConstants.modal.dragHandle.width,
+        height: UIConstants.modal.dragHandle.height,
+        borderRadius: UIConstants.modal.dragHandle.borderRadius,
     },
     pickerHeader: {
         flexDirection: 'row',
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         height: 48,
         borderRadius: Shape.radius.md,
-        padding: 4,
+        padding: Spacing.xs,
     },
     unitOption: {
         flex: 1,
