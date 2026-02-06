@@ -1,9 +1,8 @@
 import { AppText } from '@/src/components/core/AppText'
 import { Opacity, Shape, Size, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
-import { useThemeColors } from '@/src/constants/theme-helpers'
-import { useTheme } from '@/src/hooks/use-theme'
+import { useThemedComponent } from '@/src/hooks/useThemedComponent'
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
-import React, { memo, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
@@ -12,19 +11,14 @@ import {
 } from 'react-native'
 
 export type AppButtonProps = TouchableOpacityProps & {
-  // Button variants - limited and intentional
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
-  // Button size
   size?: 'sm' | 'md' | 'lg'
-  // Loading state
   loading?: boolean
-  // Button text
   children: string
-  // Theme mode override (for design preview)
   themeMode?: ThemeMode
 }
 
-export function AppButtonComponent({
+export function AppButton({
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -35,15 +29,9 @@ export function AppButtonComponent({
   themeMode,
   ...props
 }: AppButtonProps) {
-  const { theme: globalTheme } = useTheme()
-  const overrideTheme = useThemeColors(themeMode)
-  const theme = themeMode ? overrideTheme : globalTheme
+  const { theme } = useThemedComponent(themeMode)
 
   const { buttonCombinedStyle, textCombinedStyle, finalTextColor } = useMemo(() => {
-    // Correctly map AppButton variant to style-helpers variant
-    // AppButton 'primary' -> ComponentVariant 'primary'
-    // AppButton 'secondary' -> ComponentVariant 'default' (or specialized)
-    // AppButton 'ghost' -> ComponentVariant 'primary' (for text color)
     const helperVariant: ComponentVariant = variant === 'secondary' ? 'default' : 'primary'
     const variantColors = getVariantColors(theme, helperVariant)
 
@@ -176,4 +164,3 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fonts.semibold,
   },
 })
-export const AppButton = memo(AppButtonComponent)

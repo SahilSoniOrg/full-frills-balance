@@ -5,8 +5,7 @@
 
 import { AppText } from '@/src/components/core/AppText'
 import { Shape, Size, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
-import { useThemeColors } from '@/src/constants/theme-helpers'
-import { useTheme } from '@/src/hooks/use-theme'
+import { useThemedComponent } from '@/src/hooks/useThemedComponent'
 import React from 'react'
 import { StyleSheet, TextInput, type TextInputProps, View, ViewStyle } from 'react-native'
 
@@ -28,10 +27,7 @@ export function AppInput({
     style,
     ...props
 }: AppInputProps) {
-    const { theme: globalTheme, tokens: globalTokens } = useTheme()
-    const overrideTheme = useThemeColors(themeMode)
-    const theme = themeMode ? overrideTheme : globalTheme
-    const tokens = themeMode ? { input: { background: theme.surface, border: theme.border, text: theme.text, placeholder: theme.textSecondary } } : globalTokens
+    const { theme, tokens } = useThemedComponent(themeMode)
 
     return (
         <View style={[styles.container, containerStyle]}>

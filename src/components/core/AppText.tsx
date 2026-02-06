@@ -1,22 +1,15 @@
 import { ThemeMode, Typography } from '@/src/constants/design-tokens'
-import { useThemeColors } from '@/src/constants/theme-helpers'
-import { useTheme } from '@/src/hooks/use-theme'
+import { useThemedComponent } from '@/src/hooks/useThemedComponent'
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
 import { useMemo } from 'react'
 import { StyleSheet, Text, type TextProps } from 'react-native'
 
 export type AppTextProps = TextProps & {
-  // Typography variants - limited and intentional
   variant?: 'caption' | 'body' | 'subheading' | 'heading' | 'title' | 'xl' | 'hero'
-  // Semantic color options
   color?: ComponentVariant
-  // Text alignment
   align?: 'auto' | 'left' | 'right' | 'center' | 'justify'
-  // Weight variants
   weight?: 'regular' | 'medium' | 'semibold' | 'bold'
-  // Italic support
   italic?: boolean
-  // Theme mode override (for design preview)
   themeMode?: ThemeMode
 }
 
@@ -30,42 +23,28 @@ export function AppText({
   style,
   ...props
 }: AppTextProps) {
-  const { theme: globalTheme } = useTheme()
-  const overrideTheme = useThemeColors(themeMode)
-  const theme = themeMode ? overrideTheme : globalTheme
+  const { theme } = useThemedComponent(themeMode)
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
       switch (variant) {
-        case 'caption':
-          return styles.caption
-        case 'body':
-          return styles.body
-        case 'subheading':
-          return styles.subheading
-        case 'heading':
-          return styles.heading
-        case 'title':
-          return styles.title
-        case 'xl':
-          return styles.xl
-        case 'hero':
-          return styles.hero
-        default:
-          return styles.body
+        case 'caption': return styles.caption
+        case 'body': return styles.body
+        case 'subheading': return styles.subheading
+        case 'heading': return styles.heading
+        case 'title': return styles.title
+        case 'xl': return styles.xl
+        case 'hero': return styles.hero
+        default: return styles.body
       }
     })()
 
     const fontWeight = (() => {
       switch (weight) {
-        case 'medium':
-          return '600' as const
-        case 'semibold':
-          return '700' as const
-        case 'bold':
-          return 'bold' as const
-        default:
-          return 'normal' as const
+        case 'medium': return '600' as const
+        case 'semibold': return '700' as const
+        case 'bold': return 'bold' as const
+        default: return 'normal' as const
       }
     })()
 

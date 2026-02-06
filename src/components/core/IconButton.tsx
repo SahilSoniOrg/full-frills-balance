@@ -23,6 +23,36 @@ export type IconButtonProps = Omit<TouchableOpacityProps, 'children'> & {
     iconColor?: string
 }
 
+type VariantConfig = {
+    backgroundColor: ViewStyle['backgroundColor']
+    iconColor: string
+    elevation?: ViewStyle
+}
+
+const VARIANTS: Record<IconButtonVariant, (theme: ReturnType<typeof useTheme>['theme'], disabled: boolean) => VariantConfig> = {
+    primary: (theme, disabled) => ({
+        backgroundColor: disabled ? theme.textTertiary : theme.primary,
+        iconColor: disabled ? theme.textTertiary : theme.pureInverse,
+    }),
+    surface: (theme, disabled) => ({
+        backgroundColor: disabled ? theme.textTertiary : theme.surface,
+        iconColor: disabled ? theme.textTertiary : theme.text,
+        elevation: Shape.elevation.sm,
+    }),
+    clear: (theme, disabled) => ({
+        backgroundColor: 'transparent',
+        iconColor: disabled ? theme.textTertiary : theme.primary,
+    }),
+    error: (theme, disabled) => ({
+        backgroundColor: disabled ? theme.textTertiary : theme.error,
+        iconColor: disabled ? theme.textTertiary : theme.pureInverse,
+    }),
+    success: (theme, disabled) => ({
+        backgroundColor: disabled ? theme.textTertiary : theme.success,
+        iconColor: disabled ? theme.textTertiary : theme.pureInverse,
+    }),
+}
+
 export function IconButton({
     name,
     size = Size.md,
@@ -30,53 +60,13 @@ export function IconButton({
     iconColor,
     style,
     onPress,
+    disabled,
     ...props
 }: IconButtonProps) {
     const { theme } = useTheme()
 
-    const getVariantStyles = (): ViewStyle => {
-        switch (variant) {
-            case 'primary':
-                return {
-                    backgroundColor: theme.primary,
-                }
-            case 'surface':
-                return {
-                    backgroundColor: theme.surface,
-                    ...Shape.elevation.sm,
-                }
-            case 'clear':
-                return {
-                    backgroundColor: 'transparent',
-                }
-            case 'error':
-                return {
-                    backgroundColor: theme.error,
-                }
-            case 'success':
-                return {
-                    backgroundColor: theme.success,
-                }
-            default:
-                return {}
-        }
-    }
-
-    const getIconColor = () => {
-        if (iconColor) return iconColor
-        switch (variant) {
-            case 'primary':
-            case 'error':
-            case 'success':
-                return theme.pureInverse
-            case 'surface':
-                return theme.text
-            case 'clear':
-                return theme.primary
-            default:
-                return theme.text
-        }
-    }
+    const config = VARIANTS[variant](theme, disabled ?? false)
+    const finalIconColor = iconColor ?? config.iconColor
 
     return (
         <TouchableOpacity
@@ -84,13 +74,15 @@ export function IconButton({
             activeOpacity={Opacity.heavy}
             style={[
                 styles.button,
-                getVariantStyles(),
+                { backgroundColor: config.backgroundColor },
+                config.elevation,
                 style
             ]}
             hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
+            disabled={disabled}
             {...props}
         >
-            <AppIcon name={name} size={size} color={getIconColor()} />
+            <AppIcon name={name} size={size} color={finalIconColor} />
         </TouchableOpacity>
     )
 }

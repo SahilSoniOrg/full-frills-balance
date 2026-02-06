@@ -1,19 +1,13 @@
 import { Shape, Spacing, ThemeMode } from '@/src/constants/design-tokens'
-import { useThemeColors } from '@/src/constants/theme-helpers'
-import { useTheme } from '@/src/hooks/use-theme'
+import { useThemedComponent } from '@/src/hooks/useThemedComponent'
 import { useMemo } from 'react'
 import { StyleSheet, View, type ViewProps } from 'react-native'
 
 export type AppCardProps = ViewProps & {
-  // Elevation levels - limited options
   elevation?: 'none' | 'sm' | 'md' | 'lg'
-  // Padding options
   padding?: 'none' | 'sm' | 'md' | 'lg'
-  // Border radius options
   radius?: 'sm' | 'md' | 'lg' | 'xl' | 'r1' | 'r2' | 'r3' | 'r4'
-  // Background variant
   variant?: 'default' | 'secondary'
-  // Theme mode override (for design preview)
   themeMode?: ThemeMode
 }
 
@@ -27,12 +21,7 @@ export function AppCard({
   children,
   ...props
 }: AppCardProps) {
-  const { theme: globalTheme, tokens: globalTokens } = useTheme()
-  const overrideTheme = useThemeColors(themeMode)
-  const theme = themeMode ? overrideTheme : globalTheme
-  const tokens = useMemo(() =>
-    themeMode ? { card: { background: theme.surface, border: theme.border } } : globalTokens,
-    [themeMode, theme, globalTokens])
+  const { theme, tokens } = useThemedComponent(themeMode)
 
   const cardStyle = useMemo(() => {
     const elevationStyles = Shape.elevation[elevation]

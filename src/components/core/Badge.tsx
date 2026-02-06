@@ -1,26 +1,18 @@
 import { AppIcon, IconName } from '@/src/components/core/AppIcon'
 import { AppText } from '@/src/components/core/AppText'
 import { Shape, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
-import { useThemeColors } from '@/src/constants/theme-helpers'
-import { useTheme } from '@/src/hooks/use-theme'
+import { useThemedComponent } from '@/src/hooks/useThemedComponent'
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
 import { useMemo } from 'react'
 import { StyleSheet, View, type ViewProps } from 'react-native'
 
 export type BadgeProps = ViewProps & {
-  // Badge content
   children: React.ReactNode
-  // Badge variants - limited options
   variant?: ComponentVariant
-  // Badge size
   size?: 'sm' | 'md'
-  // Use solid background instead of light tinted background
   solid?: boolean
-  // Theme mode override (for design preview)
   themeMode?: ThemeMode
-  // Optional Icon
   icon?: IconName
-  // Color overrides
   backgroundColor?: string
   textColor?: string
 }
@@ -37,9 +29,7 @@ export function Badge({
   style,
   ...props
 }: BadgeProps) {
-  const { theme: globalTheme } = useTheme()
-  const overrideTheme = useThemeColors(themeMode)
-  const theme = themeMode ? overrideTheme : globalTheme
+  const { theme } = useThemedComponent(themeMode)
 
   const { badgeStyle, textStyle, iconSize, finalTextColor } = useMemo(() => {
     const variantColors = getVariantColors(theme, variant)
