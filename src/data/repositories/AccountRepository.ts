@@ -60,13 +60,9 @@ export class AccountRepository {
 
   observeById(accountId: string) {
     return this.accounts
-      .query(
-        Q.where('id', accountId),
-        Q.where('deleted_at', Q.eq(null))
-      )
-      .observe()
+      .findAndObserve(accountId)
       .pipe(
-        map((accounts) => accounts[0] || null)
+        map((account) => (account.deletedAt ? null : account))
       )
   }
 

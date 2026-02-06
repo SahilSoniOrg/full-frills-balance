@@ -7,6 +7,10 @@
  * - Unsubscribing on unmount
  * - Managing loading state
  * - Versioning to force re-renders on same-reference emissions
+ *
+ * NOTE: For WatermelonDB Models, the 'data' reference will remain stable across updates.
+ * If passing 'data' to React.memo components, you MUST pass 'version' as a prop or key
+ * to ensure re-rendering.
  */
 import { DependencyList, useEffect, useState } from 'react';
 import { Observable } from 'rxjs';

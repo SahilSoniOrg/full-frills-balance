@@ -49,7 +49,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     const accountId = params.accountId as string | undefined;
     const typeParam = params.type as string | undefined;
     const isEditMode = Boolean(accountId);
-    const { account: existingAccount } = useAccount(accountId || null);
+    const { account: existingAccount, version: accountVersion } = useAccount(accountId || null);
     const { balanceData: currentBalanceData } = useAccountBalance(accountId || null);
     const { createAccount, updateAccount, adjustBalance } = useAccountActions();
     const { accounts } = useAccounts();
@@ -93,7 +93,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
                 setInitialBalance(currentBalanceData.balance.toString());
             }
         }
-    }, [existingAccount, isEditMode, currentBalanceData]);
+    }, [existingAccount, accountVersion, isEditMode, currentBalanceData]);
 
     useEffect(() => {
         setHasExistingAccounts(accounts.length > 0);
