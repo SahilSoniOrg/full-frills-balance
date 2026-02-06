@@ -87,7 +87,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
     };
 
     return (
-        <Screen showBack={false}>
+        <Screen showBack={false} withPadding edges={['top', 'bottom']}>
             <View style={styles.content}>
                 {renderStep()}
             </View>
@@ -101,6 +101,5 @@ const styles = StyleSheet.create({
         width: '100%',
         alignSelf: 'center',
         flex: 1,
-        justifyContent: 'center',
     },
 });

@@ -72,6 +72,9 @@ export const StepSplash: React.FC<StepSplashProps> = ({
 const styles = StyleSheet.create({
     container: {
         width: '100%',
+        flex: 1,
+        justifyContent: 'center',
+        paddingVertical: Spacing.xl,
     },
     title: {
         textAlign: 'center',

@@ -106,7 +106,6 @@ const styles = StyleSheet.create({
         minHeight: Size.xxl,
         borderRadius: Shape.radius.md,
         paddingHorizontal: Spacing.md,
-        flex: 1,
     },
     icon: {
         marginRight: Spacing.md,

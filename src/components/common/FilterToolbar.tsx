@@ -48,7 +48,7 @@ export const FilterToolbar = ({
 
     return (
         <View style={[styles.container, style]}>
-            <View style={styles.searchWrapper}>
+            <View style={[styles.searchWrapper, isInternalExpanded && styles.expandedWrapper]}>
                 <ExpandableSearchButton
                     value={searchQuery}
                     onChangeText={onSearchChange}
@@ -75,9 +75,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing.sm,
-        flex: 1,
     },
     searchWrapper: {
+        flexShrink: 0,
+    },
+    expandedWrapper: {
         flex: 1,
     },
 });

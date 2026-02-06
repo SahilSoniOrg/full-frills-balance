@@ -60,8 +60,9 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.container}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
             <AppText variant="title" style={styles.title}>
                 Initial Accounts
@@ -70,7 +71,11 @@ export const StepAccountSuggestions: React.FC<StepAccountSuggestionsProps> = ({
                 Select starting accounts or add your own.
             </AppText>
 
-            <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                style={styles.scrollContainer}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={styles.grid}>
                     {allSuggestions.map((account) => {
                         const isSelected = selectedAccounts.includes(account.name);
@@ -180,7 +185,9 @@ const styles = StyleSheet.create({
     },
     scrollContainer: {
         flex: 1,
-        marginBottom: Spacing.xl,
+    },
+    scrollContent: {
+        paddingBottom: Spacing.xl,
     },
     grid: {
         flexDirection: 'row',
@@ -239,6 +246,7 @@ const styles = StyleSheet.create({
     buttonContainer: {
         gap: Spacing.md,
         paddingTop: Spacing.md,
+        paddingBottom: Spacing.xl,
     },
     continueButton: {
         marginBottom: Spacing.xs,

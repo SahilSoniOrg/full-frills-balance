@@ -47,8 +47,11 @@ export const StepFinalize: React.FC<StepFinalizeProps> = ({
 const styles = StyleSheet.create({
     container: {
         width: '100%',
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        padding: Spacing.lg,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.xl,
     },
     iconContainer: {
         marginBottom: Spacing.xl,
@@ -59,7 +62,7 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         textAlign: 'center',
-        marginBottom: Spacing.xxl,
+        marginBottom: Spacing.xxxl,
         maxWidth: 300,
     },
     buttonContainer: {
