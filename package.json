@@ -17,6 +17,7 @@
     "serve:e2e": "npx serve dist-e2e -p 8081 --single"
   },
   "dependencies": {
+    "@aptabase/react-native": "^0.4.0",
     "@expo-google-fonts/raleway": "^0.4.2",
     "@lovesworking/watermelondb-expo-plugin-sdk-52-plus": "^1.0.3",
     "@morrowdigital/watermelondb-expo-plugin": "^2.3.3",

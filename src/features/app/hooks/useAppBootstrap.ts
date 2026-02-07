@@ -1,3 +1,4 @@
+import { analytics } from '@/src/services/analytics-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
@@ -11,6 +12,9 @@ export function useAppBootstrap() {
     let isActive = true;
 
     const bootstrap = async () => {
+      // Initialize Analytics
+      analytics.initialize();
+
       try {
         await currencyInitService.initialize();
       } catch (error) {

@@ -9,6 +9,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
@@ -130,6 +131,7 @@ class ExportService {
             };
 
             const json = JSON.stringify(exportData, null, 2);
+            analytics.logExportCompleted('JSON');
 
             logger.info('[ExportService] Export complete', {
                 accounts: accounts.length,

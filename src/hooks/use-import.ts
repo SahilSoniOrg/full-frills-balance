@@ -6,6 +6,7 @@
  */
 
 import { useUI } from '@/src/contexts/UIContext';
+import { analytics } from '@/src/services/analytics-service';
 import {
     decodeContent,
     extractIfZip,
@@ -113,6 +114,7 @@ export function useImport() {
 
             // 7. Execute import
             const stats = await plugin.import(content);
+            analytics.logImportCompleted(plugin.id, stats);
             requireRestart({ type: 'IMPORT', stats });
 
         } catch (error) {

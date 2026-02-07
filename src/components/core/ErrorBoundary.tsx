@@ -10,6 +10,7 @@
 
 import { AppText } from '@/src/components/core/AppText';
 import { Palette, Shape, Spacing, Typography } from '@/src/constants';
+import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import React, { Component, ReactNode } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -38,6 +39,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         logger.error('Uncaught error in component tree', error, {
             componentStack: errorInfo.componentStack,
         });
+        analytics.logError(error, errorInfo.componentStack || undefined);
     }
 
     handleReset = () => {

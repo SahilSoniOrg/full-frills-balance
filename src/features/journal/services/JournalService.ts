@@ -8,6 +8,7 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
+import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { EnrichedJournal, JournalEntryLine } from '@/src/types/domain';
@@ -18,6 +19,8 @@ import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
+import { Q } from '@nozbe/watermelondb';
+import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export interface SimpleEntryParams {
     type: 'expense' | 'income' | 'transfer';
@@ -29,8 +32,6 @@ export interface SimpleEntryParams {
     exchangeRate?: number;
     journalId?: string;
 }
-import { Q } from '@nozbe/watermelondb';
-import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export interface SubmitJournalResult {
     success: boolean;
@@ -293,11 +294,12 @@ export class JournalService {
             transactions
         };
 
-        if (journalId) {
-            return this.updateJournal(journalId, journalData);
-        } else {
-            return this.createJournal(journalData);
-        }
+        const journal = journalId
+            ? await this.updateJournal(journalId, journalData)
+            : await this.createJournal(journalData);
+
+        analytics.logTransactionCreated('simple', type, currencyCode);
+        return journal;
     }
 
     /**
@@ -356,9 +358,11 @@ export class JournalService {
 
             if (journalId) {
                 await this.updateJournal(journalId, journalData);
+                analytics.logTransactionCreated('advanced', 'multi', journalData.currencyCode);
                 return { success: true, action: 'updated' };
             } else {
                 await this.createJournal(journalData);
+                analytics.logTransactionCreated('advanced', 'multi', journalData.currencyCode);
                 return { success: true, action: 'created' };
             }
         } catch (error) {

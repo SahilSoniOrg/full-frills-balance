@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AccountType } from '@/src/data/models/Account';
 import { accountService } from '@/src/features/accounts/services/AccountService';
+import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
 
@@ -94,6 +95,7 @@ export class OnboardingService {
 
         // 5. Complete basic onboarding (sets name and default currency)
         // This is moved to the end to ensure it only persists if DB operations succeed
+        analytics.logOnboardingComplete(selectedCurrency);
         logger.info('Onboarding completion logic finished successfully');
     }
 }

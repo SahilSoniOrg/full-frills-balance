@@ -5,6 +5,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalService } from '@/src/features/journal/services/JournalService';
+import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { balanceService } from '@/src/services/BalanceService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -57,6 +58,9 @@ export class AccountService {
                 initialBalance: data.initialBalance ? roundToPrecision(data.initialBalance, precision) : undefined
             }
         });
+
+        // 2.5 Track Analytics
+        analytics.logAccountCreated(account.accountType, account.currencyCode);
 
         // 3. Initial Balance Journal
         if (data.initialBalance && Math.abs(data.initialBalance) > getEpsilon(precision)) {
