@@ -1,12 +1,12 @@
 import { FilterToolbar } from '@/src/components/common/FilterToolbar';
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { DashboardSummary } from '@/src/features/dashboard/components/DashboardSummary';
 import { NetWorthCard } from '@/src/features/dashboard/components/NetWorthCard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange } from '@/src/utils/dateUtils';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { LayoutAnimation, StyleSheet, View } from 'react-native';
 
 interface DashboardHeaderProps {
     greeting: string;
@@ -24,8 +24,6 @@ interface DashboardHeaderProps {
     showDatePicker: () => void;
     navigatePrevious?: () => void;
     navigateNext?: () => void;
-    isCollapsed: boolean;
-    onToggleCollapse: () => void;
     sectionTitle: string;
 }
 
@@ -45,29 +43,15 @@ export function DashboardHeader({
     showDatePicker,
     navigatePrevious,
     navigateNext,
-    isCollapsed,
-    onToggleCollapse,
     sectionTitle,
 }: DashboardHeaderProps) {
     const { theme } = useTheme();
     const [isSearching, setIsSearching] = React.useState(false);
-    const wasExpandedBeforeSearch = React.useRef(!isCollapsed);
 
     const handleSearchExpand = React.useCallback((expanded: boolean) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setIsSearching(expanded);
-        if (expanded) {
-            // Save current state and collapse
-            wasExpandedBeforeSearch.current = !isCollapsed;
-            if (!isCollapsed) {
-                onToggleCollapse();
-            }
-        } else {
-            // Restore saved state if it was expanded
-            if (wasExpandedBeforeSearch.current && isCollapsed) {
-                onToggleCollapse();
-            }
-        }
-    }, [isCollapsed, onToggleCollapse]);
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -81,19 +65,6 @@ export function DashboardHeader({
                 )}
 
                 <View style={[styles.headerActions, isSearching && styles.expandedActions]}>
-                    {!isSearching && (
-                        <TouchableOpacity
-                            onPress={onToggleCollapse}
-                            hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
-                            style={[styles.collapseButton, { backgroundColor: theme.surface }]}
-                        >
-                            <AppIcon
-                                name={isCollapsed ? 'chevronDown' : 'chevronUp'}
-                                size={Size.sm}
-                                color={theme.textSecondary}
-                            />
-                        </TouchableOpacity>
-                    )}
 
                     <FilterToolbar
                         searchQuery={searchQuery}
@@ -108,7 +79,7 @@ export function DashboardHeader({
                 </View>
             </View>
 
-            {!isCollapsed && (
+            {!isSearching && (
                 <>
                     <NetWorthCard
                         netWorth={netWorth}

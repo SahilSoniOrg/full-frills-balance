@@ -4,8 +4,8 @@ import { useWealthSummary } from '@/src/features/wealth';
 import { useMonthlyFlow } from '@/src/hooks/useMonthlyFlow';
 import { DateRange } from '@/src/utils/dateUtils';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { LayoutAnimation, Platform, UIManager } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { Platform, UIManager } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -31,8 +31,6 @@ export interface DashboardViewModel {
         showDatePicker: () => void;
         navigatePrevious?: () => void;
         navigateNext?: () => void;
-        isCollapsed: boolean;
-        onToggleCollapse: () => void;
         sectionTitle: string;
     };
     fab: {
@@ -68,18 +66,11 @@ export function useDashboardViewModel(): DashboardViewModel {
         }
     });
 
-    const [isCollapsed, setIsCollapsed] = useState(false);
-
-    const onToggleCollapse = useCallback(() => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setIsCollapsed(prev => !prev);
-    }, []);
-
     const onAddPress = useCallback(() => {
         router.push('/journal-entry');
     }, [router]);
 
-    const greeting = useMemo(() => `Hello, ${userName || 'there'}!`, [userName]);
+    const greeting = useMemo(() => `Hi, ${userName || 'there'}!`, [userName]);
     const sectionTitle = list.searchQuery ? 'Search Results' : 'Recent Transactions';
 
     return {
@@ -102,8 +93,6 @@ export function useDashboardViewModel(): DashboardViewModel {
             showDatePicker: list.showDatePicker,
             navigatePrevious: list.navigatePrevious,
             navigateNext: list.navigateNext,
-            isCollapsed,
-            onToggleCollapse,
             sectionTitle,
         },
         fab: {

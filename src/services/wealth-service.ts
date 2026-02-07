@@ -55,7 +55,7 @@ export const wealthService = {
             totalEquity,
             totalIncome,
             totalExpense,
-            netWorth: (totalAssets + totalIncome + totalEquity) - (totalLiabilities + totalExpense),
+            netWorth: totalAssets - totalLiabilities,
         };
     }
 };
