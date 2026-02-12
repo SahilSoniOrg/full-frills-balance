@@ -126,8 +126,6 @@ export const SimpleForm = ({
                     setSourceId(initialSourceId);
                 } else if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
                     setSourceId(lastSourceId);
-                } else if (transactionAccounts.length > 0) {
-                    setSourceId(transactionAccounts[0].id);
                 } else {
                     setSourceId('');
                 }
@@ -137,8 +135,6 @@ export const SimpleForm = ({
             if (!isDestValid) {
                 if (initialDestinationId && accounts.find(a => a.id === initialDestinationId)?.accountType === AccountType.EXPENSE) {
                     setDestinationId(initialDestinationId);
-                } else if (expenseAccounts.length > 0) {
-                    setDestinationId(expenseAccounts[0].id);
                 } else {
                     setDestinationId('');
                 }
@@ -150,8 +146,6 @@ export const SimpleForm = ({
                     setDestinationId(initialDestinationId);
                 } else if (lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
                     setDestinationId(lastDestId);
-                } else if (transactionAccounts.length > 0) {
-                    setDestinationId(transactionAccounts[0].id);
                 } else {
                     setDestinationId('');
                 }
@@ -161,8 +155,6 @@ export const SimpleForm = ({
             if (!isSourceValid) {
                 if (initialSourceId && accounts.find(a => a.id === initialSourceId)?.accountType === AccountType.INCOME) {
                     setSourceId(initialSourceId);
-                } else if (incomeAccounts.length > 0) {
-                    setSourceId(incomeAccounts[0].id);
                 } else {
                     setSourceId('');
                 }
@@ -174,8 +166,8 @@ export const SimpleForm = ({
                     setSourceId(initialSourceId);
                 } else if (lastSourceId && accounts.some(a => a.id === lastSourceId)) {
                     setSourceId(lastSourceId);
-                } else if (transactionAccounts.length > 0) {
-                    setSourceId(transactionAccounts[0].id);
+                } else {
+                    setSourceId('');
                 }
             }
 
@@ -185,9 +177,8 @@ export const SimpleForm = ({
                     setDestinationId(initialDestinationId);
                 } else if (lastDestId && accounts.some(a => a.id === lastDestId)) {
                     setDestinationId(lastDestId);
-                } else if (transactionAccounts.length > 1) {
-                    const otherAccount = transactionAccounts.find(a => a.id !== sourceId);
-                    if (otherAccount) setDestinationId(otherAccount.id);
+                } else {
+                    setDestinationId('');
                 }
             }
         }
@@ -257,7 +248,7 @@ export const SimpleForm = ({
                                             borderColor: accountColor
                                         }
                                     ]}
-                                    onPress={() => onSelect(account.id)}
+                                    onPress={() => onSelect(isSelected ? '' : account.id)}
                                 >
                                     <View style={[styles.accountIndicator, { backgroundColor: accountColor, opacity: isSelected ? 1 : Opacity.soft }]} />
                                     <AppText
@@ -318,7 +309,12 @@ export const SimpleForm = ({
                             styles.typeTab,
                             type === t && { backgroundColor: theme.surface, ...Shape.elevation.sm }
                         ]}
-                        onPress={() => setType(t)}
+                        onPress={() => {
+                            setType(t);
+                            // Clear selections to force manual selection, unless they are already valid for the new type
+                            setSourceId('');
+                            setDestinationId('');
+                        }}
                     >
                         <AppText
                             variant="caption"
