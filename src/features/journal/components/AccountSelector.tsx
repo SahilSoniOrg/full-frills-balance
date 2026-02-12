@@ -1,10 +1,11 @@
-import { AppText, ListRow } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { AppIcon, AppText, ListRow } from '@/src/components/core';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
+import { getAccountSections, getAccountVariant, getSectionColor } from '@/src/utils/accountUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
-import React from 'react';
-import { FlatList, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Modal, SectionList, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 interface AccountSelectorProps {
     visible: boolean;
@@ -22,17 +23,29 @@ export function AccountSelector({
     onSelect,
 }: AccountSelectorProps) {
     const { theme } = useTheme();
+    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
-    const initialScrollIndex = React.useMemo(() => {
-        if (!selectedId) return undefined;
-        const index = accounts.findIndex(a => a.id === selectedId);
-        return index !== -1 ? index : undefined;
-    }, [accounts, selectedId]);
+    const sections = useMemo(() => {
+        return getAccountSections(accounts);
+    }, [accounts]);
+
+    const toggleSection = (title: string) => {
+        setCollapsedSections(prev => {
+            const next = new Set(prev);
+            if (next.has(title)) {
+                next.delete(title);
+            } else {
+                next.add(title);
+            }
+            return next;
+        });
+    };
 
     const getAccountColor = (type: string) => {
         const key = journalPresenter.getAccountColorKey(type);
         return (theme as any)[key] || theme.primary;
     };
+
 
     return (
         <Modal
@@ -40,48 +53,75 @@ export function AccountSelector({
             transparent
             animationType="slide"
             onRequestClose={onClose}
+            statusBarTranslucent
+            hardwareAccelerated
         >
-            <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
-                <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
-                    <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-                        <AppText variant="heading">Select Account</AppText>
-                        <TouchableOpacity onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
-                            <AppText variant="body" color="secondary">✕</AppText>
-                        </TouchableOpacity>
-                    </View>
+            <TouchableWithoutFeedback onPress={onClose}>
+                <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
+                    <TouchableWithoutFeedback>
+                        <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+                            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+                                <AppText variant="heading">Select Account</AppText>
+                                <TouchableOpacity onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
+                                    <AppText variant="body" color="secondary" style={{ padding: Spacing.sm }}>✕</AppText>
+                                </TouchableOpacity>
+                            </View>
 
-                    <FlatList
-                        data={accounts}
-                        keyExtractor={(item) => item.id}
-                        initialScrollIndex={initialScrollIndex}
-                        getItemLayout={(_, index) => ({
-                            length: 70, // Rough height of ListRow + margin
-                            offset: 70 * index,
-                            index,
-                        })}
-                        renderItem={({ item }) => {
-                            const isSelected = item.id === selectedId;
-                            const accountColor = getAccountColor(item.accountType);
+                            <SectionList
+                                sections={sections}
+                                keyExtractor={(item) => item.id}
+                                stickySectionHeadersEnabled={false}
+                                renderSectionHeader={({ section: { title } }) => {
+                                    const isCollapsed = collapsedSections.has(title);
+                                    const color = getSectionColor(title, theme);
+                                    return (
+                                        <TouchableOpacity
+                                            onPress={() => toggleSection(title)}
+                                            activeOpacity={Opacity.heavy}
+                                            style={styles.sectionHeader}
+                                        >
+                                            <View style={styles.sectionTitleRow}>
+                                                <View style={[styles.sectionDot, { backgroundColor: color }]} />
+                                                <AppText variant="subheading" weight="bold" color="secondary">
+                                                    {title}
+                                                </AppText>
+                                            </View>
+                                            <AppIcon
+                                                name={isCollapsed ? "chevronRight" : "chevronDown"}
+                                                size={Size.iconSm}
+                                                color={theme.textSecondary}
+                                            />
+                                        </TouchableOpacity>
+                                    );
+                                }}
+                                renderItem={({ item, section }) => {
+                                    if (collapsedSections.has(section.title)) return null;
 
-                            return (
-                                <ListRow
-                                    title={item.name}
-                                    subtitle={`${item.accountType} • ${item.currencyCode}`}
-                                    onPress={() => onSelect(item.id)}
-                                    style={[styles.accountRow, {
-                                        backgroundColor: theme.surface,
-                                        borderColor: isSelected ? accountColor : theme.border,
-                                        borderWidth: isSelected ? 2 : 1,
-                                    }]}
-                                    padding="md"
-                                />
-                            );
-                        }}
-                        contentContainerStyle={styles.accountsListContent}
-                        style={styles.accountsList}
-                    />
+                                    const isSelected = item.id === selectedId;
+                                    const accountColor = getAccountColor(item.accountType);
+
+                                    return (
+                                        <ListRow
+                                            title={item.name}
+                                            titleColor={getAccountVariant(item.accountType)}
+                                            subtitle={`${item.accountType} • ${item.currencyCode}`}
+                                            onPress={() => onSelect(item.id)}
+                                            style={[styles.accountRow, {
+                                                backgroundColor: theme.surface,
+                                                borderColor: isSelected ? accountColor : theme.border,
+                                                borderWidth: isSelected ? 2 : 1,
+                                            }]}
+                                            padding="md"
+                                        />
+                                    );
+                                }}
+                                contentContainerStyle={styles.accountsListContent}
+                                style={styles.accountsList}
+                            />
+                        </View>
+                    </TouchableWithoutFeedback>
                 </View>
-            </View>
+            </TouchableWithoutFeedback>
         </Modal>
     );
 }
@@ -90,11 +130,14 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
+        ...StyleSheet.absoluteFillObject,
     },
     modalContent: {
         borderTopLeftRadius: Shape.radius.r2,
         borderTopRightRadius: Shape.radius.r2,
-        maxHeight: '70%',
+        maxHeight: '80%',
+        width: '100%',
+        elevation: 5, // Android shadow
     },
     modalHeader: {
         flexDirection: 'row',
@@ -103,15 +146,34 @@ const styles = StyleSheet.create({
         padding: Spacing.lg,
         borderBottomWidth: 1,
     },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.xs,
+        marginTop: Spacing.sm,
+    },
+    sectionTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+    },
+    sectionDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
     accountRow: {
         borderWidth: 1,
         borderRadius: Shape.radius.r3,
         marginBottom: Spacing.sm,
     },
     accountsList: {
-        flex: 1,
+        flexGrow: 0,
     },
     accountsListContent: {
-        padding: Spacing.md,
+        paddingHorizontal: Spacing.md,
+        paddingBottom: Spacing.xl * 2, // Extra padding for safe area/bottom nav
     },
 });

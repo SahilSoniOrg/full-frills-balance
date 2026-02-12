@@ -24,6 +24,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         onAccountSelected,
         simpleFormProps,
         advancedFormProps,
+        accounts,
     } = vm;
 
     if (isLoading) {
@@ -71,7 +72,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
 
             <AccountSelector
                 visible={showAccountPicker}
-                accounts={simpleFormProps.accounts}
+                accounts={accounts}
                 selectedId={vm.selectedAccountId}
                 onClose={onCloseAccountPicker}
                 onSelect={onAccountSelected}

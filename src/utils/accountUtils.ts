@@ -60,6 +60,32 @@ export function getAccountSections(accounts: Account[]): { title: string; data: 
 /**
  * Maps section title to theme color.
  */
+import { ComponentVariant } from '@/src/utils/style-helpers'
+
+/**
+ * Maps an account type or section title to a semantic ComponentVariant key.
+ */
+export function getAccountVariant(typeOrTitle: string): ComponentVariant {
+    const normalized = typeOrTitle.toLowerCase();
+    switch (normalized) {
+        case 'assets':
+        case 'asset':
+            return 'asset';
+        case 'liabilities':
+        case 'liability':
+            return 'liability';
+        case 'equity':
+            return 'equity';
+        case 'income':
+            return 'income';
+        case 'expenses':
+        case 'expense':
+            return 'expense';
+        default:
+            return 'text';
+    }
+}
+
 export function getSectionColor(title: string, theme: {
     asset: string;
     liability: string;
@@ -68,12 +94,13 @@ export function getSectionColor(title: string, theme: {
     expense: string;
     text: string;
 }): string {
-    switch (title) {
-        case 'Assets': return theme.asset;
-        case 'Liabilities': return theme.liability;
-        case 'Equity': return theme.equity;
-        case 'Income': return theme.income;
-        case 'Expenses': return theme.expense;
+    const variant = getAccountVariant(title);
+    switch (variant) {
+        case 'asset': return theme.asset;
+        case 'liability': return theme.liability;
+        case 'equity': return theme.equity;
+        case 'income': return theme.income;
+        case 'expense': return theme.expense;
         default: return theme.text;
     }
 }

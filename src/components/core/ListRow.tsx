@@ -25,6 +25,7 @@ export type ListRowProps = TouchableOpacityProps & {
   // Text customization
   titleVariant?: AppTextProps['variant']
   subtitleVariant?: AppTextProps['variant']
+  titleColor?: string
   // Theme mode override (for design preview)
   themeMode?: ThemeMode
 }
@@ -38,6 +39,7 @@ export function ListRow({
   padding = 'md',
   titleVariant = 'body',
   subtitleVariant = 'caption',
+  titleColor = 'primary',
   themeMode,
   style,
   onPress,
@@ -78,7 +80,7 @@ export function ListRow({
       <View style={styles.content}>
         <AppText
           variant={titleVariant}
-          color="primary"
+          color={titleColor as AppTextProps['color']}
           numberOfLines={1}
           style={styles.title}
           themeMode={themeMode}
