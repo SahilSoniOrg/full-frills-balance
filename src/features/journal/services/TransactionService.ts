@@ -2,7 +2,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { EnrichedTransaction, TransactionWithAccountInfo } from '@/src/types/domain';
-import { isBalanceIncrease, isValueEntering } from '@/src/utils/accounting-utils';
+import { isBalanceIncrease, isValueEntering } from '@/src/utils/accountingHelpers';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class TransactionService {

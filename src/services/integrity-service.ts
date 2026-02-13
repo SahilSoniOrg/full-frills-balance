@@ -16,7 +16,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService'
 import { accountingService } from '@/src/utils/accountingService'
 import { logger } from '@/src/utils/logger'
-import { amountsAreEqual, roundToPrecision } from '@/src/utils/money'
+import { amountsAreEqual } from '@/src/utils/money'
 
 export interface BalanceVerificationResult {
     accountId: string
@@ -56,8 +56,13 @@ export class IntegrityService {
 
         let balance = 0
         for (const tx of transactions) {
-            const multiplier = accountingService.getImpactMultiplier(account.accountType as any, tx.transactionType)
-            balance = roundToPrecision(balance + (tx.amount * multiplier), precision)
+            balance = accountingService.calculateNewBalance(
+                balance,
+                tx.amount,
+                account.accountType,
+                tx.transactionType,
+                precision
+            )
         }
 
         return balance

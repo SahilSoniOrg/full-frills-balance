@@ -1,6 +1,7 @@
-import { AppCard, AppIcon, AppText, FloatingActionButton, IvyIcon } from '@/src/components/core';
+import { AppIcon, AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Shape, Size, Spacing, Typography } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
+import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import { AccountCardViewModel, AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -66,7 +67,7 @@ export function AccountsListView({
                     renderItem={({ item, section }: { item: AccountCardViewModel; section: AccountSectionViewModel }) => {
                         if (section.isCollapsed) return null;
                         return (
-                            <AccountCardView
+                            <AccountCard
                                 account={item}
                                 onPress={() => onAccountPress(item.id)}
                                 dividerColor={theme.divider}
@@ -120,77 +121,6 @@ export function AccountsListView({
     );
 }
 
-function AccountCardView({
-    account,
-    onPress,
-    dividerColor,
-    surfaceColor,
-}: {
-    account: AccountCardViewModel;
-    onPress: () => void;
-    dividerColor: string;
-    surfaceColor: string;
-}) {
-    return (
-        <AppCard
-            elevation="sm"
-            style={[styles.cardContainer, { backgroundColor: surfaceColor }]}
-            padding="none"
-        >
-            <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-                <View style={[styles.headerSection, { backgroundColor: account.accentColor }]}
-                >
-                    <View style={styles.cardHeaderTop}>
-                        <IvyIcon
-                            name={account.icon as any}
-                            label={account.name}
-                            color={account.textColor}
-                            size={Size.avatarSm}
-                        />
-                        <AppText variant="body" weight="bold" style={[styles.accountName, { color: account.textColor }]} numberOfLines={1}>
-                            {account.name}
-                        </AppText>
-                    </View>
-
-                    <View style={styles.balanceSection}>
-                        <AppText variant="title" weight="bold" style={[styles.balanceText, { color: account.textColor }]}>
-                            {account.balanceText}
-                        </AppText>
-                    </View>
-                </View>
-
-                {account.showMonthlyStats && (
-                    <View
-                        style={[styles.footerSection, { backgroundColor: surfaceColor }]}
-                        accessibilityLabel={`Monthly statistics for ${account.name}`}
-                        accessibilityRole="summary"
-                    >
-                        <View style={styles.statsColumn} accessibilityLabel={`Monthly Income: ${account.monthlyIncomeText}`}>
-                            <AppText variant="caption" weight="bold" color="secondary" style={styles.statsLabel}>
-                                MONTH INCOME
-                            </AppText>
-                            <AppText variant="body" weight="bold" style={styles.statsValue}>
-                                {account.monthlyIncomeText}
-                            </AppText>
-                        </View>
-
-                        <View style={[styles.divider, { backgroundColor: dividerColor }]} accessibilityRole="none" />
-
-                        <View style={styles.statsColumn} accessibilityLabel={`Monthly Expenses: ${account.monthlyExpenseText}`}>
-                            <AppText variant="caption" weight="bold" color="secondary" style={styles.statsLabel}>
-                                MONTH EXPENSES
-                            </AppText>
-                            <AppText variant="body" weight="bold" style={styles.statsValue}>
-                                {account.monthlyExpenseText}
-                            </AppText>
-                        </View>
-                    </View>
-                )}
-            </TouchableOpacity>
-        </AppCard>
-    );
-}
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -221,12 +151,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing.md,
     },
-    cardHeaderTop: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.md,
-        marginBottom: Spacing.md,
-    },
     reorderIconButton: {
         width: Size.xl,
         height: Size.xl,
@@ -250,49 +174,5 @@ const styles = StyleSheet.create({
     emptyState: {
         marginTop: Spacing.xxl,
         alignItems: 'center',
-    },
-    cardContainer: {
-        marginBottom: Spacing.lg,
-        borderRadius: Shape.radius.xl,
-        overflow: 'hidden',
-    },
-    headerSection: {
-        paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.lg,
-        paddingBottom: Spacing.xxl,
-    },
-    accountName: {
-        fontSize: Typography.sizes.lg,
-        flex: 1,
-    },
-    balanceSection: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    balanceText: {
-        fontSize: Typography.sizes.xxxl,
-        fontFamily: Typography.fonts.bold,
-    },
-    footerSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.lg,
-    },
-    statsColumn: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    statsLabel: {
-        fontSize: Typography.sizes.xs,
-        marginBottom: Spacing.xs,
-    },
-    statsValue: {
-        fontSize: Typography.sizes.sm,
-    },
-    divider: {
-        width: Spacing.xs,
-        height: Spacing.xxl,
-        borderRadius: 1,
     },
 });

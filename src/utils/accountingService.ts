@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { getBalanceImpactMultiplier, JournalLineInput, validateBalance } from '@/src/utils/accounting-utils';
+import { getBalanceImpactMultiplier, JournalLineInput, validateBalance } from '@/src/utils/accountingHelpers';
 import { roundToPrecision } from '@/src/utils/money';
 
 export interface JournalValidationResult {

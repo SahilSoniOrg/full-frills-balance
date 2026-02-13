@@ -1,12 +1,10 @@
 import { database } from '@/src/data/database/Database'
-import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { accountingService } from '@/src/utils/accountingService'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { logger } from '@/src/utils/logger'
-import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
 export class AccountingRebuildService {
@@ -25,8 +23,7 @@ export class AccountingRebuildService {
         const account = await accountRepository.find(accountId)
         if (!account) throw new Error(`Account ${accountId} not found during running balance rebuild`)
 
-        const debitMult = accountingService.getImpactMultiplier(account.accountType as any, TransactionType.DEBIT)
-        const creditMult = accountingService.getImpactMultiplier(account.accountType as any, TransactionType.CREDIT)
+
 
         const precision = await currencyRepository.getPrecision(account.currencyCode)
 
@@ -71,11 +68,14 @@ export class AccountingRebuildService {
 
         await database.write(async () => {
             for (const tx of transactions) {
-                const effect = tx.transactionType === TransactionType.DEBIT
-                    ? tx.amount * debitMult
-                    : tx.amount * creditMult
 
-                runningBalance = roundToPrecision(runningBalance + effect, precision)
+                runningBalance = accountingService.calculateNewBalance(
+                    runningBalance,
+                    tx.amount,
+                    account.accountType,
+                    tx.transactionType,
+                    precision
+                )
 
                 if (tx.runningBalance !== runningBalance) {
                     await tx.update((txToUpdate) => {
