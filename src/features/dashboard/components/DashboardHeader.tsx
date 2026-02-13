@@ -19,6 +19,7 @@ interface DashboardHeaderProps {
     expense: number;
     searchQuery: string;
     onSearchChange: (query: string) => void;
+    onSearchPress: () => void;
     dateRange: DateRange | null;
     showDatePicker: () => void;
     navigatePrevious?: () => void;
@@ -38,6 +39,7 @@ export function DashboardHeader({
     expense,
     searchQuery,
     onSearchChange,
+    onSearchPress,
     dateRange,
     showDatePicker,
     navigatePrevious,
@@ -67,6 +69,7 @@ export function DashboardHeader({
                     <FilterToolbar
                         searchQuery={searchQuery}
                         onSearchChange={onSearchChange}
+                        onSearchPress={onSearchPress}
                         dateRange={dateRange}
                         showDatePicker={showDatePicker}
                         navigatePrevious={navigatePrevious}

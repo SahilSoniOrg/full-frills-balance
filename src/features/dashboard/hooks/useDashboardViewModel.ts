@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { useJournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
+import { JournalListViewProps } from '@/src/features/journal/components/JournalListView';
+import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useWealthSummary } from '@/src/features/wealth';
 import { useMonthlyFlow } from '@/src/hooks/useMonthlyFlow';
 import { DateRange } from '@/src/utils/dateUtils';
@@ -15,7 +16,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export interface DashboardViewModel {
     isInitialized: boolean;
     hasCompletedOnboarding: boolean;
-    list: ReturnType<typeof useJournalListViewModel>;
+    listViewProps: Omit<JournalListViewProps, 'screenTitle' | 'showBack' | 'listHeader' | 'fab'>;
     headerProps: {
         greeting: string;
         netWorth: number;
@@ -28,6 +29,7 @@ export interface DashboardViewModel {
         expense: number;
         searchQuery: string;
         onSearchChange: (query: string) => void;
+        onSearchPress: () => void;
         dateRange: DateRange | null;
         showDatePicker: () => void;
         navigatePrevious?: () => void;
@@ -57,11 +59,15 @@ export function useDashboardViewModel(): DashboardViewModel {
     } = useMonthlyFlow();
 
     const isSummaryLoading = isWealthLoading || isFlowLoading;
-    const togglePrivacyMode = useCallback(() => setPrivacyMode(!isPrivacyMode), [isPrivacyMode, setPrivacyMode]);
+    const togglePrivacyMode = useCallback(async () => {
+        // Use functional setState to avoid stale closure issues
+        const currentMode = isPrivacyMode;
+        await setPrivacyMode(!currentMode);
+    }, [isPrivacyMode, setPrivacyMode]);
 
     const { strings } = AppConfig;
 
-    const list = useJournalListViewModel({
+    const { listViewProps, vm } = useJournalListScreen({
         pageSize: AppConfig.pagination.dashboardPageSize,
         emptyState: {
             title: strings.dashboard.emptyTitle,
@@ -73,33 +79,62 @@ export function useDashboardViewModel(): DashboardViewModel {
         router.push('/journal-entry');
     }, [router]);
 
+    const onSearchPress = useCallback(() => {
+        router.push('/journal');
+    }, [router]);
+
     const greeting = useMemo(() => strings.dashboard.greeting(userName), [userName, strings.dashboard]);
-    const sectionTitle = list.searchQuery ? strings.dashboard.searchResults : strings.dashboard.recentTransactions;
+    const sectionTitle = vm.searchQuery ? strings.dashboard.searchResults : strings.dashboard.recentTransactions;
+
+    // Memoize headerProps to prevent re-renders when observables fire
+    const headerProps = useMemo(() => ({
+        greeting,
+        netWorth,
+        totalAssets,
+        totalLiabilities,
+        isSummaryLoading,
+        isDashboardHidden: isPrivacyMode,
+        onToggleHidden: togglePrivacyMode,
+        income,
+        expense,
+        searchQuery: vm.searchQuery,
+        onSearchChange: vm.onSearchChange,
+        onSearchPress,
+        dateRange: vm.dateRange,
+        showDatePicker: vm.showDatePicker,
+        navigatePrevious: vm.navigatePrevious,
+        navigateNext: vm.navigateNext,
+        sectionTitle,
+    }), [
+        greeting,
+        netWorth,
+        totalAssets,
+        totalLiabilities,
+        isSummaryLoading,
+        isPrivacyMode,
+        togglePrivacyMode,
+        income,
+        expense,
+        vm.searchQuery,
+        vm.onSearchChange,
+        onSearchPress,
+        vm.dateRange,
+        vm.showDatePicker,
+        vm.navigatePrevious,
+        vm.navigateNext,
+        sectionTitle,
+    ]);
+
+    // Memoize fab object to prevent re-renders
+    const fab = useMemo(() => ({
+        onPress: onAddPress,
+    }), [onAddPress]);
 
     return {
         isInitialized,
         hasCompletedOnboarding,
-        list,
-        headerProps: {
-            greeting,
-            netWorth,
-            totalAssets,
-            totalLiabilities,
-            isSummaryLoading,
-            isDashboardHidden: isPrivacyMode,
-            onToggleHidden: togglePrivacyMode,
-            income,
-            expense,
-            searchQuery: list.searchQuery,
-            onSearchChange: list.onSearchChange,
-            dateRange: list.dateRange,
-            showDatePicker: list.showDatePicker,
-            navigatePrevious: list.navigatePrevious,
-            navigateNext: list.navigateNext,
-            sectionTitle,
-        },
-        fab: {
-            onPress: onAddPress,
-        }
+        listViewProps,
+        headerProps,
+        fab,
     };
 }

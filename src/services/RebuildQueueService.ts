@@ -5,7 +5,7 @@
  * Queues account IDs and processes them in batches with debouncing.
  */
 
-import { accountingRebuildService } from '@/src/services/AccountingRebuildService'
+import { accountingRebuildService } from '@/src/services/accountingRebuildService'
 import { logger } from '@/src/utils/logger'
 
 interface RebuildQueueConfig {

@@ -66,7 +66,6 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     const [selectedIcon, setSelectedIcon] = useState<IconName>('tag');
     const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
     const effectiveAccentColor = accentColor || theme.primary;
-    const { strings } = AppConfig;
 
     const filteredItems = useMemo(() => {
         if (!searchQuery.trim()) return items;

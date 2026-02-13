@@ -129,6 +129,10 @@ export const AppConfig = {
         on: 'On',
         off: 'Off',
       },
+      advancedMode: {
+        title: 'Advanced Mode',
+        description: 'Default to multi-line entry and raw account selection.',
+      },
       stats: {
         title: 'Account Statistics',
         description: 'Show monthly income/expense on cards',

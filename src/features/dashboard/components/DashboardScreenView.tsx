@@ -1,24 +1,25 @@
 import { AppText } from '@/src/components/core';
-import { JournalListView } from '@/src/features/journal/components/JournalListView';
-import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
+import { AppConfig, Spacing } from '@/src/constants';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
-import { Spacing } from '@/src/constants';
+import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
+import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function DashboardScreenView({
     isInitialized,
     hasCompletedOnboarding,
-    list,
+    listViewProps,
     headerProps,
     fab,
 }: DashboardViewModel) {
+    const { strings } = AppConfig;
     if (!isInitialized) {
         return (
             <View style={styles.loading}>
                 <ActivityIndicator size="large" />
-                <AppText variant="body" style={styles.loadingText}>
-                    Loading...
+                <AppText variant="body" color="secondary" style={{ marginTop: Spacing.md }}>
+                    {strings.common.loading}
                 </AppText>
             </View>
         );
@@ -30,22 +31,9 @@ export function DashboardScreenView({
 
     return (
         <JournalListView
+            {...listViewProps}
             showBack={false}
             listHeader={<DashboardHeader {...headerProps} />}
-            items={list.items}
-            isLoading={list.isLoading}
-            isLoadingMore={list.isLoadingMore}
-            loadingText={list.loadingText}
-            loadingMoreText={list.loadingMoreText}
-            emptyTitle={list.emptyState.title}
-            emptySubtitle={list.emptyState.subtitle}
-            onEndReached={list.onEndReached}
-            datePicker={{
-                visible: list.isDatePickerVisible,
-                onClose: list.hideDatePicker,
-                currentFilter: list.periodFilter,
-                onSelect: list.onDateSelect,
-            }}
             fab={fab}
         />
     );

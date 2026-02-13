@@ -1,4 +1,3 @@
-import { useUI } from '@/src/contexts/UIContext';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
 import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
@@ -27,7 +26,6 @@ export function useAccountPersistence(
 ): PersistenceResult {
     const router = useRouter();
     const { createAccount, updateAccount, adjustBalance } = useAccountActions();
-    const { defaultCurrency } = useUI();
     const [isCreating, setIsCreating] = useState(false);
     const isSubmitting = useRef(false);
 

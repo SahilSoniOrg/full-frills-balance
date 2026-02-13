@@ -1,7 +1,7 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
     Platform,
     StyleSheet,
@@ -22,19 +22,38 @@ interface ExpandableSearchButtonProps {
     onChangeText: (text: string) => void;
     placeholder?: string;
     onExpandChange?: (isExpanded: boolean) => void;
+    /**
+     * Optional callback when search button is pressed.
+     * 
+     * BEHAVIOR MODES:
+     * - WITHOUT onPress: Button expands inline to show search input (default)
+     * - WITH onPress: Button navigates/triggers action instead of expanding
+     * 
+     * Use onPress when you want the search button to navigate to a dedicated
+     * search screen rather than expanding inline.
+     */
+    onPress?: () => void;
 }
 
 /**
- * ExpandableSearchButton - A search icon that expands to a full search field on tap
+ * ExpandableSearchButton - A search icon with two behavior modes
  * 
- * Collapsed: Shows only the search icon
- * Expanded: Shows full search input with clear button
+ * MODE 1 (default): Inline expansion
+ * - Collapsed: Shows only the search icon
+ * - On tap: Expands to full search input with clear button
+ * - Use when: Search should happen in-place
+ * 
+ * MODE 2 (with onPress): Navigation
+ * - Collapsed: Shows only the search icon
+ * - On tap: Calls onPress (typically for navigation)
+ * - Use when: Search should open a dedicated screen
  */
 export const ExpandableSearchButton = ({
     value,
     onChangeText,
     placeholder = "Search...",
     onExpandChange,
+    onPress,
 }: ExpandableSearchButtonProps) => {
     const { theme } = useTheme();
     const {
@@ -45,10 +64,20 @@ export const ExpandableSearchButton = ({
         inputRef
     } = useExpandableSearch({ value, onChangeText, onExpandChange });
 
+    const handlePress = useCallback(() => {
+        if (onPress) {
+            // Navigation mode: trigger callback instead of expanding
+            onPress();
+        } else {
+            // Inline mode: expand to show search input
+            handleExpand();
+        }
+    }, [onPress, handleExpand]);
+
     if (!isExpanded) {
         return (
             <TouchableOpacity
-                onPress={handleExpand}
+                onPress={handlePress}
                 style={[styles.iconButton, { backgroundColor: theme.surface }]}
                 activeOpacity={Opacity.heavy}
             >

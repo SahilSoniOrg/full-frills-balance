@@ -4,7 +4,7 @@ import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
-import { accountingRebuildService } from '@/src/services/AccountingRebuildService'
+import { accountingRebuildService } from '@/src/services/accountingRebuildService'
 
 import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 

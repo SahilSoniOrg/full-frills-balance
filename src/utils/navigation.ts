@@ -15,9 +15,9 @@ export const AppNavigation = {
      */
     toJournalEntry: (journalId?: string) => {
         if (journalId) {
-            router.push(`/journal/entry?journalId=${journalId}` as any);
+            router.push(`/journal-entry?journalId=${journalId}` as any);
         } else {
-            router.push('/journal/entry' as any);
+            router.push('/journal-entry' as any);
         }
     },
 

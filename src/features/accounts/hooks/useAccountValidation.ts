@@ -1,4 +1,4 @@
-import { Account } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { sanitizeInput, validateAccountName } from '@/src/utils/validation';
 import { useEffect, useState } from 'react';
 

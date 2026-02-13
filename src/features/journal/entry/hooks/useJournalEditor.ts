@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { useUI } from '@/src/contexts/UIContext';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -24,10 +25,42 @@ export interface UseJournalEditorOptions {
  */
 export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     const router = useRouter();
-    const { journalId, initialMode = 'simple', initialType = 'expense' } = options;
+    const { advancedMode, setAdvancedMode } = useUI();
+    const { journalId, initialMode, initialType = 'expense' } = options;
     const { fetchRate } = useExchangeRate();
 
-    const [isGuidedMode, setIsGuidedMode] = useState(initialMode === 'simple');
+    /**
+     * Initialize mode from explicit prop or user preference
+     * - If initialMode is provided: use it (overrides preference)
+     * - Otherwise: use the user's saved advancedMode preference
+     */
+    const [isGuidedMode, setIsGuidedMode] = useState(() => {
+        if (initialMode) return initialMode === 'simple';
+        return !advancedMode;
+    });
+
+    /**
+     * Sync user's mode preference when they manually toggle
+     * 
+     * BEHAVIOR:
+     * - When user toggles Simple ↔ Advanced, save their preference
+     * - Only syncs if no explicit initialMode was provided
+     * - initialMode (if present) acts as a one-time override, not a persistent preference
+     * 
+     * This ensures:
+     * 1. Deep links can force a specific mode (via initialMode)
+     * 2. User's manual toggles are remembered for next time
+     * 3. The preference persists across app restarts
+     */
+    useEffect(() => {
+        // Only sync if no explicit initialMode was provided (which overrides preference)
+        if (!initialMode) {
+            const newAdvancedMode = !isGuidedMode;
+            if (newAdvancedMode !== advancedMode) {
+                setAdvancedMode(newAdvancedMode);
+            }
+        }
+    }, [isGuidedMode, advancedMode, setAdvancedMode, initialMode]);
     const [transactionType, setTransactionType] = useState<'expense' | 'income' | 'transfer'>(initialType);
     const isEdit = !!journalId;
 

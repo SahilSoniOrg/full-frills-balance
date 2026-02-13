@@ -15,7 +15,7 @@
 import { ThemeMode } from '@/src/constants'
 import { logger } from '@/src/utils/logger'
 import { preferences } from '@/src/utils/preferences'
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useColorScheme } from 'react-native'
 
 // Simple UI state only - no domain data
@@ -40,6 +40,9 @@ interface UIState {
   // Account Display
   showAccountMonthlyStats: boolean
 
+  // Advanced Mode
+  advancedMode: boolean
+
   // App Lifecycle
   isRestartRequired: boolean
   restartType: 'IMPORT' | 'RESET' | null
@@ -55,6 +58,7 @@ interface UIContextType extends UIState {
   updateUserDetails: (name: string, currency: string) => Promise<void>
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>
+  setAdvancedMode: (advancedMode: boolean) => Promise<void>
   requireRestart: (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => void
 }
 
@@ -72,6 +76,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     defaultCurrency: 'USD',
     isPrivacyMode: false,
     showAccountMonthlyStats: true,
+    advancedMode: false,
     isRestartRequired: false,
     restartType: null,
     importStats: null,
@@ -99,6 +104,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           defaultCurrency: loadedPreferences.defaultCurrencyCode || 'USD',
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
           showAccountMonthlyStats: loadedPreferences.showAccountMonthlyStats ?? true,
+          advancedMode: loadedPreferences.advancedMode || false,
           isRestartRequired: false,
           restartType: null,
           importStats: null,
@@ -115,7 +121,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     loadPreferences()
   }, [systemColorScheme])
 
-  const completeOnboarding = async (name: string, currency: string) => {
+  const completeOnboarding = useCallback(async (name: string, currency: string) => {
     try {
       await preferences.setUserName(name)
       await preferences.setDefaultCurrencyCode(currency)
@@ -131,9 +137,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       // Still update local state for better UX
       setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }))
     }
-  }
+  }, [])
 
-  const updateUserDetails = async (name: string, currency: string) => {
+  const updateUserDetails = useCallback(async (name: string, currency: string) => {
     try {
       if (name) await preferences.setUserName(name)
       if (currency) await preferences.setDefaultCurrencyCode(currency)
@@ -145,9 +151,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       logger.warn('Failed to update user details', { error })
     }
-  }
+  }, [])
 
-  const setThemePreference = async (theme: 'light' | 'dark' | 'system') => {
+  const setThemePreference = useCallback(async (theme: 'light' | 'dark' | 'system') => {
     try {
       await preferences.setTheme(theme)
       setUIState(prev => ({ ...prev, themePreference: theme }))
@@ -156,9 +162,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       // Still update local state for better UX
       setUIState(prev => ({ ...prev, themePreference: theme }))
     }
-  }
+  }, [])
 
-  const setPrivacyMode = async (isPrivacyMode: boolean) => {
+  const setPrivacyMode = useCallback(async (isPrivacyMode: boolean) => {
     try {
       await preferences.setIsPrivacyMode(isPrivacyMode)
       setUIState(prev => ({ ...prev, isPrivacyMode }))
@@ -166,9 +172,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       logger.warn('Failed to save privacy mode', { error })
       setUIState(prev => ({ ...prev, isPrivacyMode }))
     }
-  }
+  }, [])
 
-  const setShowAccountMonthlyStats = async (showAccountMonthlyStats: boolean) => {
+  const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
     try {
       await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats)
       setUIState(prev => ({ ...prev, showAccountMonthlyStats }))
@@ -176,7 +182,17 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       logger.warn('Failed to save account stats preference', { error })
       setUIState(prev => ({ ...prev, showAccountMonthlyStats }))
     }
-  }
+  }, [])
+
+  const setAdvancedMode = useCallback(async (advancedMode: boolean) => {
+    try {
+      await preferences.setAdvancedMode(advancedMode)
+      setUIState(prev => ({ ...prev, advancedMode }))
+    } catch (error) {
+      logger.warn('Failed to save advanced mode', { error })
+      setUIState(prev => ({ ...prev, advancedMode }))
+    }
+  }, [])
 
   const requireRestart = (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => {
     setUIState(prev => ({ ...prev, isRestartRequired: true, restartType: options.type, importStats: options.stats || null }))
@@ -190,6 +206,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     updateUserDetails,
     setPrivacyMode,
     setShowAccountMonthlyStats,
+    setAdvancedMode,
     requireRestart,
   }
 

@@ -9,7 +9,7 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-interface JournalListViewProps {
+export interface JournalListViewProps {
     screenTitle?: string;
     showBack?: boolean;
     backIcon?: React.ComponentProps<typeof Screen>['backIcon'];

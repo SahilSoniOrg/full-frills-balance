@@ -10,6 +10,7 @@ export interface FilterToolbarProps {
     searchQuery: string;
     onSearchChange: (query: string) => void;
     searchPlaceholder?: string;
+    onSearchPress?: () => void; // Optional callback when search button is pressed (for navigation)
 
     // Date Filter
     dateRange: DateRange | null;
@@ -31,6 +32,7 @@ export const FilterToolbar = ({
     searchQuery,
     onSearchChange,
     searchPlaceholder,
+    onSearchPress,
     dateRange,
     showDatePicker,
     navigatePrevious,
@@ -39,25 +41,27 @@ export const FilterToolbar = ({
     onSearchExpandChange,
     style,
 }: FilterToolbarProps) => {
-    const [isInternalExpanded, setIsInternalExpanded] = React.useState(false);
+    // Derive expanded state from search query (single source of truth)
+    // Expanded state is based purely on whether there's a search query
+    const isExpanded = searchQuery.length > 0;
 
     const handleExpandChange = React.useCallback((expanded: boolean) => {
-        setIsInternalExpanded(expanded);
         onSearchExpandChange?.(expanded);
     }, [onSearchExpandChange]);
 
     return (
         <View style={[styles.container, style]}>
-            <View style={[styles.searchWrapper, isInternalExpanded && styles.expandedWrapper]}>
+            <View style={[styles.searchWrapper, isExpanded && styles.expandedWrapper]}>
                 <ExpandableSearchButton
                     value={searchQuery}
                     onChangeText={onSearchChange}
                     placeholder={searchPlaceholder}
                     onExpandChange={handleExpandChange}
+                    onPress={onSearchPress}
                 />
             </View>
 
-            {!isInternalExpanded && (
+            {!isExpanded && (
                 <DateRangeFilter
                     range={dateRange}
                     onPress={showDatePicker}

@@ -17,6 +17,7 @@ interface UIPreferences {
   lastUsedDestinationAccountId?: string;
   isPrivacyMode: boolean;
   showAccountMonthlyStats: boolean;
+  advancedMode: boolean;
 }
 
 class PreferencesHelper {
@@ -26,6 +27,7 @@ class PreferencesHelper {
     defaultCurrencyCode: 'USD',
     isPrivacyMode: false,
     showAccountMonthlyStats: true,
+    advancedMode: false,
   };
 
   async loadPreferences(): Promise<UIPreferences> {
@@ -145,12 +147,22 @@ class PreferencesHelper {
     await this.savePreferences();
   }
 
+  get advancedMode(): boolean {
+    return this.preferences.advancedMode;
+  }
+
+  async setAdvancedMode(advancedMode: boolean): Promise<void> {
+    this.preferences.advancedMode = advancedMode;
+    await this.savePreferences();
+  }
+
   // Clear all preferences (useful for testing or reset)
   async clearPreferences(): Promise<void> {
     this.preferences = {
       onboardingCompleted: false,
       isPrivacyMode: false,
-      showAccountMonthlyStats: true
+      showAccountMonthlyStats: true,
+      advancedMode: false,
     };
     try {
       await AsyncStorage.removeItem(PREFERENCES_KEY);
