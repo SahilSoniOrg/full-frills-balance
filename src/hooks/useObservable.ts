@@ -82,7 +82,7 @@ export function useObservable<T>(
             subscription.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [stableFactory, initialValue, keepPreviousData, ...deps]);
+    }, [stableFactory, keepPreviousData, ...deps]);
 
     return { data, isLoading, error, version };
 }
@@ -151,7 +151,7 @@ export function useObservableWithEnrichment<T, E>(
             subscription.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [stableFactory, stableEnricher, initialValue, ...deps]);
+    }, [stableFactory, stableEnricher, ...deps]);
 
     return { data, isLoading, error, version };
 }
