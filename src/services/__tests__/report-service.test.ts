@@ -2,7 +2,6 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ReportService } from '@/src/services/report-service';
 import dayjs from 'dayjs';
@@ -31,47 +30,6 @@ describe('ReportService', () => {
         );
     });
 
-    describe('getNetWorthHistory', () => {
-        it('should return empty array if no assets/liabilities', async () => {
-            (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
-            const result = await service.getNetWorthHistory(START_DATE, END_DATE);
-            expect(result).toEqual([]);
-        });
-
-        it('should correctly calculating history by rewinding transactions', async () => {
-            const mockBalances = [
-                { accountId: 'acc1', accountType: AccountType.ASSET, balance: 1000, currencyCode: 'USD' }
-            ];
-            (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
-
-            const mockTransactions = [
-                {
-                    accountId: 'acc1',
-                    transactionDate: dayjs('2024-01-15').valueOf(),
-                    amount: 1000,
-                    transactionType: TransactionType.DEBIT, // Increased asset
-                    currencyCode: 'USD'
-                }
-            ];
-            (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(mockTransactions);
-
-            const MOCK_NOW = dayjs('2024-01-31').valueOf();
-            jest.useFakeTimers();
-            jest.setSystemTime(MOCK_NOW);
-
-            const history = await service.getNetWorthHistory(START_DATE, END_DATE);
-
-            // Expect Jan 31 to equal current balance (1000)
-            const lastEntry = history.find(h => dayjs(h.date).isSame('2024-01-31', 'day'));
-            expect(lastEntry?.totalAssets).toBe(1000);
-
-            // Expect Jan 1 to be 0 (before the 1000 income)
-            const firstEntry = history.find(h => dayjs(h.date).isSame('2024-01-01', 'day'));
-            expect(firstEntry?.totalAssets).toBe(0);
-
-            jest.useRealTimers();
-        });
-    });
 
     describe('getExpenseBreakdown', () => {
         it('should aggregate expenses by account', async () => {

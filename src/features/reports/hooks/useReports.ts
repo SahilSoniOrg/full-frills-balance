@@ -6,6 +6,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
+import { wealthService } from '@/src/services/wealth-service';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
@@ -49,7 +50,7 @@ export function useReports() {
             const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
 
             const [history, breakdown, incVsExp] = await Promise.all([
-                reportService.getNetWorthHistory(startDate, endDate, targetCurrency),
+                wealthService.getNetWorthHistory(startDate, endDate, targetCurrency),
                 reportService.getExpenseBreakdown(startDate, endDate, targetCurrency),
                 reportService.getIncomeVsExpense(startDate, endDate, targetCurrency)
             ]);
