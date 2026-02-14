@@ -4,7 +4,7 @@ import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
-import { accountingRebuildService } from '@/src/services/accountingRebuildService'
+import { accountingRebuildService } from '@/src/services/AccountingRebuildService'
 
 import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 
@@ -77,7 +77,7 @@ describe('TransactionRepository', () => {
                 ]
             }) // -50
 
-            await accountingRebuildService.rebuildAccountBalances(accountId)
+            await accountingRebuildService.rebuildAccountBalances(accountId, 0)
 
             const txs = await transactionRepository.findByAccount(accountId)
             // Sorted by date desc: T2 (2000), T1 (1000)
