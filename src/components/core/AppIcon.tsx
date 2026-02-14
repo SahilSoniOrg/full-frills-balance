@@ -31,6 +31,7 @@ import {
     FolderOpen,
     Home,
     Landmark,
+    LogOut,
     Menu,
     MoreVertical,
     Plus,
@@ -103,6 +104,7 @@ export const IconMap = {
     film: Film,
     shoppingBag: ShoppingBag,
     hierarchy: FolderOpen,
+    eject: LogOut,
 } as const;
 
 export type IconName = keyof typeof IconMap;
@@ -115,7 +117,8 @@ export const isValidIconName = (name: string | undefined): name is IconName => {
 };
 
 interface AppIconProps {
-    name: IconName;
+    name: IconName | string | undefined;
+    fallbackIcon?: IconName;
     color?: string;
     size?: number;
     style?: ViewStyle;
@@ -128,18 +131,23 @@ interface AppIconProps {
  */
 export const AppIcon = ({
     name,
+    fallbackIcon,
     color,
     size = 24,
     style,
     strokeWidth = 2
 }: AppIconProps) => {
     const { theme } = useTheme();
-    const IconComponent = IconMap[name];
 
-    if (!IconComponent) {
-        // logger.warn(`Icon "${name}" not found in IconMap`);
-        return null;
-    }
+    const iconToUse = (name && name in IconMap)
+        ? name as IconName
+        : (fallbackIcon && fallbackIcon in IconMap)
+            ? fallbackIcon
+            : null;
+
+    if (!iconToUse) return null;
+
+    const IconComponent = IconMap[iconToUse];
 
     return (
         <IconComponent

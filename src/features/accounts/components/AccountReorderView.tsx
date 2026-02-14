@@ -51,7 +51,11 @@ export function AccountReorderView({
                                 <AppCard padding="none" style={styles.itemCard}>
                                     <View style={styles.itemContent}>
                                         <View style={styles.dragHandle}>
-                                            <AppIcon name={getAccountIcon(account) as any} size={24} color={theme.primary} />
+                                            <AppIcon
+                                                name={getAccountIcon(account)}
+                                                fallbackIcon="wallet"
+                                                color={theme.primary}
+                                            />
                                         </View>
 
                                         <View style={styles.accountInfo}>
