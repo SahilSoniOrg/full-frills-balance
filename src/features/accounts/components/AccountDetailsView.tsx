@@ -1,13 +1,14 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionCard } from '@/src/components/common/TransactionCard';
-import { AppButton, AppCard, AppIcon, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/src/components/core';
+import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Shape, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 export function AccountDetailsView(vm: AccountDetailsViewModel) {
     const { theme } = useTheme();
@@ -38,7 +39,12 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         transactionsLoading,
         transactionItems,
         secondaryBalances,
+        isParent,
+        subAccountCount,
+        accountId,
     } = vm;
+
+    const router = useRouter();
 
     if (accountLoading) {
         return (
@@ -67,6 +73,12 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
 
     const headerActionsNode = (
         <View style={styles.headerActions}>
+            <IconButton
+                name="history"
+                onPress={onAuditPress}
+                variant="surface"
+                iconColor={theme.textSecondary}
+            />
             {headerActions.canRecover ? (
                 <IconButton
                     name="refresh"
@@ -97,7 +109,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
 
     return (
         <Screen
-            title="Account Details"
+            title={isParent ? 'Group Account' : 'Account Details'}
             headerActions={headerActionsNode}
         >
             <FlatList
@@ -117,16 +129,27 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                     name={accountIcon as any}
                                     label={accountName}
                                     color={theme[accountTypeColorKey as keyof typeof theme] as string}
-                                    size={48}
+                                    size={Size.avatarMd}
+                                    shape={isParent ? 'square' : 'circle'}
                                 />
                                 <View style={styles.titleInfo}>
                                     <AppText variant="title">
                                         {accountName}
                                     </AppText>
-                                    <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
+                                    <View style={{ flexDirection: 'row', gap: Spacing.xs, alignItems: 'center' }}>
                                         <Badge variant={accountTypeVariant as any}>
                                             {accountType}
                                         </Badge>
+                                        {isParent && (
+                                            <Pressable
+                                                onPress={() => router.push({ pathname: '/manage-hierarchy', params: { accountId } })}
+                                                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                                            >
+                                                <Badge variant={accountTypeVariant as any} icon="hierarchy">
+                                                    {subAccountCount} {subAccountCount === 1 ? 'SUB-ACCOUNT' : 'SUB-ACCOUNTS'}
+                                                </Badge>
+                                            </Pressable>
+                                        )}
                                         {isDeleted && (
                                             <Badge variant="expense">
                                                 DELETED
@@ -163,17 +186,6 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                         {transactionCountText}
                                     </AppText>
                                 </View>
-                            </View>
-
-                            <View style={[styles.accountMeta, { borderTopWidth: 1, borderTopColor: theme.border }]}
-                            >
-                                <TouchableOpacity
-                                    style={styles.historyLink}
-                                    onPress={onAuditPress}
-                                >
-                                    <AppText variant="caption" color="primary" weight="semibold">View Edit History</AppText>
-                                    <AppIcon name="chevronRight" size={14} color={theme.primary} />
-                                </TouchableOpacity>
                             </View>
                         </AppCard>
 
@@ -268,16 +280,6 @@ const styles = StyleSheet.create({
     secondaryBalances: {
         marginTop: Spacing.xs,
         gap: 2,
-    },
-    accountMeta: {
-        gap: Spacing.xs,
-        paddingTop: Spacing.md,
-    },
-    historyLink: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.xs,
-        marginTop: Spacing.sm,
     },
     sectionHeader: {
         flexDirection: 'row',

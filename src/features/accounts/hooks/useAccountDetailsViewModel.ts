@@ -1,7 +1,7 @@
 import { TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
-import { useAccount, useAccountActions, useAccountBalance } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccount, useAccountActions, useAccountBalance, useAccountHasChildren, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
 import { useAccountTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
@@ -20,6 +20,7 @@ export interface TransactionCardItemViewModel {
 }
 
 export interface AccountDetailsViewModel {
+    accountId: string;
     accountLoading: boolean;
     accountMissing: boolean;
     accountName: string;
@@ -51,6 +52,8 @@ export interface AccountDetailsViewModel {
     transactionsLoading: boolean;
     transactionItems: TransactionCardItemViewModel[];
     secondaryBalances: { currencyCode: string; amountText: string }[];
+    isParent: boolean;
+    subAccountCount: number;
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
@@ -71,6 +74,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     } = useDateRangeFilter({ defaultToCurrentMonth: true });
 
     const { account, isLoading: accountLoading } = useAccount(accountId);
+    const { hasChildren: isParent } = useAccountHasChildren(accountId);
+    const { subAccountCount } = useAccountSubAccountCount(accountId);
     const { transactions, isLoading: transactionsLoading } = useAccountTransactions(accountId, 50, dateRange || undefined);
     const { balanceData, isLoading: balanceLoading } = useAccountBalance(accountId);
     const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
@@ -247,5 +252,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         transactionsLoading,
         transactionItems,
         secondaryBalances,
+        isParent: !!isParent,
+        subAccountCount: subAccountCount || 0,
+        accountId,
     };
 }

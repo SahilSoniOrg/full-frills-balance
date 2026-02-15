@@ -81,9 +81,10 @@ export function useAccountBalance(accountId: string | null) {
                 switchMap(async ([account]) => {
                     if (!account) return null
 
-                    // Optimized: fetch only this account's balance
-                    const balance = await balanceService.getAccountBalance(account.id, Date.now())
-                    return balance
+                    // Use aggregated balances to support parent accounts
+                    const targetCurrency = defaultCurrency || AppConfig.defaultCurrency
+                    const balances = await balanceService.getAccountBalances(Date.now(), targetCurrency)
+                    return balances.find(b => b.accountId === account.id) || null
                 })
             )
         },
@@ -92,6 +93,30 @@ export function useAccountBalance(accountId: string | null) {
     )
 
     return { balanceData, isLoading, version, error }
+}
+
+/**
+ * Hook to reactively check if an account has children.
+ */
+export function useAccountHasChildren(accountId: string | null) {
+    const { data: hasChildren, isLoading, version, error } = useObservable(
+        () => accountId ? accountRepository.observeHasChildren(accountId) : of(false),
+        [accountId],
+        false
+    )
+    return { hasChildren, isLoading, version, error }
+}
+
+/**
+ * Hook to reactively get the number of sub-accounts for a parent.
+ */
+export function useAccountSubAccountCount(accountId: string | null) {
+    const { data: subAccountCount, isLoading, version, error } = useObservable(
+        () => accountId ? accountRepository.observeSubAccountCount(accountId) : of(0),
+        [accountId],
+        0
+    )
+    return { subAccountCount, isLoading, version, error }
 }
 
 /**

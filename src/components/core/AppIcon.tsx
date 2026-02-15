@@ -29,6 +29,7 @@ import {
     FileText,
     Film,
     FolderOpen,
+    History,
     Home,
     Landmark,
     LogOut,
@@ -104,6 +105,7 @@ export const IconMap = {
     film: Film,
     shoppingBag: ShoppingBag,
     hierarchy: FolderOpen,
+    history: History,
     eject: LogOut,
 } as const;
 

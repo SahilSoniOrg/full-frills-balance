@@ -38,7 +38,7 @@ export function ManageHierarchyView(vm: ManageHierarchyViewModel) {
         const children = accountsByParent.get(account.id) || [];
         const hasChildren = children.length > 0;
         const isExpanded = expandedAccountIds.has(account.id);
-        const canBeParent = (balance?.transactionCount || 0) === 0;
+        const canBeParent = (balance?.directTransactionCount || 0) === 0;
         const isExpandable = hasChildren || canBeParent;
         const isSelected = selectedAccountId === account.id;
         const accountTypeKey = account.accountType.toLowerCase() as keyof typeof theme;

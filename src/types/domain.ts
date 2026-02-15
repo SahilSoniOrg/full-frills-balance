@@ -24,6 +24,7 @@ export interface AccountBalance {
     balance: number;
     currencyCode: string;
     transactionCount: number;
+    directTransactionCount: number;
     asOfDate: number;
     accountType: AccountType;
     icon?: string;

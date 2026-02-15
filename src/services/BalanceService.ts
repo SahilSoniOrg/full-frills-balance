@@ -154,6 +154,7 @@ export class BalanceService {
                     parentBalance.balance = roundToPrecision(parentBalance.balance + amountToAdd, precision);
                     parentBalance.monthlyIncome = roundToPrecision(parentBalance.monthlyIncome + incomeToAdd, precision);
                     parentBalance.monthlyExpenses = roundToPrecision(parentBalance.monthlyExpenses + expensesToAdd, precision);
+                    parentBalance.transactionCount += myBalance.transactionCount;
                 };
 
                 conversionPromises.push(processConversion());
@@ -186,6 +187,7 @@ export class BalanceService {
                 balance: 0,
                 currencyCode: account.currencyCode,
                 transactionCount: 0,
+                directTransactionCount: 0,
                 asOfDate: cutoffDate,
                 accountType: account.accountType as AccountType,
                 monthlyIncome: 0,
@@ -200,6 +202,7 @@ export class BalanceService {
             balance: latestTx.runningBalance || 0,
             currencyCode: account.currencyCode,
             transactionCount: txCount,
+            directTransactionCount: txCount,
             asOfDate: cutoffDate,
             accountType: account.accountType as AccountType,
             // Monthly stats are still 0 here as we rely on full re-scan for those in useAccountBalances

@@ -224,6 +224,13 @@ export class AccountRepository {
     )
   }
 
+  observeSubAccountCount(accountId: string) {
+    return this.accounts.query(
+      Q.where('parent_account_id', accountId),
+      Q.where('deleted_at', Q.eq(null))
+    ).observeCount()
+  }
+
   private async ensureUniqueName(name: string, excludeId?: string): Promise<void> {
     const sanitizedName = name.trim()
 
