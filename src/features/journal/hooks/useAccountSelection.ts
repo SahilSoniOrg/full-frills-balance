@@ -33,16 +33,21 @@ export function useAccountSelection({ accounts, initialSelectedId, onSelect }: U
         });
     }, []);
 
-    const sections = useMemo(() => {
-        return getAccountSections(accounts);
+    const leafAccounts = useMemo(() => {
+        const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
+        return accounts.filter(a => !parentIds.has(a.id));
     }, [accounts]);
+
+    const sections = useMemo(() => {
+        return getAccountSections(leafAccounts);
+    }, [leafAccounts]);
 
     const transactionAccounts = useMemo(() => {
-        return accounts.filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY);
-    }, [accounts]);
+        return leafAccounts.filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY);
+    }, [leafAccounts]);
 
-    const expenseAccounts = useMemo(() => accounts.filter(a => a.accountType === AccountType.EXPENSE), [accounts]);
-    const incomeAccounts = useMemo(() => accounts.filter(a => a.accountType === AccountType.INCOME), [accounts]);
+    const expenseAccounts = useMemo(() => leafAccounts.filter(a => a.accountType === AccountType.EXPENSE), [leafAccounts]);
+    const incomeAccounts = useMemo(() => leafAccounts.filter(a => a.accountType === AccountType.INCOME), [leafAccounts]);
 
     return {
         selectedId,

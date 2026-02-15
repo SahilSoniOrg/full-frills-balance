@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -89,10 +90,14 @@ export const wealthService = {
         const end = dayjs(endDate).endOf('day');
         const now = dayjs().endOf('day');
 
-        // 1. Get current balances
+        // 1. Get current balances and filter for leaf accounts to prevent double-counting
+        const allAccounts = await accountRepository.findAll();
+        const parentIds = new Set(allAccounts.map((a: { parentAccountId?: string }) => a.parentAccountId).filter(Boolean) as string[]);
+
         const allBalances = await balanceService.getAccountBalances();
-        const relevantBalances = allBalances.filter(a =>
-            a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY
+        const relevantBalances = allBalances.filter((a: AccountBalance) =>
+            !parentIds.has(a.accountId) &&
+            (a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY)
         );
 
         if (relevantBalances.length === 0) return [];

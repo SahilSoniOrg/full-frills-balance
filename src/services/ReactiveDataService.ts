@@ -74,8 +74,12 @@ class ReactiveDataService {
                     // Optimized balance fetching with parallel aggregation
                     const balances = await balanceService.getAccountBalances(Date.now(), targetCurrency);
 
-                    // Calculate wealth summary from balances
-                    const wealthSummary = await wealthService.calculateSummary(balances, targetCurrency);
+                    // Filter for leaf accounts ONLY for summary to prevent double-counting
+                    const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
+                    const leafBalances = balances.filter(b => !parentIds.has(b.accountId));
+
+                    // Calculate wealth summary from leaf balances
+                    const wealthSummary = await wealthService.calculateSummary(leafBalances, targetCurrency);
 
                     return {
                         accounts,

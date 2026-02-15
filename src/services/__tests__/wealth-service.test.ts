@@ -20,11 +20,13 @@ describe('WealthService', () => {
     const END_DATE = dayjs('2024-01-31').valueOf();
 
     beforeEach(() => {
+        const { accountRepository } = require('@/src/data/repositories/AccountRepository');
         jest.clearAllMocks();
-        // Default behavior: return amount as is (1:1 rate)
+        // Default behaviors
         (exchangeRateService.convert as jest.Mock).mockImplementation((amount, from, to) =>
             Promise.resolve({ convertedAmount: amount, rate: 1 })
         );
+        (accountRepository.findAll as jest.Mock).mockResolvedValue([]);
     });
 
     describe('calculateSummary', () => {
@@ -107,6 +109,30 @@ describe('WealthService', () => {
             expect(firstEntry?.totalAssets).toBe(0);
 
             jest.useRealTimers();
+        });
+
+        it('should filter out parent accounts to avoid double-counting', async () => {
+            const { accountRepository } = require('@/src/data/repositories/AccountRepository');
+
+            const mockAccounts = [
+                { id: 'parent1', name: 'Parent', accountType: AccountType.ASSET, parentAccountId: undefined },
+                { id: 'child1', name: 'Child', accountType: AccountType.ASSET, parentAccountId: 'parent1' }
+            ];
+            (accountRepository.findAll as jest.Mock).mockResolvedValue(mockAccounts);
+
+            const mockBalances = [
+                { accountId: 'parent1', accountType: AccountType.ASSET, balance: 1500, currencyCode: 'USD' }, // Aggregated
+                { accountId: 'child1', accountType: AccountType.ASSET, balance: 1500, currencyCode: 'USD' }   // Leaf
+            ];
+            (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
+            (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+
+            const history = await wealthService.getNetWorthHistory(START_DATE, END_DATE);
+
+            const lastEntry = history[history.length - 1];
+            // Should only count child1 (1500), not parent1 + child1 (3000)
+            expect(lastEntry.totalAssets).toBe(1500);
+            expect(lastEntry.netWorth).toBe(1500);
         });
     });
 });
