@@ -1,7 +1,7 @@
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionCard } from '@/src/components/common/TransactionCard';
 import { TypedFlashList } from '@/src/components/common/TypedFlashList';
-import { AppText, FloatingActionButton } from '@/src/components/core';
+import { AppText, EmptyStateView, FloatingActionButton, LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { JournalListItemViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
@@ -57,21 +57,9 @@ export function JournalListView({
 }: JournalListViewProps) {
 
     const listEmpty = isLoading ? (
-        <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" />
-            <AppText variant="body" color="secondary" style={{ marginTop: Spacing.sm }}>
-                {loadingText}
-            </AppText>
-        </View>
+        <LoadingView loading={isLoading} text={loadingText} size="small" />
     ) : (
-        <View style={styles.emptyContainer}>
-            <AppText variant="heading" style={styles.emptyText}>
-                {emptyTitle}
-            </AppText>
-            <AppText variant="body" color="secondary" style={styles.emptySubtext}>
-                {emptySubtitle}
-            </AppText>
-        </View>
+        <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
     );
 
     const listFooter = isLoadingMore ? (
@@ -127,23 +115,6 @@ export function JournalListView({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingTop: Spacing.xxxxl * 2,
-    },
-    emptyText: {
-        marginBottom: Spacing.sm,
-    },
-    emptySubtext: {
-        textAlign: 'center',
     },
     loadingMore: {
         flexDirection: 'row',

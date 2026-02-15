@@ -6,11 +6,14 @@ import { Screen } from '@/src/components/layout';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { ExpenseCategory } from '@/src/services/report-service';
-import type { DailyNetWorth } from '@/src/services/wealth-service';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+
+const NET_WORTH_CHART_HEIGHT = 180;
+const EXPENSE_DONUT_SIZE = 160;
+const EXPENSE_DONUT_STROKE = 25;
+const BAR_SPACER_WIDTH = Spacing.xs;
+const BALANCE_BAR_HEIGHT = Spacing.sm;
 
 export function ReportsView(vm: ReportsViewModel) {
     const { theme } = useTheme();
@@ -21,12 +24,17 @@ export function ReportsView(vm: ReportsViewModel) {
         onDateSelect,
         dateLabel,
         loading,
-        netWorthHistory,
-        expenses,
-        incomeVsExpense,
-        currentNetWorth,
         periodFilter,
         onRefresh,
+        netWorthSeries,
+        currentNetWorthText,
+        incomeTotalText,
+        expenseTotalText,
+        incomeBarFlex,
+        expenseBarFlex,
+        expenseDonutData,
+        legendRows,
+        hasExpenseData,
     } = vm;
 
     return (
@@ -54,18 +62,12 @@ export function ReportsView(vm: ReportsViewModel) {
                     <View style={styles.headerRow}>
                         <View>
                             <AppText variant="caption" color="secondary">{AppConfig.strings.reports.netWorthChange}</AppText>
-                            <AppText variant="heading">
-                                {CurrencyFormatter.formatWithPreference(currentNetWorth)}
-                            </AppText>
+                            <AppText variant="heading">{currentNetWorthText}</AppText>
                         </View>
                     </View>
 
                     <View style={styles.chartContainer}>
-                        <LineChart
-                            data={netWorthHistory.map((d: DailyNetWorth) => ({ x: d.date, y: d.netWorth }))}
-                            height={180}
-                            color={theme.primary}
-                        />
+                        <LineChart data={netWorthSeries} height={NET_WORTH_CHART_HEIGHT} color={theme.primary} />
                     </View>
                 </AppCard>
 
@@ -75,41 +77,33 @@ export function ReportsView(vm: ReportsViewModel) {
                     <View style={styles.balanceRow}>
                         <View style={styles.balanceItem}>
                             <AppText variant="caption" color="secondary">{AppConfig.strings.reports.totalIncome}</AppText>
-                            <AppText variant="subheading" style={{ color: theme.success }}>
-                                {CurrencyFormatter.formatWithPreference(incomeVsExpense.income)}
-                            </AppText>
+                            <AppText variant="subheading" style={{ color: theme.success }}>{incomeTotalText}</AppText>
                         </View>
                         <View style={[styles.divider, { backgroundColor: theme.border }]} />
                         <View style={styles.balanceItem}>
                             <AppText variant="caption" color="secondary">{AppConfig.strings.reports.totalExpense}</AppText>
-                            <AppText variant="subheading" style={{ color: theme.error }}>
-                                {CurrencyFormatter.formatWithPreference(incomeVsExpense.expense)}
-                            </AppText>
+                            <AppText variant="subheading" style={{ color: theme.error }}>{expenseTotalText}</AppText>
                         </View>
                     </View>
                     <View style={styles.barContainer}>
-                        <View style={[styles.bar, { flex: incomeVsExpense.income || 1, backgroundColor: theme.success }]} />
-                        <View style={{ width: 4 }} />
-                        <View style={[styles.bar, { flex: incomeVsExpense.expense || 1, backgroundColor: theme.error }]} />
+                        <View style={[styles.bar, { flex: incomeBarFlex, backgroundColor: theme.success }]} />
+                        <View style={{ width: BAR_SPACER_WIDTH }} />
+                        <View style={[styles.bar, { flex: expenseBarFlex, backgroundColor: theme.error }]} />
                     </View>
                 </AppCard>
 
-                {expenses.length > 0 ? (
+                {hasExpenseData ? (
                     <AppCard style={styles.chartCard} padding="lg">
                         <View style={styles.donutContainer}>
-                            <DonutChart
-                                data={expenses.map((e: ExpenseCategory) => ({ value: e.amount, color: e.color || theme.text, label: e.accountName }))}
-                                size={160}
-                                strokeWidth={25}
-                            />
+                            <DonutChart data={expenseDonutData} size={EXPENSE_DONUT_SIZE} strokeWidth={EXPENSE_DONUT_STROKE} />
                             <View style={styles.legend}>
-                                {expenses.slice(0, 5).map((e: ExpenseCategory) => (
-                                    <View key={e.accountId} style={styles.legendItem}>
-                                        <View style={[styles.dot, { backgroundColor: e.color }]} />
+                                {legendRows.map((row) => (
+                                    <View key={row.id} style={styles.legendItem}>
+                                        <View style={[styles.dot, { backgroundColor: row.color }]} />
                                         <View style={{ flex: 1, marginRight: Spacing.sm }}>
-                                            <AppText variant="caption" numberOfLines={1}>{e.accountName}</AppText>
+                                            <AppText variant="caption" numberOfLines={1}>{row.accountName}</AppText>
                                         </View>
-                                        <AppText variant="body" weight="bold">{Math.round(e.percentage)}%</AppText>
+                                        <AppText variant="body" weight="bold">{row.percentage}%</AppText>
                                     </View>
                                 ))}
                             </View>
@@ -122,7 +116,6 @@ export function ReportsView(vm: ReportsViewModel) {
                         </AppText>
                     </AppCard>
                 )}
-
             </ScrollView>
 
             <DateRangePicker
@@ -197,17 +190,17 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     divider: {
-        width: 1,
+        width: StyleSheet.hairlineWidth,
         marginHorizontal: Spacing.md,
     },
     barContainer: {
         flexDirection: 'row',
-        height: 8,
-        borderRadius: 4,
+        height: BALANCE_BAR_HEIGHT,
+        borderRadius: Shape.radius.xs,
         overflow: 'hidden',
     },
     bar: {
         height: '100%',
-        borderRadius: 4,
-    }
+        borderRadius: Shape.radius.xs,
+    },
 });

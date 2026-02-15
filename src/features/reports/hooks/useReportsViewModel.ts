@@ -1,4 +1,5 @@
 import { useReports } from '@/src/features/reports/hooks/useReports';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter, formatDate } from '@/src/utils/dateUtils';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -9,13 +10,17 @@ export interface ReportsViewModel {
     onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
     dateLabel: string;
     loading: boolean;
-    netWorthHistory: ReturnType<typeof useReports>['netWorthHistory'];
-    expenses: ReturnType<typeof useReports>['expenses'];
-    incomeVsExpense: ReturnType<typeof useReports>['incomeVsExpense'];
-    currentNetWorth: number;
     periodFilter: PeriodFilter;
-    dateRange: DateRange;
     onRefresh: () => void;
+    netWorthSeries: { x: number; y: number }[];
+    currentNetWorthText: string;
+    incomeTotalText: string;
+    expenseTotalText: string;
+    incomeBarFlex: number;
+    expenseBarFlex: number;
+    expenseDonutData: { value: number; color: string; label: string }[];
+    legendRows: { id: string; color: string; accountName: string; percentage: number }[];
+    hasExpenseData: boolean;
 }
 
 export function useReportsViewModel(): ReportsViewModel {
@@ -28,7 +33,7 @@ export function useReportsViewModel(): ReportsViewModel {
         loading,
         dateRange,
         periodFilter,
-        updateFilter
+        updateFilter,
     } = useReports();
 
     const onDateSelect = useCallback((range: DateRange | null, filter: PeriodFilter) => {
@@ -38,14 +43,8 @@ export function useReportsViewModel(): ReportsViewModel {
         setShowDatePicker(false);
     }, [updateFilter]);
 
-    const onOpenDatePicker = useCallback(() => {
-        setShowDatePicker(true);
-    }, []);
-
-    const onCloseDatePicker = useCallback(() => {
-        setShowDatePicker(false);
-    }, []);
-
+    const onOpenDatePicker = useCallback(() => setShowDatePicker(true), []);
+    const onCloseDatePicker = useCallback(() => setShowDatePicker(false), []);
     const onRefresh = useCallback(() => { }, []);
 
     const currentNetWorth = netWorthHistory.length > 0
@@ -56,6 +55,26 @@ export function useReportsViewModel(): ReportsViewModel {
         return dateRange.label || `${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`;
     }, [dateRange]);
 
+    const netWorthSeries = useMemo(
+        () => netWorthHistory.map((point) => ({ x: point.date, y: point.netWorth })),
+        [netWorthHistory]
+    );
+
+    const expenseDonutData = useMemo(
+        () => expenses.map((expense) => ({ value: expense.amount, color: expense.color, label: expense.accountName })),
+        [expenses]
+    );
+
+    const legendRows = useMemo(
+        () => expenses.slice(0, 5).map((expense) => ({
+            id: expense.accountId,
+            color: expense.color,
+            accountName: expense.accountName,
+            percentage: Math.round(expense.percentage),
+        })),
+        [expenses]
+    );
+
     return {
         showDatePicker,
         onOpenDatePicker,
@@ -63,12 +82,16 @@ export function useReportsViewModel(): ReportsViewModel {
         onDateSelect,
         dateLabel,
         loading,
-        netWorthHistory,
-        expenses,
-        incomeVsExpense,
-        currentNetWorth,
         periodFilter,
-        dateRange,
         onRefresh,
+        netWorthSeries,
+        currentNetWorthText: CurrencyFormatter.formatWithPreference(currentNetWorth),
+        incomeTotalText: CurrencyFormatter.formatWithPreference(incomeVsExpense.income),
+        expenseTotalText: CurrencyFormatter.formatWithPreference(incomeVsExpense.expense),
+        incomeBarFlex: incomeVsExpense.income || 1,
+        expenseBarFlex: incomeVsExpense.expense || 1,
+        expenseDonutData,
+        legendRows,
+        hasExpenseData: expenses.length > 0,
     };
 }

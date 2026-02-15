@@ -1,11 +1,11 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppIcon, EmptyStateView, LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
 import { AuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
 export function AuditLogView(vm: AuditLogViewModel) {
     const { theme } = useTheme();
@@ -24,15 +24,11 @@ export function AuditLogView(vm: AuditLogViewModel) {
         >
             <View style={styles.viewContent}>
                 {isLoading ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color={theme.primary} />
-                    </View>
+                    <LoadingView loading={isLoading} />
                 ) : logs.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <AppIcon name="document" size={Size.fab} color={theme.textSecondary} />
-                        <AppText variant="body" color="secondary" style={styles.emptyText}>
-                            {AppConfig.strings.audit.emptyLogs}
-                        </AppText>
+                        <EmptyStateView title={AppConfig.strings.audit.emptyLogs} style={styles.emptyStateText} />
                     </View>
                 ) : (
                     <FlatList
@@ -59,19 +55,15 @@ const styles = StyleSheet.create({
     viewContent: {
         flex: 1,
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         gap: Spacing.md,
     },
-    emptyText: {
-        marginTop: Spacing.sm,
+    emptyStateText: {
+        flex: 0,
+        paddingTop: 0,
     },
     list: {
         padding: Spacing.md,

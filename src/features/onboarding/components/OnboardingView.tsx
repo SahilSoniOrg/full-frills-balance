@@ -1,8 +1,6 @@
 import { Screen } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants/app-config';
-import { StepAccountSuggestions } from '@/src/features/onboarding/components/StepAccountSuggestions';
-import { StepCategorySuggestions } from '@/src/features/onboarding/components/StepCategorySuggestions';
-import { StepCurrency } from '@/src/features/onboarding/components/StepCurrency';
+import { OnboardingSelectableStep } from '@/src/features/onboarding/components/OnboardingSelectableStep';
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
 import { StepIndicator } from '@/src/features/onboarding/components/StepIndicator';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
@@ -44,9 +42,10 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
                 );
             case 2:
                 return (
-                    <StepCurrency
+                    <OnboardingSelectableStep
+                        kind="currency"
                         selectedCurrency={selectedCurrency}
-                        onSelect={setSelectedCurrency}
+                        onSelectCurrency={setSelectedCurrency}
                         onContinue={onContinue}
                         onBack={onBack}
                         isCompleting={isCompleting}
@@ -54,7 +53,8 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
                 );
             case 3:
                 return (
-                    <StepAccountSuggestions
+                    <OnboardingSelectableStep
+                        kind="accounts"
                         selectedAccounts={selectedAccounts}
                         customAccounts={customAccounts}
                         onToggleAccount={onToggleAccount}
@@ -66,7 +66,8 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
                 );
             case 4:
                 return (
-                    <StepCategorySuggestions
+                    <OnboardingSelectableStep
+                        kind="categories"
                         selectedCategories={selectedCategories}
                         customCategories={customCategories}
                         onToggleCategory={onToggleCategory}

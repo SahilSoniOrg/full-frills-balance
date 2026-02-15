@@ -1,6 +1,6 @@
-import { FilterToolbar } from '@/src/components/common/FilterToolbar';
-import { AppText } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
+import { AppText, ExpandableSearchButton } from '@/src/components/core';
+import { Spacing } from '@/src/constants';
 import { DashboardSummary } from '@/src/features/dashboard/components/DashboardSummary';
 import { NetWorthCard } from '@/src/features/dashboard/components/NetWorthCard';
 import { DateRange } from '@/src/utils/dateUtils';
@@ -65,18 +65,23 @@ export function DashboardHeader({
                 )}
 
                 <View style={[styles.headerActions, isSearching && styles.expandedActions]}>
+                    <View style={styles.searchWrapper}>
+                        <ExpandableSearchButton
+                            value={searchQuery}
+                            onChangeText={onSearchChange}
+                            onExpandChange={handleSearchExpand}
+                            onPress={onSearchPress}
+                        />
+                    </View>
 
-                    <FilterToolbar
-                        searchQuery={searchQuery}
-                        onSearchChange={onSearchChange}
-                        onSearchPress={onSearchPress}
-                        dateRange={dateRange}
-                        showDatePicker={showDatePicker}
-                        navigatePrevious={navigatePrevious}
-                        navigateNext={navigateNext}
-                        onSearchExpandChange={handleSearchExpand}
-                        style={isSearching ? styles.expandedToolbar : undefined}
-                    />
+                    {searchQuery.length === 0 && (
+                        <DateRangeFilter
+                            range={dateRange}
+                            onPress={showDatePicker}
+                            onPrevious={navigatePrevious}
+                            onNext={navigateNext}
+                        />
+                    )}
                 </View>
             </View>
 
@@ -127,17 +132,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing.sm,
     },
-    collapseButton: {
-        width: Size.xxl,
-        height: Size.xxl,
-        borderRadius: Shape.radius.md,
-        alignItems: 'center',
-        justifyContent: 'center',
+    searchWrapper: {
+        flexShrink: 0,
     },
     expandedActions: {
-        flex: 1,
-    },
-    expandedToolbar: {
         flex: 1,
     },
     sectionTitle: {

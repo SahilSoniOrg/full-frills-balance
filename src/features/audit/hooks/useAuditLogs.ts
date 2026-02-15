@@ -1,5 +1,5 @@
 import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
-import { AuditLogEntry } from '@/src/features/audit/components/AuditLogItem';
+import { AuditLogEntry } from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
 import { useObservable } from '@/src/hooks/useObservable';
 import { auditService } from '@/src/services/audit-service';
 
@@ -15,7 +15,7 @@ export function useAuditLogs(params: { entityType?: AuditEntityType; entityId?: 
         [] as AuditLog[]
     );
 
-    const logs: AuditLogEntry[] = (rawLogs || []).map(log => ({
+    const logs: AuditLogEntry[] = (rawLogs || []).map((log) => ({
         id: log.id,
         entityType: log.entityType,
         entityId: log.entityId,

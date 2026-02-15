@@ -4,7 +4,8 @@ import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
+import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
+import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -15,27 +16,13 @@ interface AdvancedFormProps {
     onSelectAccountRequest: (lineId: string) => void;
 }
 
-/**
- * AdvancedForm - Generic multi-leg journal entry form.
- * Pure presentation component that uses the editor controller.
- */
 export const AdvancedForm = ({
-    accounts,
+    accounts: _accounts,
     editor,
     onSelectAccountRequest,
 }: AdvancedFormProps) => {
     const [showDatePicker, setShowDatePicker] = useState(false);
-
-    const getDomainLines = (): JournalLineInput[] => {
-        return editor.lines.map(line => ({
-            amount: JournalCalculator.getLineBaseAmount(line),
-            type: line.transactionType
-        }));
-    };
-
-    const getTotalDebits = () => JournalCalculator.calculateTotalDebits(getDomainLines());
-    const getTotalCredits = () => JournalCalculator.calculateTotalCredits(getDomainLines());
-    const isBalanced = JournalCalculator.isBalanced(getDomainLines());
+    const { totalDebits, totalCredits, isBalanced } = useAdvancedJournalSummary(editor.lines);
 
     return (
         <View style={{ gap: Spacing.md, padding: Spacing.lg }}>
@@ -106,8 +93,8 @@ export const AdvancedForm = ({
             </AppCard>
 
             <JournalSummary
-                totalDebits={getTotalDebits()}
-                totalCredits={getTotalCredits()}
+                totalDebits={totalDebits}
+                totalCredits={totalCredits}
                 isBalanced={isBalanced}
             />
 

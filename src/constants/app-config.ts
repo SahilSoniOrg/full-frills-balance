@@ -323,6 +323,7 @@ export const AppConfig = {
   layout: {
     maxContentWidth: 400,
     modalHeightPercent: '70%',
+    hierarchyModalHeightPercent: '80%',
     iconCircleSize: 32, // Match Size.iconLg or similar
     finalizeIconSize: 84, // Size.xxl * 2 or similar
     finalizeSubtitleMaxWidth: 300,
