@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     },
     indentationGuide: {
         flexDirection: 'row',
-        height: '100%',
+        alignSelf: 'stretch',
         position: 'relative',
     },
     verticalGuide: {
@@ -345,11 +345,12 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
+        minHeight: Size.touchTarget,
         paddingVertical: Spacing.md,
     },
     expandButton: {
         width: Size.lg,
-        height: '100%',
+        alignSelf: 'stretch',
         justifyContent: 'center',
         alignItems: 'center',
     },
