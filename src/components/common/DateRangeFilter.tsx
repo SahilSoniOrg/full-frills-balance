@@ -12,6 +12,7 @@ interface DateRangeFilterProps {
     onNext?: () => void;
     style?: StyleProp<ViewStyle>;
     showNavigationArrows?: boolean;
+    fullWidth?: boolean;
 }
 
 export function DateRangeFilter({
@@ -20,7 +21,8 @@ export function DateRangeFilter({
     onPrevious,
     onNext,
     style,
-    showNavigationArrows = true
+    showNavigationArrows = true,
+    fullWidth = false
 }: DateRangeFilterProps) {
     const { theme } = useTheme();
     const showNavigation = !!(onPrevious && onNext) && showNavigationArrows;
@@ -38,12 +40,16 @@ export function DateRangeFilter({
             )}
 
             <TouchableOpacity
-                style={[styles.container, { backgroundColor: theme.surface }]}
+                style={[
+                    styles.container,
+                    { backgroundColor: theme.surface },
+                    fullWidth && { flex: 1, justifyContent: 'center' }
+                ]}
                 onPress={onPress}
                 activeOpacity={Opacity.heavy}
             >
                 <AppIcon name="calendar" size={Size.sm} color={theme.primary} />
-                <AppText variant="body" style={styles.text}>
+                <AppText variant="body" style={[styles.text, { flexShrink: 1 }]} numberOfLines={1}>
                     {range?.label || 'All Time'}
                 </AppText>
                 <AppIcon name="chevronDown" size={Size.xs} color={theme.textSecondary} />

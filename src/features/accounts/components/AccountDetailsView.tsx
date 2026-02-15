@@ -178,10 +178,8 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                         </AppCard>
 
                         <View style={styles.sectionHeader}>
-                            <AppText variant="heading">
-                                Transaction History
-                            </AppText>
                             <DateRangeFilter
+                                fullWidth
                                 range={dateRange}
                                 onPress={showDatePicker}
                                 onPrevious={navigatePrevious}
