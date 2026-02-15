@@ -4,6 +4,7 @@ import { TransactionCard } from '@/src/components/common/TransactionCard';
 import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
+import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useRouter } from 'expo-router';
@@ -41,6 +42,11 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         secondaryBalances,
         isParent,
         subAccountCount,
+        subAccounts,
+        subAccountsLoading,
+        isSubAccountsModalVisible,
+        onShowSubAccounts,
+        onHideSubAccounts,
         accountId,
     } = vm;
 
@@ -142,7 +148,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                         </Badge>
                                         {isParent && (
                                             <Pressable
-                                                onPress={() => router.push({ pathname: '/manage-hierarchy', params: { accountId } })}
+                                                onPress={onShowSubAccounts}
                                                 style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                                             >
                                                 <Badge variant={accountTypeVariant as any} icon="hierarchy">
@@ -228,6 +234,14 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                 onClose={hideDatePicker}
                 currentFilter={periodFilter}
                 onSelect={onDateSelect}
+            />
+
+            <SubAccountListModal
+                visible={isSubAccountsModalVisible}
+                onClose={onHideSubAccounts}
+                parentName={accountName}
+                subAccounts={subAccounts}
+                isLoading={subAccountsLoading}
             />
         </Screen>
     );

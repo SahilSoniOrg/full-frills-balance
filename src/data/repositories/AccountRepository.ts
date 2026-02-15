@@ -231,6 +231,14 @@ export class AccountRepository {
     ).observeCount()
   }
 
+  queryByParentId(parentId: string) {
+    return this.accounts.query(
+      Q.where('parent_account_id', parentId),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.sortBy('order_num', Q.asc)
+    )
+  }
+
   private async ensureUniqueName(name: string, excludeId?: string): Promise<void> {
     const sanitizedName = name.trim()
 

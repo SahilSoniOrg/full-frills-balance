@@ -22,6 +22,7 @@ export { AccountType, TransactionType };
 export interface AccountBalance {
     accountId: string;
     balance: number;
+    directBalance: number;
     currencyCode: string;
     transactionCount: number;
     directTransactionCount: number;

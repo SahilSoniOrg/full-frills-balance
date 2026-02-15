@@ -185,6 +185,7 @@ export class BalanceService {
             return {
                 accountId: account.id,
                 balance: 0,
+                directBalance: 0,
                 currencyCode: account.currencyCode,
                 transactionCount: 0,
                 directTransactionCount: 0,
@@ -200,6 +201,7 @@ export class BalanceService {
         return {
             accountId: account.id,
             balance: latestTx.runningBalance || 0,
+            directBalance: latestTx.runningBalance || 0,
             currencyCode: account.currencyCode,
             transactionCount: txCount,
             directTransactionCount: txCount,

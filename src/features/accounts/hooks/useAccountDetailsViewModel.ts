@@ -1,8 +1,10 @@
 import { TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
-import { useAccount, useAccountActions, useAccountBalance, useAccountHasChildren, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
+import Account from '@/src/data/models/Account';
+import { useAccount, useAccountActions, useAccountBalance, useAccountBalances, useAccountHasChildren, useAccounts, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
 import { useAccountTransactions } from '@/src/features/journal/hooks/useJournals';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
@@ -11,7 +13,17 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+
+export interface SubAccountViewModel {
+    id: string;
+    name: string;
+    icon: string;
+    balanceText: string;
+    color: string;
+    level: number;
+    isGroup: boolean;
+}
 
 export interface TransactionCardItemViewModel {
     id: string;
@@ -54,6 +66,11 @@ export interface AccountDetailsViewModel {
     secondaryBalances: { currencyCode: string; amountText: string }[];
     isParent: boolean;
     subAccountCount: number;
+    subAccounts: SubAccountViewModel[];
+    subAccountsLoading: boolean;
+    isSubAccountsModalVisible: boolean;
+    onShowSubAccounts: () => void;
+    onHideSubAccounts: () => void;
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
@@ -74,12 +91,38 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     } = useDateRangeFilter({ defaultToCurrentMonth: true });
 
     const { account, isLoading: accountLoading } = useAccount(accountId);
+    const { accounts } = useAccounts();
     const { hasChildren: isParent } = useAccountHasChildren(accountId);
     const { subAccountCount } = useAccountSubAccountCount(accountId);
     const { transactions, isLoading: transactionsLoading } = useAccountTransactions(accountId, 50, dateRange || undefined);
     const { balanceData, isLoading: balanceLoading } = useAccountBalance(accountId);
     const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
 
+    const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
+
+    // Build recursive sub-tree from all accounts
+    const descendants = useMemo(() => {
+        if (!account || !accounts.length) return [];
+
+        const buildSubTree = (parentId: string, level: number): { account: Account; level: number }[] => {
+            const result: { account: Account; level: number }[] = [];
+            const childrenForParent = accounts
+                .filter((a: Account) => a.parentAccountId === parentId && a.deletedAt === null)
+                .sort((a: Account, b: Account) => (a.orderNum || 0) - (b.orderNum || 0));
+
+            for (const child of childrenForParent) {
+                result.push({ account: child, level });
+                result.push(...buildSubTree(child.id, level + 1));
+            }
+            return result;
+        };
+
+        return buildSubTree(accountId, 0);
+    }, [account, accounts, accountId]);
+
+    const { balancesByAccountId: subBalances, isLoading: subBalancesLoading } = useAccountBalances(
+        useMemo(() => descendants.map(d => d.account), [descendants])
+    );
     const balance = balanceData?.balance || 0;
     const transactionCount = balanceData?.transactionCount || 0;
     const isDeleted = account?.deletedAt != null;
@@ -175,6 +218,34 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         ? '...'
         : String(transactionCount);
 
+    const { theme } = useTheme();
+
+    const subAccounts = useMemo(() => {
+        return descendants.map(({ account: child, level }) => {
+            const subBalance = subBalances.get(child.id);
+            const balanceVal = subBalance?.balance ?? 0;
+            const currency = subBalance?.currencyCode || child.currencyCode || defaultCurrency;
+
+            const colorKey = journalPresenter.getAccountColorKey(child.accountType);
+            const color = (theme as any)[colorKey] || theme.text;
+
+            const isGroup = accounts.some(a => a.parentAccountId === child.id && a.deletedAt === null);
+
+            return {
+                id: child.id,
+                name: child.name,
+                icon: child.icon || 'wallet',
+                balanceText: CurrencyFormatter.format(balanceVal, currency),
+                color,
+                level,
+                isGroup
+            };
+        });
+    }, [descendants, subBalances, defaultCurrency, theme, accounts]);
+
+    const onShowSubAccounts = useCallback(() => setIsSubAccountsModalVisible(true), []);
+    const onHideSubAccounts = useCallback(() => setIsSubAccountsModalVisible(false), []);
+
     const transactionItems = useMemo(() => {
         return transactions.map((transaction: EnrichedTransaction) => {
             const displayAccounts = [] as any[];
@@ -254,6 +325,11 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         secondaryBalances,
         isParent: !!isParent,
         subAccountCount: subAccountCount || 0,
+        subAccounts,
+        subAccountsLoading: balanceLoading || subBalancesLoading,
+        isSubAccountsModalVisible,
+        onShowSubAccounts,
+        onHideSubAccounts,
         accountId,
     };
 }
