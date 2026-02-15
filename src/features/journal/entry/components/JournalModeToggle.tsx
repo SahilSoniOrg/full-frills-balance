@@ -7,13 +7,59 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 interface JournalModeToggleProps {
     isGuidedMode: boolean;
     setIsGuidedMode: (mode: boolean) => void;
+    variant?: 'default' | 'compact';
 }
 
-export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode }: JournalModeToggleProps) => {
+export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'default' }: JournalModeToggleProps) => {
     const { theme } = useTheme();
+    const isCompact = variant === 'compact';
+
+    if (isCompact) {
+        return (
+            <View style={[styles.compactContainer, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}>
+                <TouchableOpacity
+                    style={[
+                        styles.compactButton,
+                        { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
+                    ]}
+                    onPress={() => setIsGuidedMode(true)}
+                >
+                    <AppText
+                        variant="caption"
+                        weight={isGuidedMode ? "bold" : "medium"}
+                        style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
+                    >
+                        Simple
+                    </AppText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.compactButton,
+                        { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
+                    ]}
+                    onPress={() => setIsGuidedMode(false)}
+                >
+                    <AppText
+                        variant="caption"
+                        weight={!isGuidedMode ? "bold" : "medium"}
+                        style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
+                    >
+                        Advanced
+                    </AppText>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
-        <View style={[styles.modeToggleContainer, { backgroundColor: theme.surfaceSecondary }]}>
+        <View
+            style={[
+                styles.modeToggleContainer,
+                styles.modeToggleContainerDefault,
+                { backgroundColor: theme.surfaceSecondary }
+            ]}
+        >
             <TouchableOpacity
                 style={[
                     styles.modeButton,
@@ -23,7 +69,7 @@ export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode }: JournalMode
                 onPress={() => setIsGuidedMode(true)}
             >
                 <AppText
-                    variant="body"
+                    variant='body'
                     weight={isGuidedMode ? "bold" : "medium"}
                     style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
                 >
@@ -40,7 +86,7 @@ export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode }: JournalMode
                 onPress={() => setIsGuidedMode(false)}
             >
                 <AppText
-                    variant="body"
+                    variant='body'
                     weight={!isGuidedMode ? "bold" : "medium"}
                     style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
                 >
@@ -56,13 +102,31 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         borderRadius: Shape.radius.full,
         padding: Spacing.xs,
+    },
+    modeToggleContainerDefault: {
         marginHorizontal: Spacing.lg,
         marginVertical: Spacing.md,
     },
     modeButton: {
         flex: 1,
-        paddingVertical: Spacing.md, // Approx 10->12
+        paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.md,
+        borderRadius: Shape.radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    compactContainer: {
+        flexDirection: 'row',
+        borderRadius: Shape.radius.full,
+        borderWidth: 1,
+        padding: Spacing.xs,
+        gap: Spacing.xs,
+        minWidth: 0,
+    },
+    compactButton: {
+        minWidth: 0,
+        paddingVertical: Spacing.sm,
+        paddingHorizontal: Spacing.sm,
         borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',

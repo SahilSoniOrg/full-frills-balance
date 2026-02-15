@@ -41,34 +41,48 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-            <JournalEntryHeader title={headerTitle} />
+            <JournalEntryHeader
+                title={headerTitle}
+                rightSlot={
+                    <JournalModeToggle
+                        isGuidedMode={isGuidedMode}
+                        setIsGuidedMode={onToggleGuidedMode}
+                        variant="compact"
+                    />
+                }
+            />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                    {showEditBanner && (
-                        <View style={[styles.editBanner, { backgroundColor: withOpacity(theme.warning, Opacity.soft) }]}
-                        >
-                            <Badge variant="expense" size="sm">{AppConfig.strings.advancedEntry.editing || 'EDITING'}</Badge>
-                            <AppText variant="caption" color="secondary" style={{ marginLeft: Spacing.sm }}>
-                                {editBannerText}
-                            </AppText>
-                        </View>
-                    )}
-
-                    <JournalModeToggle
-                        isGuidedMode={isGuidedMode}
-                        setIsGuidedMode={onToggleGuidedMode}
-                    />
-
-                    {isGuidedMode ? (
+                {isGuidedMode ? (
+                    <View style={styles.content}>
+                        {showEditBanner && (
+                            <View style={[styles.editBanner, { backgroundColor: withOpacity(theme.warning, Opacity.soft) }]}
+                            >
+                                <Badge variant="expense" size="sm">{AppConfig.strings.advancedEntry.editing || 'EDITING'}</Badge>
+                                <AppText variant="caption" color="secondary" style={{ marginLeft: Spacing.sm }}>
+                                    {editBannerText}
+                                </AppText>
+                            </View>
+                        )}
                         <SimpleForm {...simpleFormConfig} />
-                    ) : (
+                    </View>
+                ) : (
+                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                        {showEditBanner && (
+                            <View style={[styles.editBanner, { backgroundColor: withOpacity(theme.warning, Opacity.soft) }]}
+                            >
+                                <Badge variant="expense" size="sm">{AppConfig.strings.advancedEntry.editing || 'EDITING'}</Badge>
+                                <AppText variant="caption" color="secondary" style={{ marginLeft: Spacing.sm }}>
+                                    {editBannerText}
+                                </AppText>
+                            </View>
+                        )}
                         <AdvancedForm {...advancedFormConfig} />
-                    )}
-                </ScrollView>
+                    </ScrollView>
+                )}
             </KeyboardAvoidingView>
 
             <AccountSelector

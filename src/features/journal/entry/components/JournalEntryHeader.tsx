@@ -2,15 +2,16 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalEntryHeaderProps {
     title: string;
     onClose?: () => void;
+    rightSlot?: ReactNode;
 }
 
-export const JournalEntryHeader = ({ title, onClose }: JournalEntryHeaderProps) => {
+export const JournalEntryHeader = ({ title, onClose, rightSlot }: JournalEntryHeaderProps) => {
     const router = useRouter();
     const { theme } = useTheme();
 
@@ -22,11 +23,15 @@ export const JournalEntryHeader = ({ title, onClose }: JournalEntryHeaderProps) 
                 <AppIcon name="close" size={Size.iconMd} color={theme.text} />
             </TouchableOpacity>
 
-            <AppText variant="heading" style={styles.headerTitle}>
-                {title}
-            </AppText>
+            <View style={styles.titleWrap}>
+                <AppText variant="heading" style={styles.headerTitle} numberOfLines={1}>
+                    {title}
+                </AppText>
+            </View>
 
-            <View style={{ width: 44 }} />
+            <View style={styles.rightSlot}>
+                {rightSlot || <View style={styles.rightPlaceholder} />}
+            </View>
         </View>
     );
 };
@@ -35,20 +40,31 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
         paddingHorizontal: Spacing.lg,
         paddingTop: Spacing.md,
-        paddingBottom: Spacing.lg,
+        paddingBottom: Spacing.md,
     },
     backButton: {
         padding: Spacing.sm,
     },
-    headerTitle: {
+    titleWrap: {
         flex: 1,
-        textAlign: 'center',
-        fontFamily: Typography.fonts.bold,
+        minWidth: 0,
+        flexShrink: 1,
+        marginLeft: Spacing.sm,
+        marginRight: Spacing.md,
     },
-    listButton: {
-        padding: Spacing.sm,
+    rightSlot: {
+        minWidth: 0,
+        alignItems: 'flex-end',
+        flexShrink: 1,
+    },
+    rightPlaceholder: {
+        width: 44,
+        height: 1,
+    },
+    headerTitle: {
+        textAlign: 'left',
+        fontFamily: Typography.fonts.bold,
     },
 });

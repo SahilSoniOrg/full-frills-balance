@@ -30,10 +30,10 @@ export const AccountTile = ({
             testID={`account-option-${account.name.replace(/\s+/g, '-')}`}
             style={[
                 styles.accountCard,
-                { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+                { backgroundColor: theme.surface, borderColor: withOpacity(theme.textSecondary, Opacity.muted) },
                 isSelected && {
                     backgroundColor: withOpacity(accountColor, Opacity.soft),
-                    borderColor: accountColor
+                    borderColor: withOpacity(accountColor, Opacity.medium)
                 },
                 style
             ]}
@@ -44,6 +44,8 @@ export const AccountTile = ({
                 variant="body"
                 weight={isSelected ? "semibold" : "regular"}
                 style={{ color: theme.text, flex: 1 }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
             >
                 {account.name}
             </AppText>
@@ -56,14 +58,14 @@ export const AccountTile = ({
 
 const styles = StyleSheet.create({
     accountCard: {
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
-        borderRadius: Shape.radius.sm,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderRadius: Shape.radius.r4,
         borderWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing.sm,
-        minWidth: Size.cardMinWidth,
+        minWidth: 148,
     },
     accountIndicator: {
         width: 4,

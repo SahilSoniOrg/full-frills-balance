@@ -24,13 +24,13 @@ export const AccountTileList = ({
     horizontal = true,
 }: AccountTileListProps) => {
     return (
-        <View style={{ gap: Spacing.sm, marginVertical: Spacing.md }}>
+        <View style={{ gap: Spacing.xs, marginVertical: Spacing.sm }}>
             {title && (
                 <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: Spacing.xs }}>
                     {title.toUpperCase()}
                 </AppText>
             )}
-            <View style={horizontal ? { minHeight: 80 } : {}}>
+            <View>
                 <TypedFlashList
                     data={accounts}
                     horizontal={horizontal}
@@ -45,8 +45,8 @@ export const AccountTileList = ({
                             tintColor={tintColor}
                         />
                     )}
-                    contentContainerStyle={{ paddingHorizontal: Spacing.xs }}
-                    ItemSeparatorComponent={() => <View style={horizontal ? { width: Spacing.md } : { height: Spacing.md }} />}
+                    contentContainerStyle={{ paddingHorizontal: horizontal ? 0 : Spacing.xs }}
+                    ItemSeparatorComponent={() => <View style={horizontal ? { width: Spacing.sm } : { height: Spacing.sm }} />}
                 />
             </View>
         </View>
