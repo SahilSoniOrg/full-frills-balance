@@ -1,6 +1,7 @@
 import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
 import { getDatePickerStyles, Layout, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
+import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -51,6 +52,7 @@ export function DateRangePickerView({
     handleApply,
     INITIAL_MONTH_INDEX,
 }: DateRangePickerViewProps) {
+    const { fonts } = useTheme();
     const renderDatePicker = () => (
         <View style={{ flex: 1 }}>
             <View style={styles.pickerHeader}>
@@ -64,7 +66,7 @@ export function DateRangePickerView({
                 mode="single"
                 date={view === 'START_DATE' ? (customRange.startDate || dayjs()) : (customRange.endDate || dayjs())}
                 onChange={handleDateSelect}
-                styles={getDatePickerStyles(theme)}
+                styles={getDatePickerStyles(theme, fonts)}
             />
         </View>
     );
@@ -91,6 +93,7 @@ export function DateRangePickerView({
                                 label={item.label}
                                 active={isActive}
                                 theme={theme}
+                                fonts={fonts}
                                 onPress={() => handleSelectMonth(item.month, item.year)}
                             />
                         );
@@ -111,7 +114,7 @@ export function DateRangePickerView({
                         onPress={() => setView('START_DATE')}
                     >
                         <AppText variant="caption" color="secondary">From</AppText>
-                        <AppText variant="body" style={styles.inputText}>
+                        <AppText variant="body" style={[{ fontFamily: fonts.bold }]}>
                             {customRange.startDate ? customRange.startDate.format('DD MMM YYYY') : 'Start'}
                         </AppText>
                     </TouchableOpacity>
@@ -124,7 +127,7 @@ export function DateRangePickerView({
                         onPress={() => setView('END_DATE')}
                     >
                         <AppText variant="caption" color="secondary">To</AppText>
-                        <AppText variant="body" style={styles.inputText}>
+                        <AppText variant="body" style={[{ fontFamily: fonts.bold }]}>
                             {customRange.endDate ? customRange.endDate.format('DD MMM YYYY') : 'Now'}
                         </AppText>
                     </TouchableOpacity>
@@ -139,7 +142,7 @@ export function DateRangePickerView({
                         { backgroundColor: theme.surface, borderColor: draftFilter.type === 'LAST_N' ? theme.primary : 'transparent', borderWidth: 1 }
                     ]}>
                         <TextInput
-                            style={[styles.numberInput, { color: theme.text, fontFamily: Typography.fonts.bold }]}
+                            style={[styles.numberInput, { color: theme.text, fontFamily: fonts.bold }]}
                             value={lastNValue}
                             onChangeText={(text) => updateLastN(text, lastNUnit)}
                             keyboardType="number-pad"
@@ -233,7 +236,7 @@ function Section({ title, children }: { title: string, children: React.ReactNode
     );
 }
 
-function RangeChip({ label, active, theme, onPress }: { label: string, active: boolean, theme: Theme, onPress: () => void }) {
+function RangeChip({ label, active, theme, fonts, onPress }: { label: string, active: boolean, theme: Theme, fonts: any, onPress: () => void }) {
     return (
         <TouchableOpacity
             style={[
@@ -245,8 +248,7 @@ function RangeChip({ label, active, theme, onPress }: { label: string, active: b
             <AppText
                 variant="body"
                 style={[
-                    styles.chipText,
-                    { color: active ? theme.onPrimary : theme.text }
+                    { color: active ? theme.onPrimary : theme.text, fontFamily: fonts.medium }
                 ]}
             >
                 {label}
@@ -300,9 +302,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'transparent',
     },
-    chipText: {
-        fontFamily: Typography.fonts.medium,
-    },
     divider: {
         marginBottom: Spacing.xl,
     },
@@ -316,9 +315,6 @@ const styles = StyleSheet.create({
         borderRadius: Shape.radius.md,
         padding: Spacing.md,
         gap: Spacing.xs,
-    },
-    inputText: {
-        fontFamily: Typography.fonts.bold,
     },
     lastNRow: {
         flexDirection: 'row',

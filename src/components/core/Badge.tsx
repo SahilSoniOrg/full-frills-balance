@@ -29,7 +29,7 @@ export function Badge({
   style,
   ...props
 }: BadgeProps) {
-  const { theme } = useThemedComponent(themeMode)
+  const { theme, fonts } = useThemedComponent(themeMode)
 
   const { badgeStyle, textStyle, iconSize, finalTextColor } = useMemo(() => {
     const variantColors = getVariantColors(theme, variant)
@@ -49,12 +49,15 @@ export function Badge({
       ],
       textStyle: [
         textTypography,
-        { color: textColor }
+        {
+          color: textColor,
+          fontFamily: fonts.semibold
+        }
       ],
       iconSize: currentIconSize,
       finalTextColor: textColor
     }
-  }, [theme, variant, size, solid, customBg, customText, style])
+  }, [theme, fonts, variant, size, solid, customBg, customText, style])
 
   return (
     <View style={badgeStyle} {...props}>
@@ -104,11 +107,9 @@ const styles = StyleSheet.create({
   },
   textSm: {
     fontSize: Typography.sizes.xs,
-    fontFamily: Typography.fonts.semibold,
   },
   textMd: {
     fontSize: Typography.sizes.sm,
-    fontFamily: Typography.fonts.semibold,
   },
   icon: {
     marginRight: Spacing.xs,

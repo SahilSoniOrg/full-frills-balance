@@ -1,6 +1,7 @@
 import { AppCard, AppIcon, AppText, IvyIcon } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -19,6 +20,7 @@ export function AccountCard({
     dividerColor,
     surfaceColor,
 }: AccountCardProps) {
+    const { fonts } = useTheme();
     return (
         <AppCard
             elevation="sm"
@@ -72,7 +74,7 @@ export function AccountCard({
                         <AppText
                             variant="title"
                             weight="bold"
-                            style={[styles.balanceText, { color: account.textColor }]}
+                            style={[styles.balanceText, { color: account.textColor, fontFamily: fonts.bold }]}
                         >
                             {account.balanceText}
                         </AppText>
@@ -155,7 +157,6 @@ const styles = StyleSheet.create({
     },
     balanceText: {
         fontSize: Typography.sizes.xxxl,
-        fontFamily: Typography.fonts.bold,
     },
     footerSection: {
         flexDirection: 'row',

@@ -1,3 +1,4 @@
+import { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
@@ -11,6 +12,10 @@ import { Alert, Platform } from 'react-native';
 export interface SettingsViewModel {
     themePreference: 'system' | 'light' | 'dark';
     setThemePreference: (value: 'system' | 'light' | 'dark') => void;
+    themeId: ThemeId;
+    setThemeId: (value: ThemeId) => void;
+    fontId: FontId;
+    setFontId: (value: FontId) => void;
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
     showAccountMonthlyStats: boolean;
@@ -160,6 +165,10 @@ export function useSettingsViewModel(): SettingsViewModel {
     return {
         themePreference,
         setThemePreference,
+        themeId: ui.themeId,
+        setThemeId: ui.setThemeId,
+        fontId: ui.fontId,
+        setFontId: ui.setFontId,
         isPrivacyMode,
         onTogglePrivacy: () => setPrivacyMode(!isPrivacyMode),
         showAccountMonthlyStats,

@@ -23,7 +23,7 @@ export const NetWorthCard = ({
     hidden: controlledHidden,
     onToggleHidden
 }: NetWorthCardProps) => {
-    const { theme } = useTheme();
+    const { theme, fonts } = useTheme();
     const { isPrivacyMode } = useUI();
     const [internalHidden, setInternalHidden] = useState(isPrivacyMode);
 
@@ -71,7 +71,7 @@ export const NetWorthCard = ({
                 </TouchableOpacity>
             </View>
 
-            <AppText variant="title" style={styles.netWorthAmount}>
+            <AppText variant="title" style={[styles.netWorthAmount, { fontFamily: fonts.bold }]}>
                 {formatCurrency(netWorth)}
             </AppText>
 
@@ -114,7 +114,6 @@ const styles = StyleSheet.create({
     },
     netWorthAmount: {
         fontSize: Typography.sizes.xxxl,
-        fontFamily: Typography.fonts.bold,
         marginBottom: Spacing.xl,
     },
     breakdownContainer: {

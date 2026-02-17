@@ -112,7 +112,7 @@ export function transformAccountsToSections(
             })
 
             const contrastColor = getContrastColor(accentColor)
-            const textColor = contrastColor === 'white' ? Palette.pureWhite : Palette.trueBlack
+            const textColor = contrastColor === 'white' ? Palette.white : Palette.black
 
             const balanceData = balancesByAccountId.get(account.id) || null
             const balance = balanceData?.balance || 0

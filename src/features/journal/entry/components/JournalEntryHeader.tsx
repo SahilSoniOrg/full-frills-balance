@@ -1,5 +1,5 @@
 import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useRouter } from 'expo-router';
 import React, { ReactNode } from 'react';
@@ -13,7 +13,7 @@ interface JournalEntryHeaderProps {
 
 export const JournalEntryHeader = ({ title, onClose, rightSlot }: JournalEntryHeaderProps) => {
     const router = useRouter();
-    const { theme } = useTheme();
+    const { theme, fonts } = useTheme();
 
     const handleClose = onClose || (() => router.back());
 
@@ -24,7 +24,7 @@ export const JournalEntryHeader = ({ title, onClose, rightSlot }: JournalEntryHe
             </TouchableOpacity>
 
             <View style={styles.titleWrap}>
-                <AppText variant="heading" style={styles.headerTitle} numberOfLines={1}>
+                <AppText variant="heading" style={[styles.headerTitle, { fontFamily: fonts.bold }]} numberOfLines={1}>
                     {title}
                 </AppText>
             </View>
@@ -65,6 +65,6 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         textAlign: 'left',
-        fontFamily: Typography.fonts.bold,
+        // dynamic font
     },
 });

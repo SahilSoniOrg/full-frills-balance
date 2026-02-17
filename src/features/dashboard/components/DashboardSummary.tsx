@@ -1,5 +1,5 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -13,7 +13,7 @@ interface DashboardSummaryProps {
 }
 
 export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }: DashboardSummaryProps) => {
-    const { theme } = useTheme();
+    const { theme, fonts } = useTheme();
     const { isPrivacyMode } = useUI();
 
     const isActuallyHidden = controlledHidden !== undefined ? controlledHidden : isPrivacyMode;
@@ -36,7 +36,7 @@ export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }
                     </View>
                     <AppText variant="caption" color="secondary">INCOME</AppText>
                 </View>
-                <AppText variant="subheading" style={[styles.value, { color: theme.income }]}>
+                <AppText variant="subheading" style={[styles.value, { color: theme.income, fontFamily: fonts.bold }]}>
                     {formatValue(income)}
                 </AppText>
             </AppCard>
@@ -49,7 +49,7 @@ export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }
                     </View>
                     <AppText variant="caption" color="secondary">EXPENSE</AppText>
                 </View>
-                <AppText variant="subheading" style={[styles.value, { color: theme.expense }]}>
+                <AppText variant="subheading" style={[styles.value, { color: theme.expense, fontFamily: fonts.bold }]}>
                     {formatValue(expense)}
                 </AppText>
             </AppCard>
@@ -81,6 +81,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     value: {
-        fontFamily: Typography.fonts.bold,
+        // dynamic font
     },
 });

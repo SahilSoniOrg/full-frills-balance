@@ -8,12 +8,11 @@
  * This is intentional - the error boundary must work even when context fails.
  */
 
-import { AppText } from '@/src/components/core/AppText';
 import { Palette, Shape, Spacing, Typography } from '@/src/constants';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import React, { Component, ReactNode } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface ErrorBoundaryProps {
     children: ReactNode;
@@ -54,18 +53,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
             return (
                 <View style={styles.container}>
-                    <AppText style={styles.emoji}>😕</AppText>
-                    <AppText variant="heading" style={styles.title}>Something went wrong</AppText>
-                    <AppText variant="body" style={styles.message}>
+                    <Text style={[styles.emoji]}>😕</Text>
+                    <Text style={[styles.title]}>Something went wrong</Text>
+                    <Text style={[styles.message]}>
                         An unexpected error occurred. Please try again.
-                    </AppText>
+                    </Text>
                     {__DEV__ && this.state.error && (
-                        <AppText variant="caption" style={styles.errorDetails}>
+                        <Text style={[styles.errorDetails]}>
                             {this.state.error.message}
-                        </AppText>
+                        </Text>
                     )}
                     <TouchableOpacity style={styles.button} onPress={this.handleReset}>
-                        <AppText variant="subheading" style={styles.buttonText}>Try Again</AppText>
+                        <Text style={[styles.buttonText]}>Try Again</Text>
                     </TouchableOpacity>
                 </View>
             );
@@ -81,43 +80,46 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: Spacing.xxl,
-        backgroundColor: Palette.trueBlack,
+        backgroundColor: Palette.background, // Use background token
     },
     emoji: {
         fontSize: Typography.sizes.hero,
         marginBottom: Spacing.lg,
+        color: Palette.textPrimary, // Explicit color
     },
     title: {
         fontSize: Typography.sizes.xxl,
         fontFamily: Typography.fonts.heading,
-        color: Palette.white,
+        color: Palette.textPrimary,
         marginBottom: Spacing.sm,
         textAlign: 'center',
     },
     message: {
         fontSize: Typography.sizes.base,
-        color: Palette.gray,
+        fontFamily: Typography.fonts.regular,
+        color: Palette.textSecondary,
         textAlign: 'center',
         marginBottom: Spacing.xxl,
     },
     errorDetails: {
         fontSize: Typography.sizes.xs,
+        fontFamily: Typography.fonts.regular,
         color: Palette.red,
         textAlign: 'center',
         marginBottom: Spacing.xxl,
         padding: Spacing.md,
-        backgroundColor: Palette.extraDarkGray,
+        backgroundColor: Palette.surface,
         borderRadius: Shape.radius.sm,
         maxWidth: '100%',
     },
     button: {
-        backgroundColor: Palette.green,
+        backgroundColor: Palette.mint,
         paddingHorizontal: Spacing.xxxl,
         paddingVertical: Spacing.md,
         borderRadius: Shape.radius.sm,
     },
     buttonText: {
-        color: Palette.white,
+        color: Palette.surface, // Dark text on mint
         fontSize: Typography.sizes.base,
         fontFamily: Typography.fonts.subheading,
     },

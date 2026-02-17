@@ -3,25 +3,25 @@
  * Provides access to design tokens with proper TypeScript support
  */
 
-import { Colors, Shape, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens';
+import { Colors, FontTheme, Shape, Spacing, Theme, ThemeMode } from '@/src/constants/design-tokens';
 import { useColorScheme } from 'react-native';
 
 /**
  * Common styles for react-native-ui-datepicker to ensure consistent appearance
  * across DateTimePickerModal and DateRangePicker.
  */
-export const getDatePickerStyles = (theme: any) => ({
+export const getDatePickerStyles = (theme: Theme, fonts: FontTheme) => ({
   selected: { backgroundColor: theme.primary },
   selected_label: { color: theme.onPrimary },
   header: { backgroundColor: 'transparent' },
-  month_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
-  year_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
-  month_label: { color: theme.text, fontFamily: Typography.fonts.medium },
-  year_label: { color: theme.text, fontFamily: Typography.fonts.medium },
-  day_label: { color: theme.text, fontFamily: Typography.fonts.medium },
-  weekday_label: { color: theme.textSecondary, fontFamily: Typography.fonts.regular },
-  time_label: { color: theme.text, fontFamily: Typography.fonts.bold },
-  time_selector_label: { color: theme.text, fontFamily: Typography.fonts.bold },
+  month_selector_label: { color: theme.text, fontFamily: fonts.bold },
+  year_selector_label: { color: theme.text, fontFamily: fonts.bold },
+  month_label: { color: theme.text, fontFamily: fonts.medium },
+  year_label: { color: theme.text, fontFamily: fonts.medium },
+  day_label: { color: theme.text, fontFamily: fonts.medium },
+  weekday_label: { color: theme.textSecondary, fontFamily: fonts.regular },
+  time_label: { color: theme.text, fontFamily: fonts.bold },
+  time_selector_label: { color: theme.text, fontFamily: fonts.bold },
   time_selector: {
     backgroundColor: theme.surfaceSecondary,
     borderRadius: Shape.radius.md,

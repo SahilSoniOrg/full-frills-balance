@@ -12,7 +12,7 @@
  * ========================================
  */
 
-import { ThemeMode } from '@/src/constants'
+import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants'
 import { logger } from '@/src/utils/logger'
 import { preferences } from '@/src/utils/preferences'
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
@@ -25,6 +25,8 @@ interface UIState {
 
   // Theme preference
   themePreference: 'light' | 'dark' | 'system'
+  themeId: ThemeId
+  fontId: FontId
 
   // Simple UI flags
   isLoading: boolean
@@ -55,6 +57,8 @@ interface UIContextType extends UIState {
   // Actions for UI state only
   completeOnboarding: (name: string, currency: string) => Promise<void>
   setThemePreference: (theme: 'light' | 'dark' | 'system') => Promise<void>
+  setThemeId: (themeId: ThemeId) => Promise<void>
+  setFontId: (fontId: FontId) => Promise<void>
   updateUserDetails: (name: string, currency: string) => Promise<void>
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>
@@ -70,6 +74,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [uiState, setUIState] = useState<UIState>({
     hasCompletedOnboarding: false,
     themePreference: 'system',
+    themeId: ThemeIds.DEEP_SPACE, // Default
+    fontId: FontIds.DEEP_SPACE, // Default
     isLoading: false,
     isInitialized: false,
     userName: '',
@@ -82,11 +88,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     importStats: null,
   })
 
-  const themeMode = useMemo<'light' | 'dark'>(() => {
-    return uiState.themePreference === 'system'
-      ? (systemColorScheme === 'dark' ? 'dark' : 'light')
-      : uiState.themePreference
-  }, [uiState.themePreference, systemColorScheme])
+  // ... (themeMode calculation remains same)
 
   // Load preferences on mount
   useEffect(() => {
@@ -96,10 +98,14 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
         const loadedPreferences = await preferences.loadPreferences()
         const themePreference = loadedPreferences.theme || 'system'
+        const themeId = loadedPreferences.themeId || ThemeIds.DEEP_SPACE
+        const fontId = loadedPreferences.fontId || FontIds.DEEP_SPACE
 
         setUIState({
           hasCompletedOnboarding: loadedPreferences.onboardingCompleted,
           themePreference,
+          themeId,
+          fontId,
           userName: loadedPreferences.userName || '',
           defaultCurrency: loadedPreferences.defaultCurrencyCode || 'USD',
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
@@ -114,7 +120,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
       } catch (error) {
         logger.warn('Failed to load preferences', { error })
-        setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true }))
+        setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true })) // Ensure initialized even on cleanup errors
       }
     }
 
@@ -164,6 +170,26 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const setThemeId = useCallback(async (themeId: ThemeId) => {
+    try {
+      await preferences.setThemeId(themeId)
+      setUIState(prev => ({ ...prev, themeId }))
+    } catch (error) {
+      logger.warn('Failed to save theme ID', { error })
+      setUIState(prev => ({ ...prev, themeId }))
+    }
+  }, [])
+
+  const setFontId = useCallback(async (fontId: FontId) => {
+    try {
+      await preferences.setFontId(fontId)
+      setUIState(prev => ({ ...prev, fontId }))
+    } catch (error) {
+      logger.warn('Failed to save font ID', { error })
+      setUIState(prev => ({ ...prev, fontId }))
+    }
+  }, [])
+
   const setPrivacyMode = useCallback(async (isPrivacyMode: boolean) => {
     try {
       await preferences.setIsPrivacyMode(isPrivacyMode)
@@ -200,9 +226,15 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const value: UIContextType = {
     ...uiState,
-    themeMode,
+    themeMode: useMemo(() => {
+      return uiState.themePreference === 'system'
+        ? (systemColorScheme === 'dark' ? 'dark' : 'light')
+        : uiState.themePreference
+    }, [uiState.themePreference, systemColorScheme]),
     completeOnboarding,
     setThemePreference,
+    setThemeId,
+    setFontId,
     updateUserDetails,
     setPrivacyMode,
     setShowAccountMonthlyStats,

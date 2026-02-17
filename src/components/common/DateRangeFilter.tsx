@@ -24,7 +24,7 @@ export function DateRangeFilter({
     showNavigationArrows = true,
     fullWidth = false
 }: DateRangeFilterProps) {
-    const { theme } = useTheme();
+    const { theme, fonts } = useTheme();
     const showNavigation = !!(onPrevious && onNext) && showNavigationArrows;
 
     const displayText = useMemo(() => {
@@ -67,12 +67,13 @@ export function DateRangeFilter({
                 activeOpacity={Opacity.heavy}
             >
                 <AppIcon name="calendar" size={Size.sm} color={theme.primary} />
-                <AppText variant="body" style={[styles.text, { flexShrink: 1 }]} numberOfLines={1}>
+                <AppText variant="body" style={[styles.text, { flexShrink: 1, fontFamily: fonts.medium }]} numberOfLines={1}>
                     {displayText}
                 </AppText>
                 <AppIcon name="chevronDown" size={Size.xs} color={theme.textSecondary} />
             </TouchableOpacity>
 
+            {/* ... navigation right button ... */}
             {showNavigation && (
                 <TouchableOpacity
                     onPress={onNext}
@@ -109,6 +110,5 @@ const styles = StyleSheet.create({
     },
     text: {
         fontSize: Typography.sizes.sm,
-        fontFamily: Typography.fonts.medium,
     },
 });

@@ -1,5 +1,5 @@
 import { AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { AccountType } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -12,7 +12,7 @@ interface AccountTypeSelectorProps {
 }
 
 export const AccountTypeSelector: React.FC<AccountTypeSelectorProps> = ({ value, onChange, disabled }) => {
-    const { theme } = useTheme();
+    const { theme, fonts } = useTheme();
 
     const accountTypes = [
         { key: AccountType.ASSET, label: AppConfig.strings.accounts.types.asset },
@@ -47,6 +47,7 @@ export const AccountTypeSelector: React.FC<AccountTypeSelectorProps> = ({ value,
                             value === type.key && styles.textSelected,
                             {
                                 color: value === type.key ? theme.pureInverse : theme.text,
+                                fontFamily: value === type.key ? fonts.bold : fonts.medium
                             },
                         ]}
                     >
@@ -76,9 +77,9 @@ const styles = StyleSheet.create({
     },
     text: {
         textAlign: 'center',
-        fontFamily: Typography.fonts.medium,
+        // dynamic font
     },
     textSelected: {
-        fontFamily: Typography.fonts.bold,
+        // dynamic font
     },
 });

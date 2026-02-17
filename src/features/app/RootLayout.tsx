@@ -5,10 +5,20 @@ import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import {
+  DMSerifDisplay_400Regular,
+} from '@expo-google-fonts/dm-serif-display';
+import {
+  InstrumentSans_400Regular,
+  InstrumentSans_500Medium,
+  InstrumentSans_600SemiBold,
+  InstrumentSans_700Bold,
+  useFonts,
+} from '@expo-google-fonts/instrument-sans';
+import {
+  Raleway_400Regular,
+  Raleway_500Medium,
   Raleway_600SemiBold,
   Raleway_700Bold,
-  Raleway_800ExtraBold,
-  useFonts,
 } from '@expo-google-fonts/raleway';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -20,9 +30,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [fontsLoaded] = useFonts({
+    'DMSerifDisplay-Regular': DMSerifDisplay_400Regular,
+    'InstrumentSans-Regular': InstrumentSans_400Regular,
+    'InstrumentSans-Medium': InstrumentSans_500Medium,
+    'InstrumentSans-SemiBold': InstrumentSans_600SemiBold,
+    'InstrumentSans-Bold': InstrumentSans_700Bold,
+    'Raleway-Regular': Raleway_400Regular,
+    'Raleway-Medium': Raleway_500Medium,
     'Raleway-SemiBold': Raleway_600SemiBold,
     'Raleway-Bold': Raleway_700Bold,
-    'Raleway-ExtraBold': Raleway_800ExtraBold,
   });
 
   if (!fontsLoaded) {
@@ -70,6 +86,7 @@ function AppContent() {
       <Stack.Screen name="manage-hierarchy" options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="import-selection" options={{ headerShown: false }} />
       <Stack.Screen name="audit-log" options={{ headerShown: false }} />
+      <Stack.Screen name="appearance-settings" options={{ headerShown: false, presentation: 'modal' }} />
     </Stack>
   );
 }

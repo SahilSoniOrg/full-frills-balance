@@ -7,10 +7,12 @@ import { CurrencySelector } from '@/src/features/accounts/components/CurrencySel
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
 import { IconPickerModal } from '@/src/features/onboarding/components/IconPickerModal';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export function AccountFormView(vm: AccountFormViewModel) {
+    const { fonts } = useTheme();
     const {
         theme,
         title,
@@ -56,7 +58,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                 style={{ flex: 1 }}
             >
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                    <AppText variant="heading" style={styles.title}>
+                    <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold }]}>
                         {heroTitle}
                     </AppText>
                     <AppText variant="body" color="secondary" style={styles.subtitle}>
@@ -113,7 +115,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     )}
 
                     <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <AppText variant="body" style={styles.label}>{AppConfig.strings.accounts.form.accountType}</AppText>
+                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{AppConfig.strings.accounts.form.accountType}</AppText>
                         <AccountTypeSelector
                             value={accountType}
                             onChange={setAccountType}
@@ -123,7 +125,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
 
                     {showCurrency && (
                         <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                            <AppText variant="body" style={styles.label}>{currencyLabel}</AppText>
+                            <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{currencyLabel}</AppText>
                             <CurrencySelector
                                 selectedCurrency={selectedCurrency}
                                 onSelect={setSelectedCurrency}
@@ -133,7 +135,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     )}
 
                     <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <AppText variant="body" style={styles.label}>{AppConfig.strings.accounts.form.parentAccount}</AppText>
+                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{AppConfig.strings.accounts.form.parentAccount}</AppText>
                         <TouchableOpacity
                             onPress={() => setIsParentPickerVisible(true)}
                             style={[styles.selectorButton, { borderColor: theme.border, backgroundColor: theme.surface }]}
@@ -202,7 +204,6 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: Typography.sizes.xxl,
-        fontFamily: Typography.fonts.bold,
         textAlign: 'center',
         marginBottom: Spacing.sm,
     },
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     },
     label: {
         marginBottom: Spacing.sm,
-        fontFamily: Typography.fonts.semibold,
+        // dynamic font
     },
     createButton: {
         marginTop: Spacing.xl,

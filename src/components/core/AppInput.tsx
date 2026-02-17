@@ -30,7 +30,7 @@ export function AppInput({
     leftIcon,
     ...props
 }: AppInputProps) {
-    const { theme, tokens } = useThemedComponent(themeMode)
+    const { theme, tokens, fonts } = useThemedComponent(themeMode)
 
     return (
         <View style={[styles.container, containerStyle]}>
@@ -61,7 +61,7 @@ export function AppInput({
                 <TextInput
                     style={[
                         styles.input,
-                        variant === 'hero' && styles.heroInput,
+                        variant === 'hero' && [styles.heroInput, { fontFamily: fonts.bold }],
                         { color: theme.text },
                         style
                     ]}
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     },
     heroInput: {
         fontSize: Typography.sizes.hero,
-        fontFamily: Typography.fonts.bold,
+        // dynamic font
         textAlign: 'center',
         minHeight: Size.xxl * 2.5,
     },

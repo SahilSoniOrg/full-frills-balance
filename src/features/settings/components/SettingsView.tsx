@@ -1,14 +1,16 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { CurrencyPreference } from '@/src/features/settings/components/CurrencyPreference';
 import { SettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function SettingsView(vm: SettingsViewModel) {
-    const { theme } = useTheme();
+    const router = useRouter();
+    const { theme, fonts } = useTheme();
     const {
         themePreference,
         setThemePreference,
@@ -36,33 +38,38 @@ export function SettingsView(vm: SettingsViewModel) {
             withPadding
         >
             <View style={styles.inner}>
-                <AppText variant="subheading" style={styles.sectionTitle}>
+                <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
                     {AppConfig.strings.settings.sections.general}
                 </AppText>
                 <AppCard elevation="sm" padding="md" style={styles.card}>
                     <CurrencyPreference />
                 </AppCard>
 
-                <AppText variant="subheading" style={styles.sectionTitle}>
+                <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
                     {AppConfig.strings.settings.sections.appearance}
                 </AppText>
                 <AppCard elevation="sm" padding="md" style={styles.card}>
-                    <View style={styles.themeOptions}>
-                        {(['system', 'light', 'dark'] as const).map((pref) => (
-                            <AppButton
-                                key={pref}
-                                variant={themePreference === pref ? 'primary' : 'outline'}
-                                size="sm"
-                                onPress={() => setThemePreference(pref)}
-                                style={styles.themeButton}
-                            >
-                                {pref.charAt(0).toUpperCase() + pref.slice(1)}
-                            </AppButton>
-                        ))}
+                    <View style={styles.rowBetween}>
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
+                            <AppText variant="body" weight="semibold">Theme & Typography</AppText>
+                            <AppText variant="caption" color="secondary">
+                                Customize colors, fonts, and dark mode
+                            </AppText>
+                        </View>
+                        <AppButton
+                            variant="secondary"
+                            size="sm"
+                            onPress={() => router.push('/appearance-settings')}
+                        >
+                            Customize
+                        </AppButton>
                     </View>
+                </AppCard>
 
-                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-
+                <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
+                    Preferences
+                </AppText>
+                <AppCard elevation="sm" padding="md" style={styles.card}>
                     <View style={styles.rowBetween}>
                         <View style={{ flex: 1 }}>
                             <AppText variant="body" weight="semibold">{AppConfig.strings.settings.privacy.title}</AppText>
@@ -94,7 +101,7 @@ export function SettingsView(vm: SettingsViewModel) {
                     </View>
                 </AppCard>
 
-                <AppText variant="subheading" style={styles.sectionTitle}>
+                <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
                     {AppConfig.strings.settings.sections.dataManagement}
                 </AppText>
                 <AppCard elevation="sm" padding="md" style={styles.card}>
@@ -131,7 +138,7 @@ export function SettingsView(vm: SettingsViewModel) {
                     </AppButton>
                 </AppCard>
 
-                <AppText variant="subheading" style={styles.sectionTitle}>
+                <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
                     {AppConfig.strings.settings.sections.maintenance}
                 </AppText>
                 <AppCard elevation="sm" padding="md" style={styles.card}>
@@ -147,7 +154,7 @@ export function SettingsView(vm: SettingsViewModel) {
                     </AppButton>
                 </AppCard>
 
-                <AppText variant="subheading" style={[styles.sectionTitle, { color: theme.error }]}
+                <AppText variant="subheading" style={[styles.sectionTitle, { color: theme.error, fontFamily: fonts.bold }]}
                 >
                     {AppConfig.strings.settings.sections.dangerZone}
                 </AppText>
@@ -186,7 +193,7 @@ export function SettingsView(vm: SettingsViewModel) {
                     </AppText>
                 </View>
             </View>
-        </Screen>
+        </Screen >
     );
 }
 
@@ -197,7 +204,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         marginBottom: Spacing.sm,
         marginTop: Spacing.md,
-        fontFamily: Typography.fonts.bold,
+        // dynamic font
     },
     card: {
         marginBottom: Spacing.md,

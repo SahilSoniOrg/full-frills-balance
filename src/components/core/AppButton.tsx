@@ -29,7 +29,7 @@ export function AppButton({
   themeMode,
   ...props
 }: AppButtonProps) {
-  const { theme } = useThemedComponent(themeMode)
+  const { theme, fonts } = useThemedComponent(themeMode)
 
   const { buttonCombinedStyle, textCombinedStyle, finalTextColor } = useMemo(() => {
     const helperVariant: ComponentVariant = variant === 'secondary' ? 'default' : 'primary'
@@ -98,11 +98,11 @@ export function AppButton({
       textCombinedStyle: [
         styles.textBase,
         textTypography,
-        { color: textColor }
+        { color: textColor, fontFamily: fonts.semibold }
       ],
       finalTextColor: textColor
     }
-  }, [theme, variant, size, disabled, style])
+  }, [theme, variant, size, disabled, style, fonts])
 
   return (
     <TouchableOpacity
@@ -153,14 +153,14 @@ const styles = StyleSheet.create({
   },
   textSm: {
     fontSize: Typography.sizes.sm,
-    fontFamily: Typography.fonts.semibold,
+    // dynamic font
   },
   textMd: {
     fontSize: Typography.sizes.base,
-    fontFamily: Typography.fonts.semibold,
+    // dynamic font
   },
   textLg: {
     fontSize: Typography.sizes.lg,
-    fontFamily: Typography.fonts.semibold,
+    // dynamic font
   },
 })

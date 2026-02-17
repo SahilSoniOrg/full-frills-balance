@@ -70,7 +70,7 @@ export const getVariantColors = (theme: Theme, variant: ComponentVariant): Varia
         case 'asset':
             return {
                 main: theme.asset,
-                light: theme.primaryLight,
+                light: theme.assetLight,
                 contrast: getContrastColor(theme.asset),
             };
         case 'text':

@@ -120,159 +120,158 @@ export const SimpleFormView = ({
     return (
         <View style={styles.root}>
             <ScrollView style={styles.scroll} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-            <View style={[styles.typeTabs, { backgroundColor: theme.surfaceSecondary, borderColor: frameBorderColor }]}>
-                {(['expense', 'income', 'transfer'] as const).map(t => (
-                    <TouchableOpacity
-                        key={t}
-                        testID={`tab-${t}`}
-                        style={[
-                            styles.typeTab,
-                            type === t && { backgroundColor: theme.surface }
-                        ]}
-                        onPress={() => setType(t)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: type === t }}
-                    >
-                        <View style={styles.typeTabContent}>
-                            <AppIcon name={typeMeta[t].icon} size={Size.iconXs} color={type === t ? activeColor : theme.textSecondary} />
-                            <AppText
-                                variant="caption"
-                                weight="bold"
-                                style={{ color: type === t ? activeColor : theme.textSecondary }}
-                            >
-                                {typeMeta[t].label.toUpperCase()}
-                            </AppText>
-                        </View>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            <View style={styles.section}>
-                <AppText variant="caption" weight="bold" style={[styles.sectionLabel, { color: sectionLabelColor }]}>
-                    {AppConfig.strings.transactionFlow.descriptionOptional}
-                </AppText>
-                <AppInput
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder={
-                        type === 'expense'
-                            ? destAccount?.name || 'Expense'
-                            : type === 'income'
-                                ? sourceAccount?.name || 'Income'
-                                : 'Transfer'
-                    }
-                    testID="description-input"
-                    style={{ backgroundColor: theme.surface }}
-                    containerStyle={styles.descriptionContainer}
-                />
-            </View>
-
-            <View style={styles.section}>
-                <AppText variant="caption" weight="bold" style={[styles.sectionLabel, { color: sectionLabelColor }]}>
-                    {AppConfig.strings.transactionFlow.schedule}
-                </AppText>
-                <TouchableOpacity
-                    activeOpacity={Opacity.soft}
-                    onPress={() => setShowDatePicker(true)}
-                >
-                    <AppCard elevation="none" padding="none" style={[styles.scheduleCard, { backgroundColor: theme.surface, borderColor: frameBorderColor }]}>
-                        <View style={styles.scheduleRow}>
-                            <AppIcon name="calendar" size={Size.iconSm} color={theme.textSecondary} />
-                            <AppText variant="body" style={{ flex: 1 }}>
-                                {dayjs(`${journalDate}T${journalTime}`).format('DD MMM YYYY, HH:mm')}
-                            </AppText>
-                            <AppIcon name="chevronRight" size={Size.iconXs} color={theme.textSecondary} />
-                        </View>
-                    </AppCard>
-                </TouchableOpacity>
-            </View>
-
-            <DateTimePickerModal
-                visible={showDatePicker}
-                date={journalDate}
-                time={journalTime}
-                onClose={() => setShowDatePicker(false)}
-                onSelect={(d, t) => {
-                    setJournalDate(d);
-                    setJournalTime(t);
-                }}
-            />
-
-            <AppCard
-                elevation="none"
-                variant="default"
-                style={[styles.amountCard, { borderColor: withOpacity(activeColor, Opacity.medium), backgroundColor: theme.surface }]}
-            >
-                <AppText variant="caption" weight="bold" style={[styles.eyebrow, { color: sectionLabelColor }]}>
-                    {AppConfig.strings.transactionFlow.amount}
-                </AppText>
-                <View style={[styles.amountRow, { backgroundColor: theme.surfaceSecondary }]}>
-                    <View style={styles.currencyWrap}>
-                        <AppText variant="xl" weight="bold" style={{ color: theme.textSecondary, opacity: Opacity.heavy }}>
-                            {displayCurrency}
-                        </AppText>
-                    </View>
-                    <TextInput
-                        style={[styles.amountInput, { color: activeColor }]}
-                        value={amount}
-                        onChangeText={setAmount}
-                        keyboardType="decimal-pad"
-                        autoFocus
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        placeholder="0"
-                        placeholderTextColor={withOpacity(theme.textSecondary, Opacity.medium)}
-                        cursorColor={activeColor}
-                        selectionColor={withOpacity(activeColor, Opacity.muted)}
-                        testID="amount-input"
-                    />
-                </View>
-            </AppCard>
-
-            <View style={styles.accountSectionStack}>
-                {accountSections.map(section => (
-                    <AppCard
-                        key={section.title}
-                        elevation="none"
-                        variant="default"
-                        style={[styles.mainCard, { borderColor: frameBorderColor, backgroundColor: theme.surface }]}
-                    >
-                        <AccountTileList
-                            title={section.title}
-                            accounts={section.accounts}
-                            selectedId={section.selectedId}
-                            onSelect={section.onSelect}
-                            tintColor={activeColor}
-                        />
-                    </AppCard>
-                ))}
-            </View>
-
-            {isCrossCurrency && sourceId && destinationId && (
-                <View style={[styles.fxCard, { backgroundColor: withOpacity(theme.primary, Opacity.soft), borderColor: withOpacity(theme.primary, Opacity.medium) }]}>
-                    {isLoadingRate ? (
-                        <AppText variant="caption" color="secondary">{AppConfig.strings.transactionFlow.fetchingRate}</AppText>
-                    ) : rateError ? (
-                        <AppText variant="caption" color="error">{rateError}</AppText>
-                    ) : exchangeRate ? (
-                        <View style={styles.fxContent}>
-                            <View style={styles.fxRateRow}>
-                                <AppIcon name="refresh" size={Size.iconXs} color={theme.primary} />
-                                <AppText variant="caption" color="primary" weight="medium">
-                                    1 {sourceCurrency} = {exchangeRate.toFixed(4)} {destCurrency}
+                <View style={[styles.typeTabs, { backgroundColor: theme.surfaceSecondary, borderColor: frameBorderColor }]}>
+                    {(['expense', 'income', 'transfer'] as const).map(t => (
+                        <TouchableOpacity
+                            key={t}
+                            testID={`tab-${t}`}
+                            style={[
+                                styles.typeTab,
+                                type === t && { backgroundColor: theme.surface }
+                            ]}
+                            onPress={() => setType(t)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: type === t }}
+                        >
+                            <View style={styles.typeTabContent}>
+                                <AppIcon name={typeMeta[t].icon} size={Size.iconXs} color={type === t ? activeColor : theme.textSecondary} />
+                                <AppText
+                                    variant="caption"
+                                    weight="bold"
+                                    style={{ color: type === t ? activeColor : theme.textSecondary }}
+                                >
+                                    {typeMeta[t].label.toUpperCase()}
                                 </AppText>
                             </View>
-                            {parseFloat(amount) > 0 && (
-                                <View style={styles.fxTotalPill}>
-                                    <AppText variant="caption" color="primary" weight="bold">
-                                        Total: {convertedAmount.toFixed(2)} {destCurrency}
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                <View style={styles.section}>
+                    <AppText variant="caption" weight="bold" style={[styles.sectionLabel, { color: sectionLabelColor }]}>
+                        {AppConfig.strings.transactionFlow.descriptionOptional}
+                    </AppText>
+                    <AppInput
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder={
+                            type === 'expense'
+                                ? destAccount?.name || 'Expense'
+                                : type === 'income'
+                                    ? sourceAccount?.name || 'Income'
+                                    : 'Transfer'
+                        }
+                        testID="description-input"
+                        style={{ backgroundColor: theme.surface }}
+                        containerStyle={styles.descriptionContainer}
+                    />
+                </View>
+
+                <View style={styles.section}>
+                    <AppText variant="caption" weight="bold" style={[styles.sectionLabel, { color: sectionLabelColor }]}>
+                        {AppConfig.strings.transactionFlow.schedule}
+                    </AppText>
+                    <TouchableOpacity
+                        activeOpacity={Opacity.soft}
+                        onPress={() => setShowDatePicker(true)}
+                    >
+                        <AppCard elevation="none" padding="none" style={[styles.scheduleCard, { backgroundColor: theme.surface, borderColor: frameBorderColor }]}>
+                            <View style={styles.scheduleRow}>
+                                <AppIcon name="calendar" size={Size.iconSm} color={theme.textSecondary} />
+                                <AppText variant="body" style={{ flex: 1 }}>
+                                    {dayjs(`${journalDate}T${journalTime}`).format('DD MMM YYYY, HH:mm')}
+                                </AppText>
+                                <AppIcon name="chevronRight" size={Size.iconXs} color={theme.textSecondary} />
+                            </View>
+                        </AppCard>
+                    </TouchableOpacity>
+                </View>
+
+                <DateTimePickerModal
+                    visible={showDatePicker}
+                    date={journalDate}
+                    time={journalTime}
+                    onClose={() => setShowDatePicker(false)}
+                    onSelect={(d, t) => {
+                        setJournalDate(d);
+                        setJournalTime(t);
+                    }}
+                />
+
+                <AppCard
+                    elevation="none"
+                    variant="default"
+                    style={[styles.amountCard, { borderColor: withOpacity(activeColor, Opacity.medium), backgroundColor: theme.surface }]}
+                >
+                    <AppText variant="caption" weight="bold" style={[styles.eyebrow, { color: sectionLabelColor }]}>
+                        {AppConfig.strings.transactionFlow.amount}
+                    </AppText>
+                    <View style={[styles.amountRow, { backgroundColor: theme.surfaceSecondary }]}>
+                        <View style={styles.currencyWrap}>
+                            <AppText variant="xl" weight="bold" style={{ color: theme.textSecondary, opacity: Opacity.heavy }}>
+                                {displayCurrency}
+                            </AppText>
+                        </View>
+                        <TextInput
+                            style={[styles.amountInput, { color: activeColor }]}
+                            value={amount}
+                            onChangeText={setAmount}
+                            keyboardType="decimal-pad"
+                            autoFocus
+                            numberOfLines={1}
+                            placeholder="0"
+                            placeholderTextColor={withOpacity(theme.textSecondary, Opacity.medium)}
+                            cursorColor={activeColor}
+                            selectionColor={withOpacity(activeColor, Opacity.muted)}
+                            testID="amount-input"
+                        />
+                    </View>
+                </AppCard>
+
+                <View style={styles.accountSectionStack}>
+                    {accountSections.map(section => (
+                        <AppCard
+                            key={section.title}
+                            elevation="none"
+                            variant="default"
+                            style={[styles.mainCard, { borderColor: frameBorderColor, backgroundColor: theme.surface }]}
+                        >
+                            <AccountTileList
+                                title={section.title}
+                                accounts={section.accounts}
+                                selectedId={section.selectedId}
+                                onSelect={section.onSelect}
+                                tintColor={activeColor}
+                            />
+                        </AppCard>
+                    ))}
+                </View>
+
+                {isCrossCurrency && sourceId && destinationId && (
+                    <View style={[styles.fxCard, { backgroundColor: withOpacity(theme.primary, Opacity.soft), borderColor: withOpacity(theme.primary, Opacity.medium) }]}>
+                        {isLoadingRate ? (
+                            <AppText variant="caption" color="secondary">{AppConfig.strings.transactionFlow.fetchingRate}</AppText>
+                        ) : rateError ? (
+                            <AppText variant="caption" color="error">{rateError}</AppText>
+                        ) : exchangeRate ? (
+                            <View style={styles.fxContent}>
+                                <View style={styles.fxRateRow}>
+                                    <AppIcon name="refresh" size={Size.iconXs} color={theme.primary} />
+                                    <AppText variant="caption" color="primary" weight="medium">
+                                        1 {sourceCurrency} = {exchangeRate.toFixed(4)} {destCurrency}
                                     </AppText>
                                 </View>
-                            )}
-                        </View>
-                    ) : null}
-                </View>
-            )}
+                                {parseFloat(amount) > 0 && (
+                                    <View style={styles.fxTotalPill}>
+                                        <AppText variant="caption" color="primary" weight="bold">
+                                            Total: {convertedAmount.toFixed(2)} {destCurrency}
+                                        </AppText>
+                                    </View>
+                                )}
+                            </View>
+                        ) : null}
+                    </View>
+                )}
             </ScrollView>
 
             <View style={[styles.footerButton, { backgroundColor: theme.background, borderTopColor: frameBorderColor }]}>
@@ -335,7 +334,7 @@ const styles = StyleSheet.create({
         maxWidth: '100%',
         flexShrink: 1,
         fontSize: Typography.sizes.xxxl,
-        fontFamily: Typography.fonts.bold,
+        // dynamic font
         textAlign: 'right',
         writingDirection: 'auto',
         includeFontPadding: false,

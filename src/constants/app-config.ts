@@ -131,6 +131,31 @@ export const AppConfig = {
         maintenance: 'Maintenance',
         dangerZone: 'Danger Zone',
       },
+      appearance: {
+        themeTitle: 'Color Theme',
+        themeDesc: 'Choose the color palette that suits your style.',
+        typographyTitle: 'Typography',
+        typographyDesc: 'Select the font family for headings and body text.',
+        modeTitle: 'Mode',
+        deepSpace: {
+          label: 'Deep Space',
+          desc: 'Dark blue tones, high contrast',
+        },
+        ivy: {
+          label: 'Ivy',
+          desc: 'Clean white, minimalist',
+        },
+        serifSans: {
+          label: 'Serif & Sans',
+          desc: 'DM Serif Display + Instrument Sans',
+        },
+        modernGeometric: {
+          label: 'Modern Geometric',
+          desc: 'Raleway everywhere',
+        },
+        customize: 'Customize',
+        preview: 'Aa',
+      },
       privacy: {
         title: 'Privacy Mode',
         description: 'Mask balances across the app',

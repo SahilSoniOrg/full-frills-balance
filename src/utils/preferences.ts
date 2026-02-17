@@ -1,3 +1,4 @@
+import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
 import { logger } from '@/src/utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -13,6 +14,8 @@ interface UIPreferences {
     endDate: number;
   };
   theme?: 'light' | 'dark' | 'system';
+  themeId?: ThemeId;
+  fontId?: FontId;
   lastUsedSourceAccountId?: string;
   lastUsedDestinationAccountId?: string;
   isPrivacyMode: boolean;
@@ -28,6 +31,8 @@ class PreferencesHelper {
     isPrivacyMode: false,
     showAccountMonthlyStats: true,
     advancedMode: false,
+    themeId: ThemeIds.DEEP_SPACE, // Default to Deep Space
+    fontId: FontIds.DEEP_SPACE, // Default to Deep Space
   };
 
   async loadPreferences(): Promise<UIPreferences> {
@@ -99,6 +104,24 @@ class PreferencesHelper {
 
   async setTheme(theme: 'light' | 'dark' | 'system'): Promise<void> {
     this.preferences.theme = theme;
+    await this.savePreferences();
+  }
+
+  get themeId(): ThemeId | undefined {
+    return this.preferences.themeId;
+  }
+
+  async setThemeId(themeId: ThemeId): Promise<void> {
+    this.preferences.themeId = themeId;
+    await this.savePreferences();
+  }
+
+  get fontId(): FontId | undefined {
+    return this.preferences.fontId;
+  }
+
+  async setFontId(fontId: FontId): Promise<void> {
+    this.preferences.fontId = fontId;
     await this.savePreferences();
   }
 

@@ -4,21 +4,18 @@
  * Consolidates theme logic used across all screens.
  */
 
-import { getContextualTokens, ThemeMode, useThemeColors } from '@/src/constants'
+import { getContextualTokens, getFontTheme, getThemeColors } from '@/src/constants'
 import { useThemeOverride, useUI } from '@/src/contexts/UIContext'
-import { useColorScheme } from '@/src/hooks/use-color-scheme'
 
 export function useTheme() {
-    const { themePreference } = useUI()
-    const overrideMode = useThemeOverride()
-    const systemColorScheme = useColorScheme()
+    const { themePreference, themeId, fontId } = useUI()
+    const themeOverride = useThemeOverride()
+    const themeMode = themeOverride ?? (themePreference === 'system' ? 'dark' : themePreference)
 
-    const themeMode: ThemeMode = overrideMode || (themePreference === 'system'
-        ? (systemColorScheme === 'dark' ? 'dark' : 'light')
-        : themePreference as ThemeMode)
-
-    const theme = useThemeColors(themeMode)
+    // Resolve dynamic theme and fonts
+    const theme = getThemeColors(themeId, themeMode)
+    const fonts = getFontTheme(fontId)
     const tokens = getContextualTokens(theme)
 
-    return { theme, themeMode, tokens }
+    return { theme, themeMode, fonts, tokens }
 }

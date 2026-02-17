@@ -23,7 +23,7 @@ export function AppText({
   style,
   ...props
 }: AppTextProps) {
-  const { theme } = useThemedComponent(themeMode)
+  const { theme, fonts } = useThemedComponent(themeMode)
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
@@ -39,28 +39,36 @@ export function AppText({
       }
     })()
 
-    const fontWeight = (() => {
-      switch (weight) {
-        case 'medium': return '600' as const
-        case 'semibold': return '700' as const
-        case 'bold': return 'bold' as const
-        default: return 'normal' as const
+    const resolvedFontFamily = (() => {
+      // For heading variants, strictly use the heading font (Serif)
+      if (['heading', 'title', 'xl', 'hero'].includes(variant)) {
+        return fonts.heading
       }
+      // For subheading, use the specific subheading definition
+      if (variant === 'subheading') {
+        return fonts.subheading
+      }
+      // For body/caption, delegate to the weight prop to select the right Sans-Serif file
+      return fonts[weight] || fonts.regular
     })()
 
     const variantColors = getVariantColors(theme, color)
 
     return [
+      // Base styles (fontSize, lineHeight) - we intentionally override fontFamily below
       typographyStyles,
       {
         color: variantColors.main,
         textAlign: align,
-        fontWeight,
+        fontFamily: resolvedFontFamily,
+        // We do NOT set fontWeight here because we are selecting the specific font file
+        // that already embodies the weight (e.g. InstrumentSans-Bold).
+        // Setting fontWeight: 'bold' effectively double-applies it or breaks linking.
         fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
       },
       style,
     ]
-  }, [variant, weight, color, theme, align, italic, style])
+  }, [variant, weight, color, theme, fonts, align, italic, style])
 
   return <Text style={textStyle} {...props} />
 }
@@ -69,43 +77,36 @@ const styles = StyleSheet.create({
   caption: {
     fontSize: Typography.sizes.xs,
     lineHeight: Typography.sizes.xs * Typography.lineHeights.normal,
-    fontFamily: Typography.fonts.regular,
     letterSpacing: Typography.letterSpacing.normal,
   },
   body: {
     fontSize: Typography.sizes.base,
     lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
-    fontFamily: Typography.fonts.regular,
     letterSpacing: Typography.letterSpacing.normal,
   },
   subheading: {
     fontSize: Typography.sizes.lg,
     lineHeight: Typography.sizes.lg * Typography.lineHeights.tight,
-    fontFamily: Typography.fonts.subheading,
     letterSpacing: Typography.letterSpacing.tight,
   },
   heading: {
     fontSize: Typography.sizes.xl,
     lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
-    fontFamily: Typography.fonts.heading,
     letterSpacing: Typography.letterSpacing.tight,
   },
   title: {
     fontSize: Typography.sizes.xxxl,
     lineHeight: Typography.sizes.xxxl * Typography.lineHeights.tight,
-    fontFamily: Typography.fonts.heading,
     letterSpacing: Typography.letterSpacing.tight,
   },
   xl: {
     fontSize: Typography.sizes.xxl,
     lineHeight: Typography.sizes.xxl * Typography.lineHeights.tight,
-    fontFamily: Typography.fonts.heading,
     letterSpacing: Typography.letterSpacing.tight,
   },
   hero: {
     fontSize: Typography.sizes.hero,
     lineHeight: Typography.sizes.hero * Typography.lineHeights.tight,
-    fontFamily: Typography.fonts.bold,
     letterSpacing: Typography.letterSpacing.tight,
   },
 })

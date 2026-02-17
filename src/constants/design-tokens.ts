@@ -100,7 +100,6 @@
  * ========================================
  */
 
-import { Platform } from 'react-native'
 
 // === SPACING SCALE ===
 // Based on 4px grid system for consistency
@@ -184,41 +183,33 @@ export const Size = {
   gridItemMargin: '2%',
 } as const
 
+// === THEME ID ===
+export const ThemeIds = {
+  DEEP_SPACE: 'deep-space',
+  IVY: 'ivy',
+} as const;
+
+export type ThemeId = typeof ThemeIds[keyof typeof ThemeIds];
+
+// === FONT ID ===
+export const FontIds = {
+  DEEP_SPACE: 'deep-space',
+  IVY: 'ivy',
+} as const;
+
+export type FontId = typeof FontIds[keyof typeof FontIds];
+
 // === TYPOGRAPHY SCALE ===
 // Clean, readable hierarchy inspired by Ivy Wallet
 export const Typography = {
   // Font families
   fonts: {
-    regular: Platform.select({
-      ios: 'SF Pro Display',
-      android: 'Roboto',
-      default: 'system-ui',
-    }),
-    medium: Platform.select({
-      ios: 'SF Pro Display-Medium',
-      android: 'Roboto-Medium',
-      default: 'system-ui',
-    }),
-    semibold: Platform.select({
-      ios: 'SF Pro Display-Semibold',
-      android: 'Roboto-Medium',
-      default: 'system-ui',
-    }),
-    bold: Platform.select({
-      ios: 'SF Pro Display-Bold',
-      android: 'Roboto-Bold',
-      default: 'system-ui',
-    }),
-    heading: Platform.select({
-      ios: 'Raleway-ExtraBold',
-      android: 'Raleway-ExtraBold',
-      default: 'system-ui',
-    }),
-    subheading: Platform.select({
-      ios: 'Raleway-SemiBold',
-      android: 'Raleway-SemiBold',
-      default: 'system-ui',
-    }),
+    regular: 'InstrumentSans-Regular',
+    medium: 'InstrumentSans-Medium',
+    semibold: 'InstrumentSans-SemiBold',
+    bold: 'InstrumentSans-Bold',
+    heading: 'DMSerifDisplay-Regular',
+    subheading: 'InstrumentSans-Bold', // Use Bold Sans for subheadings instead of Serif if preferred, or DMSerifDisplay-Regular
   },
 
   // Font sizes
@@ -247,6 +238,45 @@ export const Typography = {
     wide: 0.5,
   },
 } as const
+
+// === FONT SCHEMES ===
+// === FONT SCHEMES ===
+
+export interface FontTheme {
+  regular: string;
+  medium: string;
+  semibold: string;
+  bold: string;
+  heading: string;
+  subheading: string;
+}
+
+const DeepSpaceFonts: FontTheme = {
+  regular: 'InstrumentSans-Regular',
+  medium: 'InstrumentSans-Medium',
+  semibold: 'InstrumentSans-SemiBold',
+  bold: 'InstrumentSans-Bold',
+  heading: 'DMSerifDisplay-Regular',
+  subheading: 'InstrumentSans-Bold',
+};
+
+const IvyFonts: FontTheme = {
+  regular: 'Raleway-Regular',
+  medium: 'Raleway-Medium',
+  semibold: 'Raleway-SemiBold',
+  bold: 'Raleway-Bold',
+  heading: 'Raleway-Bold', // Ivy uses Sans for headings too
+  subheading: 'Raleway-SemiBold',
+};
+
+export const FontSchemes: Record<FontId, FontTheme> = {
+  [FontIds.DEEP_SPACE]: DeepSpaceFonts,
+  [FontIds.IVY]: IvyFonts,
+};
+
+export const getFontTheme = (fontId: FontId): FontTheme => {
+  return FontSchemes[fontId] || FontSchemes[FontIds.DEEP_SPACE];
+};
 
 // === RADIUS & ELEVATION ===
 // Subtle, consistent shadows and rounded corners
@@ -291,51 +321,81 @@ export const Shape = {
   },
 } as const
 
-// === IVY PALETTE ===
-// Exact colors from Ivy Wallet source code (IvyColors.kt)
-export const Palette = {
-  // Neutrals
-  white: '#FAFAFC', // IvyColors.White
-  extraLightGray: '#EBEBF0', // IvyColors.ExtraLightGray
-  lightGray: '#CBCBD6', // IvyColors.LightGray
-  gray: '#74747A', // IvyColors.Gray
-  darkGray: '#303033', // IvyColors.DarkGray
-  extraDarkGray: '#1C1C1F', // IvyColors.ExtraDarkGray
-  black: '#09090A', // IvyColors.Black
-  trueBlack: '#000000', // IvyColors.TrueBlack
-  pureWhite: '#FFFFFF', // Absolute white for high contrast
 
-  // Purple (Primary)
-  purple: '#5C3DF5', // IvyColors.Purple.primary
-  purpleLight: '#9987F5', // IvyColors.Purple.light
-  purpleDark: '#36248F', // IvyColors.Purple.dark
-  purpleExtraLight: '#B8ABF5', // IvyColors.Purple.extraLight
 
-  // Green (Success/Income)
-  green: '#12B880', // IvyColors.Green.primary
-  greenLight: '#5AE0B4', // IvyColors.Green.light
-  greenDark: '#0C7A56', // IvyColors.Green.dark
-  greenExtraLight: '#ABF5DC', // IvyColors.Green.extraLight
+// === LANDING PAGE PALETTE (Deep Space) ===
+// Deep Space & Mint Theme
+export const DeepSpacePalette = {
+  // Neutrals (Rich Space Grays)
+  background: '#0A0A0C',     // Main background (Deep Space)
+  surface: '#1E1E26',        // Cards/Containers (Deep Purple-Gray)
+  surfaceHighlight: '#2A2A35', // Hover/Active states
 
-  // Red (Error/Expense)
-  red: '#F53D3D', // IvyColors.Red.primary
-  redLight: '#F5AB87', // IvyColors.Red.light (Salmon-ish)
-  redDark: '#8F2424', // IvyColors.Red.dark
-  redExtraLight: '#F5ABAB', // IvyColors.Red.extraLight
+  // Text
+  textPrimary: '#F0ECE4',    // Bone/Off-White (High Contrast)
+  textSecondary: '#8A8694',  // Muted Lavender/Gray
 
-  // Orange (Warning)
-  orange: '#F57A3D', // IvyColors.Orange.primary
-  orangeLight: '#F5AB87', // IvyColors.Orange.light
-  orangeDark: '#8F4724', // IvyColors.Orange.dark
+  // Brand / Accents
+  mint: '#7DD3A8',           // Primary Accent (Success/Income/Brand)
+  mintDim: '#2A4A3D',        // Muted Mint (Backgrounds)
 
-  // Blue (Asset)
-  blue: '#3193F5', // IvyColors.Blue.primary
-  blueLight: '#87BEF5', // IvyColors.Blue.light
-  blueDark: '#24598F', // IvyColors.Blue.dark
+  // Semantic
+  red: '#EB5757',            // Error/Expense
+  redDim: '#4A2A2A',         // Muted Red
+  blue: '#5D9CEC',           // Asset
+  blueDim: '#1F2C3D',        // Muted Blue (Backgrounds)
+  orange: '#F2994A',         // Liability/Warning
+  purple: '#BB6BD9',         // Transfer
 
-  // Yellow
-  yellow: '#F5D018', // IvyColors.Yellow.primary
+  // Standard
+  white: '#FFFFFF',
+  black: '#000000',
+  transparent: 'transparent',
 } as const
+
+// === IVY PALETTE (Original) ===
+export const IvyPalette = {
+  white: '#FAFAFC',
+  extraLightGray: '#EBEBF0',
+  lightGray: '#CBCBD6',
+  gray: '#74747A',
+  darkGray: '#303033',
+  extraDarkGray: '#1C1C1F',
+  black: '#09090A',
+  trueBlack: '#000000',
+  pureWhite: '#FFFFFF',
+
+  purple: '#5C3DF5',
+  purpleLight: '#9987F5',
+  purpleDark: '#36248F',
+  purpleExtraLight: '#B8ABF5',
+
+  green: '#12B880',
+  greenLight: '#5AE0B4',
+  greenDark: '#0C7A56',
+  greenExtraLight: '#ABF5DC',
+
+  red: '#F53D3D',
+  redLight: '#F5AB87',
+  redDark: '#8F2424',
+  redExtraLight: '#F5ABAB',
+
+  orange: '#F57A3D',
+  orangeLight: '#F5AB87',
+  orangeDark: '#8F4724',
+
+  blue: '#3193F5',
+  blueLight: '#87BEF5',
+  blueDark: '#24598F',
+  blueExtraLight: '#D6EAF8', // Added for badge backgrounds
+
+  yellow: '#F5D018',
+} as const
+
+// Backwards compatibility for now (though we should migrate away from direct Palette usage)
+// We alias Palette to DeepSpacePalette as it is the current default
+export const Palette = DeepSpacePalette;
+
 
 // === THEME TYPES ===
 export interface Theme {
@@ -348,6 +408,7 @@ export interface Theme {
   error: string
   errorLight: string
   asset: string
+  assetLight: string
   liability: string
   equity: string
   income: string
@@ -368,90 +429,148 @@ export interface Theme {
   onPrimary: string
 }
 
-// === SEMANTIC COLORS ===
-// Ivy Wallet inspired clean color palette
-export const Colors: { light: Theme; dark: Theme } = {
-  // Light theme - Matches IvyMaterial3Theme ivyLightColorScheme
+// === SEMANTIC THEME DEFINITIONS ===
+
+const DeepSpaceTheme: { light: Theme; dark: Theme } = {
   light: {
-    // Primary colors
-    primary: Palette.purple,
-    primaryLight: Palette.purpleExtraLight, // Using ExtraLight for nicer backgrounds than Light
+    primary: DeepSpacePalette.mint,
+    primaryLight: DeepSpacePalette.mintDim,
+    success: DeepSpacePalette.mint,
+    successLight: DeepSpacePalette.mintDim,
+    warning: DeepSpacePalette.orange,
+    warningLight: '#FFF5E5',
+    error: DeepSpacePalette.red,
+    errorLight: '#FFE5E5',
+    asset: DeepSpacePalette.blue,
+    assetLight: '#E8F2FF', // Light blue for light mode
+    liability: DeepSpacePalette.orange,
+    equity: DeepSpacePalette.mint,
+    income: DeepSpacePalette.mint,
+    expense: DeepSpacePalette.red,
+    transfer: DeepSpacePalette.purple,
+    background: '#F5F5FA',
+    surface: '#FFFFFF',
+    surfaceSecondary: '#EBEBF0',
+    border: '#E1E1E6',
+    text: '#1A1A1E',
+    textSecondary: '#6E6E73',
+    textTertiary: '#9E9EA3',
+    icon: '#6E6E73',
+    overlay: 'rgba(10, 10, 12, 0.5)',
+    divider: '#E1E1E6',
+    pure: '#FFFFFF',
+    pureInverse: '#000000',
+    onPrimary: '#0A0A0C',
+  },
+  dark: {
+    primary: DeepSpacePalette.mint,
+    primaryLight: DeepSpacePalette.mintDim,
+    success: DeepSpacePalette.mint,
+    successLight: DeepSpacePalette.mintDim,
+    warning: DeepSpacePalette.orange,
+    warningLight: '#3D2A1A',
+    error: DeepSpacePalette.red,
+    errorLight: '#3D1A1A',
+    asset: DeepSpacePalette.blue,
+    assetLight: DeepSpacePalette.blueDim, // Dark blue for dark mode
+    liability: DeepSpacePalette.orange,
+    equity: DeepSpacePalette.mint,
+    income: DeepSpacePalette.mint,
+    expense: DeepSpacePalette.red,
+    transfer: DeepSpacePalette.purple,
+    background: DeepSpacePalette.background,
+    surface: DeepSpacePalette.surface,
+    surfaceSecondary: DeepSpacePalette.surfaceHighlight,
+    border: DeepSpacePalette.surfaceHighlight,
+    text: DeepSpacePalette.textPrimary,
+    textSecondary: DeepSpacePalette.textSecondary,
+    textTertiary: '#5A5666',
+    icon: DeepSpacePalette.textSecondary,
+    overlay: 'rgba(0, 0, 0, 0.7)',
+    divider: DeepSpacePalette.surfaceHighlight,
+    pure: '#000000',
+    pureInverse: '#FFFFFF',
+    onPrimary: '#0A0A0C',
+  },
+};
 
-    // Semantic colors
-    success: Palette.green,
-    successLight: Palette.greenExtraLight, // Lighter tint for backgrounds
-    warning: Palette.orange,
-    warningLight: '#FFE8D6', // Custom softer orange tint (Ivy's orangeLight is same as redLight)
-    error: Palette.red,
-    errorLight: Palette.redExtraLight,     // Using ExtraLight as Light is too dark/orange
-
-    // Account type colors
-    asset: Palette.blue,
-    liability: Palette.orange,
-    equity: Palette.green,
-    income: Palette.green,
-    expense: Palette.red,
-    transfer: Palette.purple,
-
-    // Neutral colors
-    background: Palette.white,
-    surface: Palette.white,        // Ivy uses White for surface
-    surfaceSecondary: Palette.extraLightGray, // Ivy uses SurfaceVariant
-    border: Palette.extraLightGray,
-    text: Palette.black,
-    textSecondary: Palette.gray,
-    textTertiary: Palette.lightGray,
-    icon: Palette.gray,
-
-    // Special colors
+const IvyTheme: { light: Theme; dark: Theme } = {
+  light: {
+    primary: IvyPalette.purple,
+    primaryLight: IvyPalette.purpleExtraLight,
+    success: IvyPalette.green,
+    successLight: IvyPalette.greenExtraLight,
+    warning: IvyPalette.orange,
+    warningLight: '#FFE8D6',
+    error: IvyPalette.red,
+    errorLight: IvyPalette.redExtraLight,
+    asset: IvyPalette.blue,
+    assetLight: IvyPalette.blueExtraLight,
+    liability: IvyPalette.orange,
+    equity: IvyPalette.green,
+    income: IvyPalette.green,
+    expense: IvyPalette.red,
+    transfer: IvyPalette.purple,
+    background: IvyPalette.white,
+    surface: IvyPalette.white,
+    surfaceSecondary: IvyPalette.extraLightGray,
+    border: IvyPalette.extraLightGray,
+    text: IvyPalette.black,
+    textSecondary: IvyPalette.gray,
+    textTertiary: IvyPalette.lightGray,
+    icon: IvyPalette.gray,
     overlay: 'rgba(9, 9, 10, 0.5)',
-    divider: Palette.extraLightGray,
+    divider: IvyPalette.extraLightGray,
     pure: '#FFFFFF',
     pureInverse: '#000000',
     onPrimary: '#FFFFFF',
   },
-
-  // Dark theme - Matches IvyMaterial3Theme ivyDarkColorScheme
   dark: {
-    // Primary colors
-    primary: Palette.purple,
-    primaryLight: Palette.purpleDark,    // Darker tint for backgrounds
-
-    // Semantic colors
-    success: Palette.green,
-    successLight: Palette.greenDark,
-    warning: Palette.orange,
-    warningLight: Palette.orangeDark,
-    error: Palette.red,
-    errorLight: Palette.redDark,
-
-    // Account type colors
-    asset: Palette.blue,
-    liability: Palette.orange,
-    equity: Palette.green,
-    income: Palette.green,
-    expense: Palette.red,
-    transfer: Palette.purple,
-
-    // Neutral colors
-    background: Palette.black,   // Ivy uses Black or TrueBlack
-    surface: Palette.extraDarkGray, // Ivy SurfaceVariant for dark is ExtraDarkGray? No, Surface is TrueBlack/Black.
-    // Let's use ExtraDarkGray for cards to separate from Black background
-    surfaceSecondary: '#25252A',   // Slightly lighter than ExtraDarkGray
-    border: Palette.darkGray,
-    text: Palette.white,
-    textSecondary: Palette.lightGray,
-    textTertiary: Palette.gray,
-    icon: Palette.lightGray,
-
-    // Special colors
+    primary: IvyPalette.purple,
+    primaryLight: IvyPalette.purpleDark,
+    success: IvyPalette.green,
+    successLight: IvyPalette.greenDark,
+    warning: IvyPalette.orange,
+    warningLight: IvyPalette.orangeDark,
+    error: IvyPalette.red,
+    errorLight: IvyPalette.redDark,
+    asset: IvyPalette.blue,
+    assetLight: IvyPalette.blueDark, // Or maybe a more muted dark blue? blueDark is good.
+    liability: IvyPalette.orange,
+    equity: IvyPalette.green,
+    income: IvyPalette.green,
+    expense: IvyPalette.red,
+    transfer: IvyPalette.purple,
+    background: IvyPalette.black,
+    surface: IvyPalette.extraDarkGray,
+    surfaceSecondary: '#25252A',
+    border: IvyPalette.darkGray,
+    text: IvyPalette.white,
+    textSecondary: IvyPalette.lightGray,
+    textTertiary: IvyPalette.gray,
+    icon: IvyPalette.lightGray,
     overlay: 'rgba(0, 0, 0, 0.8)',
-    divider: Palette.darkGray,
+    divider: IvyPalette.darkGray,
     pure: '#000000',
     pureInverse: '#FFFFFF',
     onPrimary: '#FFFFFF',
   },
-} as const
+};
+
+// === THEME REGISTRY ===
+export const ThemeSchemes: Record<ThemeId, { light: Theme; dark: Theme }> = {
+  [ThemeIds.DEEP_SPACE]: DeepSpaceTheme,
+  [ThemeIds.IVY]: IvyTheme,
+};
+
+// Default export for backwards compatibility
+export const Colors = DeepSpaceTheme;
+
+// Helper to resolve theme colors
+export const getThemeColors = (themeId: ThemeId, mode: ThemeMode): Theme => {
+  const scheme = ThemeSchemes[themeId] || ThemeSchemes[ThemeIds.DEEP_SPACE];
+  return scheme[mode];
+};
 
 // === CONTEXTUAL TOKENS ===
 // Specific UI roles mapped to semantic colors
