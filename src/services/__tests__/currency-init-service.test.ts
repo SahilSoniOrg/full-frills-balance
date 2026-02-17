@@ -30,7 +30,8 @@ describe('CurrencyInitService', () => {
             expect(usd?.name).toBe('US Dollar')
         })
 
-        it('should do nothing if table is not empty', async () => {
+
+        it('should do nothing if all currencies are present', async () => {
             // Initialize once
             await service.initialize()
             const countInitial = (await service.getAllCurrencies()).length
@@ -40,6 +41,28 @@ describe('CurrencyInitService', () => {
             const countFinal = (await service.getAllCurrencies()).length
 
             expect(countFinal).toBe(countInitial)
+        })
+
+        it('should add missing currencies if new ones are introduced', async () => {
+            await service.initialize()
+            const allCurrencies = await service.getAllCurrencies()
+            const initialCount = allCurrencies.length
+
+            // Simulate a "missing" currency by deleting one
+            const currencyToDelete = allCurrencies[0]
+            await database.write(async () => {
+                await currencyToDelete.markAsDeleted()
+                await currencyToDelete.destroyPermanently()
+            })
+
+            const countAfterDelete = (await service.getAllCurrencies()).length
+            expect(countAfterDelete).toBe(initialCount - 1)
+
+            // Re-initialize should restore it
+            await service.initialize()
+
+            const countFinal = (await service.getAllCurrencies()).length
+            expect(countFinal).toBe(initialCount)
         })
     })
 
