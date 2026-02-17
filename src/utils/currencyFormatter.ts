@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { CURRENCY_PRECISIONS, CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { preferences } from '@/src/utils/preferences';
 
 /**
@@ -22,21 +23,57 @@ export const CurrencyFormatter = {
         currencyCode: string,
         options: CurrencyFormatOptions = {}
     ): string {
+        const defaultPrecision = CURRENCY_PRECISIONS[currencyCode] ?? 2;
         const {
             includeSymbol = true,
-            minimumFractionDigits = 2,
-            maximumFractionDigits = 2
+            minimumFractionDigits = defaultPrecision,
+            maximumFractionDigits = defaultPrecision
         } = options;
 
         try {
-            return amount.toLocaleString(undefined, {
+            const formatted = amount.toLocaleString(undefined, {
                 style: includeSymbol ? 'currency' : 'decimal',
                 currency: currencyCode,
                 minimumFractionDigits,
                 maximumFractionDigits,
             });
+
+            // If we have a custom symbol and it's missing from the output or shown as code, force it
+            const customSymbol = CURRENCY_SYMBOLS[currencyCode];
+            if (includeSymbol && customSymbol) {
+                // Check if the formatted string contains the code (indicating fallback occurred)
+                if (formatted.includes(currencyCode) && currencyCode !== customSymbol) {
+                    // Reformat as decimal and prepend symbol
+                    const decimal = amount.toLocaleString(undefined, {
+                        style: 'decimal',
+                        minimumFractionDigits,
+                        maximumFractionDigits,
+                    });
+
+                    // Simple prefix logic - could be made locale-aware if needed
+                    return `${customSymbol}${decimal}`;
+                }
+
+                // Also check if the symbol is completely missing but we expected one
+                // (some locales might not show symbol for some currencies)
+                const hasSymbolOrCode = formatted.includes(currencyCode) || formatted.includes(customSymbol);
+                if (!hasSymbolOrCode) {
+                    const decimal = amount.toLocaleString(undefined, {
+                        style: 'decimal',
+                        minimumFractionDigits,
+                        maximumFractionDigits,
+                    });
+                    return `${customSymbol}${decimal}`;
+                }
+            }
+
+            return formatted;
         } catch {
             // Fallback if currency code is invalid or not supported
+            const customSymbol = CURRENCY_SYMBOLS[currencyCode];
+            if (customSymbol) {
+                return `${customSymbol}${amount.toFixed(maximumFractionDigits)}`;
+            }
             return `${amount.toFixed(maximumFractionDigits)} ${currencyCode}`;
         }
     },

@@ -94,6 +94,7 @@ export const AppConfig = {
       cancel: 'Cancel',
       delete: 'Delete',
       allTime: 'All Time',
+      searchPlaceholder: 'Search...',
     },
     dashboard: {
       emptyTitle: 'No transactions yet',

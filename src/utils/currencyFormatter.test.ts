@@ -44,6 +44,31 @@ describe('CurrencyFormatter', () => {
 
             spy.mockRestore();
         });
+
+        it('formats AMD using custom symbol', () => {
+            // AMD usually formats as 'AMD 100.00' or similar in some locales without symbol
+            // We want to ensure it shows The Symbol ֏
+            const result = CurrencyFormatter.formatAmount(100, 'AMD');
+            expect(result).toMatch(/֏100\.00/);
+        });
+
+        it('uses code as suffix for unknown currency', () => {
+            const result = CurrencyFormatter.formatAmount(100, 'UNKNOWN');
+            // Check for "100.00 UNKNOWN" pattern
+            expect(result).toMatch(/100\.00\sUNKNOWN/);
+        });
+
+        it('respects JPY zero precision', () => {
+            const result = CurrencyFormatter.formatAmount(1234.56, 'JPY');
+            // JPY should have 0 decimal places
+            expect(result).toMatch(/¥1,235/);
+        });
+
+        it('respects KWD three precision', () => {
+            const result = CurrencyFormatter.formatAmount(1234.5678, 'KWD');
+            // KWD should have 3 decimal places
+            expect(result).toMatch(/1,234\.568/); // Note: KWD might use code or symbol depending on locale, but precision should be 3
+        });
     });
 
     describe('formatWithPreference', () => {

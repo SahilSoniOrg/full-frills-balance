@@ -1,9 +1,9 @@
-import { AppIcon, AppText } from '@/src/components/core';
+import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export const CurrencyPreference = () => {
@@ -11,12 +11,24 @@ export const CurrencyPreference = () => {
     const { defaultCurrency, updateUserDetails } = useUI();
     const { currencies } = useCurrencies();
     const [showModal, setShowModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const selectedCurrencyObj = currencies.find((c) => c.code === defaultCurrency);
+
+    const filteredCurrencies = useMemo(() => {
+        if (!searchQuery) return currencies;
+        const query = searchQuery.toLowerCase();
+        return currencies.filter(c =>
+            c.code.toLowerCase().includes(query) ||
+            c.name.toLowerCase().includes(query) ||
+            c.symbol.toLowerCase().includes(query)
+        );
+    }, [currencies, searchQuery]);
 
     const handleSelect = async (code: string) => {
         await updateUserDetails('', code);
         setShowModal(false);
+        setSearchQuery('');
     };
 
     return (
@@ -54,8 +66,19 @@ export const CurrencyPreference = () => {
                                 <AppIcon name="close" size={Typography.sizes.xxl} color={theme.text} />
                             </TouchableOpacity>
                         </View>
+
+                        <View style={styles.searchContainer}>
+                            <AppInput
+                                placeholder={AppConfig.strings.common.searchPlaceholder}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                leftIcon="search"
+                                containerStyle={{ marginBottom: Spacing.sm }}
+                            />
+                        </View>
+
                         <FlatList
-                            data={currencies}
+                            data={filteredCurrencies}
                             keyExtractor={(item) => item.code}
                             renderItem={({ item }) => (
                                 <TouchableOpacity
@@ -121,6 +144,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: Spacing.lg,
         borderBottomWidth: 1,
+    },
+    searchContainer: {
+        paddingHorizontal: Spacing.lg,
+        paddingTop: Spacing.md,
     },
     currencyItem: {
         flexDirection: 'row',
