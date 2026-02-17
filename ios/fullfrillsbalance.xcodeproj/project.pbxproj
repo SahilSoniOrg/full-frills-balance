@@ -7,29 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		105031F73458FB2298CD7A60 /* libPods-fullfrillsbalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 149CDFC2FB79FAAA9AFDE66A /* libPods-fullfrillsbalance.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		1C297BE2AF0FBF3777D69E85 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0057FC79C44387A026364099 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		4FE72328534C287651E82F50 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A9D226554E7B26709F7268 /* ExpoModulesProvider.swift */; };
-		B7065CB352A6C3EA94280BE4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 019910E5D4EE0204B64DDCFC /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		C9D71549136786D63D9171D5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F0B10662802752F5A70FB44B /* PrivacyInfo.xcprivacy */; };
+		D886C6B9DE016C66F9988CF4 /* libPods-fullfrillsbalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F591C4AAD5E21E86D83E5E42 /* libPods-fullfrillsbalance.a */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		019910E5D4EE0204B64DDCFC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = fullfrillsbalance/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0057FC79C44387A026364099 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-fullfrillsbalance/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* fullfrillsbalance.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = fullfrillsbalance.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = fullfrillsbalance/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = fullfrillsbalance/Info.plist; sourceTree = "<group>"; };
-		149CDFC2FB79FAAA9AFDE66A /* libPods-fullfrillsbalance.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-fullfrillsbalance.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		36A9D226554E7B26709F7268 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-fullfrillsbalance/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		4C85FD05971EF7F17A9DA6BA /* Pods-fullfrillsbalance.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-fullfrillsbalance.debug.xcconfig"; path = "Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance.debug.xcconfig"; sourceTree = "<group>"; };
-		853BC66D2FE1EF346AEF0401 /* Pods-fullfrillsbalance.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-fullfrillsbalance.release.xcconfig"; path = "Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance.release.xcconfig"; sourceTree = "<group>"; };
+		A3E2CF88E4E611D28C190BE9 /* Pods-fullfrillsbalance.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-fullfrillsbalance.debug.xcconfig"; path = "Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance.debug.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = fullfrillsbalance/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		E05548168C84796F64B6CE99 /* Pods-fullfrillsbalance.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-fullfrillsbalance.release.xcconfig"; path = "Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		F0B10662802752F5A70FB44B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = fullfrillsbalance/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = fullfrillsbalance/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* fullfrillsbalance-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "fullfrillsbalance-Bridging-Header.h"; path = "fullfrillsbalance/fullfrillsbalance-Bridging-Header.h"; sourceTree = "<group>"; };
+		F591C4AAD5E21E86D83E5E42 /* libPods-fullfrillsbalance.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-fullfrillsbalance.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				105031F73458FB2298CD7A60 /* libPods-fullfrillsbalance.a in Frameworks */,
+				D886C6B9DE016C66F9988CF4 /* libPods-fullfrillsbalance.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,7 +53,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				019910E5D4EE0204B64DDCFC /* PrivacyInfo.xcprivacy */,
+				F0B10662802752F5A70FB44B /* PrivacyInfo.xcprivacy */,
 			);
 			name = fullfrillsbalance;
 			sourceTree = "<group>";
@@ -62,9 +62,17 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				149CDFC2FB79FAAA9AFDE66A /* libPods-fullfrillsbalance.a */,
+				F591C4AAD5E21E86D83E5E42 /* libPods-fullfrillsbalance.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		3660AB41E102D8F2E9BE6F41 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				D21B37531F8074A6E3B2BBB8 /* fullfrillsbalance */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -81,8 +89,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				E0BCBF50C91231B7523D22A7 /* Pods */,
-				9E9E53B12B535C7B2ECA9F84 /* ExpoModulesProviders */,
+				EB5BCEEC806DDBC51E020794 /* Pods */,
+				3660AB41E102D8F2E9BE6F41 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -97,22 +105,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		9E9E53B12B535C7B2ECA9F84 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				A6B9E86525D33244905CEBC4 /* fullfrillsbalance */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
-		A6B9E86525D33244905CEBC4 /* fullfrillsbalance */ = {
-			isa = PBXGroup;
-			children = (
-				36A9D226554E7B26709F7268 /* ExpoModulesProvider.swift */,
-			);
-			name = fullfrillsbalance;
-			sourceTree = "<group>";
-		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -122,11 +114,19 @@
 			path = fullfrillsbalance/Supporting;
 			sourceTree = "<group>";
 		};
-		E0BCBF50C91231B7523D22A7 /* Pods */ = {
+		D21B37531F8074A6E3B2BBB8 /* fullfrillsbalance */ = {
 			isa = PBXGroup;
 			children = (
-				4C85FD05971EF7F17A9DA6BA /* Pods-fullfrillsbalance.debug.xcconfig */,
-				853BC66D2FE1EF346AEF0401 /* Pods-fullfrillsbalance.release.xcconfig */,
+				0057FC79C44387A026364099 /* ExpoModulesProvider.swift */,
+			);
+			name = fullfrillsbalance;
+			sourceTree = "<group>";
+		};
+		EB5BCEEC806DDBC51E020794 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				A3E2CF88E4E611D28C190BE9 /* Pods-fullfrillsbalance.debug.xcconfig */,
+				E05548168C84796F64B6CE99 /* Pods-fullfrillsbalance.release.xcconfig */,
 			);
 			name = Pods;
 			path = Pods;
@@ -140,13 +140,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "fullfrillsbalance" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				D2125A6366A7FB0CE2FCEBCE /* [Expo] Configure project */,
+				F3CFE88F7B681AD57A4C028C /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				0A5387E0CC7B2052ACBBC10C /* [CP] Embed Pods Frameworks */,
+				FDEF2CE555CC4BBCB2C9895F /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
+				E3A6E68277784082BC0C4FE2 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +197,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				B7065CB352A6C3EA94280BE4 /* PrivacyInfo.xcprivacy in Resources */,
+				C9D71549136786D63D9171D5 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,30 +243,6 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		0A5387E0CC7B2052ACBBC10C /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/QuickCrypto/OpenSSL.framework/OpenSSL",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/OpenSSL.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -308,7 +285,31 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D2125A6366A7FB0CE2FCEBCE /* [Expo] Configure project */ = {
+		E3A6E68277784082BC0C4FE2 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/QuickCrypto/OpenSSL.framework/OpenSSL",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermesvm.framework/hermesvm",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/OpenSSL.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermesvm.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-fullfrillsbalance/Pods-fullfrillsbalance-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		F3CFE88F7B681AD57A4C028C /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -332,6 +333,20 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-fullfrillsbalance/expo-configure-project.sh\"\n";
 		};
+		FDEF2CE555CC4BBCB2C9895F /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo Dev Launcher] Strip Local Network Keys for Release";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Strip dev-launcher-specific local network permission keys from non-Debug builds\n# This only removes _expo._tcp Bonjour services and the dev-launcher usage description.\n# Other Bonjour services and custom descriptions are preserved for production use.\n\nif [ \"$CONFIGURATION\" != \"Debug\" ]; then\n  PLIST_PATH=\"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n  if [ -f \"$PLIST_PATH\" ]; then\n    # Check if NSBonjourServices exists\n    if /usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" >/dev/null 2>&1; then\n      # Get the count of services\n      COUNT=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n\n      # Remove _expo._tcp\n      for ((i=COUNT-1; i>=0; i--)); do\n        SERVICE=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n        if echo \"$SERVICE\" | grep -q \"_expo._tcp\"; then\n          /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices:$i\" \"$PLIST_PATH\" 2>/dev/null || true\n        fi\n      done\n\n      # If the array is now empty, remove it entirely\n      REMAINING=$(/usr/libexec/PlistBuddy -c \"Print :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null | grep \"^    \" | wc -l | tr -d ' ')\n      if [ \"$REMAINING\" -eq \"0\" ]; then\n        /usr/libexec/PlistBuddy -c \"Delete :NSBonjourServices\" \"$PLIST_PATH\" 2>/dev/null || true\n      fi\n    fi\n\n    # Only delete the description if it matches the dev-launcher default text\n    DESC=$(/usr/libexec/PlistBuddy -c \"Print :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || echo \"\")\n    if echo \"$DESC\" | grep -q \"Expo Dev Launcher\"; then\n      /usr/libexec/PlistBuddy -c \"Delete :NSLocalNetworkUsageDescription\" \"$PLIST_PATH\" 2>/dev/null || true\n    fi\n  fi\nfi\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -340,7 +355,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				4FE72328534C287651E82F50 /* ExpoModulesProvider.swift in Sources */,
+				1C297BE2AF0FBF3777D69E85 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -349,7 +364,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4C85FD05971EF7F17A9DA6BA /* Pods-fullfrillsbalance.debug.xcconfig */;
+			baseConfigurationReference = A3E2CF88E4E611D28C190BE9 /* Pods-fullfrillsbalance.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -374,7 +389,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.fullfrillsbalance;
-				PRODUCT_NAME = "fullfrillsbalance";
+				PRODUCT_NAME = fullfrillsbalance;
 				SWIFT_OBJC_BRIDGING_HEADER = "fullfrillsbalance/fullfrillsbalance-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -385,7 +400,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 853BC66D2FE1EF346AEF0401 /* Pods-fullfrillsbalance.release.xcconfig */;
+			baseConfigurationReference = E05548168C84796F64B6CE99 /* Pods-fullfrillsbalance.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -405,7 +420,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.fullfrillsbalance;
-				PRODUCT_NAME = "fullfrillsbalance";
+				PRODUCT_NAME = fullfrillsbalance;
 				SWIFT_OBJC_BRIDGING_HEADER = "fullfrillsbalance/fullfrillsbalance-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -468,6 +483,8 @@
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -523,6 +540,8 @@
 				);
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "$(inherited)";
+				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
