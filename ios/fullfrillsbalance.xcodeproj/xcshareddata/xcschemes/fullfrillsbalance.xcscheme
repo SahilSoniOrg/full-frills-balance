@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "fullfrillsbalance.app"
-               BlueprintName = "fullfrillsbalance"
-               ReferencedContainer = "container:fullfrillsbalance.xcodeproj">
+               BuildableName = "FullFrillsBalance.app"
+               BlueprintName = "FullFrillsBalance"
+               ReferencedContainer = "container:FullFrillsBalance.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "fullfrillsbalanceTests.xctest"
-               BlueprintName = "fullfrillsbalanceTests"
-               ReferencedContainer = "container:fullfrillsbalance.xcodeproj">
+               BuildableName = "FullFrillsBalanceTests.xctest"
+               BlueprintName = "FullFrillsBalanceTests"
+               ReferencedContainer = "container:FullFrillsBalance.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "fullfrillsbalance.app"
-            BlueprintName = "fullfrillsbalance"
-            ReferencedContainer = "container:fullfrillsbalance.xcodeproj">
+            BuildableName = "FullFrillsBalance.app"
+            BlueprintName = "FullFrillsBalance"
+            ReferencedContainer = "container:FullFrillsBalance.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "fullfrillsbalance.app"
-            BlueprintName = "fullfrillsbalance"
-            ReferencedContainer = "container:fullfrillsbalance.xcodeproj">
+            BuildableName = "FullFrillsBalance.app"
+            BlueprintName = "FullFrillsBalance"
+            ReferencedContainer = "container:FullFrillsBalance.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

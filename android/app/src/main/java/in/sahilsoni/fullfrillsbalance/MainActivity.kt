@@ -1,4 +1,4 @@
-package com.anonymous.fullfrillsbalance
+package `in`.sahilsoni.fullfrillsbalance
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

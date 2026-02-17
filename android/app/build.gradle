@@ -92,9 +92,9 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.fullfrillsbalance'
+    namespace 'in.sahilsoni.fullfrillsbalance'
     defaultConfig {
-        applicationId 'com.anonymous.fullfrillsbalance'
+        applicationId 'in.sahilsoni.fullfrillsbalance'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

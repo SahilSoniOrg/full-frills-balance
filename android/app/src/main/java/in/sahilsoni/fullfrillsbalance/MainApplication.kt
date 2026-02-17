@@ -1,4 +1,4 @@
-package com.anonymous.fullfrillsbalance
+package `in`.sahilsoni.fullfrillsbalance
 
 import android.app.Application
 import com.nozbe.watermelondb.jsi.WatermelonDBJSIPackage;        
