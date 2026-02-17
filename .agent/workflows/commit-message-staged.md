@@ -8,6 +8,7 @@ Use this workflow on staged changes only (`git diff --cached`).
 1. Review staged changes for correctness and architectural rule compliance.
 2. If blocking issues exist, report them first and do not draft a commit message yet.
 3. If safe, propose one conventional commit message and optional alternatives.
+4. Commit message must not include file path.
 
 ## Commit format
 `<type>(optional-scope): <short imperative summary>`
@@ -23,4 +24,3 @@ Examples:
 - Subject <= 72 chars.
 - Reflect user-visible or architecture-relevant change.
 - Avoid vague subjects like "update stuff".
-
