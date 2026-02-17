@@ -1,12 +1,23 @@
-import { TransactionCardProps } from '@/src/components/common/TransactionCard';
+import { TransactionBadge, TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
+import { AccountType } from '@/src/data/models/Account';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
+import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useCallback, useMemo, useState } from 'react';
+
+const ACCOUNT_TYPE_VARIANTS: Record<AccountType, ComponentVariant> = {
+    [AccountType.ASSET]: 'asset',
+    [AccountType.LIABILITY]: 'liability',
+    [AccountType.EQUITY]: 'equity',
+    [AccountType.INCOME]: 'income',
+    [AccountType.EXPENSE]: 'expense',
+};
 
 export interface JournalListEmptyState {
     title: string;
@@ -99,6 +110,26 @@ export function useJournalListViewModel({
                 typeIcon = 'swapHorizontal';
             }
 
+            // Resolve badges from accounts
+            const badges: TransactionBadge[] = journal.accounts.slice(0, 2).map(acc => {
+                const isSource = acc.role === 'SOURCE';
+                const isDest = acc.role === 'DESTINATION';
+                const showPrefix = isSource ? AppConfig.strings.journal.from : (isDest ? AppConfig.strings.journal.to : '');
+
+                return {
+                    text: `${showPrefix}${acc.name}`,
+                    variant: ACCOUNT_TYPE_VARIANTS[acc.accountType as AccountType],
+                    icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
+                };
+            });
+
+            if (journal.accounts.length > 2) {
+                badges.push({
+                    text: AppConfig.strings.journal.more(journal.accounts.length - 2),
+                    variant: 'default',
+                });
+            }
+
             return {
                 id: journal.id,
                 onPress: () => handleJournalPress(journal.id),
@@ -113,7 +144,8 @@ export function useJournalListViewModel({
                         typeIcon,
                         amountPrefix,
                     },
-                    accounts: journal.accounts,
+                    badges,
+                    notes: undefined, // EnrichedJournal doesn't have notes yet
                 }
             };
         });

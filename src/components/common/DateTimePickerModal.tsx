@@ -25,7 +25,7 @@ export function DateTimePickerModal({
     onClose,
     onSelect,
 }: DateTimePickerModalProps) {
-    const { theme } = useTheme();
+    const { theme, fonts } = useTheme();
     const insets = useSafeAreaInsets();
 
     // Combine date and time for dayjs
@@ -73,7 +73,7 @@ export function DateTimePickerModal({
                             date={selectedValue}
                             onChange={handleDateChange}
                             timePicker={true}
-                            styles={getDatePickerStyles(theme)}
+                            styles={getDatePickerStyles(theme, fonts)}
                         />
                     </View>
 

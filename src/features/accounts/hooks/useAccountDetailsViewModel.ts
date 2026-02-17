@@ -1,7 +1,7 @@
 import { TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
-import Account from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import { useAccount, useAccountActions, useAccountBalance, useAccountBalances, useAccountHasChildren, useAccounts, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
 import { useAccountTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -12,8 +12,17 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
+import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
+
+const ACCOUNT_TYPE_VARIANTS: Record<AccountType, ComponentVariant> = {
+    [AccountType.ASSET]: 'asset',
+    [AccountType.LIABILITY]: 'liability',
+    [AccountType.EQUITY]: 'equity',
+    [AccountType.INCOME]: 'income',
+    [AccountType.EXPENSE]: 'expense',
+};
 
 export interface SubAccountViewModel {
     id: string;
@@ -304,7 +313,11 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                         typeIcon: (isIncrease ? 'arrowUp' : 'arrowDown') as IconName,
                         amountPrefix: isIncrease ? '+ ' : '− ',
                     },
-                    accounts: displayAccounts,
+                    badges: displayAccounts.map(acc => ({
+                        text: acc.name,
+                        variant: ACCOUNT_TYPE_VARIANTS[acc.accountType as AccountType],
+                        icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
+                    })),
                     notes: transaction.notes,
                 }
             };

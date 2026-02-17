@@ -4,15 +4,17 @@ import { AppCard } from '@/src/components/core/AppCard';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppInput } from '@/src/components/core/AppInput';
 import { AppText } from '@/src/components/core/AppText';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { AccountTileList } from '@/src/features/journal/components/AccountTileList';
 import { useTheme } from '@/src/hooks/use-theme';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { TabType, UseSimpleJournalEditorProps, useSimpleJournalEditor } from '../hooks/useSimpleJournalEditor';
+import { SimpleFormAccountSections } from './SimpleFormAccountSections';
+import { SimpleFormAmountInput } from './SimpleFormAmountInput';
+import { SimpleFormTabs } from './SimpleFormTabs';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface SimpleFormProps extends UseSimpleJournalEditorProps { }
@@ -96,12 +98,6 @@ export const SimpleFormView = ({
     const sectionLabelColor = theme.textSecondary;
     const frameBorderColor = withOpacity(theme.textSecondary, Opacity.muted);
 
-    const typeMeta: Record<TabType, { label: string; icon: 'arrowDown' | 'arrowUp' | 'swapHorizontal' }> = {
-        expense: { label: 'Expense', icon: 'arrowDown' },
-        income: { label: 'Income', icon: 'arrowUp' },
-        transfer: { label: 'Transfer', icon: 'swapHorizontal' },
-    };
-
     const accountSections = type === 'expense'
         ? [
             { title: 'To Category / Account', accounts: expenseAccounts, selectedId: destinationId, onSelect: setDestinationId },
@@ -120,32 +116,12 @@ export const SimpleFormView = ({
     return (
         <View style={styles.root}>
             <ScrollView style={styles.scroll} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-                <View style={[styles.typeTabs, { backgroundColor: theme.surfaceSecondary, borderColor: frameBorderColor }]}>
-                    {(['expense', 'income', 'transfer'] as const).map(t => (
-                        <TouchableOpacity
-                            key={t}
-                            testID={`tab-${t}`}
-                            style={[
-                                styles.typeTab,
-                                type === t && { backgroundColor: theme.surface }
-                            ]}
-                            onPress={() => setType(t)}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected: type === t }}
-                        >
-                            <View style={styles.typeTabContent}>
-                                <AppIcon name={typeMeta[t].icon} size={Size.iconXs} color={type === t ? activeColor : theme.textSecondary} />
-                                <AppText
-                                    variant="caption"
-                                    weight="bold"
-                                    style={{ color: type === t ? activeColor : theme.textSecondary }}
-                                >
-                                    {typeMeta[t].label.toUpperCase()}
-                                </AppText>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                <SimpleFormTabs
+                    type={type}
+                    setType={setType}
+                    activeColor={activeColor}
+                    frameBorderColor={frameBorderColor}
+                />
 
                 <View style={styles.section}>
                     <AppText variant="caption" weight="bold" style={[styles.sectionLabel, { color: sectionLabelColor }]}>
@@ -198,54 +174,20 @@ export const SimpleFormView = ({
                     }}
                 />
 
-                <AppCard
-                    elevation="none"
-                    variant="default"
-                    style={[styles.amountCard, { borderColor: withOpacity(activeColor, Opacity.medium), backgroundColor: theme.surface }]}
-                >
-                    <AppText variant="caption" weight="bold" style={[styles.eyebrow, { color: sectionLabelColor }]}>
-                        {AppConfig.strings.transactionFlow.amount}
-                    </AppText>
-                    <View style={[styles.amountRow, { backgroundColor: theme.surfaceSecondary }]}>
-                        <View style={styles.currencyWrap}>
-                            <AppText variant="xl" weight="bold" style={{ color: theme.textSecondary, opacity: Opacity.heavy }}>
-                                {displayCurrency}
-                            </AppText>
-                        </View>
-                        <TextInput
-                            style={[styles.amountInput, { color: activeColor }]}
-                            value={amount}
-                            onChangeText={setAmount}
-                            keyboardType="decimal-pad"
-                            autoFocus
-                            numberOfLines={1}
-                            placeholder="0"
-                            placeholderTextColor={withOpacity(theme.textSecondary, Opacity.medium)}
-                            cursorColor={activeColor}
-                            selectionColor={withOpacity(activeColor, Opacity.muted)}
-                            testID="amount-input"
-                        />
-                    </View>
-                </AppCard>
+                <SimpleFormAmountInput
+                    amount={amount}
+                    setAmount={setAmount}
+                    activeColor={activeColor}
+                    displayCurrency={displayCurrency}
+                    sectionLabelColor={sectionLabelColor}
+                    amountLabel={AppConfig.strings.transactionFlow.amount}
+                />
 
-                <View style={styles.accountSectionStack}>
-                    {accountSections.map(section => (
-                        <AppCard
-                            key={section.title}
-                            elevation="none"
-                            variant="default"
-                            style={[styles.mainCard, { borderColor: frameBorderColor, backgroundColor: theme.surface }]}
-                        >
-                            <AccountTileList
-                                title={section.title}
-                                accounts={section.accounts}
-                                selectedId={section.selectedId}
-                                onSelect={section.onSelect}
-                                tintColor={activeColor}
-                            />
-                        </AppCard>
-                    ))}
-                </View>
+                <SimpleFormAccountSections
+                    sections={accountSections}
+                    activeColor={activeColor}
+                    frameBorderColor={frameBorderColor}
+                />
 
                 {isCrossCurrency && sourceId && destinationId && (
                     <View style={[styles.fxCard, { backgroundColor: withOpacity(theme.primary, Opacity.soft), borderColor: withOpacity(theme.primary, Opacity.medium) }]}>
@@ -304,75 +246,6 @@ const styles = StyleSheet.create({
     container: {
         padding: Spacing.lg,
         paddingBottom: Spacing.xxxxl + Size.buttonXl,
-    },
-    amountCard: {
-        borderWidth: 1,
-        marginTop: Spacing.xs,
-        marginBottom: Spacing.md,
-        paddingTop: Spacing.sm,
-        paddingBottom: Spacing.sm,
-    },
-    amountRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: Shape.radius.r3,
-        paddingHorizontal: Spacing.lg,
-        minHeight: Size.inputLg + Spacing.md,
-        paddingVertical: Spacing.sm,
-        gap: Spacing.sm,
-        width: '100%',
-        overflow: 'hidden',
-    },
-    currencyWrap: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        minWidth: Size.xl * 2,
-    },
-    amountInput: {
-        flex: 1,
-        minWidth: 0,
-        maxWidth: '100%',
-        flexShrink: 1,
-        fontSize: Typography.sizes.xxxl,
-        // dynamic font
-        textAlign: 'right',
-        writingDirection: 'auto',
-        includeFontPadding: false,
-    },
-    eyebrow: {
-        letterSpacing: Typography.letterSpacing.wide * 2,
-        marginBottom: Spacing.sm,
-    },
-    typeTabs: {
-        flexDirection: 'row',
-        padding: Spacing.xs,
-        borderRadius: Shape.radius.full,
-        marginTop: Spacing.sm,
-        marginBottom: Spacing.md,
-        borderWidth: 1,
-        overflow: 'hidden',
-    },
-    typeTab: {
-        flex: 1,
-        paddingVertical: Spacing.md,
-        alignItems: 'center',
-        borderRadius: Shape.radius.full,
-    },
-    typeTabContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.xs,
-    },
-    mainCard: {
-        borderRadius: Shape.radius.r2,
-        padding: Spacing.md,
-        marginTop: 0,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    accountSectionStack: {
-        gap: Spacing.sm,
-        marginBottom: Spacing.md,
     },
     fxCard: {
         alignItems: 'center',

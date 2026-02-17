@@ -1,4 +1,4 @@
-import { AppIcon, AppText, FloatingActionButton } from '@/src/components/core';
+import { AppText, FloatingActionButton, IconButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
@@ -57,10 +57,12 @@ export function AccountsListView({
                                     <AppText variant="body" weight="bold" style={{ color: section.totalColor }}>
                                         {section.totalDisplay}
                                     </AppText>
-                                    <AppIcon
+                                    <IconButton
                                         name={section.isCollapsed ? "chevronRight" : "chevronDown"}
                                         size={Size.iconSm}
-                                        color={theme.textSecondary}
+                                        variant="clear"
+                                        iconColor={theme.textSecondary}
+                                        onPress={() => onToggleSection(section.title)}
                                     />
                                 </View>
                             </View>
@@ -83,34 +85,27 @@ export function AccountsListView({
                             <View style={[styles.summaryRow, styles.screenHeaderTop]}>
                                 <AppText variant="title" weight="bold">Accounts</AppText>
                                 <View style={styles.flexRowGapSm}>
-                                    <TouchableOpacity
+                                    <IconButton
+                                        name={isPrivacyMode ? "eyeOff" : "eye"}
+                                        size={Size.iconSm}
+                                        variant="surface"
                                         onPress={onTogglePrivacy}
-                                        style={[styles.reorderIconButton, { backgroundColor: theme.surfaceSecondary }]}
                                         accessibilityLabel={isPrivacyMode ? "Show balances" : "Hide balances"}
-                                        accessibilityRole="button"
-                                    >
-                                        <AppIcon
-                                            name={isPrivacyMode ? "eyeOff" : "eye"}
-                                            size={Size.iconSm}
-                                            color={theme.text}
-                                        />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
+                                    />
+                                    <IconButton
+                                        name="reorder"
+                                        size={Size.iconSm}
+                                        variant="surface"
                                         onPress={onReorderPress}
-                                        style={[styles.reorderIconButton, { backgroundColor: theme.surfaceSecondary }]}
                                         accessibilityLabel="Reorder accounts"
-                                        accessibilityRole="button"
-                                    >
-                                        <AppIcon name="reorder" size={Size.iconSm} color={theme.text} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
+                                    />
+                                    <IconButton
+                                        name="hierarchy"
+                                        size={Size.iconSm}
+                                        variant="surface"
                                         onPress={onManageHierarchy}
-                                        style={[styles.reorderIconButton, { backgroundColor: theme.surfaceSecondary }]}
                                         accessibilityLabel="Manage hierarchy"
-                                        accessibilityRole="button"
-                                    >
-                                        <AppIcon name="hierarchy" size={Size.iconSm} color={theme.text} />
-                                    </TouchableOpacity>
+                                    />
                                 </View>
                             </View>
                         </View>
@@ -161,13 +156,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing.md,
-    },
-    reorderIconButton: {
-        width: Size.xl,
-        height: Size.xl,
-        borderRadius: Shape.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     sectionHeaderContainer: {
         marginTop: Spacing.xl,

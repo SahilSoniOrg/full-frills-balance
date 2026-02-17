@@ -28,6 +28,7 @@ interface BreakdownViewState {
     legendRows: BreakdownLegendRow[];
     hasData: boolean;
     totalCount: number;
+    showExpansionButton: boolean;
 }
 
 export function useBreakdownViewState({
@@ -57,6 +58,7 @@ export function useBreakdownViewState({
             })),
             hasData: source.length > 0,
             totalCount: source.length,
+            showExpansionButton: source.length > REPORT_CHART_LAYOUT.donutLegendCollapsedLimit,
         };
     }, [expanded, fallbackColor, globalBreakdown, selectedBreakdown]);
 }

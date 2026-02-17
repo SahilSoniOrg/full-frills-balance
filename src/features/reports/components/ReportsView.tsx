@@ -4,13 +4,12 @@ import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import { REPORT_CHART_COLORS, REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownDonutCard';
+import { IncomeExpenseTooltip, NetWorthTooltip } from '@/src/features/reports/components/ReportTooltip';
 import { useChartTooltipPosition } from '@/src/features/reports/hooks/useChartTooltipPosition';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { formatDate } from '@/src/utils/dateUtils';
 import React, { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
@@ -74,52 +73,21 @@ export function ReportsView(vm: ReportsViewModel) {
         const { left, top } = getNetWorthTooltipPosition(x, y);
 
         return (
-            <View style={[
-                styles.tooltip,
-                {
-                    left,
-                    top,
-                    width: REPORT_CHART_LAYOUT.tooltipWidth,
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                }
-            ]}>
-                <AppText variant="caption" color="secondary" style={styles.tooltipDate}>
-                    {formatDate(data.date)}
-                </AppText>
-
-                <TouchableOpacity
-                    style={styles.tooltipIconButton}
-                    onPress={() => onViewTransactions(data.date)}
-                    hitSlop={{
-                        top: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                        bottom: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                        left: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                        right: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                    }}
-                >
-                    <AppIcon name="arrowRight" size={REPORT_CHART_LAYOUT.tooltipIconSize} color={theme.primary} />
-                </TouchableOpacity>
-
-                <AppText variant="body" weight="bold" style={styles.tooltipNetWorth}>
-                    {CurrencyFormatter.formatWithPreference(data.netWorth)}
-                </AppText>
-
-                <View style={[styles.tooltipRow, { borderTopColor: theme.border }]}>
-                    <View style={styles.tooltipItem}>
-                        <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>{REPORT_CHART_STRINGS.incomeShort}</AppText>
-                        <AppText variant="caption" style={{ color: theme.success }} weight="bold">
-                            {CurrencyFormatter.formatShort(data.income)}
-                        </AppText>
-                    </View>
-                    <View style={styles.tooltipItem}>
-                        <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>{REPORT_CHART_STRINGS.expenseShort}</AppText>
-                        <AppText variant="caption" style={{ color: theme.error }} weight="bold">
-                            {CurrencyFormatter.formatShort(data.expense)}
-                        </AppText>
-                    </View>
-                </View>
-            </View>
+            <NetWorthTooltip
+                left={left}
+                top={top}
+                backgroundColor={theme.surface}
+                borderColor={theme.border}
+                date={data.date}
+                netWorth={data.netWorth}
+                income={data.income}
+                expense={data.expense}
+                successColor={theme.success}
+                errorColor={theme.error}
+                onViewTransactions={() => onViewTransactions(data.date)}
+                incomeLabel={REPORT_CHART_STRINGS.incomeShort}
+                expenseLabel={REPORT_CHART_STRINGS.expenseShort}
+            />
         );
     }, [dailyData, theme, getNetWorthTooltipPosition, onViewTransactions]);
 
@@ -129,48 +97,20 @@ export function ReportsView(vm: ReportsViewModel) {
         const { left, top } = getBarTooltipPosition(x, y);
 
         return (
-            <View style={[
-                styles.tooltip,
-                {
-                    left,
-                    top,
-                    width: REPORT_CHART_LAYOUT.tooltipWidth,
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                }
-            ]}>
-                <AppText variant="caption" color="secondary" style={styles.tooltipDate}>
-                    {data.label}
-                </AppText>
-
-                <TouchableOpacity
-                    style={styles.tooltipIconButton}
-                    onPress={vm.onViewSelectedTransactions}
-                    hitSlop={{
-                        top: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                        bottom: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                        left: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                        right: REPORT_CHART_LAYOUT.tooltipHitSlop,
-                    }}
-                >
-                    <AppIcon name="arrowRight" size={REPORT_CHART_LAYOUT.tooltipIconSize} color={theme.primary} />
-                </TouchableOpacity>
-
-                <View style={[styles.tooltipRow, { borderTopWidth: 0, marginTop: Spacing.xs }]}>
-                    <View style={styles.tooltipItem}>
-                        <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>{REPORT_CHART_STRINGS.incomeShort}</AppText>
-                        <AppText variant="caption" style={{ color: theme.success }} weight="bold">
-                            {CurrencyFormatter.formatShort(data.values[0])}
-                        </AppText>
-                    </View>
-                    <View style={styles.tooltipItem}>
-                        <AppText variant="caption" color="secondary" style={styles.tooltipLabel}>{REPORT_CHART_STRINGS.expenseShort}</AppText>
-                        <AppText variant="caption" style={{ color: theme.error }} weight="bold">
-                            {CurrencyFormatter.formatShort(data.values[1])}
-                        </AppText>
-                    </View>
-                </View>
-            </View>
+            <IncomeExpenseTooltip
+                left={left}
+                top={top}
+                backgroundColor={theme.surface}
+                borderColor={theme.border}
+                label={data.label}
+                income={data.values[0]}
+                expense={data.values[1]}
+                successColor={theme.success}
+                errorColor={theme.error}
+                onViewTransactions={vm.onViewSelectedTransactions}
+                incomeLabel={REPORT_CHART_STRINGS.incomeShort}
+                expenseLabel={REPORT_CHART_STRINGS.expenseShort}
+            />
         );
     }, [barChartData, theme, getBarTooltipPosition, vm.onViewSelectedTransactions]);
 
@@ -236,6 +176,7 @@ export function ReportsView(vm: ReportsViewModel) {
                         donutData={incomeDonutData}
                         legendRows={incomeLegendRows}
                         totalCount={vm.totalIncomeCount}
+                        showExpansionButton={vm.showIncomeExpansionButton}
                         expanded={vm.expandedIncome}
                         onToggleExpansion={vm.toggleIncomeExpansion}
                         onLegendRowPress={onLegendRowPress}
@@ -268,6 +209,7 @@ export function ReportsView(vm: ReportsViewModel) {
                         donutData={expenseDonutData}
                         legendRows={legendRows}
                         totalCount={vm.totalExpenseCount}
+                        showExpansionButton={vm.showExpenseExpansionButton}
                         expanded={vm.expandedExpenses}
                         onToggleExpansion={vm.toggleExpenseExpansion}
                         onLegendRowPress={onLegendRowPress}
@@ -345,46 +287,5 @@ const styles = StyleSheet.create({
     bar: {
         height: '100%',
         borderRadius: Shape.radius.xs,
-    },
-    tooltip: {
-        position: 'absolute',
-        borderRadius: Shape.radius.md,
-        padding: Spacing.sm,
-        borderWidth: 1,
-        shadowColor: REPORT_CHART_COLORS.tooltipShadow,
-        shadowOffset: { width: REPORT_CHART_LAYOUT.tooltipShadowOffsetX, height: REPORT_CHART_LAYOUT.tooltipShadowOffsetY },
-        shadowOpacity: REPORT_CHART_LAYOUT.tooltipShadowOpacity,
-        shadowRadius: REPORT_CHART_LAYOUT.tooltipShadowRadius,
-        elevation: REPORT_CHART_LAYOUT.tooltipElevation,
-        zIndex: REPORT_CHART_LAYOUT.tooltipZIndex,
-        alignItems: 'center',
-    },
-    tooltipDate: {
-        marginBottom: REPORT_CHART_LAYOUT.tooltipDateMarginBottom,
-        fontSize: REPORT_CHART_LAYOUT.tooltipDateFontSize,
-    },
-    tooltipNetWorth: {
-        marginBottom: Spacing.xs,
-    },
-    tooltipRow: {
-        flexDirection: 'row',
-        width: '100%',
-        justifyContent: 'space-around',
-        borderTopWidth: StyleSheet.hairlineWidth,
-        paddingTop: REPORT_CHART_LAYOUT.tooltipRowPaddingTop,
-        marginBottom: REPORT_CHART_LAYOUT.tooltipRowMarginBottom,
-    },
-    tooltipItem: {
-        alignItems: 'center',
-    },
-    tooltipLabel: {
-        fontSize: REPORT_CHART_LAYOUT.tooltipLabelFontSize,
-        marginBottom: REPORT_CHART_LAYOUT.tooltipLabelMarginBottom,
-    },
-    tooltipIconButton: {
-        position: 'absolute',
-        top: REPORT_CHART_LAYOUT.tooltipIconButtonTop,
-        right: REPORT_CHART_LAYOUT.tooltipIconButtonRight,
-        padding: REPORT_CHART_LAYOUT.tooltipIconButtonPadding,
     },
 });

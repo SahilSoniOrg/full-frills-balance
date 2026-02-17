@@ -1,5 +1,5 @@
 import { AppCard, AppIcon, AppText, IvyIcon } from '@/src/components/core';
-import { Shape, Size, Spacing, Typography } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -34,7 +34,7 @@ export function AccountCard({
             ]}
             padding="none"
         >
-            <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+            <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
                 <View style={[styles.headerSection, { backgroundColor: account.accentColor }]}>
                     <View style={styles.cardHeaderTop}>
                         <IvyIcon
@@ -61,10 +61,10 @@ export function AccountCard({
                                         }}
                                         style={styles.collapseButton}
                                     >
-                                        <AppIcon name="chevronUp" color={account.textColor} size={20} />
+                                        <AppIcon name="chevronUp" color={account.textColor} size={Size.iconSm} />
                                     </TouchableOpacity>
                                 ) : (
-                                    <IvyIcon name="folder" color={account.textColor} size={16} />
+                                    <IvyIcon name="folder" color={account.textColor} size={Size.iconXs} />
                                 )}
                             </View>
                         )}

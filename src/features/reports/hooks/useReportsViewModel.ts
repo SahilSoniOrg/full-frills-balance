@@ -1,10 +1,10 @@
-import { useReports } from '@/src/features/reports/hooks/useReports';
+import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { useBreakdownViewState } from '@/src/features/reports/hooks/useBreakdownViewState';
+import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ExpenseCategory, reportService } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter, formatDate } from '@/src/utils/dateUtils';
-import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { logger } from '@/src/utils/logger';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -50,6 +50,8 @@ export interface ReportsViewModel {
     toggleIncomeExpansion: () => void;
     totalExpenseCount: number;
     totalIncomeCount: number;
+    showExpenseExpansionButton: boolean;
+    showIncomeExpansionButton: boolean;
 }
 
 export function useReportsViewModel(): ReportsViewModel {
@@ -321,5 +323,7 @@ export function useReportsViewModel(): ReportsViewModel {
         toggleIncomeExpansion,
         totalExpenseCount: expenseViewState.totalCount,
         totalIncomeCount: incomeViewState.totalCount,
+        showExpenseExpansionButton: expenseViewState.showExpansionButton,
+        showIncomeExpansionButton: incomeViewState.showExpansionButton,
     };
 }

@@ -1,16 +1,17 @@
 import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
+import { ComponentVariant } from '@/src/utils/style-helpers';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
-export interface TransactionPresentation {
-    label: string;
-    typeIcon: IconName;
-    typeColor: string; // Now a semantic key
-    amountPrefix?: string;
+export interface TransactionBadge {
+    text: string;
+    icon?: IconName;
+    colorKey?: string; // semantic theme key
+    variant?: ComponentVariant;
 }
 
 export interface TransactionCardProps {
@@ -18,14 +19,13 @@ export interface TransactionCardProps {
     amount: number;
     currencyCode: string;
     transactionDate: number | Date;
-    presentation: TransactionPresentation;
-    accounts: {
-        id: string;
-        name: string;
-        accountType: string;
-        icon?: string;
-        role?: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
-    }[];
+    presentation: {
+        label: string;
+        typeIcon: IconName;
+        typeColor: string; // semantic key (e.g., 'income', 'expense')
+        amountPrefix?: string;
+    };
+    badges: TransactionBadge[];
     notes?: string;
     onPress?: () => void;
 }
@@ -39,7 +39,7 @@ export const TransactionCard = ({
     currencyCode,
     transactionDate,
     presentation,
-    accounts,
+    badges = [],
     notes,
     onPress,
 }: TransactionCardProps) => {
@@ -61,27 +61,17 @@ export const TransactionCard = ({
                     {presentation.label}
                 </Badge>
 
-                {accounts.slice(0, 2).map((acc) => {
-                    const isSource = acc.role === 'SOURCE';
-                    const isDest = acc.role === 'DESTINATION';
-                    const showPrefix = isSource ? AppConfig.strings.journal.from : (isDest ? AppConfig.strings.journal.to : '');
-
-                    return (
-                        <Badge
-                            key={acc.id}
-                            variant={acc.accountType.toLowerCase() as any}
-                            size="sm"
-                            icon={acc.icon as IconName || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet')}
-                        >
-                            {showPrefix}{acc.name}
-                        </Badge>
-                    );
-                })}
-                {accounts.length > 2 && (
-                    <Badge variant="default" size="sm">
-                        {AppConfig.strings.journal.more(accounts.length - 2)}
+                {badges.map((badge, idx) => (
+                    <Badge
+                        key={`${badge.text}-${idx}`}
+                        variant={badge.variant}
+                        size="sm"
+                        backgroundColor={badge.colorKey ? theme[badge.colorKey as keyof typeof theme] as string : undefined}
+                        icon={badge.icon}
+                    >
+                        {badge.text}
                     </Badge>
-                )}
+                ))}
             </View>
 
             <View style={styles.textSection}>

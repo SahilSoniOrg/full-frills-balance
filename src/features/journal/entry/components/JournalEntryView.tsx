@@ -1,7 +1,8 @@
-import { AppText, Badge } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { AppText } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
 import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
+import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
@@ -39,6 +40,8 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         );
     }
 
+    const Banner = () => showEditBanner ? <EntryEditBanner text={editBannerText} /> : null;
+
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <JournalEntryHeader
@@ -58,28 +61,12 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             >
                 {isGuidedMode ? (
                     <View style={styles.content}>
-                        {showEditBanner && (
-                            <View style={[styles.editBanner, { backgroundColor: withOpacity(theme.warning, Opacity.soft) }]}
-                            >
-                                <Badge variant="expense" size="sm">{AppConfig.strings.advancedEntry.editing || 'EDITING'}</Badge>
-                                <AppText variant="caption" color="secondary" style={{ marginLeft: Spacing.sm }}>
-                                    {editBannerText}
-                                </AppText>
-                            </View>
-                        )}
+                        <Banner />
                         <SimpleForm {...simpleFormConfig} />
                     </View>
                 ) : (
                     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                        {showEditBanner && (
-                            <View style={[styles.editBanner, { backgroundColor: withOpacity(theme.warning, Opacity.soft) }]}
-                            >
-                                <Badge variant="expense" size="sm">{AppConfig.strings.advancedEntry.editing || 'EDITING'}</Badge>
-                                <AppText variant="caption" color="secondary" style={{ marginLeft: Spacing.sm }}>
-                                    {editBannerText}
-                                </AppText>
-                            </View>
-                        )}
+                        <Banner />
                         <AdvancedForm {...advancedFormConfig} />
                     </ScrollView>
                 )}
@@ -107,13 +94,5 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-    },
-    editBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: Spacing.md,
-        marginHorizontal: Spacing.lg,
-        marginTop: Spacing.sm,
-        borderRadius: Shape.radius.sm,
     },
 });

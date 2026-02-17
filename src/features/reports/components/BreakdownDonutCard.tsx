@@ -1,8 +1,8 @@
 import { DonutChart } from '@/src/components/charts/DonutChart';
 import { AppCard, AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
-import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { AppConfig } from '@/src/constants/app-config';
+import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -20,6 +20,7 @@ interface BreakdownDonutCardProps {
     donutData: { value: number; color: string; label: string }[];
     legendRows: LegendRow[];
     totalCount: number;
+    showExpansionButton: boolean;
     expanded: boolean;
     onToggleExpansion: () => void;
     onLegendRowPress: (accountId: string) => void;
@@ -35,6 +36,7 @@ export function BreakdownDonutCard({
     donutData,
     legendRows,
     totalCount,
+    showExpansionButton,
     expanded,
     onToggleExpansion,
     onLegendRowPress,
@@ -67,7 +69,7 @@ export function BreakdownDonutCard({
                                 </View>
                             </TouchableOpacity>
                         ))}
-                        {totalCount > REPORT_CHART_LAYOUT.donutLegendCollapsedLimit && (
+                        {showExpansionButton && (
                             <TouchableOpacity onPress={onToggleExpansion} style={styles.showMoreButton}>
                                 <AppText variant="caption" color="primary">
                                     {expanded
