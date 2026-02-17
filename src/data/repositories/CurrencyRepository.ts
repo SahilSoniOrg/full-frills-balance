@@ -82,6 +82,18 @@ export class CurrencyRepository {
             }
         })
     }
+
+    /**
+     * Delete a currency (soft delete)
+     */
+    async delete(currency: Currency): Promise<void> {
+        await database.write(async () => {
+            await currency.update(record => {
+                record.deletedAt = new Date()
+                record.updatedAt = new Date()
+            })
+        })
+    }
 }
 
 export const currencyRepository = new CurrencyRepository()

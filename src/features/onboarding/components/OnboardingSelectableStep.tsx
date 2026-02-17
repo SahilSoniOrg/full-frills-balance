@@ -68,7 +68,11 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     };
 
     if (props.kind === 'currency') {
-        const items: SelectableItem[] = currencies.map((currency) => ({
+        const uniqueCurrencies = Array.from(
+            new Map(currencies.map((c) => [c.code, c])).values()
+        );
+
+        const items: SelectableItem[] = uniqueCurrencies.map((currency) => ({
             id: currency.code,
             name: currency.code,
             symbol: currency.symbol,
