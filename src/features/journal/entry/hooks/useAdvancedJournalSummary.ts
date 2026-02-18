@@ -1,4 +1,5 @@
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
+import { sanitizeAmount } from '@/src/utils/validation';
 import { useMemo } from 'react';
 
 interface AdvancedJournalLineLike {
@@ -10,9 +11,9 @@ interface AdvancedJournalLineLike {
 export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
     const domainLines = useMemo<JournalLineInput[]>(() => {
         return lines.map((line) => {
-            const rawAmount = typeof line.amount === 'string' ? parseFloat(line.amount) || 0 : line.amount;
-            const rawRate = typeof line.exchangeRate === 'string' ? parseFloat(line.exchangeRate) || 1 : line.exchangeRate;
-            const effectiveRate = rawRate || 1;
+            const rawAmount = sanitizeAmount(line.amount) || 0;
+            const rawRate = typeof line.exchangeRate === 'string' ? parseFloat(line.exchangeRate) : line.exchangeRate;
+            const effectiveRate = rawRate && rawRate > 0 ? rawRate : 1;
             return {
                 amount: rawAmount * effectiveRate,
                 type: line.transactionType,

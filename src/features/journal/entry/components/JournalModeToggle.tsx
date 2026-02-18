@@ -32,7 +32,7 @@ export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'de
                             weight={isGuidedMode ? "bold" : "medium"}
                             style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
                         >
-                            Simple
+                            {AppConfig.strings.transactionFlow.simple}
                         </AppText>
                     </TouchableOpacity>
 
@@ -48,7 +48,7 @@ export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'de
                             weight={!isGuidedMode ? "bold" : "medium"}
                             style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
                         >
-                            Advanced
+                            {AppConfig.strings.transactionFlow.advanced}
                         </AppText>
                     </TouchableOpacity>
                 </View>

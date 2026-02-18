@@ -11,6 +11,7 @@ import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { useRouter } from 'expo-router';
+import dayjs from 'dayjs';
 import { useCallback, useEffect, useState } from 'react';
 
 export interface UseJournalEditorOptions {
@@ -70,8 +71,8 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         { id: '2', accountId: '', accountName: '', accountType: AccountType.ASSET, amount: '', transactionType: TransactionType.CREDIT, notes: '', exchangeRate: '' },
     ]);
     const [description, setDescription] = useState('');
-    const [journalDate, setJournalDate] = useState(new Date().toISOString().split('T')[0]);
-    const [journalTime, setJournalTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+    const [journalDate, setJournalDate] = useState(() => dayjs().format('YYYY-MM-DD'));
+    const [journalTime, setJournalTime] = useState(() => dayjs().format('HH:mm'));
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(isEdit);
 
@@ -85,8 +86,8 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                     if (journal) {
                         const dateObj = new Date(journal.journalDate);
                         setDescription(journal.description || '');
-                        setJournalDate(dateObj.toISOString().split('T')[0]);
-                        setJournalTime(dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+                        setJournalDate(dayjs(dateObj).format('YYYY-MM-DD'));
+                        setJournalTime(dayjs(dateObj).format('HH:mm'));
 
                         const txs = await transactionService.getEnrichedByJournal(journalId);
                         if (txs.length > 0) {

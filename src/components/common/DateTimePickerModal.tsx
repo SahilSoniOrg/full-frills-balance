@@ -2,7 +2,7 @@ import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
 import { getDatePickerStyles, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from 'react-native-ui-datepicker';
@@ -28,9 +28,13 @@ export function DateTimePickerModal({
     const { theme, fonts } = useTheme();
     const insets = useSafeAreaInsets();
 
-    // Combine date and time for dayjs
-    const initialValue = dayjs(`${date}T${time}`);
-    const [selectedValue, setSelectedValue] = useState(initialValue);
+    const [selectedValue, setSelectedValue] = useState(() => dayjs(`${date}T${time}`));
+
+    useEffect(() => {
+        if (!visible) return;
+        const nextValue = dayjs(`${date}T${time}`);
+        setSelectedValue(nextValue.isValid() ? nextValue : dayjs());
+    }, [visible, date, time]);
 
     const handleApply = () => {
         const newDate = selectedValue.format('YYYY-MM-DD');

@@ -342,7 +342,11 @@ export class JournalService {
 
         // 3. Normalize and Build Data
         try {
-            const combinedTimestamp = new Date(`${journalDate}T${journalTime}`).getTime();
+            const combinedDate = new Date(`${journalDate}T${journalTime}:00`);
+            const combinedTimestamp = combinedDate.getTime();
+            if (Number.isNaN(combinedTimestamp)) {
+                return { success: false, error: 'Invalid date or time' };
+            }
             const journalData: CreateJournalData = {
                 journalDate: combinedTimestamp,
                 description: description.trim(),

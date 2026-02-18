@@ -41,11 +41,13 @@ export interface JournalEntryViewModel {
  */
 export function useJournalEntryViewModel(): JournalEntryViewModel {
     const params = useLocalSearchParams();
+    const initialMode = params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
+    const initialType = params.type === 'expense' || params.type === 'income' || params.type === 'transfer' ? params.type : undefined;
 
     const editor = useJournalEditor({
         journalId: params.journalId as string,
-        initialMode: params.mode as any,
-        initialType: params.type as any,
+        initialMode,
+        initialType,
     });
 
     const { accounts, isLoading: isLoadingAccounts } = useAccounts();
@@ -55,6 +57,11 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     const onSelectAccountRequest = useCallback((lineId: string) => {
         setActiveLineId(lineId);
         setShowAccountPicker(true);
+    }, []);
+
+    const onCloseAccountPicker = useCallback(() => {
+        setShowAccountPicker(false);
+        setActiveLineId(null);
     }, []);
 
     const onAccountSelected = useCallback((accountId: string) => {
@@ -96,7 +103,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         isGuidedMode: editor.isGuidedMode,
         onToggleGuidedMode,
         showAccountPicker,
-        onCloseAccountPicker: () => setShowAccountPicker(false),
+        onCloseAccountPicker,
         onSelectAccountRequest,
         onAccountSelected,
         selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,

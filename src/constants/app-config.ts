@@ -273,6 +273,7 @@ export const AppConfig = {
       lineTitle: (index: number) => `Line ${index}`,
       removeLine: 'Remove',
       selectAccount: 'Select Account',
+      type: 'Type',
       debit: 'Debit',
       credit: 'Credit',
       amountPlaceholder: '0.00',
