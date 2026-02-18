@@ -209,6 +209,26 @@ export const AppConfig = {
       fetchingRate: 'Fetching rate...',
       simple: 'Simple',
       advanced: 'Advanced',
+      explanationIconAccessibility: 'What is Advanced Mode?',
+    },
+    advancedModeExplanation: {
+      title: 'What is Advanced Mode?',
+      intro: 'Most finance apps force you into a "One-to-One" mindset: you spend $X at a store from one account. If you paid using two different cards, you’d have to log two separate transactions.',
+      unlocks: 'Advanced Mode unlocks "Multi-leg Journals" (atomic splits). This allows you to group any number of items into a single, balanced entry.',
+      exampleTitle: 'The Example:',
+      exampleScenario: 'Imagine you buy a $50 meal, but you pay $40 from your Bank and $10 in Cash.',
+      exampleItems: [
+        'Bank — Credit $40 (Money leaving bank)',
+        'Cash — Credit $10 (Money leaving wallet)',
+        'Food — Debit $50 (Expense increased)',
+      ],
+      whyBetterTitle: 'Why it’s better:',
+      benefits: [
+        'Atomic Transactions: The entry only saves if it "Balances" (Sum of Debits = Sum of Credits). Your books stay perfectly accurate.',
+        'Clean Ledger: You see one $50 meal in your reports, not two disconnected fragments.',
+        'Power Features: It\'s perfect for split bills, paychecks (Income minus Taxes), or complex transfers where fees are involved.',
+      ],
+      footer: 'Simple Mode is just a shortcut we built on top of this engine to handle the boring 90% of daily expenses, but Advanced is where the real power of the app\'s double-entry engine lives.',
     },
     accounts: {
       types: {

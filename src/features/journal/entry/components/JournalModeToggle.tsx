@@ -1,8 +1,9 @@
-import { AppText } from '@/src/components/core';
-import { AppConfig, Shape, Spacing } from '@/src/constants';
+import { AppIcon, AppText } from '@/src/components/core';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { AdvancedModeInfoModal } from './AdvancedModeInfoModal';
 
 interface JournalModeToggleProps {
     isGuidedMode: boolean;
@@ -12,87 +13,118 @@ interface JournalModeToggleProps {
 
 export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'default' }: JournalModeToggleProps) => {
     const { theme } = useTheme();
+    const [infoModalVisible, setInfoModalVisible] = useState(false);
     const isCompact = variant === 'compact';
 
     if (isCompact) {
         return (
-            <View style={[styles.compactContainer, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}>
-                <TouchableOpacity
-                    style={[
-                        styles.compactButton,
-                        { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
-                    ]}
-                    onPress={() => setIsGuidedMode(true)}
-                >
-                    <AppText
-                        variant="caption"
-                        weight={isGuidedMode ? "bold" : "medium"}
-                        style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
+            <View style={[styles.compactWrapper]}>
+                <View style={[styles.compactContainer, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}>
+                    <TouchableOpacity
+                        style={[
+                            styles.compactButton,
+                            { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
+                        ]}
+                        onPress={() => setIsGuidedMode(true)}
                     >
-                        Simple
-                    </AppText>
-                </TouchableOpacity>
+                        <AppText
+                            variant="caption"
+                            weight={isGuidedMode ? "bold" : "medium"}
+                            style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
+                        >
+                            Simple
+                        </AppText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.compactButton,
+                            { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
+                        ]}
+                        onPress={() => setIsGuidedMode(false)}
+                    >
+                        <AppText
+                            variant="caption"
+                            weight={!isGuidedMode ? "bold" : "medium"}
+                            style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
+                        >
+                            Advanced
+                        </AppText>
+                    </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity
-                    style={[
-                        styles.compactButton,
-                        { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
-                    ]}
-                    onPress={() => setIsGuidedMode(false)}
+                    style={styles.infoIconCompact}
+                    onPress={() => setInfoModalVisible(true)}
+                    accessibilityLabel={AppConfig.strings.transactionFlow.explanationIconAccessibility}
                 >
-                    <AppText
-                        variant="caption"
-                        weight={!isGuidedMode ? "bold" : "medium"}
-                        style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
-                    >
-                        Advanced
-                    </AppText>
+                    <AppIcon name="helpCircle" size={Size.iconXs} color={theme.textSecondary} />
                 </TouchableOpacity>
+
+                <AdvancedModeInfoModal
+                    visible={infoModalVisible}
+                    onClose={() => setInfoModalVisible(false)}
+                />
             </View>
         );
     }
 
     return (
-        <View
-            style={[
-                styles.modeToggleContainer,
-                styles.modeToggleContainerDefault,
-                { backgroundColor: theme.surfaceSecondary }
-            ]}
-        >
-            <TouchableOpacity
+        <View style={styles.defaultWrapper}>
+            <View
                 style={[
-                    styles.modeButton,
-                    { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
-                    isGuidedMode && Shape.elevation.sm
+                    styles.modeToggleContainer,
+                    styles.modeToggleContainerDefault,
+                    { backgroundColor: theme.surfaceSecondary }
                 ]}
-                onPress={() => setIsGuidedMode(true)}
             >
-                <AppText
-                    variant='body'
-                    weight={isGuidedMode ? "bold" : "medium"}
-                    style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
+                <TouchableOpacity
+                    style={[
+                        styles.modeButton,
+                        { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
+                        isGuidedMode && Shape.elevation.sm
+                    ]}
+                    onPress={() => setIsGuidedMode(true)}
                 >
-                    {AppConfig.strings.transactionFlow.simple}
-                </AppText>
-            </TouchableOpacity>
+                    <AppText
+                        variant='body'
+                        weight={isGuidedMode ? "bold" : "medium"}
+                        style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
+                    >
+                        {AppConfig.strings.transactionFlow.simple}
+                    </AppText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.modeButton,
+                        { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
+                        !isGuidedMode && Shape.elevation.sm
+                    ]}
+                    onPress={() => setIsGuidedMode(false)}
+                >
+                    <AppText
+                        variant='body'
+                        weight={!isGuidedMode ? "bold" : "medium"}
+                        style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
+                    >
+                        {AppConfig.strings.transactionFlow.advanced}
+                    </AppText>
+                </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
-                style={[
-                    styles.modeButton,
-                    { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
-                    !isGuidedMode && Shape.elevation.sm
-                ]}
-                onPress={() => setIsGuidedMode(false)}
+                style={styles.infoIconDefault}
+                onPress={() => setInfoModalVisible(true)}
+                accessibilityLabel={AppConfig.strings.transactionFlow.explanationIconAccessibility}
             >
-                <AppText
-                    variant='body'
-                    weight={!isGuidedMode ? "bold" : "medium"}
-                    style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
-                >
-                    {AppConfig.strings.transactionFlow.advanced}
-                </AppText>
+                <AppIcon name="helpCircle" size={Size.iconSm} color={theme.textSecondary} />
             </TouchableOpacity>
+
+            <AdvancedModeInfoModal
+                visible={infoModalVisible}
+                onClose={() => setInfoModalVisible(false)}
+            />
         </View>
     );
 };
@@ -115,20 +147,34 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    compactWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+    },
     compactContainer: {
         flexDirection: 'row',
         borderRadius: Shape.radius.full,
         borderWidth: 1,
         padding: Spacing.xs,
         gap: Spacing.xs,
-        minWidth: 0,
     },
     compactButton: {
-        minWidth: 0,
         paddingVertical: Spacing.sm,
-        paddingHorizontal: Spacing.sm,
+        paddingHorizontal: Spacing.md,
         borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    infoIconCompact: {
+        padding: Spacing.xs,
+    },
+    defaultWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingRight: Spacing.lg,
+    },
+    infoIconDefault: {
+        padding: Spacing.sm,
     },
 });

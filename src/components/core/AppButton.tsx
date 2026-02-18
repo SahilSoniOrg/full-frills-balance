@@ -14,7 +14,7 @@ export type AppButtonProps = TouchableOpacityProps & {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   loading?: boolean
-  children: string
+  children: React.ReactNode
   themeMode?: ThemeMode
 }
 
@@ -118,9 +118,11 @@ export function AppButton({
           color={finalTextColor}
         />
       ) : (
-        <AppText style={textCombinedStyle}>
-          {children}
-        </AppText>
+        typeof children === 'string' ? (
+          <AppText style={textCombinedStyle}>
+            {children}
+          </AppText>
+        ) : children
       )}
     </TouchableOpacity>
   )

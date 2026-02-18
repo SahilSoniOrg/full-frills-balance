@@ -29,6 +29,7 @@ import {
     FileText,
     Film,
     FolderOpen,
+    HelpCircle,
     History,
     Home,
     Landmark,
@@ -107,6 +108,7 @@ export const IconMap = {
     hierarchy: FolderOpen,
     history: History,
     eject: LogOut,
+    helpCircle: HelpCircle,
 } as const;
 
 export type IconName = keyof typeof IconMap;
