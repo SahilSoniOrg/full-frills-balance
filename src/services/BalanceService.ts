@@ -233,8 +233,7 @@ export class BalanceService {
 
         // Fetch currency precision for accurate rounding
         const { currencyRepository } = await import('@/src/data/repositories/CurrencyRepository');
-        const currencies = await currencyRepository.findAll();
-        const currencyPrecisionMap = new Map(currencies.map(c => [c.code, c.precision]));
+        const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
 
         const precisionMap = new Map<string, number>();
         for (const account of accounts) {

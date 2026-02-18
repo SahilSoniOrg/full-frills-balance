@@ -66,21 +66,32 @@ export class AccountingRebuildService {
             .extend(Q.sortBy('created_at', 'asc'))
             .fetch()
 
+        const updates: any[] = [];
+        let currentBalance = runningBalance; // Local tracking to avoid async confusion
+
         await database.write(async () => {
             for (const tx of transactions) {
-
-                runningBalance = accountingService.calculateNewBalance(
-                    runningBalance,
+                const newBalance = accountingService.calculateNewBalance(
+                    currentBalance,
                     tx.amount,
                     account.accountType,
                     tx.transactionType,
                     precision
                 )
 
-                if (tx.runningBalance !== runningBalance) {
-                    await tx.update((txToUpdate) => {
-                        txToUpdate.runningBalance = runningBalance
-                    })
+                if (Math.abs((tx.runningBalance || 0) - newBalance) > Number.EPSILON) {
+                    updates.push(tx.prepareUpdate((txToUpdate) => {
+                        txToUpdate.runningBalance = newBalance
+                    }))
+                }
+
+                currentBalance = newBalance
+            }
+
+            if (updates.length > 0) {
+                const BATCH_SIZE = 500
+                for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+                    await database.batch(...updates.slice(i, i + BATCH_SIZE))
                 }
             }
         })

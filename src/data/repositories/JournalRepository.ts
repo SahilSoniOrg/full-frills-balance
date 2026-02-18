@@ -173,7 +173,7 @@ export class JournalRepository {
     const { transactions: transactionData, totalAmount, displayType, calculatedBalances, ...journalFields } = journalData
 
     return await database.write(async () => {
-      const j = await this.journals.create((j) => {
+      const journal = this.journals.prepareCreate((j) => {
         Object.assign(j, journalFields)
         j.status = JournalStatus.POSTED
         j.totalAmount = totalAmount ?? 0
@@ -183,9 +183,9 @@ export class JournalRepository {
         j.updatedAt = new Date()
       })
 
-      await Promise.all(transactionData.map(txData => {
-        return this.transactions.create((tx) => {
-          tx.journalId = j.id
+      const transactions = transactionData.map(txData => {
+        return this.transactions.prepareCreate((tx) => {
+          tx.journalId = journal.id
           tx.accountId = txData.accountId
           tx.amount = txData.amount
           tx.currencyCode = journalFields.currencyCode // fallback
@@ -197,9 +197,11 @@ export class JournalRepository {
           tx.createdAt = new Date()
           tx.updatedAt = new Date()
         })
-      }))
+      })
 
-      return j
+      await database.batch(journal, ...transactions)
+
+      return journal
     })
   }
 
@@ -215,16 +217,17 @@ export class JournalRepository {
     const oldTransactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch()
 
     return await database.write(async () => {
-      // 1. Soft-delete old transactions (retain tombstones for sync)
       const now = new Date()
-      await Promise.all(oldTransactions.map(tx => tx.update((t) => {
+
+      // 1. Prepare updates for soft-delete of old transactions
+      const deleteUpdates = oldTransactions.map(tx => tx.prepareUpdate((t) => {
         t.deletedAt = now
         t.updatedAt = now
-      })))
+      }))
 
-      // 2. Create new transactions
-      await Promise.all(transactionData.map(txData => {
-        return this.transactions.create((tx) => {
+      // 2. Prepare creation of new transactions
+      const createUpdates = transactionData.map(txData => {
+        return this.transactions.prepareCreate((tx) => {
           tx.accountId = txData.accountId
           tx.amount = txData.amount
           tx.currencyCode = journalFields.currencyCode
@@ -237,10 +240,10 @@ export class JournalRepository {
           tx.createdAt = new Date()
           tx.updatedAt = new Date()
         })
-      }))
+      })
 
-      // 3. Update journal
-      await existingJournal.update((j: Journal) => {
+      // 3. Prepare journal update
+      const journalUpdate = existingJournal.prepareUpdate((j: Journal) => {
         j.journalDate = journalFields.journalDate
         j.description = journalFields.description
         j.currencyCode = journalFields.currencyCode
@@ -249,6 +252,12 @@ export class JournalRepository {
         j.displayType = displayType ?? j.displayType
         j.updatedAt = new Date()
       })
+
+      await database.batch(
+        journalUpdate,
+        ...deleteUpdates,
+        ...createUpdates
+      )
 
       return existingJournal
     })
@@ -262,17 +271,21 @@ export class JournalRepository {
 
     await database.write(async () => {
       const now = new Date()
-      await journal.update((j) => {
+
+      const journalUpdate = journal.prepareUpdate((j) => {
         j.deletedAt = now
         j.updatedAt = now
       })
 
-      await Promise.all(associatedTransactions.map(tx => {
-        return tx.update((t) => {
-          t.deletedAt = now
-          t.updatedAt = now
-        })
+      const transactionUpdates = associatedTransactions.map(tx => tx.prepareUpdate((t) => {
+        t.deletedAt = now
+        t.updatedAt = now
       }))
+
+      await database.batch(
+        journalUpdate,
+        ...transactionUpdates
+      )
     })
   }
 
@@ -281,11 +294,12 @@ export class JournalRepository {
     if (!journal) return
 
     await database.write(async () => {
-      await journal.update((record) => {
+      const update = journal.prepareUpdate((record) => {
         record.reversingJournalId = reversingJournalId
         record.status = JournalStatus.REVERSED
         record.updatedAt = new Date()
       })
+      await database.batch(update)
     })
   }
 
@@ -310,8 +324,8 @@ export class JournalRepository {
       const now = new Date()
       const reversalDate = originalJournal.journalDate
 
-      // 1) Create reversal journal
-      const reversalJournal = await this.journals.create((j) => {
+      // 1) Prepare reversal journal
+      const reversalJournal = this.journals.prepareCreate((j) => {
         j.journalDate = reversalDate
         j.description = `Reversal of: ${originalJournal.description || originalJournal.id} (Edit)`
         j.currencyCode = originalJournal.currencyCode
@@ -324,8 +338,8 @@ export class JournalRepository {
         j.updatedAt = now
       })
 
-      await Promise.all(originalTransactions.map(tx => {
-        return this.transactions.create((t) => {
+      const reversalTransactions = originalTransactions.map(tx => {
+        return this.transactions.prepareCreate((t) => {
           t.journalId = reversalJournal.id
           t.accountId = tx.accountId
           t.amount = tx.amount
@@ -338,17 +352,17 @@ export class JournalRepository {
           t.createdAt = now
           t.updatedAt = now
         })
-      }))
+      })
 
-      // 2) Mark original as reversed
-      await originalJournal.update((record) => {
+      // 2) Prepare original journal update
+      const originalJournalUpdate = originalJournal.prepareUpdate((record) => {
         record.reversingJournalId = reversalJournal.id
         record.status = JournalStatus.REVERSED
         record.updatedAt = now
       })
 
-      // 3) Create replacement journal
-      const replacementJournal = await this.journals.create((j) => {
+      // 3) Prepare replacement journal
+      const replacementJournal = this.journals.prepareCreate((j) => {
         Object.assign(j, journalFields)
         j.status = JournalStatus.POSTED
         j.totalAmount = totalAmount ?? 0
@@ -358,8 +372,8 @@ export class JournalRepository {
         j.updatedAt = now
       })
 
-      await Promise.all(replacementTransactions.map(txData => {
-        return this.transactions.create((tx) => {
+      const newTransactions = replacementTransactions.map(txData => {
+        return this.transactions.prepareCreate((tx) => {
           tx.journalId = replacementJournal.id
           tx.accountId = txData.accountId
           tx.amount = txData.amount
@@ -370,9 +384,17 @@ export class JournalRepository {
           tx.exchangeRate = txData.exchangeRate
           tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0
           tx.createdAt = now
-          tx.updatedAt = now
+          tx.updatedAt = new Date()
         })
-      }))
+      })
+
+      await database.batch(
+        reversalJournal,
+        ...reversalTransactions,
+        originalJournalUpdate,
+        replacementJournal,
+        ...newTransactions
+      )
 
       return { reversalJournal, replacementJournal }
     })

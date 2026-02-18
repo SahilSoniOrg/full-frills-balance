@@ -94,6 +94,13 @@ export class CurrencyRepository {
             })
         })
     }
+    /**
+     * Get precisions for all currencies (optimized raw fetch)
+     */
+    async getAllPrecisions(): Promise<Map<string, number>> {
+        const raw = await this.currencies.query().unsafeFetchRaw() as any[];
+        return new Map(raw.map(c => [c.code, c.precision]));
+    }
 }
 
 export const currencyRepository = new CurrencyRepository()
