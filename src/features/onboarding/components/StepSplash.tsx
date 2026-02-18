@@ -1,10 +1,10 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Layout, Spacing, Typography } from '@/src/constants';
 import { useImport } from '@/src/hooks/use-import';
 import { useTheme } from '@/src/hooks/use-theme';
 import { router } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 interface StepSplashProps {
     name: string;
@@ -23,7 +23,11 @@ export const StepSplash: React.FC<StepSplashProps> = ({
     const { isImporting } = useImport();
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.container}
+            keyboardVerticalOffset={Platform.OS === 'android' ? Layout.keyboardOffset.android : 0}
+        >
             <View style={styles.header}>
                 <AppText variant="hero" style={styles.title}>
                     {AppConfig.strings.onboarding.splash.title}
@@ -77,7 +81,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
                     {AppConfig.strings.onboarding.splash.btnRestore}
                 </AppButton>
             </View>
-        </View>
+        </KeyboardAvoidingView>
     );
 };
 

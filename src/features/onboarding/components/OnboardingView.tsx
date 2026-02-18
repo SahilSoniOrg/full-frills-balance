@@ -34,6 +34,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             case 1:
                 return (
                     <StepSplash
+                        key={step}
                         name={name}
                         setName={setName}
                         onContinue={onContinue}
@@ -43,6 +44,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             case 2:
                 return (
                     <OnboardingSelectableStep
+                        key={step}
                         kind="currency"
                         selectedCurrency={selectedCurrency}
                         onSelectCurrency={setSelectedCurrency}
@@ -54,6 +56,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             case 3:
                 return (
                     <OnboardingSelectableStep
+                        key={step}
                         kind="accounts"
                         selectedAccounts={selectedAccounts}
                         customAccounts={customAccounts}
@@ -67,6 +70,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             case 4:
                 return (
                     <OnboardingSelectableStep
+                        key={step}
                         kind="categories"
                         selectedCategories={selectedCategories}
                         customCategories={customCategories}
@@ -80,6 +84,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             case 5:
                 return (
                     <StepFinalize
+                        key={step}
                         onFinish={onFinish}
                         isCompleting={isCompleting}
                     />
