@@ -77,6 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
                     packagingOptions: {
                         pickFirst: ["**/libc++_shared.so"],
                     },
+                    ndkVersion: "27.1.12297006",
                 },
                 ios: {
                     deploymentTarget: "16.1",
