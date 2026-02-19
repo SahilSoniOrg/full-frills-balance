@@ -65,15 +65,6 @@ export function DashboardHeader({
                 )}
 
                 <View style={[styles.headerActions, isSearching && styles.expandedActions]}>
-                    <View style={styles.searchWrapper}>
-                        <ExpandableSearchButton
-                            value={searchQuery}
-                            onChangeText={onSearchChange}
-                            onExpandChange={handleSearchExpand}
-                            onPress={onSearchPress}
-                        />
-                    </View>
-
                     {searchQuery.length === 0 && (
                         <DateRangeFilter
                             range={dateRange}
@@ -83,6 +74,15 @@ export function DashboardHeader({
                             showNavigationArrows={false}
                         />
                     )}
+
+                    <View style={styles.searchWrapper}>
+                        <ExpandableSearchButton
+                            value={searchQuery}
+                            onChangeText={onSearchChange}
+                            onExpandChange={handleSearchExpand}
+                            onPress={onSearchPress}
+                        />
+                    </View>
                 </View>
             </View>
 
