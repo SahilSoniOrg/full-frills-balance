@@ -6,12 +6,14 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
+import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { JournalEntryLine } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { useRouter } from 'expo-router';
+import { sanitizeAmount } from '@/src/utils/validation';
 import dayjs from 'dayjs';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 export interface UseJournalEditorOptions {
@@ -66,10 +68,26 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     const isEdit = !!journalId;
 
     // Advanced / Generic state
-    const [lines, setLines] = useState<JournalEntryLine[]>([
+    const [lines, setLines] = useState<JournalEntryLine[]>(() => [
         { id: '1', accountId: '', accountName: '', accountType: AccountType.ASSET, amount: '', transactionType: TransactionType.DEBIT, notes: '', exchangeRate: '' },
         { id: '2', accountId: '', accountName: '', accountType: AccountType.ASSET, amount: '', transactionType: TransactionType.CREDIT, notes: '', exchangeRate: '' },
     ]);
+
+    const setGuidedModeInternal = useCallback((mode: boolean) => {
+        if (mode) {
+            // Normalizing to 2-leg structure if we have more than 2 lines, or if roles are missing
+            setLines(current => {
+                const debit = current.find(l => l.transactionType === TransactionType.DEBIT) || current[0];
+                const credit = current.find(l => l.transactionType === TransactionType.CREDIT) || current[1];
+                // Rule: Source (Credit) should be the first leg (index 0)
+                return [
+                    { ...credit, id: '1', transactionType: TransactionType.CREDIT },
+                    { ...debit, id: '2', transactionType: TransactionType.DEBIT }
+                ];
+            });
+        }
+        setIsGuidedMode(mode);
+    }, []);
     const [description, setDescription] = useState('');
     const [journalDate, setJournalDate] = useState(() => dayjs().format('YYYY-MM-DD'));
     const [journalTime, setJournalTime] = useState(() => dayjs().format('HH:mm'));
@@ -93,7 +111,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                         if (txs.length > 0) {
                             // 1. Force Advanced Mode for multi-leg transactions
                             if (txs.length > 2) {
-                                setIsGuidedMode(false);
+                                setGuidedModeInternal(false);
                             }
                             // 2. Refined Type Detection for 2-leg transactions
                             else if (txs.length === 2) {
@@ -189,12 +207,56 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         }
     }, [lines, fetchRate, updateLine]);
 
+    const balanceLine = useCallback((id: string) => {
+        const lineIndex = lines.findIndex(l => l.id === id);
+        const line = lines[lineIndex];
+        if (!line) return;
+
+        const imbalance = JournalCalculator.calculateImbalance(lines.map(l => ({
+            amount: sanitizeAmount(l.amount) || 0,
+            type: l.transactionType,
+            exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
+            accountCurrency: l.accountCurrency
+        })));
+
+        if (Math.abs(imbalance) < 0.001) return;
+
+        const currentBase = JournalCalculator.getLineBaseAmount(line);
+        const nominal = typeof line.amount === 'string' ? parseFloat(line.amount) : line.amount;
+
+        if (!nominal || nominal === 0) return;
+
+        const targetBase = line.transactionType === TransactionType.DEBIT
+            ? currentBase - imbalance
+            : currentBase + imbalance;
+
+        const newRate = JournalCalculator.calculateImpliedRate(nominal, targetBase);
+        const roundedRate = Math.round(newRate * 1000000) / 1000000; // 6 decimal precision for rates
+
+        // Sync to all lines with same currency
+        const lineCurrency = line.accountCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+        setLines(prev => prev.map(l => {
+            const lCurrency = l.accountCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+            if (lCurrency === lineCurrency && lCurrency !== (preferences.defaultCurrencyCode || AppConfig.defaultCurrency)) {
+                return { ...l, exchangeRate: roundedRate.toString() };
+            }
+            return l.id === id ? { ...l, exchangeRate: roundedRate.toString() } : l;
+        }));
+    }, [lines]);
+
     const submit = async () => {
         setIsSubmitting(true);
         try {
+            // Default description to transaction type if empty
+            let finalDescription = description.trim();
+            if (!finalDescription) {
+                finalDescription = transactionType.charAt(0).toUpperCase() + transactionType.slice(1);
+                setDescription(finalDescription);
+            }
+
             const result = await journalService.saveMultiLineEntry({
                 lines,
-                description,
+                description: finalDescription,
                 journalDate,
                 journalTime,
                 journalId: isEdit ? journalId : undefined
@@ -215,7 +277,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
 
     return {
         isGuidedMode,
-        setIsGuidedMode,
+        setIsGuidedMode: setGuidedModeInternal,
         transactionType,
         setTransactionType,
         isEdit,
@@ -232,6 +294,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         addLine,
         removeLine,
         updateLine,
+        balanceLine,
         autoFetchLineRate,
         submit
     };

@@ -2,10 +2,7 @@ import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { useAccounts } from '@/src/features/accounts';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
-import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
-import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { useTheme } from '@/src/hooks/use-theme';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import React, { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -21,9 +18,6 @@ export const AdvancedForm = ({
     editor,
     onSelectAccountRequest,
 }: AdvancedFormProps) => {
-    const { totalDebits, totalCredits, isBalanced } = useAdvancedJournalSummary(editor.lines);
-
-    const { theme } = useTheme();
     // Handlers
     const handleUpdateLine = useCallback((id: string, field: string, value: any) => {
         editor.updateLine(id, { [field]: value });
@@ -51,17 +45,12 @@ export const AdvancedForm = ({
                             onRemove={() => editor.removeLine(line.id)}
                             onSelectAccount={() => onSelectAccountRequest(line.id)}
                             onAutoFetchRate={() => editor.autoFetchLineRate(line.id)}
+                            onBalanceLine={() => editor.balanceLine(line.id)}
                             getLineBaseAmount={JournalCalculator.getLineBaseAmount}
                         />
                     ))}
                 </View>
             </View>
-
-            <JournalSummary
-                totalDebits={totalDebits}
-                totalCredits={totalCredits}
-                isBalanced={isBalanced}
-            />
         </View>
     );
 };

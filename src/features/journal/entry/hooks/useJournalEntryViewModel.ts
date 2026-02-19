@@ -3,8 +3,10 @@ import { useAccounts } from '@/src/features/accounts';
 import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
+import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import { preferences } from '@/src/utils/preferences';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -32,6 +34,14 @@ export interface JournalEntryViewModel {
         onSelectAccountRequest: (lineId: string) => void;
     };
     isSimpleModeDisabled: boolean;
+    primaryDisplayAmount: string;
+    primaryDisplayCurrency: string;
+    availableCurrencies: string[];
+    selectedCurrency: string;
+    onSelectCurrency: (currency: string) => void;
+    totalDebits: number;
+    totalCredits: number;
+    isBalanced: boolean;
 }
 
 /**
@@ -111,7 +121,53 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         (simpleEditor.sourceId !== simpleEditor.destinationId) && !simpleEditor.isSubmitting &&
         !simpleEditor.isLoadingRate && !simpleEditor.rateError;
 
-    const { isBalanced } = useAdvancedJournalSummary(editor.lines);
+    const { totalDebits, totalCredits, isBalanced, availableCurrencies, selectedCurrency, setSelectedCurrency } = useAdvancedJournalSummary(editor.lines);
+
+    const primaryDisplayCurrency = useMemo(() => {
+        // For Simple Mode, strictly use the curated displayCurrency from simpleEditor
+        if (editor.isGuidedMode) return simpleEditor.displayCurrency;
+
+        // For Advanced Mode, prioritize the first leg's currency as per Rule 1 & 4
+        const firstLineCurrency = editor.lines[0]?.accountCurrency;
+        if (firstLineCurrency) return firstLineCurrency;
+
+        // Fallback to any line with currency
+        const lineWithCurrency = editor.lines.find(l => !!l.accountCurrency);
+        if (lineWithCurrency?.accountCurrency) return lineWithCurrency.accountCurrency;
+
+        // Final fallback
+        return preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    }, [editor.isGuidedMode, editor.lines, simpleEditor.displayCurrency]);
+
+    const primaryDisplayAmount = useMemo(() => {
+        if (editor.isGuidedMode) return simpleEditor.amount;
+
+        // In Advanced Mode, we calculate the footer amount in primaryDisplayCurrency
+        // This keeps the footer stable while the user toggles the summary box.
+        const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+
+        const debitTotalInPrimary = editor.lines
+            .filter(l => l.transactionType === 'DEBIT')
+            .reduce((sum, line) => {
+                const baseAmount = JournalCalculator.getLineBaseAmount({
+                    amount: line.amount,
+                    exchangeRate: line.exchangeRate,
+                    accountCurrency: line.accountCurrency
+                });
+
+                if (primaryDisplayCurrency === defaultCurrency) return sum + baseAmount;
+
+                // Convert base -> primaryDisplayCurrency
+                const primaryCurrencyLine = editor.lines.find(l => l.accountCurrency === primaryDisplayCurrency);
+                const primaryRate = primaryCurrencyLine ? (typeof primaryCurrencyLine.exchangeRate === 'string' ? parseFloat(primaryCurrencyLine.exchangeRate) : primaryCurrencyLine.exchangeRate) : 1;
+
+                const finalAmount = (primaryRate && primaryRate > 0) ? baseAmount / (primaryRate as number) : baseAmount;
+                return sum + finalAmount;
+            }, 0);
+
+        return JournalCalculator.roundAmount(debitTotalInPrimary).toFixed(2);
+    }, [editor.isGuidedMode, simpleEditor.amount, editor.lines, primaryDisplayCurrency]);
+
     const hasDescription = editor.description.trim().length > 0;
     const hasIncompleteLines = editor.lines.some(line => !line.accountId || !line.amount.trim());
     const isAdvancedValid = isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
@@ -137,5 +193,13 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
             onSelectAccountRequest,
         },
         isSimpleModeDisabled,
+        isBalanced,
+        primaryDisplayAmount,
+        primaryDisplayCurrency,
+        availableCurrencies,
+        selectedCurrency,
+        onSelectCurrency: setSelectedCurrency,
+        totalDebits,
+        totalCredits,
     };
 }

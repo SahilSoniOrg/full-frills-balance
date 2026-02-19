@@ -5,7 +5,9 @@ import { JournalEntryHeader } from '@/src/features/journal/entry/components/Jour
 import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
 import { JournalSubmitFooter } from '@/src/features/journal/entry/components/JournalSubmitFooter';
+import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
+import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
 import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -21,7 +23,6 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         editBannerText,
         isGuidedMode,
         onToggleGuidedMode,
-        advancedFormConfig,
     } = vm;
 
     if (isLoading) {
@@ -70,23 +71,44 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                     {isGuidedMode ? (
                         <SimpleForm {...vm.simpleEditor} />
                     ) : (
-                        <AdvancedForm
-                            accounts={vm.accounts}
-                            editor={vm.editor}
-                            onSelectAccountRequest={vm.advancedFormConfig.onSelectAccountRequest}
-                        />
+                        <>
+                            <AdvancedForm
+                                accounts={vm.accounts}
+                                editor={vm.editor}
+                                onSelectAccountRequest={vm.advancedFormConfig.onSelectAccountRequest}
+                            />
+                            <JournalSummary
+                                totalDebits={vm.totalDebits}
+                                totalCredits={vm.totalCredits}
+                                isBalanced={vm.isBalanced}
+                                availableCurrencies={vm.availableCurrencies}
+                                selectedCurrency={vm.selectedCurrency}
+                                onSelectCurrency={vm.onSelectCurrency}
+                            />
+                        </>
                     )}
                 </ScrollView>
 
                 <JournalSubmitFooter
                     onPress={isGuidedMode ? vm.simpleEditor.handleSave : vm.editor.submit}
                     disabled={isGuidedMode ? !vm.simpleFormIsValid : !vm.advancedFormIsValid}
-                    isSubmitting={isGuidedMode ? vm.simpleEditor.isSubmitting : vm.editor.isSubmitting}
                     label={isGuidedMode
                         ? (vm.simpleEditor.isSubmitting ? AppConfig.strings.transactionFlow.saving : AppConfig.strings.transactionFlow.save(vm.simpleEditor.type))
                         : (vm.editor.isSubmitting
                             ? (vm.editor.isEdit ? AppConfig.strings.advancedEntry.updating : AppConfig.strings.advancedEntry.creating)
                             : (vm.editor.isEdit ? AppConfig.strings.advancedEntry.updateJournal : AppConfig.strings.advancedEntry.createJournal))
+                    }
+                    topSlot={
+                        <SimpleFormAmountInput
+                            amount={vm.primaryDisplayAmount}
+                            setAmount={vm.simpleEditor.setAmount}
+                            readOnly={!isGuidedMode}
+                            activeColor={isGuidedMode
+                                ? (vm.simpleEditor.type === 'expense' ? theme.expense : vm.simpleEditor.type === 'income' ? theme.income : theme.primary)
+                                : (vm.isBalanced ? theme.success : theme.error)
+                            }
+                            displayCurrency={vm.primaryDisplayCurrency}
+                        />
                     }
                 />
             </KeyboardAvoidingView>

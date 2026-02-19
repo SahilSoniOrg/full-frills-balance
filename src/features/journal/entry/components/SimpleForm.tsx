@@ -3,12 +3,10 @@ import { AppText } from '@/src/components/core/AppText';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
-import { preferences } from '@/src/utils/preferences';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { TabType } from '../hooks/useSimpleJournalEditor';
 import { SimpleFormAccountSections } from './SimpleFormAccountSections';
-import { SimpleFormAmountInput } from './SimpleFormAmountInput';
 import { SimpleFormTabs } from './SimpleFormTabs';
 
 export interface SimpleFormProps {
@@ -61,8 +59,6 @@ export const SimpleForm = ({
     const { theme } = useTheme();
 
     const activeColor = type === 'expense' ? theme.expense : type === 'income' ? theme.income : theme.primary;
-    const displayCurrency = sourceCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-    const sectionLabelColor = theme.textSecondary;
     const frameBorderColor = withOpacity(theme.textSecondary, Opacity.muted);
 
     const accountSections = type === 'expense'
@@ -87,15 +83,6 @@ export const SimpleForm = ({
                 setType={setType}
                 activeColor={activeColor}
                 frameBorderColor={frameBorderColor}
-            />
-
-            <SimpleFormAmountInput
-                amount={amount}
-                setAmount={setAmount}
-                activeColor={activeColor}
-                displayCurrency={displayCurrency}
-                sectionLabelColor={sectionLabelColor}
-                amountLabel={AppConfig.strings.transactionFlow.amount}
             />
 
             <SimpleFormAccountSections

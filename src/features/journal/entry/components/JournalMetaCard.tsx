@@ -33,7 +33,7 @@ export function JournalMetaCard({
     const [showDatePicker, setShowDatePicker] = useState(false);
 
     return (
-        <AppCard elevation="sm" padding="lg" style={[{ marginBottom: Spacing.md }, style]}>
+        <AppCard elevation="sm" padding="lg" style={style}>
             <View style={{ gap: Spacing.md }}>
                 {showBanner && (
                     <EntryEditBanner

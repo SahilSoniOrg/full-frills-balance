@@ -40,8 +40,8 @@ export class JournalCalculator {
      * Checks if the journal is balanced.
      */
     static isBalanced(lines: JournalLineInput[]): boolean {
-        const debits = this.calculateTotalDebits(lines);
-        const credits = this.calculateTotalCredits(lines);
+        const debits = JournalCalculator.calculateTotalDebits(lines);
+        const credits = JournalCalculator.calculateTotalCredits(lines);
         return debits === credits;
     }
 
@@ -98,7 +98,45 @@ export class JournalCalculator {
      * Positive means Debits > Credits (Needs more credits).
      * Negative means Credits > Debits (Needs more debits).
      */
+    /**
+     * Calculates the imbalance (Difference between Debits and Credits) in base currency.
+     * Positive means Debits > Credits (Needs more credits).
+     * Negative means Credits > Debits (Needs more debits).
+     */
     static calculateImbalance(lines: JournalLineInput[]): number {
-        return this.calculateTotalDebits(lines) - this.calculateTotalCredits(lines);
+        return JournalCalculator.calculateTotalDebits(lines) - JournalCalculator.calculateTotalCredits(lines);
+    }
+
+    /**
+     * Finds the missing functional value needed to balance the journal.
+     */
+    static calculateMissingValue(lines: JournalLineInput[]): number {
+        const imbalance = JournalCalculator.calculateImbalance(lines);
+        return roundAmount(imbalance);
+    }
+
+    /**
+     * Infers the exchange rate required to reach a specific target base value.
+     */
+    static calculateImpliedRate(nominalAmount: number, targetBaseAmount: number): number {
+        if (nominalAmount === 0) return 1;
+        // Rate = Base / Nominal
+        // e.g. 1000 ETB / 6.47 USD = 154.559...
+        return Math.abs(targetBaseAmount / nominalAmount);
+    }
+
+    /**
+     * Groups journal lines by their account currency to detect shared non-base currencies.
+     */
+    static identifyCurrencyGroups(lines: any[]): Record<string, number[]> {
+        const groups: Record<string, number[]> = {};
+        lines.forEach((line, index) => {
+            const currency = line.accountCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+            if (!groups[currency]) {
+                groups[currency] = [];
+            }
+            groups[currency].push(index);
+        });
+        return groups;
     }
 }

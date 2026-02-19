@@ -9,14 +9,14 @@ interface JournalSubmitFooterProps {
     onPress: () => void;
     label: string;
     disabled: boolean;
-    isSubmitting: boolean;
+    topSlot?: React.ReactNode;
 }
 
 export const JournalSubmitFooter = ({
     onPress,
     label,
     disabled,
-    isSubmitting,
+    topSlot,
 }: JournalSubmitFooterProps) => {
     const { theme } = useTheme();
     const insets = useSafeAreaInsets();
@@ -30,6 +30,7 @@ export const JournalSubmitFooter = ({
                 paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.md)
             }
         ]}>
+            {topSlot && <View style={styles.topSlot}>{topSlot}</View>}
             <AppButton
                 variant="primary"
                 onPress={onPress}
@@ -48,6 +49,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.lg,
         paddingTop: Spacing.md,
         borderTopWidth: 1,
+    },
+    topSlot: {
+        marginBottom: Spacing.md,
     },
     button: {
         height: Size.buttonXl,

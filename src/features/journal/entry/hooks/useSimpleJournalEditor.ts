@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
@@ -35,10 +36,10 @@ export function useSimpleJournalEditor({
     // Derived State from Editor
     const type = editor.transactionType;
 
-    const sourceLine = editor.lines.find(l => l.transactionType === TransactionType.CREDIT) || editor.lines[1];
-    const destinationLine = editor.lines.find(l => l.transactionType === TransactionType.DEBIT) || editor.lines[0];
+    const sourceLine = useMemo(() => editor.lines.find(l => l.transactionType === TransactionType.CREDIT), [editor.lines]);
+    const destinationLine = useMemo(() => editor.lines.find(l => l.transactionType === TransactionType.DEBIT), [editor.lines]);
 
-    const amount = sourceLine?.amount || '';
+    const amount = sourceLine?.amount || destinationLine?.amount || '';
     const sourceId = sourceLine?.accountId || '';
     const destinationId = destinationLine?.accountId || '';
 
@@ -90,19 +91,66 @@ export function useSimpleJournalEditor({
         return numAmount * exchangeRate;
     }, [numAmount, isCrossCurrency, exchangeRate]);
 
+    // Sync exchange rate and converted amounts back to lines for Advanced mode consistency
+    useEffect(() => {
+        if (editor.isGuidedMode === false) return; // DO NOT sync in Advanced Mode
+        if (!sourceLine || !destinationLine) return;
+
+        if (isCrossCurrency && exchangeRate) {
+            // Apply exchange rate to source line
+            if (sourceLine.exchangeRate !== exchangeRate.toString()) {
+                editor.updateLine(sourceLine.id, { exchangeRate: exchangeRate.toString() });
+            }
+            // Apply converted amount to destination line
+            const formattedConverted = convertedAmount.toFixed(2);
+            if (destinationLine.amount !== formattedConverted) {
+                editor.updateLine(destinationLine.id, { amount: formattedConverted });
+            }
+        } else {
+            // Reset if not cross-currency
+            if (sourceLine.exchangeRate) {
+                editor.updateLine(sourceLine.id, { exchangeRate: '' });
+            }
+            // Ensure amounts match if no conversion
+            if (destinationLine.amount !== amount) {
+                editor.updateLine(destinationLine.id, { amount });
+            }
+        }
+    }, [exchangeRate, isCrossCurrency, sourceLine, destinationLine, convertedAmount, amount, editor.updateLine]);
+
     // Helpers to update editor state
     const setType = (newType: 'expense' | 'income' | 'transfer') => {
         editor.setTransactionType(newType);
 
-        // Clear accounts on type change to avoid invalid states
-        if (sourceLine) editor.updateLine(sourceLine.id, { accountId: '', accountName: '', accountType: AccountType.ASSET, accountCurrency: undefined });
-        if (destinationLine) editor.updateLine(destinationLine.id, { accountId: '', accountName: '', accountType: AccountType.ASSET, accountCurrency: undefined });
+        // Simple mode always assumes 2 lines. Let's ensure they have the correct roles.
+        // Expense: Source (Credit: Asset/Liab) -> Dest (Debit: Expense)
+        // Income: Source (Credit: Income) -> Dest (Debit: Asset/Liab)
+        // Transfer: Source (Credit: Asset/Liab) -> Dest (Debit: Asset/Liab)
+
+        if (sourceLine) {
+            editor.updateLine(sourceLine.id, {
+                transactionType: TransactionType.CREDIT,
+                accountId: '',
+                accountName: '',
+                accountType: newType === 'income' ? AccountType.INCOME : AccountType.ASSET,
+                accountCurrency: undefined
+            });
+        }
+        if (destinationLine) {
+            editor.updateLine(destinationLine.id, {
+                transactionType: TransactionType.DEBIT,
+                accountId: '',
+                accountName: '',
+                accountType: newType === 'expense' ? AccountType.EXPENSE : AccountType.ASSET,
+                accountCurrency: undefined
+            });
+        }
     };
 
     const setAmount = (newAmount: string) => {
-        // Update both lines
+        // Update both lines - the effect will handle the cross-currency conversion
         if (sourceLine) editor.updateLine(sourceLine.id, { amount: newAmount });
-        if (destinationLine) editor.updateLine(destinationLine.id, { amount: newAmount });
+        if (destinationLine && !isCrossCurrency) editor.updateLine(destinationLine.id, { amount: newAmount });
     };
 
     const setSourceId = (id: string) => {
@@ -153,19 +201,19 @@ export function useSimpleJournalEditor({
         if (numAmount <= 0) return;
         if (!sourceId || !destinationId) return;
 
+        // Default description to type if empty
+        if (!editor.description.trim()) {
+            editor.setDescription(type.charAt(0).toUpperCase() + type.slice(1));
+        }
+
         // Save preferences
         if (type === 'expense' || type === 'transfer') await preferences.setLastUsedSourceAccountId(sourceId);
         if (type === 'income' || type === 'transfer') await preferences.setLastUsedDestinationAccountId(destinationId);
 
-        // Inject exchange rate into source line (if cross currency)
-        if (isCrossCurrency && exchangeRate && sourceLine) {
-            editor.updateLine(sourceLine.id, { exchangeRate: exchangeRate.toString() });
-        }
-
         // Use the main editor submit
         await editor.submit();
         onSuccess();
-    }, [numAmount, sourceId, destinationId, type, isCrossCurrency, exchangeRate, sourceLine, editor.submit, onSuccess, editor.updateLine]);
+    }, [numAmount, sourceId, destinationId, type, editor.description, editor.submit, editor.setDescription, onSuccess]);
 
     return {
         type,
@@ -194,6 +242,7 @@ export function useSimpleJournalEditor({
         destAccount,
         sourceCurrency,
         destCurrency,
+        displayCurrency: sourceCurrency || destCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
         handleSave,
         isValidAmount: numAmount > 0,
     };

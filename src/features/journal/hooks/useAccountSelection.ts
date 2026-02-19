@@ -43,7 +43,7 @@ export function useAccountSelection({ accounts, initialSelectedId, onSelect }: U
     }, [leafAccounts]);
 
     const transactionAccounts = useMemo(() => {
-        return leafAccounts.filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY);
+        return leafAccounts;
     }, [leafAccounts]);
 
     const expenseAccounts = useMemo(() => leafAccounts.filter(a => a.accountType === AccountType.EXPENSE), [leafAccounts]);

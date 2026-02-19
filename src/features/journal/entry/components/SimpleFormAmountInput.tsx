@@ -1,4 +1,3 @@
-import { AppCard } from '@/src/components/core/AppCard';
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -7,11 +6,11 @@ import { StyleSheet, TextInput, View } from 'react-native';
 
 interface SimpleFormAmountInputProps {
     amount: string;
-    setAmount: (amount: string) => void;
+    setAmount?: (amount: string) => void;
     activeColor: string;
     displayCurrency: string;
-    sectionLabelColor: string;
-    amountLabel: string;
+    sectionLabelColor?: string;
+    readOnly?: boolean;
 }
 
 export function SimpleFormAmountInput({
@@ -19,28 +18,31 @@ export function SimpleFormAmountInput({
     setAmount,
     activeColor,
     displayCurrency,
-    sectionLabelColor,
-    amountLabel,
+    readOnly,
 }: SimpleFormAmountInputProps) {
-    const { theme } = useTheme();
+    const { theme, fonts } = useTheme();
 
     return (
-        <AppCard
-            elevation="none"
-            variant="default"
-            style={[styles.amountCard, { borderColor: withOpacity(activeColor, Opacity.medium), backgroundColor: theme.surface }]}
-        >
-            <AppText variant="caption" weight="bold" style={[styles.eyebrow, { color: sectionLabelColor }]}>
-                {amountLabel}
-            </AppText>
-            <View style={[styles.amountRow, { backgroundColor: theme.surfaceSecondary }]}>
-                <View style={styles.currencyWrap}>
-                    <AppText variant="xl" weight="bold" style={{ color: theme.textSecondary, opacity: Opacity.heavy }}>
-                        {displayCurrency}
+        <View style={[styles.amountRow, { backgroundColor: theme.surfaceSecondary }]}>
+            <View style={styles.currencyWrap}>
+                <AppText variant="xl" weight="bold" style={{ color: theme.textSecondary, opacity: Opacity.heavy }}>
+                    {displayCurrency}
+                </AppText>
+            </View>
+            {readOnly ? (
+                <View style={styles.amountDisplay}>
+                    <AppText
+                        variant="title"
+                        weight="bold"
+                        style={{ color: activeColor, textAlign: 'right' }}
+                        numberOfLines={1}
+                    >
+                        {amount || '0'}
                     </AppText>
                 </View>
+            ) : (
                 <TextInput
-                    style={[styles.amountInput, { color: activeColor }]}
+                    style={[styles.amountInput, { color: activeColor, fontFamily: fonts.heading }]}
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="decimal-pad"
@@ -52,8 +54,8 @@ export function SimpleFormAmountInput({
                     selectionColor={withOpacity(activeColor, Opacity.muted)}
                     testID="amount-input"
                 />
-            </View>
-        </AppCard>
+            )}
+        </View>
     );
 }
 
@@ -90,8 +92,8 @@ const styles = StyleSheet.create({
         writingDirection: 'auto',
         includeFontPadding: false,
     },
-    eyebrow: {
-        letterSpacing: Typography.letterSpacing.wide * 2,
-        marginBottom: Spacing.sm,
+    amountDisplay: {
+        flex: 1,
+        justifyContent: 'center',
     },
 });

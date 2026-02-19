@@ -16,6 +16,7 @@ interface JournalLineItemProps {
     onRemove: () => void;
     onSelectAccount: () => void;
     onAutoFetchRate?: () => void;
+    onBalanceLine?: () => void;
     getLineBaseAmount: (line: JournalEntryLine) => number;
 }
 
@@ -27,6 +28,7 @@ export const JournalLineItem = React.memo(({
     onRemove,
     onSelectAccount,
     onAutoFetchRate,
+    onBalanceLine,
     getLineBaseAmount,
 }: JournalLineItemProps) => {
     const { theme } = useTheme();
@@ -142,9 +144,14 @@ export const JournalLineItem = React.memo(({
                             containerStyle={{ width: 60, minHeight: 0 }}
                             style={{ fontSize: 13, textAlign: 'right' }}
                         />
+                        {onBalanceLine && (
+                            <TouchableOpacity onPress={onBalanceLine} style={styles.fetchButton}>
+                                <AppText variant="caption" color="primary" weight="semibold">Balance</AppText>
+                            </TouchableOpacity>
+                        )}
                         {onAutoFetchRate && (
                             <TouchableOpacity onPress={onAutoFetchRate} style={styles.fetchButton}>
-                                <AppText variant="caption" color="primary" weight="semibold">Fetch</AppText>
+                                <AppText variant="caption" color="secondary" weight="semibold">Fetch</AppText>
                             </TouchableOpacity>
                         )}
                     </View>
