@@ -59,7 +59,6 @@ export function SimpleFormAmountInput({
 
 const styles = StyleSheet.create({
     amountCard: {
-        borderWidth: 1,
         marginTop: Spacing.xs,
         marginBottom: Spacing.md,
         paddingTop: Spacing.sm,

@@ -10,7 +10,6 @@ export interface AccountTileProps {
     account: Account;
     isSelected: boolean;
     onSelect: (id: string) => void;
-    tintColor?: string;
     style?: StyleProp<ViewStyle>;
 }
 
@@ -18,12 +17,11 @@ export const AccountTile = ({
     account,
     isSelected,
     onSelect,
-    tintColor,
     style,
 }: AccountTileProps) => {
     const { theme } = useTheme();
     const colorKey = journalPresenter.getAccountColorKey(account.accountType);
-    const accountColor = tintColor || (theme as any)[colorKey] || theme.primary;
+    const accountColor = theme[colorKey as keyof typeof theme] || theme.primary;
 
     return (
         <TouchableOpacity
@@ -40,6 +38,7 @@ export const AccountTile = ({
             onPress={() => onSelect(isSelected ? '' : account.id)}
         >
             <View style={[styles.accountIndicator, { backgroundColor: accountColor, opacity: isSelected ? 1 : Opacity.soft }]} />
+            <AppIcon name={account.icon} size={Size.iconXs} color={accountColor} fallbackIcon='wallet' />
             <AppText
                 variant="body"
                 weight={isSelected ? "semibold" : "regular"}

@@ -11,7 +11,6 @@ export interface AccountTileListProps {
     accounts: Account[];
     selectedId: string;
     onSelect: (id: string) => void;
-    tintColor?: string;
     horizontal?: boolean;
 }
 
@@ -20,7 +19,6 @@ export const AccountTileList = ({
     accounts,
     selectedId,
     onSelect,
-    tintColor,
     horizontal = true,
 }: AccountTileListProps) => {
     return (
@@ -42,7 +40,6 @@ export const AccountTileList = ({
                             account={account}
                             isSelected={selectedId === account.id}
                             onSelect={onSelect}
-                            tintColor={tintColor}
                         />
                     )}
                     contentContainerStyle={{ paddingHorizontal: horizontal ? 0 : Spacing.xs }}

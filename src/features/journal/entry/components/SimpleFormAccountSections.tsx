@@ -13,13 +13,11 @@ interface SimpleFormAccountSectionsProps {
         selectedId: string;
         onSelect: (id: string) => void;
     }[];
-    activeColor: string;
     frameBorderColor: string;
 }
 
 export function SimpleFormAccountSections({
     sections,
-    activeColor,
     frameBorderColor,
 }: SimpleFormAccountSectionsProps) {
     const { theme } = useTheme();
@@ -38,7 +36,6 @@ export function SimpleFormAccountSections({
                         accounts={section.accounts}
                         selectedId={section.selectedId}
                         onSelect={section.onSelect}
-                        tintColor={activeColor}
                     />
                 </AppCard>
             ))}
@@ -55,7 +52,5 @@ const styles = StyleSheet.create({
         borderRadius: Shape.radius.r2,
         padding: Spacing.md,
         marginTop: 0,
-        borderWidth: 1,
-        borderColor: 'transparent',
     },
 });

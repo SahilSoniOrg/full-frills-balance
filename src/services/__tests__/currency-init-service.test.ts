@@ -13,6 +13,7 @@ describe('CurrencyInitService', () => {
             await database.unsafeResetDatabase()
         })
         service = new CurrencyInitService()
+        service.resetForTesting()
     })
 
     describe('initialize', () => {

@@ -1,14 +1,13 @@
-import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
-import { AppButton, AppCard, AppInput, AppText, ListRow } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { AppText } from '@/src/components/core';
+import { AppConfig, Spacing } from '@/src/constants';
 import { useAccounts } from '@/src/features/accounts';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import { useTheme } from '@/src/hooks/use-theme';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import dayjs from 'dayjs';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 interface AdvancedFormProps {
@@ -22,12 +21,9 @@ export const AdvancedForm = ({
     editor,
     onSelectAccountRequest,
 }: AdvancedFormProps) => {
-    const [showDatePicker, setShowDatePicker] = useState(false);
     const { totalDebits, totalCredits, isBalanced } = useAdvancedJournalSummary(editor.lines);
-    const hasDescription = editor.description.trim().length > 0;
-    const hasIncompleteLines = editor.lines.some(line => !line.accountId || !line.amount.trim());
-    const canSubmit = isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
 
+    const { theme } = useTheme();
     // Handlers
     const handleUpdateLine = useCallback((id: string, field: string, value: any) => {
         editor.updateLine(id, { [field]: value });
@@ -35,41 +31,6 @@ export const AdvancedForm = ({
 
     return (
         <View style={{ gap: Spacing.md, padding: Spacing.lg }}>
-            <AppCard elevation="sm" padding="lg">
-                {/* <AppText variant="title" style={{ marginBottom: Spacing.md }}>
-                    {editor.isEdit ? AppConfig.strings.advancedEntry.editTitle : AppConfig.strings.advancedEntry.createTitle}
-                </AppText> */}
-
-                <View style={{ gap: Spacing.md }}>
-                    <ListRow
-                        title={AppConfig.strings.advancedEntry.dateTime}
-                        subtitle={dayjs(`${editor.journalDate}T${editor.journalTime}`).format('DD MMM YYYY, HH:mm')}
-                        onPress={() => setShowDatePicker(true)}
-                        showDivider
-                        style={{ marginHorizontal: -Spacing.lg }}
-                    />
-
-                    <DateTimePickerModal
-                        visible={showDatePicker}
-                        date={editor.journalDate}
-                        time={editor.journalTime}
-                        onClose={() => setShowDatePicker(false)}
-                        onSelect={(d, t) => {
-                            editor.setJournalDate(d);
-                            editor.setJournalTime(t);
-                        }}
-                    />
-
-                    <AppInput
-                        label={AppConfig.strings.advancedEntry.description}
-                        value={editor.description}
-                        onChangeText={editor.setDescription}
-                        placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-                        multiline
-                        numberOfLines={3}
-                    />
-                </View>
-            </AppCard>
 
             <View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs }}>
@@ -101,19 +62,6 @@ export const AdvancedForm = ({
                 totalCredits={totalCredits}
                 isBalanced={isBalanced}
             />
-
-            <View style={{ paddingVertical: Spacing.lg }}>
-                <AppButton
-                    variant="primary"
-                    onPress={editor.submit}
-                    disabled={!canSubmit}
-                    style={{ marginBottom: Spacing.xl, height: Size.buttonXl, borderRadius: Shape.radius.r4 }}
-                >
-                    {editor.isSubmitting
-                        ? (editor.isEdit ? AppConfig.strings.advancedEntry.updating : AppConfig.strings.advancedEntry.creating)
-                        : (editor.isEdit ? AppConfig.strings.advancedEntry.updateJournal : AppConfig.strings.advancedEntry.createJournal)}
-                </AppButton>
-            </View>
         </View>
     );
 };

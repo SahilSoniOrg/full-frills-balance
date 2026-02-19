@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
@@ -232,7 +233,6 @@ export class BalanceService {
         const balancesMap = new Map(balances.map(b => [b.accountId, b]));
 
         // Fetch currency precision for accurate rounding
-        const { currencyRepository } = await import('@/src/data/repositories/CurrencyRepository');
         const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
 
         const precisionMap = new Map<string, number>();

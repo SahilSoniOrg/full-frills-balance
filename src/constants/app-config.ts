@@ -200,16 +200,23 @@ export const AppConfig = {
       },
     },
     transactionFlow: {
-      amount: 'AMOUNT',
-      schedule: 'SCHEDULE',
-      descriptionOptional: 'DESCRIPTION (OPTIONAL)',
-      saving: 'SAVING...',
-      save: (type: string) => `SAVE ${type.toUpperCase()}`,
-      chooseDifferentAccounts: 'CHOOSE DIFFERENT ACCOUNTS',
+      amount: 'Amount',
+      descriptionOptional: 'Description (Optional)',
+      saving: 'Saving...',
+      save: (type: string) => `Save ${type.toUpperCase()}`,
+      chooseDifferentAccounts: 'Choose Different Accounts',
       fetchingRate: 'Fetching rate...',
       simple: 'Simple',
       advanced: 'Advanced',
       explanationIconAccessibility: 'What is Advanced Mode?',
+      headers: {
+        edit: 'Edit Transaction',
+        new: 'New Transaction',
+        default: 'Journal Entry',
+      },
+      banners: {
+        editing: 'You are modifying an existing transaction',
+      },
     },
     advancedModeExplanation: {
       title: 'What is Advanced Mode?',
@@ -336,6 +343,7 @@ export const AppConfig = {
       accountNameTooShort: (min: number) => `Account name must be at least ${min} characters`,
       accountNameTooLong: (max: number) => `Account name must be less than ${max} characters`,
       invalidCharacters: 'Account name contains invalid characters',
+      simpleModeTooManyLines: 'Cannot switch to Simple mode with more than 2 transaction lines.',
     },
     audit: {
       logTitle: 'Audit Log',

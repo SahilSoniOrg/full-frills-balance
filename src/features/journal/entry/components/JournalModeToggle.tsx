@@ -1,5 +1,5 @@
 import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -9,9 +9,10 @@ interface JournalModeToggleProps {
     isGuidedMode: boolean;
     setIsGuidedMode: (mode: boolean) => void;
     variant?: 'default' | 'compact';
+    isSimpleDisabled?: boolean;
 }
 
-export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'default' }: JournalModeToggleProps) => {
+export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'default', isSimpleDisabled }: JournalModeToggleProps) => {
     const { theme } = useTheme();
     const [infoModalVisible, setInfoModalVisible] = useState(false);
     const isCompact = variant === 'compact';
@@ -24,6 +25,7 @@ export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'de
                         style={[
                             styles.compactButton,
                             { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
+                            isSimpleDisabled && { opacity: Opacity.muted }
                         ]}
                         onPress={() => setIsGuidedMode(true)}
                     >
@@ -82,7 +84,8 @@ export const JournalModeToggle = ({ isGuidedMode, setIsGuidedMode, variant = 'de
                     style={[
                         styles.modeButton,
                         { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
-                        isGuidedMode && Shape.elevation.sm
+                        isGuidedMode && Shape.elevation.sm,
+                        isSimpleDisabled && { opacity: Opacity.muted }
                     ]}
                     onPress={() => setIsGuidedMode(true)}
                 >

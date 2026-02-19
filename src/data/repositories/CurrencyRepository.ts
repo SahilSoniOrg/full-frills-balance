@@ -8,11 +8,14 @@ export class CurrencyRepository {
     }
 
     /**
-     * Finds a currency by its code
+     * Finds a currency by its code (active only)
      */
     async findByCode(code: string): Promise<Currency | null> {
         const currencies = await this.currencies
-            .query(Q.where('code', code))
+            .query(
+                Q.where('code', code),
+                Q.where('deleted_at', Q.eq(null))
+            )
             .fetch()
         return currencies[0] || null
     }
@@ -33,24 +36,31 @@ export class CurrencyRepository {
     }
 
     /**
-     * Gets all available currencies
+     * Gets all active currencies
      */
     async findAll(): Promise<Currency[]> {
+        return this.currencies.query(Q.where('deleted_at', Q.eq(null))).fetch()
+    }
+
+    /**
+     * Gets ALL currencies including soft-deleted ones
+     */
+    async findAllIncludingDeleted(): Promise<Currency[]> {
         return this.currencies.query().fetch()
     }
 
     /**
-     * Observe all currencies reactively
+     * Observe all active currencies reactively
      */
     observeAll() {
-        return this.currencies.query().observe()
+        return this.currencies.query(Q.where('deleted_at', Q.eq(null))).observe()
     }
 
     /**
-     * Get count of currencies
+     * Get count of active currencies
      */
     async count(): Promise<number> {
-        return this.currencies.query().fetchCount()
+        return this.currencies.query(Q.where('deleted_at', Q.eq(null))).fetchCount()
     }
 
     /**
@@ -84,7 +94,7 @@ export class CurrencyRepository {
     }
 
     /**
-     * Delete a currency (soft delete)
+     * Soft delete a currency
      */
     async delete(currency: Currency): Promise<void> {
         await database.write(async () => {
@@ -94,11 +104,33 @@ export class CurrencyRepository {
             })
         })
     }
+
     /**
-     * Get precisions for all currencies (optimized raw fetch)
+     * Permanently delete a record
+     */
+    async permanentlyDelete(currency: Currency): Promise<void> {
+        await database.write(async () => {
+            await currency.destroyPermanently()
+        })
+    }
+
+    /**
+     * Restore a soft-deleted currency
+     */
+    async restore(currency: Currency): Promise<void> {
+        await database.write(async () => {
+            await currency.update(record => {
+                record.deletedAt = undefined
+                record.updatedAt = new Date()
+            })
+        })
+    }
+
+    /**
+     * Get precisions for all active currencies (optimized raw fetch)
      */
     async getAllPrecisions(): Promise<Map<string, number>> {
-        const raw = await this.currencies.query().unsafeFetchRaw() as any[];
+        const raw = await this.currencies.query(Q.where('deleted_at', Q.eq(null))).unsafeFetchRaw() as any[];
         return new Map(raw.map(c => [c.code, c.precision]));
     }
 }

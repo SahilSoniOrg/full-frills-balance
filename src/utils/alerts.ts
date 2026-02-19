@@ -1,8 +1,8 @@
-import { Alert, Platform } from 'react-native'
 import { handleError } from '@/src/utils/errors'
 import { logger } from '@/src/utils/logger'
+import { Alert, Platform } from 'react-native'
 
-export const showErrorAlert = (error: unknown, customTitle?: string) => {
+export const showErrorAlert = (error: unknown, customTitle?: string, useSameErrorMessage?: boolean) => {
   const appError = handleError(error)
 
   logger.error('App Error', error, {
@@ -29,6 +29,10 @@ export const showErrorAlert = (error: unknown, customTitle?: string) => {
       break
     default:
       message = 'Something went wrong. Please try again.'
+  }
+
+  if (useSameErrorMessage) {
+    message = appError.message
   }
 
   if (Platform.OS === 'web') {

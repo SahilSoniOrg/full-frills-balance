@@ -20,6 +20,21 @@ jest.mock('@/src/utils/alerts', () => ({
 const mockBack = jest.fn();
 (useRouter as jest.Mock).mockReturnValue({ back: mockBack });
 
+// Mock useUI
+jest.mock('@/src/contexts/UIContext', () => ({
+    useUI: jest.fn(() => ({
+        advancedMode: false,
+        setAdvancedMode: jest.fn()
+    }))
+}));
+
+// Mock useExchangeRate
+jest.mock('@/src/hooks/useExchangeRate', () => ({
+    useExchangeRate: jest.fn(() => ({
+        fetchRate: jest.fn()
+    }))
+}));
+
 describe('useJournalEditor', () => {
     beforeEach(() => {
         jest.clearAllMocks();

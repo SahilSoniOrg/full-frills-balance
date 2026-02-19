@@ -1,7 +1,8 @@
-import { TransactionType } from '@/src/data/models/Transaction';
+import { AppConfig } from '@/src/constants';
 import { useAccounts } from '@/src/features/accounts';
-import { SimpleFormProps } from '@/src/features/journal/entry/components/SimpleForm';
+import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -12,6 +13,7 @@ import { useCallback, useMemo, useState } from 'react';
  */
 export interface JournalEntryViewModel {
     editor: ReturnType<typeof useJournalEditor>;
+    simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
     accounts: ReturnType<typeof useAccounts>['accounts'];
     isLoading: boolean;
     headerTitle: string;
@@ -24,12 +26,12 @@ export interface JournalEntryViewModel {
     onSelectAccountRequest: (lineId: string) => void;
     onAccountSelected: (accountId: string) => void;
     selectedAccountId?: string;
-    simpleFormConfig: SimpleFormProps;
+    simpleFormIsValid: boolean;
+    advancedFormIsValid: boolean;
     advancedFormConfig: {
-        accounts: ReturnType<typeof useAccounts>['accounts'];
-        editor: ReturnType<typeof useJournalEditor>;
         onSelectAccountRequest: (lineId: string) => void;
     };
+    isSimpleModeDisabled: boolean;
 }
 
 /**
@@ -44,13 +46,21 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     const initialMode = params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
     const initialType = params.type === 'expense' || params.type === 'income' || params.type === 'transfer' ? params.type : undefined;
 
+    const { accounts, isLoading: isLoadingAccounts } = useAccounts();
+
     const editor = useJournalEditor({
         journalId: params.journalId as string,
         initialMode,
         initialType,
     });
 
-    const { accounts, isLoading: isLoadingAccounts } = useAccounts();
+    // Editor for Simple Mode
+    const simpleEditor = useSimpleJournalEditor({
+        accounts,
+        onSuccess: () => AppNavigation.back(),
+        editor,
+    });
+
     const [showAccountPicker, setShowAccountPicker] = useState(false);
     const [activeLineId, setActiveLineId] = useState<string | null>(null);
 
@@ -80,26 +90,40 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         setActiveLineId(null);
     }, [accounts, activeLineId, editor]);
 
+    const isSimpleModeDisabled = editor.lines.length > 2;
+
     const onToggleGuidedMode = useCallback((mode: boolean) => {
-        if (mode && editor.lines.length > 2) {
-            showErrorAlert('Cannot switch to Simple mode with more than 2 transaction lines.');
+        if (mode && isSimpleModeDisabled) {
+            showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, true);
             return;
         }
+
         editor.setIsGuidedMode(mode);
-    }, [editor]);
+    }, [editor, isSimpleModeDisabled]);
 
     const headerTitle = useMemo(() => {
-        if (editor.isEdit) return 'Edit Transaction';
-        return editor.isGuidedMode ? 'New Transaction' : 'Journal Entry';
+        if (editor.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
+        return editor.isGuidedMode ? AppConfig.strings.transactionFlow.headers.new : AppConfig.strings.transactionFlow.headers.default;
     }, [editor.isEdit, editor.isGuidedMode]);
+
+    // Calculate Validations
+    const isSimpleValid = simpleEditor.isValidAmount && !!simpleEditor.sourceId && !!simpleEditor.destinationId &&
+        (simpleEditor.sourceId !== simpleEditor.destinationId) && !simpleEditor.isSubmitting &&
+        !simpleEditor.isLoadingRate && !simpleEditor.rateError;
+
+    const { isBalanced } = useAdvancedJournalSummary(editor.lines);
+    const hasDescription = editor.description.trim().length > 0;
+    const hasIncompleteLines = editor.lines.some(line => !line.accountId || !line.amount.trim());
+    const isAdvancedValid = isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
 
     return {
         editor,
+        simpleEditor,
         accounts,
         isLoading: isLoadingAccounts || editor.isLoading,
         headerTitle,
         showEditBanner: editor.isEdit,
-        editBannerText: 'You are modifying an existing transaction',
+        editBannerText: AppConfig.strings.transactionFlow.banners.editing,
         isGuidedMode: editor.isGuidedMode,
         onToggleGuidedMode,
         showAccountPicker,
@@ -107,22 +131,11 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         onSelectAccountRequest,
         onAccountSelected,
         selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
-        simpleFormConfig: {
-            accounts,
-            journalId: params.journalId as string,
-            onSuccess: () => AppNavigation.back(),
-            initialType: editor.transactionType,
-            initialAmount: editor.lines[0]?.amount,
-            initialDestinationId: editor.lines.find(l => l.transactionType === TransactionType.DEBIT)?.accountId || editor.lines[0]?.accountId,
-            initialSourceId: editor.lines.find(l => l.transactionType === TransactionType.CREDIT)?.accountId || editor.lines[1]?.accountId,
-            initialDate: editor.journalDate,
-            initialTime: editor.journalTime,
-            initialDescription: editor.description,
-        },
+        simpleFormIsValid: isSimpleValid,
+        advancedFormIsValid: isAdvancedValid,
         advancedFormConfig: {
-            accounts,
-            editor,
             onSelectAccountRequest,
-        }
+        },
+        isSimpleModeDisabled,
     };
 }

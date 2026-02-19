@@ -1,15 +1,15 @@
-import { AppText } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
 import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
-import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
+import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
+import { JournalSubmitFooter } from '@/src/features/journal/entry/components/JournalSubmitFooter';
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
 import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function JournalEntryView(vm: JournalEntryViewModel) {
@@ -21,12 +21,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         editBannerText,
         isGuidedMode,
         onToggleGuidedMode,
-        showAccountPicker,
-        onCloseAccountPicker,
-        onAccountSelected,
-        simpleFormConfig,
         advancedFormConfig,
-        accounts,
     } = vm;
 
     if (isLoading) {
@@ -34,13 +29,12 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             <View style={[styles.container, { backgroundColor: theme.background }]}
             >
                 <View style={styles.loadingContainer}>
-                    <AppText variant="body">{AppConfig.strings.common.loading || 'Loading...'}</AppText>
+                    <ActivityIndicator size="large" color={theme.primary} />
                 </View>
             </View>
         );
     }
 
-    const Banner = () => showEditBanner ? <EntryEditBanner text={editBannerText} /> : null;
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -51,6 +45,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                         isGuidedMode={isGuidedMode}
                         setIsGuidedMode={onToggleGuidedMode}
                         variant="compact"
+                        isSimpleDisabled={vm.isSimpleModeDisabled}
                     />
                 }
             />
@@ -59,25 +54,49 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                {isGuidedMode ? (
-                    <View style={styles.content}>
-                        <Banner />
-                        <SimpleForm {...simpleFormConfig} />
-                    </View>
-                ) : (
-                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                        <Banner />
-                        <AdvancedForm {...advancedFormConfig} />
-                    </ScrollView>
-                )}
+
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    <JournalMetaCard
+                        date={vm.editor.journalDate}
+                        setDate={vm.editor.setJournalDate}
+                        time={vm.editor.journalTime}
+                        setTime={vm.editor.setJournalTime}
+                        description={vm.editor.description}
+                        setDescription={vm.editor.setDescription}
+                        style={{ marginHorizontal: Spacing.lg }}
+                        showBanner={showEditBanner}
+                        bannerText={editBannerText}
+                    />
+                    {isGuidedMode ? (
+                        <SimpleForm {...vm.simpleEditor} />
+                    ) : (
+                        <AdvancedForm
+                            accounts={vm.accounts}
+                            editor={vm.editor}
+                            onSelectAccountRequest={vm.advancedFormConfig.onSelectAccountRequest}
+                        />
+                    )}
+                </ScrollView>
+
+                <JournalSubmitFooter
+                    onPress={isGuidedMode ? vm.simpleEditor.handleSave : vm.editor.submit}
+                    disabled={isGuidedMode ? !vm.simpleFormIsValid : !vm.advancedFormIsValid}
+                    isSubmitting={isGuidedMode ? vm.simpleEditor.isSubmitting : vm.editor.isSubmitting}
+                    label={isGuidedMode
+                        ? (vm.simpleEditor.isSubmitting ? AppConfig.strings.transactionFlow.saving : AppConfig.strings.transactionFlow.save(vm.simpleEditor.type))
+                        : (vm.editor.isSubmitting
+                            ? (vm.editor.isEdit ? AppConfig.strings.advancedEntry.updating : AppConfig.strings.advancedEntry.creating)
+                            : (vm.editor.isEdit ? AppConfig.strings.advancedEntry.updateJournal : AppConfig.strings.advancedEntry.createJournal))
+                    }
+                />
             </KeyboardAvoidingView>
 
             <AccountSelector
-                visible={showAccountPicker}
-                accounts={accounts}
+                visible={vm.showAccountPicker}
+                accounts={vm.accounts}
                 selectedId={vm.selectedAccountId}
-                onClose={onCloseAccountPicker}
-                onSelect={onAccountSelected}
+                onClose={vm.onCloseAccountPicker}
+                onSelect={vm.onAccountSelected}
             />
         </SafeAreaView >
     );
