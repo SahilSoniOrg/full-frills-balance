@@ -9,6 +9,14 @@ export interface JournalLineInput {
     exchangeRate?: number; // Optional: for multi-currency transactions
 }
 
+/**
+ * Standard rounding for financial amounts (2 decimal places).
+ * Uses EPSILON to avoid floating point precision errors.
+ */
+function roundAmount(amount: number): number {
+    return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
 export class JournalCalculator {
     /**
      * Calculates the total debits from a list of lines.
@@ -75,7 +83,14 @@ export class JournalCalculator {
         }
 
         const baseAmount = finalAmount * rate;
-        return Math.round(baseAmount * 100) / 100;
+        return roundAmount(baseAmount);
+    }
+
+    /**
+     * Standard rounding for financial amounts (2 decimal places).
+     */
+    static roundAmount(amount: number): number {
+        return roundAmount(amount);
     }
 
     /**

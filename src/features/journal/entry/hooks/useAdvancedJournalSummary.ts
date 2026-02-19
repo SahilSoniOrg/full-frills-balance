@@ -1,5 +1,4 @@
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
-import { sanitizeAmount } from '@/src/utils/validation';
 import { useMemo } from 'react';
 
 interface AdvancedJournalLineLike {
@@ -11,11 +10,18 @@ interface AdvancedJournalLineLike {
 export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
     const domainLines = useMemo<JournalLineInput[]>(() => {
         return lines.map((line) => {
-            const rawAmount = sanitizeAmount(line.amount) || 0;
             const rawRate = typeof line.exchangeRate === 'string' ? parseFloat(line.exchangeRate) : line.exchangeRate;
-            const effectiveRate = rawRate && rawRate > 0 ? rawRate : 1;
+
+            // Use canonical calculation from JournalCalculator to ensure summary matches line display
+            const amount = JournalCalculator.getLineBaseAmount({
+                amount: line.amount,
+                exchangeRate: rawRate || 1,
+                // We pass accountCurrency to trigger the exchangeRate logic if the line isn't in base currency
+                accountCurrency: 'EXTERNAL'
+            });
+
             return {
-                amount: rawAmount * effectiveRate,
+                amount,
                 type: line.transactionType,
             };
         });

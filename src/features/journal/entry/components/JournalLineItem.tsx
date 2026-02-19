@@ -33,53 +33,51 @@ export const JournalLineItem = React.memo(({
 
     return (
         <View style={styles.container}>
-            {/* Header: Account & Amount */}
-            <View style={styles.row}>
+            {/* Main Row: Account & Amount */}
+            <View style={styles.mainRow}>
                 <TouchableOpacity
                     style={[styles.accountSelector, { backgroundColor: theme.surface, borderColor: theme.border }]}
                     onPress={onSelectAccount}
                 >
-                    <View style={{ flex: 1 }}>
-                        <AppText variant="body" weight="medium" numberOfLines={1}>
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                        <AppText variant="caption" color="secondary" weight="bold" style={{ fontSize: 10, marginBottom: 2, letterSpacing: 0.5 }}>
+                            ACCOUNT
+                        </AppText>
+                        <AppText variant="body" weight="semibold" numberOfLines={1}>
                             {line.accountName || AppConfig.strings.advancedEntry.selectAccount}
                         </AppText>
-                        {line.accountName ? (
-                            <AppText variant="caption" color="secondary" numberOfLines={1}>
-                                {line.accountType}
-                            </AppText>
-                        ) : null}
                     </View>
-                    <AppText variant="caption" color="secondary">▼</AppText>
+                    <AppText variant="caption" color="secondary" style={{ paddingLeft: Spacing.sm }}>▼</AppText>
                 </TouchableOpacity>
 
                 <View style={styles.amountContainer}>
                     <View style={[styles.amountInputWrapper, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                        {line.accountCurrency && (
-                            <AppText variant="caption" color="secondary" style={{ paddingLeft: Spacing.sm }}>
-                                {line.accountCurrency}
+                        <View style={{ flex: 1, paddingLeft: Spacing.md, paddingVertical: 4 }}>
+                            <AppText variant="caption" color="secondary" weight="bold" style={{ fontSize: 10, marginBottom: 0, letterSpacing: 0.5 }}>
+                                {line.accountCurrency || AppConfig.defaultCurrency}
                             </AppText>
-                        )}
-                        <AppInput
-                            value={line.amount}
-                            onChangeText={(value) => onUpdate('amount', value)}
-                            placeholder="0.00"
-                            keyboardType="numeric"
-                            style={styles.amountInput}
-                            containerStyle={{ flex: 1, borderWidth: 0 }}
-                            testID={`amount-input-${line.id}`}
-                        />
+                            <AppInput
+                                value={line.amount}
+                                onChangeText={(value) => onUpdate('amount', value)}
+                                placeholder="0.00"
+                                keyboardType="numeric"
+                                style={styles.amountInput}
+                                variant="minimal"
+                                containerStyle={{ minHeight: 0 }}
+                                testID={`amount-input-${line.id}`}
+                            />
+                        </View>
                     </View>
                 </View>
             </View>
 
-            {/* Sub-row: Type & Notes */}
-            <View style={styles.row}>
-                <View style={styles.typeSelector}>
+            {/* Sub Row: Type, Notes and Action */}
+            <View style={styles.secondaryRow}>
+                <View style={[styles.typeSelector, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}>
                     <TouchableOpacity
                         style={[
                             styles.typeSegment,
-                            { borderColor: theme.border, borderRightWidth: 0, borderTopLeftRadius: Shape.radius.r2, borderBottomLeftRadius: Shape.radius.r2 },
-                            line.transactionType === TransactionType.DEBIT && { backgroundColor: theme.primary, borderColor: theme.primary }
+                            line.transactionType === TransactionType.DEBIT && { backgroundColor: theme.primary }
                         ]}
                         onPress={() => onUpdate('transactionType', TransactionType.DEBIT)}
                     >
@@ -94,8 +92,7 @@ export const JournalLineItem = React.memo(({
                     <TouchableOpacity
                         style={[
                             styles.typeSegment,
-                            { borderColor: theme.border, borderLeftWidth: 1, borderTopRightRadius: Shape.radius.r2, borderBottomRightRadius: Shape.radius.r2 },
-                            line.transactionType === TransactionType.CREDIT && { backgroundColor: theme.primary, borderColor: theme.primary }
+                            line.transactionType === TransactionType.CREDIT && { backgroundColor: theme.primary }
                         ]}
                         onPress={() => onUpdate('transactionType', TransactionType.CREDIT)}
                     >
@@ -114,37 +111,40 @@ export const JournalLineItem = React.memo(({
                         value={line.notes}
                         onChangeText={(value) => onUpdate('notes', value)}
                         placeholder={AppConfig.strings.advancedEntry.notesPlaceholder}
-                        containerStyle={{ height: 36 }}
-                        style={{ fontSize: 13, paddingVertical: 0 }}
+                        containerStyle={{ height: 44 }}
+                        style={{ fontSize: 14 }}
                     />
                 </View>
 
                 {canRemove && (
                     <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-                        <AppText variant="caption" color="error">×</AppText>
+                        <AppText variant="body" color="error" weight="bold">×</AppText>
                     </TouchableOpacity>
                 )}
             </View>
 
             {/* Exchange Rate (Conditional) */}
             {line.accountCurrency && line.accountCurrency !== (preferences.defaultCurrencyCode || AppConfig.defaultCurrency) && (
-                <View style={[styles.row, { marginTop: Spacing.xs }]}>
-                    <AppText variant="caption" color="secondary">
-                        ≈ {CurrencyFormatter.format(getLineBaseAmount(line))}
-                    </AppText>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                        <AppText variant="caption" color="secondary">@</AppText>
+                <View style={[styles.exchangeRateRow, { backgroundColor: theme.surfaceSecondary }]}>
+                    <View style={{ flex: 1 }}>
+                        <AppText variant="caption" color="secondary">
+                            ≈ {CurrencyFormatter.format(getLineBaseAmount(line))}
+                        </AppText>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                        <AppText variant="caption" color="secondary">Rate:</AppText>
                         <AppInput
                             value={line.exchangeRate || ''}
                             onChangeText={(value) => onUpdate('exchangeRate', value)}
-                            placeholder="Rate"
+                            placeholder="1.0"
                             keyboardType="decimal-pad"
-                            containerStyle={{ width: 80, height: 30 }}
-                            style={{ fontSize: 12, paddingVertical: 0, textAlign: 'right' }}
+                            variant="minimal"
+                            containerStyle={{ width: 60, minHeight: 0 }}
+                            style={{ fontSize: 13, textAlign: 'right' }}
                         />
                         {onAutoFetchRate && (
-                            <TouchableOpacity onPress={onAutoFetchRate} style={{ padding: 4 }}>
-                                <AppText variant="caption" color="primary">Fetch</AppText>
+                            <TouchableOpacity onPress={onAutoFetchRate} style={styles.fetchButton}>
+                                <AppText variant="caption" color="primary" weight="semibold">Fetch</AppText>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -158,62 +158,87 @@ export const JournalLineItem = React.memo(({
 
 const styles = StyleSheet.create({
     container: {
-        paddingVertical: Spacing.md,
-        gap: Spacing.sm,
-    },
-    row: {
-        flexDirection: 'row',
+        paddingVertical: Spacing.lg,
         gap: Spacing.md,
+    },
+    mainRow: {
+        flexDirection: 'row',
+        gap: Spacing.sm,
+        alignItems: 'flex-start',
+    },
+    secondaryRow: {
+        flexDirection: 'row',
+        gap: Spacing.sm,
         alignItems: 'center',
     },
     accountSelector: {
-        flex: 1,
+        flex: 1.4,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: Spacing.xs,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
         borderWidth: 1,
-        borderRadius: Shape.radius.r2,
-        height: 44, // Match typical input height
+        borderRadius: Shape.radius.r3,
+        height: 68, // Increased height to prevent clipping
     },
     amountContainer: {
-        width: 120,
+        flex: 1,
     },
     amountInputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
-        borderRadius: Shape.radius.r2,
-        height: 44,
+        borderRadius: Shape.radius.r3,
+        height: 68, // Increased height to prevent clipping
         overflow: 'hidden',
     },
     amountInput: {
         textAlign: 'right',
+        fontSize: 18,
+        fontWeight: '700',
         paddingRight: Spacing.sm,
-        fontWeight: '600',
+        minHeight: 0,
     },
     typeSelector: {
         flexDirection: 'row',
-        height: 36,
+        height: 44,
+        borderRadius: Shape.radius.r2,
+        padding: 4,
+        borderWidth: 1,
+        alignItems: 'center',
     },
     typeSegment: {
-        width: 40,
+        width: 44,
+        height: 34,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
+        borderRadius: Shape.radius.r2 - 4,
     },
     removeButton: {
-        width: 36,
-        height: 36,
+        width: 44,
+        height: 44,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'rgba(255, 59, 48, 0.1)',
         borderRadius: Shape.radius.r2,
     },
+    exchangeRateRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderRadius: Shape.radius.r2,
+        marginTop: -Spacing.xs,
+    },
+    fetchButton: {
+        paddingVertical: Spacing.xs,
+        paddingHorizontal: Spacing.sm,
+    },
     divider: {
         height: 1,
         width: '100%',
         marginTop: Spacing.sm,
-        opacity: 0.5,
+        opacity: 0.3,
     }
 });
