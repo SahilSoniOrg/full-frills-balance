@@ -62,7 +62,7 @@ export function SubAccountListModal({
                                 Sub-Accounts
                             </AppText>
                             <AppText variant="caption" color="secondary">
-                                Details for "{parentName}"
+                                Details for &quot;{parentName}&quot;
                             </AppText>
                         </View>
                         <AppIcon name="hierarchy" size={Size.iconSm} color={theme.textTertiary} />

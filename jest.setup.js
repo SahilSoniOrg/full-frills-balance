@@ -1,4 +1,6 @@
 // Mock Platform before any other imports
+import '@testing-library/jest-native/extend-expect';
+
 jest.mock('react-native/Libraries/Utilities/Platform', () => {
     const Platform = {
         OS: 'ios',
@@ -18,8 +20,6 @@ jest.mock('react-native/Libraries/Utilities/Platform', () => {
 
 // Mock database adapter to use LokiJS for tests
 jest.mock('@/src/data/database/adapter', () => jest.requireActual('./src/data/database/adapter.ts'));
-
-import '@testing-library/jest-native/extend-expect';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () =>

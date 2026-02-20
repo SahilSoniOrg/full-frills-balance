@@ -10,8 +10,8 @@ jest.mock('react-native/Libraries/Modal/Modal', () => ({
 }));
 
 jest.mock('@/src/components/core', () => {
-    const React = require('react');
-    const { View, Text, TextInput } = require('react-native');
+    const { View, Text, TextInput } = jest.requireActual('react-native');
+    const React = jest.requireActual('react');
     return {
         AppText: ({ children, style, ...props }: any) => React.createElement(Text, { ...props, style }, children),
         AppInput: ({ style, ...props }: any) => React.createElement(TextInput, { ...props, style }),

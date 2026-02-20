@@ -154,7 +154,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
             };
             loadData();
         }
-    }, [journalId]);
+    }, [journalId, setGuidedModeInternal]);
 
     const addLine = useCallback(() => {
         setLines(prev => {

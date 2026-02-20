@@ -1,5 +1,5 @@
-import { act, renderHook } from '@testing-library/react-native';
 import { reportService } from '@/src/services/report-service';
+import { act, renderHook } from '@testing-library/react-native';
 import { useReports } from '../useReports';
 import { useReportsViewModel } from '../useReportsViewModel';
 
@@ -138,7 +138,7 @@ describe('useReportsViewModel', () => {
             result.current.onIncomeExpensePointSelect(1);
         });
 
-        const router = require('expo-router').useRouter();
+        const router = { push: mockPush }; // mockPush is already the push function of the mocked useRouter
 
         act(() => {
             result.current.onViewSelectedTransactions();

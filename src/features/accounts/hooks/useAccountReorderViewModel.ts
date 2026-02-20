@@ -13,6 +13,15 @@ export interface AccountReorderViewModel {
     onBack: () => void;
 }
 
+// Sort order for account types
+const typeOrder = [
+    AccountType.ASSET,
+    AccountType.LIABILITY,
+    AccountType.INCOME,
+    AccountType.EXPENSE,
+    AccountType.EQUITY,
+];
+
 export function useAccountReorderViewModel(): AccountReorderViewModel {
     const router = useRouter();
     const { theme } = useTheme();
@@ -20,14 +29,6 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
     const { updateAccountOrder } = useAccountActions();
     const [accounts, setAccounts] = useState<Account[]>([]);
 
-    // Sort order for account types
-    const typeOrder = [
-        AccountType.ASSET,
-        AccountType.LIABILITY,
-        AccountType.INCOME,
-        AccountType.EXPENSE,
-        AccountType.EQUITY,
-    ];
 
     useEffect(() => {
         if (!isLoading) {

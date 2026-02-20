@@ -1,5 +1,6 @@
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -20,7 +21,6 @@ describe('WealthService', () => {
     const END_DATE = dayjs('2024-01-31').valueOf();
 
     beforeEach(() => {
-        const { accountRepository } = require('@/src/data/repositories/AccountRepository');
         jest.clearAllMocks();
         // Default behaviors
         (exchangeRateService.convert as jest.Mock).mockImplementation((amount, _from, _to) =>
@@ -112,7 +112,6 @@ describe('WealthService', () => {
         });
 
         it('should filter out parent accounts to avoid double-counting', async () => {
-            const { accountRepository } = require('@/src/data/repositories/AccountRepository');
 
             const mockAccounts = [
                 { id: 'parent1', name: 'Parent', accountType: AccountType.ASSET, parentAccountId: undefined },

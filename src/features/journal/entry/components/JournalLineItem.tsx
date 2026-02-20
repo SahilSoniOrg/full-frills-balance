@@ -162,6 +162,9 @@ export const JournalLineItem = React.memo(({
     );
 });
 
+JournalLineItem.displayName = 'JournalLineItem';
+
+
 const styles = StyleSheet.create({
     container: {
         paddingVertical: Spacing.lg,

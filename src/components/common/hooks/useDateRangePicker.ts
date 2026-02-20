@@ -39,7 +39,7 @@ export function useDateRangePicker({ visible, currentFilter, onSelect, onClose }
             list.push({ month: d.month(), year: d.year(), label: d.format('MMM YYYY') });
         }
         return list;
-    }, []);
+    }, [INITIAL_MONTH_INDEX]);
 
     useEffect(() => {
         if (visible) {
@@ -75,7 +75,7 @@ export function useDateRangePicker({ visible, currentFilter, onSelect, onClose }
                 flatListRef.current?.scrollToIndex({ index: targetIndex, animated: false, viewPosition: 0.5 });
             }, Animation.scrollDelay);
         }
-    }, [visible, currentFilter, monthList]);
+    }, [visible, currentFilter, monthList, INITIAL_MONTH_INDEX]);
 
     const handleSelectMonth = useCallback((month: number, year: number) => {
         setDraftFilter({ type: 'MONTH', month, year });

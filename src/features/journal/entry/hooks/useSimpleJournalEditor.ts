@@ -114,7 +114,7 @@ export function useSimpleJournalEditor({
         }
 
         Object.entries(updates).forEach(([id, up]) => editor.updateLine(id, up));
-    }, [exchangeRate, isCrossCurrency, sourceLine, destinationLine, convertedAmount, amount]);
+    }, [exchangeRate, isCrossCurrency, sourceLine, destinationLine, convertedAmount, amount, editor]);
 
     // Helpers to update editor state
     const setType = (newType: 'expense' | 'income' | 'transfer') => {
@@ -151,7 +151,7 @@ export function useSimpleJournalEditor({
         if (destinationLine && !isCrossCurrency) editor.updateLine(destinationLine.id, { amount: newAmount });
     };
 
-    const setSourceId = (id: string) => {
+    const setSourceId = useCallback((id: string) => {
         const account = accounts.find(a => a.id === id);
         if (sourceLine) {
             editor.updateLine(sourceLine.id, {
@@ -161,9 +161,9 @@ export function useSimpleJournalEditor({
                 accountCurrency: account?.currencyCode
             });
         }
-    };
+    }, [accounts, sourceLine, editor]);
 
-    const setDestinationId = (id: string) => {
+    const setDestinationId = useCallback((id: string) => {
         const account = accounts.find(a => a.id === id);
         if (destinationLine) {
             editor.updateLine(destinationLine.id, {
@@ -173,7 +173,7 @@ export function useSimpleJournalEditor({
                 accountCurrency: account?.currencyCode
             });
         }
-    };
+    }, [accounts, destinationLine, editor]);
 
     // Account defaulting logic (re-implemented to work with editor state)
     useEffect(() => {
@@ -192,7 +192,7 @@ export function useSimpleJournalEditor({
                 setDestinationId(lastDestId);
             }
         }
-    }, [type, transactionAccounts]); // Run when type changes or accounts load
+    }, [type, transactionAccounts, destinationId, setDestinationId, setSourceId, sourceId]); // Run when type changes or accounts load
 
 
     const handleSave = useCallback(async () => {
@@ -214,7 +214,7 @@ export function useSimpleJournalEditor({
 
         // Use the main editor submit
         await editor.submit();
-    }, [numAmount, sourceId, destinationId, type, editor.description, editor.submit, editor.setDescription]);
+    }, [numAmount, sourceId, destinationId, type, editor]);
 
     return {
         type,
