@@ -211,8 +211,10 @@ export function useSimpleJournalEditor({
         if (type === 'income' || type === 'transfer') await preferences.setLastUsedDestinationAccountId(destinationId);
 
         // Use the main editor submit
-        await editor.submit();
-        onSuccess();
+        const result = await editor.submit();
+        if (result.success) {
+            onSuccess();
+        }
     }, [numAmount, sourceId, destinationId, type, editor.description, editor.submit, editor.setDescription, onSuccess]);
 
     return {

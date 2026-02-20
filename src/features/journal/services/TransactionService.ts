@@ -263,8 +263,11 @@ export class TransactionService {
 
     private mapToEnriched(tx: any, transactions: any[], accountMap: Map<string, any>, journal: any): EnrichedTransaction {
         const account = accountMap.get(tx.accountId);
-        const otherTx = transactions.find(t => t.id !== tx.id);
-        const counterAccount = otherTx ? accountMap.get(otherTx.accountId) : undefined;
+        const counterAccounts = transactions
+            .filter(t => t.id !== tx.id)
+            .map(t => accountMap.get(t.accountId))
+            .filter(Boolean);
+        const counterAccount = counterAccounts.length === 1 ? counterAccounts[0] : undefined;
         const isIncrease = isBalanceIncrease(account?.accountType as any, tx.transactionType as any);
 
         return {

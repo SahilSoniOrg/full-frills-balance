@@ -8,6 +8,7 @@ import { transactionService } from '../TransactionService'
 describe('TransactionService', () => {
     let accountId: string
     let equityAccountId: string
+    let expenseAccountId: string
 
     beforeEach(async () => {
         await database.write(async () => {
@@ -26,6 +27,13 @@ describe('TransactionService', () => {
             currencyCode: 'USD'
         })
         equityAccountId = equity.id
+
+        const expense = await accountRepository.create({
+            name: 'Expense',
+            accountType: AccountType.EXPENSE,
+            currencyCode: 'USD'
+        })
+        expenseAccountId = expense.id
     })
 
     describe('getTransactionsWithAccountInfo', () => {
@@ -57,6 +65,29 @@ describe('TransactionService', () => {
             expect(tx2?.accountName).toBe('Equity')
             expect(tx2?.accountType).toBe(AccountType.EQUITY)
             expect(tx2?.balanceImpact).toBe('INCREASE') // Credit Equity = Increase
+        })
+    })
+
+    describe('getEnrichedByJournal', () => {
+        it('does not assign a single counter account for multi-line journals', async () => {
+            const journal = await journalService.createJournal({
+                description: 'Split Transaction',
+                journalDate: Date.now(),
+                currencyCode: 'USD',
+                transactions: [
+                    { accountId, amount: 100, transactionType: TransactionType.DEBIT },
+                    { accountId: equityAccountId, amount: 60, transactionType: TransactionType.CREDIT },
+                    { accountId: expenseAccountId, amount: 40, transactionType: TransactionType.CREDIT }
+                ]
+            })
+
+            const enriched = await transactionService.getEnrichedByJournal(journal.id)
+
+            expect(enriched).toHaveLength(3)
+            enriched.forEach((tx) => {
+                expect(tx.counterAccountName).toBeUndefined()
+                expect(tx.counterAccountType).toBeUndefined()
+            })
         })
     })
 })

@@ -264,12 +264,14 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
 
             if (!result.success) {
                 showErrorAlert(result.error || 'Unknown error');
-                return;
+                return result;
             }
 
             router.back();
+            return result;
         } catch {
             showErrorAlert('Unexpected error occurred');
+            return { success: false, error: 'Unexpected error occurred' };
         } finally {
             setIsSubmitting(false);
         }
