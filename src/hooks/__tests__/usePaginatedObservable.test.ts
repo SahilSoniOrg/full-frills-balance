@@ -18,7 +18,7 @@ describe('usePaginatedObservable', () => {
     });
 
     it('should handle pagination (loadMore)', async () => {
-        const observe = jest.fn((limit, range) => {
+        const observe = jest.fn((_limit, _range) => {
             // Return enough items to satisfy "hasMore" check (items.length >= limit)
             // Limit starts at 10. We need at least 10 items for first page, or more for loadMore
             return of(Array.from({ length: 25 }, (_, i) => `item-${i}`))
@@ -58,7 +58,7 @@ describe('usePaginatedObservable', () => {
     });
 
     it('should reset pagination when dateRange changes', async () => {
-        const observe = jest.fn((limit, range) => of([]));
+        const observe = jest.fn((_limit, _range) => of([]));
         const initialRange = { startDate: 100, endDate: 200 };
         const newRange = { startDate: 300, endDate: 400 };
 

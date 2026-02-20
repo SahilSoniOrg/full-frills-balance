@@ -30,7 +30,7 @@ export class JournalValidator {
         }
 
         // Rule 4: Exchange rates must be positive if provided
-        if (lines.some(l => l.exchangeRate !== undefined && l.exchangeRate <= MIN_EXCHANGE_RATE)) {
+        if (lines.some(l => l.exchangeRate !== undefined && Number(l.exchangeRate) <= MIN_EXCHANGE_RATE)) {
             errors.push('Exchange rate must be greater than zero');
         }
 

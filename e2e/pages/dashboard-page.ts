@@ -3,7 +3,7 @@ import { BasePage } from './base-page';
 
 export class DashboardPage extends BasePage {
     async assertWelcomeVisible(userName: string) {
-        await expect(this.page.getByText(/Hello,.*!/)).toBeVisible({ timeout: 15000 });
+        await expect(this.page.getByText(`Hi, ${userName}!`)).toBeVisible({ timeout: 15000 });
     }
 
     async assertNetWorth(amount: string) {

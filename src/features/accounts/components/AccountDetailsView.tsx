@@ -7,7 +7,6 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
@@ -47,10 +46,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         isSubAccountsModalVisible,
         onShowSubAccounts,
         onHideSubAccounts,
-        accountId,
     } = vm;
-
-    const router = useRouter();
 
     if (accountLoading) {
         return (

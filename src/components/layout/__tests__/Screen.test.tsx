@@ -5,7 +5,7 @@ import { ScrollView } from 'react-native';
 
 // Mock NavigationBar to avoid testing it here
 jest.mock('@/src/components/layout/NavigationBar', () => ({
-  NavigationBar: ({ title, subtitle, onBack, showBack, backIcon, rightActions }: any) => (
+  NavigationBar: ({ title, subtitle, showBack, rightActions }: any) => (
     <MockView testID="navigation-bar">
       <MockView testID="nav-title">{title}</MockView>
       <MockView testID="nav-subtitle">{subtitle}</MockView>

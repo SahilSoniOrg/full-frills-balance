@@ -40,12 +40,6 @@ export interface MonthlyFlowData {
  * Uses RxJS shareReplay(1) to multicast emissions to all subscribers.
  */
 class ReactiveDataService {
-    /**
-     * Shared observable for dashboard data.
-     * Combines accounts, transactions, currencies, and journals into a single stream.
-     * Performs balance calculation and wealth summary computation.
-     */
-    private dashboardData$: Observable<DashboardData> | null = null;
 
     /**
      * Get or create the shared dashboard data observable.

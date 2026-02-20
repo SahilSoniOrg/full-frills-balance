@@ -1,7 +1,6 @@
 import { database } from '@/src/data/database/Database'
 import Journal from '@/src/data/models/Journal'
 import { AccountRepository } from '@/src/data/repositories/AccountRepository'
-import { JournalRepository } from '@/src/data/repositories/JournalRepository'
 import { balanceService } from '@/src/services/BalanceService'
 import { Q } from '@nozbe/watermelondb'
 
@@ -27,8 +26,6 @@ export interface PeriodReconciliation {
 
 export class ReconciliationRepository {
   private accountRepository = new AccountRepository()
-  private journalRepository = new JournalRepository()
-
   /**
    * Reconciles a single account against an expected balance
    * 

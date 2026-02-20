@@ -25,7 +25,7 @@ describe('ReportService', () => {
         jest.clearAllMocks();
 
         // Default exchange rate behavior: 1:1
-        (exchangeRateService.convert as jest.Mock).mockImplementation((amount, from, to) =>
+        (exchangeRateService.convert as jest.Mock).mockImplementation((amount, _from, _to) =>
             Promise.resolve({ convertedAmount: amount, rate: 1 })
         );
     });

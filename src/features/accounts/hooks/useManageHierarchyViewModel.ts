@@ -93,7 +93,6 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
             const children = accountsByParent.get(account.id) || [];
             const balance = balancesByAccountId.get(account.id);
             const hasDirectTransactions = (balance?.directTransactionCount || 0) > 0;
-            const hasHierarchicalTransactions = (balance?.transactionCount || 0) > 0;
 
             if (children.length > 0 || !hasDirectTransactions) {
                 groups[account.accountType].push(account);

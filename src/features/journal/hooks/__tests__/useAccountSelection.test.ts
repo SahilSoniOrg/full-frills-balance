@@ -29,8 +29,6 @@ describe('useAccountSelection', () => {
         // grandchild1 is a leaf
         // child2 is a leaf (in this list, it has no children)
 
-        const expectedLeafIds = ['grandchild1', 'leaf1', 'child2'];
-
         expect(result.current.transactionAccounts.map(a => a.id)).toEqual(
             expect.arrayContaining(['grandchild1', 'child2'])
         );

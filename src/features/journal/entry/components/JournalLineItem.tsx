@@ -22,7 +22,6 @@ interface JournalLineItemProps {
 
 export const JournalLineItem = React.memo(({
     line,
-    index,
     canRemove,
     onUpdate,
     onRemove,

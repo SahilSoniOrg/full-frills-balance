@@ -23,7 +23,7 @@ describe('WealthService', () => {
         const { accountRepository } = require('@/src/data/repositories/AccountRepository');
         jest.clearAllMocks();
         // Default behaviors
-        (exchangeRateService.convert as jest.Mock).mockImplementation((amount, from, to) =>
+        (exchangeRateService.convert as jest.Mock).mockImplementation((amount, _from, _to) =>
             Promise.resolve({ convertedAmount: amount, rate: 1 })
         );
         (accountRepository.findAll as jest.Mock).mockResolvedValue([]);

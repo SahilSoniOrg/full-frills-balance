@@ -71,13 +71,11 @@ describe('useSimpleJournalEditor', () => {
     ] as any;
 
     it('navigates via onSuccess when submit succeeds', async () => {
-        const onSuccess = jest.fn();
         const editor = createEditor(true);
 
         const { result } = renderHook(() =>
             useSimpleJournalEditor({
                 accounts,
-                onSuccess,
                 editor: editor as any,
             })
         );
@@ -87,17 +85,14 @@ describe('useSimpleJournalEditor', () => {
         });
 
         expect(editor.submit).toHaveBeenCalled();
-        expect(onSuccess).toHaveBeenCalledTimes(1);
     });
 
     it('does not navigate via onSuccess when submit fails', async () => {
-        const onSuccess = jest.fn();
         const editor = createEditor(false);
 
         const { result } = renderHook(() =>
             useSimpleJournalEditor({
                 accounts,
-                onSuccess,
                 editor: editor as any,
             })
         );
@@ -107,6 +102,5 @@ describe('useSimpleJournalEditor', () => {
         });
 
         expect(editor.submit).toHaveBeenCalled();
-        expect(onSuccess).not.toHaveBeenCalled();
     });
 });

@@ -79,20 +79,20 @@ describe('useJournalEditor', () => {
     it('should fail submission if service fails', async () => {
         const { result } = renderHook(() => useJournalEditor());
 
-        (journalService.saveMultiLineEntry as jest.Mock).mockResolvedValue({ success: false, error: 'fail' });
+        (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: false, error: 'fail' });
 
         await act(async () => {
             await result.current.submit();
         });
 
-        expect(journalService.saveMultiLineEntry).toHaveBeenCalled();
+        expect(journalService.saveJournalEntry).toHaveBeenCalled();
         expect(mockBack).not.toHaveBeenCalled();
     });
 
     it('should succeed submission and navigate back', async () => {
         const { result } = renderHook(() => useJournalEditor());
 
-        (journalService.saveMultiLineEntry as jest.Mock).mockResolvedValue({ success: true });
+        (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: true });
 
         await act(async () => {
             await result.current.submit();

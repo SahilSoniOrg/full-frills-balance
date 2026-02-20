@@ -20,11 +20,6 @@ jest.mock('@/src/constants', () => ({
 }));
 
 describe('useAdvancedJournalSummary', () => {
-    const defaultLines = [
-        { amount: '100', transactionType: TransactionType.DEBIT as const, accountCurrency: 'USD' },
-        { amount: '100', transactionType: TransactionType.CREDIT as const, accountCurrency: 'USD' }
-    ];
-
     it('identifies unique currencies', () => {
         const lines = [
             { amount: '100', transactionType: TransactionType.DEBIT as const, accountCurrency: 'USD' },

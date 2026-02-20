@@ -5,6 +5,8 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
     "useDefineForClassFields": false,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
     "paths": {
       "@/*": [
         "./*"

@@ -12,8 +12,6 @@ export function SettingsView(vm: SettingsViewModel) {
     const router = useRouter();
     const { theme, fonts } = useTheme();
     const {
-        themePreference,
-        setThemePreference,
         isPrivacyMode,
         onTogglePrivacy,
         showAccountMonthlyStats,
