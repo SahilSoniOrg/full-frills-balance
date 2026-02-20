@@ -54,7 +54,7 @@ export class AnalyticsService {
         this.track('account_created', { type, currency });
     }
 
-    logTransactionCreated(mode: 'simple' | 'advanced', type: string, currency: string) {
+    logTransactionCreated(mode: 'simple' | 'advanced' | 'import', type: string, currency: string) {
         this.track('transaction_created', { mode, type, currency });
     }
 

@@ -11,15 +11,14 @@ import { JournalEntryLine } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { sanitizeAmount } from '@/src/utils/validation';
 import dayjs from 'dayjs';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 export interface UseJournalEditorOptions {
     journalId?: string;
     initialMode?: 'simple' | 'advanced';
     initialType?: 'expense' | 'income' | 'transfer';
+    onSuccess?: () => void;
 }
 
 /**
@@ -27,7 +26,6 @@ export interface UseJournalEditorOptions {
  * Consolidates state management and business logic for both simple and advanced modes.
  */
 export function useJournalEditor(options: UseJournalEditorOptions = {}) {
-    const router = useRouter();
     const { advancedMode, setAdvancedMode } = useUI();
     const { journalId, initialMode, initialType = 'expense' } = options;
     const { fetchRate } = useExchangeRate();
@@ -213,9 +211,9 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         if (!line) return;
 
         const imbalance = JournalCalculator.calculateImbalance(lines.map(l => ({
-            amount: sanitizeAmount(l.amount) || 0,
+            amount: l.amount,
             type: l.transactionType,
-            exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
+            exchangeRate: l.exchangeRate,
             accountCurrency: l.accountCurrency
         })));
 
@@ -254,12 +252,13 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 setDescription(finalDescription);
             }
 
-            const result = await journalService.saveMultiLineEntry({
+            const result = await journalService.saveJournalEntry({
                 lines,
                 description: finalDescription,
                 journalDate,
                 journalTime,
-                journalId: isEdit ? journalId : undefined
+                journalId: isEdit ? journalId : undefined,
+                mode: isGuidedMode ? 'simple' : 'advanced'
             });
 
             if (!result.success) {
@@ -267,7 +266,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 return result;
             }
 
-            router.back();
+            options.onSuccess?.();
             return result;
         } catch {
             showErrorAlert('Unexpected error occurred');

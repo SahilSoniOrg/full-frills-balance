@@ -3,6 +3,7 @@ import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
+import { JournalEntryLine } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -12,7 +13,6 @@ export type TabType = 'expense' | 'income' | 'transfer';
 
 export interface UseSimpleJournalEditorProps {
     accounts: Account[];
-    onSuccess: () => void;
     editor: ReturnType<typeof useJournalEditor>;
 }
 
@@ -24,7 +24,6 @@ export interface UseSimpleJournalEditorProps {
  */
 export function useSimpleJournalEditor({
     accounts,
-    onSuccess,
     editor,
 }: UseSimpleJournalEditorProps) {
     const { fetchRate } = useExchangeRate();
@@ -93,30 +92,29 @@ export function useSimpleJournalEditor({
 
     // Sync exchange rate and converted amounts back to lines for Advanced mode consistency
     useEffect(() => {
-        if (editor.isGuidedMode === false) return; // DO NOT sync in Advanced Mode
-        if (!sourceLine || !destinationLine) return;
+        if (!editor.isGuidedMode || !sourceLine || !destinationLine) return;
+
+        const updates: Record<string, Partial<JournalEntryLine>> = {};
 
         if (isCrossCurrency && exchangeRate) {
-            // Apply exchange rate to source line
             if (sourceLine.exchangeRate !== exchangeRate.toString()) {
-                editor.updateLine(sourceLine.id, { exchangeRate: exchangeRate.toString() });
+                updates[sourceLine.id] = { exchangeRate: exchangeRate.toString() };
             }
-            // Apply converted amount to destination line
             const formattedConverted = convertedAmount.toFixed(2);
             if (destinationLine.amount !== formattedConverted) {
-                editor.updateLine(destinationLine.id, { amount: formattedConverted });
+                updates[destinationLine.id] = { amount: formattedConverted };
             }
-        } else {
-            // Reset if not cross-currency
+        } else if (!isCrossCurrency) {
             if (sourceLine.exchangeRate) {
-                editor.updateLine(sourceLine.id, { exchangeRate: '' });
+                updates[sourceLine.id] = { exchangeRate: '' };
             }
-            // Ensure amounts match if no conversion
             if (destinationLine.amount !== amount) {
-                editor.updateLine(destinationLine.id, { amount });
+                updates[destinationLine.id] = { amount };
             }
         }
-    }, [exchangeRate, isCrossCurrency, sourceLine, destinationLine, convertedAmount, amount, editor.updateLine]);
+
+        Object.entries(updates).forEach(([id, up]) => editor.updateLine(id, up));
+    }, [exchangeRate, isCrossCurrency, sourceLine, destinationLine, convertedAmount, amount]);
 
     // Helpers to update editor state
     const setType = (newType: 'expense' | 'income' | 'transfer') => {
@@ -198,8 +196,12 @@ export function useSimpleJournalEditor({
 
 
     const handleSave = useCallback(async () => {
-        if (numAmount <= 0) return;
-        if (!sourceId || !destinationId) return;
+        if (numAmount <= 0) {
+            return;
+        }
+        if (!sourceId || !destinationId) {
+            return;
+        }
 
         // Default description to type if empty
         if (!editor.description.trim()) {
@@ -211,11 +213,8 @@ export function useSimpleJournalEditor({
         if (type === 'income' || type === 'transfer') await preferences.setLastUsedDestinationAccountId(destinationId);
 
         // Use the main editor submit
-        const result = await editor.submit();
-        if (result.success) {
-            onSuccess();
-        }
-    }, [numAmount, sourceId, destinationId, type, editor.description, editor.submit, editor.setDescription, onSuccess]);
+        await editor.submit();
+    }, [numAmount, sourceId, destinationId, type, editor.description, editor.submit, editor.setDescription]);
 
     return {
         type,
@@ -240,8 +239,7 @@ export function useSimpleJournalEditor({
         transactionAccounts,
         expenseAccounts,
         incomeAccounts,
-        sourceAccount,
-        destAccount,
+        allAccounts: accounts,
         sourceCurrency,
         destCurrency,
         displayCurrency: sourceCurrency || destCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency,

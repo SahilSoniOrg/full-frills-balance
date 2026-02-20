@@ -27,8 +27,7 @@ export interface SimpleFormProps {
     transactionAccounts: Account[];
     expenseAccounts: Account[];
     incomeAccounts: Account[];
-    sourceAccount?: Account;
-    destAccount?: Account;
+    allAccounts: Account[];
     sourceCurrency?: string;
     destCurrency?: string;
 }
@@ -37,12 +36,10 @@ export const SimpleForm = ({
     type,
     setType,
     amount,
-    setAmount,
     sourceId,
     setSourceId,
     destinationId,
     setDestinationId,
-    isSubmitting,
     exchangeRate,
     isLoadingRate,
     rateError,
@@ -51,8 +48,7 @@ export const SimpleForm = ({
     transactionAccounts,
     expenseAccounts,
     incomeAccounts,
-    sourceAccount,
-    destAccount,
+    allAccounts,
     sourceCurrency,
     destCurrency,
 }: SimpleFormProps) => {
@@ -72,8 +68,8 @@ export const SimpleForm = ({
                 { title: 'To Account', accounts: transactionAccounts, selectedId: destinationId, onSelect: setDestinationId },
             ]
             : [
-                { title: 'Source Account', accounts: transactionAccounts, selectedId: sourceId, onSelect: setSourceId },
-                { title: 'Destination Account', accounts: transactionAccounts, selectedId: destinationId, onSelect: setDestinationId },
+                { title: 'Destination Account', accounts: allAccounts, selectedId: destinationId, onSelect: setDestinationId },
+                { title: 'Source Account', accounts: allAccounts, selectedId: sourceId, onSelect: setSourceId },
             ];
 
     return (

@@ -24,21 +24,23 @@ export function SimpleFormAccountSections({
 
     return (
         <View style={styles.accountSectionStack}>
-            {sections.map(section => (
-                <AppCard
-                    key={section.title}
-                    elevation="none"
-                    variant="default"
-                    style={[styles.mainCard, { borderColor: frameBorderColor, backgroundColor: theme.surface }]}
-                >
-                    <AccountTileList
-                        title={section.title}
-                        accounts={section.accounts}
-                        selectedId={section.selectedId}
-                        onSelect={section.onSelect}
-                    />
-                </AppCard>
-            ))}
+            <AppCard
+                key={sections.map(s => s.title).join('-')}
+                elevation="none"
+                variant="default"
+                style={[styles.mainCard, { borderColor: frameBorderColor, backgroundColor: theme.surface }]}
+            >
+                {sections.map(section => (
+                    <View key={section.title} style={styles.accountSection}>
+                        <AccountTileList
+                            title={section.title}
+                            accounts={section.accounts}
+                            selectedId={section.selectedId}
+                            onSelect={section.onSelect}
+                        />
+                    </View>
+                ))}
+            </AppCard>
         </View>
     );
 }
@@ -52,5 +54,11 @@ const styles = StyleSheet.create({
         borderRadius: Shape.radius.r2,
         padding: Spacing.md,
         marginTop: 0,
+    },
+    accountSection: {
+        flexDirection: 'row',
+        flex: 1,
+        gap: Spacing.sm,
+        paddingBottom: Spacing.md,
     },
 });

@@ -232,92 +232,27 @@ export class JournalService {
         return reversalJournal;
     }
 
-    async saveReversalJournal(originalJournalId: string, reason: string = 'Reversal'): Promise<Journal> {
-        // ... (this already existed as createReversalJournal but I'll rename if needed or just keep)
-        // Actually I'll just add saveSimpleEntry here
-        return this.createReversalJournal(originalJournalId, reason);
-    }
-
     /**
-     * Specialized method for SimpleForm/V1-style entry.
-     * Handles type-to-transaction mapping and cross-currency rounding.
+     * Unified entry point for saving journals from Simple, Advanced, or Import flows.
      */
-    async saveSimpleEntry(params: SimpleEntryParams): Promise<Journal> {
-        const { type, amount, sourceId, destinationId, journalDate, description, exchangeRate, journalId } = params;
-
-        // 1. Fetch source currency to determine journal currency
-        const sourceAccount = await accountRepository.find(sourceId);
-        const currencyCode = sourceAccount?.currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-
-        // 2. Construct transaction lines
-        let destAmount = amount;
-        let destRate = exchangeRate;
-
-        if (exchangeRate && exchangeRate > 0) {
-            const destAccount = await accountRepository.find(destinationId);
-            const precision = await currencyRepository.getPrecision(destAccount?.currencyCode || 'USD');
-
-            // Calculate rounded destination amount
-            const rawDestAmount = amount * exchangeRate;
-            destAmount = roundToPrecision(rawDestAmount, precision);
-
-            // Recalculate implied rate to ensure balance
-            destRate = amount / destAmount;
-        }
-
-        const transactions = [
-            {
-                accountId: sourceId,
-                amount: amount,
-                transactionType: TransactionType.CREDIT,
-                notes: description
-            },
-            {
-                accountId: destinationId,
-                amount: destAmount,
-                transactionType: TransactionType.DEBIT,
-                notes: description,
-                exchangeRate: destRate
-            }
-        ];
-
-        // 3. Apply type-specific mapping if different from basic CREDIT -> DEBIT
-        // (In this ledger: CREDIT is SOURCE/OUT, DEBIT is DESTINATION/IN)
-        if (type === 'income') {
-            // Income is already CREDIT (Source) -> DEBIT (Asset)
-        }
-
-        const journalData: CreateJournalData = {
-            journalDate,
-            description,
-            currencyCode,
-            transactions
-        };
-
-        const journal = journalId
-            ? await this.updateJournal(journalId, journalData)
-            : await this.createJournal(journalData);
-
-        analytics.logTransactionCreated('simple', type, currencyCode);
-        return journal;
-    }
-
-    /**
-     * Specialized method for multi-line journal entry (e.g. from Advanced Mode or Import).
-     * Handles normalization and validation before calling core creation.
-     */
-    async saveMultiLineEntry(params: {
+    async saveJournalEntry(params: {
         lines: JournalEntryLine[],
         description: string,
-        journalDate: string,
-        journalTime: string,
-        journalId?: string
+        journalDate: string | number, // support timestamp or ISO date
+        journalTime?: string,
+        journalId?: string,
+        mode?: 'simple' | 'advanced' | 'import'
     }): Promise<SubmitJournalResult> {
-        const { lines, description, journalDate, journalTime, journalId } = params;
+        const { lines, description, journalDate, journalTime, journalId, mode = 'advanced' } = params;
 
-        // 1. Validation Logic
-        if (!description.trim()) {
+        // 1. Basic Content Validation
+        const finalDescription = description.trim();
+        if (!finalDescription) {
             return { success: false, error: 'Description is required' };
+        }
+
+        if (lines.length < 2) {
+            return { success: false, error: 'A journal entry must have at least 2 lines' };
         }
 
         if (lines.some(l => !l.accountId)) {
@@ -329,30 +264,40 @@ export class JournalService {
             return { success: false, error: 'A journal entry must involve at least 2 distinct accounts' };
         }
 
-        // 2. Balance Validation
+        // 2. Normalize Timestamp
+        let combinedTimestamp: number;
+        if (typeof journalDate === 'number') {
+            combinedTimestamp = journalDate;
+        } else {
+            // Handle YYYY-MM-DD + HH:mm
+            const time = journalTime || '00:00';
+            const timeWithSeconds = time.split(':').length === 2 ? `${time}:00` : time;
+            combinedTimestamp = new Date(`${journalDate}T${timeWithSeconds}`).getTime();
+        }
+
+        if (Number.isNaN(combinedTimestamp)) {
+            return { success: false, error: 'Invalid date or time' };
+        }
+
+        // 3. Balance Validation
         const domainLines = lines.map(line => ({
             amount: sanitizeAmount(line.amount) || 0,
             type: line.transactionType,
             exchangeRate: line.exchangeRate ? parseFloat(line.exchangeRate) : 1
         }));
+
         const balanceValidation = accountingService.validateJournal(domainLines);
         if (!balanceValidation.isValid) {
             return { success: false, error: `Journal is not balanced. Discrepancy: ${balanceValidation.imbalance}` };
         }
 
-        // 3. Normalize and Build Data
+        // 4. Persistence
         try {
-            // Robustly handle HH:mm or HH:mm:ss
-            const timeWithSeconds = journalTime.split(':').length === 2 ? `${journalTime}:00` : journalTime;
-            const combinedDate = new Date(`${journalDate}T${timeWithSeconds}`);
-            const combinedTimestamp = combinedDate.getTime();
-            if (Number.isNaN(combinedTimestamp)) {
-                return { success: false, error: 'Invalid date or time' };
-            }
+            const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
             const journalData: CreateJournalData = {
                 journalDate: combinedTimestamp,
-                description: description.trim(),
-                currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+                description: finalDescription,
+                currencyCode,
                 transactions: lines.map(l => ({
                     accountId: l.accountId,
                     amount: sanitizeAmount(l.amount) || 0,
@@ -364,15 +309,15 @@ export class JournalService {
 
             if (journalId) {
                 await this.updateJournal(journalId, journalData);
-                analytics.logTransactionCreated('advanced', 'multi', journalData.currencyCode);
+                analytics.logTransactionCreated(mode, 'update', currencyCode);
                 return { success: true, action: 'updated' };
             } else {
                 await this.createJournal(journalData);
-                analytics.logTransactionCreated('advanced', 'multi', journalData.currencyCode);
+                analytics.logTransactionCreated(mode, 'create', currencyCode);
                 return { success: true, action: 'created' };
             }
         } catch (error) {
-            logger.error('Failed to save multi-line entry:', error);
+            logger.error('Failed to save journal entry:', error);
             return { success: false, error: 'Failed to save transaction' };
         }
     }

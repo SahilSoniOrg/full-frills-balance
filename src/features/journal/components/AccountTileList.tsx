@@ -25,7 +25,7 @@ export const AccountTileList = ({
         <View style={{ gap: Spacing.xs, marginVertical: Spacing.sm }}>
             {title && (
                 <AppText variant="caption" weight="bold" color="tertiary" style={{ marginLeft: Spacing.xs }}>
-                    {title.toUpperCase()}
+                    {title}
                 </AppText>
             )}
             <View>

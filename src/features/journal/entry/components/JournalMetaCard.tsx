@@ -41,10 +41,20 @@ export function JournalMetaCard({
                         style={{ marginHorizontal: 0, marginTop: 0 }}
                     />
                 )}
+
+                <AppInput
+                    // label={AppConfig.strings.advancedEntry.description}
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
+                    // multiline
+                    variant='minimal'
+                />
+
                 <ListRow
                     title={AppConfig.strings.advancedEntry.dateTime}
                     subtitle={dayjs(`${date}T${time}`).format('DD MMM YYYY, HH:mm')}
-                    leading={<AppIcon name="calendar" size={Size.iconMd} color={theme.textSecondary} />}
+                    leading={<AppIcon name="calendar" size={Size.iconSm} color={theme.textSecondary} />}
                     onPress={() => setShowDatePicker(true)}
                     style={{ marginHorizontal: -Spacing.lg }}
                 />
@@ -58,15 +68,6 @@ export function JournalMetaCard({
                         setDate(d);
                         setTime(t);
                     }}
-                />
-
-                <AppInput
-                    label={AppConfig.strings.advancedEntry.description}
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-                    multiline
-                    numberOfLines={2}
                 />
             </View>
         </AppCard>

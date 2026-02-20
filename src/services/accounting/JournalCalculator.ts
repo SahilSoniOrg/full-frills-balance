@@ -4,9 +4,10 @@ import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 
 export interface JournalLineInput {
-    amount: number; // Integer minor units (e.g. cents)
+    amount: number | string;
     type: TransactionType;
-    exchangeRate?: number; // Optional: for multi-currency transactions
+    exchangeRate?: number | string;
+    accountCurrency?: string;
 }
 
 /**
@@ -24,7 +25,11 @@ export class JournalCalculator {
     static calculateTotalDebits(lines: JournalLineInput[]): number {
         return lines
             .filter((l) => l.type === 'DEBIT')
-            .reduce((sum, l) => sum + l.amount, 0);
+            .reduce((sum, l) => sum + JournalCalculator.getLineBaseAmount({
+                amount: l.amount,
+                exchangeRate: l.exchangeRate,
+                accountCurrency: l.accountCurrency
+            }), 0);
     }
 
     /**
@@ -33,7 +38,11 @@ export class JournalCalculator {
     static calculateTotalCredits(lines: JournalLineInput[]): number {
         return lines
             .filter((l) => l.type === 'CREDIT')
-            .reduce((sum, l) => sum + l.amount, 0);
+            .reduce((sum, l) => sum + JournalCalculator.getLineBaseAmount({
+                amount: l.amount,
+                exchangeRate: l.exchangeRate,
+                accountCurrency: l.accountCurrency
+            }), 0);
     }
 
     /**

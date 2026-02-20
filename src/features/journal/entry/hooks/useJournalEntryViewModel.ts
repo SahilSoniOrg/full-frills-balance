@@ -62,12 +62,12 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         journalId: params.journalId as string,
         initialMode,
         initialType,
+        onSuccess: () => AppNavigation.back(),
     });
 
     // Editor for Simple Mode
     const simpleEditor = useSimpleJournalEditor({
         accounts,
-        onSuccess: () => AppNavigation.back(),
         editor,
     });
 
