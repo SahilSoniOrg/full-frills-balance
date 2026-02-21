@@ -1,5 +1,6 @@
+import { CustomDateTimePicker } from '@/src/components/common/CustomDateTimePicker';
 import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
-import { getDatePickerStyles, Layout, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { Layout, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
@@ -7,7 +8,6 @@ import dayjs from 'dayjs';
 import React from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
-import DateTimePicker from 'react-native-ui-datepicker';
 
 export type PickerView = 'MENU' | 'START_DATE' | 'END_DATE';
 
@@ -27,7 +27,7 @@ export interface DateRangePickerViewProps {
     handleSelectMonth: (month: number, year: number) => void;
     handleSelectAllTime: () => void;
     updateLastN: (value: string, unit: 'days' | 'weeks' | 'months') => void;
-    handleDateSelect: (params: any) => void;
+    handleDateSelect: (date: dayjs.Dayjs) => void;
     handleApply: () => void;
     INITIAL_MONTH_INDEX: number;
 }
@@ -62,11 +62,9 @@ export function DateRangePickerView({
                 </AppText>
                 <View style={{ width: Size.md }} />
             </View>
-            <DateTimePicker
-                mode="single"
+            <CustomDateTimePicker
                 date={view === 'START_DATE' ? (customRange.startDate || dayjs()) : (customRange.endDate || dayjs())}
                 onChange={handleDateSelect}
-                styles={getDatePickerStyles(theme, fonts)}
             />
         </View>
     );

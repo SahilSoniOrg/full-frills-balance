@@ -94,8 +94,7 @@ export function useDateRangePicker({ visible, currentFilter, onSelect, onClose }
         }
     }, []);
 
-    const handleDateSelect = useCallback((params: { date: any }) => {
-        const date = dayjs(params.date);
+    const handleDateSelect = useCallback((date: dayjs.Dayjs) => {
         let newRange = { ...customRange };
 
         if (view === 'START_DATE') {

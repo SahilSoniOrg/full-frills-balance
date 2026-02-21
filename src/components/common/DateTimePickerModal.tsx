@@ -1,11 +1,11 @@
+import { CustomDateTimePicker } from '@/src/components/common/CustomDateTimePicker';
 import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
-import { getDatePickerStyles, Shape, Size, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateTimePicker from 'react-native-ui-datepicker';
 
 interface DateTimePickerModalProps {
     visible: boolean;
@@ -25,7 +25,7 @@ export function DateTimePickerModal({
     onClose,
     onSelect,
 }: DateTimePickerModalProps) {
-    const { theme, fonts } = useTheme();
+    const { theme } = useTheme();
     const insets = useSafeAreaInsets();
 
     const [selectedValue, setSelectedValue] = useState(() => dayjs(`${date}T${time}`));
@@ -43,8 +43,8 @@ export function DateTimePickerModal({
         onClose();
     };
 
-    const handleDateChange = (params: { date: any }) => {
-        setSelectedValue(dayjs(params.date));
+    const handleDateChange = (newDate: dayjs.Dayjs) => {
+        setSelectedValue(newDate);
     };
 
     return (
@@ -72,12 +72,10 @@ export function DateTimePickerModal({
                     </View>
 
                     <View style={styles.pickerContainer}>
-                        <DateTimePicker
-                            mode="single"
+                        <CustomDateTimePicker
                             date={selectedValue}
                             onChange={handleDateChange}
                             timePicker={true}
-                            styles={getDatePickerStyles(theme, fonts)}
                         />
                     </View>
 
