@@ -8,6 +8,7 @@ import { JournalListItemViewModel } from '@/src/features/journal/hooks/useJourna
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { DaySeparator } from './DaySeparator';
 
 export interface JournalListViewProps {
     screenTitle?: string;
@@ -82,10 +83,21 @@ export function JournalListView({
                 <TypedFlashList
                     data={items}
                     renderItem={({ item }: { item: JournalListItemViewModel }) => (
-                        <TransactionCard
-                            {...item.cardProps}
-                            onPress={item.onPress}
-                        />
+                        item.type === 'separator' ? (
+                            <DaySeparator
+                                date={item.date}
+                                isCollapsed={item.isCollapsed}
+                                onToggle={item.onToggle}
+                                count={item.count}
+                                netAmount={item.netAmount}
+                                currencyCode={item.currencyCode}
+                            />
+                        ) : (
+                            <TransactionCard
+                                {...item.cardProps!}
+                                onPress={item.onPress!}
+                            />
+                        )
                     )}
                     keyExtractor={(item: JournalListItemViewModel) => item.id}
                     estimatedItemSize={120}

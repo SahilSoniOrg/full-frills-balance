@@ -1,7 +1,5 @@
-/**
- * Money utilities for precision-aware accounting.
- * Supports dynamic decimal places (0, 2, 3, etc.) to handle diverse currencies.
- */
+import { AppConfig } from '@/src/constants';
+import * as Localization from 'expo-localization';
 
 /**
  * Rounds a number to a specific precision (decimal places).
@@ -40,4 +38,21 @@ export const safeAdd = (a: number, b: number, precision: number): number => {
  */
 export const safeSubtract = (a: number, b: number, precision: number): number => {
     return roundToPrecision(a - b, precision);
+};
+
+/**
+ * Formats a number as a currency string.
+ * @param amount The value to format
+ * @param currencyCode The ISO currency code
+ * @param locale The locale to use
+ */
+export const formatCurrency = (
+    amount: number,
+    currencyCode: string = AppConfig.defaultCurrency,
+    locale: string = Localization.getLocales()[0]?.languageTag || AppConfig.defaultLocale
+): string => {
+    return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currencyCode,
+    }).format(amount);
 };

@@ -47,6 +47,19 @@ class ExchangeRateRepository {
     }
 
     /**
+     * Observe the latest rates for a base currency
+     */
+    observeLatestRates(fromCurrency: string) {
+        return this.collection
+            .query(
+                Q.where('from_currency', fromCurrency),
+                Q.sortBy('effective_date', 'desc'),
+                Q.sortBy('created_at', 'desc')
+            )
+            .observe()
+    }
+
+    /**
      * Cache an exchange rate in the database
      */
     async cacheRate(data: ExchangeRateCacheData): Promise<ExchangeRate> {

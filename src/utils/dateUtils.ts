@@ -1,7 +1,5 @@
-/**
- * Centralized date formatting utilities
- * Provides consistent date handling across the app
- */
+import { AppConfig } from '@/src/constants';
+import * as Localization from 'expo-localization';
 
 export interface DateRange {
   startDate: number;
@@ -343,4 +341,17 @@ export const getMonthLabel = (month: number, year: number): string => {
  */
 export const isDateInRange = (timestamp: number, range: DateRange): boolean => {
   return timestamp >= range.startDate && timestamp <= range.endDate;
+};
+
+/**
+ * Formats a timestamp for the day separator in lists (e.g. "Monday, Feb 23, 2026")
+ */
+export const formatDaySeparator = (timestamp: number, locale: string = Localization.getLocales()[0]?.languageTag || AppConfig.defaultLocale): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleDateString(locale, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };

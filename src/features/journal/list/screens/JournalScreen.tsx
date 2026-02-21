@@ -4,12 +4,26 @@ import { AppConfig, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
+import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useCallback, useMemo } from 'react';
+import { preferences } from '@/src/utils/preferences';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 export default function JournalScreen() {
     const initialDateRange = useJournalRouteDateRange();
+    const [defaultCurrency, setDefaultCurrency] = useState<string>(AppConfig.defaultCurrency);
+    const [isPrefsLoaded, setIsPrefsLoaded] = useState(false);
+
+    useEffect(() => {
+        preferences.loadPreferences().then(p => {
+            if (p.defaultCurrencyCode) setDefaultCurrency(p.defaultCurrencyCode);
+            setIsPrefsLoaded(true);
+        });
+    }, []);
+
+    const { rateMap } = useExchangeRates(isPrefsLoaded ? defaultCurrency : undefined);
+
     const { listViewProps, vm } = useJournalListScreen({
         pageSize: AppConfig.pagination.dashboardPageSize,
         emptyState: {
@@ -19,6 +33,8 @@ export default function JournalScreen() {
         loadingText: AppConfig.strings.common.loading,
         loadingMoreText: AppConfig.strings.common.loading,
         initialDateRange: initialDateRange ?? null,
+        exchangeRateMap: rateMap,
+        baseCurrency: defaultCurrency,
     });
 
     const handleFabPress = useCallback(() => {
@@ -44,6 +60,8 @@ export default function JournalScreen() {
     ), [vm.searchQuery, vm.dateRange, vm.showDatePicker, vm.navigatePrevious, vm.navigateNext, vm.onSearchChange]);
 
     const fab = useMemo(() => ({ onPress: handleFabPress }), [handleFabPress]);
+
+    if (!isPrefsLoaded) return null; // Or a proper loading screen
 
     return (
         <JournalListView

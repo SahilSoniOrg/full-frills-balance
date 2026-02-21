@@ -11,6 +11,8 @@ export const AppConfig = {
 
   // Default currency precision (decimal places)
   defaultCurrencyPrecision: 2,
+  // Default locale for formatting
+  defaultLocale: 'en-IN',
 
   // Versioning
   appVersion: '1.0.0',
@@ -111,6 +113,12 @@ export const AppConfig = {
       more: (count: number) => `+${count} more`,
       from: 'From: ',
       to: 'To: ',
+      transaction: 'Transaction',
+      transfer: 'Transfer',
+      transactionCount: (count: number) => count === 1 ? '1 transaction' : `${count} transactions`,
+      errors: {
+        missingExchangeRate: (from: string, to: string) => `Missing exchange rate for ${from} to ${to}. Skipping amount from daily net total.`,
+      },
     },
     reports: {
       netWorthChange: 'NET WORTH CHANGE',

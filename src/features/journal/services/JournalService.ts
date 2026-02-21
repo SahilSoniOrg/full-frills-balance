@@ -335,6 +335,7 @@ export class JournalService {
             Q.where('deleted_at', Q.eq(null)),
             Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
             Q.sortBy('journal_date', 'desc'),
+            Q.sortBy('created_at', 'desc'),
             Q.take(limit)
         ];
 

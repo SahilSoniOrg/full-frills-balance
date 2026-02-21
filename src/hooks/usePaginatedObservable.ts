@@ -9,7 +9,7 @@
  * - loadMore function
  * - Versioning to force re-renders on same-reference emissions
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 
 export interface DateRange {
@@ -95,18 +95,18 @@ export function usePaginatedObservable<T, E = T>(
         const isStructuralChange = prev.structuralKey !== structuralKey || prev.observe !== observe || prev.enrich !== enrich || prev.pageSize !== pageSize;
         const isVersionChange = prev.versionKey !== versionKey;
 
-        if (isStructuralChange) {
+        if (isStructuralChange || isVersionChange) {
             setIsLoading(true);
-            setItems([]); // Clear items only on structural changes
+            setHasMore(true);
             prevFilterRef.current = { structuralKey, versionKey, observe, enrich, pageSize };
-            if (currentLimit !== pageSize) {
-                setCurrentLimit(pageSize); // Reset pagination
-                return;
+
+            if (isStructuralChange) {
+                setItems([]); // Clear items only on structural changes
+                if (currentLimit !== pageSize) {
+                    setCurrentLimit(pageSize); // Reset pagination
+                    return;
+                }
             }
-        } else if (isVersionChange) {
-            setIsLoading(true);
-            // Do NOT clear items for version changes, just re-fetch
-            prevFilterRef.current = { structuralKey, versionKey, observe, enrich, pageSize };
         }
 
         const observable = observe(currentLimit, dateRange, searchQuery);
@@ -142,11 +142,11 @@ export function usePaginatedObservable<T, E = T>(
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentLimit, effectKey, observe, enrich, pageSize, retryKey]);
 
-    const loadMore = () => {
+    const loadMore = useCallback(() => {
         if (isLoadingMore || !hasMore) return;
         setIsLoadingMore(true);
         setCurrentLimit(prev => prev + pageSize);
-    };
+    }, [isLoadingMore, hasMore, pageSize]);
 
     const retry = () => {
         setError(null);

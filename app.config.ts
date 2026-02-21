@@ -85,6 +85,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             },
         ],
         "react-native-quick-crypto",
+        "expo-localization",
     ],
     experiments: {
         typedRoutes: true,
