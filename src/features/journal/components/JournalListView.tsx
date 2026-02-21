@@ -100,6 +100,7 @@ export function JournalListView({
                         )
                     )}
                     keyExtractor={(item: JournalListItemViewModel) => item.id}
+                    getItemType={(item: JournalListItemViewModel) => item.type}
                     estimatedItemSize={120}
                     contentContainerStyle={[styles.listContent, listContentStyle]}
                     ListHeaderComponent={listHeader}
