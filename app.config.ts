@@ -54,6 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         favicon: "./assets/images/favicon.png",
     },
     plugins: [
+        "./plugins/withAndroid16KBPageSize",
         "expo-sqlite",
         "@lovesworking/watermelondb-expo-plugin-sdk-52-plus",
         "expo-router",
@@ -76,6 +77,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
                     enableMinifyInReleaseBuilds: true,
                     packagingOptions: {
                         pickFirst: ["**/libc++_shared.so"],
+                        jniLibs: {
+                            useLegacyPackaging: false,
+                        },
                     },
                     ndkVersion: "27.1.12297006",
                 },
