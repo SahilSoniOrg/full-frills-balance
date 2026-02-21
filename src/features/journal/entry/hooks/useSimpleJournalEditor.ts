@@ -95,22 +95,38 @@ export function useSimpleJournalEditor({
         if (!editor.isGuidedMode || !sourceLine || !destinationLine) return;
 
         const updates: Record<string, Partial<JournalEntryLine>> = {};
+        const baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
         if (isCrossCurrency && exchangeRate) {
-            if (sourceLine.exchangeRate !== exchangeRate.toString()) {
-                updates[sourceLine.id] = { exchangeRate: exchangeRate.toString() };
-            }
             const formattedConverted = convertedAmount.toFixed(2);
+
+            // Set source line rate to Base Currency
+            if (sourceCurrency !== baseCurrency) {
+                const srcRate = destCurrency === baseCurrency
+                    ? (numAmount > 0 ? (convertedAmount / numAmount).toFixed(6) : '')
+                    : '';
+                if (sourceLine.exchangeRate !== srcRate) updates[sourceLine.id] = { exchangeRate: srcRate };
+            } else if (sourceLine.exchangeRate) {
+                updates[sourceLine.id] = { exchangeRate: '' };
+            }
+
+            // Set destination line rate to Base Currency
+            if (destCurrency !== baseCurrency) {
+                const dstRate = sourceCurrency === baseCurrency
+                    ? (convertedAmount > 0 ? (numAmount / convertedAmount).toFixed(6) : '')
+                    : '';
+                if (destinationLine.exchangeRate !== dstRate) updates[destinationLine.id] = { exchangeRate: dstRate };
+            } else if (destinationLine.exchangeRate) {
+                updates[destinationLine.id] = { exchangeRate: '' };
+            }
+
             if (destinationLine.amount !== formattedConverted) {
                 updates[destinationLine.id] = { amount: formattedConverted };
             }
         } else if (!isCrossCurrency) {
-            if (sourceLine.exchangeRate) {
-                updates[sourceLine.id] = { exchangeRate: '' };
-            }
-            if (destinationLine.amount !== amount) {
-                updates[destinationLine.id] = { amount };
-            }
+            if (sourceLine.exchangeRate) updates[sourceLine.id] = { exchangeRate: '' };
+            if (destinationLine.exchangeRate) updates[destinationLine.id] = { exchangeRate: '' };
+            if (destinationLine.amount !== amount) updates[destinationLine.id] = { amount };
         }
 
         Object.entries(updates).forEach(([id, up]) => editor.updateLine(id, up));

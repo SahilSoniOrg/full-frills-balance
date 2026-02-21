@@ -61,18 +61,13 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         date: journal.journalDate,
         status: journal.status,
         currency: journal.currencyCode,
-        displayType: journal.displayType
+        displayType: journal.displayType,
+        totalAmount: journal.totalAmount || 0
     } : null;
 
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
-    const totalAmount = useMemo(() => {
-        return transactions
-            .filter((t: TransactionWithAccountInfo) => t.flowDirection === 'IN')
-            .reduce((sum: number, t: TransactionWithAccountInfo) => sum + (t.amount || 0), 0);
-    }, [transactions]);
-
-    const amountText = journalInfo ? CurrencyFormatter.format(totalAmount, journalInfo.currency) : '';
+    const amountText = journalInfo ? CurrencyFormatter.format(journalInfo.totalAmount, journalInfo.currency) : '';
     const formattedDate = journalInfo ? formatDate(journalInfo.date, { includeTime: true }) : '';
     const descriptionText = journalInfo?.description || 'No description';
     const statusVariant = journalInfo?.status === 'POSTED' ? 'income' : 'expense';

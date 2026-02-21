@@ -16,6 +16,7 @@ export interface CreateJournalData {
     transactionType: TransactionType
     notes?: string
     exchangeRate?: number
+    currencyCode?: string
   }[]
 }
 
@@ -188,7 +189,7 @@ export class JournalRepository {
           tx.journalId = journal.id
           tx.accountId = txData.accountId
           tx.amount = txData.amount
-          tx.currencyCode = journalFields.currencyCode // fallback
+          tx.currencyCode = txData.currencyCode || journalFields.currencyCode
           tx.transactionType = txData.transactionType
           tx.transactionDate = journalFields.journalDate
           tx.notes = txData.notes
@@ -230,7 +231,7 @@ export class JournalRepository {
         return this.transactions.prepareCreate((tx) => {
           tx.accountId = txData.accountId
           tx.amount = txData.amount
-          tx.currencyCode = journalFields.currencyCode
+          tx.currencyCode = txData.currencyCode || journalFields.currencyCode
           tx.transactionType = txData.transactionType
           tx.journalId = journalId
           tx.transactionDate = journalFields.journalDate
@@ -377,7 +378,7 @@ export class JournalRepository {
           tx.journalId = replacementJournal.id
           tx.accountId = txData.accountId
           tx.amount = txData.amount
-          tx.currencyCode = journalFields.currencyCode
+          tx.currencyCode = txData.currencyCode || journalFields.currencyCode
           tx.transactionType = txData.transactionType
           tx.transactionDate = journalFields.journalDate
           tx.notes = txData.notes

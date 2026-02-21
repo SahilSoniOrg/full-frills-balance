@@ -128,7 +128,8 @@ export class JournalService {
         const validation = accountingService.validateJournal(roundedTransactions.map(t => ({
             amount: t.amount,
             type: t.transactionType,
-            exchangeRate: t.exchangeRate
+            exchangeRate: t.exchangeRate,
+            accountCurrency: t.currencyCode
         })), journalPrecision);
 
         if (!validation.isValid) {
@@ -283,7 +284,8 @@ export class JournalService {
         const domainLines = lines.map(line => ({
             amount: sanitizeAmount(line.amount) || 0,
             type: line.transactionType,
-            exchangeRate: line.exchangeRate ? parseFloat(line.exchangeRate) : 1
+            exchangeRate: line.exchangeRate ? parseFloat(line.exchangeRate) : 1,
+            accountCurrency: line.accountCurrency
         }));
 
         const balanceValidation = accountingService.validateJournal(domainLines);
@@ -303,7 +305,8 @@ export class JournalService {
                     amount: sanitizeAmount(l.amount) || 0,
                     transactionType: l.transactionType,
                     notes: l.notes.trim() || undefined,
-                    exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined
+                    exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
+                    currencyCode: l.accountCurrency
                 }))
             };
 
