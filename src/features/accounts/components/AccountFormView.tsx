@@ -10,9 +10,11 @@ import { IconPickerModal } from '@/src/features/onboarding/components/IconPicker
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function AccountFormView(vm: AccountFormViewModel) {
     const { fonts } = useTheme();
+    const insets = useSafeAreaInsets();
     const {
         theme,
         title,
@@ -52,6 +54,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
         <Screen
             title={title}
             onBack={onCancel}
+            edges={['top', 'bottom']}
         >
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -160,6 +163,15 @@ export function AccountFormView(vm: AccountFormViewModel) {
                         </TouchableOpacity>
                     </AppCard>
 
+                </ScrollView>
+                <View style={[
+                    styles.footer,
+                    {
+                        backgroundColor: theme.background,
+                        borderTopColor: theme.border,
+                        paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.md)
+                    }
+                ]}>
                     <AppButton
                         variant="primary"
                         size="lg"
@@ -170,8 +182,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     >
                         {saveLabel}
                     </AppButton>
-                    <View style={{ height: Spacing.xxxl }} />
-                </ScrollView>
+                </View>
             </KeyboardAvoidingView>
 
             <IconPickerModal
@@ -218,8 +229,14 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.sm,
         // dynamic font
     },
+    footer: {
+        paddingHorizontal: Spacing.lg,
+        paddingTop: Spacing.md,
+        borderTopWidth: 1,
+    },
     createButton: {
-        marginTop: Spacing.xl,
+        height: Size.buttonXl,
+        borderRadius: Shape.radius.r4,
     },
     errorContainer: {
         padding: Spacing.md,
