@@ -59,6 +59,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 32) : 0}
             >
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                     <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold }]}>
