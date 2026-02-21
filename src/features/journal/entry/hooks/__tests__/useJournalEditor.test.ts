@@ -77,7 +77,8 @@ describe('useJournalEditor', () => {
     });
 
     it('should fail submission if service fails', async () => {
-        const { result } = renderHook(() => useJournalEditor());
+        const mockOnSuccess = jest.fn();
+        const { result } = renderHook(() => useJournalEditor({ onSuccess: mockOnSuccess }));
 
         (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: false, error: 'fail' });
 
@@ -86,11 +87,12 @@ describe('useJournalEditor', () => {
         });
 
         expect(journalService.saveJournalEntry).toHaveBeenCalled();
-        expect(mockBack).not.toHaveBeenCalled();
+        expect(mockOnSuccess).not.toHaveBeenCalled();
     });
 
-    it('should succeed submission and navigate back', async () => {
-        const { result } = renderHook(() => useJournalEditor());
+    it('should succeed submission and call onSuccess', async () => {
+        const mockOnSuccess = jest.fn();
+        const { result } = renderHook(() => useJournalEditor({ onSuccess: mockOnSuccess }));
 
         (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: true });
 
@@ -98,7 +100,7 @@ describe('useJournalEditor', () => {
             await result.current.submit();
         });
 
-        expect(mockBack).toHaveBeenCalled();
+        expect(mockOnSuccess).toHaveBeenCalled();
     });
 
     it('should load journal data on edit', async () => {

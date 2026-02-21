@@ -24,7 +24,7 @@ jest.mock('@/src/utils/navigation', () => ({
 }));
 
 jest.mock('@/src/utils/logger', () => ({
-    logger: { warn: jest.fn() }
+    logger: { warn: jest.fn(), error: jest.fn() }
 }));
 
 jest.mock('@/src/constants', () => ({

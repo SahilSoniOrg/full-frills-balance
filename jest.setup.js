@@ -74,6 +74,10 @@ jest.mock('react-native/Libraries/Components/StatusBar/StatusBar', () => {
 // Mock Expo modules
 jest.mock('expo-font');
 jest.mock('expo-asset');
+jest.mock('expo-localization', () => ({
+    getLocales: () => [{ languageTag: 'en-US', currencyCode: 'USD' }],
+    getCalendars: () => [{ timeZone: 'UTC' }],
+}));
 jest.mock('@react-navigation/native', () => ({
     ThemeProvider: (children) => children,
     useTheme: () => ({
