@@ -24,6 +24,8 @@ export type ImportFormat = string; // Plugin IDs: 'native' | 'ivy' | future form
 export function useImport() {
     const { requireRestart } = useUI();
     const [isImporting, setIsImporting] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [progressMessage, setProgressMessage] = useState('');
 
     const handleImport = useCallback(async (expectedType?: ImportFormat) => {
         let didSetImporting = false;
@@ -59,6 +61,8 @@ export function useImport() {
             if (!proceed) return;
 
             setIsImporting(true);
+            setProgress(0);
+            setProgressMessage('Initializing...');
             didSetImporting = true;
 
             // 1. Read file as bytes
@@ -113,7 +117,10 @@ export function useImport() {
             logger.info(`[useImport] Using plugin: ${plugin.id}`);
 
             // 7. Execute import
-            const stats = await plugin.import(content);
+            const stats = await plugin.import(content, (msg, prog) => {
+                setProgressMessage(msg);
+                setProgress(prog);
+            });
             analytics.logImportCompleted(plugin.id, stats);
             requireRestart({ type: 'IMPORT', stats });
 
@@ -129,6 +136,8 @@ export function useImport() {
 
     return {
         handleImport,
-        isImporting
+        isImporting,
+        progress,
+        progressMessage
     };
 }

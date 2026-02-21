@@ -47,11 +47,44 @@ const ImportPluginCard = ({ plugin, index, isImporting, onSelect }: ImportPlugin
 };
 
 export default function ImportSelectionScreen() {
-    const { handleImport, isImporting } = useImport();
+    const { theme } = useTheme();
+    const { handleImport, isImporting, progress, progressMessage } = useImport();
     const plugins = useImportPlugins();
     const handleSelect = useCallback((id: string) => {
         handleImport(id);
     }, [handleImport]);
+
+    if (isImporting) {
+        return (
+            <Screen
+                title="Importing Data"
+                showBack={false}
+                withPadding
+            >
+                <View style={[styles.container, styles.progressContainer]}>
+                    <View style={styles.progressAnimationPlaceholder}>
+                        <AppText variant="heading" style={{ fontSize: 48, marginBottom: Spacing.md }}>⏳</AppText>
+                    </View>
+
+                    <AppText variant="subheading" style={{ marginBottom: Spacing.xl }}>
+                        Restoring Backup
+                    </AppText>
+
+                    <View style={[styles.progressBarBg, { backgroundColor: theme.surfaceSecondary }]}>
+                        <View style={[styles.progressBarFill, { backgroundColor: theme.primary, width: `${Math.max(0, Math.min(100, progress * 100))}%` }]} />
+                    </View>
+
+                    <AppText variant="body" color="secondary" style={{ textAlign: 'center', marginTop: Spacing.md }}>
+                        {progressMessage || 'Please wait...'}
+                    </AppText>
+
+                    <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.xxl * 2, textAlign: 'center', opacity: 0.7 }}>
+                        This may take a few minutes for large backups. Please do not close the app.
+                    </AppText>
+                </View>
+            </Screen>
+        );
+    }
 
     return (
         <Screen
@@ -122,5 +155,27 @@ const styles = StyleSheet.create({
     note: {
         marginTop: Spacing.xl,
         paddingHorizontal: Spacing.xl,
+    },
+    progressContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: Spacing.xxl * 2,
+    },
+    progressAnimationPlaceholder: {
+        width: Size.xxl * 2,
+        height: Size.xxl * 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    progressBarBg: {
+        width: '100%',
+        height: 8,
+        borderRadius: Shape.radius.full,
+        overflow: 'hidden',
+        marginBottom: Spacing.md,
+    },
+    progressBarFill: {
+        height: '100%',
     }
 });

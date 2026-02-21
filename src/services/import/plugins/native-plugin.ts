@@ -49,7 +49,7 @@ export const nativePlugin: ImportPlugin = {
         return hasJournals && hasAccounts && hasTransactions && hasVersion && !hasCategories;
     },
 
-    async import(jsonContent: string): Promise<ImportStats> {
+    async import(jsonContent: string, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
         logger.info('[NativePlugin] Starting import...');
 
         let data: NativeImportData;
@@ -69,10 +69,12 @@ export const nativePlugin: ImportPlugin = {
 
         try {
             // 1. Wipe existing data
+            onProgress?.('Wiping database...', 0.1);
             logger.warn('[NativePlugin] Wiping database for import...');
             await integrityService.resetDatabase();
 
             // 2. Clear and restore preferences
+            onProgress?.('Restoring preferences...', 0.2);
             await preferences.clearPreferences();
             if (data.preferences) {
                 const validThemes = ['light', 'dark', 'system'] as const;
@@ -86,6 +88,9 @@ export const nativePlugin: ImportPlugin = {
             }
 
             // 3. Import Data in Batch
+            onProgress?.('Saving data to database (this may take a while)...', 0.4);
+            // Yield UI
+            await new Promise(resolve => setTimeout(resolve, 0));
             logger.info('[NativePlugin] Executing batch insert...');
             await importRepository.batchInsert({
                 accounts: data.accounts.map(acc => ({
@@ -131,6 +136,7 @@ export const nativePlugin: ImportPlugin = {
                 }))
             });
 
+            onProgress?.('Finalizing import...', 0.95);
             logger.info('[NativePlugin] Import successful.');
             return {
                 accounts: data.accounts.length,

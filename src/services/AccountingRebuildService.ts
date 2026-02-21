@@ -66,35 +66,41 @@ export class AccountingRebuildService {
             .extend(Q.sortBy('created_at', 'asc'))
             .fetch()
 
-        const updates: any[] = [];
+        const pendingUpdates: { tx: any; newBalance: number }[] = [];
         let currentBalance = runningBalance; // Local tracking to avoid async confusion
 
-        await database.write(async () => {
-            for (const tx of transactions) {
-                const newBalance = accountingService.calculateNewBalance(
-                    currentBalance,
-                    tx.amount,
-                    account.accountType,
-                    tx.transactionType,
-                    precision
-                )
+        // First pass: just calculate balances and identify which transactions need updates.
+        // No WatermelonDB prepares here.
+        for (const tx of transactions) {
+            const newBalance = accountingService.calculateNewBalance(
+                currentBalance,
+                tx.amount,
+                account.accountType,
+                tx.transactionType,
+                precision
+            )
 
-                if (Math.abs((tx.runningBalance || 0) - newBalance) > Number.EPSILON) {
-                    updates.push(tx.prepareUpdate((txToUpdate) => {
-                        txToUpdate.runningBalance = newBalance
-                    }))
-                }
-
-                currentBalance = newBalance
+            if (Math.abs((tx.runningBalance || 0) - newBalance) > Number.EPSILON) {
+                pendingUpdates.push({ tx, newBalance })
             }
 
-            if (updates.length > 0) {
-                const BATCH_SIZE = 500
-                for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-                    await database.batch(...updates.slice(i, i + BATCH_SIZE))
-                }
+            currentBalance = newBalance
+        }
+
+        if (pendingUpdates.length > 0) {
+            const BATCH_SIZE = 500
+            for (let i = 0; i < pendingUpdates.length; i += BATCH_SIZE) {
+                const chunk = pendingUpdates.slice(i, i + BATCH_SIZE)
+                await database.write(async () => {
+                    const preparedChunk = chunk.map(({ tx, newBalance }) =>
+                        tx.prepareUpdate((txToUpdate: any) => {
+                            txToUpdate.runningBalance = newBalance
+                        })
+                    )
+                    await database.batch(...preparedChunk)
+                })
             }
-        })
+        }
     }
 }
 

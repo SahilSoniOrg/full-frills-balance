@@ -74,7 +74,7 @@ export const ivyPlugin: ImportPlugin = {
         return hasAccounts && hasCategories && hasTransactions;
     },
 
-    async import(jsonContent: string): Promise<ImportStats> {
+    async import(jsonContent: string, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
         const data: IvyData = JSON.parse(jsonContent);
 
         if (!this.detect(data)) {
@@ -86,10 +86,12 @@ export const ivyPlugin: ImportPlugin = {
 
         // 1. Wipe existing data for clean import
         logger.warn('[IvyPlugin] Wiping database before import...');
+        onProgress?.('Wiping database...', 0.05);
         await integrityService.resetDatabase();
         const accountImports: any[] = [];
 
         // 2. Pre-Scan Transactions for Category Usage (Per Currency)
+        onProgress?.('Analyzing categories...', 0.10);
         interface CategoryStat {
             expenseCount: number;
             incomeCount: number;
@@ -130,6 +132,7 @@ export const ivyPlugin: ImportPlugin = {
         });
 
         // 3. Create Accounts
+        onProgress?.('Preparing accounts...', 0.15);
         const accountMap = new Map<string, string>();
         const accountCurrencyMap = new Map<string, string>();
         const categoryAccountMap = new Map<string, string>();
@@ -237,21 +240,30 @@ export const ivyPlugin: ImportPlugin = {
         });
 
         // 5. Create Journals & Transactions
+        onProgress?.('Mapping transactions...', 0.20);
         const journalImports: any[] = [];
         const transactionImports: any[] = [];
         const skippedItems: { id: string; reason: string; description?: string }[] = [];
 
-        data.transactions.forEach(tx => {
+        const totalTransactions = data.transactions.length;
+        for (let i = 0; i < totalTransactions; i++) {
+            if (i % 500 === 0) {
+                // Yield to UI thread every so often
+                onProgress?.(`Processing transactions (${i} of ${totalTransactions})...`, 0.20 + (i / totalTransactions) * 0.50);
+                await new Promise(r => setTimeout(r, 0));
+            }
+
+            const tx = data.transactions[i];
             const txDesc = tx.title || tx.description || 'Unknown Transaction';
 
             if (tx.isDeleted) {
                 skippedItems.push({ id: tx.id, reason: 'Deleted', description: txDesc });
-                return;
+                continue;
             }
 
             if (tx.dueDate) {
                 skippedItems.push({ id: tx.id, reason: 'Planned Payment', description: txDesc });
-                return;
+                continue;
             }
 
             const journalId = tx.id;
@@ -293,7 +305,7 @@ export const ivyPlugin: ImportPlugin = {
             }
 
             if (!sourceId || !destId) {
-                return;
+                continue;
             }
 
             const amount = Math.abs(tx.amount);
@@ -345,9 +357,10 @@ export const ivyPlugin: ImportPlugin = {
             }
 
             transactionImports.push(txRecord);
-        });
+        }
 
         // 6. Write to DB
+        onProgress?.('Saving to database...', 0.75);
         logger.info('[IvyPlugin] Writing mapped data to database...');
         await importRepository.batchInsert({
             accounts: accountImports,
@@ -356,6 +369,7 @@ export const ivyPlugin: ImportPlugin = {
         });
 
         // 7. Run integrity check to repair account balances
+        onProgress?.('Running integrity check...', 0.85);
         logger.info('[IvyPlugin] Running integrity check to fix account balances...');
         const integrityResult = await integrityService.runStartupCheck();
         logger.info('[IvyPlugin] Integrity check complete', {
@@ -364,6 +378,7 @@ export const ivyPlugin: ImportPlugin = {
         });
 
         // 8. Restore Preferences
+        onProgress?.('Finalizing...', 0.95);
         await preferences.setOnboardingCompleted(true);
 
         const firstCurrency = accountCurrencyMap.values().next().value;

@@ -48,5 +48,5 @@ export interface ImportPlugin {
      * Execute the import operation.
      * WARNING: Implementations should wipe existing data before import.
      */
-    import(jsonContent: string): Promise<ImportStats>;
+    import(jsonContent: string, onProgress?: (message: string, progress: number) => void): Promise<ImportStats>;
 }
