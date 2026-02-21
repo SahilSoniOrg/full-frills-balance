@@ -242,11 +242,11 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         }));
     }, [lines]);
 
-    const submit = async () => {
+    const submit = async (overrides?: { description?: string }) => {
         setIsSubmitting(true);
         try {
             // Default description to transaction type if empty
-            let finalDescription = description.trim();
+            let finalDescription = overrides?.description || description.trim();
             if (!finalDescription) {
                 finalDescription = transactionType.charAt(0).toUpperCase() + transactionType.slice(1);
                 setDescription(finalDescription);

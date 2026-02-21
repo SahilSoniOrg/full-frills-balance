@@ -219,9 +219,18 @@ export function useSimpleJournalEditor({
             return;
         }
 
+        let overrides;
         // Default description to type if empty
         if (!editor.description.trim()) {
-            editor.setDescription(type.charAt(0).toUpperCase() + type.slice(1));
+            let defaultDesc = 'Transfer';
+            if (type === 'expense' && destAccount) {
+                defaultDesc = `Paid for ${destAccount.name}`;
+            } else if (type === 'income' && sourceAccount) {
+                defaultDesc = `Income from ${sourceAccount.name}`;
+            }
+
+            editor.setDescription(defaultDesc);
+            overrides = { description: defaultDesc };
         }
 
         // Save preferences
@@ -229,8 +238,8 @@ export function useSimpleJournalEditor({
         if (type === 'income' || type === 'transfer') await preferences.setLastUsedDestinationAccountId(destinationId);
 
         // Use the main editor submit
-        await editor.submit();
-    }, [numAmount, sourceId, destinationId, type, editor]);
+        await editor.submit(overrides);
+    }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount]);
 
     return {
         type,
