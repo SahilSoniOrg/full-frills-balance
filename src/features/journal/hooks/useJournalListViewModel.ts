@@ -4,14 +4,16 @@ import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/data/models/Account';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
+import { preferences } from '@/src/utils/preferences';
 import { ComponentVariant } from '@/src/utils/style-helpers';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const ACCOUNT_TYPE_VARIANTS: Record<AccountType, ComponentVariant> = {
     [AccountType.ASSET]: 'asset',
@@ -77,10 +79,11 @@ export function useJournalListViewModel({
     loadingMoreText = AppConfig.strings.common.loading,
     initialDateRange,
     exchangeRateMap = {},
-    baseCurrency = AppConfig.defaultCurrency,
+    baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
 }: UseJournalListViewModelParams): JournalListViewModel {
     const [searchQuery, setSearchQuery] = useState('');
     const [collapsedDays, setCollapsedDays] = useState<Set<number>>(new Set());
+    const missingCurrenciesCache = useRef(new Set<string>());
 
     const toggleDay = useCallback((timestamp: number) => {
         setCollapsedDays(prev => {
@@ -253,6 +256,26 @@ export function useJournalListViewModel({
 
         return result;
     }, [journals, handleJournalPress, collapsedDays, toggleDay, exchangeRateMap, baseCurrency]);
+
+    useEffect(() => {
+        const toFetch = new Set<string>();
+        journals.forEach(j => {
+            if (j.currencyCode !== baseCurrency) {
+                const rate = exchangeRateMap[j.currencyCode];
+                if (!rate || rate <= 0) {
+                    if (!missingCurrenciesCache.current.has(j.currencyCode)) {
+                        toFetch.add(j.currencyCode);
+                        missingCurrenciesCache.current.add(j.currencyCode);
+                    }
+                }
+            }
+        });
+
+        toFetch.forEach(currencyCode => {
+            exchangeRateService.getRate(baseCurrency, currencyCode)
+                .catch(e => logger.error(`Failed to dynamically fetch rate for missing currency ${currencyCode}`, e));
+        });
+    }, [journals, baseCurrency, exchangeRateMap]);
 
     const onEndReached = useMemo(() => {
         if (searchQuery || !hasMore) return undefined;

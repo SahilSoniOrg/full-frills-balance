@@ -3,10 +3,12 @@ import { useUI } from '@/src/contexts/UIContext';
 import { JournalListViewProps } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useWealthSummary } from '@/src/features/wealth';
+import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useMonthlyFlow } from '@/src/hooks/useMonthlyFlow';
 import { DateRange } from '@/src/utils/dateUtils';
+import { preferences } from '@/src/utils/preferences';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, UIManager } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -45,6 +47,18 @@ export function useDashboardViewModel(): DashboardViewModel {
     const router = useRouter();
     const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, setPrivacyMode } = useUI();
 
+    const [defaultCurrency, setDefaultCurrency] = useState<string>(AppConfig.defaultCurrency);
+    const [isPrefsLoaded, setIsPrefsLoaded] = useState(false);
+
+    useEffect(() => {
+        preferences.loadPreferences().then(p => {
+            if (p.defaultCurrencyCode) setDefaultCurrency(p.defaultCurrencyCode);
+            setIsPrefsLoaded(true);
+        });
+    }, []);
+
+    const { rateMap } = useExchangeRates(isPrefsLoaded ? defaultCurrency : undefined);
+
     const {
         netWorth,
         totalAssets,
@@ -72,7 +86,9 @@ export function useDashboardViewModel(): DashboardViewModel {
         emptyState: {
             title: strings.dashboard.emptyTitle,
             subtitle: strings.dashboard.emptySubtitle
-        }
+        },
+        exchangeRateMap: rateMap,
+        baseCurrency: defaultCurrency,
     });
 
     const onAddPress = useCallback(() => {
