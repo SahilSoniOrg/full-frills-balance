@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 6,
+  version: 7,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -88,6 +88,27 @@ export const schema = appSchema({
         { name: 'changes', type: 'string' }, // JSON of before/after
         { name: 'timestamp', type: 'number', isIndexed: true },
         { name: 'created_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'budgets',
+      columns: [
+        { name: 'name', type: 'string' },
+        { name: 'amount', type: 'number' },
+        { name: 'currency_code', type: 'string', isIndexed: true },
+        { name: 'start_month', type: 'string', isIndexed: true }, // YYYY-MM
+        { name: 'active', type: 'boolean' },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'budget_scopes',
+      columns: [
+        { name: 'budget_id', type: 'string', isIndexed: true },
+        { name: 'account_id', type: 'string', isIndexed: true },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
       ],
     }),
   ],

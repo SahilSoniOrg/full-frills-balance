@@ -37,6 +37,15 @@ export function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="budget"
+        options={{
+          title: 'Budgets',
+          tabBarIcon: ({ color, size }) => (
+            <AppIcon name="pieChart" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="reports"
         options={{
           title: 'Reports',

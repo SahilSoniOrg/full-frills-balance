@@ -84,5 +84,31 @@ export const migrations = schemaMigrations({
                 }),
             ],
         },
+        {
+            toVersion: 7,
+            steps: [
+                createTable({
+                    name: 'budgets',
+                    columns: [
+                        { name: 'name', type: 'string' },
+                        { name: 'amount', type: 'number' },
+                        { name: 'currency_code', type: 'string', isIndexed: true },
+                        { name: 'start_month', type: 'string', isIndexed: true },
+                        { name: 'active', type: 'boolean' },
+                        { name: 'created_at', type: 'number', isIndexed: true },
+                        { name: 'updated_at', type: 'number' },
+                    ],
+                }),
+                createTable({
+                    name: 'budget_scopes',
+                    columns: [
+                        { name: 'budget_id', type: 'string', isIndexed: true },
+                        { name: 'account_id', type: 'string', isIndexed: true },
+                        { name: 'created_at', type: 'number', isIndexed: true },
+                        { name: 'updated_at', type: 'number' },
+                    ],
+                }),
+            ],
+        },
     ],
 })

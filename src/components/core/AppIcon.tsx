@@ -36,6 +36,7 @@ import {
     LogOut,
     Menu,
     MoreVertical,
+    PieChart,
     Plus,
     PlusCircle,
     Receipt,
@@ -59,6 +60,7 @@ import { ViewStyle } from 'react-native';
 export const IconMap = {
     home: Home,
     wallet: Wallet,
+    pieChart: PieChart,
     reports: BarChart3,
     settings: Settings,
     eye: Eye,
