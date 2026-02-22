@@ -42,6 +42,10 @@ export class BudgetRepository {
             .fetch()
     }
 
+    observeById(id: string) {
+        return this.budgets.findAndObserve(id)
+    }
+
     async find(id: string): Promise<Budget | null> {
         try {
             return await this.budgets.find(id)

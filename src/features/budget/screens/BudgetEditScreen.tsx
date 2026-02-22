@@ -1,25 +1,25 @@
-import { AppButton, AppCard, AppText } from '@/src/components/core'
+import { AccountPickerModal } from '@/src/components/common/AccountPickerModal'
+import { SubmitFooter } from '@/src/components/common/SubmitFooter'
+import { AppButton, AppCard, AppText, ListRow } from '@/src/components/core'
 import { AppInput } from '@/src/components/core/AppInput'
 import { Screen, ScreenHeader } from '@/src/components/layout'
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector'
-import { useTheme } from '@/src/hooks/use-theme'
-import { router, useLocalSearchParams } from 'expo-router'
-import React from 'react'
-import { Alert, ScrollView, Switch, View } from 'react-native'
+import { router } from 'expo-router'
+import React, { useState } from 'react'
+import { Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import { useBudgetEditViewModel } from '../hooks/useBudgetEditViewModel'
 
 export default function BudgetEditScreen() {
-    const params = useLocalSearchParams<{ id?: string }>()
-    const { theme } = useTheme()
     const {
         expenseAccounts,
         name, setName,
         amount, setAmount,
         currencies, currencyCode, setCurrencyCode,
-        selectedAccountIds, toggleAccount,
+        selectedAccountIds, setSelectedAccountIds,
         save, deleteBudget,
         loading, isSaving, isFormValid, budget
-    } = useBudgetEditViewModel(params.id)
+    } = useBudgetEditViewModel()
+    const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false)
 
     if (loading) {
         return (
@@ -50,7 +50,7 @@ export default function BudgetEditScreen() {
     }
 
     return (
-        <Screen>
+        <Screen edges={['top', 'bottom']}>
             <ScreenHeader
                 title={budget ? 'Edit Budget' : 'New Budget'}
                 actions={
@@ -59,76 +59,76 @@ export default function BudgetEditScreen() {
                     </AppButton>
                 }
             />
-            <ScrollView contentContainerStyle={{ padding: 16 }}>
-                <AppCard style={{ marginBottom: 24 }}>
-                    <AppInput
-                        label="Budget Name"
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="e.g., Groceries"
-                        autoCapitalize="words"
-                    />
-                    <AppInput
-                        label="Monthly Amount"
-                        value={amount}
-                        onChangeText={setAmount}
-                        placeholder="0.00"
-                        keyboardType="decimal-pad"
-                        style={{ marginTop: 16 }}
-                    />
-                    <AppText variant="body" style={{ marginTop: 16, marginBottom: 8 }}>Currency</AppText>
-                    <CurrencySelector
-                        selectedCurrency={currencyCode}
-                        currencies={currencies}
-                        onSelect={setCurrencyCode}
-                    />
-                </AppCard>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+                <ScrollView contentContainerStyle={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+                    <AppCard style={{ marginBottom: 24 }}>
+                        <AppInput
+                            label="Budget Name"
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="e.g., Groceries"
+                            autoCapitalize="words"
+                        />
+                        <AppInput
+                            label="Monthly Amount"
+                            value={amount}
+                            onChangeText={setAmount}
+                            placeholder="0.00"
+                            keyboardType="decimal-pad"
+                            style={{ marginTop: 16 }}
+                        />
+                        <AppText variant="body" style={{ marginTop: 16, marginBottom: 8 }}>Currency</AppText>
+                        <CurrencySelector
+                            selectedCurrency={currencyCode}
+                            currencies={currencies}
+                            onSelect={setCurrencyCode}
+                        />
+                    </AppCard>
 
-                <AppText variant="subheading" style={{ marginBottom: 12 }}>
-                    Scope (Accounts)
-                </AppText>
-                <AppCard style={{ marginBottom: 32 }}>
-                    {expenseAccounts.map(account => (
-                        <View
-                            key={account.id}
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                paddingVertical: 12,
-                                borderBottomWidth: 1,
-                                borderBottomColor: theme.border
-                            }}
-                        >
-                            <AppText>{account.name}</AppText>
-                            <Switch
-                                value={selectedAccountIds.includes(account.id)}
-                                onValueChange={() => toggleAccount(account.id)}
-                                trackColor={{ true: theme.primary }}
-                            />
-                        </View>
-                    ))}
-                </AppCard>
-
-                <AppButton
+                    <AppText variant="subheading" style={{ marginBottom: 12 }}>
+                        Scope (Accounts)
+                    </AppText>
+                    <AppCard style={{ marginBottom: 32 }}>
+                        <ListRow
+                            title={selectedAccountIds.length > 0 ? `${selectedAccountIds.length} accounts selected` : 'Select accounts'}
+                            subtitle="Choose which accounts this budget applies to"
+                            onPress={() => setIsAccountPickerVisible(true)}
+                        />
+                    </AppCard>
+                </ScrollView>
+                <SubmitFooter
                     onPress={handleSave}
                     disabled={!isFormValid || isSaving}
-                    loading={isSaving}
-                    style={{ marginBottom: 16 }}
-                >
-                    Save Budget
-                </AppButton>
+                    label={budget ? (isSaving ? 'Updating...' : 'Update Budget') : (isSaving ? 'Creating...' : 'Create Budget')}
+                    topSlot={
+                        budget ? (
+                            <AppButton
+                                variant="ghost"
+                                onPress={handleDelete}
+                                disabled={isSaving}
+                            >
+                                Delete Budget
+                            </AppButton>
+                        ) : undefined
+                    }
+                />
+            </KeyboardAvoidingView>
 
-                {budget && (
-                    <AppButton
-                        variant="ghost"
-                        onPress={handleDelete}
-                        disabled={isSaving}
-                    >
-                        Delete Budget
-                    </AppButton>
-                )}
-            </ScrollView>
+            <AccountPickerModal
+                multiple
+                visible={isAccountPickerVisible}
+                accounts={expenseAccounts}
+                selectedIds={selectedAccountIds}
+                title="Select Scope Accounts"
+                onClose={() => setIsAccountPickerVisible(false)}
+                onSelect={(ids) => {
+                    setSelectedAccountIds(ids as string[]);
+                    setIsAccountPickerVisible(false);
+                }}
+            />
         </Screen>
     )
 }

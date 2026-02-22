@@ -4,6 +4,8 @@ import Budget from '@/src/data/models/Budget'
 import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository'
+import { ledgerReadService } from '@/src/services/ledger/ledgerReadService'
+import { EnrichedTransaction } from '@/src/types/domain'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
 import dayjs from 'dayjs'
@@ -22,8 +24,10 @@ export class BudgetReadService {
      * Observe the reactive usage of a budget based on its assigned scopes.
      * Resolves scopes to leaf expense accounts, fetches transactions
      * within the budget month, and computes totals.
+     * @param budget The budget record
+     * @param targetMonth Optional YYYY-MM string to evaluate. Defaults to current month.
      */
-    observeBudgetUsage(budget: Budget): Observable<BudgetUsage> {
+    observeBudgetUsage(budget: Budget, targetMonth?: string): Observable<BudgetUsage> {
         return combineLatest([
             budget.observe(),
             budgetRepository.observeScopes(budget.id).pipe(
@@ -35,8 +39,9 @@ export class BudgetReadService {
             accountRepository.observeByType(AccountType.EXPENSE)
         ]).pipe(
             switchMap(([observedBudget, scopeAccounts, allExpenses]) => {
-                const startOfMonth = dayjs(`${observedBudget.startMonth}-01`).startOf('month').valueOf()
-                const endOfMonth = dayjs(`${observedBudget.startMonth}-01`).endOf('month').valueOf()
+                const evaluateMonth = targetMonth || dayjs().format('YYYY-MM')
+                const startOfMonth = dayjs(`${evaluateMonth}-01`).startOf('month').valueOf()
+                const endOfMonth = dayjs(`${evaluateMonth}-01`).endOf('month').valueOf()
 
                 const childrenMap = new Map<string, string[]>()
                 allExpenses.forEach(acc => {
@@ -107,6 +112,31 @@ export class BudgetReadService {
                             }
                         })
                     )
+            })
+        )
+    }
+
+    /**
+     * Resolves scopes to leaf expense accounts and queries the ledger for enriched
+     * transactions within the budget's targeted month bounds.
+     */
+    observeBudgetEnrichedTransactions(budget: Budget, targetMonth?: string): Observable<EnrichedTransaction[]> {
+        return budgetRepository.observeScopes(budget.id).pipe(
+            switchMap(scopes => {
+                if (scopes.length === 0) return of([])
+
+                // Just extract the raw IDs mapped to the budget; ledgerReadService will resolve the leaves
+                const rootAccountIds = scopes.map(s => s.account.id);
+
+                const evaluateMonth = targetMonth || dayjs().format('YYYY-MM')
+                const startOfMonth = dayjs(`${evaluateMonth}-01`).startOf('month').valueOf()
+                const endOfMonth = dayjs(`${evaluateMonth}-01`).endOf('month').valueOf()
+
+                return ledgerReadService.observeEnrichedForAccounts(
+                    rootAccountIds,
+                    1000,
+                    { startDate: startOfMonth, endDate: endOfMonth }
+                )
             })
         )
     }

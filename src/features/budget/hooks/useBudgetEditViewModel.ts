@@ -8,10 +8,12 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { useObservable } from '@/src/hooks/useObservable'
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService'
 import { logger } from '@/src/utils/logger'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 
-export function useBudgetEditViewModel(budgetId?: string | null) {
+export function useBudgetEditViewModel() {
+    const params = useLocalSearchParams()
+    const budgetId = params.id as string
     const { defaultCurrency } = useUI()
     const { data: expenseAccounts = [] } = useObservable(() => accountRepository.observeByType(AccountType.EXPENSE), [], [])
     const { data: currencies = [] } = useObservable(() => currencyRepository.observeAll(), [], [])
@@ -45,12 +47,6 @@ export function useBudgetEditViewModel(budgetId?: string | null) {
             })
         }
     }, [budgetId])
-
-    const toggleAccount = useCallback((id: string) => {
-        setSelectedAccountIds(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        )
-    }, [])
 
     const save = useCallback(async () => {
         if (!name.trim() || !amount || selectedAccountIds.length === 0) {
@@ -103,7 +99,7 @@ export function useBudgetEditViewModel(budgetId?: string | null) {
         startMonth,
         setStartMonth,
         selectedAccountIds,
-        toggleAccount,
+        setSelectedAccountIds,
         currencies,
         currencyCode,
         setCurrencyCode,

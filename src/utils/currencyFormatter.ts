@@ -42,28 +42,32 @@ export const CurrencyFormatter = {
             const customSymbol = CURRENCY_SYMBOLS[currencyCode];
             if (includeSymbol && customSymbol) {
                 // Check if the formatted string contains the code (indicating fallback occurred)
-                if (formatted.includes(currencyCode) && currencyCode !== customSymbol) {
-                    // Reformat as decimal and prepend symbol
-                    const decimal = amount.toLocaleString(undefined, {
+                // We use a regex to handle cases like "-AMD 47.00" or "(AMD 47.00)"
+                const containsCode = new RegExp(`\\b${currencyCode}\\b`).test(formatted);
+                const containsSymbol = formatted.includes(customSymbol);
+
+                if (containsCode && !containsSymbol && currencyCode !== customSymbol) {
+                    // Reformat as decimal and apply symbol
+                    const decimal = Math.abs(amount).toLocaleString(undefined, {
                         style: 'decimal',
                         minimumFractionDigits,
                         maximumFractionDigits,
                     });
 
+                    const sign = amount < 0 ? '-' : '';
                     // Simple prefix logic - could be made locale-aware if needed
-                    return `${customSymbol}${decimal}`;
+                    return `${sign}${customSymbol}${decimal}`;
                 }
 
                 // Also check if the symbol is completely missing but we expected one
-                // (some locales might not show symbol for some currencies)
-                const hasSymbolOrCode = formatted.includes(currencyCode) || formatted.includes(customSymbol);
-                if (!hasSymbolOrCode) {
-                    const decimal = amount.toLocaleString(undefined, {
+                if (!containsSymbol && !containsCode) {
+                    const decimal = Math.abs(amount).toLocaleString(undefined, {
                         style: 'decimal',
                         minimumFractionDigits,
                         maximumFractionDigits,
                     });
-                    return `${customSymbol}${decimal}`;
+                    const sign = amount < 0 ? '-' : '';
+                    return `${sign}${customSymbol}${decimal}`;
                 }
             }
 
@@ -71,10 +75,12 @@ export const CurrencyFormatter = {
         } catch {
             // Fallback if currency code is invalid or not supported
             const customSymbol = CURRENCY_SYMBOLS[currencyCode];
+            const decimal = Math.abs(amount).toFixed(maximumFractionDigits);
+            const sign = amount < 0 ? '-' : '';
             if (customSymbol) {
-                return `${customSymbol}${amount.toFixed(maximumFractionDigits)}`;
+                return `${sign}${customSymbol}${decimal}`;
             }
-            return `${amount.toFixed(maximumFractionDigits)} ${currencyCode}`;
+            return `${sign}${decimal} ${currencyCode}`;
         }
     },
 

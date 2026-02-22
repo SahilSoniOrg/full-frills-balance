@@ -24,6 +24,7 @@ interface LineChartProps {
     width?: number;
     onPress?: (index: number) => void;
     selectedIndex?: number;
+    domainX?: [number, number]; // [min, max] bound for the time range
     renderTooltip?: (params: { index: number; x: number; y: number; dataPoint: DataPoint }) => React.ReactNode;
 }
 
@@ -35,6 +36,7 @@ export const LineChart = ({
     width: customWidth,
     onPress,
     selectedIndex,
+    domainX,
     renderTooltip
 }: LineChartProps) => {
     const { theme } = useTheme();
@@ -43,6 +45,8 @@ export const LineChart = ({
     const CHART_WIDTH = customWidth || (windowWidth - (Spacing.lg * 2)); // Padding
     const PADDING_VERTICAL = Spacing.lg;
     const PADDING_LEFT = Spacing.xl * 2; // More space for scale (approx 40px)
+    const PADDING_RIGHT = Spacing.lg; // Prevent right-side clipping
+    const PLOT_WIDTH = Math.max(0, CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT);
 
     const { path, gradientPath, minX, maxX, displayMinY, displayRange, maxValPoint } = useMemo(() => {
         if (data.length === 0) return { path: "", gradientPath: "", minX: 0, maxX: 0, displayMinY: 0, displayRange: 0, maxValPoint: undefined };
@@ -50,8 +54,8 @@ export const LineChart = ({
         const yValues = data.map(d => d.y);
         const xValues = data.map(d => d.x);
 
-        const minX = Math.min(...xValues);
-        const maxX = Math.max(...xValues);
+        const minX = domainX ? domainX[0] : Math.min(...xValues);
+        const maxX = domainX ? domainX[1] : Math.max(...xValues);
         const minY = Math.min(...yValues);
         const maxY = Math.max(...yValues);
 
@@ -71,7 +75,7 @@ export const LineChart = ({
 
         data.forEach((point, index) => {
             const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
-            const x = PADDING_LEFT + (normalizedX * (CHART_WIDTH - PADDING_LEFT));
+            const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
             // Invert Y because SVG 0 is top
             const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
 
@@ -88,12 +92,12 @@ export const LineChart = ({
         if (data.length > 0) {
             const lastPoint = data[data.length - 1];
             const normalizedLastX = xRange === 0 ? 0.5 : (lastPoint.x - minX) / xRange;
-            const lastX = PADDING_LEFT + (normalizedLastX * (CHART_WIDTH - PADDING_LEFT));
+            const lastX = PADDING_LEFT + (normalizedLastX * PLOT_WIDTH);
             gradientPathStr += ` L ${lastX} ${height - PADDING_VERTICAL} L ${PADDING_LEFT} ${height - PADDING_VERTICAL} Z`;
         }
 
         return { path: pathStr, gradientPath: gradientPathStr, minX, maxX, displayMinY, displayRange, maxValPoint };
-    }, [data, height, CHART_WIDTH, PADDING_VERTICAL, PADDING_LEFT]);
+    }, [data, height, CHART_WIDTH, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX]);
 
     const lastGestureIndex = useRef(-1);
 
@@ -102,7 +106,7 @@ export const LineChart = ({
         if (!onPress) return;
 
         // Calculate index from x
-        const contentWidth = CHART_WIDTH - PADDING_LEFT;
+        const contentWidth = PLOT_WIDTH;
         const relativeX = x - PADDING_LEFT;
 
         // Clamp
@@ -150,11 +154,11 @@ export const LineChart = ({
 
         const point = data[selectedIndex];
         const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
-        const x = PADDING_LEFT + (normalizedX * (CHART_WIDTH - PADDING_LEFT));
+        const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
         const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
 
         return { x, y, point };
-    }, [selectedIndex, data, minX, maxX, displayMinY, displayRange, height, CHART_WIDTH, PADDING_LEFT, PADDING_VERTICAL]);
+    }, [selectedIndex, data, minX, maxX, displayMinY, displayRange, height, CHART_WIDTH, PLOT_WIDTH, PADDING_LEFT, PADDING_VERTICAL]);
 
     if (data.length === 0) {
         return (
@@ -187,7 +191,7 @@ export const LineChart = ({
                                             <Line
                                                 x1={PADDING_LEFT}
                                                 y1={y}
-                                                x2={CHART_WIDTH}
+                                                x2={CHART_WIDTH - PADDING_RIGHT}
                                                 y2={y}
                                                 stroke={theme.border}
                                                 strokeWidth={1}
@@ -210,7 +214,7 @@ export const LineChart = ({
                                 {/* Max Value Annotation */}
                                 {maxValPoint && (() => {
                                     const normalizedX = maxX === minX ? 0.5 : (maxValPoint.x - minX) / (maxX - minX);
-                                    const x = PADDING_LEFT + (normalizedX * (CHART_WIDTH - PADDING_LEFT));
+                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
                                     const y = height - PADDING_VERTICAL - (((maxValPoint.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
                                     return (
                                         <React.Fragment>
@@ -248,7 +252,7 @@ export const LineChart = ({
                                 {/* Interactive Points */}
                                 {data.map((point, index) => {
                                     const normalizedX = maxX === minX ? 0.5 : (point.x - minX) / (maxX - minX);
-                                    const x = PADDING_LEFT + (normalizedX * (CHART_WIDTH - PADDING_LEFT));
+                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
                                     const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
 
                                     const isSelected = selectedIndex === index;

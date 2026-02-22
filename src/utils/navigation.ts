@@ -47,6 +47,24 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to the Budget Detail screen.
+     */
+    toBudgetDetail: (budgetId: string) => {
+        router.push(`/budget-details?id=${budgetId}`);
+    },
+
+    /**
+     * Navigate to the Budget Form screen (Create or Edit).
+     */
+    toBudgetForm: (budgetId?: string) => {
+        if (budgetId) {
+            router.push(`/budget-edit?id=${budgetId}`);
+        } else {
+            router.push('/budget-edit');
+        }
+    },
+
+    /**
      * Navigate to the Reports screen.
      */
     toReports: () => {

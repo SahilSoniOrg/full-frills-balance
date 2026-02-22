@@ -10,10 +10,21 @@ export class LedgerReadService {
     observeEnrichedForAccount(accountId: string, limit: number, dateRange?: { startDate: number; endDate: number }) {
         if (!accountId) return of([] as EnrichedTransaction[]);
 
-        const account$ = accountRepository.observeById(accountId);
+        return this.observeEnrichedForAccounts([accountId], limit, dateRange);
+    }
+
+    observeEnrichedForAccounts(rootAccountIds: string[], limit: number, dateRange?: { startDate: number; endDate: number }) {
+        if (!rootAccountIds || rootAccountIds.length === 0) return of([] as EnrichedTransaction[]);
 
         const descendantIds$ = accountRepository.observeAll().pipe(
-            map((accounts) => this.getAccountTreeIds(accountId, accounts)),
+            map((accounts) => {
+                const allIds = new Set<string>();
+                for (const rootId of rootAccountIds) {
+                    const ids = this.getAccountTreeIds(rootId, accounts);
+                    ids.forEach(id => allIds.add(id));
+                }
+                return Array.from(allIds);
+            }),
             distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
         );
 
@@ -39,15 +50,15 @@ export class LedgerReadService {
             switchMap((ids) => accountRepository.observeByIds(ids)),
         );
 
-        return combineLatest([transactions$, account$, journals$, allAccounts$]).pipe(
-            map(([transactions, parentAccount, journals, allAccounts]) => {
+        return combineLatest([transactions$, journals$, allAccounts$]).pipe(
+            map(([transactions, journals, allAccounts]) => {
                 const journalMap = new Map(journals.map((j) => [j.id, j]));
                 const accountMap = new Map(allAccounts.map((a) => [a.id, a]));
 
                 return transactions.map((tx) => {
                     const journal = journalMap.get(tx.journalId);
                     const txAccount = accountMap.get(tx.accountId);
-                    const isIncrease = isBalanceIncrease(parentAccount?.accountType as any, tx.transactionType as any);
+                    const isIncrease = isBalanceIncrease(txAccount?.accountType as any, tx.transactionType as any);
 
                     return {
                         id: tx.id,
@@ -59,10 +70,10 @@ export class LedgerReadService {
                         transactionDate: tx.transactionDate,
                         notes: tx.notes,
                         journalDescription: journal?.description,
-                        accountName: txAccount?.name || parentAccount?.name,
-                        accountType: txAccount?.accountType as any || parentAccount?.accountType as any,
-                        icon: txAccount?.icon || parentAccount?.icon,
-                        runningBalance: tx.accountId === accountId ? tx.runningBalance : undefined,
+                        accountName: txAccount?.name,
+                        accountType: txAccount?.accountType as any,
+                        icon: txAccount?.icon,
+                        runningBalance: rootAccountIds.length === 1 && rootAccountIds.includes(tx.accountId) ? tx.runningBalance : undefined,
                         displayTitle: journal?.description || AppConfig.strings.journal.transaction,
                         displayType: journal?.displayType as any,
                         isIncrease,

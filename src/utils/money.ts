@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import * as Localization from 'expo-localization';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 
 /**
  * Rounds a number to a specific precision (decimal places).
@@ -44,15 +44,11 @@ export const safeSubtract = (a: number, b: number, precision: number): number =>
  * Formats a number as a currency string.
  * @param amount The value to format
  * @param currencyCode The ISO currency code
- * @param locale The locale to use
  */
 export const formatCurrency = (
     amount: number,
     currencyCode: string = AppConfig.defaultCurrency,
-    locale: string = Localization.getLocales()[0]?.languageTag || AppConfig.defaultLocale
 ): string => {
-    return new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency: currencyCode,
-    }).format(amount);
+    // Redirect to centralized CurrencyFormatter to ensure symbol fallback logic is applied
+    return CurrencyFormatter.format(amount, currencyCode);
 };

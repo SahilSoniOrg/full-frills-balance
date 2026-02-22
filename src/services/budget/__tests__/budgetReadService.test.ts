@@ -87,7 +87,7 @@ describe('budgetReadService', () => {
         await new Promise(r => setTimeout(r, 50))
 
         let lastUsage: any
-        const sub = budgetReadService.observeBudgetUsage(budget).subscribe(u => {
+        const sub = budgetReadService.observeBudgetUsage(budget, month).subscribe(u => {
             // We want the most recent emission.
             // It will emit several times initially as observables resolve.
             if (u && u.budgetAmount === 500) {
@@ -103,5 +103,45 @@ describe('budgetReadService', () => {
         expect(lastUsage.spent).toBe(100)
         expect(lastUsage.remaining).toBe(400)
         expect(lastUsage.usagePercent).toBe(0.2)
+    })
+
+    it('should allow querying an older month natively', async () => {
+        const currentMonth = '2023-10'
+        const previousMonth = '2023-09'
+
+        const budget = await budgetRepository.create({
+            name: 'Food Budget',
+            amount: 500,
+            currencyCode: 'USD',
+            startMonth: currentMonth
+        }, [expenseParentId])
+
+        // Add expense in the previous month
+        await journalRepository.createJournalWithTransactions({
+            description: 'Old Grocery',
+            journalDate: dayjs('2023-09-15').valueOf(),
+            currencyCode: 'USD',
+            transactions: [
+                { accountId: expenseChildId, amount: 200, transactionType: TransactionType.DEBIT },
+                { accountId: assetId, amount: 200, transactionType: TransactionType.CREDIT }
+            ]
+        })
+
+        // Wait briefly for DB indexing
+        await new Promise(r => setTimeout(r, 50))
+
+        let lastUsage: any
+        const sub = budgetReadService.observeBudgetUsage(budget, previousMonth).subscribe(u => {
+            if (u && u.budgetAmount === 500) {
+                lastUsage = u
+            }
+        })
+
+        await new Promise(r => setTimeout(r, 200))
+        sub.unsubscribe()
+
+        expect(lastUsage).toBeDefined()
+        expect(lastUsage.spent).toBe(200)
+        expect(lastUsage.remaining).toBe(300)
     })
 })

@@ -1,35 +1,53 @@
-import { AppIcon, AppText, ListRow } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountSections, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, SectionList, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface AccountPickerModalProps {
+type BaseProps = {
     visible: boolean;
     accounts: Account[];
-    selectedId?: string;
     title?: string;
     onClose: () => void;
-    onSelect: (accountId: string) => void;
-}
+};
 
-export function AccountPickerModal({
-    visible,
-    accounts,
-    selectedId: initialSelectedId,
-    title = 'Select Account',
-    onClose,
-    onSelect,
-}: AccountPickerModalProps) {
+export type SingleProps = BaseProps & {
+    multiple?: false;
+    selectedId?: string;
+    onSelect: (accountId: string) => void;
+};
+
+export type MultiProps = BaseProps & {
+    multiple: true;
+    selectedIds?: string[];
+    onSelect: (accountIds: string[]) => void;
+};
+
+type AccountPickerModalProps = SingleProps | MultiProps;
+
+export function AccountPickerModal(props: AccountPickerModalProps) {
+    const { visible, accounts, title = 'Select Account', onClose, multiple } = props;
     const { theme } = useTheme();
-    const [selectedId, setSelectedId] = useState(initialSelectedId || '');
+    const insets = useSafeAreaInsets();
+
+    // State for single select
+    const [selectedId, setSelectedId] = useState('');
+    // State for multi select
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        setSelectedId(initialSelectedId || '');
-    }, [initialSelectedId]);
+        if (visible) {
+            if (props.multiple) {
+                setSelectedIds(new Set(props.selectedIds || []));
+            } else {
+                setSelectedId(props.selectedId || '');
+            }
+        }
+    }, [visible, props]);
 
     const leafAccounts = useMemo(() => {
         const parentIds = new Set(accounts.map((a) => a.parentAccountId).filter(Boolean) as string[]);
@@ -40,11 +58,26 @@ export function AccountPickerModal({
 
     const handleSelect = useCallback(
         (id: string) => {
-            setSelectedId(id);
-            onSelect(id);
+            if (props.multiple) {
+                setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                });
+            } else {
+                setSelectedId(id);
+                props.onSelect(id);
+            }
         },
-        [onSelect],
+        [props],
     );
+
+    const handleApply = useCallback(() => {
+        if (props.multiple) {
+            props.onSelect(Array.from(selectedIds));
+        }
+    }, [props, selectedIds]);
 
     const toggleSection = useCallback((sectionTitle: string) => {
         setCollapsedSections((prev) => {
@@ -120,7 +153,7 @@ export function AccountPickerModal({
                                 renderItem={({ item, section }) => {
                                     if (collapsedSections.has(section.title)) return null;
 
-                                    const isSelected = item.id === selectedId;
+                                    const isSelected = multiple ? selectedIds.has(item.id) : item.id === selectedId;
                                     const accountColor = getAccountColor(item.accountType);
 
                                     return (
@@ -137,6 +170,11 @@ export function AccountPickerModal({
                                                     borderWidth: isSelected ? 2 : 1,
                                                 },
                                             ]}
+                                            trailing={
+                                                multiple && isSelected ? (
+                                                    <AppIcon name="check" size={20} color={accountColor} />
+                                                ) : undefined
+                                            }
                                             padding="md"
                                         />
                                     );
@@ -144,6 +182,17 @@ export function AccountPickerModal({
                                 contentContainerStyle={styles.accountsListContent}
                                 style={styles.accountsList}
                             />
+
+                            {multiple && (
+                                <View style={[styles.footer, {
+                                    borderTopColor: theme.border,
+                                    paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.md)
+                                }]}>
+                                    <AppButton onPress={handleApply}>
+                                        {`Apply (${selectedIds.size})`}
+                                    </AppButton>
+                                </View>
+                            )}
                         </View>
                     </TouchableWithoutFeedback>
                 </View>
@@ -161,7 +210,7 @@ const styles = StyleSheet.create({
     modalContent: {
         borderTopLeftRadius: Shape.radius.r2,
         borderTopRightRadius: Shape.radius.r2,
-        maxHeight: '80%',
+        maxHeight: '85%',
         width: '100%',
         elevation: 5,
     },
@@ -196,10 +245,15 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.sm,
     },
     accountsList: {
-        flexGrow: 0,
+        flexShrink: 1,
     },
     accountsListContent: {
         paddingHorizontal: Spacing.md,
         paddingBottom: Spacing.xl * 2,
     },
+    footer: {
+        paddingTop: Spacing.md,
+        paddingHorizontal: Spacing.lg,
+        borderTopWidth: 1,
+    }
 });

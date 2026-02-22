@@ -5,4 +5,5 @@ import { BudgetUsage } from '@/src/services/budget/budgetReadService'
 export interface BudgetItem {
     budget: Budget
     usage: BudgetUsage
+    previousUsage?: BudgetUsage
 }
