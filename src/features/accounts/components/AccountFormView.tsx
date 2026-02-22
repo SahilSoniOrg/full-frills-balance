@@ -1,5 +1,4 @@
-import { AppButton, AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
@@ -10,11 +9,12 @@ import { IconPickerModal } from '@/src/features/onboarding/components/IconPicker
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AccountSubmitFooter } from './AccountSubmitFooter';
+
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function AccountFormView(vm: AccountFormViewModel) {
     const { fonts } = useTheme();
-    const insets = useSafeAreaInsets();
     const {
         theme,
         title,
@@ -51,15 +51,11 @@ export function AccountFormView(vm: AccountFormViewModel) {
     } = vm;
 
     return (
-        <Screen
-            title={title}
-            onBack={onCancel}
-            edges={['top', 'bottom']}
-        >
+        <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.top + 32) : 0}
             >
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                     <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold }]}>
@@ -165,25 +161,11 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     </AppCard>
 
                 </ScrollView>
-                <View style={[
-                    styles.footer,
-                    {
-                        backgroundColor: theme.background,
-                        borderTopColor: theme.border,
-                        paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.md)
-                    }
-                ]}>
-                    <AppButton
-                        variant="primary"
-                        size="lg"
-                        onPress={onSave}
-                        disabled={isSaveDisabled}
-                        style={styles.createButton}
-                        testID="save-button"
-                    >
-                        {saveLabel}
-                    </AppButton>
-                </View>
+                <AccountSubmitFooter
+                    onPress={onSave}
+                    label={saveLabel}
+                    disabled={isSaveDisabled}
+                />
             </KeyboardAvoidingView>
 
             <IconPickerModal
@@ -205,7 +187,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     setIsParentPickerVisible(false);
                 }}
             />
-        </Screen>
+        </SafeAreaView >
     );
 }
 
@@ -213,6 +195,10 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         padding: Spacing.lg,
+    },
+    container: {
+        flex: 1,
+        // padding: Spacing.lg,
     },
     title: {
         fontSize: Typography.sizes.xxl,
