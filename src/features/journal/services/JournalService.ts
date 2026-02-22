@@ -100,7 +100,7 @@ export class JournalService {
 
         return ledgerWriteService.createJournal({
             journalDate: Date.now(),
-            description: journal.description ? `Copy of ${journal.description}` : undefined,
+            description: journal.description ? `${journal.description}` : undefined,
             currencyCode: journal.currencyCode,
             transactions: transactions.map(tx => ({
                 accountId: tx.accountId,

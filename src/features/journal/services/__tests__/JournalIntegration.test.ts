@@ -165,7 +165,7 @@ describe('JournalRepository', () => {
 
             expect(duplicatedJournal).toBeDefined()
             expect(duplicatedJournal.id).not.toBe(originalJournal.id)
-            expect(duplicatedJournal.description).toBe(`Copy of ${originalJournal.description}`)
+            expect(duplicatedJournal.description).toBe(`${originalJournal.description}`)
             expect(duplicatedJournal.totalAmount).toBe(originalJournal.totalAmount)
             expect(duplicatedJournal.transactionCount).toBe(originalJournal.transactionCount)
 
