@@ -76,6 +76,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
                     enableMinifyInReleaseBuilds: true,
                     packagingOptions: {
                         pickFirst: ["**/libc++_shared.so"],
+                        jniLibs: {
+                            useLegacyPackaging: false,
+                        },
                     },
                     ndkVersion: "27.1.12297006",
                 },
