@@ -1,8 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalService } from '@/src/features/journal/services/JournalService';
 import { balanceService } from '@/src/services/BalanceService';
+import { ledgerWriteService } from '@/src/services/ledger';
 import { accountService } from '../AccountService';
 
 describe('Account Hierarchy Integration', () => {
@@ -56,7 +56,7 @@ describe('Account Hierarchy Integration', () => {
             currencyCode: 'USD',
         });
 
-        await journalService.createJournal({
+        await ledgerWriteService.createJournal({
             journalDate: Date.now(),
             description: 'Child Tx',
             currencyCode: 'USD',
@@ -93,7 +93,7 @@ describe('Account Hierarchy Integration', () => {
             currencyCode: 'USD',
         });
 
-        await journalService.createJournal({
+        await ledgerWriteService.createJournal({
             journalDate: Date.now(),
             description: 'C Tx',
             currencyCode: 'USD',
@@ -170,7 +170,7 @@ describe('Account Hierarchy Integration', () => {
         });
 
         // Add a transaction
-        await journalService.createJournal({
+        await ledgerWriteService.createJournal({
             journalDate: Date.now(),
             description: 'Tx',
             currencyCode: 'USD',

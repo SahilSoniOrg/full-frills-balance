@@ -2,7 +2,8 @@ import { journalService } from '@/src/features/journal/services/JournalService'
 import { transactionService } from '@/src/features/journal/services/TransactionService'
 import { useObservable } from '@/src/hooks/useObservable'
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable'
-import { EnrichedJournal, EnrichedTransaction, TransactionWithAccountInfo } from '@/src/types/domain'
+import { useLedgerTransactionsForAccount } from '@/src/services/ledger'
+import { EnrichedJournal, TransactionWithAccountInfo } from '@/src/types/domain'
 import { useCallback } from 'react'
 import { of } from 'rxjs'
 
@@ -31,21 +32,7 @@ export function useJournals(pageSize: number = 50, dateRange?: { startDate: numb
  * Note: This hook uses repository-owned enriched observables to react to account changes.
  */
 export function useAccountTransactions(accountId: string, pageSize: number = 50, dateRange?: { startDate: number, endDate: number }) {
-    const observe = useCallback((limit: number, range?: { startDate: number, endDate: number }) => {
-        return transactionService.observeEnrichedForAccount(
-            accountId,
-            limit,
-            range
-        )
-    }, [accountId])
-
-    const { items: transactions, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<any, EnrichedTransaction>({
-        pageSize,
-        dateRange,
-        observe
-    })
-
-    return { transactions, isLoading, isLoadingMore, hasMore, loadMore, version }
+    return useLedgerTransactionsForAccount(accountId, pageSize, dateRange)
 }
 
 

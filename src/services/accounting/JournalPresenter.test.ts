@@ -102,16 +102,6 @@ describe('JournalPresenter', () => {
         });
     });
 
-    describe('getAccountColorKey', () => {
-        it('returns correct key for ASSET', () => {
-            expect(journalPresenter.getAccountColorKey(AccountType.ASSET)).toBe('asset');
-        });
-
-        it('returns correct key for LIABILITY', () => {
-            expect(journalPresenter.getAccountColorKey(AccountType.LIABILITY)).toBe('liability');
-        });
-    });
-
     describe('getIconLabel', () => {
         it('returns I for INCOME', () => {
             expect(journalPresenter.getIconLabel(JournalDisplayType.INCOME)).toBe('I');

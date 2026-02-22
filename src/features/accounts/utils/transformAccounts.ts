@@ -1,7 +1,7 @@
 import { AppConfig, Palette } from '@/src/constants'
 import { Theme } from '@/src/constants/design-tokens'
 import Account from '@/src/data/models/Account'
-import { getAccountAccentColor, getAccountSections, getSectionColor } from '@/src/utils/accountUtils'
+import { getAccountAccentColor, getAccountSections, getSectionColor } from '@/src/utils/accountCategory'
 import { getContrastColor } from '@/src/utils/colorUtils'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 
@@ -109,6 +109,7 @@ export function transformAccountsToSections(
                 equity: theme.equity,
                 income: theme.income,
                 expense: theme.expense,
+                text: theme.text,
             })
 
             const contrastColor = getContrastColor(accentColor)

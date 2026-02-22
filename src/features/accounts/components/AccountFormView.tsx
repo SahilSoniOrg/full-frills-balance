@@ -1,23 +1,20 @@
+import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
 import { IconPickerModal } from '@/src/features/onboarding/components/IconPickerModal';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { AccountSubmitFooter } from './AccountSubmitFooter';
-
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function AccountFormView(vm: AccountFormViewModel) {
-    const { fonts } = useTheme();
+    const { theme, fonts } = useTheme();
     const {
-        theme,
-        title,
         heroTitle,
         heroSubtitle,
         isEditMode,
@@ -26,6 +23,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
         accountType,
         setAccountType,
         selectedCurrency,
+        currencies,
         setSelectedCurrency,
         selectedIcon,
         setSelectedIcon,
@@ -34,7 +32,6 @@ export function AccountFormView(vm: AccountFormViewModel) {
         initialBalance,
         onInitialBalanceChange,
         formError,
-        onCancel,
         onSave,
         saveLabel,
         currencyLabel,
@@ -97,9 +94,6 @@ export function AccountFormView(vm: AccountFormViewModel) {
                             </View>
                         </View>
                     </AppCard>
-
-
-
                     {showInitialBalance && (
                         <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
                             <AppInput
@@ -128,6 +122,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                             <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{currencyLabel}</AppText>
                             <CurrencySelector
                                 selectedCurrency={selectedCurrency}
+                                currencies={currencies}
                                 onSelect={setSelectedCurrency}
                                 disabled={isEditMode}
                             />
@@ -161,7 +156,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     </AppCard>
 
                 </ScrollView>
-                <AccountSubmitFooter
+                <SubmitFooter
                     onPress={onSave}
                     label={saveLabel}
                     disabled={isSaveDisabled}
@@ -177,7 +172,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                 }}
                 selectedIcon={selectedIcon as any}
             />
-            <AccountSelector
+            <AccountPickerModal
                 visible={isParentPickerVisible}
                 accounts={potentialParents}
                 selectedId={parentAccountId}
@@ -198,7 +193,6 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        // padding: Spacing.lg,
     },
     title: {
         fontSize: Typography.sizes.xxl,
@@ -214,16 +208,6 @@ const styles = StyleSheet.create({
     },
     label: {
         marginBottom: Spacing.sm,
-        // dynamic font
-    },
-    footer: {
-        paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.md,
-        borderTopWidth: 1,
-    },
-    createButton: {
-        height: Size.buttonXl,
-        borderRadius: Shape.radius.r4,
     },
     errorContainer: {
         padding: Spacing.md,

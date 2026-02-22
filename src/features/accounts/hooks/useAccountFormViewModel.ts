@@ -6,7 +6,6 @@ import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountP
 import { useAccount, useAccountBalance, useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import { useCurrencies } from '@/src/hooks/use-currencies';
-import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
@@ -14,10 +13,9 @@ import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
+import Currency from '@/src/data/models/Currency';
 
 export interface AccountFormViewModel {
-    theme: ReturnType<typeof useTheme>['theme'];
-    title: string;
     heroTitle: string;
     heroSubtitle: string;
     isEditMode: boolean;
@@ -26,6 +24,7 @@ export interface AccountFormViewModel {
     accountType: AccountType;
     setAccountType: (value: AccountType) => void;
     selectedCurrency: string;
+    currencies: Currency[];
     setSelectedCurrency: (value: string) => void;
     selectedIcon: string;
     setSelectedIcon: (value: string) => void;
@@ -35,7 +34,6 @@ export interface AccountFormViewModel {
     onInitialBalanceChange: (value: string) => void;
     isCreating: boolean;
     formError: string | null;
-    onCancel: () => void;
     onSave: () => void;
     saveLabel: string;
     currencyLabel: string;
@@ -49,12 +47,10 @@ export interface AccountFormViewModel {
     setIsParentPickerVisible: (visible: boolean) => void;
     isParent: boolean;
     showCurrency: boolean;
-    showBalance: boolean;
 }
 
 export function useAccountFormViewModel(): AccountFormViewModel {
     const params = useLocalSearchParams();
-    const { theme } = useTheme();
     const { defaultCurrency } = useUI();
 
     const accountId = params.accountId as string | undefined;
@@ -71,7 +67,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         false
     );
 
-    useCurrencies();
+    const { currencies } = useCurrencies();
 
     const getInitialAccountType = (): AccountType => {
         if (typeParam) {
@@ -167,7 +163,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     };
 
     // UI Derived State
-    const title = isEditMode ? 'Edit Account' : 'New Account';
     const heroTitle = isEditMode
         ? 'Edit Account'
         : (hasExistingAccounts ? 'Create New Account' : 'Create Your First Account');
@@ -212,8 +207,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     const showBalance = !effectiveIsParent;
 
     return {
-        theme,
-        title,
         heroTitle,
         heroSubtitle,
         isEditMode,
@@ -222,6 +215,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         accountType,
         setAccountType,
         selectedCurrency,
+        currencies,
         setSelectedCurrency,
         selectedIcon,
         setSelectedIcon,
@@ -231,7 +225,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         onInitialBalanceChange,
         isCreating: persistence.isCreating,
         formError: validation.formError,
-        onCancel: persistence.handleCancel,
         onSave,
         saveLabel,
         currencyLabel,
@@ -245,6 +238,5 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         setIsParentPickerVisible,
         isParent: effectiveIsParent,
         showCurrency,
-        showBalance,
     };
 }

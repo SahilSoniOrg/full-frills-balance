@@ -1,5 +1,6 @@
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { useAccountActions, useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
+import { createAccountTypeRecord } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -81,13 +82,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     const rootAccounts = useMemo(() => accounts.filter((account: Account) => !account.parentAccountId), [accounts]);
 
     const visibleRootAccountsByCategory = useMemo(() => {
-        const groups: Record<string, Account[]> = {
-            [AccountType.ASSET]: [],
-            [AccountType.LIABILITY]: [],
-            [AccountType.EQUITY]: [],
-            [AccountType.INCOME]: [],
-            [AccountType.EXPENSE]: [],
-        };
+        const groups = createAccountTypeRecord<Account[]>(() => []);
 
         rootAccounts.forEach((account: Account) => {
             const children = accountsByParent.get(account.id) || [];

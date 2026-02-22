@@ -156,20 +156,6 @@ export const journalPresenter = {
     },
 
     /**
-     * Gets theme color key for an account type (Used by hooks/repositories)
-     */
-    getAccountColorKey(type: string): 'asset' | 'liability' | 'equity' | 'income' | 'expense' {
-        switch (type) {
-            case AccountType.ASSET: return 'asset';
-            case AccountType.LIABILITY: return 'liability';
-            case AccountType.EQUITY: return 'equity';
-            case AccountType.INCOME: return 'income';
-            case AccountType.EXPENSE: return 'expense';
-            default: return 'asset';
-        }
-    },
-
-    /**
      * Simple icon label for the Ivy-style UI
      */
     getIconLabel(type: JournalDisplayType): string {

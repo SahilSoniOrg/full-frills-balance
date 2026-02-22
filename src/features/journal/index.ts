@@ -1,4 +1,3 @@
-export { AccountSelector } from './components/AccountSelector'
 export { default as EntryScreen } from './entry/EntryScreen'
 export * from './hooks/useJournal'
 export * from './hooks/useJournalActions'

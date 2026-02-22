@@ -1,6 +1,7 @@
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { useAccountActions, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
+import { ACCOUNT_TYPE_ORDER } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,15 +13,6 @@ export interface AccountReorderViewModel {
     onMove: (index: number, direction: 'up' | 'down') => void;
     onBack: () => void;
 }
-
-// Sort order for account types
-const typeOrder = [
-    AccountType.ASSET,
-    AccountType.LIABILITY,
-    AccountType.INCOME,
-    AccountType.EXPENSE,
-    AccountType.EQUITY,
-];
 
 export function useAccountReorderViewModel(): AccountReorderViewModel {
     const router = useRouter();
@@ -34,8 +26,8 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
         if (!isLoading) {
             const sorted = [...initialAccounts].sort((a, b) => {
                 // First by Type
-                const typeRankA = typeOrder.indexOf(a.accountType);
-                const typeRankB = typeOrder.indexOf(b.accountType);
+                const typeRankA = ACCOUNT_TYPE_ORDER.indexOf(a.accountType);
+                const typeRankB = ACCOUNT_TYPE_ORDER.indexOf(b.accountType);
                 if (typeRankA !== typeRankB) return typeRankA - typeRankB;
 
                 // Then by OrderNum

@@ -130,7 +130,18 @@ export function useSimpleJournalEditor({
         }
 
         Object.entries(updates).forEach(([id, up]) => editor.updateLine(id, up));
-    }, [exchangeRate, isCrossCurrency, sourceLine, destinationLine, convertedAmount, amount, editor]);
+    }, [
+        exchangeRate,
+        isCrossCurrency,
+        sourceLine,
+        destinationLine,
+        convertedAmount,
+        amount,
+        editor,
+        sourceCurrency,
+        destCurrency,
+        numAmount,
+    ]);
 
     // Helpers to update editor state
     const setType = (newType: 'expense' | 'income' | 'transfer') => {

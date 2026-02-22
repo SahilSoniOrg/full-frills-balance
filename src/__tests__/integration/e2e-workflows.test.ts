@@ -10,9 +10,10 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { accountService } from '@/src/features/accounts'
+import { journalService } from '@/src/features/journal'
 import { balanceService } from '@/src/services/BalanceService'
 import { IntegrityService } from '@/src/services/integrity-service'
-import { journalService } from '@/src/features/journal'
+import { ledgerWriteService } from '@/src/services/ledger'
 import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 
 describe('E2E Workflows', () => {
@@ -53,7 +54,7 @@ describe('E2E Workflows', () => {
             })
 
             // Morning: Coffee
-            await journalService.createJournal({
+            await ledgerWriteService.createJournal({
                 description: 'Morning Coffee',
                 journalDate: Date.now() + 1000,
                 currencyCode: 'USD',
@@ -64,7 +65,7 @@ describe('E2E Workflows', () => {
             })
 
             // Lunch
-            await journalService.createJournal({
+            await ledgerWriteService.createJournal({
                 description: 'Lunch',
                 journalDate: Date.now() + 2000,
                 currencyCode: 'USD',
@@ -75,7 +76,7 @@ describe('E2E Workflows', () => {
             })
 
             // Bus ride
-            await journalService.createJournal({
+            await ledgerWriteService.createJournal({
                 description: 'Bus',
                 journalDate: Date.now() + 3000,
                 currencyCode: 'USD',
@@ -138,7 +139,7 @@ describe('E2E Workflows', () => {
             })
 
             // Make a purchase
-            const journal = await journalService.createJournal({
+            const journal = await ledgerWriteService.createJournal({
                 description: 'Accidental purchase',
                 journalDate: FIXED_DATE + 10000,
                 currencyCode: 'USD',
@@ -180,7 +181,7 @@ describe('E2E Workflows', () => {
             })
 
             // Spend 100 EUR at 1.10 USD/EUR rate (= 110 USD in journal currency)
-            await journalService.createJournal({
+            await ledgerWriteService.createJournal({
                 description: 'Purchase in EUR',
                 journalDate: Date.now(),
                 currencyCode: 'USD',

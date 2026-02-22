@@ -1,5 +1,5 @@
 import { AccountType } from '@/src/data/models/Account';
-import { getAccountSections, groupAccountsByType } from '@/src/utils/accountUtils';
+import { getAccountSections, groupAccountsByType } from '@/src/utils/accountCategory';
 
 describe('accountUtils', () => {
     const mockAccounts: any[] = [

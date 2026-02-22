@@ -1,27 +1,18 @@
 import { TransactionBadge, TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/data/models/Account';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
-import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
-const ACCOUNT_TYPE_VARIANTS: Record<AccountType, ComponentVariant> = {
-    [AccountType.ASSET]: 'asset',
-    [AccountType.LIABILITY]: 'liability',
-    [AccountType.EQUITY]: 'equity',
-    [AccountType.INCOME]: 'income',
-    [AccountType.EXPENSE]: 'expense',
-};
 
 export interface JournalListEmptyState {
     title: string;
@@ -215,7 +206,7 @@ export function useJournalListViewModel({
 
                     return {
                         text: `${showPrefix}${acc.name}`,
-                        variant: ACCOUNT_TYPE_VARIANTS[acc.accountType as AccountType],
+                        variant: getAccountTypeVariant(acc.accountType),
                         icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
                     };
                 });

@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database'
 import { AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
-import { journalService } from '../JournalService'
+import { ledgerWriteService } from '@/src/services/ledger'
 import { transactionService } from '../TransactionService'
 
 describe('TransactionService', () => {
@@ -38,7 +38,7 @@ describe('TransactionService', () => {
 
     describe('getTransactionsWithAccountInfo', () => {
         it('should return transactions with joined account info', async () => {
-            const journal = await journalService.createJournal({
+            const journal = await ledgerWriteService.createJournal({
                 description: 'Test Journal',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -70,7 +70,7 @@ describe('TransactionService', () => {
 
     describe('getEnrichedByJournal', () => {
         it('does not assign a single counter account for multi-line journals', async () => {
-            const journal = await journalService.createJournal({
+            const journal = await ledgerWriteService.createJournal({
                 description: 'Split Transaction',
                 journalDate: Date.now(),
                 currencyCode: 'USD',

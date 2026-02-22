@@ -1,6 +1,7 @@
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { JournalService } from '@/src/features/journal/services/JournalService';
+import { ledgerWriteService } from '@/src/services/ledger';
 import { accountingService } from '@/src/utils/accountingService';
 
 // Mock dependencies
@@ -12,6 +13,9 @@ jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/utils/accountingService');
 jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/ledger', () => ({
+    ledgerWriteService: { createJournal: jest.fn() },
+}));
 jest.mock('@/src/utils/preferences', () => ({
     preferences: { defaultCurrencyCode: 'USD' }
 }));
@@ -42,7 +46,7 @@ describe('JournalService - saveJournalEntry', () => {
         ];
 
         it('should create new journal if no ID provided', async () => {
-            const createSpy = jest.spyOn(service, 'createJournal').mockResolvedValue({ id: 'j1' } as any);
+            const createSpy = jest.spyOn(ledgerWriteService, 'createJournal').mockResolvedValue({ id: 'j1' } as any);
 
             const result = await service.saveJournalEntry({
                 lines: validLines as any,
@@ -99,7 +103,7 @@ describe('JournalService - saveJournalEntry', () => {
         });
 
         it('should handle timestamp dates', async () => {
-            const createSpy = jest.spyOn(service, 'createJournal').mockResolvedValue({ id: 'j1' } as any);
+            const createSpy = jest.spyOn(ledgerWriteService, 'createJournal').mockResolvedValue({ id: 'j1' } as any);
             const ts = Date.now();
 
             const result = await service.saveJournalEntry({

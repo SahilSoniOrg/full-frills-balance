@@ -1,11 +1,12 @@
 import Journal from '@/src/data/models/Journal';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { journalService } from '@/src/features/journal/services/JournalService';
+import { ledgerWriteService } from '@/src/services/ledger';
 import { useCallback } from 'react';
 
 export function useJournalActions() {
     const createJournal = useCallback(async (data: CreateJournalData) => {
-        return journalService.createJournal(data);
+        return ledgerWriteService.createJournal(data);
     }, []);
 
     const deleteJournal = useCallback(async (journal: Journal) => {

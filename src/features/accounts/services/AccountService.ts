@@ -5,14 +5,15 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { journalService } from '@/src/features/journal/services/JournalService';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { balanceService } from '@/src/services/BalanceService';
+import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { getEpsilon, roundToPrecision } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
+import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
 
 export interface CreateAccountData {
     name: string;
@@ -83,14 +84,14 @@ export class AccountService {
             const balancingAccountId = await this.getOpeningBalancesAccountId(data.currencyCode);
 
             // Direction: Assets/Expenses are DR+, Liabilities/Equity/Income are CR+
-            const isIncreaseDR = ['ASSET', 'EXPENSE'].includes(data.accountType);
+            const isIncreaseDR = isDebitNormalAccountType(data.accountType);
             const accountTxType = data.initialBalance > 0
                 ? (isIncreaseDR ? TransactionType.DEBIT : TransactionType.CREDIT)
                 : (isIncreaseDR ? TransactionType.CREDIT : TransactionType.DEBIT);
 
             const balancingTxType = accountTxType === TransactionType.DEBIT ? TransactionType.CREDIT : TransactionType.DEBIT;
 
-            await journalService.createJournal({
+            await ledgerWriteService.createJournal({
                 journalDate: Date.now(),
                 description: `Initial Balance: ${data.name}`,
                 currencyCode: data.currencyCode,
@@ -164,7 +165,7 @@ export class AccountService {
             updatePayload.parentAccountId = updates.parentAccountId;
         }
 
-        console.log(`[AccountService] updateAccount for ${accountId}:`, updatePayload);
+        logger.info('[AccountService] updateAccount payload prepared', { accountId, updatePayload });
         const updatedAccount = await accountRepository.update(account, updatePayload);
 
         await auditService.log({
@@ -255,7 +256,7 @@ export class AccountService {
         const correctionAccountId = await this.findOrCreateBalanceCorrectionAccount(account.currencyCode);
 
         // Direction: Assets/Expenses are DR+, Liabilities/Equity/Income are CR+
-        const isDRType = [AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType as AccountType);
+        const isDRType = isDebitNormalAccountType(account.accountType);
 
         // If we need to INCREASE the balance:
         // For ASSET (DR+): DEBIT account, CREDIT Balance Correction
@@ -268,7 +269,7 @@ export class AccountService {
 
         const balancingTxType = accountTxType === TransactionType.DEBIT ? TransactionType.CREDIT : TransactionType.DEBIT;
 
-        await journalService.createJournal({
+        await ledgerWriteService.createJournal({
             journalDate: Date.now(),
             description: `Balance Adjustment: ${account.name}`,
             currencyCode: account.currencyCode,

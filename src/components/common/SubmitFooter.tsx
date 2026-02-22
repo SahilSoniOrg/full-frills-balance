@@ -5,31 +5,33 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface JournalSubmitFooterProps {
+interface SubmitFooterProps {
     onPress: () => void;
     label: string;
     disabled: boolean;
     topSlot?: React.ReactNode;
 }
 
-export const JournalSubmitFooter = ({
+export const SubmitFooter = ({
     onPress,
     label,
     disabled,
     topSlot,
-}: JournalSubmitFooterProps) => {
+}: SubmitFooterProps) => {
     const { theme } = useTheme();
     const insets = useSafeAreaInsets();
 
     return (
-        <View style={[
-            styles.footer,
-            {
-                backgroundColor: theme.background,
-                borderTopColor: theme.border,
-                paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.md)
-            }
-        ]}>
+        <View
+            style={[
+                styles.footer,
+                {
+                    backgroundColor: theme.background,
+                    borderTopColor: theme.border,
+                    paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.md),
+                },
+            ]}
+        >
             {topSlot && <View style={styles.topSlot}>{topSlot}</View>}
             <AppButton
                 variant="primary"

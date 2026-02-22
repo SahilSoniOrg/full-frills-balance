@@ -1,3 +1,5 @@
+import { useJournals } from '@/src/features/journal/hooks/useJournals';
+import { logger } from '@/src/utils/logger';
 import { act, renderHook } from '@testing-library/react-native';
 import { useJournalListViewModel } from '../useJournalListViewModel';
 
@@ -54,7 +56,7 @@ jest.mock('@/src/utils/money', () => ({
 }));
 
 // Use date components to avoid timezone shift
-const mockEnrichedJournals = [
+const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     {
         id: 'j1',
         journalDate: new Date(2024, 2, 20, 10).getTime(), // March 20
@@ -62,7 +64,9 @@ const mockEnrichedJournals = [
         totalAmount: 100,
         currencyCode: 'USD',
         description: 'Salary',
-        accounts: [{ name: 'Bank', role: 'DESTINATION', accountType: 'ASSET' }]
+        status: 'POSTED',
+        transactionCount: 1,
+        accounts: [{ id: 'a1', name: 'Bank', role: 'DESTINATION', accountType: 'ASSET' }]
     },
     {
         id: 'j2',
@@ -71,7 +75,9 @@ const mockEnrichedJournals = [
         totalAmount: 20,
         currencyCode: 'USD',
         description: 'Coffee',
-        accounts: [{ name: 'Cash', role: 'SOURCE', accountType: 'ASSET' }]
+        status: 'POSTED',
+        transactionCount: 1,
+        accounts: [{ id: 'a2', name: 'Cash', role: 'SOURCE', accountType: 'ASSET' }]
     },
     {
         id: 'j3',
@@ -80,12 +86,14 @@ const mockEnrichedJournals = [
         totalAmount: 50,
         currencyCode: 'EUR',
         description: 'Lunch',
-        accounts: [{ name: 'Card', role: 'SOURCE', accountType: 'ASSET' }]
+        status: 'POSTED',
+        transactionCount: 1,
+        accounts: [{ id: 'a3', name: 'Card', role: 'SOURCE', accountType: 'ASSET' }]
     }
 ];
 
 describe('useJournalListViewModel', () => {
-    const useJournalsMock = require('@/src/features/journal/hooks/useJournals').useJournals;
+    const useJournalsMock = useJournals as jest.MockedFunction<typeof useJournals>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -146,8 +154,6 @@ describe('useJournalListViewModel', () => {
     });
 
     it('should log warning and skip amount when exchange rate is missing', () => {
-        const { logger } = require('@/src/utils/logger');
-
         const { result } = renderHook(() => useJournalListViewModel({
             emptyState: { title: 'Empty', subtitle: 'None' },
             baseCurrency: 'USD',

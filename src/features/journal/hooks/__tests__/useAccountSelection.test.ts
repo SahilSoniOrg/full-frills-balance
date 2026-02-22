@@ -3,11 +3,13 @@ import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSele
 import { renderHook } from '@testing-library/react-native';
 
 // Mock getAccountSections as it's not the focus of this test
-jest.mock('@/src/utils/accountUtils', () => ({
-    getAccountSections: jest.fn((accounts) => [{ title: 'All', data: accounts }]),
-    getAccountVariant: jest.fn(),
-    getSectionColor: jest.fn(),
-}));
+jest.mock('@/src/utils/accountCategory', () => {
+    const actual = jest.requireActual('@/src/utils/accountCategory');
+    return {
+        ...actual,
+        getAccountSections: jest.fn((accounts) => [{ title: 'All', data: accounts }]),
+    };
+});
 
 describe('useAccountSelection', () => {
     const mockAccounts = [

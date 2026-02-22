@@ -1,11 +1,15 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { journalService } from '@/src/features/journal/services/JournalService';
+import { ledgerWriteService } from '@/src/services/ledger';
 import { act, renderHook } from '@testing-library/react-native';
 
 // Mock dependencies
 jest.mock('@/src/features/journal/services/JournalService');
 jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/services/ledger', () => ({
+    ledgerWriteService: { createJournal: jest.fn() },
+}));
 jest.mock('@/src/data/database/Database', () => ({
     database: {
         write: jest.fn(),
@@ -26,7 +30,7 @@ describe('useJournalActions', () => {
             await result.current.createJournal(data);
         });
 
-        expect(journalService.createJournal).toHaveBeenCalledWith(data);
+        expect(ledgerWriteService.createJournal).toHaveBeenCalledWith(data);
     });
 
     it('should delegate updateJournal to journalService', async () => {

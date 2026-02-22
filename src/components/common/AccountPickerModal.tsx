@@ -1,49 +1,72 @@
 import { AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useTheme } from '@/src/hooks/use-theme';
-import { getAccountVariant, getSectionColor } from '@/src/utils/accountUtils';
-import { journalPresenter } from '@/src/utils/journalPresenter';
-import React from 'react';
+import { getAccountSections, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, SectionList, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
-interface AccountSelectorProps {
+interface AccountPickerModalProps {
     visible: boolean;
     accounts: Account[];
     selectedId?: string;
+    title?: string;
     onClose: () => void;
     onSelect: (accountId: string) => void;
 }
 
-export function AccountSelector({
+export function AccountPickerModal({
     visible,
     accounts,
     selectedId: initialSelectedId,
+    title = 'Select Account',
     onClose,
     onSelect,
-}: AccountSelectorProps) {
+}: AccountPickerModalProps) {
     const { theme } = useTheme();
-    const {
-        selectedId,
-        sections,
-        collapsedSections,
-        toggleSection,
-        handleSelect
-    } = useAccountSelection({
-        accounts,
-        initialSelectedId,
-        onSelect: (id) => {
+    const [selectedId, setSelectedId] = useState(initialSelectedId || '');
+    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        setSelectedId(initialSelectedId || '');
+    }, [initialSelectedId]);
+
+    const leafAccounts = useMemo(() => {
+        const parentIds = new Set(accounts.map((a) => a.parentAccountId).filter(Boolean) as string[]);
+        return accounts.filter((a) => !parentIds.has(a.id));
+    }, [accounts]);
+
+    const sections = useMemo(() => getAccountSections(leafAccounts), [leafAccounts]);
+
+    const handleSelect = useCallback(
+        (id: string) => {
+            setSelectedId(id);
             onSelect(id);
-            // Optionally close on select if desired, but current behavior is handled by caller
-        }
-    });
+        },
+        [onSelect],
+    );
+
+    const toggleSection = useCallback((sectionTitle: string) => {
+        setCollapsedSections((prev) => {
+            const next = new Set(prev);
+            if (next.has(sectionTitle)) {
+                next.delete(sectionTitle);
+            } else {
+                next.add(sectionTitle);
+            }
+            return next;
+        });
+    }, []);
 
     const getAccountColor = (type: string) => {
-        const key = journalPresenter.getAccountColorKey(type);
-        return (theme as any)[key] || theme.primary;
+        const variant = getAccountVariant(type);
+        if (variant === 'asset') return theme.asset;
+        if (variant === 'liability') return theme.liability;
+        if (variant === 'equity') return theme.equity;
+        if (variant === 'income') return theme.income;
+        if (variant === 'expense') return theme.expense;
+        return theme.primary;
     };
-
 
     return (
         <Modal
@@ -59,9 +82,11 @@ export function AccountSelector({
                     <TouchableWithoutFeedback>
                         <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
                             <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-                                <AppText variant="heading">Select Account</AppText>
+                                <AppText variant="heading">{title}</AppText>
                                 <TouchableOpacity onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
-                                    <AppText variant="body" color="secondary" style={{ padding: Spacing.sm }}>✕</AppText>
+                                    <AppText variant="body" color="secondary" style={{ padding: Spacing.sm }}>
+                                        ✕
+                                    </AppText>
                                 </TouchableOpacity>
                             </View>
 
@@ -69,23 +94,23 @@ export function AccountSelector({
                                 sections={sections}
                                 keyExtractor={(item) => item.id}
                                 stickySectionHeadersEnabled={false}
-                                renderSectionHeader={({ section: { title } }) => {
-                                    const isCollapsed = collapsedSections.has(title);
-                                    const color = getSectionColor(title, theme);
+                                renderSectionHeader={({ section: { title: sectionTitle } }) => {
+                                    const isCollapsed = collapsedSections.has(sectionTitle);
+                                    const color = getSectionColor(sectionTitle, theme);
                                     return (
                                         <TouchableOpacity
-                                            onPress={() => toggleSection(title)}
+                                            onPress={() => toggleSection(sectionTitle)}
                                             activeOpacity={Opacity.heavy}
                                             style={styles.sectionHeader}
                                         >
                                             <View style={styles.sectionTitleRow}>
                                                 <View style={[styles.sectionDot, { backgroundColor: color }]} />
                                                 <AppText variant="subheading" weight="bold" color="secondary">
-                                                    {title}
+                                                    {sectionTitle}
                                                 </AppText>
                                             </View>
                                             <AppIcon
-                                                name={isCollapsed ? "chevronRight" : "chevronDown"}
+                                                name={isCollapsed ? 'chevronRight' : 'chevronDown'}
                                                 size={Size.iconSm}
                                                 color={theme.textSecondary}
                                             />
@@ -104,11 +129,14 @@ export function AccountSelector({
                                             titleColor={getAccountVariant(item.accountType)}
                                             subtitle={`${item.accountType} • ${item.currencyCode}`}
                                             onPress={() => handleSelect(item.id)}
-                                            style={[styles.accountRow, {
-                                                backgroundColor: theme.surface,
-                                                borderColor: isSelected ? accountColor : theme.border,
-                                                borderWidth: isSelected ? 2 : 1,
-                                            }]}
+                                            style={[
+                                                styles.accountRow,
+                                                {
+                                                    backgroundColor: theme.surface,
+                                                    borderColor: isSelected ? accountColor : theme.border,
+                                                    borderWidth: isSelected ? 2 : 1,
+                                                },
+                                            ]}
                                             padding="md"
                                         />
                                     );
@@ -135,7 +163,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: Shape.radius.r2,
         maxHeight: '80%',
         width: '100%',
-        elevation: 5, // Android shadow
+        elevation: 5,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -172,6 +200,6 @@ const styles = StyleSheet.create({
     },
     accountsListContent: {
         paddingHorizontal: Spacing.md,
-        paddingBottom: Spacing.xl * 2, // Extra padding for safe area/bottom nav
+        paddingBottom: Spacing.xl * 2,
     },
 });

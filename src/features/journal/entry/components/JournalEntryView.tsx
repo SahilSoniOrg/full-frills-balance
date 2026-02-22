@@ -1,10 +1,10 @@
+import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppConfig, Spacing } from '@/src/constants';
-import { AccountSelector } from '@/src/features/journal/components/AccountSelector';
 import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
 import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
 import { JournalModeToggle } from '@/src/features/journal/entry/components/JournalModeToggle';
-import { JournalSubmitFooter } from '@/src/features/journal/entry/components/JournalSubmitFooter';
 import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
@@ -89,7 +89,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                     )}
                 </ScrollView>
 
-                <JournalSubmitFooter
+                <SubmitFooter
                     onPress={isGuidedMode ? vm.simpleEditor.handleSave : vm.editor.submit}
                     disabled={isGuidedMode ? !vm.simpleFormIsValid : !vm.advancedFormIsValid}
                     label={isGuidedMode
@@ -113,7 +113,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                 />
             </KeyboardAvoidingView>
 
-            <AccountSelector
+            <AccountPickerModal
                 visible={vm.showAccountPicker}
                 accounts={vm.accounts}
                 selectedId={vm.selectedAccountId}

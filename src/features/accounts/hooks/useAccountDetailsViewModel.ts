@@ -1,28 +1,20 @@
 import { TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { useAccount, useAccountActions, useAccountBalance, useAccountBalances, useAccountHasChildren, useAccounts, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
-import { useAccountTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
+import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
-import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-
-const ACCOUNT_TYPE_VARIANTS: Record<AccountType, ComponentVariant> = {
-    [AccountType.ASSET]: 'asset',
-    [AccountType.LIABILITY]: 'liability',
-    [AccountType.EQUITY]: 'equity',
-    [AccountType.INCOME]: 'income',
-    [AccountType.EXPENSE]: 'expense',
-};
 
 export interface SubAccountViewModel {
     id: string;
@@ -123,7 +115,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const { accounts } = useAccounts();
     const { hasChildren: isParent } = useAccountHasChildren(accountId);
     const { subAccountCount } = useAccountSubAccountCount(accountId);
-    const { transactions, isLoading: transactionsLoading } = useAccountTransactions(accountId, 50, dateRange || undefined);
+    const { transactions, isLoading: transactionsLoading } = useLedgerTransactionsForAccount(accountId, 50, dateRange || undefined);
     const { balanceData, isLoading: balanceLoading } = useAccountBalance(accountId);
     const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
 
@@ -224,8 +216,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     }, [hideDatePicker, setFilter]);
 
     const accountType = account?.accountType || '';
-    const typeLower = accountType.toLowerCase();
-    const accountTypeColorKey = journalPresenter.getAccountColorKey(accountType);
+    const accountTypeVariant = getAccountTypeVariant(accountType);
+    const accountTypeColorKey = getAccountTypeColorKey(accountType);
 
     const balanceCurrency = balanceData?.currencyCode || account?.currencyCode || defaultCurrency;
 
@@ -255,8 +247,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             const balanceVal = subBalance?.balance ?? 0;
             const currency = subBalance?.currencyCode || child.currencyCode || defaultCurrency;
 
-            const colorKey = journalPresenter.getAccountColorKey(child.accountType);
-            const color = (theme as any)[colorKey] || theme.text;
+            const color = theme[getAccountTypeColorKey(child.accountType)];
 
             const isGroup = accounts.some(a => a.parentAccountId === child.id && a.deletedAt === null);
 
@@ -315,7 +306,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                     },
                     badges: displayAccounts.map(acc => ({
                         text: acc.name,
-                        variant: ACCOUNT_TYPE_VARIANTS[acc.accountType as AccountType],
+                        variant: getAccountTypeVariant(acc.accountType),
                         icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
                     })),
                     notes: transaction.notes,
@@ -329,7 +320,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         accountMissing: !accountLoading && !account,
         accountName: account?.name || '',
         accountType,
-        accountTypeVariant: typeLower,
+        accountTypeVariant,
         accountIcon: account?.icon || null,
         accountTypeColorKey,
         isDeleted,

@@ -1,22 +1,21 @@
 import { AppConfig } from '@/src/constants';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal from '@/src/data/models/Journal';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
+import { ledgerWriteService } from '@/src/services/ledger';
+import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { EnrichedJournal, JournalEntryLine } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
-import { journalPresenter } from '@/src/utils/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
-import { roundToPrecision } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Q } from '@nozbe/watermelondb';
@@ -41,40 +40,12 @@ export interface SubmitJournalResult {
 
 export class JournalService {
 
-    /**
-     * Orchestrates creation of a journal with multiple transactions.
-     * Handles account lookup, validation, persistence, and post-write side effects (Audit, Rebuild).
-     */
-    async createJournal(data: CreateJournalData): Promise<Journal> {
-        const prepared = await this.prepareJournalData(data);
-        const journal = await journalRepository.createJournalWithTransactions({
-            ...data,
-            transactions: prepared.transactions,
-            totalAmount: prepared.totalAmount,
-            displayType: prepared.displayType,
-            calculatedBalances: prepared.calculatedBalances
-        });
-
-        await auditService.log({
-            entityType: 'journal',
-            entityId: journal.id,
-            action: AuditAction.CREATE,
-            changes: { description: data.description }
-        });
-
-        if (prepared.accountsToRebuild.size > 0) {
-            rebuildQueueService.enqueueMany(prepared.accountsToRebuild, data.journalDate);
-        }
-
-        return journal;
-    }
-
     async updateJournal(journalId: string, data: CreateJournalData): Promise<Journal> {
         const originalJournal = await journalRepository.find(journalId);
         if (!originalJournal) throw new Error('Journal not found');
 
         const originalTransactions = await transactionRepository.findByJournal(journalId);
-        const prepared = await this.prepareJournalData(data);
+        const prepared = await prepareJournalData(data);
 
         const journal = await journalRepository.updateJournalWithTransactions(journalId, {
             ...data,
@@ -102,71 +73,6 @@ export class JournalService {
         return journal;
     }
 
-    /**
-     * Internal: Shared logic for validation, rounding, and balance calculation.
-     */
-    private async prepareJournalData(data: CreateJournalData) {
-        // 1. Fetch all unique accounts involved
-        const accountIds = [...new Set(data.transactions.map(t => t.accountId))];
-        const accounts = await accountRepository.findAllByIds(accountIds);
-        const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]));
-
-        // 2. Get precisions
-        const accountPrecisions = new Map<string, number>();
-        await Promise.all(accounts.map(async acc => {
-            const p = await currencyRepository.getPrecision(acc.currencyCode);
-            accountPrecisions.set(acc.id, p);
-        }));
-        const journalPrecision = await currencyRepository.getPrecision(data.currencyCode);
-
-        // 3. Round and Validate
-        const roundedTransactions = data.transactions.map(t => ({
-            ...t,
-            amount: roundToPrecision(t.amount, accountPrecisions.get(t.accountId) ?? 2)
-        }));
-
-        const validation = accountingService.validateJournal(roundedTransactions.map(t => ({
-            amount: t.amount,
-            type: t.transactionType,
-            exchangeRate: t.exchangeRate,
-            accountCurrency: t.currencyCode
-        })), journalPrecision);
-
-        if (!validation.isValid) {
-            throw new Error(`Unbalanced journal: ${validation.imbalance}`);
-        }
-
-        // 4. Calculate balances and determine rebuild needs
-        const accountsToRebuild = new Set<string>(accountIds);
-        const calculatedBalances = new Map<string, number>();
-
-        for (const tx of roundedTransactions) {
-            const latestTx = await transactionRepository.findLatestForAccountBeforeDate(tx.accountId, data.journalDate);
-            if (!accountingService.isBackdated(data.journalDate, latestTx?.transactionDate)) {
-                const balance = accountingService.calculateNewBalance(
-                    latestTx?.runningBalance || 0,
-                    tx.amount,
-                    accountTypes.get(tx.accountId)!,
-                    tx.transactionType,
-                    accountPrecisions.get(tx.accountId) ?? 2
-                );
-                calculatedBalances.set(tx.accountId, balance);
-            }
-        }
-
-        // 5. Enriched persistence data
-        const totalAmount = Math.max(Math.abs(validation.totalDebits), Math.abs(validation.totalCredits));
-        const displayType = journalPresenter.getJournalDisplayType(roundedTransactions, accountTypes);
-
-        return {
-            transactions: roundedTransactions,
-            totalAmount,
-            displayType,
-            calculatedBalances,
-            accountsToRebuild
-        };
-    }
-
     async deleteJournal(journalId: string): Promise<void> {
         const journal = await journalRepository.find(journalId);
         if (!journal) return;
@@ -192,7 +98,7 @@ export class JournalService {
 
         const transactions = await transactionRepository.findByJournal(journalId);
 
-        return this.createJournal({
+        return ledgerWriteService.createJournal({
             journalDate: Date.now(),
             description: journal.description ? `Copy of ${journal.description}` : undefined,
             currencyCode: journal.currencyCode,
@@ -219,7 +125,7 @@ export class JournalService {
             exchangeRate: tx.exchangeRate || 1
         }));
 
-        const reversalJournal = await this.createJournal({
+        const reversalJournal = await ledgerWriteService.createJournal({
             journalDate: Date.now(),
             description: `Reversal of: ${originalJournal.description || originalJournalId} (${reason})`,
             currencyCode: originalJournal.currencyCode,
@@ -315,7 +221,7 @@ export class JournalService {
                 analytics.logTransactionCreated(mode, 'update', currencyCode);
                 return { success: true, action: 'updated' };
             } else {
-                await this.createJournal(journalData);
+                await ledgerWriteService.createJournal(journalData);
                 analytics.logTransactionCreated(mode, 'create', currencyCode);
                 return { success: true, action: 'created' };
             }

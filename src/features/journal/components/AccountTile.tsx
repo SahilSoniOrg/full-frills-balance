@@ -2,7 +2,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
-import { journalPresenter } from '@/src/utils/journalPresenter';
+import { getAccountAccentColor } from '@/src/utils/accountCategory';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -20,8 +20,7 @@ export const AccountTile = ({
     style,
 }: AccountTileProps) => {
     const { theme } = useTheme();
-    const colorKey = journalPresenter.getAccountColorKey(account.accountType);
-    const accountColor = theme[colorKey as keyof typeof theme] || theme.primary;
+    const accountColor = getAccountAccentColor(account.accountType, theme);
 
     return (
         <TouchableOpacity

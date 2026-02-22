@@ -9,6 +9,7 @@ import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { balanceService } from '@/src/services/BalanceService'
+import { ledgerWriteService } from '@/src/services/ledger'
 import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 import { journalService } from '../JournalService'
 import { transactionService } from '../TransactionService'
@@ -48,7 +49,7 @@ describe('JournalRepository', () => {
 
     describe('createJournalWithTransactions', () => {
         it('should create a balanced journal successfully', async () => {
-            const journal = await journalService.createJournal({
+            const journal = await ledgerWriteService.createJournal({
                 description: 'Lunch expense',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -66,7 +67,7 @@ describe('JournalRepository', () => {
 
         it('should reject unbalanced journals', async () => {
             await expect(
-                journalService.createJournal({
+                ledgerWriteService.createJournal({
                     description: 'Unbalanced',
                     journalDate: Date.now(),
                     currencyCode: 'USD',
@@ -80,7 +81,7 @@ describe('JournalRepository', () => {
 
         it('should handle multi-leg journals', async () => {
             // Receive salary and immediately pay some expense
-            const journal = await journalService.createJournal({
+            const journal = await ledgerWriteService.createJournal({
                 description: 'Salary with immediate expense',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -96,7 +97,7 @@ describe('JournalRepository', () => {
         })
 
         it('should update account balances correctly', async () => {
-            await journalService.createJournal({
+            await ledgerWriteService.createJournal({
                 description: 'Deposit',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -119,7 +120,7 @@ describe('JournalRepository', () => {
 
     describe('updateJournalWithTransactions', () => {
         it('should update journal and recalculate balances', async () => {
-            const journal = await journalService.createJournal({
+            const journal = await ledgerWriteService.createJournal({
                 description: 'Original',
                 journalDate: Date.now(),
                 currencyCode: 'USD',
@@ -150,7 +151,7 @@ describe('JournalRepository', () => {
 
     describe('duplicateJournal', () => {
         it('should duplicate a journal and its transactions', async () => {
-            const originalJournal = await journalService.createJournal({
+            const originalJournal = await ledgerWriteService.createJournal({
                 description: 'Original Transaction',
                 journalDate: Date.now() - 86400000, // Yesterday
                 currencyCode: 'USD',
@@ -185,7 +186,7 @@ describe('JournalRepository', () => {
     describe('deleteJournal', () => {
         // TODO: Fix rebuild queue singleton timing issue in test environment
         it('should soft-delete journal and its transactions', async () => {
-            const journal = await journalService.createJournal({
+            const journal = await ledgerWriteService.createJournal({
                 description: 'To be deleted',
                 journalDate: Date.now(),
                 currencyCode: 'USD',

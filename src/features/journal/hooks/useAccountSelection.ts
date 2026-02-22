@@ -1,5 +1,5 @@
 import Account, { AccountType } from '@/src/data/models/Account';
-import { getAccountSections } from '@/src/utils/accountUtils';
+import { getAccountSections, isAssetOrLiability } from '@/src/utils/accountCategory';
 import { useCallback, useMemo, useState } from 'react';
 
 export interface UseAccountSelectionOptions {
@@ -43,7 +43,7 @@ export function useAccountSelection({ accounts, initialSelectedId, onSelect }: U
     }, [leafAccounts]);
 
     const transactionAccounts = useMemo(() => {
-        return leafAccounts.filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY);
+        return leafAccounts.filter(a => isAssetOrLiability(a.accountType));
     }, [leafAccounts]);
 
     const expenseAccounts = useMemo(() => leafAccounts.filter(a => a.accountType === AccountType.EXPENSE), [leafAccounts]);
