@@ -142,6 +142,7 @@ export const nativePlugin: ImportPlugin = {
                 accounts: data.accounts.length,
                 journals: data.journals.length,
                 transactions: data.transactions.length,
+                budgets: 0,
                 auditLogs: data.auditLogs?.length || 0,
                 skippedTransactions: 0
             };

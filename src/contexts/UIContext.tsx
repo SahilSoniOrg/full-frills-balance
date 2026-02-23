@@ -48,7 +48,7 @@ interface UIState {
   // App Lifecycle
   isRestartRequired: boolean
   restartType: 'IMPORT' | 'RESET' | null
-  importStats: { accounts: number; journals: number; transactions: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } | null
+  importStats: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } | null
 }
 
 interface UIContextType extends UIState {
@@ -63,7 +63,7 @@ interface UIContextType extends UIState {
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>
   setAdvancedMode: (advancedMode: boolean) => Promise<void>
-  requireRestart: (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => void
+  requireRestart: (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => void
 }
 
 export const UIContext = createContext<UIContextType | undefined>(undefined)
@@ -220,7 +220,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const requireRestart = (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => {
+  const requireRestart = (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => {
     setUIState(prev => ({ ...prev, isRestartRequired: true, restartType: options.type, importStats: options.stats || null }))
   }
 

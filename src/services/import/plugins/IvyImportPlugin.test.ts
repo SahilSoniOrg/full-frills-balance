@@ -20,6 +20,7 @@ jest.mock('@/src/utils/preferences', () => ({
     preferences: {
         setOnboardingCompleted: jest.fn().mockResolvedValue(true),
         setDefaultCurrencyCode: jest.fn().mockResolvedValue(true),
+        setUserName: jest.fn().mockResolvedValue(true),
     }
 }));
 
@@ -38,6 +39,12 @@ describe('IvyImportPlugin', () => {
         ],
         transactions: [
             { id: 'ivy-t1', accountId: 'ivy-a1', type: 'EXPENSE', amount: 50, categoryId: 'ivy-c1', dateTime: '2023-01-01T10:00:00Z' }
+        ],
+        budgets: [
+            { id: 'ivy-b1', name: 'Food Budget', amount: 500, categoryIdsSerialized: '["ivy-c1"]', isDeleted: false }
+        ],
+        settings: [
+            { id: 'ivy-s1', name: 'Sahil', currency: 'INR', isDeleted: false }
         ]
     };
 
@@ -77,6 +84,16 @@ describe('IvyImportPlugin', () => {
             expect(stats.transactions).toBe(2); // 1 Expense = 2 legs
             expect(stats.skippedTransactions).toBe(0);
             expect(stats.auditLogs).toBe(0);
+
+            expect(lastBatch.budgets).toHaveLength(1);
+            expect(lastBatch.budgets[0].name).toBe('Food Budget');
+            expect(lastBatch.budgets[0].amount).toBe(50000); // 500 * 100
+            expect(lastBatch.budgets[0].currencyCode).toBe('INR'); // From settings
+            expect(lastBatch.budgetScopes).toHaveLength(1); // 1 Category Scope
+
+            const { preferences } = require('@/src/utils/preferences');
+            expect(preferences.setUserName).toHaveBeenCalledWith('Sahil');
+            expect(preferences.setDefaultCurrencyCode).toHaveBeenCalledWith('INR');
         });
 
         it('handles multi-currency transfers correctly', async () => {

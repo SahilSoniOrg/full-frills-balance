@@ -379,6 +379,7 @@ export const AppConfig = {
         accounts: 'Accounts',
         journals: 'Journals',
         transactions: 'Transactions',
+        budgets: 'Budgets',
         auditLogs: 'Audit Logs',
         skippedItems: 'Skipped Items',
       },

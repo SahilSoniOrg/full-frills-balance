@@ -67,6 +67,12 @@ export const RestartRequiredScreen = () => {
                                 <AppText variant="body" weight="medium">{AppConfig.strings.maintenance.stats.transactions}</AppText>
                                 <AppText variant="body" color="success" weight="bold">{importStats.transactions}</AppText>
                             </View>
+                            {typeof importStats.budgets === 'number' && importStats.budgets > 0 && (
+                                <View style={styles.statRow}>
+                                    <AppText variant="body" weight="medium">{AppConfig.strings.maintenance.stats.budgets}</AppText>
+                                    <AppText variant="body" color="success" weight="bold">{importStats.budgets}</AppText>
+                                </View>
+                            )}
                             {typeof importStats.auditLogs === 'number' && importStats.auditLogs > 0 && (
                                 <View style={styles.statRow}>
                                     <AppText variant="body" weight="medium">{AppConfig.strings.maintenance.stats.auditLogs}</AppText>

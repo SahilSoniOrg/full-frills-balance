@@ -11,6 +11,7 @@ export interface ImportStats {
     accounts: number;
     journals: number;
     transactions: number;
+    budgets?: number;
     auditLogs?: number;
     skippedTransactions: number;
     skippedItems?: { id: string; reason: string; description?: string }[];

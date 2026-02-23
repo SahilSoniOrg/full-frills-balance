@@ -26,6 +26,23 @@ interface IvyAccount {
     archived?: boolean;
 }
 
+interface IvyBudget {
+    id: string;
+    name: string;
+    amount: number;
+    categoryIdsSerialized?: string;
+    accountIdsSerialized?: string;
+    isDeleted?: boolean;
+    orderId?: number;
+}
+
+interface IvySettings {
+    id: string;
+    name: string;
+    currency: string;
+    isDeleted?: boolean;
+}
+
 interface IvyCategory {
     id: string;
     name: string;
@@ -52,6 +69,8 @@ interface IvyData {
     accounts: IvyAccount[];
     categories: IvyCategory[];
     transactions: IvyTransaction[];
+    budgets?: IvyBudget[];
+    settings?: IvySettings[];
 }
 
 export const ivyPlugin: ImportPlugin = {
@@ -82,9 +101,18 @@ export const ivyPlugin: ImportPlugin = {
         }
 
         logger.info('[IvyPlugin] Starting Import from Ivy Wallet JSON...');
-        logger.info(`[IvyPlugin] Found ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions`);
+        logger.info(`[IvyPlugin] Found ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions, ${data.budgets?.length || 0} budgets`);
 
-        // 1. Wipe existing data for clean import
+        // 1. Extract base currency and name from settings
+        const ivySettings = data.settings?.find(s => !s.isDeleted) || data.settings?.[0];
+        const ivyBaseCurrency = ivySettings?.currency || 'USD';
+        const ivyUserName = ivySettings?.name || '';
+
+        if (ivySettings) {
+            logger.info(`[IvyPlugin] Identified base currency: ${ivyBaseCurrency} and user: ${ivyUserName}`);
+        }
+
+        // 2. Wipe existing data for clean import
         logger.warn('[IvyPlugin] Wiping database before import...');
         onProgress?.('Wiping database...', 0.05);
         await integrityService.resetDatabase();
@@ -359,13 +387,81 @@ export const ivyPlugin: ImportPlugin = {
             transactionImports.push(txRecord);
         }
 
-        // 6. Write to DB
+        // 6. Map Budgets
+        onProgress?.('Mapping budgets...', 0.70);
+        const budgetImports: any[] = [];
+        const budgetScopeImports: any[] = [];
+
+        if (data.budgets) {
+            data.budgets.forEach(ivyBudget => {
+                if (ivyBudget.isDeleted) return;
+
+                const budgetId = ivyBudget.id;
+                // Ivy amount is likely already in major units if it's a Double in Kotlin
+                // But let's be careful. Our Budget model expects "amount: number"
+                // IvyEntity says "amount: Double"
+                const amount = Math.floor(ivyBudget.amount * 100); // Convert to minor units if needed
+
+                budgetImports.push({
+                    id: budgetId,
+                    name: ivyBudget.name,
+                    amount: amount,
+                    currencyCode: ivyBaseCurrency, // Use currency identified from settings
+                    startMonth: new Date().toISOString().substring(0, 7), // Default to current month
+                    active: true,
+                });
+
+                // Map category scopes
+                if (ivyBudget.categoryIdsSerialized) {
+                    try {
+                        const catIds: string[] = JSON.parse(ivyBudget.categoryIdsSerialized);
+                        catIds.forEach(catId => {
+                            // Find all category-currency accounts for this category
+                            for (const [key, balanceId] of categoryAccountMap.entries()) {
+                                if (key.startsWith(`${catId}:::`)) {
+                                    budgetScopeImports.push({
+                                        id: generateId(),
+                                        budgetId,
+                                        accountId: balanceId
+                                    });
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        logger.error(`[IvyPlugin] Failed to parse categoryIdsSerialized for budget ${budgetId}`, e);
+                    }
+                }
+
+                // Map account scopes
+                if (ivyBudget.accountIdsSerialized) {
+                    try {
+                        const accIds: string[] = JSON.parse(ivyBudget.accountIdsSerialized);
+                        accIds.forEach(accId => {
+                            const balanceId = accountMap.get(accId);
+                            if (balanceId) {
+                                budgetScopeImports.push({
+                                    id: generateId(),
+                                    budgetId,
+                                    accountId: balanceId
+                                });
+                            }
+                        });
+                    } catch (e) {
+                        logger.error(`[IvyPlugin] Failed to parse accountIdsSerialized for budget ${budgetId}`, e);
+                    }
+                }
+            });
+        }
+
+        // 7. Write to DB
         onProgress?.('Saving to database...', 0.75);
         logger.info('[IvyPlugin] Writing mapped data to database...');
         await importRepository.batchInsert({
             accounts: accountImports,
             journals: journalImports,
-            transactions: transactionImports
+            transactions: transactionImports,
+            budgets: budgetImports,
+            budgetScopes: budgetScopeImports
         });
 
         // 7. Run integrity check to repair account balances
@@ -377,13 +473,21 @@ export const ivyPlugin: ImportPlugin = {
             repairsSuccessful: integrityResult.repairsSuccessful
         });
 
-        // 8. Restore Preferences
+        // 9. Restore Preferences
         onProgress?.('Finalizing...', 0.95);
         await preferences.setOnboardingCompleted(true);
 
-        const firstCurrency = accountCurrencyMap.values().next().value;
-        if (firstCurrency) {
-            await preferences.setDefaultCurrencyCode(firstCurrency);
+        if (ivyUserName) {
+            await preferences.setUserName(ivyUserName);
+        }
+
+        if (ivyBaseCurrency) {
+            await preferences.setDefaultCurrencyCode(ivyBaseCurrency);
+        } else {
+            const firstCurrency = accountCurrencyMap.values().next().value;
+            if (firstCurrency) {
+                await preferences.setDefaultCurrencyCode(firstCurrency);
+            }
         }
 
         logger.info('[IvyPlugin] Import successful.');
@@ -396,6 +500,7 @@ export const ivyPlugin: ImportPlugin = {
             accounts: accountImports.length,
             journals: journalImports.length,
             transactions: transactionImports.length,
+            budgets: budgetImports.length,
             auditLogs: 0,
             skippedTransactions: skippedItems.length,
             skippedItems

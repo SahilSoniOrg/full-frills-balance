@@ -1,6 +1,8 @@
 import { database } from '@/src/data/database/Database'
 import Account from '@/src/data/models/Account'
 import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog'
+import Budget from '@/src/data/models/Budget'
+import BudgetScope from '@/src/data/models/BudgetScope'
 import Journal from '@/src/data/models/Journal'
 import Transaction from '@/src/data/models/Transaction'
 import { Q } from '@nozbe/watermelondb'
@@ -60,6 +62,25 @@ export interface ImportedAuditLog {
   createdAt?: number
 }
 
+export interface ImportedBudget {
+  id: string
+  name: string
+  amount: number
+  currencyCode: string
+  startMonth: string
+  active: boolean
+  createdAt?: number
+  updatedAt?: number
+}
+
+export interface ImportedBudgetScope {
+  id: string
+  budgetId: string
+  accountId: string
+  createdAt?: number
+  updatedAt?: number
+}
+
 export interface ChangeSet<T> {
   created?: T[]
   updated?: T[]
@@ -70,6 +91,8 @@ export interface BatchImportData {
   accounts: ImportedAccount[]
   journals: ImportedJournal[]
   transactions: ImportedTransaction[]
+  budgets?: ImportedBudget[]
+  budgetScopes?: ImportedBudgetScope[]
   auditLogs?: ImportedAuditLog[]
 }
 
@@ -148,11 +171,38 @@ export class ImportRepository {
         })
       )
 
+      const budgetPrepares = (data.budgets || []).map((b) =>
+        database.collections.get<Budget>('budgets').prepareCreate(record => {
+          record._raw.id = b.id
+          record.name = b.name
+          record.amount = b.amount
+          record.currencyCode = b.currencyCode
+          record.startMonth = b.startMonth
+          record.active = b.active
+          record._raw._status = 'synced'
+          if (b.createdAt) (record as any)._raw.created_at = b.createdAt
+          if (b.updatedAt) (record as any)._raw.updated_at = b.updatedAt
+        })
+      )
+
+      const budgetScopePrepares = (data.budgetScopes || []).map((bs) =>
+        database.collections.get<BudgetScope>('budget_scopes').prepareCreate(record => {
+          record._raw.id = bs.id
+            ; (record as any)._raw.budget_id = bs.budgetId
+            ; (record as any)._raw.account_id = bs.accountId
+          record._raw._status = 'synced'
+          if (bs.createdAt) (record as any)._raw.created_at = bs.createdAt
+          if (bs.updatedAt) (record as any)._raw.updated_at = bs.updatedAt
+        })
+      )
+
       const operations = [
         ...accountPrepares,
         ...journalPrepares,
         ...transactionPrepares,
-        ...auditLogPrepares
+        ...auditLogPrepares,
+        ...budgetPrepares,
+        ...budgetScopePrepares
       ]
 
       if (operations.length > 0) {
