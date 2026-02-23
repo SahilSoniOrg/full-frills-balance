@@ -1,10 +1,13 @@
-import { TransactionBadge, TransactionCardProps } from '@/src/components/common/TransactionCard';
+import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
+import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
+import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -19,21 +22,8 @@ export interface JournalListEmptyState {
     subtitle: string;
 }
 
-export interface JournalListItemViewModel {
-    id: string;
-    type: 'transaction' | 'separator';
-    date: number; // For separators or sorting
-    cardProps?: TransactionCardProps;
-    onPress?: () => void;
-    isCollapsed?: boolean;
-    onToggle?: () => void;
-    count?: number; // Added for separators
-    netAmount?: number; // Added for separators (normalized to base currency)
-    currencyCode?: string; // Added for separators
-}
-
 export interface JournalListViewModel {
-    items: JournalListItemViewModel[];
+    items: TransactionListItem[];
     isLoading: boolean;
     isLoadingMore: boolean;
     onEndReached?: () => void;
@@ -73,20 +63,7 @@ export function useJournalListViewModel({
     baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
 }: UseJournalListViewModelParams): JournalListViewModel {
     const [searchQuery, setSearchQuery] = useState('');
-    const [collapsedDays, setCollapsedDays] = useState<Set<number>>(new Set());
     const missingCurrenciesCache = useRef(new Set<string>());
-
-    const toggleDay = useCallback((timestamp: number) => {
-        setCollapsedDays(prev => {
-            const next = new Set(prev);
-            if (next.has(timestamp)) {
-                next.delete(timestamp);
-            } else {
-                next.add(timestamp);
-            }
-            return next;
-        });
-    }, []);
 
     const {
         dateRange,
@@ -114,39 +91,17 @@ export function useJournalListViewModel({
         hideDatePicker();
     }, [hideDatePicker, setFilter]);
 
-    const items = useMemo(() => {
-        const result: JournalListItemViewModel[] = [];
+    const { precision } = useCurrencyPrecision(baseCurrency);
 
-        // Group journals by date first to calculate stats
-        const dayGroups: Record<number, EnrichedJournal[]> = {};
-        const days: number[] = [];
-
-        journals.forEach((journal: EnrichedJournal) => {
-            const startOfDay = new Date(journal.journalDate).setHours(0, 0, 0, 0);
-            if (!dayGroups[startOfDay]) {
-                dayGroups[startOfDay] = [];
-                days.push(startOfDay);
-            }
-            dayGroups[startOfDay].push(journal);
-        });
-
-        days.forEach(startOfDay => {
-            const journalsForDay = dayGroups[startOfDay];
-            const isCollapsed = collapsedDays.has(startOfDay);
-
-            // Calculate daily stats
-            const count = journalsForDay.length;
+    const transactionGroupingOptions = useMemo(() => ({
+        items: journals,
+        getDate: (j: EnrichedJournal) => j.journalDate,
+        sortByDate: 'desc' as const,
+        getStats: (journalsForDay: EnrichedJournal[]) => {
             let netAmount = 0;
-
-            // We normalize EVERYTHING to the base currency
-            // amount_in_base = amount_in_other / rate
-            const precision = AppConfig.defaultCurrencyPrecision; // Usually 2 for default currency
 
             journalsForDay.forEach(j => {
                 let amount = 0;
-
-                // Normalize to base currency
-                // If same currency, no conversion needed
                 if (j.currencyCode === baseCurrency) {
                     amount = j.totalAmount;
                 } else {
@@ -154,12 +109,10 @@ export function useJournalListViewModel({
                     if (rate && rate > 0) {
                         amount = j.totalAmount / rate;
                     } else {
-                        // Critical: Missing rate means we cannot accurately sum this into netAmount
                         logger.warn(AppConfig.strings.journal.errors.missingExchangeRate(j.currencyCode, baseCurrency));
                     }
                 }
 
-                // Net worth change: Income (+), Expense (-)
                 if (amount !== 0) {
                     if (j.displayType === JournalDisplayType.INCOME) {
                         netAmount = safeAdd(netAmount, amount, precision);
@@ -169,84 +122,74 @@ export function useJournalListViewModel({
                 }
             });
 
-            result.push({
-                id: `sep-${startOfDay}`,
-                type: 'separator',
-                date: startOfDay,
-                isCollapsed,
-                onToggle: () => toggleDay(startOfDay),
-                count,
+            return {
+                count: journalsForDay.length,
                 netAmount,
                 currencyCode: baseCurrency,
+            };
+        },
+        renderItem: (journal: EnrichedJournal) => {
+            const displayType = journal.displayType as JournalDisplayType;
+            const presentation = journalPresenter.getPresentation(displayType, journal.semanticLabel);
+
+            let typeIcon: IconName = 'document';
+            let amountPrefix = '';
+            if (displayType === JournalDisplayType.INCOME) {
+                typeIcon = 'arrowUp';
+                amountPrefix = '+ ';
+            } else if (displayType === JournalDisplayType.EXPENSE) {
+                typeIcon = 'arrowDown';
+                amountPrefix = '− ';
+            } else if (displayType === JournalDisplayType.TRANSFER) {
+                typeIcon = 'swapHorizontal';
+            }
+
+            const badges: TransactionBadge[] = journal.accounts.slice(0, 2).map(acc => {
+                const isSource = acc.role === 'SOURCE';
+                const isDest = acc.role === 'DESTINATION';
+                const showPrefix = isSource ? AppConfig.strings.journal.from : (isDest ? AppConfig.strings.journal.to : '');
+
+                return {
+                    text: `${showPrefix}${acc.name}`,
+                    variant: getAccountTypeVariant(acc.accountType),
+                    icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
+                };
             });
 
-            if (isCollapsed) return;
-
-            journalsForDay.forEach((journal: EnrichedJournal) => {
-                const displayType = journal.displayType as JournalDisplayType;
-                const presentation = journalPresenter.getPresentation(displayType, journal.semanticLabel);
-
-                let typeIcon: IconName = 'document';
-                let amountPrefix = '';
-                if (displayType === JournalDisplayType.INCOME) {
-                    typeIcon = 'arrowUp';
-                    amountPrefix = '+ ';
-                } else if (displayType === JournalDisplayType.EXPENSE) {
-                    typeIcon = 'arrowDown';
-                    amountPrefix = '− ';
-                } else if (displayType === JournalDisplayType.TRANSFER) {
-                    typeIcon = 'swapHorizontal';
-                }
-
-                // Resolve badges from accounts
-                const badges: TransactionBadge[] = journal.accounts.slice(0, 2).map(acc => {
-                    const isSource = acc.role === 'SOURCE';
-                    const isDest = acc.role === 'DESTINATION';
-                    const showPrefix = isSource ? AppConfig.strings.journal.from : (isDest ? AppConfig.strings.journal.to : '');
-
-                    return {
-                        text: `${showPrefix}${acc.name}`,
-                        variant: getAccountTypeVariant(acc.accountType),
-                        icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
-                    };
+            if (journal.accounts.length > 2) {
+                badges.push({
+                    text: AppConfig.strings.journal.more(journal.accounts.length - 2),
+                    variant: 'default',
                 });
+            }
 
-                if (journal.accounts.length > 2) {
-                    badges.push({
-                        text: AppConfig.strings.journal.more(journal.accounts.length - 2),
-                        variant: 'default',
-                    });
+            const defaultTitle = displayType === JournalDisplayType.TRANSFER
+                ? AppConfig.strings.journal.transfer
+                : AppConfig.strings.journal.transaction;
+
+            return {
+                id: journal.id,
+                type: 'transaction' as const,
+                date: journal.journalDate,
+                onPress: () => handleJournalPress(journal.id),
+                cardProps: {
+                    title: journal.description || defaultTitle,
+                    amount: journal.totalAmount,
+                    currencyCode: journal.currencyCode,
+                    transactionDate: journal.journalDate,
+                    presentation: {
+                        label: presentation.label,
+                        typeColor: presentation.colorKey,
+                        typeIcon,
+                        amountPrefix,
+                    },
+                    badges,
                 }
+            };
+        }
+    }), [journals, baseCurrency, exchangeRateMap, handleJournalPress, precision]);
 
-                const defaultTitle = displayType === JournalDisplayType.TRANSFER
-                    ? AppConfig.strings.journal.transfer
-                    : AppConfig.strings.journal.transaction;
-
-                result.push({
-                    id: journal.id,
-                    type: 'transaction',
-                    date: journal.journalDate,
-                    onPress: () => handleJournalPress(journal.id),
-                    cardProps: {
-                        title: journal.description || defaultTitle,
-                        amount: journal.totalAmount,
-                        currencyCode: journal.currencyCode,
-                        transactionDate: journal.journalDate,
-                        presentation: {
-                            label: presentation.label,
-                            typeColor: presentation.colorKey,
-                            typeIcon,
-                            amountPrefix,
-                        },
-                        badges,
-                        notes: undefined, // EnrichedJournal doesn't have notes yet
-                    }
-                });
-            });
-        });
-
-        return result;
-    }, [journals, handleJournalPress, collapsedDays, toggleDay, exchangeRateMap, baseCurrency]);
+    const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
 
     useEffect(() => {
         const toFetch = new Set<string>();
@@ -294,3 +237,4 @@ export function useJournalListViewModel({
         loadingMoreText,
     };
 }
+

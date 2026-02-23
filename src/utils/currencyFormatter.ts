@@ -23,7 +23,7 @@ export const CurrencyFormatter = {
         currencyCode: string,
         options: CurrencyFormatOptions = {}
     ): string {
-        const defaultPrecision = CURRENCY_PRECISIONS[currencyCode] ?? 2;
+        const defaultPrecision = this.getPrecisionFallback(currencyCode);
         const {
             includeSymbol = true,
             minimumFractionDigits = defaultPrecision,
@@ -133,6 +133,16 @@ export const CurrencyFormatter = {
             }
         }
 
+
         return this.format(amount, code, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    },
+
+    /**
+     * Gets the fallback precision (decimal places) for a currency code.
+     * Uses CURRENCY_PRECISIONS mapping and falls back to 2.
+     */
+    getPrecisionFallback(currencyCode: string | undefined): number {
+        if (!currencyCode) return 2;
+        return CURRENCY_PRECISIONS[currencyCode.toUpperCase()] ?? 2;
     }
 };

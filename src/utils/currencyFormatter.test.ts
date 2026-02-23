@@ -117,4 +117,25 @@ describe('CurrencyFormatter', () => {
             expect(CurrencyFormatter.formatShort(500, 'USD')).toMatch(/\$500/);
         });
     });
+
+    describe('getPrecisionFallback', () => {
+        it('should return 2 for undefined or unknown code', () => {
+            expect(CurrencyFormatter.getPrecisionFallback(undefined)).toBe(2);
+            expect(CurrencyFormatter.getPrecisionFallback('UNKNOWN')).toBe(2);
+        });
+
+        it('should return 0 for JPY and KRW', () => {
+            expect(CurrencyFormatter.getPrecisionFallback('JPY')).toBe(0);
+            expect(CurrencyFormatter.getPrecisionFallback('KRW')).toBe(0);
+            expect(CurrencyFormatter.getPrecisionFallback('jpy')).toBe(0);
+        });
+
+        it('should return 3 for KWD, BHD, OMR, JOD, TND', () => {
+            expect(CurrencyFormatter.getPrecisionFallback('KWD')).toBe(3);
+            expect(CurrencyFormatter.getPrecisionFallback('BHD')).toBe(3);
+            expect(CurrencyFormatter.getPrecisionFallback('OMR')).toBe(3);
+            expect(CurrencyFormatter.getPrecisionFallback('JOD')).toBe(3);
+            expect(CurrencyFormatter.getPrecisionFallback('TND')).toBe(3);
+        });
+    });
 });

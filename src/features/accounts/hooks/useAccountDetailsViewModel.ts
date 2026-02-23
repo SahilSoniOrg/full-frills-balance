@@ -1,18 +1,21 @@
-import { TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
 import Account from '@/src/data/models/Account';
 import { useAccount, useAccountActions, useAccountBalance, useAccountBalances, useAccountHasChildren, useAccounts, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
+import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
+import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
+import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
+import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
+import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -24,12 +27,6 @@ export interface SubAccountViewModel {
     color: string;
     level: number;
     isGroup: boolean;
-}
-
-export interface TransactionCardItemViewModel {
-    id: string;
-    cardProps: TransactionCardProps;
-    onPress: () => void;
 }
 
 export interface AccountDetailsViewModel {
@@ -63,7 +60,9 @@ export interface AccountDetailsViewModel {
     navigateNext?: () => void;
     onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
     transactionsLoading: boolean;
-    transactionItems: TransactionCardItemViewModel[];
+    transactionsLoadingMore: boolean;
+    transactionItems: TransactionListItem[];
+    onLoadMore?: () => void;
     secondaryBalances: { currencyCode: string; amountText: string }[];
     isParent: boolean;
     subAccountCount: number;
@@ -115,7 +114,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const { accounts } = useAccounts();
     const { hasChildren: isParent } = useAccountHasChildren(accountId);
     const { subAccountCount } = useAccountSubAccountCount(accountId);
-    const { transactions, isLoading: transactionsLoading } = useLedgerTransactionsForAccount(accountId, 50, dateRange || undefined);
+    const { transactions, isLoading: transactionsLoading, isLoadingMore: transactionsLoadingMore, hasMore, loadMore } = useLedgerTransactionsForAccount(accountId, 50, dateRange || undefined);
     const { balanceData, isLoading: balanceLoading } = useAccountBalance(accountId);
     const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
 
@@ -266,8 +265,28 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const onShowSubAccounts = useCallback(() => setIsSubAccountsModalVisible(true), []);
     const onHideSubAccounts = useCallback(() => setIsSubAccountsModalVisible(false), []);
 
-    const transactionItems = useMemo(() => {
-        return transactions.map((transaction: EnrichedTransaction) => {
+    const { precision } = useCurrencyPrecision(balanceCurrency);
+
+    const transactionGroupingOptions = useMemo(() => ({
+        items: transactions,
+        getDate: (t: EnrichedTransaction) => t.transactionDate,
+        sortByDate: 'desc' as const,
+        getStats: (txnsForDay: EnrichedTransaction[]) => {
+            let netAmount = 0;
+            txnsForDay.forEach(t => {
+                if (t.isIncrease) {
+                    netAmount = safeAdd(netAmount, t.amount, precision);
+                } else {
+                    netAmount = safeSubtract(netAmount, t.amount, precision);
+                }
+            });
+            return {
+                count: txnsForDay.length,
+                netAmount,
+                currencyCode: balanceCurrency,
+            };
+        },
+        renderItem: (transaction: EnrichedTransaction) => {
             const displayAccounts = [] as any[];
 
             if (transaction.counterAccountType) {
@@ -292,6 +311,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
             return {
                 id: transaction.id,
+                type: 'transaction' as const,
+                date: transaction.transactionDate,
                 onPress: () => onTransactionPress(transaction),
                 cardProps: {
                     title: transaction.journalDescription || transaction.displayTitle || 'Transaction',
@@ -312,8 +333,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                     notes: transaction.notes,
                 }
             };
-        });
-    }, [onTransactionPress, transactions]);
+        }
+    }), [transactions, balanceCurrency, onTransactionPress, precision]);
+
+    const { groupedItems: transactionItems } = useTransactionGrouping(transactionGroupingOptions);
 
     return {
         accountLoading,
@@ -345,7 +368,9 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         navigateNext,
         onDateSelect,
         transactionsLoading,
+        transactionsLoadingMore,
         transactionItems,
+        onLoadMore: hasMore ? loadMore : undefined,
         secondaryBalances,
         isParent: !!isParent,
         subAccountCount: subAccountCount || 0,

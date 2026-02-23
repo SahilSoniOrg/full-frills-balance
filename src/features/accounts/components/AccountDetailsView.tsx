@@ -1,6 +1,6 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { TransactionCard } from '@/src/components/common/TransactionCard';
+import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
@@ -8,7 +8,7 @@ import { SubAccountListModal } from '@/src/features/accounts/components/SubAccou
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 export function AccountDetailsView(vm: AccountDetailsViewModel) {
     const { theme } = useTheme();
@@ -37,7 +37,9 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         navigateNext,
         onDateSelect,
         transactionsLoading,
+        transactionsLoadingMore,
         transactionItems,
+        onLoadMore,
         secondaryBalances,
         isParent,
         subAccountCount,
@@ -114,15 +116,13 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
             title={isParent ? 'Group Account' : 'Account Details'}
             headerActions={headerActionsNode}
         >
-            <FlatList
-                data={transactionItems}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                    <TransactionCard
-                        {...item.cardProps}
-                        onPress={item.onPress}
-                    />
-                )}
+            <TransactionListView
+                items={transactionItems}
+                isLoading={transactionsLoading}
+                isLoadingMore={transactionsLoadingMore}
+                onEndReached={onLoadMore}
+                emptyTitle="No transactions yet"
+                emptySubtitle="Transactions for this account will appear here."
                 ListHeaderComponent={
                     <View style={styles.headerListRegion}>
                         <AppCard elevation="sm" style={styles.accountInfoCard}>
@@ -202,21 +202,8 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                         </View>
                     </View>
                 }
-                ListEmptyComponent={
-                    transactionsLoading ? (
-                        <View style={{ padding: Spacing.lg }}>
-                            <ActivityIndicator size="small" color={theme.primary} />
-                        </View>
-                    ) : (
-                        <AppCard elevation="sm" padding="lg">
-                            <AppText variant="body" color="secondary" style={styles.emptyText}>
-                                No transactions yet
-                            </AppText>
-                        </AppCard>
-                    )
-                }
                 contentContainerStyle={styles.listContainer}
-                showsVerticalScrollIndicator={false}
+                estimatedItemSize={120}
             />
 
             {showFab && (
@@ -297,11 +284,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: Spacing.sm,
     },
-    emptyText: {
-        textAlign: 'center',
-    },
     listContainer: {
         paddingHorizontal: Spacing.lg,
         paddingBottom: Spacing.xxxxl * 2.5,
     },
 });
+

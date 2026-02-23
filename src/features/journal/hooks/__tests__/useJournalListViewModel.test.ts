@@ -113,17 +113,17 @@ describe('useJournalListViewModel', () => {
 
         const items = result.current.items;
 
-        // Items order in ViewModel follows 'days' order, which follows journals loop
-        // journals are j1(20), j2(20), j3(21)
-        // so days will be [20, 21]
+        // Standardized behavior: Decending date sort
+        // Day 21 comes first
         expect(items[0].type).toBe('separator');
-        expect(items[0].date).toBe(new Date(2024, 2, 20).getTime());
-        expect(items[1].id).toBe('j1');
-        expect(items[2].id).toBe('j2');
+        expect(items[0].date).toBe(new Date(2024, 2, 21).getTime());
+        expect(items[1].id).toBe('j3');
 
-        expect(items[3].type).toBe('separator');
-        expect(items[3].date).toBe(new Date(2024, 2, 21).getTime());
-        expect(items[4].id).toBe('j3');
+        // Day 20 comes second
+        expect(items[2].type).toBe('separator');
+        expect(items[2].date).toBe(new Date(2024, 2, 20).getTime());
+        expect(items[3].id).toBe('j1');
+        expect(items[4].id).toBe('j2');
     });
 
     it('should calculate daily stats correctly for same currency', () => {
@@ -171,15 +171,16 @@ describe('useJournalListViewModel', () => {
             emptyState: { title: 'Empty', subtitle: 'None' }
         }));
 
-        // Toggle day (j1, j2 are on day 20, which is first separator index 0)
+        // Toggle day 21 (first separator index 0)
         act(() => {
             result.current.items[0].onToggle?.();
         });
 
         const itemsAfter = result.current.items;
-        // j1 and j2 should be gone
-        expect(itemsAfter.find(i => i.id === 'j1')).toBeUndefined();
-        expect(itemsAfter.find(i => i.id === 'j2')).toBeUndefined();
-        expect(itemsAfter.length).toBe(3); // 2 seps + j3
+        // j3 should be gone
+        expect(itemsAfter.find(i => i.id === 'j3')).toBeUndefined();
+        expect(itemsAfter.find(i => i.id === 'j1')).toBeDefined();
+        expect(itemsAfter.find(i => i.id === 'j2')).toBeDefined();
+        expect(itemsAfter.length).toBe(4); // 2 seps + j1 + j2
     });
 });

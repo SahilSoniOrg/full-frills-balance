@@ -1,17 +1,15 @@
 import { LineChart } from '@/src/components/charts/LineChart'
-import { TransactionCard } from '@/src/components/common/TransactionCard'
-import { TypedFlashList } from '@/src/components/common/TypedFlashList'
-import { AppButton, AppCard, AppIcon, AppText, EmptyStateView, IvyIcon, LoadingView } from '@/src/components/core'
+import { TransactionListView } from '@/src/components/common/TransactionListView'
+import { AppButton, AppCard, AppIcon, AppText, IvyIcon, LoadingView } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
 import { Shape, Size, Spacing } from '@/src/constants'
-import { DaySeparator } from '@/src/features/journal/components/DaySeparator'
 import { useTheme } from '@/src/hooks/use-theme'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { AppNavigation } from '@/src/utils/navigation'
 import dayjs from 'dayjs'
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
-import { BudgetDetailListItemViewModel, useBudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel'
+import { useBudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel'
 
 export function BudgetDetailScreen() {
     const vm = useBudgetDetailViewModel()
@@ -119,13 +117,6 @@ export function BudgetDetailScreen() {
         </View>
     )
 
-    const listEmpty = (
-        <EmptyStateView
-            title="No activity"
-            subtitle="No transactions found for this budget in the selected month."
-        />
-    )
-
     return (
         <Screen
             showBack
@@ -143,31 +134,15 @@ export function BudgetDetailScreen() {
         >
 
             <View style={styles.container}>
-                <TypedFlashList
-                    data={vm.items}
-                    renderItem={({ item }: { item: BudgetDetailListItemViewModel }) => (
-                        item.type === 'separator' ? (
-                            <DaySeparator
-                                date={item.date}
-                                isCollapsed={item.isCollapsed!}
-                                onToggle={item.onToggle!}
-                                count={item.count!}
-                                netAmount={item.netAmount!}
-                                currencyCode={item.currencyCode!}
-                            />
-                        ) : (
-                            <TransactionCard
-                                {...item.cardProps!}
-                                onPress={item.onPress!}
-                            />
-                        )
-                    )}
-                    keyExtractor={(item: BudgetDetailListItemViewModel) => item.id}
-                    getItemType={(item: BudgetDetailListItemViewModel) => item.type}
-                    estimatedItemSize={100}
-                    contentContainerStyle={styles.listContent}
+                <TransactionListView
+                    items={vm.items}
+                    isLoading={vm.isLoading}
+                    isLoadingMore={false}
+                    emptyTitle="No activity"
+                    emptySubtitle="No transactions found for this budget in the selected month."
                     ListHeaderComponent={listHeader}
-                    ListEmptyComponent={listEmpty}
+                    contentContainerStyle={styles.listContent}
+                    estimatedItemSize={100}
                 />
             </View>
         </Screen>
@@ -196,7 +171,7 @@ const styles = StyleSheet.create({
     },
     chartContainer: {
         marginTop: Spacing.xl,
-        marginLeft: -Spacing.lg, // offset padding entirely from the card to give chart full width
+        marginLeft: -Spacing.lg,
         marginRight: -Spacing.lg,
     },
     cardHeader: {
@@ -240,4 +215,5 @@ const styles = StyleSheet.create({
         paddingTop: Spacing.md,
         paddingBottom: Spacing.xxl,
     },
-})
+});
+

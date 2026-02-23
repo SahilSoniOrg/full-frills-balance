@@ -1,9 +1,11 @@
-import { TransactionBadge, TransactionCardProps } from '@/src/components/common/TransactionCard'
+import { TransactionBadge } from '@/src/components/common/TransactionCard'
 import { IconName } from '@/src/components/core'
 import { AppConfig } from '@/src/constants'
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository'
+import { useCurrencyPrecision } from '@/src/hooks/use-currencies'
 import { useExchangeRates } from '@/src/hooks/useExchangeRates'
 import { useObservable } from '@/src/hooks/useObservable'
+import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping'
 import { budgetReadService } from '@/src/services/budget/budgetReadService'
 import { exchangeRateService } from '@/src/services/exchange-rate-service'
 import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain'
@@ -18,41 +20,16 @@ import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { combineLatest, of, switchMap } from 'rxjs'
 
-export interface BudgetDetailListItemViewModel {
-    id: string
-    type: 'transaction' | 'separator'
-    date: number
-    cardProps?: TransactionCardProps
-    onPress?: () => void
-    isCollapsed?: boolean
-    onToggle?: () => void
-    count?: number
-    netAmount?: number
-    currencyCode?: string
-}
-
 export function useBudgetDetailViewModel() {
     const params = useLocalSearchParams()
     const budgetId = params.id as string
 
     const [targetMonth, setTargetMonth] = useState(() => dayjs().format('YYYY-MM'))
-    const [collapsedDays, setCollapsedDays] = useState<Set<number>>(new Set())
     const missingCurrenciesCache = useRef(new Set<string>())
     const baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency
 
     const { rateMap: ratesMap = {} } = useExchangeRates(baseCurrency)
-
-    const toggleDay = useCallback((timestamp: number) => {
-        setCollapsedDays(prev => {
-            const next = new Set(prev)
-            if (next.has(timestamp)) {
-                next.delete(timestamp)
-            } else {
-                next.add(timestamp)
-            }
-            return next
-        })
-    }, [])
+    const { precision } = useCurrencyPrecision(baseCurrency)
 
     const handleJournalPress = useCallback((journalId: string) => {
         AppNavigation.toTransactionDetails(journalId)
@@ -77,50 +54,25 @@ export function useBudgetDetailViewModel() {
     const usage = budgetData ? budgetData[1] : null
     const transactions = budgetData ? budgetData[2] : []
 
-    const items = useMemo(() => {
-        if (!transactions.length) return []
-
-        const result: BudgetDetailListItemViewModel[] = []
-        const dayGroups: Record<number, EnrichedTransaction[]> = {}
-        const days: number[] = []
-
-        transactions.forEach((tx: EnrichedTransaction) => {
-            const startOfDay = new Date(tx.transactionDate).setHours(0, 0, 0, 0)
-            if (!dayGroups[startOfDay]) {
-                dayGroups[startOfDay] = []
-                days.push(startOfDay)
-            }
-            dayGroups[startOfDay].push(tx)
-        })
-
-        // Sort days descending
-        days.sort((a, b) => b - a)
-
-        days.forEach(startOfDay => {
-            const txsForDay = dayGroups[startOfDay]
-            const isCollapsed = collapsedDays.has(startOfDay)
-
-            const count = txsForDay.length
+    const transactionGroupingOptions = useMemo(() => ({
+        items: transactions,
+        getDate: (t: EnrichedTransaction) => t.transactionDate,
+        sortByDate: 'desc' as const,
+        getStats: (txsForDay: EnrichedTransaction[]) => {
             let netAmount = 0
-            const precision = AppConfig.defaultCurrencyPrecision
 
             txsForDay.forEach(tx => {
                 let amount = 0
-
                 if (tx.currencyCode === baseCurrency) {
                     amount = tx.amount
                 } else {
                     const rate = ratesMap[tx.currencyCode]
                     if (rate && rate > 0) {
                         amount = tx.amount / rate
-                    } else {
-                        logger.warn(`Missing exchange rate for ${tx.currencyCode} -> ${baseCurrency}`)
                     }
                 }
 
                 // In budget view, we sum everything flowing in/out of the scoped expenses.
-                // A debit physically flowed matching money into an expense (spent).
-                // A credit pulled money out (refund).
                 if (tx.transactionType === 'DEBIT') {
                     netAmount = safeAdd(netAmount, amount, precision)
                 } else if (tx.transactionType === 'CREDIT') {
@@ -128,69 +80,57 @@ export function useBudgetDetailViewModel() {
                 }
             })
 
-            result.push({
-                id: `sep-${startOfDay}`,
-                type: 'separator',
-                date: startOfDay,
-                isCollapsed,
-                onToggle: () => toggleDay(startOfDay),
-                count,
+            return {
+                count: txsForDay.length,
                 netAmount,
                 currencyCode: baseCurrency,
-            })
+            }
+        },
+        renderItem: (tx: EnrichedTransaction) => {
+            const displayType = tx.displayType as JournalDisplayType
+            const presentation = journalPresenter.getPresentation(displayType, tx.journalDescription || '')
 
-            if (isCollapsed) return
+            let typeIcon: IconName = 'document'
+            let amountPrefix = ''
 
-            txsForDay.forEach(tx => {
-                const displayType = tx.displayType as JournalDisplayType
-                const presentation = journalPresenter.getPresentation(displayType, tx.journalDescription || '')
+            if (tx.transactionType === 'DEBIT') {
+                typeIcon = 'arrowUp'
+                amountPrefix = '+ '
+            } else if (tx.transactionType === 'CREDIT') {
+                typeIcon = 'arrowDown'
+                amountPrefix = '− '
+            }
 
-                let typeIcon: IconName = 'document'
-                let amountPrefix = ''
+            const badges: TransactionBadge[] = [{
+                text: tx.accountName || AppConfig.strings.journal.transaction,
+                variant: getAccountTypeVariant(tx.accountType as any),
+                icon: (tx.icon as IconName) || 'tag',
+            }]
 
-                // For layout purposes in the budget context, we show debit as spend (+) and credit as refund (-)
-                if (tx.transactionType === 'DEBIT') {
-                    typeIcon = 'arrowUp' // representing spend from budget perspective
-                    amountPrefix = '+ '
-                } else if (tx.transactionType === 'CREDIT') {
-                    typeIcon = 'arrowDown' // representing refund to budget
-                    amountPrefix = '− '
+            return {
+                id: tx.id,
+                type: 'transaction' as const,
+                date: tx.transactionDate,
+                onPress: () => handleJournalPress(tx.journalId),
+                cardProps: {
+                    title: tx.displayTitle || tx.journalDescription || AppConfig.strings.journal.transaction,
+                    amount: tx.amount,
+                    currencyCode: tx.currencyCode,
+                    transactionDate: tx.transactionDate,
+                    presentation: {
+                        label: presentation.label,
+                        typeColor: tx.transactionType === 'DEBIT' ? 'warning' : 'success',
+                        typeIcon,
+                        amountPrefix,
+                    },
+                    badges,
+                    notes: tx.notes,
                 }
+            }
+        }
+    }), [transactions, baseCurrency, ratesMap, handleJournalPress, precision]);
 
-                // We reconstruct badges based on the single tx account. 
-                // Unlike JournalListView which shows multiple accounts, here we are 
-                // typically viewing the leaf expense account that got hit.
-                const badges: TransactionBadge[] = [{
-                    text: tx.accountName || AppConfig.strings.journal.transaction,
-                    variant: getAccountTypeVariant(tx.accountType as any),
-                    icon: (tx.icon as IconName) || 'tag',
-                }]
-
-                result.push({
-                    id: tx.id,
-                    type: 'transaction',
-                    date: tx.transactionDate,
-                    onPress: () => handleJournalPress(tx.journalId),
-                    cardProps: {
-                        title: tx.displayTitle || tx.journalDescription || AppConfig.strings.journal.transaction,
-                        amount: tx.amount,
-                        currencyCode: tx.currencyCode,
-                        transactionDate: tx.transactionDate,
-                        presentation: {
-                            label: presentation.label,
-                            typeColor: tx.transactionType === 'DEBIT' ? 'warning' : 'success',
-                            typeIcon,
-                            amountPrefix,
-                        },
-                        badges,
-                        notes: tx.notes,
-                    }
-                })
-            })
-        })
-
-        return result
-    }, [transactions, handleJournalPress, collapsedDays, toggleDay, ratesMap, baseCurrency])
+    const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
 
     useEffect(() => {
         const toFetch = new Set<string>()
@@ -218,7 +158,6 @@ export function useBudgetDetailViewModel() {
         const sortedTxs = [...transactions].sort((a, b) => a.transactionDate - b.transactionDate)
         const data: { x: number, y: number }[] = []
         let cumulativeSpent = 0
-        const precision = AppConfig.defaultCurrencyPrecision
 
         const startOfMonth = dayjs(`${targetMonth}-01`).startOf('month').valueOf()
         const endOfMonth = dayjs(`${targetMonth}-01`).endOf('month').valueOf()
@@ -264,7 +203,7 @@ export function useBudgetDetailViewModel() {
             data,
             domainX: [startOfMonth, endOfMonth] as [number, number]
         }
-    }, [transactions, targetMonth, budget, baseCurrency, ratesMap])
+    }, [transactions, targetMonth, budget, baseCurrency, ratesMap, precision])
 
     const nextMonth = useCallback(() => {
         setTargetMonth(prev => dayjs(`${prev}-01`).add(1, 'month').format('YYYY-MM'))

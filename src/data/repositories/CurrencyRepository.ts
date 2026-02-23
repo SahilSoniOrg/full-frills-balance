@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database'
 import Currency from '@/src/data/models/Currency'
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { Q } from '@nozbe/watermelondb'
 
 export class CurrencyRepository {
@@ -28,11 +29,7 @@ export class CurrencyRepository {
         const currency = await this.findByCode(code)
         if (currency) return currency.precision
 
-        // Fallback logic
-        if (code === 'JPY' || code === 'KRW') return 0
-        if (code === 'KWD' || code === 'BHD') return 3
-
-        return 2 // Default decimal places
+        return CurrencyFormatter.getPrecisionFallback(code)
     }
 
     /**
