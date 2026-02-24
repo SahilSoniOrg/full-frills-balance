@@ -16,6 +16,7 @@ export function DashboardScreenView({
     fab,
     safeToSpendData,
     patterns,
+    transactionSectionTitle,
 }: DashboardViewModel) {
     const { strings } = AppConfig;
     if (!isInitialized) {
@@ -47,6 +48,9 @@ export function DashboardScreenView({
                         />
                     )}
                     <InsightWidget patterns={patterns} />
+                    <AppText variant="subheading" color="secondary" style={styles.transactionSectionTitle}>
+                        {transactionSectionTitle}
+                    </AppText>
                 </View>
             }
             fab={fab}
@@ -63,5 +67,9 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: Spacing.sm,
+    },
+    transactionSectionTitle: {
+        marginTop: Spacing.sm,
+        marginBottom: Spacing.md,
     },
 });

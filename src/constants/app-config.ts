@@ -101,7 +101,7 @@ export const AppConfig = {
     dashboard: {
       emptyTitle: 'No transactions yet',
       emptySubtitle: 'Tap the + button to add your first transaction',
-      recentTransactions: 'Recent Transactions',
+      recentTransactions: 'Recent Activity',
       searchResults: 'Search Results',
       greeting: (name: string) => `Hi, ${name || 'there'}!`,
       insightsTitle: 'PATTERNS & INSIGHTS',
@@ -115,6 +115,28 @@ export const AppConfig = {
       debts: 'Debts',
       budgets: 'Budgets',
       bills: 'Bills',
+      safeToSpendExplanation: {
+        title: 'How Safe to Spend Works',
+        intro: 'Safe to Spend is your spendable limit after reserving money for known commitments.',
+        unlocks: 'It helps you avoid accidental overspending by subtracting predictable obligations first.',
+        formulaTitle: 'Formula:',
+        formulaItems: [
+          'Liquid Assets: Cash-like accounts available for near-term spending.',
+          'Liquid Debts: Short-term liabilities that reduce available cash.',
+          'Remaining Budgets: Unspent planned amounts in active budgets.',
+          'Recurring Bills: Detected repeating charges from your recent activity.',
+        ],
+        bucketTitle: 'What each bucket includes:',
+        exampleTitle: 'Current snapshot:',
+        benefitsTitle: 'Why this is useful:',
+        benefits: [
+          'Reality-first planning: You spend from what remains after obligations, not gross balance.',
+          'Built-in guardrails: Budget and bill commitments are treated as reserved funds.',
+          'Transparent logic: You can always inspect the exact subcategories behind each bucket.',
+        ],
+        footer: 'If a bucket looks off, update account subcategories or budget scopes to improve the estimate.',
+        closeCta: 'Got it',
+      },
     },
     journal: {
       emptyTitle: 'No transactions found',

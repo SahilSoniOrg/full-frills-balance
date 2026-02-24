@@ -37,8 +37,8 @@ export interface DashboardViewModel {
         showDatePicker: () => void;
         navigatePrevious?: () => void;
         navigateNext?: () => void;
-        sectionTitle: string;
     };
+    transactionSectionTitle: string;
     fab: {
         onPress: () => void;
     };
@@ -126,7 +126,6 @@ export function useDashboardViewModel(): DashboardViewModel {
         showDatePicker: vm.showDatePicker,
         navigatePrevious: vm.navigatePrevious,
         navigateNext: vm.navigateNext,
-        sectionTitle,
     }), [
         greeting,
         netWorth,
@@ -144,7 +143,6 @@ export function useDashboardViewModel(): DashboardViewModel {
         vm.showDatePicker,
         vm.navigatePrevious,
         vm.navigateNext,
-        sectionTitle,
     ]);
 
     // Memoize fab object to prevent re-renders
@@ -157,6 +155,7 @@ export function useDashboardViewModel(): DashboardViewModel {
         hasCompletedOnboarding,
         listViewProps,
         headerProps,
+        transactionSectionTitle: sectionTitle,
         fab,
         safeToSpendData,
         patterns,

@@ -1,15 +1,32 @@
 import { AppConfig } from '@/src/constants';
-import { AccountType } from '@/src/data/models/Account';
+import { AccountSubcategory, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
-import { isLiquidAssetSubcategory, isLiquidLiabilitySubcategory } from '@/src/utils/accountSubcategoryUtils';
+import {
+    isLiquidAssetSubcategory,
+    isLiquidLiabilitySubcategory,
+    LIQUID_ASSET_SUBCATEGORIES,
+    LIQUID_LIABILITY_SUBCATEGORIES
+} from '@/src/utils/accountSubcategoryUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
+
+const DEFAULT_INSIGHTS_CONFIG = {
+    lookbackDays: 90,
+    minRecurringIntervalDays: 25,
+    maxRecurringIntervalDays: 35,
+    minAnnualRecurringIntervalDays: 360,
+    maxAnnualRecurringIntervalDays: 370,
+    minRecurringCount: 3,
+    spendingSpikeMultiplier: 1.5,
+    spendingSpikeSeverityThreshold: 1000,
+    spikeWindowDays: 7,
+} as const;
 
 export interface SafeToSpendResult {
     totalLiquidAssets: number;
@@ -18,6 +35,14 @@ export interface SafeToSpendResult {
     committedRecurring: number;
     safeToSpend: number;
     currencyCode: string;
+    liquidAssetSubcategories: AccountSubcategory[];
+    liquidLiabilitySubcategories: AccountSubcategory[];
+    budgetSubcategories: AccountSubcategory[];
+    recurringSubcategories: AccountSubcategory[];
+    liquidAssetAccountNames: string[];
+    liquidLiabilityAccountNames: string[];
+    budgetAccountNames: string[];
+    recurringAccountNames: string[];
 }
 
 export interface Pattern {
@@ -30,6 +55,8 @@ export interface Pattern {
     journalIds: string[];
     amount?: number;
     currencyCode?: string;
+    accountSubcategory?: AccountSubcategory;
+    accountName?: string;
 }
 
 export class InsightService {
@@ -43,9 +70,10 @@ export class InsightService {
             accountRepository.observeByType(AccountType.ASSET),
             accountRepository.observeByType(AccountType.LIABILITY),
             budgetRepository.observeAllActive(),
-            this.observePatterns()
+            this.observePatterns(),
+            accountRepository.observeAll(),
         ]).pipe(
-            switchMap(([assets, liabilities, budgets, patterns]) => {
+            switchMap(([assets, liabilities, budgets, patterns, allAccounts]) => {
                 const liquidAssets = assets.filter(a => isLiquidAssetSubcategory(a.accountSubcategory));
                 const liquidLiabilities = liabilities.filter(l => isLiquidLiabilitySubcategory(l.accountSubcategory));
 
@@ -56,7 +84,15 @@ export class InsightService {
                         committedBudget: 0,
                         committedRecurring: 0,
                         safeToSpend: 0,
-                        currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency
+                        currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+                        liquidAssetSubcategories: [...LIQUID_ASSET_SUBCATEGORIES],
+                        liquidLiabilitySubcategories: [...LIQUID_LIABILITY_SUBCATEGORIES],
+                        budgetSubcategories: [],
+                        recurringSubcategories: [],
+                        liquidAssetAccountNames: [],
+                        liquidLiabilityAccountNames: [],
+                        budgetAccountNames: [],
+                        recurringAccountNames: [],
                     });
                 }
 
@@ -67,9 +103,14 @@ export class InsightService {
                     .reduce((sum, p) => sum + (p.amount || 0), 0);
 
                 const budgetUsageObservables = budgets.map(b => budgetReadService.observeBudgetUsage(b));
+                const budgetScopeObservables = budgets.map(b => budgetRepository.observeScopes(b.id));
+                const accountById = new Map(allAccounts.map(account => [account.id, account]));
 
-                return (budgetUsageObservables.length > 0 ? combineLatest(budgetUsageObservables) : of([])).pipe(
-                    switchMap(async (usages) => {
+                const budgetUsage$ = budgetUsageObservables.length > 0 ? combineLatest(budgetUsageObservables) : of([]);
+                const budgetScopes$ = budgetScopeObservables.length > 0 ? combineLatest(budgetScopeObservables) : of([]);
+
+                return combineLatest([budgetUsage$, budgetScopes$]).pipe(
+                    switchMap(async ([usages, budgetScopeGroups]) => {
                         const accountBalances = await balanceService.getAccountBalances();
 
                         let totalLiquid = 0;
@@ -86,6 +127,41 @@ export class InsightService {
 
                         const remainingBudget = usages.reduce((acc, curr) => acc + Math.max(0, curr.remaining), 0);
                         const netCash = totalLiquid - totalLiabilities;
+                        const budgetSubcategories = Array.from(
+                            new Set(
+                                budgetScopeGroups
+                                    .flatMap(scopes => scopes)
+                                    .map(scope => accountById.get(scope.account.id)?.accountSubcategory)
+                                    .filter((subcategory): subcategory is AccountSubcategory => Boolean(subcategory))
+                            )
+                        );
+
+                        const recurringSubcategories = Array.from(
+                            new Set(
+                                patterns
+                                    .filter(pattern => pattern.type === 'subscription-amnesiac')
+                                    .map(pattern => pattern.accountSubcategory)
+                                    .filter((subcategory): subcategory is AccountSubcategory => Boolean(subcategory))
+                            )
+                        );
+                        const liquidAssetAccountNames = Array.from(new Set(liquidAssets.map(a => a.name)));
+                        const liquidLiabilityAccountNames = Array.from(new Set(liquidLiabilities.map(l => l.name)));
+                        const budgetAccountNames = Array.from(
+                            new Set(
+                                budgetScopeGroups
+                                    .flatMap(scopes => scopes)
+                                    .map(scope => accountById.get(scope.account.id)?.name)
+                                    .filter((name): name is string => Boolean(name))
+                            )
+                        );
+                        const recurringAccountNames = Array.from(
+                            new Set(
+                                patterns
+                                    .filter(pattern => pattern.type === 'subscription-amnesiac')
+                                    .map(pattern => pattern.accountName)
+                                    .filter((name): name is string => Boolean(name))
+                            )
+                        );
 
                         return {
                             totalLiquidAssets: totalLiquid,
@@ -93,7 +169,15 @@ export class InsightService {
                             committedBudget: remainingBudget,
                             committedRecurring,
                             safeToSpend: Math.max(0, netCash - remainingBudget - committedRecurring),
-                            currencyCode: resultCurrency
+                            currencyCode: resultCurrency,
+                            liquidAssetSubcategories: [...LIQUID_ASSET_SUBCATEGORIES],
+                            liquidLiabilitySubcategories: [...LIQUID_LIABILITY_SUBCATEGORIES],
+                            budgetSubcategories,
+                            recurringSubcategories,
+                            liquidAssetAccountNames,
+                            liquidLiabilityAccountNames,
+                            budgetAccountNames,
+                            recurringAccountNames,
                         };
                     })
                 );
@@ -114,7 +198,8 @@ export class InsightService {
     }
 
     private observePatternsInternal(onlyDismissed: boolean): Observable<Pattern[]> {
-        const lookbackDays = AppConfig.insights.lookbackDays;
+        const insightsConfig = AppConfig.insights ?? DEFAULT_INSIGHTS_CONFIG;
+        const lookbackDays = insightsConfig.lookbackDays;
         const ninetyDaysAgo = Date.now() - (lookbackDays * 24 * 60 * 60 * 1000);
 
         return combineLatest([
@@ -143,7 +228,7 @@ export class InsightService {
                 });
 
                 expenseGroups.forEach((group, key) => {
-                    const minCount = AppConfig.insights.minRecurringCount;
+                    const minCount = insightsConfig.minRecurringCount;
                     if (group.length >= minCount) {
                         group.sort((a, b) => a.transactionDate - b.transactionDate);
                         const intervals = [];
@@ -153,10 +238,10 @@ export class InsightService {
 
                         const isRecurring = intervals.every(interval => {
                             const days = interval / (24 * 60 * 60 * 1000);
-                            const minD = AppConfig.insights.minRecurringIntervalDays;
-                            const maxD = AppConfig.insights.maxRecurringIntervalDays;
-                            const minA = AppConfig.insights.minAnnualRecurringIntervalDays;
-                            const maxA = AppConfig.insights.maxAnnualRecurringIntervalDays;
+                            const minD = insightsConfig.minRecurringIntervalDays;
+                            const maxD = insightsConfig.maxRecurringIntervalDays;
+                            const minA = insightsConfig.minAnnualRecurringIntervalDays;
+                            const maxA = insightsConfig.maxAnnualRecurringIntervalDays;
                             return (days >= minD && days <= maxD) || (days >= minA && days <= maxA);
                         });
 
@@ -169,20 +254,22 @@ export class InsightService {
                             patterns.push({
                                 id: `sub_${key}`,
                                 type: 'subscription-amnesiac',
-                                severity: amount > AppConfig.insights.spendingSpikeSeverityThreshold ? 'high' : 'medium',
+                                severity: amount > insightsConfig.spendingSpikeSeverityThreshold ? 'high' : 'medium',
                                 message: 'Subscription Amnesia',
                                 description: `You have a recurring payment of ${formattedAmount} in "${accountName}".`,
                                 suggestion: 'Review this regular expense to see if it still provides value.',
                                 journalIds: Array.from(new Set(group.map(t => t.journalId))),
                                 amount,
-                                currencyCode: group[0].currencyCode
+                                currencyCode: group[0].currencyCode,
+                                accountSubcategory: account?.accountSubcategory,
+                                accountName,
                             });
                         }
                     }
                 });
 
                 // 2. Slow Leak Detection (Spike in spending categories)
-                const spikeWindow = AppConfig.insights.spikeWindowDays;
+                const spikeWindow = insightsConfig.spikeWindowDays;
                 const last7Days = Date.now() - (spikeWindow * 24 * 60 * 60 * 1000);
                 const currentWeekTransactions = expenseTransactions.filter(t => t.transactionDate >= last7Days);
                 const previousWeeksTransactions = expenseTransactions.filter(t => t.transactionDate < last7Days);
@@ -206,7 +293,7 @@ export class InsightService {
                     const historyTotal = totalBySubcategory.get(subcategory) || 0;
                     const historyAverage = historyTotal / 12; // TODO: Calculate actual week count or move to config
 
-                    const spikeMultiplier = AppConfig.insights.spendingSpikeMultiplier;
+                    const spikeMultiplier = insightsConfig.spendingSpikeMultiplier;
                     if (historyAverage > 0 && amount > historyAverage * spikeMultiplier) {
                         const formattedSubcategory = subcategory.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
                         patterns.push({

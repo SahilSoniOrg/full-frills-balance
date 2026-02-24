@@ -24,7 +24,6 @@ interface DashboardHeaderProps {
     showDatePicker: () => void;
     navigatePrevious?: () => void;
     navigateNext?: () => void;
-    sectionTitle: string;
 }
 
 export function DashboardHeader({
@@ -44,7 +43,6 @@ export function DashboardHeader({
     showDatePicker,
     navigatePrevious,
     navigateNext,
-    sectionTitle,
 }: DashboardHeaderProps) {
     const [isSearching, setIsSearching] = React.useState(false);
 
@@ -104,10 +102,6 @@ export function DashboardHeader({
                     />
                 </>
             )}
-
-            <AppText variant="subheading" style={styles.sectionTitle}>
-                {sectionTitle}
-            </AppText>
         </View>
     );
 }
@@ -138,9 +132,5 @@ const styles = StyleSheet.create({
     },
     expandedActions: {
         flex: 1,
-    },
-    sectionTitle: {
-        marginBottom: Spacing.md,
-        marginTop: Spacing.sm,
     },
 });
