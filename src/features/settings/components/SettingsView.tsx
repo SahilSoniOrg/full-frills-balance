@@ -1,6 +1,7 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { ArchetypePreference } from '@/src/features/settings/components/ArchetypePreference';
 import { CurrencyPreference } from '@/src/features/settings/components/CurrencyPreference';
 import { SettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -68,6 +69,8 @@ export function SettingsView(vm: SettingsViewModel) {
                     Preferences
                 </AppText>
                 <AppCard elevation="sm" padding="md" style={styles.card}>
+                    <ArchetypePreference />
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
                     <View style={styles.rowBetween}>
                         <View style={{ flex: 1 }}>
                             <AppText variant="body" weight="semibold">{AppConfig.strings.settings.privacy.title}</AppText>
@@ -95,6 +98,24 @@ export function SettingsView(vm: SettingsViewModel) {
                             onPress={onToggleAccountMonthlyStats}
                         >
                             {showAccountMonthlyStats ? AppConfig.strings.settings.privacy.on : AppConfig.strings.settings.privacy.off}
+                        </AppButton>
+                    </View>
+
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
+                    <View style={styles.rowBetween}>
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
+                            <AppText variant="body" weight="semibold">Dismissed Insights</AppText>
+                            <AppText variant="caption" color="secondary">
+                                View and restore patterns you've crossed out
+                            </AppText>
+                        </View>
+                        <AppButton
+                            variant="secondary"
+                            size="sm"
+                            onPress={() => router.push('/dismissed-insights')}
+                        >
+                            {AppConfig.strings.dashboard.manageDismissed}
                         </AppButton>
                     </View>
                 </AppCard>

@@ -20,6 +20,8 @@ export interface SettingsViewModel {
     onTogglePrivacy: () => void;
     showAccountMonthlyStats: boolean;
     onToggleAccountMonthlyStats: () => void;
+    archetype: string;
+    setArchetype: (value: string) => void;
     isExporting: boolean;
     isImporting: boolean;
     isMaintenanceMode: boolean;
@@ -43,6 +45,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         setPrivacyMode,
         showAccountMonthlyStats,
         setShowAccountMonthlyStats,
+        archetype,
+        setArchetype,
     } = ui;
     const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } = useSettingsActions();
     const { isImporting: isImportingData } = useImport();
@@ -173,6 +177,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         onTogglePrivacy: () => setPrivacyMode(!isPrivacyMode),
         showAccountMonthlyStats,
         onToggleAccountMonthlyStats: () => setShowAccountMonthlyStats(!showAccountMonthlyStats),
+        archetype,
+        setArchetype,
         isExporting,
         isImporting: isImportingData,
         isMaintenanceMode,

@@ -256,6 +256,10 @@ export class JournalService {
         if (dateRange) {
             clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)));
             clauses.push(Q.where('journal_date', Q.lte(dateRange.endDate)));
+
+            if (dateRange.journalIds && dateRange.journalIds.length > 0) {
+                clauses.push(Q.where('id', Q.oneOf(dateRange.journalIds)));
+            }
         }
 
         if (searchQuery) {

@@ -12,7 +12,7 @@
  * ========================================
  */
 
-import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants'
+import { AppConfig, FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants'
 import { logger } from '@/src/utils/logger'
 import { preferences } from '@/src/utils/preferences'
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
@@ -49,19 +49,21 @@ interface UIState {
   isRestartRequired: boolean
   restartType: 'IMPORT' | 'RESET' | null
   importStats: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } | null
+  archetype: string
 }
 
 interface UIContextType extends UIState {
   // Computed value (not stored in state)
   themeMode: 'light' | 'dark'
   // Actions for UI state only
-  completeOnboarding: (name: string, currency: string) => Promise<void>
+  completeOnboarding: (name: string, currency: string, archetype?: string) => Promise<void>
   setThemePreference: (theme: 'light' | 'dark' | 'system') => Promise<void>
   setThemeId: (themeId: ThemeId) => Promise<void>
   setFontId: (fontId: FontId) => Promise<void>
-  updateUserDetails: (name: string, currency: string) => Promise<void>
+  updateUserDetails: (name: string, currency: string, archetype?: string) => Promise<void>
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>
+  setArchetype: (archetype: string) => Promise<void>
   setAdvancedMode: (advancedMode: boolean) => Promise<void>
   requireRestart: (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => void
 }
@@ -79,13 +81,14 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     isLoading: false,
     isInitialized: false,
     userName: '',
-    defaultCurrency: 'USD',
+    defaultCurrency: AppConfig.defaultCurrency,
     isPrivacyMode: false,
     showAccountMonthlyStats: true,
     advancedMode: false,
     isRestartRequired: false,
     restartType: null,
     importStats: null,
+    archetype: 'balance-glancer',
   })
 
   // ... (themeMode calculation remains same)
@@ -107,7 +110,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           themeId,
           fontId,
           userName: loadedPreferences.userName || '',
-          defaultCurrency: loadedPreferences.defaultCurrencyCode || 'USD',
+          defaultCurrency: loadedPreferences.defaultCurrencyCode || AppConfig.defaultCurrency,
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
           showAccountMonthlyStats: loadedPreferences.showAccountMonthlyStats ?? true,
           advancedMode: loadedPreferences.advancedMode || false,
@@ -116,6 +119,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           importStats: null,
           isLoading: false,
           isInitialized: true,
+          archetype: loadedPreferences.archetype || 'balance-glancer',
         })
 
       } catch (error) {
@@ -127,16 +131,18 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     loadPreferences()
   }, [systemColorScheme])
 
-  const completeOnboarding = useCallback(async (name: string, currency: string) => {
+  const completeOnboarding = useCallback(async (name: string, currency: string, archetype?: string) => {
     try {
       await preferences.setUserName(name)
       await preferences.setDefaultCurrencyCode(currency)
+      if (archetype) await preferences.setArchetype(archetype)
       await preferences.setOnboardingCompleted(true)
       setUIState(prev => ({
         ...prev,
         hasCompletedOnboarding: true,
         userName: name,
-        defaultCurrency: currency
+        defaultCurrency: currency,
+        archetype: archetype || prev.archetype
       }))
     } catch (error) {
       logger.warn('Failed to save onboarding state', { error })
@@ -145,14 +151,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const updateUserDetails = useCallback(async (name: string, currency: string) => {
+  const updateUserDetails = useCallback(async (name: string, currency: string, archetype?: string) => {
     try {
       if (name) await preferences.setUserName(name)
       if (currency) await preferences.setDefaultCurrencyCode(currency)
+      if (archetype) await preferences.setArchetype(archetype)
       setUIState(prev => ({
         ...prev,
         userName: name || prev.userName,
-        defaultCurrency: currency || prev.defaultCurrency
+        defaultCurrency: currency || prev.defaultCurrency,
+        archetype: archetype || prev.archetype
       }))
     } catch (error) {
       logger.warn('Failed to update user details', { error })
@@ -210,6 +218,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const setArchetype = useCallback(async (archetype: string) => {
+    try {
+      await preferences.setArchetype(archetype)
+      setUIState(prev => ({ ...prev, archetype }))
+    } catch (error) {
+      logger.warn('Failed to save archetype', { error })
+      setUIState(prev => ({ ...prev, archetype }))
+    }
+  }, [])
+
   const setAdvancedMode = useCallback(async (advancedMode: boolean) => {
     try {
       await preferences.setAdvancedMode(advancedMode)
@@ -238,6 +256,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     updateUserDetails,
     setPrivacyMode,
     setShowAccountMonthlyStats,
+    setArchetype,
     setAdvancedMode,
     requireRestart,
   }

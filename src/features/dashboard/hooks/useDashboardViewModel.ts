@@ -5,10 +5,11 @@ import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalLis
 import { useWealthSummary } from '@/src/features/wealth';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useMonthlyFlow } from '@/src/hooks/useMonthlyFlow';
+import { useObservable } from '@/src/hooks/useObservable';
+import { insightService, Pattern, SafeToSpendResult } from '@/src/services/insight-service';
 import { DateRange } from '@/src/utils/dateUtils';
-import { preferences } from '@/src/utils/preferences';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Platform, UIManager } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -41,23 +42,16 @@ export interface DashboardViewModel {
     fab: {
         onPress: () => void;
     };
+    safeToSpendData: SafeToSpendResult | null;
+    patterns: Pattern[];
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
     const router = useRouter();
-    const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, setPrivacyMode } = useUI();
+    const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, setPrivacyMode, defaultCurrency } = useUI();
 
-    const [defaultCurrency, setDefaultCurrency] = useState<string>(AppConfig.defaultCurrency);
-    const [isPrefsLoaded, setIsPrefsLoaded] = useState(false);
 
-    useEffect(() => {
-        preferences.loadPreferences().then(p => {
-            if (p.defaultCurrencyCode) setDefaultCurrency(p.defaultCurrencyCode);
-            setIsPrefsLoaded(true);
-        });
-    }, []);
-
-    const { rateMap } = useExchangeRates(isPrefsLoaded ? defaultCurrency : undefined);
+    const { rateMap } = useExchangeRates(isInitialized ? defaultCurrency : undefined);
 
     const {
         netWorth,
@@ -71,6 +65,18 @@ export function useDashboardViewModel(): DashboardViewModel {
         expense,
         isLoading: isFlowLoading,
     } = useMonthlyFlow();
+
+    const { data: safeToSpendData } = useObservable(
+        () => insightService.observeSafeToSpend(),
+        [],
+        null
+    );
+
+    const { data: patterns } = useObservable(
+        () => insightService.observePatterns(),
+        [],
+        []
+    );
 
     const isSummaryLoading = isWealthLoading || isFlowLoading;
     const togglePrivacyMode = useCallback(async () => {
@@ -152,5 +158,7 @@ export function useDashboardViewModel(): DashboardViewModel {
         listViewProps,
         headerProps,
         fab,
+        safeToSpendData,
+        patterns,
     };
 }

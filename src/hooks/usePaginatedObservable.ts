@@ -20,6 +20,7 @@ export interface DateRange {
 export interface AccountDateRange extends DateRange {
     accountId?: string;
     accountVersion?: number;
+    journalIds?: string[];
 }
 
 export interface UsePaginatedObservableOptions<T, E = T> {

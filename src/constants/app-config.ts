@@ -104,6 +104,17 @@ export const AppConfig = {
       recentTransactions: 'Recent Transactions',
       searchResults: 'Search Results',
       greeting: (name: string) => `Hi, ${name || 'there'}!`,
+      insightsTitle: 'PATTERNS & INSIGHTS',
+      safeToSpendTitle: 'SAFE TO SPEND',
+      triggeringTransactionsTitle: 'TRIGGERING TRANSACTIONS',
+      dismissedInsightsTitle: 'Dismissed Insights',
+      noDismissedInsights: 'No dismissed insights found.',
+      restore: 'Restore',
+      manageDismissed: 'Manage',
+      assets: 'Assets',
+      debts: 'Debts',
+      budgets: 'Budgets',
+      bills: 'Bills',
     },
     journal: {
       emptyTitle: 'No transactions found',
@@ -308,8 +319,8 @@ export const AppConfig = {
     onboarding: {
       iconPickerTitle: 'Select Icon',
       splash: {
-        title: 'Welcome\nto Balance',
-        subtitle: "Let's personalize your experience.",
+        title: 'Find Your\nPhantom Surplus',
+        subtitle: "Stop wondering where it went.\nStart seeing where it's stays.",
         inputLabel: 'What should we call you?',
         inputPlaceholder: 'Enter your name',
         btnGetStarted: 'Get Started',
@@ -333,9 +344,9 @@ export const AppConfig = {
         typeLabels: { income: 'Income', expense: 'Expense' },
       },
       finalize: {
-        title: 'All Ready!',
-        subtitle: "Your accounts are set up and ready to go. Let's start tracking your balance.",
-        btnFinish: "Let's Begin",
+        title: 'The Blueprint is Ready',
+        subtitle: "We'll show you your 'Safe to Spend' limit every morning. No more guessing, no more guilt.",
+        btnFinish: "Uncover Insights",
       },
     },
     journalSummary: {
@@ -401,5 +412,17 @@ export const AppConfig = {
   // Default Values
   defaults: {
     reportDays: 30,
+  },
+  // Insight Configuration
+  insights: {
+    lookbackDays: 90,
+    minRecurringIntervalDays: 25,
+    maxRecurringIntervalDays: 35,
+    minAnnualRecurringIntervalDays: 360,
+    maxAnnualRecurringIntervalDays: 370,
+    minRecurringCount: 3,
+    spendingSpikeMultiplier: 1.5,
+    spendingSpikeSeverityThreshold: 1000,
+    spikeWindowDays: 7,
   },
 } as const

@@ -7,6 +7,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
+import { preferences } from '../utils/preferences';
 
 export class BalanceService {
     /**
@@ -17,7 +18,7 @@ export class BalanceService {
         accounts: Account[],
         balancesMap: Map<string, AccountBalance>,
         accountPrecisionMap: Map<string, number>,
-        targetDefaultCurrency: string = 'USD'
+        targetDefaultCurrency: string = preferences.defaultCurrencyCode || AppConfig.defaultCurrency
     ) {
         // 1. Build child-to-parent map
         const parentIdMap = new Map<string, string>();
@@ -218,7 +219,7 @@ export class BalanceService {
     /**
      * Gets balances for all active accounts in batch.
      */
-    async getAccountBalances(asOfDate?: number, targetDefaultCurrency: string = 'USD'): Promise<AccountBalance[]> {
+    async getAccountBalances(asOfDate?: number, targetDefaultCurrency: string = preferences.defaultCurrencyCode || AppConfig.defaultCurrency): Promise<AccountBalance[]> {
         const accounts = await accountRepository.findAll();
         if (accounts.length === 0) return [];
 

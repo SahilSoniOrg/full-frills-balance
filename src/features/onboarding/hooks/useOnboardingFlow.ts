@@ -25,17 +25,20 @@ export interface OnboardingFlowViewModel {
     onContinue: () => void;
     onBack: () => void;
     onFinish: () => void;
+    archetype: string;
+    setArchetype: (value: string) => void;
 }
 
 export function useOnboardingFlow(): OnboardingFlowViewModel {
     const ui = useUI();
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
-    const [selectedCurrency, setSelectedCurrency] = useState('USD');
+    const [selectedCurrency, setSelectedCurrency] = useState(ui.defaultCurrency);
     const [selectedAccounts, setSelectedAccounts] = useState<string[]>(['Cash', 'Bank']);
     const [customAccounts, setCustomAccounts] = useState<{ name: string; icon: IconName }[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>(['Salary', 'Food & Drink', 'Groceries', 'Bills']);
     const [customCategories, setCustomCategories] = useState<{ name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[]>([]);
+    const [archetype, setArchetype] = useState('balance-glancer');
     const [isCompleting, setIsCompleting] = useState(false);
 
     const onContinue = useCallback(() => {
@@ -99,11 +102,11 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
                 selectedAccounts,
                 customAccounts,
                 selectedCategories,
-                customCategories
+                customCategories,
             });
 
             // Then update UI state & preferences via Context
-            await ui.completeOnboarding(name, selectedCurrency);
+            await ui.completeOnboarding(name, selectedCurrency, archetype);
 
             logger.info('Onboarding complete, redirecting to dashboard');
             void triggerHaptic('success');
@@ -122,6 +125,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
         selectedAccounts,
         selectedCategories,
         selectedCurrency,
+        archetype,
         ui
     ]);
 
@@ -143,5 +147,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
         onContinue,
         onBack,
         onFinish,
+        archetype,
+        setArchetype,
     };
 }

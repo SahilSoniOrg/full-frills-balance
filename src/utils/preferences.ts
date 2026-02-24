@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
 import { logger } from '@/src/utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,18 +22,22 @@ interface UIPreferences {
   isPrivacyMode: boolean;
   showAccountMonthlyStats: boolean;
   advancedMode: boolean;
+  archetype?: string;
+  dismissedPatternIds: string[];
 }
 
 class PreferencesHelper {
   private preferences: UIPreferences = {
     onboardingCompleted: false,
     userName: '',
-    defaultCurrencyCode: 'USD',
+    defaultCurrencyCode: AppConfig.defaultCurrency, // Changed from App to undefined
     isPrivacyMode: false,
     showAccountMonthlyStats: true,
     advancedMode: false,
     themeId: ThemeIds.DEEP_SPACE, // Default to Deep Space
     fontId: FontIds.DEEP_SPACE, // Default to Deep Space
+    archetype: undefined, // Changed from 'balance-glancer' to undefined
+    dismissedPatternIds: [],
   };
 
   async loadPreferences(): Promise<UIPreferences> {
@@ -54,6 +59,11 @@ class PreferencesHelper {
     return this.preferences;
   }
 
+  private async updatePreferences(updates: Partial<UIPreferences>): Promise<void> {
+    this.preferences = { ...this.preferences, ...updates };
+    await this.savePreferences();
+  }
+
   async savePreferences(): Promise<void> {
     try {
       await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(this.preferences));
@@ -67,8 +77,7 @@ class PreferencesHelper {
   }
 
   async setOnboardingCompleted(completed: boolean): Promise<void> {
-    this.preferences.onboardingCompleted = completed;
-    await this.savePreferences();
+    await this.updatePreferences({ onboardingCompleted: completed });
   }
 
   get userName(): string | undefined {
@@ -76,8 +85,7 @@ class PreferencesHelper {
   }
 
   async setUserName(name: string): Promise<void> {
-    this.preferences.userName = name;
-    await this.savePreferences();
+    await this.updatePreferences({ userName: name });
   }
 
   get lastSelectedAccountId(): string | undefined {
@@ -85,8 +93,7 @@ class PreferencesHelper {
   }
 
   async setLastSelectedAccountId(accountId: string | undefined): Promise<void> {
-    this.preferences.lastSelectedAccountId = accountId;
-    await this.savePreferences();
+    await this.updatePreferences({ lastSelectedAccountId: accountId });
   }
 
   get lastDateRange(): { startDate: number; endDate: number } | undefined {
@@ -94,8 +101,7 @@ class PreferencesHelper {
   }
 
   async setLastDateRange(range: { startDate: number; endDate: number } | undefined): Promise<void> {
-    this.preferences.lastDateRange = range;
-    await this.savePreferences();
+    await this.updatePreferences({ lastDateRange: range });
   }
 
   get theme(): 'light' | 'dark' | 'system' | undefined {
@@ -103,8 +109,7 @@ class PreferencesHelper {
   }
 
   async setTheme(theme: 'light' | 'dark' | 'system'): Promise<void> {
-    this.preferences.theme = theme;
-    await this.savePreferences();
+    await this.updatePreferences({ theme });
   }
 
   get themeId(): ThemeId | undefined {
@@ -112,8 +117,7 @@ class PreferencesHelper {
   }
 
   async setThemeId(themeId: ThemeId): Promise<void> {
-    this.preferences.themeId = themeId;
-    await this.savePreferences();
+    await this.updatePreferences({ themeId });
   }
 
   get fontId(): FontId | undefined {
@@ -121,8 +125,7 @@ class PreferencesHelper {
   }
 
   async setFontId(fontId: FontId): Promise<void> {
-    this.preferences.fontId = fontId;
-    await this.savePreferences();
+    await this.updatePreferences({ fontId });
   }
 
   get defaultCurrencyCode(): string | undefined {
@@ -130,8 +133,7 @@ class PreferencesHelper {
   }
 
   async setDefaultCurrencyCode(currencyCode: string): Promise<void> {
-    this.preferences.defaultCurrencyCode = currencyCode;
-    await this.savePreferences();
+    await this.updatePreferences({ defaultCurrencyCode: currencyCode });
   }
 
   get lastUsedSourceAccountId(): string | undefined {
@@ -139,8 +141,7 @@ class PreferencesHelper {
   }
 
   async setLastUsedSourceAccountId(accountId: string | undefined): Promise<void> {
-    this.preferences.lastUsedSourceAccountId = accountId;
-    await this.savePreferences();
+    await this.updatePreferences({ lastUsedSourceAccountId: accountId });
   }
 
   get lastUsedDestinationAccountId(): string | undefined {
@@ -148,8 +149,7 @@ class PreferencesHelper {
   }
 
   async setLastUsedDestinationAccountId(accountId: string | undefined): Promise<void> {
-    this.preferences.lastUsedDestinationAccountId = accountId;
-    await this.savePreferences();
+    await this.updatePreferences({ lastUsedDestinationAccountId: accountId });
   }
 
   get isPrivacyMode(): boolean {
@@ -157,8 +157,7 @@ class PreferencesHelper {
   }
 
   async setIsPrivacyMode(isPrivacyMode: boolean): Promise<void> {
-    this.preferences.isPrivacyMode = isPrivacyMode;
-    await this.savePreferences();
+    await this.updatePreferences({ isPrivacyMode });
   }
 
   get showAccountMonthlyStats(): boolean {
@@ -166,8 +165,7 @@ class PreferencesHelper {
   }
 
   async setShowAccountMonthlyStats(show: boolean): Promise<void> {
-    this.preferences.showAccountMonthlyStats = show;
-    await this.savePreferences();
+    await this.updatePreferences({ showAccountMonthlyStats: show });
   }
 
   get advancedMode(): boolean {
@@ -175,17 +173,49 @@ class PreferencesHelper {
   }
 
   async setAdvancedMode(advancedMode: boolean): Promise<void> {
-    this.preferences.advancedMode = advancedMode;
-    await this.savePreferences();
+    await this.updatePreferences({ advancedMode });
+  }
+
+  get archetype(): string | undefined {
+    return this.preferences.archetype;
+  }
+
+  async setArchetype(archetype: string): Promise<void> {
+    await this.updatePreferences({ archetype });
+  }
+
+  get dismissedPatternIds(): string[] {
+    return this.preferences.dismissedPatternIds;
+  }
+
+  async dismissPattern(id: string): Promise<void> {
+    const current = this.preferences.dismissedPatternIds;
+    if (!current.includes(id)) {
+      await this.updatePreferences({
+        dismissedPatternIds: [...current, id],
+      });
+    }
+  }
+
+  async undismissPattern(id: string): Promise<void> {
+    const current = this.preferences.dismissedPatternIds;
+    if (current.includes(id)) {
+      await this.updatePreferences({
+        dismissedPatternIds: current.filter(pId => pId !== id),
+      });
+    }
   }
 
   // Clear all preferences (useful for testing or reset)
   async clearPreferences(): Promise<void> {
     this.preferences = {
       onboardingCompleted: false,
+      userName: '',
+      defaultCurrencyCode: AppConfig.defaultCurrency,
       isPrivacyMode: false,
       showAccountMonthlyStats: true,
       advancedMode: false,
+      dismissedPatternIds: [],
     };
     try {
       await AsyncStorage.removeItem(PREFERENCES_KEY);

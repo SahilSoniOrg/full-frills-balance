@@ -5,6 +5,8 @@ import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardV
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { InsightWidget } from './InsightWidget';
+import { SafeToSpendCard } from './SafeToSpendCard';
 
 export function DashboardScreenView({
     isInitialized,
@@ -12,6 +14,8 @@ export function DashboardScreenView({
     listViewProps,
     headerProps,
     fab,
+    safeToSpendData,
+    patterns,
 }: DashboardViewModel) {
     const { strings } = AppConfig;
     if (!isInitialized) {
@@ -33,7 +37,18 @@ export function DashboardScreenView({
         <JournalListView
             {...listViewProps}
             showBack={false}
-            listHeader={<DashboardHeader {...headerProps} />}
+            listHeader={
+                <View>
+                    <DashboardHeader {...headerProps} />
+                    {safeToSpendData && (
+                        <SafeToSpendCard
+                            {...safeToSpendData}
+                            isLoading={!isInitialized}
+                        />
+                    )}
+                    <InsightWidget patterns={patterns} />
+                </View>
+            }
             fab={fab}
         />
     );

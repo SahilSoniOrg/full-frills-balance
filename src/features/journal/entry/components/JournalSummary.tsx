@@ -23,7 +23,7 @@ export function JournalSummary({
     onSelectCurrency
 }: JournalSummaryProps) {
     const { theme } = useTheme();
-    const currency = selectedCurrency || preferences.defaultCurrencyCode || 'USD';
+    const currency = selectedCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
     const difference = Math.abs(totalDebits - totalCredits);
     const showSelector = availableCurrencies.length > 1;
 

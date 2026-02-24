@@ -1,6 +1,7 @@
 import { SelectableGrid, SelectableItem } from '@/src/components/common/SelectableGrid';
 import { AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Size, withOpacity } from '@/src/constants';
+import { ARCHETYPES } from '@/src/constants/archetypes';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -34,7 +35,13 @@ type CategoryStepProps = BaseProps & {
     onAddCustomCategory: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
 };
 
-type OnboardingSelectableStepProps = CurrencyStepProps | AccountStepProps | CategoryStepProps;
+type ArchetypeStepProps = BaseProps & {
+    kind: 'archetype';
+    selectedArchetype: string;
+    onSelectArchetype: (id: string) => void;
+};
+
+type OnboardingSelectableStepProps = CurrencyStepProps | AccountStepProps | CategoryStepProps | ArchetypeStepProps;
 
 export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     const { theme } = useTheme();
@@ -135,6 +142,28 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
                     onAdd: props.onAddCustomAccount,
                     defaultIcon: 'wallet',
                 }}
+            />
+        );
+    }
+
+    if (props.kind === 'archetype') {
+        const items: SelectableItem[] = ARCHETYPES.map(a => ({
+            id: a.id,
+            name: a.name,
+            subtitle: a.description,
+            icon: a.icon
+        }));
+
+        return (
+            <SelectableGrid
+                title="Your Financial Style"
+                subtitle="This helps us personalize your insights."
+                items={items}
+                selectedIds={[props.selectedArchetype]}
+                onToggle={props.onSelectArchetype}
+                onContinue={props.onContinue}
+                onBack={props.onBack}
+                isCompleting={props.isCompleting}
             />
         );
     }

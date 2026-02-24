@@ -5,6 +5,7 @@
  * Refactored from ivy-import-service.ts to implement ImportPlugin interface.
  */
 
+import { AppConfig } from '@/src/constants';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
@@ -110,6 +111,7 @@ export const ivyPlugin: ImportPlugin = {
     },
 
     async import(jsonContent: string, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
+        const targetDefaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency
         const data: IvyData = JSON.parse(jsonContent);
 
         if (!this.detect(data)) {
@@ -121,7 +123,7 @@ export const ivyPlugin: ImportPlugin = {
 
         // 1. Extract base currency and name from settings
         const ivySettings = data.settings?.find(s => !s.isDeleted) || data.settings?.[0];
-        const ivyBaseCurrency = ivySettings?.currency || 'USD';
+        const ivyBaseCurrency = ivySettings?.currency || targetDefaultCurrency;
         const ivyUserName = ivySettings?.name || '';
 
         if (ivySettings) {
@@ -146,7 +148,7 @@ export const ivyPlugin: ImportPlugin = {
 
         const rawIvyAccountCurrency = new Map<string, string>();
         data.accounts.forEach(a => {
-            rawIvyAccountCurrency.set(a.id, a.currency || 'USD');
+            rawIvyAccountCurrency.set(a.id, a.currency || targetDefaultCurrency);
         });
 
         data.transactions.forEach(tx => {
@@ -154,7 +156,7 @@ export const ivyPlugin: ImportPlugin = {
             if (tx.dueDate) return;
             if (!tx.categoryId) return;
 
-            let currency = 'USD';
+            let currency = targetDefaultCurrency;
             if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
                 currency = rawIvyAccountCurrency.get(tx.accountId)!;
             }
@@ -202,7 +204,7 @@ export const ivyPlugin: ImportPlugin = {
         data.accounts.forEach(a => {
             const balanceId = generateId();
             accountMap.set(a.id, balanceId);
-            accountCurrencyMap.set(balanceId, a.currency || 'USD');
+            accountCurrencyMap.set(balanceId, a.currency || targetDefaultCurrency);
         });
 
         for (const key of categoryUsageMap.keys()) {
@@ -241,7 +243,7 @@ export const ivyPlugin: ImportPlugin = {
             allPendingAccounts.push({
                 id,
                 name: ivyAcc.name,
-                currency: ivyAcc.currency || 'USD',
+                currency: ivyAcc.currency || targetDefaultCurrency,
                 type: mappedType,
                 description,
                 icon: ivyAcc.icon,
@@ -335,7 +337,7 @@ export const ivyPlugin: ImportPlugin = {
             let sourceId: string | undefined;
             let destId: string | undefined;
             let displayType = 'EXPENSE';
-            let currencyCode = 'USD';
+            let currencyCode = targetDefaultCurrency;
 
             if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
                 currencyCode = rawIvyAccountCurrency.get(tx.accountId)!;
