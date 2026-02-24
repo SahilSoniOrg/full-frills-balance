@@ -4,7 +4,7 @@
  */
 
 import { database } from '@/src/data/database/Database'
-import { AccountType } from '@/src/data/models/Account'
+import { AccountSubcategory, AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
@@ -31,6 +31,16 @@ describe('AccountRepository', () => {
             expect(account.accountType).toBe(AccountType.ASSET)
         })
 
+        it('should default subcategory based on account type when missing', async () => {
+            const account = await accountRepository.create({
+                name: 'Emergency Fund',
+                accountType: AccountType.ASSET,
+                currencyCode: 'USD',
+            })
+
+            expect(account.accountSubcategory).toBe(AccountSubcategory.CASH)
+        })
+
         it('should create account with initial balance', async () => {
             const account = await accountService.createAccount({
                 name: 'Savings',
@@ -41,6 +51,33 @@ describe('AccountRepository', () => {
 
             const balance = await balanceService.getAccountBalance(account.id)
             expect(balance.balance).toBe(1000)
+        })
+
+        it('should reject invalid subcategory for account type', async () => {
+            await expect(accountRepository.create({
+                name: 'Invalid Asset',
+                accountType: AccountType.ASSET,
+                accountSubcategory: AccountSubcategory.CREDIT_CARD,
+                currencyCode: 'USD',
+            })).rejects.toThrow('Subcategory CREDIT_CARD is not valid for account type ASSET')
+        })
+    })
+
+    describe('update', () => {
+        it('should re-default subcategory when account type changes and current subcategory is incompatible', async () => {
+            const account = await accountRepository.create({
+                name: 'Starter Asset',
+                accountType: AccountType.ASSET,
+                accountSubcategory: AccountSubcategory.CASH,
+                currencyCode: 'USD',
+            })
+
+            const updated = await accountRepository.update(account, {
+                accountType: AccountType.EQUITY,
+            })
+
+            expect(updated.accountType).toBe(AccountType.EQUITY)
+            expect(updated.accountSubcategory).toBe(AccountSubcategory.OPENING_BALANCE)
         })
     })
 

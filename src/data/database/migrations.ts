@@ -1,4 +1,4 @@
-import { addColumns, createTable, schemaMigrations } from '@nozbe/watermelondb/Schema/migrations'
+import { addColumns, createTable, schemaMigrations, unsafeExecuteSql } from '@nozbe/watermelondb/Schema/migrations'
 
 export const migrations = schemaMigrations({
     migrations: [
@@ -104,6 +104,48 @@ export const migrations = schemaMigrations({
                     columns: [
                         { name: 'budget_id', type: 'string', isIndexed: true },
                         { name: 'account_id', type: 'string', isIndexed: true },
+                        { name: 'created_at', type: 'number', isIndexed: true },
+                        { name: 'updated_at', type: 'number' },
+                    ],
+                }),
+            ],
+        },
+        {
+            toVersion: 8,
+            steps: [
+                addColumns({
+                    table: 'accounts',
+                    columns: [
+                        { name: 'account_subtype', type: 'string', isOptional: true, isIndexed: true },
+                    ],
+                }),
+                unsafeExecuteSql(`
+                  UPDATE accounts
+                  SET account_subtype = CASE account_type
+                    WHEN 'ASSET' THEN 'CASH'
+                    WHEN 'LIABILITY' THEN 'CREDIT_CARD'
+                    WHEN 'EQUITY' THEN 'OPENING_BALANCE'
+                    WHEN 'INCOME' THEN 'SALARY'
+                    WHEN 'EXPENSE' THEN 'FOOD'
+                    ELSE 'OTHER'
+                  END
+                  WHERE account_subtype IS NULL OR account_subtype = '';
+                `),
+                createTable({
+                    name: 'account_metadata',
+                    columns: [
+                        { name: 'account_id', type: 'string', isIndexed: true },
+                        { name: 'statement_day', type: 'number', isOptional: true },
+                        { name: 'due_day', type: 'number', isOptional: true },
+                        { name: 'minimum_payment_amount', type: 'number', isOptional: true },
+                        { name: 'minimum_balance_amount', type: 'number', isOptional: true },
+                        { name: 'credit_limit_amount', type: 'number', isOptional: true },
+                        { name: 'apr_bps', type: 'number', isOptional: true },
+                        { name: 'emi_day', type: 'number', isOptional: true },
+                        { name: 'loan_tenure_months', type: 'number', isOptional: true },
+                        { name: 'autopay_enabled', type: 'boolean', isOptional: true },
+                        { name: 'grace_period_days', type: 'number', isOptional: true },
+                        { name: 'notes', type: 'string', isOptional: true },
                         { name: 'created_at', type: 'number', isIndexed: true },
                         { name: 'updated_at', type: 'number' },
                     ],

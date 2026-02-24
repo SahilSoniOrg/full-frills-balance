@@ -1,16 +1,23 @@
 import { database } from '@/src/data/database/Database'
-import Account from '@/src/data/models/Account'
-import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog'
+import Account, {
+  AccountSubcategory,
+  AccountType,
+  getDefaultSubcategoryForTypeLike,
+  isAccountSubcategory,
+  isAccountType
+} from '@/src/data/models/Account'
+import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog'
 import Budget from '@/src/data/models/Budget'
 import BudgetScope from '@/src/data/models/BudgetScope'
-import Journal from '@/src/data/models/Journal'
-import Transaction from '@/src/data/models/Transaction'
+import Journal, { JournalStatus } from '@/src/data/models/Journal'
+import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { Q } from '@nozbe/watermelondb'
 
 export interface ImportedAccount {
   id: string
   name: string
-  accountType: string
+  accountType: AccountType | string
+  accountSubcategory?: AccountSubcategory | string
   currencyCode: string
   parentAccountId?: string
   description?: string
@@ -96,6 +103,36 @@ export interface BatchImportData {
   auditLogs?: ImportedAuditLog[]
 }
 
+const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET
+
+function toAccountType(value: AccountType | string): AccountType {
+  return isAccountType(value) ? value : DEFAULT_ACCOUNT_TYPE
+}
+
+function toAccountSubcategory(value?: AccountSubcategory | string): AccountSubcategory | undefined {
+  if (!value) return undefined
+  return isAccountSubcategory(value) ? value : undefined
+}
+
+function pickImportedSubcategory(account: ImportedAccount): AccountSubcategory | undefined {
+  return toAccountSubcategory(account.accountSubcategory) ?? getDefaultSubcategoryForTypeLike(account.accountType)
+}
+
+function toJournalStatus(value: string): JournalStatus {
+  const statuses = Object.values(JournalStatus)
+  return statuses.includes(value as JournalStatus) ? (value as JournalStatus) : JournalStatus.POSTED
+}
+
+function toTransactionType(value: string): TransactionType {
+  const types = Object.values(TransactionType)
+  return types.includes(value as TransactionType) ? (value as TransactionType) : TransactionType.DEBIT
+}
+
+function toAuditAction(value: string): AuditAction {
+  const actions = Object.values(AuditAction)
+  return actions.includes(value as AuditAction) ? (value as AuditAction) : AuditAction.UPDATE
+}
+
 export class ImportRepository {
   async batchInsert(data: BatchImportData): Promise<void> {
     await database.write(async () => {
@@ -108,7 +145,8 @@ export class ImportRepository {
         accountsCollection.prepareCreate(record => {
           record._raw.id = acc.id
           record.name = acc.name
-          record.accountType = acc.accountType as any
+          record.accountType = toAccountType(acc.accountType)
+          record.accountSubcategory = pickImportedSubcategory(acc)
           record.currencyCode = acc.currencyCode
           record.parentAccountId = acc.parentAccountId
           record.description = acc.description
@@ -127,7 +165,7 @@ export class ImportRepository {
           record.journalDate = j.journalDate
           record.description = j.description
           record.currencyCode = j.currencyCode
-          record.status = j.status as any
+          record.status = toJournalStatus(j.status)
           record.originalJournalId = j.originalJournalId
           record.reversingJournalId = j.reversingJournalId
           record.totalAmount = j.totalAmount
@@ -146,7 +184,7 @@ export class ImportRepository {
           record.journalId = t.journalId
           record.accountId = t.accountId
           record.amount = t.amount
-          record.transactionType = t.transactionType as any
+          record.transactionType = toTransactionType(t.transactionType)
           record.currencyCode = t.currencyCode
           record.transactionDate = t.transactionDate
           record.notes = t.notes
@@ -163,7 +201,7 @@ export class ImportRepository {
           record._raw.id = log.id
           record.entityType = log.entityType
           record.entityId = log.entityId
-          record.action = log.action as any
+          record.action = toAuditAction(log.action)
           record.changes = log.changes
           record.timestamp = log.timestamp
           record._raw._status = 'synced'
@@ -292,7 +330,8 @@ export class ImportRepository {
         ...(data.accounts.updated || [])
       ], (record: Account, acc: ImportedAccount) => {
         record.name = acc.name
-        record.accountType = acc.accountType as any
+        record.accountType = toAccountType(acc.accountType)
+        record.accountSubcategory = pickImportedSubcategory(acc)
         record.currencyCode = acc.currencyCode
         record.parentAccountId = acc.parentAccountId
         record.description = acc.description
@@ -314,7 +353,7 @@ export class ImportRepository {
         record.journalDate = j.journalDate
         record.description = j.description
         record.currencyCode = j.currencyCode
-        record.status = j.status as any
+        record.status = toJournalStatus(j.status)
         record.originalJournalId = j.originalJournalId
         record.reversingJournalId = j.reversingJournalId
         record.totalAmount = j.totalAmount
@@ -336,7 +375,7 @@ export class ImportRepository {
         record.journalId = t.journalId
         record.accountId = t.accountId
         record.amount = t.amount
-        record.transactionType = t.transactionType as any
+        record.transactionType = toTransactionType(t.transactionType)
         record.currencyCode = t.currencyCode
         record.transactionDate = t.transactionDate
         record.notes = t.notes
@@ -357,7 +396,7 @@ export class ImportRepository {
         ], (record: AuditLog, log: ImportedAuditLog) => {
           record.entityType = log.entityType
           record.entityId = log.entityId
-          record.action = log.action as any
+          record.action = toAuditAction(log.action)
           record.changes = log.changes
           record.timestamp = log.timestamp
           if (log.createdAt) (record as any)._raw.created_at = log.createdAt

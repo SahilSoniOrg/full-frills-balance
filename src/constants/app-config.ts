@@ -269,6 +269,7 @@ export const AppConfig = {
         accountName: 'Account Name',
         accountNamePlaceholder: 'e.g., Checking Account',
         accountType: 'Account Type',
+        accountSubcategory: 'Account Subcategory',
         currentBalance: 'Current Balance',
         initialBalance: 'Initial Balance',
         balancePlaceholder: '0.00',

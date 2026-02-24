@@ -3,6 +3,7 @@ import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
+import { AccountSubcategorySelector } from '@/src/features/accounts/components/AccountSubcategorySelector';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
@@ -22,6 +23,8 @@ export function AccountFormView(vm: AccountFormViewModel) {
         setAccountName,
         accountType,
         setAccountType,
+        accountSubcategory,
+        setAccountSubcategory,
         selectedCurrency,
         currencies,
         setSelectedCurrency,
@@ -113,6 +116,18 @@ export function AccountFormView(vm: AccountFormViewModel) {
                         <AccountTypeSelector
                             value={accountType}
                             onChange={setAccountType}
+                            disabled={isParent}
+                        />
+                    </AppCard>
+
+                    <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>
+                            {AppConfig.strings.accounts.form.accountSubcategory}
+                        </AppText>
+                        <AccountSubcategorySelector
+                            accountType={accountType}
+                            value={accountSubcategory}
+                            onChange={setAccountSubcategory}
                             disabled={isParent}
                         />
                     </AppCard>

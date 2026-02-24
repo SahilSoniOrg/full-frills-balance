@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
-import Account from '@/src/data/models/Account';
+import Account, { formatAccountSubcategoryLabel } from '@/src/data/models/Account';
 import { useAccount, useAccountActions, useAccountBalance, useAccountBalances, useAccountHasChildren, useAccounts, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -35,6 +35,7 @@ export interface AccountDetailsViewModel {
     accountMissing: boolean;
     accountName: string;
     accountType: string;
+    accountSubcategoryLabel: string;
     accountTypeVariant: string;
     accountIcon: string | null;
     accountTypeColorKey: string;
@@ -215,6 +216,9 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     }, [hideDatePicker, setFilter]);
 
     const accountType = account?.accountType || '';
+    const accountSubcategoryLabel = account?.accountSubcategory
+        ? formatAccountSubcategoryLabel(account.accountSubcategory)
+        : '';
     const accountTypeVariant = getAccountTypeVariant(accountType);
     const accountTypeColorKey = getAccountTypeColorKey(accountType);
 
@@ -343,6 +347,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         accountMissing: !accountLoading && !account,
         accountName: account?.name || '',
         accountType,
+        accountSubcategoryLabel,
         accountTypeVariant,
         accountIcon: account?.icon || null,
         accountTypeColorKey,

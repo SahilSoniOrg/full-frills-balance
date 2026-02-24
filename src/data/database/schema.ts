@@ -1,13 +1,14 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 7,
+  version: 8,
   tables: [
     tableSchema({
       name: 'accounts',
       columns: [
         { name: 'name', type: 'string' },
         { name: 'account_type', type: 'string', isIndexed: true }, // ASSET, LIABILITY, etc.
+        { name: 'account_subtype', type: 'string', isOptional: true, isIndexed: true },
         { name: 'currency_code', type: 'string', isIndexed: true },
         { name: 'parent_account_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'description', type: 'string', isOptional: true },
@@ -107,6 +108,25 @@ export const schema = appSchema({
       columns: [
         { name: 'budget_id', type: 'string', isIndexed: true },
         { name: 'account_id', type: 'string', isIndexed: true },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'account_metadata',
+      columns: [
+        { name: 'account_id', type: 'string', isIndexed: true },
+        { name: 'statement_day', type: 'number', isOptional: true },
+        { name: 'due_day', type: 'number', isOptional: true },
+        { name: 'minimum_payment_amount', type: 'number', isOptional: true },
+        { name: 'minimum_balance_amount', type: 'number', isOptional: true },
+        { name: 'credit_limit_amount', type: 'number', isOptional: true },
+        { name: 'apr_bps', type: 'number', isOptional: true },
+        { name: 'emi_day', type: 'number', isOptional: true },
+        { name: 'loan_tenure_months', type: 'number', isOptional: true },
+        { name: 'autopay_enabled', type: 'boolean', isOptional: true },
+        { name: 'grace_period_days', type: 'number', isOptional: true },
+        { name: 'notes', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
       ],

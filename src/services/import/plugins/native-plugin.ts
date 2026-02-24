@@ -5,7 +5,14 @@
  * Refactored from import-service.ts to implement ImportPlugin interface.
  */
 
+import { AppConfig } from '@/src/constants';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
+import {
+    ImportedAccount,
+    ImportedAuditLog,
+    ImportedJournal,
+    ImportedTransaction
+} from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
@@ -20,10 +27,10 @@ interface NativeImportData {
         defaultCurrencyCode?: string;
         isPrivacyMode?: boolean;
     };
-    accounts: any[];
-    journals: any[];
-    transactions: any[];
-    auditLogs?: any[];
+    accounts: ImportedAccount[];
+    journals: ImportedJournal[];
+    transactions: ImportedTransaction[];
+    auditLogs?: ImportedAuditLog[];
 }
 
 export const nativePlugin: ImportPlugin = {
@@ -66,6 +73,7 @@ export const nativePlugin: ImportPlugin = {
         }
 
         logger.info(`[NativePlugin] Validated file. Found ${data.accounts.length} accounts, ${data.journals.length} journals, ${data.transactions.length} transactions.`);
+        const defaultCurrencyCode = data.preferences?.defaultCurrencyCode || AppConfig.defaultCurrency;
 
         try {
             // 1. Wipe existing data
@@ -97,7 +105,8 @@ export const nativePlugin: ImportPlugin = {
                     id: acc.id,
                     name: acc.name,
                     accountType: acc.accountType,
-                    currencyCode: acc.currencyCode || data.preferences?.defaultCurrencyCode,
+                    accountSubcategory: acc.accountSubcategory,
+                    currencyCode: acc.currencyCode || defaultCurrencyCode,
                     parentAccountId: acc.parentAccountId,
                     description: acc.description,
                     createdAt: acc.createdAt ? new Date(acc.createdAt).getTime() : undefined
@@ -119,13 +128,13 @@ export const nativePlugin: ImportPlugin = {
                     accountId: t.accountId,
                     amount: t.amount,
                     transactionType: t.transactionType,
-                    currencyCode: t.currencyCode || data.accounts.find(a => a.id === t.accountId)?.currencyCode || data.preferences?.defaultCurrencyCode,
+                    currencyCode: t.currencyCode || data.accounts.find(a => a.id === t.accountId)?.currencyCode || defaultCurrencyCode,
                     transactionDate: new Date(t.transactionDate).getTime(),
                     notes: t.notes,
                     exchangeRate: t.exchangeRate,
                     createdAt: t.createdAt ? new Date(t.createdAt).getTime() : undefined
                 })),
-                auditLogs: (data.auditLogs || []).map((log: any) => ({
+                auditLogs: (data.auditLogs || []).map((log) => ({
                     id: log.id,
                     entityType: log.entityType,
                     entityId: log.entityId,

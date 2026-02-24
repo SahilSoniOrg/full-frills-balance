@@ -17,6 +17,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         accountMissing,
         accountName,
         accountType,
+        accountSubcategoryLabel,
         accountTypeVariant,
         accountIcon,
         accountTypeColorKey,
@@ -142,6 +143,11 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                         <Badge variant={accountTypeVariant as any}>
                                             {accountType}
                                         </Badge>
+                                        {accountSubcategoryLabel ? (
+                                            <Badge variant={accountTypeVariant as any}>
+                                                {accountSubcategoryLabel}
+                                            </Badge>
+                                        ) : null}
                                         {isParent && (
                                             <Pressable
                                                 onPress={onShowSubAccounts}
@@ -289,4 +295,3 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xxxxl * 2.5,
     },
 });
-

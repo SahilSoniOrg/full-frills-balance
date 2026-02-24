@@ -1,6 +1,11 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
-import Account, { AccountType } from '@/src/data/models/Account';
+import Account, {
+    AccountSubcategory,
+    AccountType,
+    getAccountSubcategoriesForType,
+    getDefaultSubcategoryForType,
+} from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { useAccount, useAccountBalance, useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
@@ -23,6 +28,9 @@ export interface AccountFormViewModel {
     setAccountName: (value: string) => void;
     accountType: AccountType;
     setAccountType: (value: AccountType) => void;
+    accountSubcategory: AccountSubcategory;
+    setAccountSubcategory: (value: AccountSubcategory) => void;
+    availableSubcategories: readonly AccountSubcategory[];
     selectedCurrency: string;
     currencies: Currency[];
     setSelectedCurrency: (value: string) => void;
@@ -82,6 +90,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     // Form State
     const [accountName, setAccountName] = useState('');
     const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType());
+    const [accountSubcategory, setAccountSubcategory] = useState<AccountSubcategory>(
+        getDefaultSubcategoryForType(getInitialAccountType())
+    );
     const [selectedCurrency, setSelectedCurrency] = useState<string>(defaultCurrency || AppConfig.defaultCurrency);
     const [selectedIcon, setSelectedIcon] = useState<string>('wallet');
     const [initialBalance, setInitialBalance] = useState('');
@@ -93,6 +104,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     const formDirtyRef = useRef({
         name: false,
         type: false,
+        subcategory: false,
         currency: false,
         icon: false,
         balance: false,
@@ -104,13 +116,18 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
     // Sync Effects
     useEffect(() => {
-        formDirtyRef.current = { name: false, type: false, currency: false, icon: false, balance: false };
+        formDirtyRef.current = { name: false, type: false, subcategory: false, currency: false, icon: false, balance: false };
     }, [accountId]);
 
     useEffect(() => {
         if (existingAccount) {
             if (!formDirtyRef.current.name) setAccountName(existingAccount.name);
             if (!formDirtyRef.current.type) setAccountType(existingAccount.accountType);
+            if (!formDirtyRef.current.subcategory) {
+                setAccountSubcategory(
+                    existingAccount.accountSubcategory || getDefaultSubcategoryForType(existingAccount.accountType)
+                );
+            }
             if (!formDirtyRef.current.currency) setSelectedCurrency(existingAccount.currencyCode);
             if (!formDirtyRef.current.icon && existingAccount.icon) setSelectedIcon(existingAccount.icon);
             if (existingAccount.parentAccountId) setParentAccountId(existingAccount.parentAccountId);
@@ -119,6 +136,22 @@ export function useAccountFormViewModel(): AccountFormViewModel {
             }
         }
     }, [existingAccount, accountVersion, isEditMode, currentBalanceData]);
+
+    const availableSubcategories = useMemo(
+        () => getAccountSubcategoriesForType(accountType),
+        [accountType]
+    );
+
+    const onAccountTypeChange = (nextType: AccountType) => {
+        formDirtyRef.current.type = true;
+        setAccountType(nextType);
+        setAccountSubcategory(getDefaultSubcategoryForType(nextType));
+    };
+
+    const onAccountSubcategoryChange = (subcategory: AccountSubcategory) => {
+        formDirtyRef.current.subcategory = true;
+        setAccountSubcategory(subcategory);
+    };
 
     const onInitialBalanceChange = (value: string) => {
         formDirtyRef.current.balance = true;
@@ -154,6 +187,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         await persistence.handleSave(
             accountName,
             accountType,
+            accountSubcategory,
             selectedCurrency,
             selectedIcon,
             initialBalance,
@@ -213,7 +247,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         accountName,
         setAccountName,
         accountType,
-        setAccountType,
+        setAccountType: onAccountTypeChange,
+        accountSubcategory,
+        setAccountSubcategory: onAccountSubcategoryChange,
+        availableSubcategories,
         selectedCurrency,
         currencies,
         setSelectedCurrency,

@@ -1,5 +1,10 @@
 import { database } from '@/src/data/database/Database'
-import Account, { AccountType } from '@/src/data/models/Account'
+import Account, {
+  AccountSubcategory,
+  AccountType,
+  getDefaultSubcategoryForType,
+  isSubcategoryAllowedForType
+} from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
 import { ValidationError } from '@/src/utils/errors'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
@@ -9,6 +14,7 @@ import { map, of } from 'rxjs'
 export interface AccountPersistenceInput {
   name: string
   accountType: AccountType
+  accountSubcategory?: AccountSubcategory
   currencyCode: string
   description?: string
   icon?: string
@@ -32,7 +38,7 @@ export class AccountRepository {
   observeAll() {
     return this.accounts
       .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
-      .observeWithColumns(['account_type', 'name', 'order_num', 'currency_code', 'icon', 'description', 'parent_account_id', 'deleted_at'])
+      .observeWithColumns(['account_type', 'account_subtype', 'name', 'order_num', 'currency_code', 'icon', 'description', 'parent_account_id', 'deleted_at'])
   }
 
   observeByType(accountType: string) {
@@ -42,7 +48,7 @@ export class AccountRepository {
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('order_num', Q.asc)
       )
-    return query.observeWithColumns(['name', 'order_num', 'currency_code', 'icon', 'description', 'parent_account_id', 'deleted_at'])
+    return query.observeWithColumns(['name', 'account_subtype', 'order_num', 'currency_code', 'icon', 'description', 'parent_account_id', 'deleted_at'])
   }
 
   observeByIds(accountIds: string[]) {
@@ -55,7 +61,7 @@ export class AccountRepository {
         Q.where('id', Q.oneOf(accountIds)),
         Q.where('deleted_at', Q.eq(null))
       )
-      .observeWithColumns(['name', 'account_type', 'currency_code', 'order_num', 'icon', 'description', 'parent_account_id', 'deleted_at'])
+      .observeWithColumns(['name', 'account_type', 'account_subtype', 'currency_code', 'order_num', 'icon', 'description', 'parent_account_id', 'deleted_at'])
   }
 
   observeById(accountId: string) {
@@ -146,8 +152,13 @@ export class AccountRepository {
   }
 
   async seedDefaults(defaults: AccountPersistenceInput[]): Promise<void> {
+    const normalizedDefaults = defaults.map((entry) => ({
+      ...entry,
+      accountSubcategory: entry.accountSubcategory ?? getDefaultSubcategoryForType(entry.accountType)
+    }))
+    normalizedDefaults.forEach((entry) => this.validateSubcategory(entry.accountType, entry.accountSubcategory))
     await this.db.write(async () => {
-      const creates = defaults.map((data) =>
+      const creates = normalizedDefaults.map((data) =>
         this.accounts.prepareCreate((account) => {
           Object.assign(account, data)
           account.createdAt = new Date()
@@ -162,9 +173,14 @@ export class AccountRepository {
 
   async create(data: AccountPersistenceInput): Promise<Account> {
     await this.ensureUniqueName(data.name)
+    const payload: AccountPersistenceInput = {
+      ...data,
+      accountSubcategory: data.accountSubcategory ?? getDefaultSubcategoryForType(data.accountType)
+    }
+    this.validateSubcategory(payload.accountType, payload.accountSubcategory)
     return await this.db.write(async () => {
       return this.accounts.create((account) => {
-        Object.assign(account, data)
+        Object.assign(account, payload)
         account.createdAt = new Date()
         account.updatedAt = new Date()
       })
@@ -175,9 +191,22 @@ export class AccountRepository {
     if (updates.name && updates.name !== account.name) {
       await this.ensureUniqueName(updates.name, account.id)
     }
+    const normalizedUpdates: Partial<AccountPersistenceInput> = { ...updates }
+    if (normalizedUpdates.accountType && normalizedUpdates.accountSubcategory === undefined) {
+      normalizedUpdates.accountSubcategory = isSubcategoryAllowedForType(
+        normalizedUpdates.accountType,
+        account.accountSubcategory
+      )
+        ? account.accountSubcategory
+        : getDefaultSubcategoryForType(normalizedUpdates.accountType)
+    }
+
+    const nextType = normalizedUpdates.accountType ?? account.accountType
+    const nextSubcategory = normalizedUpdates.accountSubcategory ?? account.accountSubcategory
+    this.validateSubcategory(nextType, nextSubcategory)
     return await this.db.write(async () => {
       await account.update((acc) => {
-        Object.assign(acc, updates)
+        Object.assign(acc, normalizedUpdates)
         acc.updatedAt = new Date()
       })
       return account
@@ -259,6 +288,12 @@ export class AccountRepository {
 
     if (duplicate) {
       throw new ValidationError(`Account with name "${name}" already exists`)
+    }
+  }
+
+  private validateSubcategory(accountType: AccountType, subcategory?: AccountSubcategory): void {
+    if (!isSubcategoryAllowedForType(accountType, subcategory)) {
+      throw new ValidationError(`Subcategory ${subcategory} is not valid for account type ${accountType}`)
     }
   }
 }
