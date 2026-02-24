@@ -73,6 +73,22 @@ interface IvyData {
     settings?: IvySettings[];
 }
 
+/**
+ * Robustly parse serialized Ivy IDs which can be either a JSON array
+ * or a raw ID string.
+ */
+function parseSerializedIds(serialized?: string): string[] {
+    if (!serialized) return [];
+    try {
+        const parsed = JSON.parse(serialized);
+        if (Array.isArray(parsed)) return parsed;
+        return [String(parsed)];
+    } catch (e) {
+        // If it's not JSON, it might be a raw ID string
+        return [serialized];
+    }
+}
+
 export const ivyPlugin: ImportPlugin = {
     id: 'ivy',
     name: 'Ivy Wallet Backup',
@@ -158,6 +174,24 @@ export const ivyPlugin: ImportPlugin = {
             }
             categoryCurrencies.get(tx.categoryId)!.add(currency);
         });
+
+        // Add categories from budgets to ensure accounts are created for them
+        if (data.budgets) {
+            data.budgets.forEach(budget => {
+                if (budget.isDeleted || !budget.categoryIdsSerialized) return;
+                const catIds = parseSerializedIds(budget.categoryIdsSerialized);
+                catIds.forEach(catId => {
+                    const key = `${catId}:::${ivyBaseCurrency}`;
+                    if (!categoryUsageMap.has(key)) {
+                        categoryUsageMap.set(key, { expenseCount: 0, incomeCount: 0 });
+                    }
+                    if (!categoryCurrencies.has(catId)) {
+                        categoryCurrencies.set(catId, new Set());
+                    }
+                    categoryCurrencies.get(catId)!.add(ivyBaseCurrency);
+                });
+            });
+        }
 
         // 3. Create Accounts
         onProgress?.('Preparing accounts...', 0.15);
@@ -400,7 +434,7 @@ export const ivyPlugin: ImportPlugin = {
                 // Ivy amount is likely already in major units if it's a Double in Kotlin
                 // But let's be careful. Our Budget model expects "amount: number"
                 // IvyEntity says "amount: Double"
-                const amount = Math.floor(ivyBudget.amount * 100); // Convert to minor units if needed
+                const amount = ivyBudget.amount; // Convert to minor units if needed
 
                 budgetImports.push({
                     id: budgetId,
@@ -413,42 +447,34 @@ export const ivyPlugin: ImportPlugin = {
 
                 // Map category scopes
                 if (ivyBudget.categoryIdsSerialized) {
-                    try {
-                        const catIds: string[] = JSON.parse(ivyBudget.categoryIdsSerialized);
-                        catIds.forEach(catId => {
-                            // Find all category-currency accounts for this category
-                            for (const [key, balanceId] of categoryAccountMap.entries()) {
-                                if (key.startsWith(`${catId}:::`)) {
-                                    budgetScopeImports.push({
-                                        id: generateId(),
-                                        budgetId,
-                                        accountId: balanceId
-                                    });
-                                }
-                            }
-                        });
-                    } catch (e) {
-                        logger.error(`[IvyPlugin] Failed to parse categoryIdsSerialized for budget ${budgetId}`, e);
-                    }
-                }
-
-                // Map account scopes
-                if (ivyBudget.accountIdsSerialized) {
-                    try {
-                        const accIds: string[] = JSON.parse(ivyBudget.accountIdsSerialized);
-                        accIds.forEach(accId => {
-                            const balanceId = accountMap.get(accId);
-                            if (balanceId) {
+                    const catIds = parseSerializedIds(ivyBudget.categoryIdsSerialized);
+                    catIds.forEach(catId => {
+                        // Find all category-currency accounts for this category
+                        for (const [key, balanceId] of categoryAccountMap.entries()) {
+                            if (key.startsWith(`${catId}:::`)) {
                                 budgetScopeImports.push({
                                     id: generateId(),
                                     budgetId,
                                     accountId: balanceId
                                 });
                             }
-                        });
-                    } catch (e) {
-                        logger.error(`[IvyPlugin] Failed to parse accountIdsSerialized for budget ${budgetId}`, e);
-                    }
+                        }
+                    });
+                }
+
+                // Map account scopes
+                if (ivyBudget.accountIdsSerialized) {
+                    const accIds = parseSerializedIds(ivyBudget.accountIdsSerialized);
+                    accIds.forEach(accId => {
+                        const balanceId = accountMap.get(accId);
+                        if (balanceId) {
+                            budgetScopeImports.push({
+                                id: generateId(),
+                                budgetId,
+                                accountId: balanceId
+                            });
+                        }
+                    });
                 }
             });
         }
