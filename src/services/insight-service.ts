@@ -5,6 +5,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { isLiquidAssetSubcategory, isLiquidLiabilitySubcategory } from '@/src/utils/accountSubcategoryUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
@@ -45,7 +46,8 @@ export class InsightService {
             this.observePatterns()
         ]).pipe(
             switchMap(([assets, liabilities, budgets, patterns]) => {
-                const liquidAssets = assets;
+                const liquidAssets = assets.filter(a => isLiquidAssetSubcategory(a.accountSubcategory));
+                const liquidLiabilities = liabilities.filter(l => isLiquidLiabilitySubcategory(l.accountSubcategory));
 
                 if (liquidAssets.length === 0) {
                     return of({
@@ -77,7 +79,7 @@ export class InsightService {
                         });
 
                         let totalLiabilities = 0;
-                        liabilities.forEach(l => {
+                        liquidLiabilities.forEach(l => {
                             const b = accountBalances.find(bal => bal.accountId === l.id);
                             if (b) totalLiabilities += Math.abs(b.balance);
                         });
@@ -185,35 +187,63 @@ export class InsightService {
                 const currentWeekTransactions = expenseTransactions.filter(t => t.transactionDate >= last7Days);
                 const previousWeeksTransactions = expenseTransactions.filter(t => t.transactionDate < last7Days);
 
-                const currentWeekByAccount = new Map<string, number>();
+                // Group by subcategory to catch spending across multiple checking/credit cards
+                const currentWeekBySubcategory = new Map<string, number>();
                 currentWeekTransactions.forEach(t => {
-                    currentWeekByAccount.set(t.accountId, (currentWeekByAccount.get(t.accountId) || 0) + Math.abs(t.amount));
+                    const acc = accountMap.get(t.accountId);
+                    const subcat = acc?.accountSubcategory || 'UNKNOWN';
+                    currentWeekBySubcategory.set(subcat, (currentWeekBySubcategory.get(subcat) || 0) + Math.abs(t.amount));
                 });
 
-                const totalByAccount = new Map<string, number>();
+                const totalBySubcategory = new Map<string, number>();
                 previousWeeksTransactions.forEach(t => {
-                    totalByAccount.set(t.accountId, (totalByAccount.get(t.accountId) || 0) + Math.abs(t.amount));
+                    const acc = accountMap.get(t.accountId);
+                    const subcat = acc?.accountSubcategory || 'UNKNOWN';
+                    totalBySubcategory.set(subcat, (totalBySubcategory.get(subcat) || 0) + Math.abs(t.amount));
                 });
 
-                currentWeekByAccount.forEach((amount, accountId) => {
-                    const historyTotal = totalByAccount.get(accountId) || 0;
+                currentWeekBySubcategory.forEach((amount, subcategory) => {
+                    const historyTotal = totalBySubcategory.get(subcategory) || 0;
                     const historyAverage = historyTotal / 12; // TODO: Calculate actual week count or move to config
 
                     const spikeMultiplier = AppConfig.insights.spendingSpikeMultiplier;
                     if (historyAverage > 0 && amount > historyAverage * spikeMultiplier) {
-                        const account = accountMap.get(accountId);
-                        const accountName = account?.name || 'Unknown Category';
+                        const formattedSubcategory = subcategory.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
                         patterns.push({
-                            id: `leak_${accountId}`,
+                            id: `leak_${subcategory}`,
                             type: 'slow-leak',
                             severity: 'low',
                             message: 'Spending Spike',
-                            description: `Spending in "${accountName}" is 50% higher than your weekly average.`,
+                            description: `Spending on "${formattedSubcategory}" is 50% higher than your weekly average.`,
                             suggestion: 'Check your recent activity in this category for any unusual spends.',
-                            journalIds: Array.from(new Set(currentWeekTransactions.filter(t => t.accountId === accountId).map(t => t.journalId)))
+                            journalIds: Array.from(new Set(currentWeekTransactions.filter(t => accountMap.get(t.accountId)?.accountSubcategory === subcategory).map(t => t.journalId)))
                         });
                     }
                 });
+
+                // 3. Asset Allocation & Emergency Fund Insights
+                const assets = accounts.filter(a => a.accountType === AccountType.ASSET);
+                if (assets.length > 0) {
+                    // We need balances to evaluate asset allocation. 
+                    // To avoid making this observable asynchronous and blocking everything, 
+                    // we'll rely on the existing balance logic or skip it if we can't get it synchronously here.
+                    // Actually, the pattern observation is already asynchronous/switchMap heavy.
+                    // For now, let's keep it simple: we just highlight if they have NO emergency fund account
+                    const hasEmergencyFund = assets.some(a => a.accountSubcategory === 'EMERGENCY_FUND');
+                    const hasSignificantAssets = assets.length > 3; // Rough proxy for "established user"
+
+                    if (!hasEmergencyFund && hasSignificantAssets) {
+                        patterns.push({
+                            id: `no_emergency_fund`,
+                            type: 'lifestyle-drift', // Repurposing classification for now
+                            severity: 'medium',
+                            message: 'No Emergency Fund',
+                            description: `You don't have a dedicated account for emergencies.`,
+                            suggestion: 'Consider creating an "Emergency Fund" asset account to track savings meant for unexpected expenses.',
+                            journalIds: []
+                        });
+                    }
+                }
 
                 const dismissedIds = preferences.dismissedPatternIds;
                 if (onlyDismissed) {
