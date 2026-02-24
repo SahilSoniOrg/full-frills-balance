@@ -1,5 +1,8 @@
 import { database } from '@/src/data/database/Database'
 import { AccountSubcategory, AccountType } from '@/src/data/models/Account'
+import AccountMetadata from '@/src/data/models/AccountMetadata'
+import Currency from '@/src/data/models/Currency'
+import ExchangeRate from '@/src/data/models/ExchangeRate'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { importRepository } from '@/src/data/repositories/ImportRepository'
 
@@ -48,6 +51,43 @@ describe('ImportRepository', () => {
 
       const unknown = await accountRepository.find('a_unknown')
       expect(unknown?.accountSubcategory).toBe(AccountSubcategory.OTHER)
+    })
+  })
+
+  describe('batchInsert additional entity support', () => {
+    it('should import currencies, exchange rates, and account metadata', async () => {
+      await importRepository.batchInsert({
+        accounts: [
+          { id: 'a1', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+        ],
+        journals: [],
+        transactions: [],
+        currencies: [
+          { id: 'c_usd', code: 'USD', symbol: '$', name: 'US Dollar', precision: 2 },
+        ],
+        exchangeRates: [
+          { id: 'er_1', fromCurrency: 'USD', toCurrency: 'INR', rate: 80, effectiveDate: Date.now(), source: 'manual' },
+        ],
+        accountMetadata: [
+          { id: 'm_1', accountId: 'a1', statementDay: 2, dueDay: 20, autopayEnabled: true },
+        ],
+      })
+
+      const currencies = await database.collections.get<Currency>('currencies').query().fetch()
+      const exchangeRates = await database.collections.get<ExchangeRate>('exchange_rates').query().fetch()
+      const metadata = await database.collections.get<AccountMetadata>('account_metadata').query().fetch()
+
+      expect(currencies).toHaveLength(1)
+      expect(currencies[0].code).toBe('USD')
+
+      expect(exchangeRates).toHaveLength(1)
+      expect(exchangeRates[0].fromCurrency).toBe('USD')
+      expect(exchangeRates[0].toCurrency).toBe('INR')
+
+      expect(metadata).toHaveLength(1)
+      expect(metadata[0].statementDay).toBe(2)
+      expect(metadata[0].dueDay).toBe(20)
+      expect(metadata[0].autopayEnabled).toBe(true)
     })
   })
 })

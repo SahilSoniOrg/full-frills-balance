@@ -9,28 +9,40 @@ import { AppConfig } from '@/src/constants';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import {
     ImportedAccount,
+    ImportedAccountMetadata,
     ImportedAuditLog,
+    ImportedBudget,
+    ImportedBudgetScope,
+    ImportedCurrency,
+    ImportedExchangeRate,
     ImportedJournal,
     ImportedTransaction
 } from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
+import { preferences, UIPreferences } from '@/src/utils/preferences';
 
 interface NativeImportData {
     version: string;
-    preferences: {
-        theme?: string;
-        onboardingCompleted?: boolean;
-        userName?: string;
-        defaultCurrencyCode?: string;
-        isPrivacyMode?: boolean;
-    };
+    preferences?: Partial<UIPreferences>;
     accounts: ImportedAccount[];
     journals: ImportedJournal[];
     transactions: ImportedTransaction[];
     auditLogs?: ImportedAuditLog[];
+    budgets?: ImportedBudget[];
+    budgetScopes?: ImportedBudgetScope[];
+    currencies?: ImportedCurrency[];
+    exchangeRates?: ImportedExchangeRate[];
+    accountMetadata?: ImportedAccountMetadata[];
+}
+
+function parseTimestamp(value?: number | string): number | undefined {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 export const nativePlugin: ImportPlugin = {
@@ -83,17 +95,7 @@ export const nativePlugin: ImportPlugin = {
 
             // 2. Clear and restore preferences
             onProgress?.('Restoring preferences...', 0.2);
-            await preferences.clearPreferences();
-            if (data.preferences) {
-                const validThemes = ['light', 'dark', 'system'] as const;
-                if (data.preferences.theme && validThemes.includes(data.preferences.theme as typeof validThemes[number])) {
-                    await preferences.setTheme(data.preferences.theme as 'light' | 'dark' | 'system');
-                }
-                if (data.preferences.onboardingCompleted !== undefined) await preferences.setOnboardingCompleted(data.preferences.onboardingCompleted);
-                if (data.preferences.userName) await preferences.setUserName(data.preferences.userName);
-                if (data.preferences.defaultCurrencyCode) await preferences.setDefaultCurrencyCode(data.preferences.defaultCurrencyCode);
-                if (data.preferences.isPrivacyMode !== undefined) await preferences.setIsPrivacyMode(data.preferences.isPrivacyMode);
-            }
+            await preferences.restorePreferences(data.preferences);
 
             // 3. Import Data in Batch
             onProgress?.('Saving data to database (this may take a while)...', 0.4);
@@ -109,18 +111,26 @@ export const nativePlugin: ImportPlugin = {
                     currencyCode: acc.currencyCode || defaultCurrencyCode,
                     parentAccountId: acc.parentAccountId,
                     description: acc.description,
-                    createdAt: acc.createdAt ? new Date(acc.createdAt).getTime() : undefined
+                    icon: acc.icon,
+                    orderNum: acc.orderNum,
+                    createdAt: parseTimestamp(acc.createdAt),
+                    updatedAt: parseTimestamp(acc.updatedAt),
+                    deletedAt: parseTimestamp(acc.deletedAt),
                 })),
                 journals: data.journals.map(j => ({
                     id: j.id,
-                    journalDate: new Date(j.journalDate).getTime(),
+                    journalDate: parseTimestamp(j.journalDate) ?? Date.now(),
                     description: j.description,
                     currencyCode: j.currencyCode,
                     status: j.status,
+                    originalJournalId: j.originalJournalId,
+                    reversingJournalId: j.reversingJournalId,
                     totalAmount: j.totalAmount,
                     transactionCount: j.transactionCount,
                     displayType: j.displayType,
-                    createdAt: j.createdAt ? new Date(j.createdAt).getTime() : undefined
+                    createdAt: parseTimestamp(j.createdAt),
+                    updatedAt: parseTimestamp(j.updatedAt),
+                    deletedAt: parseTimestamp(j.deletedAt),
                 })),
                 transactions: data.transactions.map(t => ({
                     id: t.id,
@@ -129,10 +139,12 @@ export const nativePlugin: ImportPlugin = {
                     amount: t.amount,
                     transactionType: t.transactionType,
                     currencyCode: t.currencyCode || data.accounts.find(a => a.id === t.accountId)?.currencyCode || defaultCurrencyCode,
-                    transactionDate: new Date(t.transactionDate).getTime(),
+                    transactionDate: parseTimestamp(t.transactionDate) ?? Date.now(),
                     notes: t.notes,
                     exchangeRate: t.exchangeRate,
-                    createdAt: t.createdAt ? new Date(t.createdAt).getTime() : undefined
+                    createdAt: parseTimestamp(t.createdAt),
+                    updatedAt: parseTimestamp(t.updatedAt),
+                    deletedAt: parseTimestamp(t.deletedAt),
                 })),
                 auditLogs: (data.auditLogs || []).map((log) => ({
                     id: log.id,
@@ -141,8 +153,62 @@ export const nativePlugin: ImportPlugin = {
                     action: log.action,
                     changes: log.changes,
                     timestamp: log.timestamp,
-                    createdAt: log.createdAt ? new Date(log.createdAt).getTime() : undefined
-                }))
+                    createdAt: parseTimestamp(log.createdAt),
+                })),
+                budgets: (data.budgets || []).map((budget) => ({
+                    id: budget.id,
+                    name: budget.name,
+                    amount: budget.amount,
+                    currencyCode: budget.currencyCode || defaultCurrencyCode,
+                    startMonth: budget.startMonth,
+                    active: budget.active,
+                    createdAt: parseTimestamp(budget.createdAt),
+                    updatedAt: parseTimestamp(budget.updatedAt),
+                })),
+                budgetScopes: (data.budgetScopes || []).map((scope) => ({
+                    id: scope.id,
+                    budgetId: scope.budgetId,
+                    accountId: scope.accountId,
+                    createdAt: parseTimestamp(scope.createdAt),
+                    updatedAt: parseTimestamp(scope.updatedAt),
+                })),
+                currencies: (data.currencies || []).map((currency) => ({
+                    id: currency.id,
+                    code: currency.code,
+                    symbol: currency.symbol,
+                    name: currency.name,
+                    precision: currency.precision,
+                    createdAt: parseTimestamp(currency.createdAt),
+                    updatedAt: parseTimestamp(currency.updatedAt),
+                    deletedAt: parseTimestamp(currency.deletedAt),
+                })),
+                exchangeRates: (data.exchangeRates || []).map((rate) => ({
+                    id: rate.id,
+                    fromCurrency: rate.fromCurrency,
+                    toCurrency: rate.toCurrency,
+                    rate: rate.rate,
+                    effectiveDate: parseTimestamp(rate.effectiveDate) ?? Date.now(),
+                    source: rate.source,
+                    createdAt: parseTimestamp(rate.createdAt),
+                    updatedAt: parseTimestamp(rate.updatedAt),
+                })),
+                accountMetadata: (data.accountMetadata || []).map((metadata) => ({
+                    id: metadata.id,
+                    accountId: metadata.accountId,
+                    statementDay: metadata.statementDay,
+                    dueDay: metadata.dueDay,
+                    minimumPaymentAmount: metadata.minimumPaymentAmount,
+                    minimumBalanceAmount: metadata.minimumBalanceAmount,
+                    creditLimitAmount: metadata.creditLimitAmount,
+                    aprBps: metadata.aprBps,
+                    emiDay: metadata.emiDay,
+                    loanTenureMonths: metadata.loanTenureMonths,
+                    autopayEnabled: metadata.autopayEnabled,
+                    gracePeriodDays: metadata.gracePeriodDays,
+                    notes: metadata.notes,
+                    createdAt: parseTimestamp(metadata.createdAt),
+                    updatedAt: parseTimestamp(metadata.updatedAt),
+                })),
             });
 
             onProgress?.('Finalizing import...', 0.95);
@@ -151,7 +217,7 @@ export const nativePlugin: ImportPlugin = {
                 accounts: data.accounts.length,
                 journals: data.journals.length,
                 transactions: data.transactions.length,
-                budgets: 0,
+                budgets: data.budgets?.length || 0,
                 auditLogs: data.auditLogs?.length || 0,
                 skippedTransactions: 0
             };

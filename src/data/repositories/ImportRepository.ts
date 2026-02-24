@@ -9,8 +9,11 @@ import Account, {
 import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog'
 import Budget from '@/src/data/models/Budget'
 import BudgetScope from '@/src/data/models/BudgetScope'
+import Currency from '@/src/data/models/Currency'
+import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
+import AccountMetadata from '@/src/data/models/AccountMetadata'
 import { Q } from '@nozbe/watermelondb'
 
 export interface ImportedAccount {
@@ -88,6 +91,46 @@ export interface ImportedBudgetScope {
   updatedAt?: number
 }
 
+export interface ImportedCurrency {
+  id: string
+  code: string
+  symbol: string
+  name: string
+  precision: number
+  createdAt?: number
+  updatedAt?: number
+  deletedAt?: number
+}
+
+export interface ImportedExchangeRate {
+  id: string
+  fromCurrency: string
+  toCurrency: string
+  rate: number
+  effectiveDate: number
+  source: string
+  createdAt?: number
+  updatedAt?: number
+}
+
+export interface ImportedAccountMetadata {
+  id: string
+  accountId: string
+  statementDay?: number
+  dueDay?: number
+  minimumPaymentAmount?: number
+  minimumBalanceAmount?: number
+  creditLimitAmount?: number
+  aprBps?: number
+  emiDay?: number
+  loanTenureMonths?: number
+  autopayEnabled?: boolean
+  gracePeriodDays?: number
+  notes?: string
+  createdAt?: number
+  updatedAt?: number
+}
+
 export interface ChangeSet<T> {
   created?: T[]
   updated?: T[]
@@ -101,6 +144,9 @@ export interface BatchImportData {
   budgets?: ImportedBudget[]
   budgetScopes?: ImportedBudgetScope[]
   auditLogs?: ImportedAuditLog[]
+  currencies?: ImportedCurrency[]
+  exchangeRates?: ImportedExchangeRate[]
+  accountMetadata?: ImportedAccountMetadata[]
 }
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET
@@ -140,6 +186,9 @@ export class ImportRepository {
       const journalsCollection = database.collections.get<Journal>('journals')
       const transactionsCollection = database.collections.get<Transaction>('transactions')
       const auditLogsCollection = database.collections.get<AuditLog>('audit_logs')
+      const currenciesCollection = database.collections.get<Currency>('currencies')
+      const exchangeRatesCollection = database.collections.get<ExchangeRate>('exchange_rates')
+      const accountMetadataCollection = database.collections.get<AccountMetadata>('account_metadata')
 
       const accountPrepares = data.accounts.map(acc =>
         accountsCollection.prepareCreate(record => {
@@ -234,13 +283,65 @@ export class ImportRepository {
         })
       )
 
+      const currencyPrepares = (data.currencies || []).map((c) =>
+        currenciesCollection.prepareCreate(record => {
+          record._raw.id = c.id
+          record.code = c.code
+          record.symbol = c.symbol
+          record.name = c.name
+          record.precision = c.precision
+          record._raw._status = 'synced'
+          if (c.createdAt) (record as any)._raw.created_at = c.createdAt
+          if (c.updatedAt) (record as any)._raw.updated_at = c.updatedAt
+          if (c.deletedAt) (record as any)._raw.deleted_at = c.deletedAt
+        })
+      )
+
+      const exchangeRatePrepares = (data.exchangeRates || []).map((er) =>
+        exchangeRatesCollection.prepareCreate(record => {
+          record._raw.id = er.id
+          record.fromCurrency = er.fromCurrency
+          record.toCurrency = er.toCurrency
+          record.rate = er.rate
+          record.effectiveDate = er.effectiveDate
+          record.source = er.source
+          record._raw._status = 'synced'
+          if (er.createdAt) (record as any)._raw.created_at = er.createdAt
+          if (er.updatedAt) (record as any)._raw.updated_at = er.updatedAt
+        })
+      )
+
+      const accountMetadataPrepares = (data.accountMetadata || []).map((metadata) =>
+        accountMetadataCollection.prepareCreate(record => {
+          record._raw.id = metadata.id
+            ; (record as any)._raw.account_id = metadata.accountId
+          record.statementDay = metadata.statementDay
+          record.dueDay = metadata.dueDay
+          record.minimumPaymentAmount = metadata.minimumPaymentAmount
+          record.minimumBalanceAmount = metadata.minimumBalanceAmount
+          record.creditLimitAmount = metadata.creditLimitAmount
+          record.aprBps = metadata.aprBps
+          record.emiDay = metadata.emiDay
+          record.loanTenureMonths = metadata.loanTenureMonths
+          record.autopayEnabled = metadata.autopayEnabled
+          record.gracePeriodDays = metadata.gracePeriodDays
+          record.notes = metadata.notes
+          record._raw._status = 'synced'
+          if (metadata.createdAt) (record as any)._raw.created_at = metadata.createdAt
+          if (metadata.updatedAt) (record as any)._raw.updated_at = metadata.updatedAt
+        })
+      )
+
       const operations = [
         ...accountPrepares,
         ...journalPrepares,
         ...transactionPrepares,
         ...auditLogPrepares,
         ...budgetPrepares,
-        ...budgetScopePrepares
+        ...budgetScopePrepares,
+        ...currencyPrepares,
+        ...exchangeRatePrepares,
+        ...accountMetadataPrepares
       ]
 
       if (operations.length > 0) {

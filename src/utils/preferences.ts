@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 
-interface UIPreferences {
+export interface UIPreferences {
   onboardingCompleted: boolean;
   userName?: string;
   defaultCurrencyCode?: string;
@@ -26,19 +26,40 @@ interface UIPreferences {
   dismissedPatternIds: string[];
 }
 
+const DEFAULT_UI_PREFERENCES: UIPreferences = {
+  onboardingCompleted: false,
+  userName: '',
+  defaultCurrencyCode: AppConfig.defaultCurrency,
+  isPrivacyMode: false,
+  showAccountMonthlyStats: true,
+  advancedMode: false,
+  themeId: ThemeIds.DEEP_SPACE,
+  fontId: FontIds.DEEP_SPACE,
+  archetype: undefined,
+  dismissedPatternIds: [],
+};
+
 class PreferencesHelper {
-  private preferences: UIPreferences = {
-    onboardingCompleted: false,
-    userName: '',
-    defaultCurrencyCode: AppConfig.defaultCurrency, // Changed from App to undefined
-    isPrivacyMode: false,
-    showAccountMonthlyStats: true,
-    advancedMode: false,
-    themeId: ThemeIds.DEEP_SPACE, // Default to Deep Space
-    fontId: FontIds.DEEP_SPACE, // Default to Deep Space
-    archetype: undefined, // Changed from 'balance-glancer' to undefined
-    dismissedPatternIds: [],
-  };
+  private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
+
+  private sanitizePreferences(input: Partial<UIPreferences>): Partial<UIPreferences> {
+    const sanitized: Partial<UIPreferences> = { ...input };
+
+    if (sanitized.theme && !['light', 'dark', 'system'].includes(sanitized.theme)) {
+      delete sanitized.theme;
+    }
+    if (sanitized.themeId && !Object.values(ThemeIds).includes(sanitized.themeId)) {
+      delete sanitized.themeId;
+    }
+    if (sanitized.fontId && !Object.values(FontIds).includes(sanitized.fontId)) {
+      delete sanitized.fontId;
+    }
+    if (sanitized.dismissedPatternIds && !Array.isArray(sanitized.dismissedPatternIds)) {
+      sanitized.dismissedPatternIds = [];
+    }
+
+    return sanitized;
+  }
 
   async loadPreferences(): Promise<UIPreferences> {
     try {
@@ -47,7 +68,7 @@ class PreferencesHelper {
         try {
           const parsed = JSON.parse(stored);
           if (typeof parsed === 'object' && parsed !== null) {
-            this.preferences = { ...this.preferences, ...parsed };
+            this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
           }
         } catch (parseError) {
           logger.error('Failed to parse preferences, using defaults', { error: parseError });
@@ -60,7 +81,15 @@ class PreferencesHelper {
   }
 
   private async updatePreferences(updates: Partial<UIPreferences>): Promise<void> {
-    this.preferences = { ...this.preferences, ...updates };
+    this.preferences = { ...this.preferences, ...this.sanitizePreferences(updates) };
+    await this.savePreferences();
+  }
+
+  async restorePreferences(data?: Partial<UIPreferences>): Promise<void> {
+    this.preferences = {
+      ...DEFAULT_UI_PREFERENCES,
+      ...(data ? this.sanitizePreferences(data) : {}),
+    };
     await this.savePreferences();
   }
 
@@ -208,15 +237,7 @@ class PreferencesHelper {
 
   // Clear all preferences (useful for testing or reset)
   async clearPreferences(): Promise<void> {
-    this.preferences = {
-      onboardingCompleted: false,
-      userName: '',
-      defaultCurrencyCode: AppConfig.defaultCurrency,
-      isPrivacyMode: false,
-      showAccountMonthlyStats: true,
-      advancedMode: false,
-      dismissedPatternIds: [],
-    };
+    this.preferences = { ...DEFAULT_UI_PREFERENCES };
     try {
       await AsyncStorage.removeItem(PREFERENCES_KEY);
     } catch (error) {
