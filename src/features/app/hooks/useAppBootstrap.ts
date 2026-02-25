@@ -1,6 +1,7 @@
 import { analytics } from '@/src/services/analytics-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { integrityService } from '@/src/services/integrity-service';
+import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { logger } from '@/src/utils/logger';
 import { useEffect } from 'react';
 
@@ -28,6 +29,14 @@ export function useAppBootstrap() {
       } catch (error) {
         if (isActive) {
           logger.warn('[Bootstrap] Integrity check failed', { error });
+        }
+      }
+
+      try {
+        await plannedPaymentService.processDuePayments();
+      } catch (error) {
+        if (isActive) {
+          logger.error('[Bootstrap] Planned payments processing failed', error);
         }
       }
     };

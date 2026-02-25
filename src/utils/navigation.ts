@@ -90,5 +90,30 @@ export const AppNavigation = {
      */
     toAccountReorder: () => {
         router.push('/accounts/reorder' as any);
+    },
+
+    /**
+     * Navigate to the Planned Payments List screen.
+     */
+    toPlannedPayments: () => {
+        router.push('/planned-payments' as any);
+    },
+
+    /**
+     * Navigate to the Planned Payment Details screen.
+     */
+    toPlannedPaymentDetails: (id: string) => {
+        router.push(`/planned-payment-details?id=${id}` as any);
+    },
+
+    /**
+     * Navigate to the Planned Payment Form screen.
+     */
+    toPlannedPaymentForm: (id?: string) => {
+        if (id) {
+            router.push(`/planned-payment-form?id=${id}` as any);
+        } else {
+            router.push('/planned-payment-form' as any);
+        }
     }
 };

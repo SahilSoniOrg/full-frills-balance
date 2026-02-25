@@ -133,6 +133,7 @@ export interface EnrichedJournal {
     }[];
     semanticType?: string;
     semanticLabel?: string;
+    notes?: string;
 }
 
 /**

@@ -100,6 +100,23 @@ export function SettingsView(vm: SettingsViewModel) {
                             {showAccountMonthlyStats ? AppConfig.strings.settings.privacy.on : AppConfig.strings.settings.privacy.off}
                         </AppButton>
                     </View>
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
+                    <View style={styles.rowBetween}>
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
+                            <AppText variant="body" weight="semibold">Planned Payments</AppText>
+                            <AppText variant="caption" color="secondary">
+                                Manage recurring rules and automated tracking
+                            </AppText>
+                        </View>
+                        <AppButton
+                            variant="secondary"
+                            size="sm"
+                            onPress={() => router.push('/planned-payments')}
+                        >
+                            Manage
+                        </AppButton>
+                    </View>
 
                     <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
 

@@ -1,10 +1,16 @@
 import { AppConfig } from '@/src/constants';
-import { AccountSubcategory, AccountType } from '@/src/data/models/Account';
+import Account, { AccountSubcategory, AccountType } from '@/src/data/models/Account';
+import Budget from '@/src/data/models/Budget';
+import Journal from '@/src/data/models/Journal';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import {
     isLiquidAssetSubcategory,
     isLiquidLiabilitySubcategory,
@@ -12,9 +18,11 @@ import {
     LIQUID_LIABILITY_SUBCATEGORIES
 } from '@/src/utils/accountSubcategoryUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import dayjs from 'dayjs';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { debounceTime, map, switchMap } from 'rxjs/operators';
 
 const DEFAULT_INSIGHTS_CONFIG = {
     lookbackDays: 90,
@@ -33,6 +41,7 @@ export interface SafeToSpendResult {
     totalLiabilities: number;
     committedBudget: number;
     committedRecurring: number;
+    committedPlanned: number;
     safeToSpend: number;
     currencyCode: string;
     liquidAssetSubcategories: AccountSubcategory[];
@@ -70,10 +79,13 @@ export class InsightService {
             accountRepository.observeByType(AccountType.ASSET),
             accountRepository.observeByType(AccountType.LIABILITY),
             budgetRepository.observeAllActive(),
+            plannedPaymentRepository.observeActive(),
             this.observePatterns(),
             accountRepository.observeAll(),
-        ]).pipe(
-            switchMap(([assets, liabilities, budgets, patterns, allAccounts]) => {
+            journalRepository.observePlannedForMonth(dayjs().format('YYYY-MM')),
+        ] as [Observable<Account[]>, Observable<Account[]>, Observable<Budget[]>, Observable<PlannedPayment[]>, Observable<Pattern[]>, Observable<Account[]>, Observable<Journal[]>]
+        ).pipe(
+            switchMap(([assets, liabilities, budgets, plannedPayments, patterns, allAccounts, plannedJournals]) => {
                 const liquidAssets = assets.filter(a => isLiquidAssetSubcategory(a.accountSubcategory));
                 const liquidLiabilities = liabilities.filter(l => isLiquidLiabilitySubcategory(l.accountSubcategory));
 
@@ -83,6 +95,7 @@ export class InsightService {
                         totalLiabilities: 0,
                         committedBudget: 0,
                         committedRecurring: 0,
+                        committedPlanned: 0,
                         safeToSpend: 0,
                         currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
                         liquidAssetSubcategories: [...LIQUID_ASSET_SUBCATEGORIES],
@@ -98,10 +111,6 @@ export class InsightService {
 
                 const resultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
-                const committedRecurring = patterns
-                    .filter(p => p.type === 'subscription-amnesiac')
-                    .reduce((sum, p) => sum + (p.amount || 0), 0);
-
                 const budgetUsageObservables = budgets.map(b => budgetReadService.observeBudgetUsage(b));
                 const budgetScopeObservables = budgets.map(b => budgetRepository.observeScopes(b.id));
                 const accountById = new Map(allAccounts.map(account => [account.id, account]));
@@ -109,9 +118,60 @@ export class InsightService {
                 const budgetUsage$ = budgetUsageObservables.length > 0 ? combineLatest(budgetUsageObservables) : of([]);
                 const budgetScopes$ = budgetScopeObservables.length > 0 ? combineLatest(budgetScopeObservables) : of([]);
 
+                const nowTime = Date.now();
+                const endOfMonth = dayjs().endOf('month').valueOf();
+
                 return combineLatest([budgetUsage$, budgetScopes$]).pipe(
                     switchMap(async ([usages, budgetScopeGroups]) => {
                         const accountBalances = await balanceService.getAccountBalances();
+
+                        const recurringConversions = await Promise.all(
+                            patterns
+                                .filter(p => p.type === 'subscription-amnesiac')
+                                .map(async p => {
+                                    if (!p.amount || !p.currencyCode || p.currencyCode === resultCurrency) return p.amount || 0;
+                                    try {
+                                        const { convertedAmount } = await exchangeRateService.convert(p.amount, p.currencyCode, resultCurrency);
+                                        return convertedAmount;
+                                    } catch (e) {
+                                        logger.error(`Failed to convert pattern amount for safe-to-spend`, e);
+                                        return p.amount;
+                                    }
+                                })
+                        );
+                        const committedRecurring = recurringConversions.reduce((a, b) => a + b, 0);
+
+                        const plannedConversions = await Promise.all(
+                            plannedPayments
+                                .filter(pp => pp.nextOccurrence > nowTime && pp.nextOccurrence <= endOfMonth)
+                                .map(async pp => {
+                                    if (!pp.amount || !pp.currencyCode || pp.currencyCode === resultCurrency) return pp.amount || 0;
+                                    try {
+                                        const { convertedAmount } = await exchangeRateService.convert(pp.amount, pp.currencyCode, resultCurrency);
+                                        return convertedAmount;
+                                    } catch (e) {
+                                        logger.error(`Failed to convert planned payment amount for safe-to-spend`, e);
+                                        return pp.amount;
+                                    }
+                                })
+                        );
+                        const committedPlannedPayments = plannedConversions.reduce((a, b) => a + b, 0);
+
+                        const plannedJournalConversions = await Promise.all(
+                            plannedJournals.map(async pj => {
+                                if (!pj.totalAmount || !pj.currencyCode || pj.currencyCode === resultCurrency) return pj.totalAmount || 0;
+                                try {
+                                    const { convertedAmount } = await exchangeRateService.convert(pj.totalAmount, pj.currencyCode, resultCurrency);
+                                    return convertedAmount;
+                                } catch (e) {
+                                    logger.error(`Failed to convert planned journal amount for safe-to-spend`, e);
+                                    return pj.totalAmount;
+                                }
+                            })
+                        );
+                        const committedPlannedJournals = plannedJournalConversions.reduce((a, b) => a + b, 0);
+
+                        const committedPlanned = committedPlannedPayments + committedPlannedJournals;
 
                         let totalLiquid = 0;
                         liquidAssets.forEach(a => {
@@ -125,11 +185,15 @@ export class InsightService {
                             if (b) totalLiabilities += Math.abs(b.balance);
                         });
 
-                        const remainingBudget = usages.reduce((acc, curr) => acc + Math.max(0, curr.remaining), 0);
+                        const usagesList = usages as any[];
+                        const remainingBudget = usagesList.reduce((acc, curr) => acc + Math.max(0, curr.remaining), 0);
                         const netCash = totalLiquid - totalLiabilities;
+                        const safeToSpend = netCash - remainingBudget - committedRecurring - committedPlanned;
+
+                        const scopeGroups = budgetScopeGroups as any[];
                         const budgetSubcategories = Array.from(
                             new Set(
-                                budgetScopeGroups
+                                scopeGroups
                                     .flatMap(scopes => scopes)
                                     .map(scope => accountById.get(scope.account.id)?.accountSubcategory)
                                     .filter((subcategory): subcategory is AccountSubcategory => Boolean(subcategory))
@@ -148,7 +212,7 @@ export class InsightService {
                         const liquidLiabilityAccountNames = Array.from(new Set(liquidLiabilities.map(l => l.name)));
                         const budgetAccountNames = Array.from(
                             new Set(
-                                budgetScopeGroups
+                                scopeGroups
                                     .flatMap(scopes => scopes)
                                     .map(scope => accountById.get(scope.account.id)?.name)
                                     .filter((name): name is string => Boolean(name))
@@ -168,7 +232,8 @@ export class InsightService {
                             totalLiabilities,
                             committedBudget: remainingBudget,
                             committedRecurring,
-                            safeToSpend: Math.max(0, netCash - remainingBudget - committedRecurring),
+                            committedPlanned,
+                            safeToSpend: Math.max(0, safeToSpend),
                             currencyCode: resultCurrency,
                             liquidAssetSubcategories: [...LIQUID_ASSET_SUBCATEGORIES],
                             liquidLiabilitySubcategories: [...LIQUID_LIABILITY_SUBCATEGORIES],
@@ -205,9 +270,11 @@ export class InsightService {
         return combineLatest([
             transactionRepository.observeActive(),
             accountRepository.observeAll(),
+            plannedPaymentRepository.observeActive(), // Added for deduplication
             this.refreshTrigger
         ]).pipe(
-            map(([transactions, accounts]) => {
+            debounceTime(500), // Performance optimization
+            map(([transactions, accounts, activePlannedPayments]) => {
                 const accountMap = new Map(accounts.map(a => [a.id, a]));
                 const recentTransactions = transactions.filter(t => t.transactionDate >= ninetyDaysAgo);
 
@@ -268,6 +335,20 @@ export class InsightService {
                     }
                 });
 
+                // Deduplicate subscription patterns against manual Planned Payments
+                const finalPatterns = patterns.filter((p: Pattern) => {
+                    if (p.type !== 'subscription-amnesiac') return true;
+                    // Check if there's an active planned payment for this account name and approximate amount
+                    const account = accounts.find((a: Account) => a.name === p.accountName);
+                    if (!account) return true;
+
+                    const isAlreadyPlanned = activePlannedPayments.some((pp: PlannedPayment) =>
+                        Math.abs(pp.amount) === Math.abs(p.amount || 0) &&
+                        (pp.fromAccountId === account.id || pp.toAccountId === account.id)
+                    );
+                    return !isAlreadyPlanned;
+                });
+
                 // 2. Slow Leak Detection (Spike in spending categories)
                 const spikeWindow = insightsConfig.spikeWindowDays;
                 const last7Days = Date.now() - (spikeWindow * 24 * 60 * 60 * 1000);
@@ -296,7 +377,7 @@ export class InsightService {
                     const spikeMultiplier = insightsConfig.spendingSpikeMultiplier;
                     if (historyAverage > 0 && amount > historyAverage * spikeMultiplier) {
                         const formattedSubcategory = subcategory.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-                        patterns.push({
+                        finalPatterns.push({
                             id: `leak_${subcategory}`,
                             type: 'slow-leak',
                             severity: 'low',
@@ -320,7 +401,7 @@ export class InsightService {
                     const hasSignificantAssets = assets.length > 3; // Rough proxy for "established user"
 
                     if (!hasEmergencyFund && hasSignificantAssets) {
-                        patterns.push({
+                        finalPatterns.push({
                             id: `no_emergency_fund`,
                             type: 'lifestyle-drift', // Repurposing classification for now
                             severity: 'medium',
@@ -334,9 +415,9 @@ export class InsightService {
 
                 const dismissedIds = preferences.dismissedPatternIds;
                 if (onlyDismissed) {
-                    return patterns.filter(p => dismissedIds.includes(p.id));
+                    return finalPatterns.filter(p => dismissedIds.includes(p.id));
                 }
-                return patterns.filter(p => !dismissedIds.includes(p.id));
+                return finalPatterns.filter(p => !dismissedIds.includes(p.id));
             })
         );
     }

@@ -6,6 +6,7 @@ export enum JournalStatus {
   DRAFT = 'DRAFT',
   POSTED = 'POSTED',
   REVERSED = 'REVERSED',
+  PLANNED = 'PLANNED',
 }
 
 export default class Journal extends Model {
@@ -20,6 +21,7 @@ export default class Journal extends Model {
   @field('status') status!: JournalStatus
   @field('original_journal_id') originalJournalId?: string
   @field('reversing_journal_id') reversingJournalId?: string
+  @field('planned_payment_id') plannedPaymentId?: string
 
   // Denormalized fields for list performance
   // totalAmount is the magnitude of the journal (sum of all debits)

@@ -11,6 +11,7 @@ import BudgetScope from '@/src/data/models/BudgetScope'
 import Currency from '@/src/data/models/Currency'
 import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal from '@/src/data/models/Journal'
+import PlannedPayment from '@/src/data/models/PlannedPayment'
 import Transaction from '@/src/data/models/Transaction'
 
 // Adapter (platform-specific resolution handled by Metro)
@@ -33,6 +34,7 @@ export const database = new WatermelonDB({
     Currency,
     ExchangeRate,
     Journal,
+    PlannedPayment,
     Transaction,
   ],
 })

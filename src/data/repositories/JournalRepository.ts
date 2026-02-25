@@ -3,6 +3,7 @@ import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
+import dayjs from 'dayjs'
 import { map, of } from 'rxjs'
 
 export interface CreateJournalData {
@@ -10,6 +11,8 @@ export interface CreateJournalData {
   description?: string
   currencyCode: string
   originalJournalId?: string
+  status?: JournalStatus
+  plannedPaymentId?: string
   transactions: {
     accountId: string
     amount: number
@@ -126,6 +129,20 @@ export class JournalRepository {
       .observeWithColumns(['status', 'deleted_at', 'journal_date'])
   }
 
+  observePlannedForMonth(targetMonth: string) {
+    const startOfMonth = dayjs(`${targetMonth}-01`).startOf('month').valueOf()
+    const endOfMonth = dayjs(`${targetMonth}-01`).endOf('month').valueOf()
+
+    return this.journals
+      .query(
+        Q.where('status', JournalStatus.PLANNED),
+        Q.where('journal_date', Q.gte(startOfMonth)),
+        Q.where('journal_date', Q.lte(endOfMonth)),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .observe()
+  }
+
   /**
    * PURE PERSISTENCE METHODS
    */
@@ -176,7 +193,8 @@ export class JournalRepository {
     return await database.write(async () => {
       const journal = this.journals.prepareCreate((j) => {
         Object.assign(j, journalFields)
-        j.status = JournalStatus.POSTED
+        j.status = journalFields.status ?? JournalStatus.POSTED
+        j.plannedPaymentId = journalFields.plannedPaymentId
         j.totalAmount = totalAmount ?? 0
         j.transactionCount = transactionData.length
         j.displayType = displayType ?? 'TRANSACTION'
@@ -248,6 +266,8 @@ export class JournalRepository {
         j.journalDate = journalFields.journalDate
         j.description = journalFields.description
         j.currencyCode = journalFields.currencyCode
+        j.status = journalFields.status ?? j.status
+        j.plannedPaymentId = journalFields.plannedPaymentId ?? j.plannedPaymentId
         j.totalAmount = totalAmount ?? j.totalAmount
         j.transactionCount = transactionData.length
         j.displayType = displayType ?? j.displayType

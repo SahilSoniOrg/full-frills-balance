@@ -1,9 +1,11 @@
 import { IconName } from '@/src/components/core';
 import { Opacity, withOpacity } from '@/src/constants';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
+import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { TransactionWithAccountInfo } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -45,6 +47,8 @@ export interface TransactionDetailsViewModel {
     formattedDate: string;
     journalIdShort: string;
     onHistoryPress: () => void;
+    onPost?: () => void;
+    onSkip?: () => void;
     splitItems: TransactionSplitItemViewModel[];
 }
 
@@ -52,7 +56,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     const router = useRouter();
     const { journalId } = useLocalSearchParams<{ journalId: string }>();
     const { theme } = useTheme();
-    const { deleteJournal, findJournal, duplicateJournal } = useJournalActions();
+    const { deleteJournal, findJournal, duplicateJournal, postJournal } = useJournalActions();
     const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
     const { journal, isLoading: isLoadingJournal } = useJournal(journalId);
 
@@ -62,7 +66,9 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         status: journal.status,
         currency: journal.currencyCode,
         displayType: journal.displayType,
-        totalAmount: journal.totalAmount || 0
+        totalAmount: journal.totalAmount || 0,
+        plannedPaymentId: journal.plannedPaymentId,
+        journalDate: journal.journalDate
     } : null;
 
     const isLoading = isLoadingTransactions || isLoadingJournal;
@@ -120,6 +126,47 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         router.back();
     }, [router]);
 
+    const handlePost = useCallback(async () => {
+        if (!journalInfo || journalInfo.status !== 'PLANNED') return;
+
+        showConfirmationAlert(
+            'Post Transaction',
+            `Are you sure you want to mark this planned transaction for ${amountText} as posted?`,
+            async () => {
+                try {
+                    await postJournal(journalId);
+                    showSuccessAlert('Posted', 'Transaction has been marked as posted.');
+                } catch (error) {
+                    logger.error('Failed to post transaction:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    showErrorAlert(`Could not post transaction: ${errorMessage}`);
+                }
+            }
+        );
+    }, [journalId, journalInfo, postJournal, amountText]);
+
+    const handleSkip = useCallback(async () => {
+        if (!journalInfo || journalInfo.status !== 'PLANNED' || !journalInfo.plannedPaymentId) return;
+
+        showConfirmationAlert(
+            'Skip Transaction',
+            `Are you sure you want to skip this planned transaction for ${amountText}? The schedule will advance to the next occurrence.`,
+            async () => {
+                try {
+                    const pp = await plannedPaymentRepository.find(journalInfo.plannedPaymentId!);
+                    if (!pp) throw new Error('Planned payment rule not found.');
+                    await plannedPaymentService.skipOccurrence(pp, journalInfo.journalDate);
+                    showSuccessAlert('Skipped', 'Transaction has been skipped.');
+                    router.back();
+                } catch (error) {
+                    logger.error('Failed to skip transaction:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    showErrorAlert(`Could not skip transaction: ${errorMessage}`);
+                }
+            }
+        );
+    }, [journalId, journalInfo, router, amountText]);
+
     const splitItems = useMemo(() => {
         return transactions.map((item: TransactionWithAccountInfo) => {
             const isIn = item.flowDirection === 'IN';
@@ -159,6 +206,8 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         formattedDate,
         journalIdShort: journalId?.substring(0, 8) || '...',
         onHistoryPress,
+        onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
+        onSkip: journalInfo?.status === 'PLANNED' ? handleSkip : undefined,
         splitItems,
     };
 }

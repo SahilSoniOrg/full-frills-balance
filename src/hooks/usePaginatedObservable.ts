@@ -21,6 +21,7 @@ export interface AccountDateRange extends DateRange {
     accountId?: string;
     accountVersion?: number;
     journalIds?: string[];
+    plannedPaymentId?: string;
 }
 
 export interface UsePaginatedObservableOptions<T, E = T> {
@@ -65,12 +66,12 @@ export function usePaginatedObservable<T, E = T>(
     const structuralKey = useMemo(
         () => {
             const rangePart = dateRange
-                ? `${dateRange.startDate}-${dateRange.endDate}-${dateRange.accountId || ''}`
+                ? `${dateRange.startDate}-${dateRange.endDate}-${dateRange.accountId || ''}-${dateRange.plannedPaymentId || ''}`
                 : 'none';
             return `${rangePart}-${searchQuery || ''}`;
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [dateRange?.startDate, dateRange?.endDate, dateRange?.accountId, searchQuery]
+        [dateRange?.startDate, dateRange?.endDate, dateRange?.accountId, dateRange?.plannedPaymentId, searchQuery]
     );
 
     // Version key for re-fetching without clearing

@@ -6,4 +6,6 @@ export { default as JournalScreen } from './list/screens/JournalScreen'
 export { default as TransactionDetailsScreen } from './screens/TransactionDetailsScreen'
 export { journalService, SubmitJournalResult } from './services/JournalService'
 export { transactionService } from './services/TransactionService'
+export { JournalListView } from './components/JournalListView'
+export { PlannedPaymentsSection } from './components/PlannedPaymentsSection'
 

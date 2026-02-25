@@ -139,6 +139,38 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                             onPress={onHistoryPress}
                             padding="sm"
                         />
+
+                        {vm.onPost && (
+                            <View style={{ padding: Spacing.md, gap: Spacing.sm }}>
+                                <AppButton
+                                    variant="primary"
+                                    onPress={vm.onPost}
+                                    style={{ width: '100%' }}
+                                >
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                                        <AppIcon name="checkmark" size={18} color={theme.onPrimary} />
+                                        <AppText variant="body" weight="bold" style={{ color: theme.onPrimary }}>
+                                            Post Transaction Now
+                                        </AppText>
+                                    </View>
+                                </AppButton>
+
+                                {vm.onSkip && (
+                                    <AppButton
+                                        variant="outline"
+                                        onPress={vm.onSkip}
+                                        style={{ width: '100%' }}
+                                    >
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                                            <AppIcon name="close" size={18} color={theme.text} />
+                                            <AppText variant="body" weight="bold">
+                                                Skip This Occurrence
+                                            </AppText>
+                                        </View>
+                                    </AppButton>
+                                )}
+                            </View>
+                        )}
                     </View>
 
                     <View style={[styles.divider, { backgroundColor: theme.divider }]} />

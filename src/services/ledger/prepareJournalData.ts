@@ -1,7 +1,8 @@
 import { AccountType } from '@/src/data/models/Account';
-import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
+import { JournalStatus } from '@/src/data/models/Journal';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -51,17 +52,21 @@ export async function prepareJournalData(data: CreateJournalData): Promise<Prepa
     const accountsToRebuild = new Set<string>(accountIds);
     const calculatedBalances = new Map<string, number>();
 
-    for (const tx of roundedTransactions) {
-        const latestTx = await transactionRepository.findLatestForAccountBeforeDate(tx.accountId, data.journalDate);
-        if (!accountingService.isBackdated(data.journalDate, latestTx?.transactionDate)) {
-            const balance = accountingService.calculateNewBalance(
-                latestTx?.runningBalance || 0,
-                tx.amount,
-                accountTypes.get(tx.accountId)!,
-                tx.transactionType,
-                accountPrecisions.get(tx.accountId) ?? 2,
-            );
-            calculatedBalances.set(tx.accountId, balance);
+    const isPlanned = data.status === JournalStatus.PLANNED;
+
+    if (!isPlanned) {
+        for (const tx of roundedTransactions) {
+            const latestTx = await transactionRepository.findLatestForAccountBeforeDate(tx.accountId, data.journalDate);
+            if (!accountingService.isBackdated(data.journalDate, latestTx?.transactionDate)) {
+                const balance = accountingService.calculateNewBalance(
+                    latestTx?.runningBalance || 0,
+                    tx.amount,
+                    accountTypes.get(tx.accountId)!,
+                    tx.transactionType,
+                    accountPrecisions.get(tx.accountId) ?? 2,
+                );
+                calculatedBalances.set(tx.accountId, balance);
+            }
         }
     }
 

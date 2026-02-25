@@ -7,17 +7,19 @@ import { EnrichedJournal, TransactionWithAccountInfo } from '@/src/types/domain'
 import { useCallback } from 'react'
 import { of } from 'rxjs'
 
+import { JournalStatus } from '@/src/data/models/Journal'
+
 /**
  * Hook to reactively get journals with pagination and account enrichment
  */
-export function useJournals(pageSize: number = 50, dateRange?: { startDate: number, endDate: number }, searchQuery?: string) {
+export function useJournals(pageSize: number = 50, dateRange?: { startDate: number, endDate: number }, searchQuery?: string, status?: JournalStatus[], plannedPaymentId?: string) {
     const observe = useCallback((limit: number, range?: { startDate: number, endDate: number }, query?: string) => {
-        return journalService.observeEnrichedJournals(limit, range, query)
-    }, [])
+        return journalService.observeEnrichedJournals(limit, { ...range, plannedPaymentId } as any, query, status)
+    }, [status, plannedPaymentId])
 
     const { items: journals, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<any, EnrichedJournal>({
         pageSize,
-        dateRange,
+        dateRange: (dateRange || plannedPaymentId) ? { ...dateRange, plannedPaymentId } as any : undefined,
         searchQuery,
         observe
     })

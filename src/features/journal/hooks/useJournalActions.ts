@@ -25,11 +25,16 @@ export function useJournalActions() {
         return journalService.duplicateJournal(journalId);
     }, []);
 
+    const postJournal = useCallback(async (journalId: string) => {
+        return journalService.postJournal(journalId);
+    }, []);
+
     return {
         createJournal,
         updateJournal,
         deleteJournal,
         findJournal,
         duplicateJournal,
+        postJournal,
     };
 }

@@ -142,6 +142,7 @@ export const AppConfig = {
       emptyTitle: 'No transactions found',
       emptySubtitle: 'Try adjusting your search or date filter',
       transactions: 'Transactions',
+      plannedPayments: 'Planned Payments',
       searchResults: 'Search Results',
       more: (count: number) => `+${count} more`,
       from: 'From: ',
@@ -420,6 +421,38 @@ export const AppConfig = {
       restartNote: 'A restart is required to finalize changes and re-initialize the application engine.',
       restartBtn: 'Restart App',
     },
+    plannedPayments: {
+      title: 'Planned Payments',
+      emptyTitle: 'No Planned Payments',
+      emptySubtitle: 'Create your first recurring payment rule to automate your tracking.',
+      nameLabel: 'Rule Name',
+      namePlaceholder: 'e.g., Monthly Rent',
+      amountLabel: 'Amount',
+      amountPlaceholder: '0.00',
+      fromAccountLabel: 'From Account',
+      toAccountLabel: 'To Account',
+      selectAccount: 'Select Account',
+      recurrenceTitle: 'Recurrence',
+      intervalLabel: 'Interval',
+      autoPostLabel: 'Auto-Post',
+      saveLabel: 'Save Rule',
+      savingLabel: 'Saving...',
+      nextOccurrence: (date: string) => `Next: ${date}`,
+      everyDay: 'Every day',
+      everyWeek: 'Every week',
+      everyMonth: 'Every month',
+      everyYear: 'Every year',
+      everyN: (n: number, type: string) => `Every ${n} ${type}s`,
+      statusPaused: 'PAUSED',
+      formTitleNew: 'New Recurring Rule',
+      formTitleEdit: 'Edit Recurring Rule',
+      dayOfWeek: 'Day of Week',
+      dayOfMonth: 'Day of Month (1-31)',
+      month: 'Month',
+      selectMonth: 'Select Month',
+      monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      dayNames: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    },
   },
 
   // Layout Constants
@@ -435,6 +468,8 @@ export const AppConfig = {
   // Default Values
   defaults: {
     reportDays: 30,
+    journalPageSize: 50,
+    plannedJournalLimit: 10,
   },
   // Insight Configuration
   insights: {
@@ -447,5 +482,9 @@ export const AppConfig = {
     spendingSpikeMultiplier: 1.5,
     spendingSpikeSeverityThreshold: 1000,
     spikeWindowDays: 7,
+    recurringHorizonDays: 7,
+  },
+  time: {
+    msPerDay: 24 * 60 * 60 * 1000,
   },
 } as const

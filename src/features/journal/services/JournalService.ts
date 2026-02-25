@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
-import Journal from '@/src/data/models/Journal';
+import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -139,6 +139,46 @@ export class JournalService {
         return reversalJournal;
     }
 
+    async postJournal(journalId: string): Promise<Journal> {
+        const journal = await journalRepository.find(journalId);
+        if (!journal) throw new Error('Journal not found');
+        if (journal.status !== JournalStatus.PLANNED) {
+            throw new Error(`Cannot post journal with status ${journal.status}. Only PLANNED journals can be posted.`);
+        }
+
+        const transactions = await transactionRepository.findByJournal(journalId);
+
+        // 1. Update status to POSTED
+        const updatedJournal = await journalRepository.updateJournalWithTransactions(journalId, {
+            journalDate: journal.journalDate,
+            description: journal.description || '',
+            currencyCode: journal.currencyCode,
+            transactions: transactions.map(t => ({
+                accountId: t.accountId,
+                amount: t.amount,
+                transactionType: t.transactionType as TransactionType,
+                notes: t.notes,
+                exchangeRate: t.exchangeRate
+            })),
+            status: JournalStatus.POSTED
+        });
+
+        // 2. Audit log
+        await auditService.log({
+            entityType: 'journal',
+            entityId: journalId,
+            action: AuditAction.UPDATE,
+            changes: { status: JournalStatus.POSTED }
+        });
+
+        // 3. Rebuild balances
+        const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
+        rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
+
+        logger.info(`Manually posted journal ${journalId}`);
+        return updatedJournal;
+    }
+
     /**
      * Unified entry point for saving journals from Simple, Advanced, or Import flows.
      */
@@ -239,26 +279,34 @@ export class JournalService {
      * Observe journals with their associated accounts for list display.
      * Uses a reactive pipeline to enrich journals with account info without manual caching.
      */
-    observeEnrichedJournals(limit: number, dateRange?: AccountDateRange, searchQuery?: string) {
+    observeEnrichedJournals(limit: number, dateRange?: AccountDateRange, searchQuery?: string, status?: JournalStatus[]) {
         const clauses: any[] = [
             Q.where('deleted_at', Q.eq(null)),
-            Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+            Q.where('status', Q.oneOf(status || [...ACTIVE_JOURNAL_STATUSES])),
             Q.sortBy('journal_date', 'desc'),
             Q.sortBy('created_at', 'desc'),
             Q.take(limit)
         ];
 
-        if (dateRange?.accountId) {
+        if (dateRange?.accountId && !dateRange.plannedPaymentId) {
             clauses.push(Q.experimentalJoinTables(['transactions']));
             clauses.push(Q.on('transactions', Q.where('account_id', dateRange.accountId)));
         }
 
         if (dateRange) {
-            clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)));
-            clauses.push(Q.where('journal_date', Q.lte(dateRange.endDate)));
+            if (dateRange.startDate !== undefined) {
+                clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)));
+            }
+            if (dateRange.endDate !== undefined) {
+                clauses.push(Q.where('journal_date', Q.lte(dateRange.endDate)));
+            }
 
             if (dateRange.journalIds && dateRange.journalIds.length > 0) {
                 clauses.push(Q.where('id', Q.oneOf(dateRange.journalIds)));
+            }
+
+            if (dateRange.plannedPaymentId) {
+                clauses.push(Q.where('planned_payment_id', Q.eq(dateRange.plannedPaymentId)));
             }
         }
 

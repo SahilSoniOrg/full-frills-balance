@@ -14,6 +14,7 @@ import BudgetScope from '@/src/data/models/BudgetScope';
 import Currency from '@/src/data/models/Currency';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import Journal from '@/src/data/models/Journal';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
@@ -45,6 +46,7 @@ export interface JournalExport {
   totalAmount: number;
   transactionCount: number;
   displayType: string;
+  plannedPaymentId?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -135,6 +137,26 @@ export interface AccountMetadataExport {
   updatedAt: string;
 }
 
+export interface PlannedPaymentExport {
+  id: string;
+  name: string;
+  description?: string;
+  amount: number;
+  currencyCode: string;
+  fromAccountId: string;
+  toAccountId?: string;
+  intervalN: number;
+  intervalType: string;
+  startDate: string;
+  endDate?: string;
+  nextOccurrence: string;
+  status: string;
+  isAutoPost: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
 export interface ExportData {
   exportDate: string;
   version: string;
@@ -148,6 +170,7 @@ export interface ExportData {
   currencies: CurrencyExport[];
   exchangeRates: ExchangeRateExport[];
   accountMetadata: AccountMetadataExport[];
+  plannedPayments: PlannedPaymentExport[];
 }
 
 interface ExportSummary {
@@ -160,6 +183,7 @@ interface ExportSummary {
   currencies: number;
   exchangeRates: number;
   accountMetadata: number;
+  plannedPayments: number;
 }
 
 function toIsoDate(value: Date | number | undefined | null): string | undefined {
@@ -186,6 +210,7 @@ class ExportService {
         currencies,
         exchangeRates,
         accountMetadata,
+        plannedPayments,
         userPreferences,
       ] = await Promise.all([
         database.collections.get<Account>('accounts').query().fetch(),
@@ -197,6 +222,7 @@ class ExportService {
         database.collections.get<Currency>('currencies').query().fetch(),
         database.collections.get<ExchangeRate>('exchange_rates').query().fetch(),
         database.collections.get<AccountMetadata>('account_metadata').query().fetch(),
+        database.collections.get<PlannedPayment>('planned_payments').query().fetch(),
         preferences.loadPreferences(),
       ]);
 
@@ -229,6 +255,7 @@ class ExportService {
           totalAmount: j.totalAmount,
           transactionCount: j.transactionCount,
           displayType: j.displayType,
+          plannedPaymentId: j.plannedPaymentId,
           createdAt: j.createdAt.toISOString(),
           updatedAt: j.updatedAt.toISOString(),
           deletedAt: toIsoDate(j.deletedAt),
@@ -311,6 +338,25 @@ class ExportService {
           createdAt: metadata.createdAt.toISOString(),
           updatedAt: metadata.updatedAt.toISOString(),
         })),
+        plannedPayments: plannedPayments.map((pp) => ({
+          id: pp.id,
+          name: pp.name,
+          description: pp.description,
+          amount: pp.amount,
+          currencyCode: pp.currencyCode,
+          fromAccountId: pp.fromAccountId,
+          toAccountId: pp.toAccountId,
+          intervalN: pp.intervalN,
+          intervalType: pp.intervalType,
+          startDate: new Date(pp.startDate).toISOString(),
+          endDate: toIsoDate(pp.endDate),
+          nextOccurrence: new Date(pp.nextOccurrence).toISOString(),
+          status: pp.status,
+          isAutoPost: pp.isAutoPost,
+          createdAt: pp.createdAt.toISOString(),
+          updatedAt: pp.updatedAt.toISOString(),
+          deletedAt: toIsoDate(pp.deletedAt),
+        })),
       };
 
       const json = JSON.stringify(exportData, null, 2);
@@ -326,6 +372,7 @@ class ExportService {
         currencies: exportData.currencies.length,
         exchangeRates: exportData.exchangeRates.length,
         accountMetadata: exportData.accountMetadata.length,
+        plannedPayments: exportData.plannedPayments.length,
       });
 
       return json;
@@ -349,6 +396,7 @@ class ExportService {
       currencies,
       exchangeRates,
       accountMetadata,
+      plannedPayments,
     ] = await Promise.all([
       database.collections.get<Account>('accounts').query().fetchCount(),
       database.collections.get<Journal>('journals').query().fetchCount(),
@@ -359,6 +407,7 @@ class ExportService {
       database.collections.get<Currency>('currencies').query().fetchCount(),
       database.collections.get<ExchangeRate>('exchange_rates').query().fetchCount(),
       database.collections.get<AccountMetadata>('account_metadata').query().fetchCount(),
+      database.collections.get<PlannedPayment>('planned_payments').query().fetchCount(),
     ]);
 
     return {
@@ -371,6 +420,7 @@ class ExportService {
       currencies,
       exchangeRates,
       accountMetadata,
+      plannedPayments,
     };
   }
 }

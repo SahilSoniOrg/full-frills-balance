@@ -6,7 +6,6 @@
  */
 
 import { AppConfig } from '@/src/constants';
-import { importRepository } from '@/src/data/repositories/ImportRepository';
 import {
     ImportedAccount,
     ImportedAccountMetadata,
@@ -16,7 +15,8 @@ import {
     ImportedCurrency,
     ImportedExchangeRate,
     ImportedJournal,
-    ImportedTransaction
+    ImportedPlannedPayment,
+    ImportedTransaction, importRepository
 } from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
@@ -35,6 +35,7 @@ interface NativeImportData {
     currencies?: ImportedCurrency[];
     exchangeRates?: ImportedExchangeRate[];
     accountMetadata?: ImportedAccountMetadata[];
+    plannedPayments?: ImportedPlannedPayment[];
 }
 
 function parseTimestamp(value?: number | string): number | undefined {
@@ -128,6 +129,7 @@ export const nativePlugin: ImportPlugin = {
                     totalAmount: j.totalAmount,
                     transactionCount: j.transactionCount,
                     displayType: j.displayType,
+                    plannedPaymentId: j.plannedPaymentId,
                     createdAt: parseTimestamp(j.createdAt),
                     updatedAt: parseTimestamp(j.updatedAt),
                     deletedAt: parseTimestamp(j.deletedAt),
@@ -208,6 +210,27 @@ export const nativePlugin: ImportPlugin = {
                     notes: metadata.notes,
                     createdAt: parseTimestamp(metadata.createdAt),
                     updatedAt: parseTimestamp(metadata.updatedAt),
+                })),
+                plannedPayments: (data.plannedPayments || []).map((pp) => ({
+                    id: pp.id,
+                    name: pp.name,
+                    description: pp.description,
+                    amount: pp.amount,
+                    currencyCode: pp.currencyCode,
+                    fromAccountId: pp.fromAccountId,
+                    toAccountId: pp.toAccountId,
+                    intervalN: pp.intervalN,
+                    intervalType: pp.intervalType,
+                    startDate: parseTimestamp(pp.startDate) ?? Date.now(),
+                    endDate: parseTimestamp(pp.endDate),
+                    nextOccurrence: parseTimestamp(pp.nextOccurrence) ?? Date.now(),
+                    status: pp.status,
+                    isAutoPost: pp.isAutoPost,
+                    recurrenceDay: pp.recurrenceDay,
+                    recurrenceMonth: pp.recurrenceMonth,
+                    createdAt: parseTimestamp(pp.createdAt),
+                    updatedAt: parseTimestamp(pp.updatedAt),
+                    deletedAt: parseTimestamp(pp.deletedAt),
                 })),
             });
 

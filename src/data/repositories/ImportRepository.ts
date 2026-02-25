@@ -6,14 +6,15 @@ import Account, {
   isAccountSubcategory,
   isAccountType
 } from '@/src/data/models/Account'
+import AccountMetadata from '@/src/data/models/AccountMetadata'
 import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog'
 import Budget from '@/src/data/models/Budget'
 import BudgetScope from '@/src/data/models/BudgetScope'
 import Currency from '@/src/data/models/Currency'
 import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
+import PlannedPayment from '@/src/data/models/PlannedPayment'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
-import AccountMetadata from '@/src/data/models/AccountMetadata'
 import { Q } from '@nozbe/watermelondb'
 
 export interface ImportedAccount {
@@ -45,6 +46,7 @@ export interface ImportedJournal {
   deletedAt?: number
   originalJournalId?: string
   reversingJournalId?: string
+  plannedPaymentId?: string
 }
 
 export interface ImportedTransaction {
@@ -131,6 +133,28 @@ export interface ImportedAccountMetadata {
   updatedAt?: number
 }
 
+export interface ImportedPlannedPayment {
+  id: string
+  name: string
+  description?: string
+  amount: number
+  currencyCode: string
+  fromAccountId: string
+  toAccountId: string
+  intervalN: number
+  intervalType: string
+  startDate: number
+  endDate?: number
+  nextOccurrence: number
+  status: string
+  isAutoPost: boolean
+  recurrenceDay?: number
+  recurrenceMonth?: number
+  createdAt?: number
+  updatedAt?: number
+  deletedAt?: number
+}
+
 export interface ChangeSet<T> {
   created?: T[]
   updated?: T[]
@@ -147,6 +171,7 @@ export interface BatchImportData {
   currencies?: ImportedCurrency[]
   exchangeRates?: ImportedExchangeRate[]
   accountMetadata?: ImportedAccountMetadata[]
+  plannedPayments?: ImportedPlannedPayment[]
 }
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET
@@ -189,6 +214,7 @@ export class ImportRepository {
       const currenciesCollection = database.collections.get<Currency>('currencies')
       const exchangeRatesCollection = database.collections.get<ExchangeRate>('exchange_rates')
       const accountMetadataCollection = database.collections.get<AccountMetadata>('account_metadata')
+      const plannedPaymentsCollection = database.collections.get<PlannedPayment>('planned_payments')
 
       const accountPrepares = data.accounts.map(acc =>
         accountsCollection.prepareCreate(record => {
@@ -220,6 +246,7 @@ export class ImportRepository {
           record.totalAmount = j.totalAmount
           record.transactionCount = j.transactionCount
           record.displayType = j.displayType
+          if (j.plannedPaymentId) record.plannedPaymentId = j.plannedPaymentId
           record._raw._status = 'synced'
           if (j.createdAt) (record as any)._raw.created_at = j.createdAt
           if (j.updatedAt) (record as any)._raw.updated_at = j.updatedAt
@@ -332,6 +359,31 @@ export class ImportRepository {
         })
       )
 
+      const plannedPaymentPrepares = (data.plannedPayments || []).map((pp) =>
+        plannedPaymentsCollection.prepareCreate((record) => {
+          record._raw.id = pp.id
+          record.name = pp.name
+          record.description = pp.description
+          record.amount = pp.amount
+          record.currencyCode = pp.currencyCode
+          record.fromAccountId = pp.fromAccountId
+          record.toAccountId = pp.toAccountId
+          record.intervalN = pp.intervalN
+          record.intervalType = pp.intervalType as any
+          record.startDate = pp.startDate
+          record.endDate = pp.endDate
+          record.nextOccurrence = pp.nextOccurrence
+          record.status = pp.status as any
+          record.isAutoPost = pp.isAutoPost
+          record.recurrenceDay = pp.recurrenceDay
+          record.recurrenceMonth = pp.recurrenceMonth
+          record._raw._status = 'synced'
+          if (pp.createdAt) (record as any)._raw.created_at = pp.createdAt
+          if (pp.updatedAt) (record as any)._raw.updated_at = pp.updatedAt
+          if (pp.deletedAt) (record as any)._raw.deleted_at = pp.deletedAt
+        })
+      )
+
       const operations = [
         ...accountPrepares,
         ...journalPrepares,
@@ -341,21 +393,12 @@ export class ImportRepository {
         ...budgetScopePrepares,
         ...currencyPrepares,
         ...exchangeRatePrepares,
-        ...accountMetadataPrepares
+        ...accountMetadataPrepares,
+        ...plannedPaymentPrepares
       ]
 
       if (operations.length > 0) {
         await database.batch(...operations)
-      }
-
-      // Trigger rebuild for all involved accounts
-      const uniqueAccountIds = Array.from(new Set(data.transactions.map(t => t.accountId)))
-      if (uniqueAccountIds.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { rebuildQueueService } = require('@/src/services/RebuildQueueService')
-        // We find the earliest transaction date in the import to rebuild from there
-        const earliestDate = data.transactions.reduce((min, t) => Math.min(min, t.transactionDate), Date.now())
-        rebuildQueueService.enqueueMany(uniqueAccountIds, earliestDate)
       }
     })
   }
@@ -460,6 +503,9 @@ export class ImportRepository {
         record.totalAmount = j.totalAmount
         record.transactionCount = j.transactionCount
         record.displayType = j.displayType
+        if (j.plannedPaymentId) {
+          record.plannedPaymentId = j.plannedPaymentId
+        }
         if (j.createdAt) (record as any)._raw.created_at = j.createdAt
         if (j.updatedAt) (record as any)._raw.updated_at = j.updatedAt
         if (j.deletedAt) {
@@ -507,48 +553,15 @@ export class ImportRepository {
       await softDelete(accountsCollection, data.accounts.deleted || [])
       await softDelete(journalsCollection, data.journals.deleted || [])
 
-      const createdOrUpdatedTransactions = [
-        ...(data.transactions.created || []),
-        ...(data.transactions.updated || [])
-      ]
-      const txDates: number[] = createdOrUpdatedTransactions
-        .map(t => t.transactionDate)
-        .filter((date): date is number => typeof date === 'number')
-
       const deletedTransactionIds = data.transactions.deleted || []
-      const deletedTxAccountIds = new Set<string>()
-      if (deletedTransactionIds.length > 0) {
-        const deletedTxs = await transactionsCollection
-          .query(Q.where('id', Q.oneOf(deletedTransactionIds)))
-          .fetch()
-        for (const tx of deletedTxs) {
-          deletedTxAccountIds.add(tx.accountId)
-          if (typeof tx.transactionDate === 'number') {
-            txDates.push(tx.transactionDate)
-          }
-        }
-      }
-
       await softDelete(transactionsCollection, deletedTransactionIds)
+
       if (data.auditLogs) {
         await hardDelete(auditLogsCollection, data.auditLogs.deleted || [])
       }
 
       if (ops.length > 0) {
         await database.batch(...ops)
-      }
-
-      const txAccountIds = createdOrUpdatedTransactions.map(t => t.accountId)
-      const allAffectedAccountIds = new Set<string>([...txAccountIds, ...deletedTxAccountIds])
-      if (allAffectedAccountIds.size > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { rebuildQueueService } = require('@/src/services/RebuildQueueService')
-        const earliestDate = txDates.length > 0 ? Math.min(...txDates) : undefined
-        if (earliestDate !== undefined) {
-          rebuildQueueService.enqueueMany(allAffectedAccountIds, earliestDate)
-        } else {
-          rebuildQueueService.enqueueMany(allAffectedAccountIds)
-        }
       }
     })
   }

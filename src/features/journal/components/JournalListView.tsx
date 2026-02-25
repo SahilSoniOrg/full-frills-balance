@@ -4,6 +4,7 @@ import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
+import { EnrichedJournal } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -33,6 +34,8 @@ export interface JournalListViewProps {
     fab?: {
         onPress: () => void;
     };
+    plannedJournals?: EnrichedJournal[];
+    onPlannedJournalPress?: (item: EnrichedJournal) => void;
 }
 
 export function JournalListView({
@@ -53,6 +56,8 @@ export function JournalListView({
     containerStyle,
     datePicker,
     fab,
+    plannedJournals,
+    onPlannedJournalPress,
 }: JournalListViewProps) {
     return (
         <Screen
@@ -74,6 +79,8 @@ export function JournalListView({
                     onEndReached={onEndReached}
                     contentContainerStyle={[styles.listContent, listContentStyle]}
                     estimatedItemSize={120}
+                    plannedJournals={plannedJournals}
+                    onPlannedJournalPress={onPlannedJournalPress}
                 />
 
                 {fab && (

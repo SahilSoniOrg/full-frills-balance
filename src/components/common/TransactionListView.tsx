@@ -1,5 +1,6 @@
 import { AppText, EmptyStateView, LoadingView } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
+import { EnrichedJournal } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -19,6 +20,8 @@ interface TransactionListViewProps {
     onEndReached?: () => void;
     contentContainerStyle?: any;
     estimatedItemSize?: number;
+    plannedJournals?: EnrichedJournal[];
+    onPlannedJournalPress?: (item: EnrichedJournal) => void;
 }
 
 export function TransactionListView({

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 8,
+  version: 9,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -44,6 +44,7 @@ export const schema = appSchema({
         { name: 'total_amount', type: 'number' },
         { name: 'transaction_count', type: 'number' },
         { name: 'display_type', type: 'string' },
+        { name: 'planned_payment_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
@@ -129,6 +130,29 @@ export const schema = appSchema({
         { name: 'notes', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'planned_payments',
+      columns: [
+        { name: 'name', type: 'string' },
+        { name: 'description', type: 'string', isOptional: true },
+        { name: 'amount', type: 'number' },
+        { name: 'currency_code', type: 'string', isIndexed: true },
+        { name: 'from_account_id', type: 'string', isIndexed: true },
+        { name: 'to_account_id', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'interval_n', type: 'number' },
+        { name: 'interval_type', type: 'string' }, // DAILY, WEEKLY, etc.
+        { name: 'start_date', type: 'number', isIndexed: true },
+        { name: 'end_date', type: 'number', isOptional: true },
+        { name: 'next_occurrence', type: 'number', isIndexed: true },
+        { name: 'status', type: 'string' }, // ACTIVE, PAUSED, COMPLETED
+        { name: 'is_auto_post', type: 'boolean' },
+        { name: 'recurrence_day', type: 'number', isOptional: true },
+        { name: 'recurrence_month', type: 'number', isOptional: true },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
+        { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
       ],
     }),
   ],

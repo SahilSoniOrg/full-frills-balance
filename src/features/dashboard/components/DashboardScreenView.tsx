@@ -2,7 +2,8 @@ import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
-import { JournalListView } from '@/src/features/journal/components/JournalListView';
+import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
+
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { InsightWidget } from './InsightWidget';
@@ -41,6 +42,10 @@ export function DashboardScreenView({
             listHeader={
                 <View>
                     <DashboardHeader {...headerProps} />
+                    <PlannedPaymentsSection
+                        items={listViewProps.plannedJournals || []}
+                        onItemPress={listViewProps.onPlannedJournalPress}
+                    />
                     {safeToSpendData && (
                         <SafeToSpendCard
                             {...safeToSpendData}

@@ -9,6 +9,7 @@ import { AppConfig } from '@/src/constants';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
+import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
@@ -64,6 +65,24 @@ interface IvyTransaction {
     categoryId?: string;
     isDeleted?: boolean;
     dueDate?: string | number;
+    recurringRuleId?: string;
+}
+
+interface IvyPlannedPaymentRule {
+    id: string;
+    startDate?: string;
+    intervalN?: number;
+    intervalType?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
+    oneTime: boolean;
+    type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+    accountId: string;
+    amount: number;
+    categoryId?: string;
+    title?: string;
+    description?: string;
+    toAccountId?: string;
+    toAmount?: number;
+    isDeleted?: boolean;
 }
 
 interface IvyData {
@@ -72,6 +91,7 @@ interface IvyData {
     transactions: IvyTransaction[];
     budgets?: IvyBudget[];
     settings?: IvySettings[];
+    plannedPaymentRules?: IvyPlannedPaymentRule[];
 }
 
 /**
@@ -192,6 +212,33 @@ export const ivyPlugin: ImportPlugin = {
                     }
                     categoryCurrencies.get(catId)!.add(ivyBaseCurrency);
                 });
+            });
+        }
+
+        // Add categories from planned payment rules
+        if (data.plannedPaymentRules) {
+            data.plannedPaymentRules.forEach(rule => {
+                if (rule.isDeleted || !rule.categoryId) return;
+
+                let currency = targetDefaultCurrency;
+                if (rule.accountId && rawIvyAccountCurrency.has(rule.accountId)) {
+                    currency = rawIvyAccountCurrency.get(rule.accountId)!;
+                }
+
+                const key = `${rule.categoryId}:::${currency}`;
+                if (!categoryUsageMap.has(key)) {
+                    categoryUsageMap.set(key, { expenseCount: 0, incomeCount: 0 });
+                }
+
+                // Track usage type for income/expense determination
+                const stats = categoryUsageMap.get(key)!;
+                if (rule.type === 'EXPENSE') stats.expenseCount++;
+                if (rule.type === 'INCOME') stats.incomeCount++;
+
+                if (!categoryCurrencies.has(rule.categoryId)) {
+                    categoryCurrencies.set(rule.categoryId, new Set());
+                }
+                categoryCurrencies.get(rule.categoryId)!.add(currency);
             });
         }
 
@@ -383,7 +430,8 @@ export const ivyPlugin: ImportPlugin = {
                 status: JournalStatus.POSTED,
                 totalAmount: amount,
                 transactionCount: 2,
-                displayType
+                displayType,
+                plannedPaymentId: tx.recurringRuleId
             });
 
             // Transaction 1: SOURCE (Credit)
@@ -481,7 +529,92 @@ export const ivyPlugin: ImportPlugin = {
             });
         }
 
-        // 7. Write to DB
+        // 7. Map Planned Payments
+        onProgress?.('Mapping planned payments...', 0.73);
+        const plannedPaymentImports: any[] = [];
+        const mapIvyInterval = (ivyInterval?: string): string => {
+            switch (ivyInterval) {
+                case 'DAY': return 'DAILY';
+                case 'WEEK': return 'WEEKLY';
+                case 'MONTH': return 'MONTHLY';
+                case 'YEAR': return 'YEARLY';
+                default: return 'MONTHLY';
+            }
+        };
+
+        if (data.plannedPaymentRules) {
+            data.plannedPaymentRules.forEach(rule => {
+                if (rule.isDeleted) return;
+
+                const fromAccountId = accountMap.get(rule.accountId);
+                if (!fromAccountId) return;
+
+                let currencyCode = accountCurrencyMap.get(fromAccountId) || targetDefaultCurrency;
+                let toAccountId = rule.toAccountId ? accountMap.get(rule.toAccountId) : undefined;
+                const intervalType = mapIvyInterval(rule.intervalType);
+                const startDate = rule.startDate ? new Date(rule.startDate).getTime() : Date.now();
+                const startLocalDate = new Date(startDate);
+                const recurrenceDay = startLocalDate.getDate();
+                const recurrenceMonth = startLocalDate.getMonth() + 1; // 1-indexed
+
+                // Normalize occurrence date to midnight to align with PlannedPaymentService expectations
+                const normalizedNextOcc = new Date(startDate);
+                normalizedNextOcc.setHours(0, 0, 0, 0);
+                const finalNextOcc = normalizedNextOcc.getTime();
+
+                // If it's a category rule, find the category account for the respective currency
+                if (rule.categoryId) {
+                    const key = `${rule.categoryId}:::${currencyCode}`;
+                    const catAccId = categoryAccountMap.get(key);
+                    if (catAccId) {
+                        if (rule.type === 'INCOME') {
+                            const originalFrom = fromAccountId;
+                            const catFrom = catAccId;
+                            plannedPaymentImports.push({
+                                id: rule.id,
+                                name: rule.title || 'Income Rule',
+                                description: rule.description,
+                                amount: Math.abs(rule.amount),
+                                currencyCode,
+                                fromAccountId: catFrom,
+                                toAccountId: originalFrom,
+                                intervalN: rule.intervalN || 1,
+                                intervalType,
+                                startDate,
+                                nextOccurrence: finalNextOcc,
+                                status: PlannedPaymentStatus.ACTIVE,
+                                isAutoPost: false,
+                                recurrenceDay,
+                                recurrenceMonth
+                            });
+                            return;
+                        } else if (rule.type === 'EXPENSE') {
+                            toAccountId = catAccId;
+                        }
+                    }
+                }
+
+                plannedPaymentImports.push({
+                    id: rule.id,
+                    name: rule.title || (rule.type === 'TRANSFER' ? 'Transfer Rule' : 'Payment Rule'),
+                    description: rule.description,
+                    amount: Math.abs(rule.amount),
+                    currencyCode,
+                    fromAccountId,
+                    toAccountId,
+                    intervalN: rule.intervalN || 1,
+                    intervalType,
+                    startDate,
+                    nextOccurrence: finalNextOcc,
+                    status: PlannedPaymentStatus.ACTIVE,
+                    isAutoPost: false,
+                    recurrenceDay,
+                    recurrenceMonth
+                });
+            });
+        }
+
+        // 8. Write to DB
         onProgress?.('Saving to database...', 0.75);
         logger.info('[IvyPlugin] Writing mapped data to database...');
         await importRepository.batchInsert({
@@ -489,7 +622,8 @@ export const ivyPlugin: ImportPlugin = {
             journals: journalImports,
             transactions: transactionImports,
             budgets: budgetImports,
-            budgetScopes: budgetScopeImports
+            budgetScopes: budgetScopeImports,
+            plannedPayments: plannedPaymentImports
         });
 
         // 7. Run integrity check to repair account balances
@@ -529,6 +663,7 @@ export const ivyPlugin: ImportPlugin = {
             journals: journalImports.length,
             transactions: transactionImports.length,
             budgets: budgetImports.length,
+            plannedPayments: plannedPaymentImports.length,
             auditLogs: 0,
             skippedTransactions: skippedItems.length,
             skippedItems

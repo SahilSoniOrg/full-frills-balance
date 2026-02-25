@@ -4,6 +4,7 @@ import { CreateJournalData, journalRepository } from '@/src/data/repositories/Jo
 import { auditService } from '@/src/services/audit-service';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 
 export class LedgerWriteService {
     async createJournal(data: CreateJournalData): Promise<Journal> {
@@ -24,7 +25,8 @@ export class LedgerWriteService {
             changes: { description: data.description },
         });
 
-        if (prepared.accountsToRebuild.size > 0) {
+        const activeStatus = !data.status || ACTIVE_JOURNAL_STATUSES.includes(data.status as any);
+        if (activeStatus && prepared.accountsToRebuild.size > 0) {
             rebuildQueueService.enqueueMany(prepared.accountsToRebuild, data.journalDate);
         }
 

@@ -1,8 +1,8 @@
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
-import { useTheme } from '@/src/hooks/use-theme';
 import { AccountSubcategory, formatAccountSubcategoryLabel } from '@/src/data/models/Account';
+import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -11,6 +11,7 @@ interface SafeToSpendCardProps {
     safeToSpend: number;
     committedBudget: number;
     committedRecurring: number;
+    committedPlanned: number;
     totalLiquidAssets: number;
     totalLiabilities: number;
     currencyCode: string;
@@ -29,6 +30,7 @@ export const SafeToSpendCard = ({
     safeToSpend,
     committedBudget,
     committedRecurring,
+    committedPlanned,
     totalLiquidAssets,
     totalLiabilities,
     currencyCode,
@@ -166,7 +168,7 @@ export const SafeToSpendCard = ({
                             {AppConfig.strings.dashboard.bills}
                         </AppText>
                         <AppText variant="subheading" style={[styles.breakdownValue, { color: theme.onPrimary }]}>
-                            {format(committedRecurring)}
+                            {format(committedRecurring + committedPlanned)}
                         </AppText>
                     </View>
                 </View>
@@ -226,7 +228,7 @@ export const SafeToSpendCard = ({
                         <AppText variant="caption" color="secondary">Liquid Assets: {format(totalLiquidAssets)}</AppText>
                         <AppText variant="caption" color="secondary">Liquid Debts: {format(totalLiabilities)}</AppText>
                         <AppText variant="caption" color="secondary">Remaining Budgets: {format(committedBudget)}</AppText>
-                        <AppText variant="caption" color="secondary">Recurring Bills: {format(committedRecurring)}</AppText>
+                        <AppText variant="caption" color="secondary">Recurring Bills & Plans: {format(committedRecurring + committedPlanned)}</AppText>
                         <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                         <AppText variant="body" weight="bold">Safe to Spend: {format(safeToSpend)}</AppText>
                     </View>
