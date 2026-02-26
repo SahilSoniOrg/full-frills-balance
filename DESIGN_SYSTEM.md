@@ -268,3 +268,47 @@ import { Spacing, Typography, Colors, App } from '@/src/constants'
 ## ========================================
 
 The design preview at `/_design-preview` is your visual truth. If it looks wrong there, it's wrong everywhere. This screen is frozen and serves as the regression detector and taste alignment check for all future design system changes.
+
+## ========================================
+## ALERT & NOTIFICATION SYSTEM
+## ========================================
+
+Use the unified alert system from `@/src/utils/alerts` for all user notifications.
+
+### Alert Types
+
+| Type | Use Case | Behavior |
+|------|----------|----------|
+| **Toast** | Success messages, info | Auto-dismiss after 3s, non-blocking |
+| **Alert** | Errors, warnings | Blocks until dismissed |
+| **Confirm** | Destructive actions | Requires explicit user confirmation |
+
+### API
+
+```tsx
+import { toast, alert, confirm } from '@/src/utils/alerts'
+
+// Success notification
+toast.success('Changes saved')
+
+// Error notification  
+toast.error('Failed to save')
+
+// Info dialog
+alert.show({ title: 'Notice', message: 'Something happened' })
+
+// Destructive confirmation
+confirm.show({
+  title: 'Delete?',
+  message: 'This cannot be undone.',
+  confirmText: 'Delete',
+  destructive: true,
+  onConfirm: () => {},
+})
+```
+
+### When to Use Each
+
+- **toast.success/error**: After async operations complete (save, delete, import)
+- **alert.show**: When user needs to read important info that blocks flow
+- **confirm.show**: Before destructive actions (delete, reset, overwrite)
