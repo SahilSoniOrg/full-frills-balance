@@ -1,33 +1,42 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { ImportStats } from '@/src/services/import';
 import { logger } from '@/src/utils/logger';
-import { init, trackEvent } from '@aptabase/react-native';
+import PostHog from 'posthog-react-native';
 
 /**
  * Analytics Service
  * 
  * Provides a privacy-first, lightweight wrapper for tracking usage patterns.
- * Powered by Aptabase.
+ * Powered by PostHog.
  */
 
-// Expo environment variable (must be prefixed with EXPO_PUBLIC_)
-const APTABASE_KEY = process.env.EXPO_PUBLIC_APTABASE_KEY || '';
+// PostHog configuration — evaluated at module load so the client is ready immediately
+const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
+const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+
+/**
+ * Singleton PostHog client shared by both PostHogProvider (in RootLayout)
+ * and AnalyticsService (for service-layer tracking).
+ * Exported so RootLayout can pass it via `client={posthogClient}`.
+ */
+export const posthogClient = POSTHOG_API_KEY
+    ? new PostHog(POSTHOG_API_KEY, {
+        host: POSTHOG_HOST,
+    })
+    : null;
 
 export class AnalyticsService {
-    private isInitialized = false;
-
     /**
-     * Initialize analytics provider
+     * Initialize analytics provider. No-op since the client is created eagerly;
+     * kept for call-site compatibility.
      */
     initialize() {
-        if (this.isInitialized) return;
-
-        try {
-            init(APTABASE_KEY);
-            this.isInitialized = true;
-            logger.info('[Analytics] Initialized with Aptabase');
-        } catch (error) {
-            logger.error('[Analytics] Initialization failed', error);
+        if (posthogClient && __DEV__) {
+            logger.info('[Analytics] PostHog client ready (debug mode — events disabled in __DEV__)');
+        } else if (posthogClient) {
+            logger.info('[Analytics] PostHog client ready');
+        } else {
+            logger.warn('[Analytics] No PostHog API key configured — analytics disabled');
         }
     }
 
@@ -35,10 +44,10 @@ export class AnalyticsService {
      * Track a custom event
      */
     track(eventName: string, props?: Record<string, string | number | boolean>) {
-        if (!this.isInitialized) return;
+        if (!posthogClient) return;
 
         try {
-            trackEvent(eventName, props);
+            posthogClient.capture(eventName, props);
             if (__DEV__) {
                 logger.debug(`[Analytics] Tracked: ${eventName}`, props);
             }

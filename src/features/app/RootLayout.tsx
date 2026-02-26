@@ -6,6 +6,7 @@ import { database } from '@/src/data/database/Database';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
+import { posthogClient } from '@/src/services/analytics-service';
 import {
   DMSerifDisplay_400Regular,
 } from '@expo-google-fonts/dm-serif-display';
@@ -25,6 +26,7 @@ import {
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -52,11 +54,16 @@ export default function RootLayout() {
       <ErrorBoundary>
         <DatabaseProvider database={database}>
           <UIProvider>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <AppContent />
-              <AlertContainer />
-              <ToastContainer />
-            </ThemeProvider>
+            <PostHogProvider
+              client={posthogClient ?? undefined}
+              debug={__DEV__}
+            >
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <AppContent />
+                <AlertContainer />
+                <ToastContainer />
+              </ThemeProvider>
+            </PostHogProvider>
           </UIProvider>
         </DatabaseProvider>
       </ErrorBoundary>

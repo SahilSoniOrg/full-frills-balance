@@ -17,7 +17,6 @@
     "serve:e2e": "npx serve dist-e2e -p 8081 --single"
   },
   "dependencies": {
-    "@aptabase/react-native": "^0.4.0",
     "@expo-google-fonts/dm-serif-display": "^0.4.2",
     "@expo-google-fonts/instrument-sans": "^0.4.2",
     "@expo-google-fonts/raleway": "^0.4.2",
@@ -33,9 +32,11 @@
     "babel-plugin-react-compiler": "^19.0.0-beta-af1b7da-20250417",
     "dayjs": "^1.11.19",
     "expo": "~54.0.33",
+    "expo-application": "~7.0.8",
     "expo-build-properties": "^1.0.10",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",
+    "expo-device": "~8.0.10",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.21",
     "expo-font": "~14.0.10",
@@ -56,6 +57,7 @@
     "jszip": "^3.10.1",
     "lucide-react-native": "^0.563.0",
     "moti": "^0.30.0",
+    "posthog-react-native": "^4.36.1",
     "react": "19.1.0",
     "react-compiler-runtime": "^19.0.0-beta-af1b7da-20250417",
     "react-dom": "19.1.0",

@@ -139,11 +139,21 @@ jest.mock('react-native-nitro-modules', () => ({
     NitroModules: {},
 }));
 
-// Mock Aptabase
-jest.mock('@aptabase/react-native', () => ({
-    init: jest.fn(),
-    trackEvent: jest.fn(),
-}));
+// Mock PostHog
+jest.mock('posthog-react-native', () => {
+    return {
+        __esModule: true,
+        default: jest.fn().mockImplementation(() => ({
+            capture: jest.fn(),
+            identify: jest.fn(),
+            reset: jest.fn(),
+        })),
+        PostHogProvider: ({ children }) => children,
+        usePostHog: () => ({
+            capture: jest.fn(),
+        }),
+    };
+});
 
 // Global fetch mock to prevent network hangs
 global.fetch = jest.fn().mockImplementation(() =>
