@@ -10,6 +10,7 @@
 
 import { AppConfig } from '@/src/constants/app-config'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
+import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
@@ -25,6 +26,8 @@ export interface BalanceVerificationResult {
     computedBalance: number
     matches: boolean
     discrepancy: number
+    /** True when a snapshot's stored absoluteBalance didn't match a recomputation at that point */
+    snapshotCorrupted?: boolean
 }
 
 export interface IntegrityCheckResult {
@@ -43,6 +46,10 @@ export interface IntegrityCheckResult {
 export class IntegrityService {
     /**
      * Computes account balance from scratch by iterating all transactions.
+     * 
+     * Optimized: if a balance snapshot exists before cutoffDate, we use it as
+     * the starting point (absoluteBalance) and only iterate subsequent transactions.
+     * This reduces the scan from O(N_total) to O(N_since_last_checkpoint).
      */
     async computeBalanceFromTransactions(accountId: string, cutoffDate?: number): Promise<number> {
         const account = await accountRepository.find(accountId)
@@ -51,11 +58,36 @@ export class IntegrityService {
         }
 
         const effectiveCutoff = cutoffDate ?? Date.now()
-        const transactions = await transactionRepository.findForAccountUpToDate(accountId, effectiveCutoff)
         const precision = await currencyRepository.getPrecision(account.currencyCode)
 
+        // Try to find the latest snapshot before the cutoff as a checkpoint
+        const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, effectiveCutoff)
+
         let balance = 0
-        for (const tx of transactions) {
+        let startDate = 0
+
+        if (snapshot) {
+            // Start from the snapshot's known-good balance
+            balance = snapshot.absoluteBalance
+            startDate = snapshot.transactionDate
+            logger.debug(
+                `[IntegrityService] Using snapshot at ${startDate} as base ` +
+                `(balance=${balance}) for account ${accountId}`
+            )
+        }
+
+        // Only iterate delta transactions after the snapshot checkpoint
+        const transactions = await transactionRepository.findByAccount(accountId, undefined, {
+            startDate: startDate,
+            endDate: effectiveCutoff,
+        })
+
+        // findByAccount returns desc order; we need asc for sequential balance calculation
+        const sortedAsc = transactions.slice().sort(
+            (a, b) => a.transactionDate - b.transactionDate || a.createdAt.getTime() - b.createdAt.getTime()
+        )
+
+        for (const tx of sortedAsc) {
             balance = accountingService.calculateNewBalance(
                 balance,
                 tx.amount,
@@ -70,6 +102,9 @@ export class IntegrityService {
 
     /**
      * Verifies a single account's balance.
+     * 
+     * Also cross-checks the most recent snapshot's `absoluteBalance` against
+     * a fresh recomputation up to that snapshot's date, to detect corrupted checkpoints.
      */
     async verifyAccountBalance(accountId: string, cutoffDate: number = Date.now()): Promise<BalanceVerificationResult> {
         const account = await accountRepository.find(accountId)
@@ -77,23 +112,70 @@ export class IntegrityService {
             throw new Error(`Account ${accountId} not found`)
         }
 
+        const precision = await currencyRepository.getPrecision(account.currencyCode)
+
         // 1. Get the "Cached" balance (the running_balance of the latest transaction)
         const latestTx = await transactionRepository.findLatestForAccount(accountId, cutoffDate)
         const cachedBalance = latestTx?.runningBalance || 0
 
-        // 2. Compute the "Real" balance (sum of all transactions)
+        // 2. Compute the "Real" balance using the snapshot-optimized path
         const computedBalance = await this.computeBalanceFromTransactions(accountId, cutoffDate)
-        const precision = await currencyRepository.getPrecision(account.currencyCode)
         const discrepancy = Math.abs(cachedBalance - computedBalance)
+
+        // 3. Check if the snapshot itself is corrupt (cross-check)
+        let snapshotCorrupted: boolean | undefined = undefined
+        const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, cutoffDate)
+        if (snapshot) {
+            // Recompute from scratch (no snapshot) up to the snapshot's exact date
+            const snapshotRecomputed = await this.computeBalanceFromScratch(accountId, snapshot.transactionDate)
+            snapshotCorrupted = !amountsAreEqual(snapshot.absoluteBalance, snapshotRecomputed, precision)
+
+            if (snapshotCorrupted) {
+                logger.warn(
+                    `[IntegrityService] Snapshot corruption detected for account ${accountId}: ` +
+                    `snapshot.absoluteBalance=${snapshot.absoluteBalance}, recomputed=${snapshotRecomputed}`
+                )
+            }
+        }
 
         return {
             accountId,
             accountName: account.name,
-            cachedBalance: cachedBalance,
+            cachedBalance,
             computedBalance,
             matches: amountsAreEqual(cachedBalance, computedBalance, precision),
             discrepancy,
+            snapshotCorrupted,
         }
+    }
+
+    /**
+     * Computes account balance by iterating ALL transactions from the beginning,
+     * ignoring any snapshots. Used strictly for snapshot cross-checking.
+     */
+    private async computeBalanceFromScratch(accountId: string, cutoffDate: number): Promise<number> {
+        const account = await accountRepository.find(accountId)
+        if (!account) throw new Error(`Account ${accountId} not found`)
+
+        const precision = await currencyRepository.getPrecision(account.currencyCode)
+        const transactions = await transactionRepository.findForAccountUpToDate(accountId, cutoffDate)
+
+        const sortedAsc = transactions.slice().sort(
+            (a, b) => a.transactionDate - b.transactionDate || a.createdAt.getTime() - b.createdAt.getTime()
+        )
+
+        let balance = 0
+        for (const tx of sortedAsc) {
+            balance = accountingService.calculateNewBalance(
+                balance,
+                tx.amount,
+                account.accountType,
+                tx.transactionType,
+                precision
+            )
+        }
+
+        return balance
     }
 
     /**
@@ -142,7 +224,7 @@ export class IntegrityService {
         }
 
         const results = await this.verifyAllAccountBalances()
-        const discrepancies = results.filter(r => !r.matches)
+        const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted)
 
         let repairsAttempted = 0
         let repairsSuccessful = 0
@@ -150,7 +232,8 @@ export class IntegrityService {
         for (const discrepancy of discrepancies) {
             logger.warn(
                 `[IntegrityService] Balance discrepancy for ${discrepancy.accountName}: ` +
-                `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}`
+                `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}` +
+                (discrepancy.snapshotCorrupted ? ' [snapshot corrupted]' : '')
             )
 
             repairsAttempted++
