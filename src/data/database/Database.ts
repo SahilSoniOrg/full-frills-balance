@@ -6,6 +6,7 @@ import { setGenerator } from '@nozbe/watermelondb/utils/common/randomId'
 import Account from '@/src/data/models/Account'
 import AccountMetadata from '@/src/data/models/AccountMetadata'
 import AuditLog from '@/src/data/models/AuditLog'
+import BalanceSnapshot from '@/src/data/models/BalanceSnapshot'
 import Budget from '@/src/data/models/Budget'
 import BudgetScope from '@/src/data/models/BudgetScope'
 import Currency from '@/src/data/models/Currency'
@@ -29,6 +30,7 @@ export const database = new WatermelonDB({
     Account,
     AccountMetadata,
     AuditLog,
+    BalanceSnapshot,
     Budget,
     BudgetScope,
     Currency,

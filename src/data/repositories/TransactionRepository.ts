@@ -376,6 +376,18 @@ export class TransactionRepository {
     accountId: string,
     cutoffDate: number = Date.now()
   ): Promise<number> {
+    return this.getCountForAccountBetween(accountId, 0, cutoffDate)
+  }
+
+  /**
+   * Gets the transaction count for an account between two dates.
+   * Useful for snapshot-optimized count retrieval.
+   */
+  async getCountForAccountBetween(
+    accountId: string,
+    startDate: number,
+    endDate: number
+  ): Promise<number> {
     return this.transactions
       .query(
         Q.experimentalJoinTables(['journals']),
@@ -385,7 +397,8 @@ export class TransactionRepository {
         ]),
         Q.where('account_id', accountId),
         Q.where('deleted_at', Q.eq(null)),
-        Q.where('transaction_date', Q.lte(cutoffDate))
+        Q.where('transaction_date', Q.gt(startDate)),
+        Q.where('transaction_date', Q.lte(endDate))
       )
       .fetchCount()
   }

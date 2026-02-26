@@ -178,6 +178,9 @@ export default class Account extends Model {
   @field('icon') icon?: string
   @field('order_num') orderNum?: number
 
+  @field('drift_delta') driftDelta?: number // For O(1) responsive historical edits
+  @field('drift_effective_date') driftEffectiveDate?: number // Earliest date affected by drift
+
   @date('created_at') createdAt!: Date
   @date('updated_at') updatedAt!: Date
   @date('deleted_at') deletedAt?: Date

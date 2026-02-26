@@ -186,5 +186,22 @@ export const migrations = schemaMigrations({
                 }),
             ],
         },
+        {
+            toVersion: 10,
+            steps: [
+                createTable({
+                    name: 'balance_snapshots',
+                    columns: [
+                        { name: 'account_id', type: 'string', isIndexed: true },
+                        { name: 'transaction_id', type: 'string', isIndexed: true },
+                        { name: 'transaction_date', type: 'number', isIndexed: true },
+                        { name: 'absolute_balance', type: 'number' },
+                        { name: 'transaction_count', type: 'number' },
+                        { name: 'created_at', type: 'number', isIndexed: true },
+                        { name: 'updated_at', type: 'number' },
+                    ],
+                }),
+            ],
+        },
     ],
 })

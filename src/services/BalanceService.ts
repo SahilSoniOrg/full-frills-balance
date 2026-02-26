@@ -9,6 +9,8 @@ import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 import { preferences } from '../utils/preferences';
 
+import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
+
 export class BalanceService {
     /**
      * Aggregates balances from child accounts to their parents.
@@ -169,10 +171,7 @@ export class BalanceService {
 
     /**
      * Returns an account's balance and transaction count as of a given date.
-     * Logic migrated from AccountRepository to centralize balance management.
-     * 
-     * ⚠️ WARNING: DO NOT USE FOR UI. This is an imperative snapshot. 
-     * Use `useAccountBalance` hook for reactive UI updates.
+     * Logic integrated with snapshots and drift tracking.
      */
     async getAccountBalance(
         accountId: string,
@@ -181,6 +180,7 @@ export class BalanceService {
         const account = await accountRepository.find(accountId);
         if (!account) throw new Error(`Account ${accountId} not found`);
 
+        // 1. Get the latest transaction for the balance - O(log N)
         const latestTx = await transactionRepository.findLatestForAccount(accountId, cutoffDate);
 
         if (!latestTx) {
@@ -198,19 +198,34 @@ export class BalanceService {
             };
         }
 
-        const txCount = await transactionRepository.getCountForAccount(accountId, cutoffDate);
+        // 2. Resolve transaction count using snapshots to avoid O(N) scans - O(log N)
+        const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, cutoffDate);
+        let baseCount = 0;
+        let startDate = 0;
+
+        if (snapshot) {
+            baseCount = snapshot.transactionCount;
+            startDate = snapshot.transactionDate;
+        }
+
+        // Only count the "delta" since the last snapshot (max SegmentSize)
+        const deltaCount = await transactionRepository.getCountForAccountBetween(
+            accountId,
+            startDate,
+            cutoffDate
+        );
+
+        const totalCount = baseCount + deltaCount;
 
         return {
             accountId: account.id,
             balance: latestTx.runningBalance || 0,
             directBalance: latestTx.runningBalance || 0,
             currencyCode: account.currencyCode,
-            transactionCount: txCount,
-            directTransactionCount: txCount,
+            transactionCount: totalCount,
+            directTransactionCount: totalCount,
             asOfDate: cutoffDate,
             accountType: account.accountType as AccountType,
-            // Monthly stats are still 0 here as we rely on full re-scan for those in useAccountBalances
-            // or we could implement a targeted query if needed.
             monthlyIncome: 0,
             monthlyExpenses: 0
         };
