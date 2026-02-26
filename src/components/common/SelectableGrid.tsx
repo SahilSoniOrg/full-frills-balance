@@ -3,7 +3,7 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig, Layout, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface SelectableItem {
     id?: string;
@@ -171,34 +171,32 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     }, [selectedIds, theme, effectiveAccentColor, maxSelection, renderIcon, renderSubtitle, handleToggle]);
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.container}
-            keyboardVerticalOffset={Platform.OS === 'android' ? Layout.keyboardOffset.android : 0}
-        >
-            <View style={styles.header}>
-                <AppText variant="title" style={styles.title}>
-                    {title}
-                </AppText>
-                <AppText variant="body" color="secondary" style={styles.subtitle}>
-                    {subtitle}
-                </AppText>
-            </View>
-
-            <ScrollView
+        <View style={styles.container}>
+            <FlatList
+                data={filteredItems}
+                renderItem={({ item }: { item: SelectableItem }) => (
+                    <View style={styles.itemWrapper}>
+                        {renderItem({ item })}
+                    </View>
+                )}
+                keyExtractor={(item: SelectableItem) => item.id ?? item.name}
+                numColumns={2}
+                columnWrapperStyle={styles.grid}
                 style={styles.scrollContainer}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
-            >
-                <View style={styles.grid}>
-                    {filteredItems.map((item) => (
-                        <View key={item.id ?? item.name} style={styles.itemWrapper}>
-                            {renderItem({ item })}
-                        </View>
-                    ))}
-                </View>
-            </ScrollView>
+                ListHeaderComponent={
+                    <View style={styles.header}>
+                        <AppText variant="title" style={styles.title}>
+                            {title}
+                        </AppText>
+                        <AppText variant="body" color="secondary" style={styles.subtitle}>
+                            {subtitle}
+                        </AppText>
+                    </View>
+                }
+            />
 
             {(customInput || showSearch) && (
                 <View style={styles.bottomInputSection}>
@@ -306,7 +304,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
                     Back
                 </AppButton>
             </View>
-        </KeyboardAvoidingView>
+        </View>
     );
 };
 

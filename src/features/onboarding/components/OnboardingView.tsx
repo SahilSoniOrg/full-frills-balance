@@ -6,7 +6,7 @@ import { StepIndicator } from '@/src/features/onboarding/components/StepIndicato
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 export function OnboardingView(vm: OnboardingFlowViewModel) {
     const {
@@ -120,15 +120,24 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
 
     return (
         <Screen showBack={false} withPadding edges={['top', 'bottom']}>
-            <View style={styles.content}>
-                <StepIndicator currentStep={step} totalSteps={6} />
-                {renderStep()}
-            </View>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.container}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
+            >
+                <View style={styles.content}>
+                    <StepIndicator currentStep={step} totalSteps={6} />
+                    {renderStep()}
+                </View>
+            </KeyboardAvoidingView>
         </Screen>
     );
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
     content: {
         maxWidth: AppConfig.layout.maxContentWidth,
         width: '100%',

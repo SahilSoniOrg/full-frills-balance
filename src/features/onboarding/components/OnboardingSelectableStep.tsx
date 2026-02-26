@@ -75,16 +75,29 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     };
 
     if (props.kind === 'currency') {
-        const uniqueCurrencies = Array.from(
-            new Map(currencies.map((c) => [c.code, c])).values()
-        );
+        const items: SelectableItem[] = React.useMemo(() => {
+            const uniqueCurrencies = Array.from(
+                new Map(currencies.map((c) => [c.code, c])).values()
+            );
 
-        const items: SelectableItem[] = uniqueCurrencies.map((currency) => ({
-            id: currency.code,
-            name: currency.code,
-            symbol: currency.symbol,
-            subtitle: currency.name,
-        }));
+            const mappedItems = uniqueCurrencies.map((currency) => ({
+                id: currency.code,
+                name: currency.code,
+                symbol: currency.symbol,
+                subtitle: currency.name,
+            }));
+
+            // If a currency is selected, move it to the top
+            if (props.selectedCurrency) {
+                return [...mappedItems].sort((a, b) => {
+                    if (a.id === props.selectedCurrency) return -1;
+                    if (b.id === props.selectedCurrency) return 1;
+                    return 0;
+                });
+            }
+
+            return mappedItems;
+        }, [currencies, props.selectedCurrency]);
 
         return (
             <SelectableGrid
