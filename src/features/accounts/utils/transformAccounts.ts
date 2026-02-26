@@ -99,6 +99,15 @@ export function transformAccountsToSections(
             : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency || AppConfig.defaultCurrency)
 
         const typeAccounts = section.data
+        const accountsByParent = new Map<string, Account[]>()
+        typeAccounts.forEach(a => {
+            if (a.parentAccountId) {
+                const children = accountsByParent.get(a.parentAccountId) || []
+                children.push(a)
+                accountsByParent.set(a.parentAccountId, children)
+            }
+        })
+
         const rootAccounts = typeAccounts.filter(a => !a.parentAccountId || !typeAccounts.find(p => p.id === a.parentAccountId))
         const flattenedData: AccountCardViewModel[] = []
 
@@ -127,7 +136,7 @@ export function transformAccountsToSections(
             const monthlyExpenseText = isLoading ? '...' : CurrencyFormatter.format(monthlyExpenses, currencyCode)
 
             const isExpanded = expandedAccountIds.has(account.id)
-            const children = typeAccounts.filter(a => a.parentAccountId === account.id)
+            const children = accountsByParent.get(account.id) || []
 
             flattenedData.push({
                 id: account.id,

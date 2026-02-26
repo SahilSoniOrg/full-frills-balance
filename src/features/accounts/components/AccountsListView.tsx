@@ -6,7 +6,7 @@ import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccounts
 import { AccountCardViewModel, AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export function AccountsListView({
     sections,
@@ -20,6 +20,7 @@ export function AccountsListView({
     onManageHierarchy,
     onTogglePrivacy,
     isPrivacyMode,
+    isLoading,
 }: AccountsListViewModel) {
     const { theme } = useTheme();
     return (
@@ -112,9 +113,13 @@ export function AccountsListView({
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyState}>
-                            <AppText variant="body" color="secondary">
-                                No accounts yet. Create your first account to get started!
-                            </AppText>
+                            {isLoading ? (
+                                <ActivityIndicator size="small" color={theme.primary} />
+                            ) : (
+                                <AppText variant="body" color="secondary">
+                                    No accounts yet. Create your first account to get started!
+                                </AppText>
+                            )}
                         </View>
                     }
                     contentContainerStyle={styles.listContainer}

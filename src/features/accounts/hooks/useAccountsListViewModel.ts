@@ -1,11 +1,28 @@
+import { AppConfig } from '@/src/constants/app-config'
 import { useUI } from '@/src/contexts/UIContext'
 import Account from '@/src/data/models/Account'
-import { useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts'
 import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts'
-import { useWealthSummary } from '@/src/features/wealth'
 import { useTheme } from '@/src/hooks/use-theme'
+import { useObservable } from '@/src/hooks/useObservable'
+import { reactiveDataService } from '@/src/services/ReactiveDataService'
 import { useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
+
+export interface AccountCardViewModel {
+    id: string
+    name: string
+    icon: string | null
+    accentColor: string
+    textColor: string
+    balanceText: string
+    monthlyIncomeText: string
+    monthlyExpenseText: string
+    showMonthlyStats: boolean
+    currencyCode: string
+    depth: number
+    hasChildren: boolean
+    isExpanded: boolean
+}
 
 export interface AccountSectionViewModel {
     title: string
@@ -13,7 +30,7 @@ export interface AccountSectionViewModel {
     totalDisplay: string
     totalColor: string
     isCollapsed: boolean
-    data: any[]
+    data: AccountCardViewModel[]
 }
 
 export interface AccountsListViewModel {
@@ -28,6 +45,8 @@ export interface AccountsListViewModel {
     onManageHierarchy: () => void
     onTogglePrivacy: () => void
     isPrivacyMode: boolean
+    isLoading: boolean
+    version: number
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
@@ -35,9 +54,30 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     const { theme } = useTheme()
     const { defaultCurrency, showAccountMonthlyStats, isPrivacyMode, setPrivacyMode } = useUI()
 
-    // Separate hooks for accounts and balances (previously part of useWealthSummary)
-    const { accounts } = useAccounts()
-    const { balancesByAccountId } = useAccountBalances(accounts)
+    const targetCurrency = defaultCurrency || AppConfig.defaultCurrency
+
+    const { data: dashboardData, isLoading, version } = useObservable(
+        () => reactiveDataService.observeOptimizedAccountList(targetCurrency),
+        [targetCurrency],
+        {
+            accounts: [],
+            balances: [],
+            wealthSummary: {
+                netWorth: 0,
+                totalAssets: 0,
+                totalLiabilities: 0,
+                totalEquity: 0,
+                totalIncome: 0,
+                totalExpense: 0,
+            },
+        }
+    )
+
+    const accounts = dashboardData.accounts
+
+    const balancesByAccountId = useMemo(() =>
+        new Map(dashboardData.balances.map(b => [b.accountId, b])),
+        [dashboardData.balances])
 
     const {
         totalAssets,
@@ -45,8 +85,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         totalEquity,
         totalIncome,
         totalExpense,
-        isLoading,
-    } = useWealthSummary()
+    } = dashboardData.wealthSummary
+
     const togglePrivacyMode = useCallback(() => setPrivacyMode(!isPrivacyMode), [isPrivacyMode, setPrivacyMode])
 
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']))
@@ -69,14 +109,12 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         const isExpanded = expandedAccountIds.has(accountId)
 
         if (hasChildren && !isExpanded) {
-            // Expanding first if it has children and is collapsed
             setExpandedAccountIds(prev => {
                 const next = new Set(prev)
                 next.add(accountId)
                 return next
             })
         } else {
-            // Navigation to details if no children OR already expanded
             router.push(`/account-details?accountId=${accountId}`)
         }
     }, [router, accounts, expandedAccountIds])
@@ -106,8 +144,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     }, [router])
 
     const onRefresh = useCallback(() => {
-        // Refresh is handled reactively by useWealthSummary observables
-    }, []);
+        // Refresh is handled reactively by observables
+    }, [])
 
     const sections = useMemo(() => {
         return transformAccountsToSections(accounts, {
@@ -154,5 +192,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         onManageHierarchy,
         onTogglePrivacy,
         isPrivacyMode,
+        isLoading,
+        version,
     }
 }

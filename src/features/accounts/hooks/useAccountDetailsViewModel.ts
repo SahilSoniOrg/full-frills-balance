@@ -1,13 +1,13 @@
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
 import Account, { formatAccountSubcategoryLabel } from '@/src/data/models/Account';
-import { useAccount, useAccountActions, useAccountBalance, useAccountBalances, useAccountHasChildren, useAccounts, useAccountSubAccountCount } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountActions, useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
-import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
+import { AccountBalance, EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
@@ -111,12 +111,18 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         initialDateRange
     });
 
-    const { account, isLoading: accountLoading } = useAccount(accountId);
-    const { accounts } = useAccounts();
-    const { hasChildren: isParent } = useAccountHasChildren(accountId);
-    const { subAccountCount } = useAccountSubAccountCount(accountId);
+    const {
+        account,
+        balanceData,
+        subAccounts: rawSubBalances,
+        allAccounts: accounts,
+        isLoading: dashboardLoading
+    } = useAccountDashboard(accountId);
+
+    const isParent = useMemo(() => accounts.some((a: Account) => a.parentAccountId === accountId && a.deletedAt === null), [accounts, accountId]);
+    const subAccountCount = useMemo(() => accounts.filter((a: Account) => a.parentAccountId === accountId && a.deletedAt === null).length, [accounts, accountId]);
+
     const { transactions, isLoading: transactionsLoading, isLoadingMore: transactionsLoadingMore, hasMore, loadMore } = useLedgerTransactionsForAccount(accountId, 50, dateRange || undefined);
-    const { balanceData, isLoading: balanceLoading } = useAccountBalance(accountId);
     const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
 
     const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
@@ -141,9 +147,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         return buildSubTree(accountId, 0);
     }, [account, accounts, accountId]);
 
-    const { balancesByAccountId: subBalances, isLoading: subBalancesLoading } = useAccountBalances(
-        useMemo(() => descendants.map(d => d.account), [descendants])
-    );
+    const subBalances = useMemo(() => new Map<string, AccountBalance>(rawSubBalances.map((b: AccountBalance) => [b.accountId, b])), [rawSubBalances]);
+    const subBalancesLoading = dashboardLoading;
+    const accountLoading = dashboardLoading;
+    const balanceLoading = dashboardLoading;
     const balance = balanceData?.balance || 0;
     const transactionCount = balanceData?.transactionCount || 0;
     const isDeleted = account?.deletedAt != null;
@@ -232,7 +239,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
     const secondaryBalances = useMemo(() => {
         if (!balanceData?.childBalances) return [];
-        return balanceData.childBalances.map(cb => ({
+        return balanceData.childBalances.map((cb: { currencyCode: string; balance: number }) => ({
             currencyCode: cb.currencyCode,
             amountText: CurrencyFormatter.format(cb.balance, cb.currencyCode)
         }));

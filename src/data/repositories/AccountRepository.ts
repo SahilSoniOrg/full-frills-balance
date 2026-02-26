@@ -296,6 +296,81 @@ export class AccountRepository {
       throw new ValidationError(`Subcategory ${subcategory} is not valid for account type ${accountType}`)
     }
   }
+
+  /**
+   * Optimized raw SQL fetch for account list items.
+   * Returns accounts with direct balances and monthly stats in a single pass.
+   */
+  async getAccountListItemsRaw(startOfMonth: number, endOfMonth: number, includeDeleted: boolean = false): Promise<any[] | null> {
+    // WatermelonDB provides access to the underlying adapter
+    const adapter = this.db.adapter as any
+
+    // We only support raw SQL on SQLite (Native)
+    // The queryRaw signature for SQLiteAdapter is (sql, args)
+    // We try to find the specific adapter that supports queryRaw
+    const sqlAdapter = adapter.underlyingAdapter || adapter
+
+    if (sqlAdapter && typeof sqlAdapter.queryRaw === 'function') {
+      const sql = `
+        SELECT 
+          a.id as id, 
+          a.name as name, 
+          a.account_type as account_type, 
+          a.account_subtype as account_subtype, 
+          a.currency_code as currency_code, 
+          a.icon as icon, 
+          a.parent_account_id as parent_account_id,
+          (
+            SELECT t.running_balance 
+            FROM transactions t
+            JOIN journals j ON t.journal_id = j.id
+            WHERE t.account_id = a.id 
+              AND t.deleted_at IS NULL 
+              AND j.deleted_at IS NULL 
+              AND j.status IN ('POSTED', 'REVERSED')
+            ORDER BY t.transaction_date DESC, t.created_at DESC
+            LIMIT 1
+          ) as direct_balance,
+          IFNULL((
+            SELECT COUNT(*) 
+            FROM transactions t 
+            WHERE t.account_id = a.id AND t.deleted_at IS NULL
+          ), 0) as direct_transaction_count,
+          IFNULL((
+            SELECT SUM(CASE WHEN t.transaction_type = 'CREDIT' THEN t.amount ELSE 0 END)
+            FROM transactions t
+            JOIN journals j ON t.journal_id = j.id
+            WHERE t.account_id = a.id
+              AND t.deleted_at IS NULL 
+              AND j.deleted_at IS NULL 
+              AND j.status IN ('POSTED', 'REVERSED')
+              AND t.transaction_date >= ?
+              AND t.transaction_date <= ?
+          ), 0) as monthly_income,
+          IFNULL((
+            SELECT SUM(CASE WHEN t.transaction_type = 'DEBIT' THEN t.amount ELSE 0 END)
+            FROM transactions t
+            JOIN journals j ON t.journal_id = j.id
+            WHERE t.account_id = a.id
+              AND t.deleted_at IS NULL 
+              AND j.deleted_at IS NULL 
+              AND j.status IN ('POSTED', 'REVERSED')
+              AND t.transaction_date >= ?
+              AND t.transaction_date <= ?
+          ), 0) as monthly_expenses
+        FROM accounts a
+        WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'}
+        ORDER BY a.order_num ASC
+      `
+      // Correct signature for underlying bridge queryRaw is (sql, args)
+      return await sqlAdapter.queryRaw(sql, [startOfMonth, endOfMonth, startOfMonth, endOfMonth])
+    }
+
+    // Fallback for LokiJS or other environments: 
+    // Return null to signal that optimized raw fetch is not supported.
+    return null
+  }
 }
+
 
 export const accountRepository = new AccountRepository()

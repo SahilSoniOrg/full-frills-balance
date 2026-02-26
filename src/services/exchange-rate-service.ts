@@ -79,6 +79,30 @@ export class ExchangeRateService {
         }
     }
 
+    /**
+     * Non-blocking rate lookup.
+     * Returns cached rate immediately if available, or returns 1.0 and triggers
+     * a background fetch if not.
+     */
+    getRateSafe(fromCurrency: string, toCurrency: string): number {
+        if (fromCurrency === toCurrency) return 1.0
+        if (!fromCurrency || !toCurrency) return 1.0
+
+        // 1. Check memory cache first (instant)
+        const memCached = this.memoryCache.get(fromCurrency)
+        if (memCached && memCached.rates[toCurrency]) {
+            return memCached.rates[toCurrency]
+        }
+
+        // 2. Trigger background check/fetch (async, non-blocking)
+        this.getRate(fromCurrency, toCurrency).catch(err => {
+            logger.error(`Background rate fetch failed (${fromCurrency} -> ${toCurrency}):`, err)
+        })
+
+        // 3. Return 1.0 immediately while fetch happens in background
+        return 1.0
+    }
+
     private updateMemoryCache(base: string, target: string, rate: number) {
         const entry = this.memoryCache.get(base) || { rates: {}, timestamp: Date.now() }
         entry.rates[target] = rate

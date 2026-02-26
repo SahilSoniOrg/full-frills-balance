@@ -12,6 +12,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { accountService } from '@/src/features/accounts/services/AccountService'
 import { useObservable } from '@/src/hooks/useObservable'
 import { balanceService } from '@/src/services/BalanceService'
+import { reactiveDataService } from '@/src/services/ReactiveDataService'
 import { AccountBalance } from '@/src/types/domain'
 import { useCallback } from 'react'
 import { combineLatest, debounceTime, of, switchMap } from 'rxjs'
@@ -81,8 +82,11 @@ export function useAccountBalance(accountId: string | null) {
                 switchMap(async ([account]) => {
                     if (!account) return null
 
-                    // Use aggregated balances to support parent accounts
                     const targetCurrency = defaultCurrency || AppConfig.defaultCurrency
+
+                    // If it's a leaf account (no children), we can just get its direct balance
+                    // But for consistency with parent accounts, we use the optimized getAccountBalances
+                    // which is now near-instant thanks to non-blocking exchange rates.
                     const balances = await balanceService.getAccountBalances(Date.now(), targetCurrency)
                     return balances.find(b => b.accountId === account.id) || null
                 })
@@ -219,3 +223,29 @@ export function useAccountActions() {
         adjustBalance
     }
 }
+
+/**
+ * Optimized hook for account details/dashboard.
+ * Uses the high-performance raw SQL + consolidated optimization from ReactiveDataService.
+ */
+export function useAccountDashboard(accountId: string | null) {
+    const { defaultCurrency } = useUI()
+    const targetCurrency = defaultCurrency || AppConfig.defaultCurrency
+
+    const { data, isLoading, version, error } = useObservable(
+        () => accountId ? reactiveDataService.observeAccountDashboard(accountId, targetCurrency) : of(null),
+        [accountId, targetCurrency],
+        null as { account: Account | null; balance: AccountBalance | null; subAccounts: AccountBalance[]; allAccounts: Account[] } | null
+    )
+
+    return {
+        account: data?.account || null,
+        balanceData: data?.balance || null,
+        subAccounts: data?.subAccounts || [],
+        allAccounts: data?.allAccounts || [],
+        isLoading,
+        version,
+        error
+    }
+}
+

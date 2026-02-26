@@ -144,6 +144,37 @@ describe('ExchangeRateService', () => {
         });
     });
 
+    describe('getRateSafe', () => {
+        it('returns 1.0 and triggers background fetch if not in cache', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => 'application/json' },
+                json: async () => ({
+                    rates: { 'EUR': 0.85 }
+                })
+            });
+
+            const rate = service.getRateSafe('USD', 'EUR');
+            expect(rate).toBe(1.0);
+
+            // Wait a bit for the background fetch to trigger
+            await new Promise(resolve => setTimeout(resolve, 0));
+            expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
+        });
+
+        it('returns cached rate immediately', async () => {
+            // Pre-seed memory cache
+            (service as any).memoryCache.set('USD', {
+                rates: { 'EUR': 0.88 },
+                timestamp: Date.now()
+            });
+
+            const rate = service.getRateSafe('USD', 'EUR');
+            expect(rate).toBe(0.88);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+    });
+
     describe('fetchRatesForBase fallback', () => {
         it('uses stale DB records if API fails', async () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));

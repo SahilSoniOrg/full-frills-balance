@@ -16,7 +16,7 @@ export class BalanceService {
      * Aggregates balances from child accounts to their parents.
      * Supports multi-level hierarchy.
      */
-    private async aggregateBalances(
+    public async aggregateBalances(
         accounts: Account[],
         balancesMap: Map<string, AccountBalance>,
         accountPrecisionMap: Map<string, number>,
@@ -102,8 +102,7 @@ export class BalanceService {
         for (let d = maxDepth; d > 0; d--) {
             const accountIdsAtLevel = levelMap.get(d) || [];
 
-            // Collect all required conversions for this level
-            const conversionPromises: Promise<any>[] = [];
+            // Aggregation for this level is now synchronous and non-blocking
 
             for (const accountId of accountIdsAtLevel) {
                 const parentId = parentIdMap.get(accountId);
@@ -125,21 +124,18 @@ export class BalanceService {
                 parentBalance.currencyCode = targetCurrency;
 
                 // Conversion Logic
-                const processConversion = async () => {
+                const processConversion = () => {
                     const precision = accountPrecisionMap.get(parentId) ?? AppConfig.defaultCurrencyPrecision;
                     let amountToAdd = myBalance.balance;
                     let incomeToAdd = myBalance.monthlyIncome;
                     let expensesToAdd = myBalance.monthlyExpenses;
 
                     if (myBalance.currencyCode !== targetCurrency) {
-                        const [balanceConv, incomeConv, expenseConv] = await Promise.all([
-                            exchangeRateService.convert(myBalance.balance, myBalance.currencyCode, targetCurrency),
-                            exchangeRateService.convert(myBalance.monthlyIncome, myBalance.currencyCode, targetCurrency),
-                            exchangeRateService.convert(myBalance.monthlyExpenses, myBalance.currencyCode, targetCurrency),
-                        ]);
-                        amountToAdd = balanceConv.convertedAmount;
-                        incomeToAdd = incomeConv.convertedAmount;
-                        expensesToAdd = expenseConv.convertedAmount;
+                        const rate = exchangeRateService.getRateSafe(myBalance.currencyCode, targetCurrency);
+
+                        amountToAdd = myBalance.balance * rate;
+                        incomeToAdd = myBalance.monthlyIncome * rate;
+                        expensesToAdd = myBalance.monthlyExpenses * rate;
 
                         // Track mixed child balances for UI "Multi-currency" indicator
                         if (!parentBalance.childBalances) parentBalance.childBalances = [];
@@ -161,11 +157,8 @@ export class BalanceService {
                     parentBalance.transactionCount += myBalance.transactionCount;
                 };
 
-                conversionPromises.push(processConversion());
+                processConversion();
             }
-
-            // Await all parallel conversions for this level before moving to the parent level
-            await Promise.all(conversionPromises);
         }
     }
 
@@ -180,7 +173,6 @@ export class BalanceService {
         const account = await accountRepository.find(accountId);
         if (!account) throw new Error(`Account ${accountId} not found`);
 
-        // 1. Get the latest transaction for the balance - O(log N)
         const latestTx = await transactionRepository.findLatestForAccount(accountId, cutoffDate);
 
         if (!latestTx) {
@@ -198,7 +190,6 @@ export class BalanceService {
             };
         }
 
-        // 2. Resolve transaction count using snapshots to avoid O(N) scans - O(log N)
         const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, cutoffDate);
         let baseCount = 0;
         let startDate = 0;
@@ -208,7 +199,6 @@ export class BalanceService {
             startDate = snapshot.transactionDate;
         }
 
-        // Only count the "delta" since the last snapshot (max SegmentSize)
         const deltaCount = await transactionRepository.getCountForAccountBetween(
             accountId,
             startDate,
@@ -240,12 +230,15 @@ export class BalanceService {
 
         const cutoffDate = asOfDate ?? Date.now();
 
-        const balancePromises = accounts.map(async (account): Promise<AccountBalance> => {
-            const balanceData = await this.getAccountBalance(account.id, cutoffDate);
-            return balanceData;
-        });
+        // Optimized batch fetching with yielding to prevent UI freezes
+        const balances = await Promise.all(accounts.map(async (account, index) => {
+            // Yield every 10 accounts to allow UI to breathe
+            if (index % 10 === 0) {
+                await Promise.resolve();
+            }
+            return this.getAccountBalance(account.id, cutoffDate);
+        }));
 
-        const balances = await Promise.all(balancePromises);
         const balancesMap = new Map(balances.map(b => [b.accountId, b]));
 
         // Fetch currency precision for accurate rounding
