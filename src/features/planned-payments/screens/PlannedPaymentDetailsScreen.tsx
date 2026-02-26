@@ -13,7 +13,8 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { confirm } from '@/src/utils/alerts'
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 export default function PlannedPaymentDetailsScreen() {
     const { theme } = useTheme();
@@ -193,19 +194,15 @@ export default function PlannedPaymentDetailsScreen() {
                     </View>
                 )}
 
-                {/* Actions */}
                 <View style={styles.actions}>
                     <AppButton
                         variant="primary"
                         onPress={() => {
-                            Alert.alert(
-                                'Post Transaction Now?',
-                                `This will post the upcoming instance for ${CurrencyFormatter.format(item.amount, item.currencyCode)} and advance the schedule to the next occurrence.`,
-                                [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Post Now', onPress: handlePostNow }
-                                ]
-                            );
+                            confirm.show({
+                                title: 'Post Transaction Now?',
+                                message: `This will post the upcoming instance for ${CurrencyFormatter.format(item.amount, item.currencyCode)} and advance the schedule to the next occurrence.`,
+                                onConfirm: handlePostNow,
+                            });
                         }}
                         style={{ flex: 1 }}
                     >
@@ -220,14 +217,13 @@ export default function PlannedPaymentDetailsScreen() {
                     <AppButton
                         variant="outline"
                         onPress={() => {
-                            Alert.alert(
-                                'Skip Occurrence?',
-                                `This will skip the upcoming instance on ${new Date(item.nextOccurrence).toLocaleDateString()} and advance the schedule without creating a transaction.`,
-                                [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Skip Now', style: 'destructive', onPress: handleSkip }
-                                ]
-                            );
+                            confirm.show({
+                                title: 'Skip Occurrence?',
+                                message: `This will skip the upcoming instance on ${new Date(item.nextOccurrence).toLocaleDateString()} and advance the schedule without creating a transaction.`,
+                                confirmText: 'Skip',
+                                destructive: true,
+                                onConfirm: handleSkip,
+                            });
                         }}
                         style={{ flex: 1 }}
                     >

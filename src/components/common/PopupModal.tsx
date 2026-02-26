@@ -7,7 +7,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from
 type PopupModalAction = {
     label: string;
     onPress: () => void;
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 };
 
 interface PopupModalProps {
@@ -113,6 +113,7 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'center',
+        alignItems: 'center',
         padding: Spacing.lg,
     },
     modalContainer: {

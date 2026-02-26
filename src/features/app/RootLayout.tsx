@@ -1,3 +1,5 @@
+import { AlertContainer } from '@/src/components/common/AlertContainer';
+import { ToastContainer } from '@/src/components/common/Toast';
 import { ErrorBoundary } from '@/src/components/core';
 import { UIProvider, useUI } from '@/src/contexts/UIContext';
 import { database } from '@/src/data/database/Database';
@@ -52,6 +54,8 @@ export default function RootLayout() {
           <UIProvider>
             <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
               <AppContent />
+              <AlertContainer />
+              <ToastContainer />
             </ThemeProvider>
           </UIProvider>
         </DatabaseProvider>

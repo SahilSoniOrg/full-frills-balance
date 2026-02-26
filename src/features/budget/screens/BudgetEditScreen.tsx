@@ -6,7 +6,8 @@ import { Screen, ScreenHeader } from '@/src/components/layout'
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector'
 import { router } from 'expo-router'
 import React, { useState } from 'react'
-import { Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { confirm, toast } from '@/src/utils/alerts'
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import { useBudgetEditViewModel } from '../hooks/useBudgetEditViewModel'
 
 export default function BudgetEditScreen() {
@@ -35,17 +36,21 @@ export default function BudgetEditScreen() {
     }
 
     const handleDelete = () => {
-        Alert.alert('Delete Budget', 'Are you sure you want to delete this budget?', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: deleteBudget }
-        ])
+        confirm.show({
+            title: 'Delete Budget',
+            message: 'Are you sure you want to delete this budget?', 
+            confirmText: 'Delete',
+            onConfirm: deleteBudget,
+            destructive: true,
+        })
     }
 
     const handleSave = async () => {
         try {
             await save()
+            toast.success('Budget saved')
         } catch (e: any) {
-            Alert.alert('Error', e.message)
+            toast.error(e.message || 'Failed to save budget')
         }
     }
 

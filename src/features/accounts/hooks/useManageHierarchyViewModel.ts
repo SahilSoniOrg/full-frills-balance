@@ -4,7 +4,8 @@ import { createAccountTypeRecord } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, LayoutAnimation } from 'react-native';
+import { toast } from '@/src/utils/alerts'
+import { LayoutAnimation } from 'react-native'
 
 export interface ManageHierarchyViewModel {
     accounts: Account[];
@@ -179,8 +180,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
                 setExpandedAccountIds((prev) => new Set([...prev, parentId]));
             }
         } catch (error: any) {
-            logger.error('[ManageHierarchy] updateAccount failed', error);
-            Alert.alert('Move Failed', error.message || 'An unexpected error occurred.');
+            toast.error(error.message || 'Move failed');
         }
 
         setSelectedAccountId(null);
@@ -194,8 +194,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
             await updateAccount(childAccount, { parentAccountId: parentId });
             setExpandedAccountIds((prev) => new Set([...prev, parentId]));
         } catch (error: any) {
-            logger.error('[ManageHierarchy] handleAddChild failed', error);
-            Alert.alert('Move Failed', error.message || 'An unexpected error occurred.');
+            toast.error(error.message || 'Move failed');
         }
 
         setSelectedAccountId(null);
