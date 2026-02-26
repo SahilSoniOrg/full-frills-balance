@@ -1,5 +1,6 @@
 ---
-trigger: always_on
+trigger: model_decision
+description: Core product and engineering principles for the application
 ---
 
 # Product & Engineering Principles
@@ -42,4 +43,3 @@ trigger: always_on
 - Make the smallest safe decision that preserves correctness.
 - Document assumptions in code comments or follow-up notes when needed.
 - Flag unresolved tradeoffs explicitly instead of hiding them in implementation.
-
