@@ -47,6 +47,9 @@ export interface AccountsListViewModel {
     isPrivacyMode: boolean
     isLoading: boolean
     version: number
+    netWorth: number
+    totalAssets: number
+    totalLiabilities: number
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
@@ -80,6 +83,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         [dashboardData.balances])
 
     const {
+        netWorth,
         totalAssets,
         totalLiabilities,
         totalEquity,
@@ -194,5 +198,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         isPrivacyMode,
         isLoading,
         version,
+        netWorth,
+        totalAssets,
+        totalLiabilities,
     }
 }

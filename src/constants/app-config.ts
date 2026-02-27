@@ -115,6 +115,10 @@ export const AppConfig = {
       debts: 'Debts',
       budgets: 'Budgets',
       bills: 'Bills',
+      shortfall: 'SHORTFALL',
+      neededForObligations: 'Needed for obligations',
+      afterObligations: 'After obligations',
+      noDataForBreakdown: 'Not enough liquid assets to determine breakdown.',
       safeToSpendExplanation: {
         title: 'How Safe to Spend Works',
         intro: 'Safe to Spend is your spendable limit after reserving money for known commitments.',
@@ -143,6 +147,7 @@ export const AppConfig = {
       emptySubtitle: 'Try adjusting your search or date filter',
       transactions: 'Transactions',
       plannedPayments: 'Planned Payments',
+      upcoming: 'Upcoming',
       searchResults: 'Search Results',
       more: (count: number) => `+${count} more`,
       from: 'From: ',
@@ -155,6 +160,7 @@ export const AppConfig = {
       },
     },
     reports: {
+      title: 'Analytics',
       netWorthChange: 'NET WORTH CHANGE',
       totalIncome: 'TOTAL INCOME',
       totalExpense: 'TOTAL EXPENSE',

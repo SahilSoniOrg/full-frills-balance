@@ -4,9 +4,9 @@ import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHe
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { InsightWidget } from './InsightWidget';
+import { InsightsBottomSheet } from './InsightsBottomSheet';
 import { SafeToSpendCard } from './SafeToSpendCard';
 
 export function DashboardScreenView({
@@ -16,10 +16,11 @@ export function DashboardScreenView({
     headerProps,
     fab,
     safeToSpendData,
-    patterns,
     transactionSectionTitle,
 }: DashboardViewModel) {
     const { strings } = AppConfig;
+    const [isInsightsVisible, setInsightsVisible] = useState(false);
+
     if (!isInitialized) {
         return (
             <View style={styles.loading}>
@@ -36,30 +37,39 @@ export function DashboardScreenView({
     }
 
     return (
-        <JournalListView
-            {...listViewProps}
-            showBack={false}
-            listHeader={
-                <View>
-                    <DashboardHeader {...headerProps} />
-                    <PlannedPaymentsSection
-                        items={listViewProps.plannedJournals || []}
-                        onItemPress={listViewProps.onPlannedJournalPress}
-                    />
-                    {safeToSpendData && (
-                        <SafeToSpendCard
-                            {...safeToSpendData}
-                            isLoading={!isInitialized}
+        <>
+            <JournalListView
+                {...listViewProps}
+                showBack={false}
+                listHeader={
+                    <View>
+                        <DashboardHeader
+                            {...headerProps}
+                            onInsightsPress={() => setInsightsVisible(true)}
                         />
-                    )}
-                    <InsightWidget patterns={patterns} />
-                    <AppText variant="subheading" color="secondary" style={styles.transactionSectionTitle}>
-                        {transactionSectionTitle}
-                    </AppText>
-                </View>
-            }
-            fab={fab}
-        />
+                        {safeToSpendData && (
+                            <SafeToSpendCard
+                                {...safeToSpendData}
+                                isLoading={!isInitialized}
+                            />
+                        )}
+                        <PlannedPaymentsSection
+                            items={listViewProps.plannedJournals || []}
+                            onItemPress={listViewProps.onPlannedJournalPress}
+                        />
+                        <AppText variant="subheading" color="secondary" style={styles.transactionSectionTitle}>
+                            {transactionSectionTitle}
+                        </AppText>
+                    </View>
+                }
+                fab={fab}
+            />
+            <InsightsBottomSheet
+                visible={isInsightsVisible}
+                onClose={() => setInsightsVisible(false)}
+                patterns={headerProps.patterns}
+            />
+        </>
     );
 }
 

@@ -45,6 +45,7 @@ import {
     Settings,
     ShoppingBag,
     ShoppingCart,
+    Sparkles,
     Tag,
     Trash2,
     TrendingUp,
@@ -111,6 +112,7 @@ export const IconMap = {
     history: History,
     eject: LogOut,
     helpCircle: HelpCircle,
+    sparkles: Sparkles,
 } as const;
 
 export type IconName = keyof typeof IconMap;

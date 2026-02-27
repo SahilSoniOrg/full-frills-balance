@@ -37,20 +37,20 @@ export function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="budget"
+        name="commitments"
         options={{
-          title: 'Budgets',
+          title: 'Commitments',
           tabBarIcon: ({ color, size }) => (
             <AppIcon name="pieChart" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="reports"
+        name="activity"
         options={{
-          title: 'Reports',
+          title: 'Activity',
           tabBarIcon: ({ color, size }) => (
-            <AppIcon name="reports" size={size} color={color} />
+            <AppIcon name="receipt" size={size} color={color} />
           ),
         }}
       />

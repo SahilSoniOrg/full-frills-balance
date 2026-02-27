@@ -1,6 +1,6 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
-import { ExpandableSearchButton } from '@/src/components/core';
-import { AppConfig, Spacing } from '@/src/constants';
+import { ExpandableSearchButton, IconButton } from '@/src/components/core';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
@@ -43,6 +43,13 @@ export default function JournalScreen() {
 
     const headerActions = useMemo(() => (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+            <IconButton
+                name="reports"
+                size={Size.iconSm}
+                variant="surface"
+                onPress={AppNavigation.toReports}
+                accessibilityLabel="View Analytics"
+            />
             <ExpandableSearchButton
                 value={vm.searchQuery}
                 onChangeText={vm.onSearchChange}

@@ -3,9 +3,11 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { useBreakdownViewState } from '@/src/features/reports/hooks/useBreakdownViewState';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useObservable } from '@/src/hooks/useObservable';
+import { insightService, Pattern } from '@/src/services/insight-service';
 import { ExpenseCategory, reportService } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { DateRange, PeriodFilter, formatDate, getEndOfDay, getStartOfDay } from '@/src/utils/dateUtils';
+import { DateRange, formatDate, getEndOfDay, getStartOfDay, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { useRouter } from 'expo-router';
@@ -54,6 +56,7 @@ export interface ReportsViewModel {
     totalIncomeCount: number;
     showExpenseExpansionButton: boolean;
     showIncomeExpansionButton: boolean;
+    patterns: Pattern[];
 }
 
 export function useReportsViewModel(): ReportsViewModel {
@@ -62,6 +65,12 @@ export function useReportsViewModel(): ReportsViewModel {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [selectedNetWorthIndex, setSelectedNetWorthIndex] = useState<number | undefined>();
     const [selectedIncomeExpenseIndex, setSelectedIncomeExpenseIndex] = useState<number | undefined>();
+
+    const { data: patterns } = useObservable(
+        () => insightService.observePatterns(),
+        [],
+        []
+    );
 
     // Dynamic Breakdown State
     const [selectedExpenses, setSelectedExpenses] = useState<ExpenseCategory[] | null>(null);
@@ -345,5 +354,6 @@ export function useReportsViewModel(): ReportsViewModel {
         totalIncomeCount: incomeViewState.totalCount,
         showExpenseExpansionButton: expenseViewState.showExpansionButton,
         showIncomeExpansionButton: incomeViewState.showExpansionButton,
+        patterns,
     };
 }

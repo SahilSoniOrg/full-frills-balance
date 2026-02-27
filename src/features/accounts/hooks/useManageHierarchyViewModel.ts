@@ -1,11 +1,11 @@
 import Account from '@/src/data/models/Account';
 import { useAccountActions, useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { createAccountTypeRecord } from '@/src/utils/accountCategory';
-import { logger } from '@/src/utils/logger';
+
+import { toast } from '@/src/utils/alerts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from '@/src/utils/alerts'
-import { LayoutAnimation } from 'react-native'
+import { LayoutAnimation } from 'react-native';
 
 export interface ManageHierarchyViewModel {
     accounts: Account[];

@@ -5,7 +5,7 @@ import { insightService, Pattern } from '@/src/services/insight-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';
 
 interface InsightWidgetProps {
@@ -14,7 +14,6 @@ interface InsightWidgetProps {
 
 export const InsightWidget = ({ patterns }: InsightWidgetProps) => {
     const { theme, fonts } = useTheme();
-    const { width: screenWidth } = useWindowDimensions();
     const router = useRouter();
     const [isEmergencyFundInfoVisible, setEmergencyFundInfoVisible] = React.useState(false);
 
@@ -117,14 +116,7 @@ export const InsightWidget = ({ patterns }: InsightWidgetProps) => {
                         </AppText>
                     </TouchableOpacity>
                 </View>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
-                    snapToAlignment="start"
-                    decelerationRate="fast"
-                    snapToInterval={screenWidth * 0.82 + Spacing.md}
-                >
+                <View style={styles.listContent}>
                     {patterns.map(pattern => {
                         const severity = getSeverityMeta(pattern.severity);
                         return (
@@ -135,7 +127,6 @@ export const InsightWidget = ({ patterns }: InsightWidgetProps) => {
                                 style={[
                                     styles.card,
                                     {
-                                        width: screenWidth * 0.82,
                                         borderColor: theme.border,
                                         backgroundColor: theme.surface,
                                     }
@@ -230,7 +221,7 @@ export const InsightWidget = ({ patterns }: InsightWidgetProps) => {
                             </AppCard>
                         );
                     })}
-                </ScrollView>
+                </View>
             </View>
 
             <EmergencyFundPopupModal
@@ -271,18 +262,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.xs,
     },
     card: {
-        marginRight: Spacing.md,
+        marginBottom: Spacing.sm,
         overflow: 'hidden',
         borderWidth: 1,
-        alignSelf: 'flex-start',
     },
     cardPressable: {
         position: 'relative',
-        padding: Spacing.md + Spacing.xs,
+        padding: Spacing.md,
     },
-    scrollContent: {
-        paddingRight: Spacing.xl,
-        alignItems: 'flex-start',
+    listContent: {
+        gap: Spacing.sm,
     },
     header: {
         flexDirection: 'row',

@@ -118,60 +118,13 @@ export class InsightService {
                 const budgetUsage$ = budgetUsageObservables.length > 0 ? combineLatest(budgetUsageObservables) : of([]);
                 const budgetScopes$ = budgetScopeObservables.length > 0 ? combineLatest(budgetScopeObservables) : of([]);
 
-                const nowTime = Date.now();
-                const endOfMonth = dayjs().endOf('month').valueOf();
 
                 return combineLatest([budgetUsage$, budgetScopes$]).pipe(
                     switchMap(async ([usages, budgetScopeGroups]) => {
                         const accountBalances = await balanceService.getAccountBalances();
 
-                        const recurringConversions = await Promise.all(
-                            patterns
-                                .filter(p => p.type === 'subscription-amnesiac')
-                                .map(async p => {
-                                    if (!p.amount || !p.currencyCode || p.currencyCode === resultCurrency) return p.amount || 0;
-                                    try {
-                                        const { convertedAmount } = await exchangeRateService.convert(p.amount, p.currencyCode, resultCurrency);
-                                        return convertedAmount;
-                                    } catch (e) {
-                                        logger.error(`Failed to convert pattern amount for safe-to-spend`, e);
-                                        return p.amount;
-                                    }
-                                })
-                        );
-                        const committedRecurring = recurringConversions.reduce((a, b) => a + b, 0);
-
-                        const plannedConversions = await Promise.all(
-                            plannedPayments
-                                .filter(pp => pp.nextOccurrence > nowTime && pp.nextOccurrence <= endOfMonth)
-                                .map(async pp => {
-                                    if (!pp.amount || !pp.currencyCode || pp.currencyCode === resultCurrency) return pp.amount || 0;
-                                    try {
-                                        const { convertedAmount } = await exchangeRateService.convert(pp.amount, pp.currencyCode, resultCurrency);
-                                        return convertedAmount;
-                                    } catch (e) {
-                                        logger.error(`Failed to convert planned payment amount for safe-to-spend`, e);
-                                        return pp.amount;
-                                    }
-                                })
-                        );
-                        const committedPlannedPayments = plannedConversions.reduce((a, b) => a + b, 0);
-
-                        const plannedJournalConversions = await Promise.all(
-                            plannedJournals.map(async pj => {
-                                if (!pj.totalAmount || !pj.currencyCode || pj.currencyCode === resultCurrency) return pj.totalAmount || 0;
-                                try {
-                                    const { convertedAmount } = await exchangeRateService.convert(pj.totalAmount, pj.currencyCode, resultCurrency);
-                                    return convertedAmount;
-                                } catch (e) {
-                                    logger.error(`Failed to convert planned journal amount for safe-to-spend`, e);
-                                    return pj.totalAmount;
-                                }
-                            })
-                        );
-                        const committedPlannedJournals = plannedJournalConversions.reduce((a, b) => a + b, 0);
-
-                        const committedPlanned = committedPlannedPayments + committedPlannedJournals;
+                        const committedRecurring = await this.calculateCommittedRecurring(patterns, resultCurrency);
+                        const committedPlanned = await this.calculateCommittedPlanned(plannedPayments, plannedJournals, resultCurrency);
 
                         let totalLiquid = 0;
                         liquidAssets.forEach(a => {
@@ -185,8 +138,7 @@ export class InsightService {
                             if (b) totalLiabilities += Math.abs(b.balance);
                         });
 
-                        const usagesList = usages as any[];
-                        const remainingBudget = usagesList.reduce((acc, curr) => acc + Math.max(0, curr.remaining), 0);
+                        const remainingBudget = (usages as any[]).reduce((acc, curr) => acc + Math.max(0, curr.remaining), 0);
                         const netCash = totalLiquid - totalLiabilities;
                         const safeToSpend = netCash - remainingBudget - committedRecurring - committedPlanned;
 
@@ -433,6 +385,65 @@ export class InsightService {
     async undismissPattern(id: string): Promise<void> {
         await preferences.undismissPattern(id);
         this.refreshTrigger.next();
+    }
+
+    private async calculateCommittedRecurring(patterns: Pattern[], resultCurrency: string): Promise<number> {
+        const recurringConversions = await Promise.all(
+            patterns
+                .filter(p => p.type === 'subscription-amnesiac')
+                .map(async p => {
+                    if (!p.amount || !p.currencyCode || p.currencyCode === resultCurrency) return p.amount || 0;
+                    try {
+                        const { convertedAmount } = await exchangeRateService.convert(p.amount, p.currencyCode, resultCurrency);
+                        return convertedAmount;
+                    } catch (e) {
+                        logger.error(`Failed to convert pattern amount for safe-to-spend`, e);
+                        return p.amount;
+                    }
+                })
+        );
+        return recurringConversions.reduce((a, b) => a + b, 0);
+    }
+
+    private async calculateCommittedPlanned(
+        plannedPayments: PlannedPayment[],
+        plannedJournals: Journal[],
+        resultCurrency: string
+    ): Promise<number> {
+        const nowTime = Date.now();
+        const endOfMonth = dayjs().endOf('month').valueOf();
+
+        const plannedConversions = await Promise.all(
+            plannedPayments
+                .filter(pp => pp.nextOccurrence > nowTime && pp.nextOccurrence <= endOfMonth)
+                .map(async pp => {
+                    if (!pp.amount || !pp.currencyCode || pp.currencyCode === resultCurrency) return pp.amount || 0;
+                    try {
+                        const { convertedAmount } = await exchangeRateService.convert(pp.amount, pp.currencyCode, resultCurrency);
+                        return convertedAmount;
+                    } catch (e) {
+                        logger.error(`Failed to convert planned payment amount for safe-to-spend`, e);
+                        return pp.amount;
+                    }
+                })
+        );
+        const committedPlannedPayments = plannedConversions.reduce((a, b) => a + b, 0);
+
+        const plannedJournalConversions = await Promise.all(
+            plannedJournals.map(async pj => {
+                if (!pj.totalAmount || !pj.currencyCode || pj.currencyCode === resultCurrency) return pj.totalAmount || 0;
+                try {
+                    const { convertedAmount } = await exchangeRateService.convert(pj.totalAmount, pj.currencyCode, resultCurrency);
+                    return convertedAmount;
+                } catch (e) {
+                    logger.error(`Failed to convert planned journal amount for safe-to-spend`, e);
+                    return pj.totalAmount;
+                }
+            })
+        );
+        const committedPlannedJournals = plannedJournalConversions.reduce((a, b) => a + b, 0);
+
+        return committedPlannedPayments + committedPlannedJournals;
     }
 }
 

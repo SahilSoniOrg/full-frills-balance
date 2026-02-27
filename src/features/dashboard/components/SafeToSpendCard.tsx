@@ -1,6 +1,6 @@
 import { PopupModal } from '@/src/components/common/PopupModal';
-import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppIcon, AppText } from '@/src/components/core';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AccountSubcategory, formatAccountSubcategoryLabel } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -94,85 +94,98 @@ export const SafeToSpendCard = ({
         </View>
     );
 
+    const committedTotal = committedBudget + committedRecurring + committedPlanned;
+    const totalObligations = totalLiabilities + committedTotal;
+    const effectiveTotal = Math.max(totalLiquidAssets, totalObligations);
+
+    const shortfall = Math.max(0, totalObligations - totalLiquidAssets);
+    const isOverCommitted = shortfall > 0;
+    const isPositiveSafeToSpend = !isOverCommitted && safeToSpend > 0;
+
     return (
         <>
-            <AppCard
-                elevation="md"
-                padding="lg"
-                radius="r1"
-                style={[styles.container, { backgroundColor: theme.primary }]}
-            >
-                <View style={styles.kickerRow}>
-                    <View style={[styles.kickerBadge, { backgroundColor: withOpacity(theme.onPrimary, Opacity.soft) }]}>
-                        <AppIcon name="wallet" size={Size.xs} color={withOpacity(theme.onPrimary, Opacity.heavy)} />
+            <View style={styles.container}>
+                <View style={styles.heroWrap}>
+                    <View style={styles.kickerRow}>
+                        <AppText
+                            variant="caption"
+                            weight="bold"
+                            color={isOverCommitted ? "error" : (isPositiveSafeToSpend ? "success" : "secondary")}
+                            style={styles.kickerText}
+                        >
+                            {isOverCommitted ? AppConfig.strings.dashboard.shortfall : AppConfig.strings.dashboard.safeToSpendTitle}
+                        </AppText>
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel="Open safe-to-spend calculation info"
+                            onPress={() => setInfoVisible(true)}
+                            style={styles.infoButton}
+                        >
+                            <AppIcon
+                                name="helpCircle"
+                                fallbackIcon="helpCircle"
+                                size={Size.xs}
+                                color={isOverCommitted ? theme.error : theme.textSecondary}
+                            />
+                        </TouchableOpacity>
                     </View>
-                    <AppText variant="caption" style={[styles.kickerText, { color: withOpacity(theme.onPrimary, Opacity.heavy) }]}>
-                        {AppConfig.strings.dashboard.safeToSpendTitle}
-                    </AppText>
-                    <TouchableOpacity
-                        accessibilityRole="button"
-                        accessibilityLabel="Open safe-to-spend calculation info"
-                        onPress={() => setInfoVisible(true)}
-                        style={[styles.infoButton, { backgroundColor: withOpacity(theme.onPrimary, Opacity.soft) }]}
+
+                    <AppText
+                        variant="hero"
+                        color={isOverCommitted ? "error" : (isPositiveSafeToSpend ? "success" : undefined)}
+                        style={[styles.amount, { fontFamily: fonts.bold }]}
                     >
-                        <AppIcon
-                            name="helpCircle"
-                            fallbackIcon="helpCircle"
-                            size={Size.xs}
-                            color={withOpacity(theme.onPrimary, Opacity.heavy)}
-                        />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.amountWrap}>
-                    <AppText variant="xl" style={[styles.amount, { color: theme.onPrimary, fontFamily: fonts.bold }]}>
-                        {format(safeToSpend)}
+                        {format(isOverCommitted ? shortfall : safeToSpend)}
                     </AppText>
-                    <AppText variant="caption" style={{ color: withOpacity(theme.onPrimary, Opacity.medium) }}>
-                        Available after debt, budgets, and upcoming bills
+                    <AppText
+                        variant="caption"
+                        color={isOverCommitted ? "error" : (isPositiveSafeToSpend ? "success" : "secondary")}
+                    >
+                        {isOverCommitted ? AppConfig.strings.dashboard.neededForObligations : AppConfig.strings.dashboard.afterObligations}
                     </AppText>
                 </View>
 
-                <View style={[styles.divider, { backgroundColor: withOpacity(theme.onPrimary, Opacity.muted) }]} />
+                <View style={styles.breakdownContainer}>
+                    {effectiveTotal > 0 ? (
+                        <>
+                            {/* Segmented Bar */}
+                            <View style={[styles.progressBarContainer, { backgroundColor: theme.surfaceSecondary }]}>
+                                {totalLiabilities > 0 && (
+                                    <View style={[styles.progressSegment, { width: `${(totalLiabilities / effectiveTotal) * 100}%`, backgroundColor: theme.error }]} />
+                                )}
+                                {committedTotal > 0 && (
+                                    <View style={[styles.progressSegment, { width: `${(committedTotal / effectiveTotal) * 100}%`, backgroundColor: theme.warning }]} />
+                                )}
+                                {safeToSpend > 0 && (
+                                    <View style={[styles.progressSegment, { width: `${(safeToSpend / effectiveTotal) * 100}%`, backgroundColor: theme.primary }]} />
+                                )}
+                            </View>
 
-                <View style={styles.breakdownGrid}>
-                    <View style={[styles.breakdownItem, { backgroundColor: withOpacity(theme.onPrimary, Opacity.soft) }]}>
-                        <AppText variant="caption" style={{ color: withOpacity(theme.onPrimary, Opacity.medium) }}>
-                            {AppConfig.strings.dashboard.assets}
-                        </AppText>
-                        <AppText variant="subheading" style={[styles.breakdownValue, { color: theme.onPrimary }]}>
-                            {format(totalLiquidAssets)}
-                        </AppText>
-                    </View>
-
-                    <View style={[styles.breakdownItem, { backgroundColor: withOpacity(theme.onPrimary, Opacity.soft) }]}>
-                        <AppText variant="caption" style={{ color: withOpacity(theme.onPrimary, Opacity.medium) }}>
-                            {AppConfig.strings.dashboard.debts}
-                        </AppText>
-                        <AppText variant="subheading" style={[styles.breakdownValue, { color: theme.onPrimary }]}>
-                            {format(totalLiabilities)}
-                        </AppText>
-                    </View>
-
-                    <View style={[styles.breakdownItem, { backgroundColor: withOpacity(theme.onPrimary, Opacity.soft) }]}>
-                        <AppText variant="caption" style={{ color: withOpacity(theme.onPrimary, Opacity.medium) }}>
-                            {AppConfig.strings.dashboard.budgets}
-                        </AppText>
-                        <AppText variant="subheading" style={[styles.breakdownValue, { color: theme.onPrimary }]}>
-                            {format(committedBudget)}
-                        </AppText>
-                    </View>
-
-                    <View style={[styles.breakdownItem, { backgroundColor: withOpacity(theme.onPrimary, Opacity.soft) }]}>
-                        <AppText variant="caption" style={{ color: withOpacity(theme.onPrimary, Opacity.medium) }}>
-                            {AppConfig.strings.dashboard.bills}
-                        </AppText>
-                        <AppText variant="subheading" style={[styles.breakdownValue, { color: theme.onPrimary }]}>
-                            {format(committedRecurring + committedPlanned)}
-                        </AppText>
-                    </View>
+                            {/* Legend */}
+                            <View style={styles.legendContainer}>
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
+                                    <AppText variant="caption" color="secondary">Safe: {format(safeToSpend)}</AppText>
+                                </View>
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.legendDot, { backgroundColor: theme.warning }]} />
+                                    <AppText variant="caption" color="secondary">Committed: {format(committedBudget + committedRecurring + committedPlanned)}</AppText>
+                                </View>
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
+                                    <AppText variant="caption" color="secondary">Debts: {format(totalLiabilities)}</AppText>
+                                </View>
+                            </View>
+                        </>
+                    ) : (
+                        <View style={styles.emptyState}>
+                            <AppText variant="caption" color="secondary">
+                                {AppConfig.strings.dashboard.noDataForBreakdown}
+                            </AppText>
+                        </View>
+                    )}
                 </View>
-            </AppCard>
+            </View>
 
             <PopupModal
                 visible={isInfoVisible}
@@ -284,31 +297,46 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    amountWrap: {
-        marginTop: Spacing.md,
-        marginBottom: Spacing.lg,
+    heroWrap: {
+        marginBottom: Spacing.xl,
     },
     amount: {
         marginBottom: Spacing.xs,
     },
-    divider: {
-        height: 1,
-        width: '100%',
+    breakdownContainer: {
+        marginTop: Spacing.sm,
         marginBottom: Spacing.md,
     },
-    breakdownGrid: {
+    progressBarContainer: {
+        height: 12,
+        flexDirection: 'row',
+        borderRadius: Shape.radius.full,
+        overflow: 'hidden',
+        marginBottom: Spacing.md,
+        width: '100%',
+    },
+    progressSegment: {
+        height: '100%',
+    },
+    legendContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: Spacing.sm,
+        justifyContent: 'space-between',
+        rowGap: Spacing.sm,
     },
-    breakdownItem: {
-        width: '48%',
-        borderRadius: Spacing.sm,
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: Spacing.xs,
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.xs,
     },
-    breakdownValue: {
-        marginTop: Spacing.xs,
+    legendDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    emptyState: {
+        paddingVertical: Spacing.sm,
+        alignItems: 'center',
     },
     modalHighlight: {
         padding: Spacing.md,

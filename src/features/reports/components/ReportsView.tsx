@@ -5,11 +5,13 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { InsightWidget } from '@/src/features/dashboard';
 import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownDonutCard';
 import { IncomeExpenseTooltip, NetWorthTooltip } from '@/src/features/reports/components/ReportTooltip';
 import { useChartTooltipPosition } from '@/src/features/reports/hooks/useChartTooltipPosition';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AppNavigation } from '@/src/utils/navigation';
 import React, { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
@@ -49,6 +51,7 @@ export function ReportsView(vm: ReportsViewModel) {
         dailyData,
         onViewTransactions,
         onLegendRowPress,
+        patterns,
     } = vm;
 
     const { width } = useWindowDimensions();
@@ -115,7 +118,7 @@ export function ReportsView(vm: ReportsViewModel) {
     }, [barChartData, theme, getBarTooltipPosition, vm.onViewSelectedTransactions]);
 
     return (
-        <Screen showBack={false}>
+        <Screen showBack={true} title={AppConfig.strings.reports.title} onBack={AppNavigation.back}>
             <View style={styles.filterBar}>
                 <TouchableOpacity
                     style={[styles.filterButton, { borderColor: theme.border, backgroundColor: theme.surface }]}
@@ -135,6 +138,7 @@ export function ReportsView(vm: ReportsViewModel) {
                     <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={theme.primary} />
                 }
             >
+                <InsightWidget patterns={patterns} />
                 <AppCard style={styles.chartCard} padding="lg">
                     <View style={styles.headerRow}>
                         <View>

@@ -4,6 +4,7 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import { AccountCardViewModel, AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
+import { NetWorthCard } from '@/src/features/dashboard';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -21,6 +22,9 @@ export function AccountsListView({
     onTogglePrivacy,
     isPrivacyMode,
     isLoading,
+    netWorth,
+    totalAssets,
+    totalLiabilities,
 }: AccountsListViewModel) {
     const { theme } = useTheme();
     return (
@@ -109,6 +113,14 @@ export function AccountsListView({
                                     />
                                 </View>
                             </View>
+                            <NetWorthCard
+                                netWorth={netWorth}
+                                totalAssets={totalAssets}
+                                totalLiabilities={totalLiabilities}
+                                isLoading={isLoading}
+                                hidden={isPrivacyMode}
+                                onToggleHidden={onTogglePrivacy}
+                            />
                         </View>
                     }
                     ListEmptyComponent={

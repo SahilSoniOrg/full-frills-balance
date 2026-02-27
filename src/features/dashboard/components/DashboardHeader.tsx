@@ -1,107 +1,43 @@
-import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
-import { AppText, ExpandableSearchButton } from '@/src/components/core';
+import { AppIcon, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import { DashboardSummary } from '@/src/features/dashboard/components/DashboardSummary';
-import { NetWorthCard } from '@/src/features/dashboard/components/NetWorthCard';
-import { DateRange } from '@/src/utils/dateUtils';
+import { useTheme } from '@/src/hooks/use-theme';
+import { Pattern } from '@/src/services/insight-service';
 import React from 'react';
-import { LayoutAnimation, StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface DashboardHeaderProps {
     greeting: string;
-    netWorth: number;
-    totalAssets: number;
-    totalLiabilities: number;
-    isSummaryLoading: boolean;
-    isDashboardHidden: boolean;
-    onToggleHidden: (hidden: boolean) => void;
-    income: number;
-    expense: number;
-    searchQuery: string;
-    onSearchChange: (query: string) => void;
-    onSearchPress: () => void;
-    dateRange: DateRange | null;
-    showDatePicker: () => void;
-    navigatePrevious?: () => void;
-    navigateNext?: () => void;
+    patterns?: Pattern[];
+    onInsightsPress?: () => void;
 }
 
-export function DashboardHeader({
-    greeting,
-    netWorth,
-    totalAssets,
-    totalLiabilities,
-    isSummaryLoading,
-    isDashboardHidden,
-    onToggleHidden,
-    income,
-    expense,
-    searchQuery,
-    onSearchChange,
-    onSearchPress,
-    dateRange,
-    showDatePicker,
-    navigatePrevious,
-    navigateNext,
-}: DashboardHeaderProps) {
-    const [isSearching, setIsSearching] = React.useState(false);
-
-    const handleSearchExpand = React.useCallback((expanded: boolean) => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setIsSearching(expanded);
-    }, []);
+export function DashboardHeader({ greeting, patterns = [], onInsightsPress }: DashboardHeaderProps) {
+    const { theme } = useTheme();
+    const insightsCount = patterns.length;
 
     return (
         <View style={styles.container}>
-            <View style={[styles.headerRow, isSearching && { gap: 0 }]}>
-                {!isSearching && (
-                    <View style={styles.greetingContainer}>
-                        <AppText variant="title" numberOfLines={1}>
-                            {greeting}
-                        </AppText>
-                    </View>
-                )}
-
-                <View style={[styles.headerActions, isSearching && styles.expandedActions]}>
-                    {searchQuery.length === 0 && (
-                        <DateRangeFilter
-                            range={dateRange}
-                            onPress={showDatePicker}
-                            onPrevious={navigatePrevious}
-                            onNext={navigateNext}
-                            showNavigationArrows={false}
-                        />
-                    )}
-
-                    <View style={styles.searchWrapper}>
-                        <ExpandableSearchButton
-                            value={searchQuery}
-                            onChangeText={onSearchChange}
-                            onExpandChange={handleSearchExpand}
-                            onPress={onSearchPress}
-                        />
-                    </View>
+            <View style={styles.headerRow}>
+                <View style={styles.greetingContainer}>
+                    <AppText variant="title" numberOfLines={1}>
+                        {greeting}
+                    </AppText>
                 </View>
+
+                {onInsightsPress && (
+                    <TouchableOpacity
+                        style={styles.bellContainer}
+                        onPress={onInsightsPress}
+                        accessibilityRole="button"
+                        accessibilityLabel="View Insights"
+                    >
+                        <AppIcon name="sparkles" size={24} color={theme.text} />
+                        {insightsCount > 0 && (
+                            <View style={[styles.badge, { backgroundColor: theme.error }]} />
+                        )}
+                    </TouchableOpacity>
+                )}
             </View>
-
-            {!isSearching && (
-                <>
-                    <NetWorthCard
-                        netWorth={netWorth}
-                        totalAssets={totalAssets}
-                        totalLiabilities={totalLiabilities}
-                        isLoading={isSummaryLoading}
-                        hidden={isDashboardHidden}
-                        onToggleHidden={onToggleHidden}
-                    />
-
-                    <DashboardSummary
-                        income={income}
-                        expense={expense}
-                        isHidden={isDashboardHidden}
-                    />
-                </>
-            )}
         </View>
     );
 }
@@ -122,15 +58,16 @@ const styles = StyleSheet.create({
         minWidth: 0,
         marginRight: Spacing.sm,
     },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
+    bellContainer: {
+        position: 'relative',
+        padding: Spacing.xs,
     },
-    searchWrapper: {
-        flexShrink: 0,
-    },
-    expandedActions: {
-        flex: 1,
-    },
+    badge: {
+        position: 'absolute',
+        top: 2,
+        right: 4,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    }
 });
