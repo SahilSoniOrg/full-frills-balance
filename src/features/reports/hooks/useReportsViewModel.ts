@@ -1,11 +1,13 @@
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useBreakdownViewState } from '@/src/features/reports/hooks/useBreakdownViewState';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ExpenseCategory, reportService } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { DateRange, PeriodFilter, formatDate } from '@/src/utils/dateUtils';
+import { DateRange, PeriodFilter, formatDate, getEndOfDay, getStartOfDay } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
+import { Q } from '@nozbe/watermelondb';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -85,9 +87,27 @@ export function useReportsViewModel(): ReportsViewModel {
         dailyIncomeVsExpense,
     } = useReports();
 
-    const onDateSelect = useCallback((range: DateRange | null, filter: PeriodFilter) => {
-        if (range) {
-            updateFilter(range, filter);
+    const onDateSelect = useCallback(async (range: DateRange | null, filter: PeriodFilter) => {
+        let finalRange = range;
+
+        if (filter.type === 'ALL_TIME') {
+            // Find earliest transaction to bound the "All Time" start date
+            const earliest = await transactionRepository.transactionsQuery(
+                Q.where('deleted_at', Q.eq(null)),
+                Q.sortBy('transaction_date', Q.asc),
+                Q.take(1)
+            ).fetch();
+
+            const startTimestamp = earliest.length > 0 ? earliest[0].transactionDate : Date.now();
+            finalRange = {
+                startDate: getStartOfDay(startTimestamp),
+                endDate: getEndOfDay(Date.now()),
+                label: 'All Time'
+            };
+        }
+
+        if (finalRange) {
+            updateFilter(finalRange, filter);
         }
         setShowDatePicker(false);
         // Reset selections on filter change

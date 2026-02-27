@@ -41,7 +41,7 @@ export const AccountTile = ({
             <AppText
                 variant="body"
                 weight={isSelected ? "semibold" : "regular"}
-                style={{ color: theme.text, flex: 1 }}
+                style={{ color: theme.text, flexShrink: 1 }}
                 numberOfLines={1}
                 ellipsizeMode="tail"
             >
@@ -64,6 +64,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing.sm,
         minWidth: 148,
+        maxWidth: 240,
     },
     accountIndicator: {
         width: 4,

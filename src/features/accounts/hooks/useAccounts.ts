@@ -19,11 +19,12 @@ import { combineLatest, debounceTime, of, switchMap } from 'rxjs'
 
 /**
  * Hook to reactively get all accounts
+ * @param loadData Optional flag to delay fetching (useful for performance optimization)
  */
-export function useAccounts() {
+export function useAccounts(loadData: boolean = true) {
     const { data: accounts, isLoading, version, error } = useObservable(
-        () => accountRepository.observeAll(),
-        [],
+        () => loadData ? accountRepository.observeAll() : of([]),
+        [loadData],
         [] as Account[]
     )
     return { accounts, isLoading, version, error }
@@ -75,8 +76,7 @@ export function useAccountBalance(accountId: string | null) {
                     'exchange_rate',
                     'updated_at'
                 ]),
-                currencyRepository.observeAll(),
-                journalRepository.observeStatusMeta()
+                currencyRepository.observeAll()
             ]).pipe(
                 debounceTime(Animation.dataRefreshDebounce),
                 switchMap(async ([account]) => {

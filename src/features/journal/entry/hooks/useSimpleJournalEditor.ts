@@ -207,19 +207,53 @@ export function useSimpleJournalEditor({
         const lastSourceId = preferences.lastUsedSourceAccountId;
         const lastDestId = preferences.lastUsedDestinationAccountId;
 
+        let shouldUpdate = false;
+        let newSourceId: string | undefined;
+        let newDestId: string | undefined;
+
         // Only default if empty
         if (!sourceId && lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
             if (type === 'transfer' || type === 'expense') {
-                setSourceId(lastSourceId);
+                newSourceId = lastSourceId;
+                shouldUpdate = true;
             }
         }
 
         if (!destinationId && lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
             if (type === 'transfer' || type === 'income') {
-                setDestinationId(lastDestId);
+                newDestId = lastDestId;
+                shouldUpdate = true;
             }
         }
-    }, [type, transactionAccounts, destinationId, setDestinationId, setSourceId, sourceId]); // Run when type changes or accounts load
+
+        if (shouldUpdate) {
+            editor.setLines(prev => {
+                return prev.map(line => {
+                    if (line.transactionType === TransactionType.CREDIT && newSourceId) {
+                        const account = accounts.find(a => a.id === newSourceId);
+                        return {
+                            ...line,
+                            accountId: newSourceId,
+                            accountName: account?.name || '',
+                            accountType: account?.accountType || AccountType.ASSET,
+                            accountCurrency: account?.currencyCode
+                        };
+                    }
+                    if (line.transactionType === TransactionType.DEBIT && newDestId) {
+                        const account = accounts.find(a => a.id === newDestId);
+                        return {
+                            ...line,
+                            accountId: newDestId,
+                            accountName: account?.name || '',
+                            accountType: account?.accountType || AccountType.ASSET,
+                            accountCurrency: account?.currencyCode
+                        };
+                    }
+                    return line;
+                });
+            });
+        }
+    }, [type, transactionAccounts, destinationId, sourceId, accounts, editor]); // Run when type changes or accounts load
 
 
     const handleSave = useCallback(async () => {

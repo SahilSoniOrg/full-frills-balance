@@ -205,23 +205,51 @@ export class ReportService {
         }
 
         const transactions = await transactionRepository.findByAccountsAndDateRange(accountIds, startDate, endDate);
-        const convertedTransactions = await Promise.all(transactions.map(async (tx) => {
+
+        // Group transactions by currency to fetch exchange rates efficiently
+        const transactionsByCurrency = new Map<string, typeof transactions>();
+        for (const tx of transactions) {
             const account = accountMap.get(tx.accountId);
-            if (!account) return null;
-
+            if (!account) continue;
             const txCurrency = tx.currencyCode || account.currencyCode || currency;
-            const { convertedAmount } = await exchangeRateService.convert(tx.amount, txCurrency, currency);
+            const group = transactionsByCurrency.get(txCurrency);
+            if (group) {
+                group.push(tx);
+            } else {
+                transactionsByCurrency.set(txCurrency, [tx]);
+            }
+        }
 
-            return {
-                accountId: tx.accountId,
-                accountType: account.accountType,
-                transactionType: tx.transactionType,
-                transactionDate: tx.transactionDate,
-                amount: convertedAmount,
-            } satisfies ConvertedReportTransaction;
-        }));
+        // Fetch rates concurrently for each unique currency (K unique currencies vs N transactions)
+        const currencyRates = new Map<string, number>();
+        await Promise.all(
+            Array.from(transactionsByCurrency.keys()).map(async (txCurrency) => {
+                if (txCurrency === currency) {
+                    currencyRates.set(txCurrency, 1);
+                } else {
+                    const { convertedAmount } = await exchangeRateService.convert(1, txCurrency, currency);
+                    currencyRates.set(txCurrency, convertedAmount);
+                }
+            })
+        );
 
-        return convertedTransactions.filter((transaction): transaction is ConvertedReportTransaction => transaction !== null);
+        // Apply conversions synchronously
+        const convertedTransactions: ConvertedReportTransaction[] = [];
+        for (const [txCurrency, txs] of transactionsByCurrency.entries()) {
+            const rate = currencyRates.get(txCurrency) || 1;
+            for (const tx of txs) {
+                const account = accountMap.get(tx.accountId)!;
+                convertedTransactions.push({
+                    accountId: tx.accountId,
+                    accountType: account.accountType,
+                    transactionType: tx.transactionType,
+                    transactionDate: tx.transactionDate,
+                    amount: tx.amount * rate,
+                });
+            }
+        }
+
+        return convertedTransactions;
     }
 
     private buildBreakdown(

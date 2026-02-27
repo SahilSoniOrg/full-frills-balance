@@ -6,19 +6,20 @@ import Account, {
     getAccountSubcategoriesForType,
     getDefaultSubcategoryForType,
 } from '@/src/data/models/Account';
+import Currency from '@/src/data/models/Currency';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
-import { useAccount, useAccountBalance, useAccountBalances, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccount, useAccountBalance, useAccounts } from '@/src/features/accounts/hooks/useAccounts';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
+import { balanceService } from '@/src/services/BalanceService';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
-import Currency from '@/src/data/models/Currency';
 
 export interface AccountFormViewModel {
     heroTitle: string;
@@ -177,8 +178,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
         const parent = parentAccountId ? accounts.find(a => a.id === parentAccountId) : null;
         if (parent) {
-            const balance = balancesByAccountId.get(parent.id);
-            if ((balance?.transactionCount || 0) > 0) {
+            const balance = await balanceService.getAccountBalance(parent.id);
+            if (balance.transactionCount > 0) {
                 showErrorAlert(new ValidationError(`Account "${parent.name}" has transactions and cannot be used as a parent. Move or delete transactions before using this account as a parent.`));
                 return;
             }
@@ -212,23 +213,17 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         return `Currency${isEditMode ? ' (cannot be changed)' : ''}`;
     }, [isEditMode]);
 
-    const { balancesByAccountId } = useAccountBalances(accounts);
-
     const potentialParents = useMemo(() => {
         return accounts
             .filter(a => {
-                const balance = balancesByAccountId.get(a.id);
-                const hasNoTx = (balance?.transactionCount || 0) === 0;
-
                 return (
                     a.id !== accountId && // Not self
                     a.accountType === accountType && // Same type
                     a.currencyCode === selectedCurrency && // Same currency
-                    !a.deletedAt && // Not deleted
-                    hasNoTx // Must have no transactions
+                    !a.deletedAt // Not deleted
                 );
             });
-    }, [accounts, accountId, accountType, selectedCurrency, balancesByAccountId]);
+    }, [accounts, accountId, accountType, selectedCurrency]);
 
     const parentAccountName = useMemo(() => {
         if (!parentAccountId) return 'None';

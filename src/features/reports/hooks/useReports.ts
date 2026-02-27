@@ -3,7 +3,6 @@ import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
@@ -27,46 +26,30 @@ export function useReports() {
     const triggerObservable = useMemo(() => {
         return combineLatest([
             accountRepository.observeAll(),
-            transactionRepository.observeByDateRangeWithColumns(
-                dateRange.startDate,
-                dateRange.endDate,
-                [
-                    'amount',
-                    'transaction_type',
-                    'transaction_date',
-                    'deleted_at',
-                    'account_id',
-                    'journal_id',
-                    'currency_code',
-                    'exchange_rate'
-                ]
-            ),
-            journalRepository.observeStatusMeta()
+            journalRepository.observeStatusMeta() // Changed from transactionRepository to journalStatusMeta for performance
         ]).pipe(map(() => 0));
-    }, [dateRange.startDate, dateRange.endDate]);
+    }, []);
 
-    const { data, isLoading: loading, error } = useObservableWithEnrichment(
+    // Load net worth history (faster, independent)
+    const { data: netWorthHistory, isLoading: loadingNetWorth, error: errorNetWorth } = useObservableWithEnrichment(
         () => triggerObservable,
         async () => {
             const { startDate, endDate } = dateRange;
+            return await wealthService.getNetWorthHistory(startDate, endDate, targetCurrency);
+        },
+        [dateRange, triggerObservable, defaultCurrency],
+        []
+    );
 
-            const [history, reportSnapshot] = await Promise.all([
-                wealthService.getNetWorthHistory(startDate, endDate, targetCurrency),
-                reportService.getReportSnapshot(startDate, endDate, targetCurrency),
-            ]);
-
-            return {
-                netWorthHistory: history,
-                expenseBreakdown: reportSnapshot.expenseBreakdown,
-                incomeBreakdown: reportSnapshot.incomeBreakdown,
-                incomeVsExpenseHistory: reportSnapshot.incomeVsExpenseHistory,
-                incomeVsExpense: reportSnapshot.incomeVsExpense,
-                dailyIncomeVsExpense: reportSnapshot.dailyIncomeVsExpense,
-            };
+    // Load full report snapshot (slower, richer)
+    const { data: snapshotData, isLoading: loadingSnapshot, error: errorSnapshot } = useObservableWithEnrichment(
+        () => triggerObservable,
+        async () => {
+            const { startDate, endDate } = dateRange;
+            return await reportService.getReportSnapshot(startDate, endDate, targetCurrency);
         },
         [dateRange, triggerObservable, defaultCurrency],
         {
-            netWorthHistory: [],
             expenseBreakdown: [],
             incomeBreakdown: [],
             incomeVsExpenseHistory: [],
@@ -74,6 +57,13 @@ export function useReports() {
             dailyIncomeVsExpense: []
         }
     );
+
+    const loading = loadingNetWorth || loadingSnapshot;
+    const error = errorNetWorth || errorSnapshot;
+    const data = {
+        netWorthHistory,
+        ...snapshotData
+    };
 
     const expenses = useMemo(() => {
         const colors = REPORT_CHART_COLOR_KEYS.expense.map((colorKey) => theme[colorKey]);

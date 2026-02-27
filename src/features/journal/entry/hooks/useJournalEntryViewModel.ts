@@ -146,6 +146,10 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         // This keeps the footer stable while the user toggles the summary box.
         const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
+        // Hoist primaryCurrencyLine lookup out of reduce to be O(1) inside loop
+        const primaryCurrencyLine = editor.lines.find(l => l.accountCurrency === primaryDisplayCurrency);
+        const primaryRate = primaryCurrencyLine ? (typeof primaryCurrencyLine.exchangeRate === 'string' ? parseFloat(primaryCurrencyLine.exchangeRate) : primaryCurrencyLine.exchangeRate) : 1;
+
         const debitTotalInPrimary = editor.lines
             .filter(l => l.transactionType === 'DEBIT')
             .reduce((sum, line) => {
@@ -156,10 +160,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
                 });
 
                 if (primaryDisplayCurrency === defaultCurrency) return sum + baseAmount;
-
-                // Convert base -> primaryDisplayCurrency
-                const primaryCurrencyLine = editor.lines.find(l => l.accountCurrency === primaryDisplayCurrency);
-                const primaryRate = primaryCurrencyLine ? (typeof primaryCurrencyLine.exchangeRate === 'string' ? parseFloat(primaryCurrencyLine.exchangeRate) : primaryCurrencyLine.exchangeRate) : 1;
 
                 const finalAmount = (primaryRate && primaryRate > 0) ? baseAmount / (primaryRate as number) : baseAmount;
                 return sum + finalAmount;
