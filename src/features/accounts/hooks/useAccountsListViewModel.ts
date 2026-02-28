@@ -50,6 +50,11 @@ export interface AccountsListViewModel {
     netWorth: number
     totalAssets: number
     totalLiabilities: number
+    // Search
+    searchQuery: string
+    isSearching: boolean
+    onSearchChange: (query: string) => void
+    setIsSearching: (isSearching: boolean) => void
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
@@ -95,6 +100,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']))
     const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set())
+    const [searchQuery, setSearchQuery] = useState('')
+    const [isSearching, setIsSearching] = useState(false)
 
     const onToggleSection = useCallback((title: string) => {
         setCollapsedSections(prev => {
@@ -151,8 +158,14 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         // Refresh is handled reactively by observables
     }, [])
 
+    const filteredAccounts = useMemo(() => {
+        if (!searchQuery) return accounts
+        const lowercaseQuery = searchQuery.toLowerCase()
+        return accounts.filter((a: Account) => a.name.toLowerCase().includes(lowercaseQuery))
+    }, [accounts, searchQuery])
+
     const sections = useMemo(() => {
-        return transformAccountsToSections(accounts, {
+        return transformAccountsToSections(filteredAccounts, {
             balancesByAccountId,
             defaultCurrency,
             showAccountMonthlyStats,
@@ -168,7 +181,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
             totalExpense,
         })
     }, [
-        accounts,
+        filteredAccounts,
         balancesByAccountId,
         defaultCurrency,
         showAccountMonthlyStats,
@@ -201,5 +214,9 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         netWorth,
         totalAssets,
         totalLiabilities,
+        searchQuery,
+        isSearching,
+        onSearchChange: setSearchQuery,
+        setIsSearching,
     }
 }

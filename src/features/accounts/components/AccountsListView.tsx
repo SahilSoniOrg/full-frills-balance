@@ -1,4 +1,4 @@
-import { AppText, FloatingActionButton, IconButton } from '@/src/components/core';
+import { AppText, ExpandableSearchButton, FloatingActionButton, IconButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
@@ -25,10 +25,14 @@ export function AccountsListView({
     netWorth,
     totalAssets,
     totalLiabilities,
+    searchQuery,
+    isSearching,
+    onSearchChange,
+    setIsSearching,
 }: AccountsListViewModel) {
     const { theme } = useTheme();
     return (
-        <Screen showBack={false}>
+        <Screen showBack={false} isSearchActive={isSearching}>
             <View style={styles.container}>
                 <SectionList
                     sections={sections}
@@ -88,28 +92,38 @@ export function AccountsListView({
                     ListHeaderComponent={
                         <View style={styles.header}>
                             <View style={[styles.summaryRow, styles.screenHeaderTop]}>
-                                <AppText variant="title" weight="bold">Accounts</AppText>
-                                <View style={styles.flexRowGapSm}>
-                                    <IconButton
-                                        name={isPrivacyMode ? "eyeOff" : "eye"}
-                                        size={Size.iconSm}
-                                        variant="surface"
-                                        onPress={onTogglePrivacy}
-                                        accessibilityLabel={isPrivacyMode ? "Show balances" : "Hide balances"}
-                                    />
-                                    <IconButton
-                                        name="reorder"
-                                        size={Size.iconSm}
-                                        variant="surface"
-                                        onPress={onReorderPress}
-                                        accessibilityLabel="Reorder accounts"
-                                    />
-                                    <IconButton
-                                        name="hierarchy"
-                                        size={Size.iconSm}
-                                        variant="surface"
-                                        onPress={onManageHierarchy}
-                                        accessibilityLabel="Manage hierarchy"
+                                {!isSearching && <AppText variant="title" weight="bold">Accounts</AppText>}
+                                <View style={[styles.flexRowGapSm, isSearching && { flex: 1 }]}>
+                                    {!isSearching && (
+                                        <>
+                                            <IconButton
+                                                name={isPrivacyMode ? "eyeOff" : "eye"}
+                                                size={Size.iconSm}
+                                                variant="surface"
+                                                onPress={onTogglePrivacy}
+                                                accessibilityLabel={isPrivacyMode ? "Show balances" : "Hide balances"}
+                                            />
+                                            <IconButton
+                                                name="reorder"
+                                                size={Size.iconSm}
+                                                variant="surface"
+                                                onPress={onReorderPress}
+                                                accessibilityLabel="Reorder accounts"
+                                            />
+                                            <IconButton
+                                                name="hierarchy"
+                                                size={Size.iconSm}
+                                                variant="surface"
+                                                onPress={onManageHierarchy}
+                                                accessibilityLabel="Manage hierarchy"
+                                            />
+                                        </>
+                                    )}
+                                    <ExpandableSearchButton
+                                        value={searchQuery}
+                                        onChangeText={onSearchChange}
+                                        onExpandChange={setIsSearching}
+                                        placeholder="Search accounts..."
                                     />
                                 </View>
                             </View>

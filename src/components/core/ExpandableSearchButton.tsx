@@ -78,10 +78,14 @@ export const ExpandableSearchButton = ({
         return (
             <TouchableOpacity
                 onPress={handlePress}
-                style={[styles.iconButton, { backgroundColor: theme.surface }]}
+                style={[
+                    styles.iconButton,
+                    { backgroundColor: theme.surface },
+                    Shape.elevation.sm
+                ]}
                 activeOpacity={Opacity.heavy}
             >
-                <AppIcon name="search" size={Size.sm} color={theme.textSecondary} />
+                <AppIcon name="search" size={Size.sm} color={theme.text} />
             </TouchableOpacity>
         );
     }
@@ -93,7 +97,8 @@ export const ExpandableSearchButton = ({
                 {
                     backgroundColor: theme.surface,
                     borderColor: theme.border,
-                }
+                },
+                Shape.elevation.sm
             ]}
         >
             <AppIcon name="search" size={Size.sm} color={theme.textSecondary} style={styles.icon} />
@@ -116,9 +121,9 @@ export const ExpandableSearchButton = ({
 
 const styles = StyleSheet.create({
     iconButton: {
-        width: Size.xxl,
-        height: Size.xxl,
-        borderRadius: Shape.radius.md,
+        width: Size.xl,
+        height: Size.xl,
+        borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -126,9 +131,9 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        height: Size.xxl,
-        minHeight: Size.xxl,
-        borderRadius: Shape.radius.md,
+        height: Size.xl,
+        minHeight: Size.xl,
+        borderRadius: Shape.radius.full,
         paddingHorizontal: Spacing.md,
         gap: Spacing.sm,
     },

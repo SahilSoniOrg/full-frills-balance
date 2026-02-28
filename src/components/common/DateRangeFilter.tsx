@@ -50,7 +50,11 @@ export function DateRangeFilter({
             {showNavigation && (
                 <TouchableOpacity
                     onPress={onPrevious}
-                    style={[styles.navButton, { backgroundColor: theme.surface }]}
+                    style={[
+                        styles.navButton,
+                        { backgroundColor: theme.surface },
+                        Shape.elevation.sm
+                    ]}
                     activeOpacity={Opacity.heavy}
                 >
                     <AppIcon name="chevronLeft" size={Size.sm} color={theme.textSecondary} />
@@ -61,6 +65,7 @@ export function DateRangeFilter({
                 style={[
                     styles.container,
                     { backgroundColor: theme.surface },
+                    Shape.elevation.sm,
                     fullWidth && { flex: 1, justifyContent: 'center' }
                 ]}
                 onPress={onPress}
@@ -77,7 +82,11 @@ export function DateRangeFilter({
             {showNavigation && (
                 <TouchableOpacity
                     onPress={onNext}
-                    style={[styles.navButton, { backgroundColor: theme.surface }]}
+                    style={[
+                        styles.navButton,
+                        { backgroundColor: theme.surface },
+                        Shape.elevation.sm
+                    ]}
                     activeOpacity={Opacity.heavy}
                 >
                     <AppIcon name="chevronRight" size={Size.sm} color={theme.textSecondary} />
@@ -94,21 +103,22 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
     },
     navButton: {
-        width: Size.xxl,
-        height: Size.xxl,
-        borderRadius: Shape.radius.md,
+        width: Size.xl,
+        height: Size.xl,
+        borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
     },
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        height: Size.xxl,
+        height: Size.xl,
         paddingHorizontal: Spacing.md,
-        borderRadius: Shape.radius.md,
+        borderRadius: Shape.radius.full,
         gap: Spacing.sm,
     },
     text: {
         fontSize: Typography.sizes.sm,
+        marginHorizontal: Spacing.xs,
     },
 });
