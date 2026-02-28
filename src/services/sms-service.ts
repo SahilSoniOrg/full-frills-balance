@@ -1,5 +1,10 @@
 import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
+import { database } from '@/src/data/database/Database';
+import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { journalService } from '@/src/features/journal/services/JournalService';
 import { logger } from '@/src/utils/logger';
+import { Q } from '@nozbe/watermelondb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform } from 'react-native';
 
@@ -155,7 +160,16 @@ class SmsService {
         const processedIds = await this.getProcessedSmsIds();
         const parsedTransactions: ParsedTransaction[] = [];
 
-        logger.info(`Fetched ${messages.length} messages from device.`);
+        let activeRules: SmsAutoPostRule[] = [];
+        try {
+            activeRules = await database.collections.get<SmsAutoPostRule>('sms_auto_post_rules')
+                .query(Q.where('is_active', true))
+                .fetch();
+        } catch (error) {
+            logger.error('Failed to fetch SMS auto-post rules', error);
+        }
+
+        logger.info(`Fetched ${messages.length} messages from device. Found ${activeRules.length} active Auto-Post rules.`);
 
         for (let i = 0; i < messages.length; i++) {
             const msg = messages[i];
@@ -183,7 +197,76 @@ class SmsService {
             }
 
             if (parsed) {
-                parsedTransactions.push(parsed);
+                let isAutoPosted = false;
+
+                // 1. Process Auto-Post Rules
+                if (activeRules.length > 0) {
+                    for (const rule of activeRules) {
+                        try {
+                            const senderRegex = new RegExp(rule.senderMatch, 'i');
+                            const senderMatch = senderRegex.test(msg.address);
+
+                            let bodyMatch = true;
+                            if (rule.bodyMatch) {
+                                const bodyRegex = new RegExp(rule.bodyMatch, 'i');
+                                bodyMatch = bodyRegex.test(msg.body);
+                            }
+
+                            if (senderMatch && bodyMatch) {
+                                // Rule matches! Auto-post this journal entry.
+                                logger.info(`Auto-posting SMS ${msg.id} using rule ${rule.id}`);
+                                const isExpense = parsed.type === 'debit';
+                                const lines = [
+                                    {
+                                        id: `src-${parsed.id}`,
+                                        accountId: rule.sourceAccountId,
+                                        accountName: '', // not strictly needed by service, just UI type
+                                        accountType: 'ASSET' as any,
+                                        amount: parsed.amount.toString(),
+                                        transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
+                                        notes: '',
+                                        exchangeRate: ''
+                                    },
+                                    {
+                                        id: `dst-${parsed.id}`,
+                                        accountId: rule.categoryAccountId,
+                                        accountName: '',
+                                        accountType: 'EXPENSE' as any,
+                                        amount: parsed.amount.toString(),
+                                        transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
+                                        notes: '',
+                                        exchangeRate: ''
+                                    }
+                                ];
+
+                                const description = parsed.merchant
+                                    ? `Auto-Posted: ${parsed.merchant}`
+                                    : 'Auto-Posted SMS Transaction';
+
+                                await journalService.saveJournalEntry({
+                                    lines,
+                                    description,
+                                    journalDate: parsed.date || Date.now(),
+                                    smsId: parsed.id,
+                                    smsSender: parsed.address,
+                                    rawSmsBody: parsed.rawBody,
+                                    mode: 'import'
+                                });
+
+                                await this.markSmsAsProcessed(msg.id);
+                                isAutoPosted = true;
+                                break; // Stop evaluating rules
+                            }
+                        } catch (err) {
+                            logger.warn(`Rule parsing error for rule ${rule.id}`, { error: (err as Error).message });
+                        }
+                    }
+                }
+
+                // 2. Queue for manual review if not auto-posted
+                if (!isAutoPosted) {
+                    parsedTransactions.push(parsed);
+                }
             }
         }
 

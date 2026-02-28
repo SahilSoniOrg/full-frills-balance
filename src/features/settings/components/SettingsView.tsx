@@ -125,6 +125,21 @@ export function SettingsView(vm: SettingsViewModel) {
                             {showAccountMonthlyStats ? AppConfig.strings.settings.privacy.on : AppConfig.strings.settings.privacy.off}
                         </AppButton>
                     </View>
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
+                    <View style={styles.rowBetween}>
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
+                            <AppText variant="body" weight="semibold">SMS Auto-Post Rules</AppText>
+                            <AppText variant="caption" color="secondary">Manage rules to automatically post imported SMS</AppText>
+                        </View>
+                        <AppButton
+                            variant="secondary"
+                            size="sm"
+                            onPress={vm.onManageSmsRules}
+                        >
+                            Manage
+                        </AppButton>
+                    </View>
                 </AppCard>
 
                 <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>

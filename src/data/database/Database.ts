@@ -14,6 +14,7 @@ import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal from '@/src/data/models/Journal'
 import JournalMetadata from '@/src/data/models/JournalMetadata'
 import PlannedPayment from '@/src/data/models/PlannedPayment'
+import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule'
 import Transaction from '@/src/data/models/Transaction'
 
 // Adapter (platform-specific resolution handled by Metro)
@@ -39,6 +40,7 @@ export const database = new WatermelonDB({
     Journal,
     JournalMetadata,
     PlannedPayment,
+    SmsAutoPostRule,
     Transaction,
   ],
 })

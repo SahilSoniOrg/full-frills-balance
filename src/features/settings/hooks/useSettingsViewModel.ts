@@ -32,6 +32,7 @@ export interface SettingsViewModel {
     onExport: () => void;
     onImport: () => void;
     onAuditLog: () => void;
+    onManageSmsRules: () => void;
     onFixIntegrity: () => void;
     onCleanup: () => void;
     onFactoryReset: () => void;
@@ -181,6 +182,7 @@ export function useSettingsViewModel(): SettingsViewModel {
         onExport,
         onImport: () => router.push('/import-selection'),
         onAuditLog: () => router.push('/audit-log'),
+        onManageSmsRules: () => router.push('/sms-rules' as any),
         onFixIntegrity,
         onCleanup,
         onFactoryReset,

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 11,
+  version: 12,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -179,6 +179,18 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
       ],
+    }),
+    tableSchema({
+      name: 'sms_auto_post_rules',
+      columns: [
+        { name: 'sender_match', type: 'string', isIndexed: true },
+        { name: 'body_match', type: 'string', isOptional: true },
+        { name: 'source_account_id', type: 'string', isIndexed: true },
+        { name: 'category_account_id', type: 'string', isIndexed: true },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
+      ]
     }),
   ],
 })
