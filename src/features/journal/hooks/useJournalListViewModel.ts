@@ -27,6 +27,8 @@ export interface JournalListViewModel {
     onEndReached?: () => void;
     searchQuery: string;
     onSearchChange: (value: string) => void;
+    isSearchGlobal: boolean;
+    toggleSearchGlobal: () => void;
     dateRange: DateRange | null;
     periodFilter: PeriodFilter;
     isDatePickerVisible: boolean;
@@ -50,6 +52,7 @@ interface UseJournalListViewModelParams {
     initialDateRange?: DateRange | null;
     exchangeRateMap?: Record<string, number>;
     baseCurrency?: string;
+    defaultToCurrentMonth?: boolean;
 }
 
 export function useJournalListViewModel({
@@ -60,8 +63,10 @@ export function useJournalListViewModel({
     initialDateRange,
     exchangeRateMap = {},
     baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+    defaultToCurrentMonth = true,
 }: UseJournalListViewModelParams): JournalListViewModel {
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchGlobal, setIsSearchGlobal] = useState(true);
     const missingCurrenciesCache = useRef(new Set<string>());
 
     const {
@@ -73,9 +78,14 @@ export function useJournalListViewModel({
         setFilter,
         navigatePrevious,
         navigateNext,
-    } = useDateRangeFilter({ defaultToCurrentMonth: true, initialDateRange });
+    } = useDateRangeFilter({ defaultToCurrentMonth, initialDateRange });
 
-    const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(pageSize, dateRange || undefined, searchQuery);
+    const effectiveDateRange = useMemo(() => {
+        if (searchQuery && isSearchGlobal) return undefined;
+        return dateRange || undefined;
+    }, [searchQuery, isSearchGlobal, dateRange]);
+
+    const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(pageSize, effectiveDateRange, searchQuery);
 
     const { journals: plannedJournals } = useJournals(AppConfig.defaults.plannedJournalLimit, undefined, undefined, [JournalStatus.PLANNED]);
 
@@ -85,10 +95,19 @@ export function useJournalListViewModel({
 
     const onSearchChange = useCallback((value: string) => {
         setSearchQuery(value);
+        if (value.length > 0 && !searchQuery) {
+            // Just started searching, reset to global by default
+            setIsSearchGlobal(true);
+        }
+    }, [searchQuery]);
+
+    const toggleSearchGlobal = useCallback(() => {
+        setIsSearchGlobal(prev => !prev);
     }, []);
 
     const onDateSelect = useCallback((range: DateRange | null, filter: PeriodFilter) => {
         setFilter(range, filter);
+        setIsSearchGlobal(false); // If they manually pick a date, respect it
         hideDatePicker();
     }, [hideDatePicker, setFilter]);
 
@@ -176,6 +195,8 @@ export function useJournalListViewModel({
         onEndReached,
         searchQuery,
         onSearchChange,
+        isSearchGlobal,
+        toggleSearchGlobal,
         dateRange,
         periodFilter,
         isDatePickerVisible,

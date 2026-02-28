@@ -36,38 +36,46 @@ export interface JournalListViewProps {
     };
     plannedJournals?: EnrichedJournal[];
     onPlannedJournalPress?: (item: EnrichedJournal) => void;
+    isSearchActive?: boolean;
+    alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];
 }
 
-export function JournalListView({
-    screenTitle,
-    showBack,
-    backIcon,
-    headerActions,
-    listHeader,
-    items,
-    isLoading,
-    isLoadingMore,
-    loadingText,
-    loadingMoreText,
-    emptyTitle,
-    emptySubtitle,
-    onEndReached,
-    listContentStyle,
-    containerStyle,
-    datePicker,
-    fab,
-    plannedJournals,
-    onPlannedJournalPress,
-}: JournalListViewProps) {
+export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
+    const {
+        screenTitle,
+        showBack,
+        backIcon,
+        headerActions,
+        listHeader,
+        items,
+        isLoading,
+        isLoadingMore,
+        loadingText,
+        loadingMoreText,
+        emptyTitle,
+        emptySubtitle,
+        onEndReached,
+        listContentStyle,
+        containerStyle,
+        datePicker,
+        fab,
+        plannedJournals,
+        onPlannedJournalPress,
+        isSearchActive,
+        alignTitle,
+    } = props;
     return (
         <Screen
             title={screenTitle}
             showBack={showBack}
             backIcon={backIcon}
             headerActions={headerActions}
+            isSearchActive={isSearchActive}
+            alignTitle={alignTitle}
         >
             <View style={[styles.container, containerStyle]}>
                 <TransactionListView
+                    ref={ref}
                     items={items}
                     isLoading={isLoading}
                     isLoadingMore={isLoadingMore}
@@ -96,7 +104,7 @@ export function JournalListView({
             </View>
         </Screen>
     );
-}
+});
 
 const styles = StyleSheet.create({
     container: {

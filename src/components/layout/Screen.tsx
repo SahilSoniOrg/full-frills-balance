@@ -20,6 +20,8 @@ export type ScreenProps = ViewProps & {
   showBack?: boolean
   backIcon?: NavigationBarProps['backIcon']
   headerActions?: React.ReactNode
+  isSearchActive?: boolean
+  alignTitle?: NavigationBarProps['alignTitle']
   // Layout
   scrollable?: boolean
   withPadding?: boolean
@@ -34,6 +36,8 @@ export function Screen({
   showBack,
   backIcon,
   headerActions,
+  isSearchActive = false,
+  alignTitle,
   scrollable = false,
   withPadding = false,
   edges = ['top'],
@@ -64,14 +68,16 @@ export function Screen({
     >
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
 
-      {title && (
+      {(title || headerActions) && (
         <NavigationBar
-          title={title}
+          title={title || ''}
           subtitle={subtitle}
           onBack={onBack}
           showBack={showBack}
           backIcon={backIcon}
           rightActions={headerActions}
+          isSearchActive={isSearchActive}
+          alignTitle={alignTitle}
         />
       )}
 

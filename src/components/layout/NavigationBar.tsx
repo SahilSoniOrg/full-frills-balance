@@ -16,6 +16,8 @@ export type NavigationBarProps = {
     showBack?: boolean
     backIcon?: 'back' | 'close'
     rightActions?: React.ReactNode
+    isSearchActive?: boolean
+    alignTitle?: 'center' | 'left'
     style?: ViewStyle
 }
 
@@ -26,6 +28,8 @@ export function NavigationBar({
     showBack = true,
     backIcon = 'back',
     rightActions,
+    isSearchActive = false,
+    alignTitle = 'center',
     style
 }: NavigationBarProps) {
     const router = useRouter()
@@ -40,29 +44,46 @@ export function NavigationBar({
 
     return (
         <View style={[styles.container, style]}>
-            <View style={styles.left}>
-                {showBack && (
-                    <IconButton
-                        name={backIcon}
-                        onPress={handleBack}
-                        variant="surface"
-                        style={styles.backButton}
-                    />
-                )}
-            </View>
+            {(showBack || alignTitle === 'center') && (
+                <View style={[styles.left, !showBack && styles.noWidth]}>
+                    {showBack && !isSearchActive && (
+                        <IconButton
+                            name={backIcon}
+                            onPress={handleBack}
+                            variant="surface"
+                            style={styles.backButton}
+                        />
+                    )}
+                </View>
+            )}
 
-            <View style={styles.center}>
-                <AppText variant="subheading" style={styles.title} numberOfLines={1}>
-                    {title}
-                </AppText>
-                {subtitle && (
-                    <AppText variant="caption" color="secondary" numberOfLines={1}>
-                        {subtitle}
+            {!isSearchActive && (
+                <View style={[
+                    styles.center,
+                    alignTitle === 'left' && styles.centerLeft
+                ]}>
+                    <AppText
+                        variant="subheading"
+                        style={[styles.title, alignTitle === 'left' && styles.titleLeft]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
+                        {title}
                     </AppText>
-                )}
-            </View>
+                    {subtitle && (
+                        <AppText
+                            variant="caption"
+                            color="secondary"
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
+                            {subtitle}
+                        </AppText>
+                    )}
+                </View>
+            )}
 
-            <View style={styles.right}>
+            <View style={[styles.right, isSearchActive && styles.rightSearchActive]}>
                 {rightActions}
             </View>
         </View>
@@ -78,6 +99,9 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.sm,
         height: 64, // Standard header height
     },
+    noWidth: {
+        width: 0,
+    },
     left: {
         width: 48,
         alignItems: 'flex-start',
@@ -85,18 +109,29 @@ const styles = StyleSheet.create({
     center: {
         flex: 1,
         alignItems: 'center',
+        paddingHorizontal: Spacing.sm,
+    },
+    centerLeft: {
+        alignItems: 'flex-start',
+        paddingLeft: 0,
     },
     right: {
-        width: 'auto',
         minWidth: 48,
         flexDirection: 'row',
         justifyContent: 'flex-end',
+        alignItems: 'center',
         gap: Spacing.sm,
+    },
+    rightSearchActive: {
+        flex: 1,
     },
     backButton: {
         // IconButton defaults are good
     },
     title: {
         textAlign: 'center',
+    },
+    titleLeft: {
+        textAlign: 'left',
     }
 })

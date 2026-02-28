@@ -8,12 +8,13 @@ import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {
     const initialDateRange = useJournalRouteDateRange();
     const [defaultCurrency, setDefaultCurrency] = useState<string>(AppConfig.defaultCurrency);
     const [isPrefsLoaded, setIsPrefsLoaded] = useState(false);
+    const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         preferences.loadPreferences().then(p => {
@@ -42,29 +43,40 @@ export default function JournalScreen() {
     }, []);
 
     const headerActions = useMemo(() => (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-            <IconButton
-                name="reports"
-                size={Size.iconSm}
-                variant="surface"
-                onPress={AppNavigation.toReports}
-                accessibilityLabel="View Analytics"
-            />
+        <View style={styles.headerActions}>
+            {!isSearching && (
+                <IconButton
+                    name="reports"
+                    size={Size.iconSm}
+                    variant="surface"
+                    onPress={AppNavigation.toReports}
+                    accessibilityLabel="View Analytics"
+                />
+            )}
             <ExpandableSearchButton
                 value={vm.searchQuery}
                 onChangeText={vm.onSearchChange}
+                onExpandChange={setIsSearching}
             />
-            {vm.searchQuery.length === 0 && (
+            {isSearching ? (
                 <DateRangeFilter
-                    range={vm.dateRange}
-                    onPress={vm.showDatePicker}
-                    onPrevious={vm.navigatePrevious}
-                    onNext={vm.navigateNext}
+                    range={vm.isSearchGlobal ? null : vm.dateRange}
+                    onPress={vm.isSearchGlobal ? vm.showDatePicker : vm.toggleSearchGlobal}
                     showNavigationArrows={false}
                 />
+            ) : (
+                vm.searchQuery.length === 0 && (
+                    <DateRangeFilter
+                        range={vm.dateRange}
+                        onPress={vm.showDatePicker}
+                        onPrevious={vm.navigatePrevious}
+                        onNext={vm.navigateNext}
+                        showNavigationArrows={false}
+                    />
+                )
             )}
         </View>
-    ), [vm.searchQuery, vm.dateRange, vm.showDatePicker, vm.navigatePrevious, vm.navigateNext, vm.onSearchChange]);
+    ), [isSearching, vm.searchQuery, vm.isSearchGlobal, vm.dateRange, vm.showDatePicker, vm.toggleSearchGlobal, vm.navigatePrevious, vm.navigateNext, vm.onSearchChange]);
 
     const fab = useMemo(() => ({ onPress: handleFabPress }), [handleFabPress]);
 
@@ -73,12 +85,23 @@ export default function JournalScreen() {
     return (
         <JournalListView
             {...listViewProps}
-            screenTitle={AppConfig.strings.journal.transactions}
+            screenTitle={isSearching ? undefined : AppConfig.strings.journal.transactions}
             headerActions={headerActions}
             listHeader={null}
             fab={fab}
             plannedJournals={vm.plannedJournals}
             onPlannedJournalPress={listViewProps.onPlannedJournalPress}
+            showBack={false}
+            isSearchActive={isSearching}
+            alignTitle="left"
         />
     );
 }
+
+const styles = StyleSheet.create({
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.xs,
+    }
+});

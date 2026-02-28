@@ -56,6 +56,7 @@ export function useDashboardViewModel(): DashboardViewModel {
         },
         exchangeRateMap: rateMap,
         baseCurrency: defaultCurrency,
+        defaultToCurrentMonth: false,
     });
 
     const onAddPress = useCallback(() => {

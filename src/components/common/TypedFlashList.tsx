@@ -5,7 +5,7 @@ import React from 'react';
  * TypedFlashList - A wrapper for FlashList that fixes typing issues 
  * with estimatedItemSize and other props in some versions.
  */
-export function TypedFlashList(_props: any) {
+export const TypedFlashList = React.forwardRef((props: any, ref: any) => {
     const Component = FlashList as any;
-    return <Component {..._props} />;
-}
+    return <Component {...props} ref={ref} />;
+});

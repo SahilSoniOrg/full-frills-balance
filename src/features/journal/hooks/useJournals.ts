@@ -21,7 +21,8 @@ export function useJournals(pageSize: number = 50, dateRange?: { startDate: numb
         pageSize,
         dateRange: (dateRange || plannedPaymentId) ? { ...dateRange, plannedPaymentId } as any : undefined,
         searchQuery,
-        observe
+        observe,
+        suppressResetOnSearch: true,
     })
 
     return { journals, isLoading, isLoadingMore, hasMore, loadMore }

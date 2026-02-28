@@ -35,6 +35,8 @@ export interface UsePaginatedObservableOptions<T, E = T> {
     observe: (limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Observable<T[]>;
     /** Optional enrichment function to transform raw items */
     enrich?: (items: T[], limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Promise<E[]>;
+    /** If true, filter changes don't clear the list or set isLoading to true */
+    suppressResetOnSearch?: boolean;
 }
 
 export interface UsePaginatedObservableResult<E> {
@@ -51,7 +53,7 @@ export interface UsePaginatedObservableResult<E> {
 export function usePaginatedObservable<T, E = T>(
     options: UsePaginatedObservableOptions<T, E>
 ): UsePaginatedObservableResult<E> {
-    const { pageSize, dateRange, searchQuery, observe, enrich } = options;
+    const { pageSize, dateRange, searchQuery, observe, enrich, suppressResetOnSearch = false } = options;
 
     const [items, setItems] = useState<E[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -98,12 +100,19 @@ export function usePaginatedObservable<T, E = T>(
         const isVersionChange = prev.versionKey !== versionKey;
 
         if (isStructuralChange || isVersionChange) {
-            setIsLoading(true);
+            const shouldSuppressReset = suppressResetOnSearch && prev.structuralKey !== structuralKey && prev.versionKey === versionKey;
+
+            if (!shouldSuppressReset) {
+                setIsLoading(true);
+            }
+
             setHasMore(true);
             prevFilterRef.current = { structuralKey, versionKey, observe, enrich, pageSize };
 
             if (isStructuralChange) {
-                setItems([]); // Clear items only on structural changes
+                if (!shouldSuppressReset) {
+                    setItems([]); // Clear items only on structural changes (unless suppressed)
+                }
                 if (currentLimit !== pageSize) {
                     setCurrentLimit(pageSize); // Reset pagination
                     return;

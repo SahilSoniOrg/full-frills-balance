@@ -24,20 +24,21 @@ interface TransactionListViewProps {
     onPlannedJournalPress?: (item: EnrichedJournal) => void;
 }
 
-export function TransactionListView({
-    items,
-    isLoading,
-    isLoadingMore,
-    loadingText,
-    loadingMoreText,
-    emptyTitle = 'No transactions',
-    emptySubtitle = 'Try changing your filters',
-    ListHeaderComponent,
-    onEndReached,
-    contentContainerStyle,
-    estimatedItemSize = 120,
-}: TransactionListViewProps) {
-    const listEmpty = isLoading ? (
+export const TransactionListView = React.forwardRef<any, TransactionListViewProps>((props, ref) => {
+    const {
+        items,
+        isLoading,
+        isLoadingMore,
+        loadingText,
+        loadingMoreText,
+        emptyTitle = 'No transactions',
+        emptySubtitle = 'Try changing your filters',
+        ListHeaderComponent,
+        onEndReached,
+        contentContainerStyle,
+        estimatedItemSize = 120,
+    } = props;
+    const listEmpty = (isLoading && items.length === 0) ? (
         <LoadingView loading={isLoading} text={loadingText || 'Loading...'} size="small" />
     ) : (
         <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
@@ -54,6 +55,7 @@ export function TransactionListView({
 
     return (
         <TypedFlashList
+            ref={ref}
             data={items}
             renderItem={({ item }: { item: TransactionListItem }) => (
                 item.type === 'separator' ? (
@@ -83,7 +85,7 @@ export function TransactionListView({
             onEndReachedThreshold={0.5}
         />
     );
-}
+});
 
 const styles = StyleSheet.create({
     loadingMore: {

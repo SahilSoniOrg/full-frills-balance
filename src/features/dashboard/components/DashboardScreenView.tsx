@@ -17,7 +17,8 @@ export function DashboardScreenView({
     fab,
     safeToSpendData,
     transactionSectionTitle,
-}: DashboardViewModel) {
+    listRef,
+}: DashboardViewModel & { listRef?: React.RefObject<any> }) {
     const { strings } = AppConfig;
     const [isInsightsVisible, setInsightsVisible] = useState(false);
 
@@ -40,6 +41,7 @@ export function DashboardScreenView({
         <>
             <JournalListView
                 {...listViewProps}
+                ref={listRef}
                 showBack={false}
                 listHeader={
                     <View>
