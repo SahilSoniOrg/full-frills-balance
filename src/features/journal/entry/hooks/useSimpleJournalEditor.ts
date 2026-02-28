@@ -99,11 +99,12 @@ export function useSimpleJournalEditor({
 
         if (isCrossCurrency && exchangeRate) {
             const formattedConverted = convertedAmount.toFixed(2);
+            const parsedConverted = parseFloat(formattedConverted);
 
             // Set source line rate to Base Currency
             if (sourceCurrency !== baseCurrency) {
                 const srcRate = destCurrency === baseCurrency
-                    ? (numAmount > 0 ? (convertedAmount / numAmount).toFixed(6) : '')
+                    ? (numAmount > 0 ? (parsedConverted / numAmount).toFixed(6) : '')
                     : '';
                 if (sourceLine.exchangeRate !== srcRate) updates[sourceLine.id] = { exchangeRate: srcRate };
             } else if (sourceLine.exchangeRate) {
@@ -113,7 +114,7 @@ export function useSimpleJournalEditor({
             // Set destination line rate to Base Currency
             if (destCurrency !== baseCurrency) {
                 const dstRate = sourceCurrency === baseCurrency
-                    ? (convertedAmount > 0 ? (numAmount / convertedAmount).toFixed(6) : '')
+                    ? (parsedConverted > 0 ? (numAmount / parsedConverted).toFixed(6) : '')
                     : '';
                 if (destinationLine.exchangeRate !== dstRate) updates[destinationLine.id] = { exchangeRate: dstRate };
             } else if (destinationLine.exchangeRate) {
