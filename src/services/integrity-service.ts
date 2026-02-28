@@ -77,15 +77,26 @@ export class IntegrityService {
         }
 
         // Only iterate delta transactions after the snapshot checkpoint
-        const transactions = await transactionRepository.findByAccount(accountId, undefined, {
+        let transactions = await transactionRepository.findByAccount(accountId, undefined, {
             startDate: startDate,
             endDate: effectiveCutoff,
         })
 
         // findByAccount returns desc order; we need asc for sequential balance calculation
-        const sortedAsc = transactions.slice().sort(
+        let sortedAsc = transactions.slice().sort(
             (a, b) => a.transactionDate - b.transactionDate || a.createdAt.getTime() - b.createdAt.getTime()
         )
+
+        // Precise Anchor: Skip transactions already included in the snapshot
+        if (snapshot) {
+            const snapshotIdx = sortedAsc.findIndex(tx => tx.id === snapshot.transactionId);
+            if (snapshotIdx !== -1) {
+                sortedAsc = sortedAsc.slice(snapshotIdx + 1);
+            } else {
+                // Fallback for edge cases where snapshot transaction is missing
+                sortedAsc = sortedAsc.filter(tx => tx.transactionDate > startDate);
+            }
+        }
 
         for (const tx of sortedAsc) {
             balance = accountingService.calculateNewBalance(
@@ -120,14 +131,15 @@ export class IntegrityService {
 
         // 2. Compute the "Real" balance using the snapshot-optimized path
         const computedBalance = await this.computeBalanceFromTransactions(accountId, cutoffDate)
-        const discrepancy = Math.abs(cachedBalance - computedBalance)
+        const matches = amountsAreEqual(cachedBalance, computedBalance, precision)
+        const discrepancy = matches ? 0 : Math.abs(cachedBalance - computedBalance)
 
         // 3. Check if the snapshot itself is corrupt (cross-check)
         let snapshotCorrupted: boolean | undefined = undefined
         const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, cutoffDate)
         if (snapshot) {
-            // Recompute from scratch (no snapshot) up to the snapshot's exact date
-            const snapshotRecomputed = await this.computeBalanceFromScratch(accountId, snapshot.transactionDate)
+            // Recompute from scratch (no snapshot) up to the snapshot's exact transaction
+            const snapshotRecomputed = await this.computeBalanceFromScratch(accountId, snapshot.transactionDate, snapshot.transactionId)
             snapshotCorrupted = !amountsAreEqual(snapshot.absoluteBalance, snapshotRecomputed, precision)
 
             if (snapshotCorrupted) {
@@ -143,7 +155,7 @@ export class IntegrityService {
             accountName: account.name,
             cachedBalance,
             computedBalance,
-            matches: amountsAreEqual(cachedBalance, computedBalance, precision),
+            matches,
             discrepancy,
             snapshotCorrupted,
         }
@@ -153,16 +165,24 @@ export class IntegrityService {
      * Computes account balance by iterating ALL transactions from the beginning,
      * ignoring any snapshots. Used strictly for snapshot cross-checking.
      */
-    private async computeBalanceFromScratch(accountId: string, cutoffDate: number): Promise<number> {
+    private async computeBalanceFromScratch(accountId: string, cutoffDate: number, limitTransactionId?: string): Promise<number> {
         const account = await accountRepository.find(accountId)
         if (!account) throw new Error(`Account ${accountId} not found`)
 
         const precision = await currencyRepository.getPrecision(account.currencyCode)
         const transactions = await transactionRepository.findForAccountUpToDate(accountId, cutoffDate)
 
-        const sortedAsc = transactions.slice().sort(
+        let sortedAsc = transactions.slice().sort(
             (a, b) => a.transactionDate - b.transactionDate || a.createdAt.getTime() - b.createdAt.getTime()
         )
+
+        // Precise boundary: if we have a limit transaction, stop there
+        if (limitTransactionId) {
+            const limitIdx = sortedAsc.findIndex(tx => tx.id === limitTransactionId);
+            if (limitIdx !== -1) {
+                sortedAsc = sortedAsc.slice(0, limitIdx + 1);
+            }
+        }
 
         let balance = 0
         for (const tx of sortedAsc) {

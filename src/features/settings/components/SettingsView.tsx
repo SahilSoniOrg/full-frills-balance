@@ -1,17 +1,21 @@
-import { AppButton, AppCard, AppText } from '@/src/components/core';
+import { AppButton, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { ArchetypePreference } from '@/src/features/settings/components/ArchetypePreference';
 import { CurrencyPreference } from '@/src/features/settings/components/CurrencyPreference';
 import { SettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import * as Application from 'expo-application';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 
 export function SettingsView(vm: SettingsViewModel) {
     const router = useRouter();
     const { theme, fonts } = useTheme();
+    const [localName, setLocalName] = useState(vm.userName);
+
     const {
         isPrivacyMode,
         onTogglePrivacy,
@@ -30,6 +34,12 @@ export function SettingsView(vm: SettingsViewModel) {
         onFactoryReset,
     } = vm;
 
+    const handleNameSave = () => {
+        if (localName.trim() !== vm.userName) {
+            vm.setUserName(localName);
+        }
+    };
+
     return (
         <Screen
             showBack={false}
@@ -38,16 +48,29 @@ export function SettingsView(vm: SettingsViewModel) {
         >
             <View style={styles.inner}>
                 <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
-                    {AppConfig.strings.settings.sections.general}
+                    Personalization
                 </AppText>
                 <AppCard elevation="sm" padding="md" style={styles.card}>
-                    <CurrencyPreference />
-                </AppCard>
+                    <View style={styles.rowBetween}>
+                        <View style={{ flex: 1 }}>
+                            <AppInput
+                                label="Your Name"
+                                value={localName}
+                                onChangeText={setLocalName}
+                                onBlur={handleNameSave}
+                                onSubmitEditing={handleNameSave}
+                                placeholder="How should we call you?"
+                                leftIcon="user"
+                            />
+                        </View>
+                    </View>
 
-                <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
-                    {AppConfig.strings.settings.sections.appearance}
-                </AppText>
-                <AppCard elevation="sm" padding="md" style={styles.card}>
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
+                    <CurrencyPreference />
+
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
                     <View style={styles.rowBetween}>
                         <View style={{ flex: 1, marginRight: Spacing.md }}>
                             <AppText variant="body" weight="semibold">Theme & Typography</AppText>
@@ -63,16 +86,18 @@ export function SettingsView(vm: SettingsViewModel) {
                             Customize
                         </AppButton>
                     </View>
+
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
+                    <ArchetypePreference />
                 </AppCard>
 
                 <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
                     Preferences
                 </AppText>
                 <AppCard elevation="sm" padding="md" style={styles.card}>
-                    <ArchetypePreference />
-                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
                     <View style={styles.rowBetween}>
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
                             <AppText variant="body" weight="semibold">{AppConfig.strings.settings.privacy.title}</AppText>
                             <AppText variant="caption" color="secondary">{AppConfig.strings.settings.privacy.description}</AppText>
                         </View>
@@ -88,7 +113,7 @@ export function SettingsView(vm: SettingsViewModel) {
                     <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
 
                     <View style={styles.rowBetween}>
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
                             <AppText variant="body" weight="semibold">{AppConfig.strings.settings.stats.title}</AppText>
                             <AppText variant="caption" color="secondary">{AppConfig.strings.settings.stats.description}</AppText>
                         </View>
@@ -100,21 +125,64 @@ export function SettingsView(vm: SettingsViewModel) {
                             {showAccountMonthlyStats ? AppConfig.strings.settings.privacy.on : AppConfig.strings.settings.privacy.off}
                         </AppButton>
                     </View>
-                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+                </AppCard>
 
+                <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
+                    Community & Support
+                </AppText>
+                <AppCard elevation="sm" padding="md" style={styles.card}>
                     <View style={styles.rowBetween}>
+                        <AppIcon name="messageCircle" size={24} color={theme.primary} style={{ marginRight: Spacing.md }} />
                         <View style={{ flex: 1, marginRight: Spacing.md }}>
-                            <AppText variant="body" weight="semibold">Commitments</AppText>
+                            <AppText variant="body" weight="semibold">Telegram Community</AppText>
                             <AppText variant="caption" color="secondary">
-                                Manage budgets and recurring payments
+                                Join our group for discussions and support
                             </AppText>
                         </View>
                         <AppButton
                             variant="secondary"
                             size="sm"
-                            onPress={() => router.push('/commitments')}
+                            onPress={() => Linking.openURL('https://t.me/FullFrills')}
                         >
-                            Manage
+                            Join
+                        </AppButton>
+                    </View>
+
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
+                    <View style={styles.rowBetween}>
+                        <AppIcon name="playSquare" size={24} color={theme.primary} style={{ marginRight: Spacing.md }} />
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
+                            <AppText variant="body" weight="semibold">Rate on Play Store</AppText>
+                            <AppText variant="caption" color="secondary">
+                                Love the app? Leave a review
+                            </AppText>
+                        </View>
+                        <AppButton
+                            variant="secondary"
+                            size="sm"
+                            onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=in.sahilsoni.fullfrillsbalance')}
+                        >
+                            Rate
+                        </AppButton>
+                    </View>
+
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+
+                    <View style={styles.rowBetween}>
+                        <AppIcon name="github" size={24} color={theme.primary} style={{ marginRight: Spacing.md }} />
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
+                            <AppText variant="body" weight="semibold">GitHub Source</AppText>
+                            <AppText variant="caption" color="secondary">
+                                Star the repo or contribute
+                            </AppText>
+                        </View>
+                        <AppButton
+                            variant="secondary"
+                            size="sm"
+                            onPress={() => Linking.openURL('https://github.com/SahilSoniOrg/full-frills-balance')}
+                        >
+                            View
                         </AppButton>
                     </View>
                 </AppCard>
@@ -207,7 +275,8 @@ export function SettingsView(vm: SettingsViewModel) {
 
                 <View style={styles.footer}>
                     <AppText variant="caption" color="secondary">
-                        {AppConfig.strings.settings.version(AppConfig.appVersion)}
+                        {AppConfig.strings.settings.version(Application.nativeApplicationVersion || AppConfig.appVersion)} ({Application.nativeBuildVersion || '1'})
+                        {Constants.expoConfig?.extra?.gitCommit ? ` - ${Constants.expoConfig.extra.gitCommit}` : ''}
                     </AppText>
                 </View>
             </View>

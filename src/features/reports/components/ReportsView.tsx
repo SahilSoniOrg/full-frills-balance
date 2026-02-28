@@ -5,7 +5,6 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
-import { InsightWidget } from '@/src/features/dashboard';
 import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownDonutCard';
 import { IncomeExpenseTooltip, NetWorthTooltip } from '@/src/features/reports/components/ReportTooltip';
 import { useChartTooltipPosition } from '@/src/features/reports/hooks/useChartTooltipPosition';
@@ -51,7 +50,6 @@ export function ReportsView(vm: ReportsViewModel) {
         dailyData,
         onViewTransactions,
         onLegendRowPress,
-        patterns,
     } = vm;
 
     const { width } = useWindowDimensions();
@@ -138,7 +136,6 @@ export function ReportsView(vm: ReportsViewModel) {
                     <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={theme.primary} />
                 }
             >
-                <InsightWidget patterns={patterns} />
                 <AppCard style={styles.chartCard} padding="lg">
                     <View style={styles.headerRow}>
                         <View>

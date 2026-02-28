@@ -1,4 +1,16 @@
+import { execSync } from 'child_process';
 import { ConfigContext, ExpoConfig } from 'expo/config';
+
+const getGitCommit = () => {
+    try {
+        return execSync('git rev-parse --short HEAD').toString().trim();
+    } catch (e) {
+        console.warn("Could not fetch git commit", e);
+        return '';
+    }
+};
+
+const gitCommit = getGitCommit();
 
 const getAppConfig = () => {
     const APP_VARIANT = process.env.APP_VARIANT;
@@ -99,6 +111,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         eas: {
             projectId: "a9311be4-71b9-448c-b147-cb38ef622218",
         },
+        gitCommit,
     },
     owner: "sscsps",
 });

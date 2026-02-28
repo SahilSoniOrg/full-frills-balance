@@ -2,27 +2,18 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Size, Spacing } from '@/src/constants';
 import { InsightWidget } from '@/src/features/dashboard/components/InsightWidget';
+import { useInsights } from '@/src/features/dashboard/hooks/useInsights';
 import { useTheme } from '@/src/hooks/use-theme';
-import { insightService, Pattern } from '@/src/services/insight-service';
-import React, { useEffect, useState } from 'react';
+import { Pattern } from '@/src/services/insight-service';
+import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 type Tab = 'active' | 'dismissed';
 
 export default function InsightsScreen() {
-    const { theme, fonts } = useTheme();
+    const { theme } = useTheme();
     const [activeTab, setActiveTab] = useState<Tab>('active');
-    const [activePatterns, setActivePatterns] = useState<Pattern[]>([]);
-    const [dismissedPatterns, setDismissedPatterns] = useState<Pattern[]>([]);
-
-    useEffect(() => {
-        const activeSub = insightService.observePatterns().subscribe(setActivePatterns);
-        const dismissedSub = insightService.observeDismissedPatterns().subscribe(setDismissedPatterns);
-        return () => {
-            activeSub.unsubscribe();
-            dismissedSub.unsubscribe();
-        };
-    }, []);
+    const { activePatterns, dismissedPatterns, restoreInsight } = useInsights();
 
     const renderTabs = () => (
         <View style={[styles.tabContainer, { borderBottomColor: theme.border }]}>
@@ -60,7 +51,7 @@ export default function InsightsScreen() {
     );
 
     const handleRestore = async (id: string) => {
-        await insightService.undismissPattern(id);
+        await restoreInsight(id);
     };
 
     return (
@@ -82,7 +73,7 @@ export default function InsightsScreen() {
                 ) : (
                     dismissedPatterns.length > 0 ? (
                         <View style={styles.dismissedList}>
-                            {dismissedPatterns.map(item => (
+                            {dismissedPatterns.map((item: Pattern) => (
                                 <View key={item.id} style={[styles.dismissedItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                                     <View style={styles.itemContent}>
                                         <View style={styles.header}>

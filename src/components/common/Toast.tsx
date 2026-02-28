@@ -2,38 +2,14 @@ import { AppIcon, IconName } from '@/src/components/core/AppIcon'
 import { AppText } from '@/src/components/core/AppText'
 import { Size, Spacing, ZIndex } from '@/src/constants/design-tokens'
 import { useTheme } from '@/src/hooks/use-theme'
-import { ToastPayload, clearToastListener, setToastListener } from '@/src/utils/alerts'
-import React, { useEffect, useRef, useState } from 'react'
+import { ToastItem, useToastListener } from '@/src/hooks/useToastListener'
+import { ToastPayload } from '@/src/utils/alerts'
+import React, { useEffect, useRef } from 'react'
 import { Animated, StyleSheet, View } from 'react-native'
-
-interface ToastItem extends ToastPayload {
-  id: string
-}
 
 export function ToastContainer() {
   const { theme } = useTheme()
-  const [toasts, setToasts] = useState<ToastItem[]>([])
-  const removeQueue = useRef<string[]>([])
-
-  useEffect(() => {
-    const listener = (payload: ToastPayload) => {
-      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
-
-      const newToast: ToastItem = { ...payload, id }
-      setToasts(prev => [...prev, newToast])
-
-      setTimeout(() => {
-        removeQueue.current.push(id)
-        setToasts(prev => prev.filter(t => t.id !== id))
-      }, payload.duration)
-    }
-
-    setToastListener(listener)
-
-    return () => {
-      clearToastListener()
-    }
-  }, [])
+  const { toasts } = useToastListener()
 
   if (toasts.length === 0) return null
 

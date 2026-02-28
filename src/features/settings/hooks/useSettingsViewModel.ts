@@ -10,6 +10,8 @@ import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
 export interface SettingsViewModel {
+    userName: string;
+    setUserName: (value: string) => void;
     themePreference: 'system' | 'light' | 'dark';
     setThemePreference: (value: 'system' | 'light' | 'dark') => void;
     themeId: ThemeId;
@@ -39,6 +41,8 @@ export function useSettingsViewModel(): SettingsViewModel {
     const router = useRouter();
     const ui = useUI();
     const {
+        userName,
+        updateUserDetails,
         themePreference,
         setThemePreference,
         isPrivacyMode,
@@ -54,6 +58,12 @@ export function useSettingsViewModel(): SettingsViewModel {
     const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
     const [isCleaning, setIsCleaning] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+
+    const setUserName = useCallback((newName: string) => {
+        if (newName.trim() && newName !== userName) {
+            updateUserDetails(newName.trim(), ui.defaultCurrency, archetype);
+        }
+    }, [ui.defaultCurrency, archetype, updateUserDetails, userName]);
 
     const onExport = useCallback(async () => {
         setIsExporting(true);
@@ -149,6 +159,8 @@ export function useSettingsViewModel(): SettingsViewModel {
     }, [resetApp]);
 
     return {
+        userName,
+        setUserName,
         themePreference,
         setThemePreference,
         themeId: ui.themeId,

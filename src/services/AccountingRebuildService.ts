@@ -6,6 +6,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { accountingService } from '@/src/utils/accountingService'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { logger } from '@/src/utils/logger'
+import { amountsAreEqual } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
 const CHECKPOINT_INTERVAL = 1000;
@@ -36,11 +37,11 @@ export class AccountingRebuildService {
         let runningCount = snapshot?.transactionCount || 0;
         let startDate = snapshot?.transactionDate || 0;
 
-        // 2. Fetch all transactions from the checkpoint forward
+        // 2. Fetch all transactions from the checkpoint's date forward
         const query = transactionRepository.transactionsQuery(
             Q.experimentalJoinTables(['journals']),
             Q.where('account_id', accountId),
-            Q.where('transaction_date', Q.gt(startDate)),
+            Q.where('transaction_date', Q.gte(startDate)),
             Q.where('deleted_at', Q.eq(null)),
             Q.on('journals', [
                 Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
@@ -49,7 +50,20 @@ export class AccountingRebuildService {
         ).extend(Q.sortBy('transaction_date', 'asc'))
             .extend(Q.sortBy('created_at', 'asc'))
 
-        const transactions = await query.fetch();
+        let transactions = await query.fetch();
+
+        // Precise Anchor: If we have a snapshot, find its transaction and skip everything up to it.
+        // This handles cases with multiple transactions on the same millisecond.
+        if (snapshot) {
+            const snapshotIdx = transactions.findIndex(tx => tx.id === snapshot.transactionId);
+            if (snapshotIdx !== -1) {
+                transactions = transactions.slice(snapshotIdx + 1);
+            } else {
+                // If snapshot transaction isn't found (rare/corrupt), fallback to date >
+                // we already have gte, so we just filter.
+                transactions = transactions.filter(tx => tx.transactionDate > startDate);
+            }
+        }
 
         const pendingUpdates: { tx: any; newBalance: number }[] = [];
         const snapshotsToCreate: {
@@ -75,14 +89,17 @@ export class AccountingRebuildService {
                 precision
             );
 
-            if (Math.abs((tx.runningBalance || 0) - newBalance) > Number.EPSILON) {
+            const isSnapshotPoint = currentCount % CHECKPOINT_INTERVAL === 0;
+
+            // Update if balance changed OR if it's a snapshot point (to ensure consistency)
+            if (!amountsAreEqual(tx.runningBalance || 0, newBalance, precision) || isSnapshotPoint) {
                 pendingUpdates.push({ tx, newBalance });
             }
 
             currentBalance = newBalance;
 
             // Create a snapshot every 1000 transactions
-            if (currentCount % CHECKPOINT_INTERVAL === 0) {
+            if (isSnapshotPoint) {
                 snapshotsToCreate.push({
                     transactionId: tx.id,
                     transactionDate: tx.transactionDate,
