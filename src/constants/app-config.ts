@@ -488,7 +488,7 @@ export const AppConfig = {
     spendingSpikeMultiplier: 1.5,
     spendingSpikeSeverityThreshold: 1000,
     spikeWindowDays: 7,
-    recurringHorizonDays: 7,
+    recurringHorizonDays: 25,
   },
   time: {
     msPerDay: 24 * 60 * 60 * 1000,
