@@ -203,5 +203,23 @@ export const migrations = schemaMigrations({
                 }),
             ],
         },
+        {
+            toVersion: 11,
+            steps: [
+                createTable({
+                    name: 'journal_metadata',
+                    columns: [
+                        { name: 'journal_id', type: 'string', isIndexed: true },
+                        { name: 'import_source', type: 'string' },
+                        { name: 'original_sms_id', type: 'string', isOptional: true },
+                        { name: 'original_sms_sender', type: 'string', isOptional: true },
+                        { name: 'original_sms_body', type: 'string', isOptional: true },
+                        { name: 'metadata_json', type: 'string', isOptional: true },
+                        { name: 'created_at', type: 'number', isIndexed: true },
+                        { name: 'updated_at', type: 'number' },
+                    ],
+                }),
+            ],
+        },
     ],
 })

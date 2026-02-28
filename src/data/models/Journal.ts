@@ -13,6 +13,7 @@ export default class Journal extends Model {
   static table = 'journals'
   static associations = {
     transactions: { type: 'has_many', foreignKey: 'journal_id' },
+    journal_metadata: { type: 'has_many', foreignKey: 'journal_id' },
   } as const
 
   @field('journal_date') journalDate!: number
@@ -35,6 +36,7 @@ export default class Journal extends Model {
 
   // Relations with proper types
   @children('transactions') transactions!: Query<Transaction>
+  @children('journal_metadata') metadata!: Query<any> // Typings can be tricky with circular deps, we'll cast at point of use or keep generic for 1-to-1
   @relation('journals', 'original_journal_id') originalJournal!: Relation<Journal>
   @relation('journals', 'reversing_journal_id') reversingJournal!: Relation<Journal>
 }

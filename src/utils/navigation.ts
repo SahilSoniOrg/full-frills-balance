@@ -13,12 +13,33 @@ export const AppNavigation = {
     /**
      * Navigate to the Journal Entry screen (Create or Edit).
      */
-    toJournalEntry: (journalId?: string) => {
-        if (journalId) {
-            router.push(`/journal-entry?journalId=${journalId}` as any);
-        } else {
-            router.push('/journal-entry' as any);
+    toJournalEntry: (options?: { journalId?: string; smsId?: string; smsSender?: string; rawSmsBody?: string; initialDate?: string; params?: Record<string, string> }) => {
+        const queryParams = new URLSearchParams();
+        if (options?.journalId) {
+            queryParams.append('journalId', options.journalId);
         }
+        if (options?.smsId) {
+            queryParams.append('smsId', options.smsId);
+        }
+        if (options?.smsSender) {
+            queryParams.append('smsSender', options.smsSender);
+        }
+        if (options?.rawSmsBody) {
+            queryParams.append('rawSmsBody', options.rawSmsBody);
+        }
+        if (options?.initialDate) {
+            queryParams.append('initialDate', options.initialDate);
+        }
+        if (options?.params) {
+            Object.entries(options.params).forEach(([key, value]) => {
+                queryParams.append(key, value);
+            });
+        }
+
+        const queryString = queryParams.toString();
+        const route = queryString ? `/journal-entry?${queryString}` : '/journal-entry';
+
+        router.push(route as any);
     },
 
     /**

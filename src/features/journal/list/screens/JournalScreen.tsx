@@ -2,19 +2,21 @@ import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { ExpandableSearchButton, IconButton } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
+import { SmsImportSheet } from '@/src/features/journal/components/SmsImportSheet';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {
     const initialDateRange = useJournalRouteDateRange();
     const [defaultCurrency, setDefaultCurrency] = useState<string>(AppConfig.defaultCurrency);
     const [isPrefsLoaded, setIsPrefsLoaded] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [isSmsSheetVisible, setIsSmsSheetVisible] = useState(false);
 
     useEffect(() => {
         preferences.loadPreferences().then(p => {
@@ -44,6 +46,15 @@ export default function JournalScreen() {
 
     const headerActions = useMemo(() => (
         <View style={styles.headerActions}>
+            {Platform.OS === 'android' && !isSearching && (
+                <IconButton
+                    name="messageCircle"
+                    size={Size.iconSm}
+                    variant="surface"
+                    onPress={() => setIsSmsSheetVisible(true)}
+                    accessibilityLabel="Import SMS"
+                />
+            )}
             {!isSearching && (
                 <IconButton
                     name="reports"
@@ -83,18 +94,23 @@ export default function JournalScreen() {
     if (!isPrefsLoaded) return null; // Or a proper loading screen
 
     return (
-        <JournalListView
-            {...listViewProps}
-            screenTitle={isSearching ? undefined : AppConfig.strings.journal.transactions}
-            headerActions={headerActions}
-            listHeader={null}
-            fab={fab}
-            plannedJournals={vm.plannedJournals}
-            onPlannedJournalPress={listViewProps.onPlannedJournalPress}
-            showBack={false}
-            isSearchActive={isSearching}
-            alignTitle="left"
-        />
+        <>
+            <JournalListView
+                {...listViewProps}
+                screenTitle={isSearching ? undefined : AppConfig.strings.journal.transactions}
+                headerActions={headerActions}
+                listHeader={null}
+                fab={fab}
+                plannedJournals={vm.plannedJournals}
+                onPlannedJournalPress={listViewProps.onPlannedJournalPress}
+                showBack={false}
+                isSearchActive={isSearching}
+                alignTitle="left"
+            />
+            {isSmsSheetVisible && (
+                <SmsImportSheet onClose={() => setIsSmsSheetVisible(false)} />
+            )}
+        </>
     );
 }
 

@@ -21,6 +21,13 @@ export interface CreateJournalData {
     exchangeRate?: number
     currencyCode?: string
   }[]
+  metadata?: {
+    importSource: string
+    originalSmsId?: string
+    originalSmsSender?: string
+    originalSmsBody?: string
+    metadataJson?: string
+  }
 }
 
 export class JournalRepository {
@@ -30,6 +37,10 @@ export class JournalRepository {
 
   private get transactions() {
     return database.collections.get<Transaction>('transactions')
+  }
+
+  private get journalMetadata() {
+    return database.collections.get<any>('journal_metadata')
   }
 
   journalsQuery(...clauses: any[]) {
@@ -188,7 +199,7 @@ export class JournalRepository {
   async createJournalWithTransactions(
     journalData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
   ): Promise<Journal> {
-    const { transactions: transactionData, totalAmount, displayType, calculatedBalances, ...journalFields } = journalData
+    const { transactions: transactionData, totalAmount, displayType, calculatedBalances, metadata, ...journalFields } = journalData
 
     return await database.write(async () => {
       const journal = this.journals.prepareCreate((j) => {
@@ -218,7 +229,21 @@ export class JournalRepository {
         })
       })
 
-      await database.batch(journal, ...transactions)
+      const batchOps: any[] = [journal, ...transactions]
+
+      if (metadata) {
+        const metaRecord = this.journalMetadata.prepareCreate((m: any) => {
+          m.journalId = journal.id
+          m.importSource = metadata.importSource
+          m.originalSmsId = metadata.originalSmsId
+          m.originalSmsSender = metadata.originalSmsSender
+          m.originalSmsBody = metadata.originalSmsBody
+          m.metadataJson = metadata.metadataJson
+        })
+        batchOps.push(metaRecord)
+      }
+
+      await database.batch(...batchOps)
 
       return journal
     })

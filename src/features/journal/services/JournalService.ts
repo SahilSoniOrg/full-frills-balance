@@ -188,9 +188,12 @@ export class JournalService {
         journalDate: string | number, // support timestamp or ISO date
         journalTime?: string,
         journalId?: string,
+        smsId?: string,
+        smsSender?: string,
+        rawSmsBody?: string,
         mode?: 'simple' | 'advanced' | 'import'
     }): Promise<SubmitJournalResult> {
-        const { lines, description, journalDate, journalTime, journalId, mode = 'advanced' } = params;
+        const { lines, description, journalDate, journalTime, journalId, smsId, smsSender, rawSmsBody, mode = 'advanced' } = params;
 
         // 1. Basic Content Validation
         const finalDescription = description.trim();
@@ -241,11 +244,20 @@ export class JournalService {
 
         // 4. Persistence
         try {
+            const metadata = (smsId || smsSender || rawSmsBody) ? {
+                importSource: smsId ? 'sms' : 'manual',
+                originalSmsId: smsId,
+                originalSmsSender: smsSender,
+                originalSmsBody: rawSmsBody,
+            } : undefined;
+
             const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+
             const journalData: CreateJournalData = {
                 journalDate: combinedTimestamp,
                 description: finalDescription,
                 currencyCode,
+                metadata,
                 transactions: lines.map(l => ({
                     accountId: l.accountId,
                     amount: sanitizeAmount(l.amount) || 0,

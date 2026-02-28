@@ -14,6 +14,7 @@ import BudgetScope from '@/src/data/models/BudgetScope';
 import Currency from '@/src/data/models/Currency';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import Journal from '@/src/data/models/Journal';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
 import { analytics } from '@/src/services/analytics-service';
@@ -137,6 +138,18 @@ export interface AccountMetadataExport {
   updatedAt: string;
 }
 
+export interface JournalMetadataExport {
+  id: string;
+  journalId: string;
+  importSource: string;
+  originalSmsId?: string;
+  originalSmsSender?: string;
+  originalSmsBody?: string;
+  metadataJson?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PlannedPaymentExport {
   id: string;
   name: string;
@@ -171,6 +184,7 @@ export interface ExportData {
   exchangeRates: ExchangeRateExport[];
   accountMetadata: AccountMetadataExport[];
   plannedPayments: PlannedPaymentExport[];
+  journalMetadata: JournalMetadataExport[];
 }
 
 interface ExportSummary {
@@ -184,6 +198,7 @@ interface ExportSummary {
   exchangeRates: number;
   accountMetadata: number;
   plannedPayments: number;
+  journalMetadata: number;
 }
 
 function toIsoDate(value: Date | number | undefined | null): string | undefined {
@@ -211,6 +226,7 @@ class ExportService {
         exchangeRates,
         accountMetadata,
         plannedPayments,
+        journalMetadata,
         userPreferences,
       ] = await Promise.all([
         database.collections.get<Account>('accounts').query().fetch(),
@@ -223,6 +239,7 @@ class ExportService {
         database.collections.get<ExchangeRate>('exchange_rates').query().fetch(),
         database.collections.get<AccountMetadata>('account_metadata').query().fetch(),
         database.collections.get<PlannedPayment>('planned_payments').query().fetch(),
+        database.collections.get<JournalMetadata>('journal_metadata').query().fetch(),
         preferences.loadPreferences(),
       ]);
 
@@ -357,6 +374,17 @@ class ExportService {
           updatedAt: pp.updatedAt.toISOString(),
           deletedAt: toIsoDate(pp.deletedAt),
         })),
+        journalMetadata: journalMetadata.map((meta) => ({
+          id: meta.id,
+          journalId: meta.journal.id, // Using .id directly over relation since export doesn't strictly need fetched relation objects
+          importSource: meta.importSource,
+          originalSmsId: meta.originalSmsId,
+          originalSmsSender: meta.originalSmsSender,
+          originalSmsBody: meta.originalSmsBody,
+          metadataJson: meta.metadataJson,
+          createdAt: meta.createdAt.toISOString(),
+          updatedAt: meta.updatedAt.toISOString(),
+        })),
       };
 
       const json = JSON.stringify(exportData, null, 2);
@@ -373,6 +401,7 @@ class ExportService {
         exchangeRates: exportData.exchangeRates.length,
         accountMetadata: exportData.accountMetadata.length,
         plannedPayments: exportData.plannedPayments.length,
+        journalMetadata: exportData.journalMetadata.length,
       });
 
       return json;
@@ -397,6 +426,7 @@ class ExportService {
       exchangeRates,
       accountMetadata,
       plannedPayments,
+      journalMetadata,
     ] = await Promise.all([
       database.collections.get<Account>('accounts').query().fetchCount(),
       database.collections.get<Journal>('journals').query().fetchCount(),
@@ -408,6 +438,7 @@ class ExportService {
       database.collections.get<ExchangeRate>('exchange_rates').query().fetchCount(),
       database.collections.get<AccountMetadata>('account_metadata').query().fetchCount(),
       database.collections.get<PlannedPayment>('planned_payments').query().fetchCount(),
+      database.collections.get<JournalMetadata>('journal_metadata').query().fetchCount(),
     ]);
 
     return {
@@ -421,6 +452,7 @@ class ExportService {
       exchangeRates,
       accountMetadata,
       plannedPayments,
+      journalMetadata,
     };
   }
 }

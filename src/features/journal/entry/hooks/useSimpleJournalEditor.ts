@@ -256,6 +256,24 @@ export function useSimpleJournalEditor({
         }
     }, [type, transactionAccounts, destinationId, sourceId, accounts, editor]); // Run when type changes or accounts load
 
+    // Hydrate account details into lines if they were initialized just with accountId (like from deep link or params)
+    useEffect(() => {
+        if (accounts.length === 0) return;
+
+        editor.lines.forEach(line => {
+            if (line.accountId && !line.accountName) {
+                const acct = accounts.find(a => a.id === line.accountId);
+                if (acct) {
+                    editor.updateLine(line.id, {
+                        accountName: acct.name,
+                        accountType: acct.accountType,
+                        accountCurrency: acct.currencyCode
+                    });
+                }
+            }
+        });
+    }, [accounts, editor.lines, editor.updateLine]);
+
 
     const handleSave = useCallback(async () => {
         if (numAmount <= 0) {

@@ -62,6 +62,14 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         journalId: params.journalId as string,
         initialMode,
         initialType,
+        initialAmount: params.amount as string,
+        initialDescription: params.notes as string,
+        smsId: params.smsId as string,
+        smsSender: params.smsSender as string,
+        rawSmsBody: params.rawSmsBody as string,
+        initialDate: params.initialDate as string,
+        initialSourceId: params.sourceAccountId as string,
+        initialDestinationId: params.destinationAccountId as string,
         onSuccess: () => AppNavigation.back(),
     });
 

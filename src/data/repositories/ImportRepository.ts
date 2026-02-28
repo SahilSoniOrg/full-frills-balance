@@ -13,6 +13,7 @@ import BudgetScope from '@/src/data/models/BudgetScope'
 import Currency from '@/src/data/models/Currency'
 import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
+import JournalMetadata from '@/src/data/models/JournalMetadata'
 import PlannedPayment from '@/src/data/models/PlannedPayment'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { Q } from '@nozbe/watermelondb'
@@ -155,6 +156,18 @@ export interface ImportedPlannedPayment {
   deletedAt?: number
 }
 
+export interface ImportedJournalMetadata {
+  id: string
+  journalId: string
+  importSource: string
+  originalSmsId?: string
+  originalSmsSender?: string
+  originalSmsBody?: string
+  metadataJson?: string
+  createdAt?: number
+  updatedAt?: number
+}
+
 export interface ChangeSet<T> {
   created?: T[]
   updated?: T[]
@@ -172,6 +185,7 @@ export interface BatchImportData {
   exchangeRates?: ImportedExchangeRate[]
   accountMetadata?: ImportedAccountMetadata[]
   plannedPayments?: ImportedPlannedPayment[]
+  journalMetadata?: ImportedJournalMetadata[]
 }
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET
@@ -215,6 +229,7 @@ export class ImportRepository {
       const exchangeRatesCollection = database.collections.get<ExchangeRate>('exchange_rates')
       const accountMetadataCollection = database.collections.get<AccountMetadata>('account_metadata')
       const plannedPaymentsCollection = database.collections.get<PlannedPayment>('planned_payments')
+      const journalMetadataCollection = database.collections.get<JournalMetadata>('journal_metadata')
 
       const accountPrepares = data.accounts.map(acc =>
         accountsCollection.prepareCreate(record => {
@@ -384,6 +399,21 @@ export class ImportRepository {
         })
       )
 
+      const journalMetadataPrepares = (data.journalMetadata || []).map((meta) =>
+        journalMetadataCollection.prepareCreate((record) => {
+          record._raw.id = meta.id
+            ; (record as any)._raw.journal_id = meta.journalId
+          record.importSource = meta.importSource
+          record.originalSmsId = meta.originalSmsId
+          record.originalSmsSender = meta.originalSmsSender
+          record.originalSmsBody = meta.originalSmsBody
+          record.metadataJson = meta.metadataJson
+          record._raw._status = 'synced'
+          if (meta.createdAt) (record as any)._raw.created_at = meta.createdAt
+          if (meta.updatedAt) (record as any)._raw.updated_at = meta.updatedAt
+        })
+      )
+
       const operations = [
         ...accountPrepares,
         ...journalPrepares,
@@ -394,7 +424,8 @@ export class ImportRepository {
         ...currencyPrepares,
         ...exchangeRatePrepares,
         ...accountMetadataPrepares,
-        ...plannedPaymentPrepares
+        ...plannedPaymentPrepares,
+        ...journalMetadataPrepares
       ]
 
       if (operations.length > 0) {

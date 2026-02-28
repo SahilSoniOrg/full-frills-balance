@@ -15,6 +15,7 @@ import {
     ImportedCurrency,
     ImportedExchangeRate,
     ImportedJournal,
+    ImportedJournalMetadata,
     ImportedPlannedPayment,
     ImportedTransaction, importRepository
 } from '@/src/data/repositories/ImportRepository';
@@ -36,6 +37,7 @@ interface NativeImportData {
     exchangeRates?: ImportedExchangeRate[];
     accountMetadata?: ImportedAccountMetadata[];
     plannedPayments?: ImportedPlannedPayment[];
+    journalMetadata?: ImportedJournalMetadata[];
 }
 
 function parseTimestamp(value?: number | string): number | undefined {
@@ -231,6 +233,17 @@ export const nativePlugin: ImportPlugin = {
                     createdAt: parseTimestamp(pp.createdAt),
                     updatedAt: parseTimestamp(pp.updatedAt),
                     deletedAt: parseTimestamp(pp.deletedAt),
+                })),
+                journalMetadata: (data.journalMetadata || []).map((meta) => ({
+                    id: meta.id,
+                    journalId: meta.journalId,
+                    importSource: meta.importSource,
+                    originalSmsId: meta.originalSmsId,
+                    originalSmsSender: meta.originalSmsSender,
+                    originalSmsBody: meta.originalSmsBody,
+                    metadataJson: meta.metadataJson,
+                    createdAt: parseTimestamp(meta.createdAt),
+                    updatedAt: parseTimestamp(meta.updatedAt),
                 })),
             });
 

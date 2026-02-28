@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 10,
+  version: 11,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -165,6 +165,19 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
+      ],
+    }),
+    tableSchema({
+      name: 'journal_metadata',
+      columns: [
+        { name: 'journal_id', type: 'string', isIndexed: true },
+        { name: 'import_source', type: 'string' },
+        { name: 'original_sms_id', type: 'string', isOptional: true },
+        { name: 'original_sms_sender', type: 'string', isOptional: true },
+        { name: 'original_sms_body', type: 'string', isOptional: true },
+        { name: 'metadata_json', type: 'string', isOptional: true },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
       ],
     }),
   ],

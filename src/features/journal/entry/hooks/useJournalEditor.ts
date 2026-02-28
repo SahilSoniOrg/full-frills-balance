@@ -7,6 +7,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
+import { smsService } from '@/src/services/sms-service';
 import { JournalEntryLine } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
@@ -18,6 +19,14 @@ export interface UseJournalEditorOptions {
     journalId?: string;
     initialMode?: 'simple' | 'advanced';
     initialType?: 'expense' | 'income' | 'transfer';
+    initialAmount?: string;
+    initialDescription?: string;
+    initialDate?: string; // ISO string format
+    initialSourceId?: string;
+    initialDestinationId?: string;
+    smsId?: string;
+    smsSender?: string;
+    rawSmsBody?: string;
     onSuccess?: () => void;
 }
 
@@ -27,7 +36,7 @@ export interface UseJournalEditorOptions {
  */
 export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     const { advancedMode, setAdvancedMode } = useUI();
-    const { journalId, initialMode, initialType = 'expense' } = options;
+    const { journalId, initialMode, initialType = 'expense', initialAmount, initialDescription, initialDate, initialSourceId, initialDestinationId } = options;
     const { fetchRate } = useExchangeRate();
 
     /**
@@ -67,8 +76,8 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
 
     // Advanced / Generic state
     const [lines, setLines] = useState<JournalEntryLine[]>(() => [
-        { id: '1', accountId: '', accountName: '', accountType: AccountType.ASSET, amount: '', transactionType: TransactionType.DEBIT, notes: '', exchangeRate: '' },
-        { id: '2', accountId: '', accountName: '', accountType: AccountType.ASSET, amount: '', transactionType: TransactionType.CREDIT, notes: '', exchangeRate: '' },
+        { id: '1', accountId: initialDestinationId || '', accountName: '', accountType: AccountType.ASSET, amount: initialAmount || '', transactionType: TransactionType.DEBIT, notes: '', exchangeRate: '' },
+        { id: '2', accountId: initialSourceId || '', accountName: '', accountType: AccountType.ASSET, amount: initialAmount || '', transactionType: TransactionType.CREDIT, notes: '', exchangeRate: '' },
     ]);
 
     const setGuidedModeInternal = useCallback((mode: boolean) => {
@@ -86,9 +95,9 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         }
         setIsGuidedMode(mode);
     }, []);
-    const [description, setDescription] = useState('');
-    const [journalDate, setJournalDate] = useState(() => dayjs().format('YYYY-MM-DD'));
-    const [journalTime, setJournalTime] = useState(() => dayjs().format('HH:mm'));
+    const [description, setDescription] = useState(initialDescription || '');
+    const [journalDate, setJournalDate] = useState(() => initialDate ? dayjs(initialDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'));
+    const [journalTime, setJournalTime] = useState(() => initialDate ? dayjs(initialDate).format('HH:mm') : dayjs().format('HH:mm'));
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(isEdit);
 
@@ -258,12 +267,19 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 journalDate,
                 journalTime,
                 journalId: isEdit ? journalId : undefined,
-                mode: isGuidedMode ? 'simple' : 'advanced'
+                mode: isGuidedMode ? 'simple' : 'advanced',
+                smsId: options.smsId,
+                smsSender: options.smsSender,
+                rawSmsBody: options.rawSmsBody
             });
 
             if (!result.success) {
                 showErrorAlert(result.error || 'Unknown error');
                 return result;
+            }
+
+            if (options.smsId) {
+                await smsService.markSmsAsProcessed(options.smsId);
             }
 
             options.onSuccess?.();

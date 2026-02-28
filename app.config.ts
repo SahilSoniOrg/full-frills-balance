@@ -60,6 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         edgeToEdgeEnabled: true,
         predictiveBackGestureEnabled: false,
         package: appConfig.package,
+        permissions: ["READ_SMS"],
     },
     web: {
         output: "static",
