@@ -10,9 +10,10 @@ import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';
 
 interface InsightWidgetProps {
     patterns: Pattern[];
+    hideManageDismissed?: boolean;
 }
 
-export const InsightWidget = ({ patterns }: InsightWidgetProps) => {
+export const InsightWidget = ({ patterns, hideManageDismissed = false }: InsightWidgetProps) => {
     const { theme, fonts } = useTheme();
     const router = useRouter();
     const [isEmergencyFundInfoVisible, setEmergencyFundInfoVisible] = React.useState(false);
@@ -52,7 +53,7 @@ export const InsightWidget = ({ patterns }: InsightWidgetProps) => {
     if (patterns.length === 0) return null;
 
     const handleManageDismissed = () => {
-        router.push('/dismissed-insights');
+        router.push('/insights');
     };
 
     const getSeverityMeta = (severity: Pattern['severity']) => {
@@ -104,17 +105,19 @@ export const InsightWidget = ({ patterns }: InsightWidgetProps) => {
                             </AppText>
                         </View>
                     </View>
-                    <TouchableOpacity
-                        onPress={handleManageDismissed}
-                        style={[styles.managePill, { backgroundColor: theme.surfaceSecondary }]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Manage dismissed insights"
-                    >
-                        <AppIcon name="history" size={14} color={theme.textSecondary} />
-                        <AppText variant="caption" color="secondary">
-                            {AppConfig.strings.dashboard.manageDismissed}
-                        </AppText>
-                    </TouchableOpacity>
+                    {!hideManageDismissed && (
+                        <TouchableOpacity
+                            onPress={handleManageDismissed}
+                            style={[styles.managePill, { backgroundColor: theme.surfaceSecondary }]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Manage dismissed insights"
+                        >
+                            <AppIcon name="history" size={14} color={theme.textSecondary} />
+                            <AppText variant="caption" color="secondary">
+                                {AppConfig.strings.dashboard.manageDismissed}
+                            </AppText>
+                        </TouchableOpacity>
+                    )}
                 </View>
                 <View style={styles.listContent}>
                     {patterns.map(pattern => {

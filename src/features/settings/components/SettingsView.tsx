@@ -117,24 +117,6 @@ export function SettingsView(vm: SettingsViewModel) {
                             Manage
                         </AppButton>
                     </View>
-
-                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
-
-                    <View style={styles.rowBetween}>
-                        <View style={{ flex: 1, marginRight: Spacing.md }}>
-                            <AppText variant="body" weight="semibold">Dismissed Insights</AppText>
-                            <AppText variant="caption" color="secondary">
-                                View and restore patterns you've crossed out
-                            </AppText>
-                        </View>
-                        <AppButton
-                            variant="secondary"
-                            size="sm"
-                            onPress={() => router.push('/dismissed-insights')}
-                        >
-                            {AppConfig.strings.dashboard.manageDismissed}
-                        </AppButton>
-                    </View>
                 </AppCard>
 
                 <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>

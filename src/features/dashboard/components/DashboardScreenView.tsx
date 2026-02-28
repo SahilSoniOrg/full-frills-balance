@@ -4,9 +4,9 @@ import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHe
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
 
-import React, { useState } from 'react';
+import { useRouter } from 'expo-router';
+import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { InsightsBottomSheet } from './InsightsBottomSheet';
 import { SafeToSpendCard } from './SafeToSpendCard';
 
 export function DashboardScreenView({
@@ -20,7 +20,7 @@ export function DashboardScreenView({
     listRef,
 }: DashboardViewModel & { listRef?: React.RefObject<any> }) {
     const { strings } = AppConfig;
-    const [isInsightsVisible, setInsightsVisible] = useState(false);
+    const router = useRouter();
 
     if (!isInitialized) {
         return (
@@ -47,7 +47,7 @@ export function DashboardScreenView({
                     <View>
                         <DashboardHeader
                             {...headerProps}
-                            onInsightsPress={() => setInsightsVisible(true)}
+                            onInsightsPress={() => router.push('/insights')}
                         />
                         {safeToSpendData && (
                             <SafeToSpendCard
@@ -65,11 +65,6 @@ export function DashboardScreenView({
                     </View>
                 }
                 fab={fab}
-            />
-            <InsightsBottomSheet
-                visible={isInsightsVisible}
-                onClose={() => setInsightsVisible(false)}
-                patterns={headerProps.patterns}
             />
         </>
     );
