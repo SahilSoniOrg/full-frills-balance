@@ -104,15 +104,15 @@ export function SettingsView(vm: SettingsViewModel) {
 
                     <View style={styles.rowBetween}>
                         <View style={{ flex: 1, marginRight: Spacing.md }}>
-                            <AppText variant="body" weight="semibold">Planned Payments</AppText>
+                            <AppText variant="body" weight="semibold">Commitments</AppText>
                             <AppText variant="caption" color="secondary">
-                                Manage recurring rules and automated tracking
+                                Manage budgets and recurring payments
                             </AppText>
                         </View>
                         <AppButton
                             variant="secondary"
                             size="sm"
-                            onPress={() => router.push('/planned-payments')}
+                            onPress={() => router.push('/commitments')}
                         >
                             Manage
                         </AppButton>

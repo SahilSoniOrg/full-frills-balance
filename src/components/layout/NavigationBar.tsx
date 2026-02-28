@@ -45,7 +45,7 @@ export function NavigationBar({
     return (
         <View style={[styles.container, style]}>
             {(showBack || alignTitle === 'center') && (
-                <View style={[styles.left, !showBack && styles.noWidth]}>
+                <View style={[styles.left, (!showBack && alignTitle !== 'center') && styles.noWidth]}>
                     {showBack && !isSearchActive && (
                         <IconButton
                             name={backIcon}

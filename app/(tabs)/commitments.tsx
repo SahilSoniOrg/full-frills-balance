@@ -1,1 +1,1 @@
-export { default } from '@/src/features/budget/screens/BudgetListScreen';
+export { default } from '@/src/features/commitments/screens/CommitmentsScreen';
