@@ -5,7 +5,8 @@ import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
-import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccounts } from '@/src/features/accounts';
+import { smsService } from '@/src/services/sms-service';
 import { toast } from '@/src/utils/alerts';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -50,25 +51,13 @@ export default function SmsRuleFormScreen() {
         if (!isValid) return;
         setIsSubmitting(true);
         try {
-            await database.write(async () => {
-                if (id) {
-                    const rule = await database.collections.get<SmsAutoPostRule>('sms_auto_post_rules').find(id);
-                    await rule.update(record => {
-                        record.senderMatch = senderMatch.trim();
-                        record.bodyMatch = bodyMatch.trim() || undefined;
-                        record.sourceAccountId = sourceAccountId;
-                        record.categoryAccountId = categoryAccountId;
-                        record.isActive = isActive;
-                    });
-                } else {
-                    await database.collections.get<SmsAutoPostRule>('sms_auto_post_rules').create(record => {
-                        record.senderMatch = senderMatch.trim();
-                        record.bodyMatch = bodyMatch.trim() || undefined;
-                        record.sourceAccountId = sourceAccountId;
-                        record.categoryAccountId = categoryAccountId;
-                        record.isActive = isActive;
-                    });
-                }
+            await smsService.saveAutoPostRule({
+                id,
+                senderMatch: senderMatch.trim(),
+                bodyMatch: bodyMatch.trim() || undefined,
+                sourceAccountId,
+                categoryAccountId,
+                isActive
             });
             toast.success('Rule saved');
             router.back();
@@ -83,10 +72,7 @@ export default function SmsRuleFormScreen() {
         if (!id) return;
         setIsSubmitting(true);
         try {
-            await database.write(async () => {
-                const rule = await database.collections.get<SmsAutoPostRule>('sms_auto_post_rules').find(id);
-                await rule.destroyPermanently();
-            });
+            await smsService.deleteAutoPostRule(id);
             toast.success('Rule deleted');
             router.back();
         } catch (e) {

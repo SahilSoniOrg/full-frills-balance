@@ -1,4 +1,4 @@
-import { accountService } from '@/src/features/accounts/services/AccountService';
+import { accountService } from '@/src/features/accounts';
 import { onboardingService } from '../OnboardingService';
 
 jest.mock('@/src/features/accounts/services/AccountService');

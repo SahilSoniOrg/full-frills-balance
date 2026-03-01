@@ -10,3 +10,4 @@ export * from './hooks/usePlannedPaymentDetails';
 export * from './hooks/usePlannedPaymentForm';
 export * from './hooks/usePlannedPayments';
 
+export { PlannedPaymentListView } from './components/PlannedPaymentListView';

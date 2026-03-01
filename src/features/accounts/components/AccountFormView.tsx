@@ -7,7 +7,7 @@ import { AccountSubcategorySelector } from '@/src/features/accounts/components/A
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import { IconPickerModal } from '@/src/features/onboarding/components/IconPickerModal';
+import { IconPickerModal } from '@/src/features/onboarding';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';

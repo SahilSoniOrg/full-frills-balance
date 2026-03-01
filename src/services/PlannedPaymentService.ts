@@ -4,7 +4,7 @@ import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import PlannedPayment, { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository'
-import { journalService } from '@/src/features/journal/services/JournalService'
+import { journalService } from '@/src/features/journal';
 import { ledgerWriteService } from '@/src/services/ledger'
 import { logger } from '@/src/utils/logger'
 import { Q } from '@nozbe/watermelondb'

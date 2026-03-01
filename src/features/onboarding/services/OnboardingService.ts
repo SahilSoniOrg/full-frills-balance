@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AccountType } from '@/src/data/models/Account';
-import { accountService } from '@/src/features/accounts/services/AccountService';
+import { accountService } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';

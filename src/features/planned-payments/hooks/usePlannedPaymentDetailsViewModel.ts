@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { useAccount } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccount } from '@/src/features/accounts';
 import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalDisplayType } from '@/src/types/domain';

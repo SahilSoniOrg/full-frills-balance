@@ -1,8 +1,8 @@
 import { AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
-import { BudgetListView } from '@/src/features/budget/components/BudgetListView';
-import { PlannedPaymentListView } from '@/src/features/planned-payments/components/PlannedPaymentListView';
+import { BudgetListView } from '@/src/features/budget';
+import { PlannedPaymentListView } from '@/src/features/planned-payments';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import React, { useState } from 'react';

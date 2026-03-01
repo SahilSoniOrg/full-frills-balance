@@ -2,7 +2,7 @@ import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { database } from '@/src/data/database/Database';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { journalService } from '@/src/features/journal';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -304,6 +304,36 @@ class SmsService {
         } catch (error) {
             logger.error('Failed to mark SMS as processed', error);
         }
+    }
+
+    async saveAutoPostRule(data: { id?: string, senderMatch: string, bodyMatch?: string, sourceAccountId: string, categoryAccountId: string, isActive: boolean }) {
+        await database.write(async () => {
+            if (data.id) {
+                const rule = await database.collections.get<SmsAutoPostRule>('sms_auto_post_rules').find(data.id);
+                await rule.update(record => {
+                    record.senderMatch = data.senderMatch;
+                    record.bodyMatch = data.bodyMatch;
+                    record.sourceAccountId = data.sourceAccountId;
+                    record.categoryAccountId = data.categoryAccountId;
+                    record.isActive = data.isActive;
+                });
+            } else {
+                await database.collections.get<SmsAutoPostRule>('sms_auto_post_rules').create(record => {
+                    record.senderMatch = data.senderMatch;
+                    record.bodyMatch = data.bodyMatch;
+                    record.sourceAccountId = data.sourceAccountId;
+                    record.categoryAccountId = data.categoryAccountId;
+                    record.isActive = data.isActive;
+                });
+            }
+        });
+    }
+
+    async deleteAutoPostRule(id: string) {
+        await database.write(async () => {
+            const rule = await database.collections.get<SmsAutoPostRule>('sms_auto_post_rules').find(id);
+            await rule.destroyPermanently();
+        });
     }
 }
 

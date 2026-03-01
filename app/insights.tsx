@@ -1,4 +1,4 @@
-import InsightsScreen from '@/src/features/dashboard/screens/InsightsScreen';
+import { InsightsScreen } from '@/src/features/dashboard';
 import React from 'react';
 
 export default function InsightsRoute() {

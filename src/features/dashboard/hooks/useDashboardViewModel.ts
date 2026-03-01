@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { JournalListViewProps } from '@/src/features/journal/components/JournalListView';
-import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
+import { JournalListViewProps } from '@/src/features/journal';
+import { useJournalListScreen } from '@/src/features/journal';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
 import { insightService, Pattern, SafeToSpendResult } from '@/src/services/insight-service';

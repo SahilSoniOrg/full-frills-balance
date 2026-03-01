@@ -1,7 +1,7 @@
 import { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { useJournals } from '@/src/features/journal/hooks/useJournals';
+import { useJournals } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { AppNavigation } from '@/src/utils/navigation';

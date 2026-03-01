@@ -1,2 +1,2 @@
-import BudgetEditScreen from '@/src/features/budget/screens/BudgetEditScreen'
+import { BudgetEditScreen } from '@/src/features/budget';
 export default BudgetEditScreen

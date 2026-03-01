@@ -1,3 +1,4 @@
+export { CurrencySelector } from './components/CurrencySelector';
 export {
     useAccount,
     useAccountActions,

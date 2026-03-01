@@ -1,1 +1,1 @@
-export { default } from '@/src/features/commitments/screens/CommitmentsScreen';
+export { CommitmentsScreen as default } from '@/src/features/commitments';

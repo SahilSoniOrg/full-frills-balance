@@ -1,2 +1,2 @@
-import ReportsScreen from '@/src/features/reports/screens/ReportsScreen';
+import { ReportsScreen } from '@/src/features/reports';
 export default ReportsScreen;

@@ -3,7 +3,7 @@ import { SubmitFooter } from '@/src/components/common/SubmitFooter'
 import { AppButton, AppCard, AppText, ListRow } from '@/src/components/core'
 import { AppInput } from '@/src/components/core/AppInput'
 import { Screen, ScreenHeader } from '@/src/components/layout'
-import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector'
+import { CurrencySelector } from '@/src/features/accounts';
 import { router } from 'expo-router'
 import React, { useState } from 'react'
 import { confirm, toast } from '@/src/utils/alerts'

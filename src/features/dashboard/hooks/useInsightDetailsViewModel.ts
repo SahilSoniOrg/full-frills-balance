@@ -1,7 +1,7 @@
 import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { journalService } from '@/src/features/journal';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';

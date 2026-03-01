@@ -4,7 +4,7 @@ import { AppCard, AppInput, AppText, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { useAccounts } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccounts } from '@/src/features/accounts';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useLocalSearchParams } from 'expo-router';

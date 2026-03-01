@@ -1,2 +1,2 @@
-import SmsRulesScreen from '@/src/features/settings/screens/SmsRulesScreen';
+import { SmsRulesScreen } from '@/src/features/settings';
 export default SmsRulesScreen;
