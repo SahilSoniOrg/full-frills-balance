@@ -1,8 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { JournalListViewProps } from '@/src/features/journal';
-import { useJournalListScreen } from '@/src/features/journal';
-import { useExchangeRates } from '@/src/hooks/useExchangeRates';
+import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { insightService, Pattern, SafeToSpendResult } from '@/src/services/insight-service';
 import { useRouter } from 'expo-router';
@@ -30,9 +28,7 @@ export interface DashboardViewModel {
 
 export function useDashboardViewModel(): DashboardViewModel {
     const router = useRouter();
-    const { userName, hasCompletedOnboarding, isInitialized, defaultCurrency } = useUI();
-
-    const { rateMap } = useExchangeRates(isInitialized ? defaultCurrency : undefined);
+    const { userName, hasCompletedOnboarding, isInitialized } = useUI();
 
     const { data: safeToSpendData } = useObservable(
         () => insightService.observeSafeToSpend(),
@@ -54,8 +50,6 @@ export function useDashboardViewModel(): DashboardViewModel {
             title: strings.dashboard.emptyTitle,
             subtitle: strings.dashboard.emptySubtitle
         },
-        exchangeRateMap: rateMap,
-        baseCurrency: defaultCurrency,
         defaultToCurrentMonth: false,
     });
 

@@ -1,10 +1,12 @@
+import { CategoryCreationBar } from '@/src/components/common/CategoryCreationBar';
 import { SelectableGrid, SelectableItem } from '@/src/components/common/SelectableGrid';
-import { AppIcon, AppText, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Size, withOpacity } from '@/src/constants';
+import { AppIcon, AppInput, AppText, IconName } from '@/src/components/core';
+import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { ARCHETYPES } from '@/src/constants/archetypes';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
 
 type BaseProps = {
@@ -49,6 +51,9 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     const incomeLabel = AppConfig.strings.onboarding.categories.typeLabels.income;
     const expenseLabel = AppConfig.strings.onboarding.categories.typeLabels.expense;
 
+    // Currency search state
+    const [currencySearchQuery, setCurrencySearchQuery] = useState('');
+
     const renderCategoryIcon = (item: SelectableItem, isSelected: boolean) => {
         const categoryType = item.subtitle === incomeLabel ? 'INCOME' : 'EXPENSE';
         const behaviorColor = categoryType === 'INCOME' ? theme.success : theme.error;
@@ -80,15 +85,21 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
                 new Map(currencies.map((c) => [c.code, c])).values()
             );
 
-            const mappedItems = uniqueCurrencies.map((currency) => ({
+            let mappedItems = uniqueCurrencies.map((currency) => ({
                 id: currency.code,
                 name: currency.code,
                 symbol: currency.symbol,
                 subtitle: currency.name,
             }));
 
-            // If a currency is selected, move it to the top
-            if (props.selectedCurrency) {
+            if (currencySearchQuery.trim()) {
+                const query = currencySearchQuery.toLowerCase();
+                mappedItems = mappedItems.filter(i =>
+                    i.name.toLowerCase().includes(query) ||
+                    (i.subtitle && i.subtitle.toLowerCase().includes(query))
+                );
+            } else if (props.selectedCurrency) {
+                // If a currency is selected & no search, move it to the top
                 return [...mappedItems].sort((a, b) => {
                     if (a.id === props.selectedCurrency) return -1;
                     if (b.id === props.selectedCurrency) return 1;
@@ -97,7 +108,7 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
             }
 
             return mappedItems;
-        }, [currencies, props.selectedCurrency]);
+        }, [currencies, props.selectedCurrency, currencySearchQuery]);
 
         return (
             <SelectableGrid
@@ -109,8 +120,16 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
                 onContinue={props.onContinue}
                 onBack={props.onBack}
                 isCompleting={props.isCompleting}
-                showSearch
-                searchPlaceholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
+                bottomContent={
+                    <View style={styles.searchContainer}>
+                        <AppInput
+                            placeholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
+                            value={currencySearchQuery}
+                            onChangeText={setCurrencySearchQuery}
+                            accessibilityLabel="Search currency"
+                        />
+                    </View>
+                }
                 renderSubtitle={(item, isSelected) => (
                     <AppText
                         variant="caption"
@@ -150,11 +169,13 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
                 onContinue={props.onContinue}
                 onBack={props.onBack}
                 isCompleting={props.isCompleting}
-                customInput={{
-                    placeholder: AppConfig.strings.onboarding.accounts.placeholder,
-                    onAdd: props.onAddCustomAccount,
-                    defaultIcon: 'wallet',
-                }}
+                bottomContent={
+                    <CategoryCreationBar
+                        placeholder={AppConfig.strings.onboarding.accounts.placeholder}
+                        onAdd={props.onAddCustomAccount}
+                        defaultIcon="wallet"
+                    />
+                }
             />
         );
     }
@@ -205,15 +226,23 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
             onContinue={props.onContinue}
             onBack={props.onBack}
             isCompleting={props.isCompleting}
-            customInput={{
-                placeholder: AppConfig.strings.onboarding.categories.placeholder,
-                onAdd: props.onAddCustomCategory,
-                defaultIcon: 'tag',
-                showTypeToggle: true,
-                typeLabels: AppConfig.strings.onboarding.categories.typeLabels,
-            }}
+            bottomContent={
+                <CategoryCreationBar
+                    placeholder={AppConfig.strings.onboarding.categories.placeholder}
+                    onAdd={props.onAddCustomCategory}
+                    defaultIcon="tag"
+                    showTypeToggle={true}
+                    typeLabels={AppConfig.strings.onboarding.categories.typeLabels}
+                />
+            }
             renderIcon={renderCategoryIcon}
             renderSubtitle={renderCategorySubtitle}
         />
     );
 }
+
+const styles = StyleSheet.create({
+    searchContainer: {
+        marginBottom: Spacing.md,
+    }
+});

@@ -5,27 +5,14 @@ import { JournalListView } from '@/src/features/journal/components/JournalListVi
 import { SmsImportSheet } from '@/src/features/journal/components/SmsImportSheet';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
-import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {
     const initialDateRange = useJournalRouteDateRange();
-    const [defaultCurrency, setDefaultCurrency] = useState<string>(AppConfig.defaultCurrency);
-    const [isPrefsLoaded, setIsPrefsLoaded] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     const [isSmsSheetVisible, setIsSmsSheetVisible] = useState(false);
-
-    useEffect(() => {
-        preferences.loadPreferences().then(p => {
-            if (p.defaultCurrencyCode) setDefaultCurrency(p.defaultCurrencyCode);
-            setIsPrefsLoaded(true);
-        });
-    }, []);
-
-    const { rateMap } = useExchangeRates(isPrefsLoaded ? defaultCurrency : undefined);
 
     const { listViewProps, vm } = useJournalListScreen({
         pageSize: AppConfig.pagination.dashboardPageSize,
@@ -36,8 +23,6 @@ export default function JournalScreen() {
         loadingText: AppConfig.strings.common.loading,
         loadingMoreText: AppConfig.strings.common.loading,
         initialDateRange: initialDateRange ?? null,
-        exchangeRateMap: rateMap,
-        baseCurrency: defaultCurrency,
     });
 
     const handleFabPress = useCallback(() => {
@@ -90,8 +75,6 @@ export default function JournalScreen() {
     ), [isSearching, vm.searchQuery, vm.isSearchGlobal, vm.dateRange, vm.showDatePicker, vm.toggleSearchGlobal, vm.navigatePrevious, vm.navigateNext, vm.onSearchChange]);
 
     const fab = useMemo(() => ({ onPress: handleFabPress }), [handleFabPress]);
-
-    if (!isPrefsLoaded) return null; // Or a proper loading screen
 
     return (
         <>

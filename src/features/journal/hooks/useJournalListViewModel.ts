@@ -1,8 +1,10 @@
 import { AppConfig } from '@/src/constants';
+import { useUI } from '@/src/contexts/UIContext';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
+import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
@@ -11,7 +13,6 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
@@ -50,8 +51,6 @@ interface UseJournalListViewModelParams {
     loadingText?: string;
     loadingMoreText?: string;
     initialDateRange?: DateRange | null;
-    exchangeRateMap?: Record<string, number>;
-    baseCurrency?: string;
     defaultToCurrentMonth?: boolean;
 }
 
@@ -61,10 +60,11 @@ export function useJournalListViewModel({
     loadingText = AppConfig.strings.common.loading,
     loadingMoreText = AppConfig.strings.common.loading,
     initialDateRange,
-    exchangeRateMap = {},
-    baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
     defaultToCurrentMonth = true,
 }: UseJournalListViewModelParams): JournalListViewModel {
+    const { defaultCurrency: baseCurrency, isInitialized } = useUI();
+    const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchGlobal, setIsSearchGlobal] = useState(true);
     const missingCurrenciesCache = useRef(new Set<string>());

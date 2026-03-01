@@ -25,6 +25,17 @@ jest.mock('@/src/utils/navigation', () => ({
     AppNavigation: { toTransactionDetails: jest.fn() }
 }));
 
+jest.mock('@/src/contexts/UIContext', () => ({
+    useUI: () => ({ defaultCurrency: 'USD', isInitialized: true })
+}));
+
+let mockRateMap: Record<string, number> = { 'EUR': 0.5 };
+jest.mock('@/src/hooks/useExchangeRates', () => ({
+    useExchangeRates: () => ({
+        get rateMap() { return mockRateMap; }
+    })
+}));
+
 jest.mock('@/src/utils/logger', () => ({
     logger: { warn: jest.fn(), error: jest.fn() }
 }));
@@ -33,6 +44,10 @@ jest.mock('@/src/constants', () => ({
     AppConfig: {
         defaultCurrency: 'USD',
         defaultCurrencyPrecision: 2,
+        defaults: {
+            journalPageSize: 20,
+            plannedJournalLimit: 50
+        },
         strings: {
             common: { loading: 'Loading' },
             journal: {
@@ -97,6 +112,7 @@ describe('useJournalListViewModel', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockRateMap = { 'EUR': 0.5 };
         useJournalsMock.mockReturnValue({
             journals: mockEnrichedJournals,
             isLoading: false,
@@ -128,8 +144,7 @@ describe('useJournalListViewModel', () => {
 
     it('should calculate daily stats correctly for same currency', () => {
         const { result } = renderHook(() => useJournalListViewModel({
-            emptyState: { title: 'Empty', subtitle: 'None' },
-            baseCurrency: 'USD'
+            emptyState: { title: 'Empty', subtitle: 'None' }
         }));
 
         const sep20 = result.current.items.find(i => i.id === `sep-${new Date(2024, 2, 20).getTime()}`);
@@ -141,9 +156,7 @@ describe('useJournalListViewModel', () => {
 
     it('should normalize amounts using exchangeRateMap', () => {
         const { result } = renderHook(() => useJournalListViewModel({
-            emptyState: { title: 'Empty', subtitle: 'None' },
-            baseCurrency: 'USD',
-            exchangeRateMap: { 'EUR': 0.5 } // 1 USD = 0.5 EUR => 50 EUR = 100 USD
+            emptyState: { title: 'Empty', subtitle: 'None' }
         }));
 
         const sep21 = result.current.items.find(i => i.id === `sep-${new Date(2024, 2, 21).getTime()}`);
@@ -154,10 +167,10 @@ describe('useJournalListViewModel', () => {
     });
 
     it('should log warning and skip amount when exchange rate is missing', () => {
+        mockRateMap = {};
+
         const { result } = renderHook(() => useJournalListViewModel({
-            emptyState: { title: 'Empty', subtitle: 'None' },
-            baseCurrency: 'USD',
-            exchangeRateMap: {} // Missing EUR
+            emptyState: { title: 'Empty', subtitle: 'None' }
         }));
 
         const sep21 = result.current.items.find(i => i.id === `sep-${new Date(2024, 2, 21).getTime()}`);

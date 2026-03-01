@@ -13,7 +13,7 @@ export function useSettingsActions() {
     }, []);
 
     const runIntegrityCheck = useCallback(async () => {
-        return integrityService.runStartupCheck();
+        return integrityService.forceRunCheck();
     }, []);
 
     const cleanupDatabase = useCallback(async () => {

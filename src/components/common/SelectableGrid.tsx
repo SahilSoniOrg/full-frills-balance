@@ -1,9 +1,9 @@
-import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { IconName } from '@/src/components/core/AppIcon';
-import { AppConfig, Layout, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Layout, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface SelectableItem {
     id?: string;
@@ -12,14 +12,6 @@ export interface SelectableItem {
     symbol?: string;
     color?: string;
     subtitle?: string;
-}
-
-export interface CustomItemInput {
-    placeholder: string;
-    onAdd: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
-    defaultIcon?: IconName;
-    showTypeToggle?: boolean;
-    typeLabels?: { income: string; expense: string };
 }
 
 export interface SelectableGridProps {
@@ -32,13 +24,11 @@ export interface SelectableGridProps {
     onBack: () => void;
     isCompleting: boolean;
     maxSelection?: number;
-    showSearch?: boolean;
-    searchPlaceholder?: string;
     renderIcon?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
     renderSubtitle?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
     accentColor?: string;
     footerActionLabel?: string;
-    customInput?: CustomItemInput | null;
+    bottomContent?: React.ReactNode;
 }
 
 export const SelectableGrid: React.FC<SelectableGridProps> = ({
@@ -51,30 +41,14 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     onBack,
     isCompleting,
     maxSelection,
-    showSearch = false,
-    searchPlaceholder = 'Search...',
     renderIcon,
     renderSubtitle,
     accentColor,
     footerActionLabel = 'Continue',
-    customInput,
+    bottomContent,
 }) => {
     const { theme } = useTheme();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [customName, setCustomName] = useState('');
-    const [customType, setCustomType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
-    const [selectedIcon, setSelectedIcon] = useState<IconName>('tag');
-    const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
     const effectiveAccentColor = accentColor || theme.primary;
-
-    const filteredItems = useMemo(() => {
-        if (!searchQuery.trim()) return items;
-        const query = searchQuery.toLowerCase();
-        return items.filter(item =>
-            item.name.toLowerCase().includes(query) ||
-            item.subtitle?.toLowerCase().includes(query)
-        );
-    }, [items, searchQuery]);
 
     const handleToggle = useCallback((id: string) => {
         if (maxSelection && selectedIds.length >= maxSelection && !selectedIds.includes(id)) {
@@ -82,21 +56,6 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
         }
         onToggle(id);
     }, [maxSelection, onToggle, selectedIds]);
-
-    const handleAddCustom = useCallback(() => {
-        if (!customName.trim() || !customInput) return;
-        const type = customInput.showTypeToggle ? customType : 'EXPENSE';
-        customInput.onAdd(customName.trim(), type, selectedIcon);
-        setCustomName('');
-        setSelectedIcon(customInput.defaultIcon || 'tag');
-    }, [customName, customInput, selectedIcon, customType]);
-
-    const handleTypeChange = useCallback((type: 'INCOME' | 'EXPENSE') => {
-        setCustomType(type);
-        if (customInput?.showTypeToggle) {
-            setSelectedIcon(type === 'EXPENSE' ? (customInput.defaultIcon || 'tag') : (customInput.defaultIcon || 'trendingUp'));
-        }
-    }, [customInput]);
 
     const renderItem = useCallback(({ item }: { item: SelectableItem }) => {
         const itemId = item.id ?? item.name;
@@ -173,7 +132,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     return (
         <View style={styles.container}>
             <FlatList
-                data={filteredItems}
+                data={items}
                 renderItem={({ item }: { item: SelectableItem }) => (
                     <View style={styles.itemWrapper}>
                         {renderItem({ item })}
@@ -198,91 +157,10 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
                 }
             />
 
-            {(customInput || showSearch) && (
-                <View style={styles.bottomInputSection}>
-                    {customInput && (
-                        <View style={styles.customInputContainer}>
-                            <View style={styles.inputRow}>
-                                <TouchableOpacity
-                                    style={[styles.iconButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                                    onPress={() => setIsIconPickerVisible(true)}
-                                    accessibilityLabel="Select icon"
-                                    accessibilityRole="button"
-                                >
-                                    <AppIcon name={selectedIcon} size={Size.sm} color={theme.primary} />
-                                </TouchableOpacity>
-
-                                <AppInput
-                                    placeholder={customInput.placeholder}
-                                    value={customName}
-                                    onChangeText={setCustomName}
-                                    containerStyle={styles.customInput}
-                                    accessibilityLabel="Custom item name"
-                                    onSubmitEditing={handleAddCustom}
-                                />
-
-                                <TouchableOpacity
-                                    style={[styles.addButton, { backgroundColor: customName.trim() ? theme.primary : theme.border }]}
-                                    onPress={handleAddCustom}
-                                    disabled={!customName.trim()}
-                                    accessibilityLabel="Add custom item"
-                                    accessibilityRole="button"
-                                    accessibilityState={{ disabled: !customName.trim() }}
-                                >
-                                    <AppIcon name="add" size={Size.sm} color={theme.surface} />
-                                </TouchableOpacity>
-                            </View>
-
-                            {customInput.showTypeToggle && (
-                                <View style={styles.typeToggle}>
-                                    <TouchableOpacity
-                                        onPress={() => handleTypeChange('EXPENSE')}
-                                        style={[
-                                            styles.typeButton,
-                                            customType === 'EXPENSE' && { backgroundColor: withOpacity(theme.error, Opacity.soft), borderColor: theme.error }
-                                        ]}
-                                    >
-                                        <AppText variant="caption" style={{ color: customType === 'EXPENSE' ? theme.error : theme.textSecondary }}>
-                                            {customInput.typeLabels?.expense || 'Expense'}
-                                        </AppText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        onPress={() => handleTypeChange('INCOME')}
-                                        style={[
-                                            styles.typeButton,
-                                            customType === 'INCOME' && { backgroundColor: withOpacity(theme.success, Opacity.soft), borderColor: theme.success }
-                                        ]}
-                                    >
-                                        <AppText variant="caption" style={{ color: customType === 'INCOME' ? theme.success : theme.textSecondary }}>
-                                            {customInput.typeLabels?.income || 'Income'}
-                                        </AppText>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                        </View>
-                    )}
-
-                    {showSearch && (
-                        <View style={styles.searchContainer}>
-                            <AppInput
-                                placeholder={searchPlaceholder}
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                                containerStyle={styles.searchBar}
-                                accessibilityLabel="Search"
-                            />
-                        </View>
-                    )}
+            {bottomContent && (
+                <View style={styles.bottomSection}>
+                    {bottomContent}
                 </View>
-            )}
-
-            {isIconPickerVisible && customInput && (
-                <IconPickerModal
-                    visible={isIconPickerVisible}
-                    onClose={() => setIsIconPickerVisible(false)}
-                    onSelect={(icon) => setSelectedIcon(icon)}
-                    selectedIcon={selectedIcon}
-                />
             )}
 
             <View style={styles.footer}>
@@ -308,50 +186,6 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     );
 };
 
-const IconPickerModal: React.FC<{
-    visible: boolean;
-    onClose: () => void;
-    onSelect: (icon: IconName) => void;
-    selectedIcon: IconName;
-}> = ({ visible, onClose, onSelect, selectedIcon }) => {
-    const { theme } = useTheme();
-    const icons: IconName[] = [
-        'tag', 'trendingUp', 'shoppingCart', 'coffee', 'bus', 'film',
-        'shoppingBag', 'document', 'home', 'wallet', 'bank', 'safe', 'creditCard',
-        'briefcase', 'circle', 'copy', 'receipt', 'calendar', 'search',
-        'edit', 'delete', 'arrowUp', 'arrowDown', 'swapHorizontal'
-    ];
-
-    const { strings } = AppConfig;
-
-    return (
-        <Modal visible={visible} transparent animationType="fade">
-            <Pressable style={[styles.modalOverlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
-                <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
-                    <AppText variant="subheading" style={styles.modalTitle}>{strings.onboarding.iconPickerTitle}</AppText>
-                    <View style={styles.iconGrid}>
-                        {icons.map((icon) => (
-                            <TouchableOpacity
-                                key={icon}
-                                style={[
-                                    styles.modalIconButton,
-                                    { backgroundColor: selectedIcon === icon ? withOpacity(theme.primary, Opacity.soft) : 'transparent' }
-                                ]}
-                                onPress={() => {
-                                    onSelect(icon);
-                                    onClose();
-                                }}
-                            >
-                                <AppIcon name={icon} size={Size.iconLg} color={selectedIcon === icon ? theme.primary : theme.text} />
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-            </Pressable>
-        </Modal>
-    );
-};
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -368,51 +202,6 @@ const styles = StyleSheet.create({
     subtitle: {
         textAlign: 'center',
         paddingHorizontal: Spacing.xl,
-    },
-    customInputContainer: {
-        marginBottom: Spacing.md,
-        gap: Spacing.sm,
-    },
-    inputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-    },
-    customInput: {
-        flex: 1,
-        marginBottom: 0,
-    },
-    iconButton: {
-        width: Size.inputMd,
-        height: Size.inputMd,
-        borderRadius: Shape.radius.r2,
-        borderWidth: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    addButton: {
-        width: Size.inputMd,
-        height: Size.inputMd,
-        borderRadius: Size.inputMd / 2,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    typeToggle: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-        paddingLeft: Size.inputMd + Spacing.sm,
-    },
-    typeButton: {
-        paddingVertical: 4,
-        paddingHorizontal: Spacing.md,
-        borderRadius: Shape.radius.r3,
-        borderWidth: 1,
-    },
-    searchContainer: {
-        marginBottom: Spacing.md,
-    },
-    searchBar: {
-        marginBottom: 0,
     },
     scrollContainer: {
         flex: 1,
@@ -461,36 +250,8 @@ const styles = StyleSheet.create({
     continueButton: {
         width: '100%',
     },
-    bottomInputSection: {
+    bottomSection: {
         paddingTop: Spacing.md,
         paddingHorizontal: Spacing.lg,
-    },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        borderRadius: Shape.radius.r3,
-        padding: Spacing.lg,
-        width: '80%',
-        maxHeight: '60%',
-    },
-    modalTitle: {
-        marginBottom: Spacing.md,
-        textAlign: 'center',
-    },
-    iconGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        gap: Spacing.sm,
-    },
-    modalIconButton: {
-        width: Size.xxl,
-        height: Size.xxl,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: Shape.radius.r2,
     },
 });
