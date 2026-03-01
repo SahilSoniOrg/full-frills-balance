@@ -102,6 +102,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         ],
         "react-native-quick-crypto",
         "expo-localization",
+        "./plugins/withTelephony",
     ],
     experiments: {
         typedRoutes: true,
