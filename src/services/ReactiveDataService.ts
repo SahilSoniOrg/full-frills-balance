@@ -42,15 +42,21 @@ export interface MonthlyFlowData {
  * Uses RxJS shareReplay(1) to multicast emissions to all subscribers.
  */
 class ReactiveDataService {
+    // M-1 fix: cache dashboard observables per currency so multiple hook subscribers
+    // share a single combineLatest chain. Currency changes are rare and a new entry is
+    // created on demand — old entries are GC'd when the Map grows stale.
+    private _dashboardCache = new Map<string, Observable<DashboardData>>();
 
     /**
-     * Get or create the shared dashboard data observable.
-     * Uses shareReplay(1) to multicast to all subscribers.
+     * Get or create the shared dashboard data observable for the given currency.
+     * Successive calls with the same currency return the SAME shareReplay'd stream.
      */
     observeDashboardData(targetCurrency: string): Observable<DashboardData> {
-        // Note: We create a new observable per currency to avoid stale data
-        // This is acceptable since currency changes are rare
-        return combineLatest([
+        if (this._dashboardCache.has(targetCurrency)) {
+            return this._dashboardCache.get(targetCurrency)!;
+        }
+
+        const obs$ = combineLatest([
             accountRepository.observeAll(),
             transactionRepository.observeActiveWithColumns([
                 'amount',
@@ -67,22 +73,12 @@ class ReactiveDataService {
             debounceTime(Animation.dataRefreshDebounce),
             switchMap(async ([accounts, transactions]) => {
                 try {
-                    // Optimized balance fetching with parallel aggregation
                     const balances = await balanceService.getAccountBalances(Date.now(), targetCurrency);
-
-                    // Filter for leaf accounts ONLY for summary to prevent double-counting
                     const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
                     const leafBalances = balances.filter(b => !parentIds.has(b.accountId));
-
-                    // Calculate wealth summary from leaf balances
                     const wealthSummary = await wealthService.calculateSummary(leafBalances, targetCurrency);
 
-                    return {
-                        accounts,
-                        transactions,
-                        balances,
-                        wealthSummary,
-                    };
+                    return { accounts, transactions, balances, wealthSummary };
                 } catch (error) {
                     logger.error('Failed to calculate dashboard data:', error);
                     return {
@@ -90,19 +86,19 @@ class ReactiveDataService {
                         transactions,
                         balances: [],
                         wealthSummary: {
-                            netWorth: 0,
-                            totalAssets: 0,
-                            totalLiabilities: 0,
-                            totalEquity: 0,
-                            totalIncome: 0,
-                            totalExpense: 0,
+                            netWorth: 0, totalAssets: 0, totalLiabilities: 0,
+                            totalEquity: 0, totalIncome: 0, totalExpense: 0,
                         },
                     };
                 }
             }),
-            shareReplay(1) // Multicast to all subscribers
+            shareReplay({ bufferSize: 1, refCount: true })
         );
+
+        this._dashboardCache.set(targetCurrency, obs$);
+        return obs$;
     }
+
 
     /**
      * Specialized lightweight observable for the Accounts List.
@@ -115,7 +111,7 @@ class ReactiveDataService {
                 const { transactions, ...summary } = data;
                 return summary;
             }),
-            shareReplay(1)
+            shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
@@ -153,7 +149,7 @@ class ReactiveDataService {
                     return { income: 0, expense: 0 };
                 }
             }),
-            shareReplay(1)
+            shareReplay({ bufferSize: 1, refCount: true })
         );
     }
     /**
@@ -233,7 +229,7 @@ class ReactiveDataService {
                     };
                 }
             }),
-            shareReplay(1)
+            shareReplay({ bufferSize: 1, refCount: true })
         );
     }
     /**
@@ -322,7 +318,7 @@ class ReactiveDataService {
                     return { account: targetAccount, balance: null, subAccounts: [], allAccounts: accounts };
                 }
             }),
-            shareReplay(1)
+            shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 

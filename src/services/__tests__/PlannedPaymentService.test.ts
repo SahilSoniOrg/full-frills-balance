@@ -1,18 +1,21 @@
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 
 jest.mock('@/src/services/ledger');
+jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
-jest.mock('@/src/features/journal/services/JournalService', () => ({
-    journalService: {
-        postJournal: jest.fn(),
-        deleteJournal: jest.fn(),
+jest.mock('@/src/data/repositories/JournalRepository');
+jest.mock('@/src/data/repositories/TransactionRepository', () => ({
+    transactionRepository: {
+        findByJournal: jest.fn().mockResolvedValue([]),
     }
 }));
 jest.mock('@/src/data/database/Database', () => ({
     database: {
+        write: jest.fn().mockImplementation(async (fn: any) => fn()),
         collections: {
             get: jest.fn().mockReturnValue({
                 query: jest.fn().mockReturnThis(),
@@ -23,7 +26,6 @@ jest.mock('@/src/data/database/Database', () => ({
 }));
 
 import { database } from '@/src/data/database/Database';
-import { journalService } from '@/src/features/journal/services/JournalService';
 
 describe('PlannedPaymentService', () => {
     describe('calculateNextOccurrence', () => {
@@ -135,18 +137,19 @@ describe('PlannedPaymentService', () => {
         };
 
         test('Promotes existing PLANNED journal if found on the same day', async () => {
-            const queryFetchSpy = jest.fn().mockResolvedValue([{ id: 'existing-j-1' }]);
+            const mockJournal = { id: 'existing-j-1', journalDate: new Date(2024, 0, 1).getTime(), update: jest.fn().mockImplementation(async (fn: any) => fn(mockJournal)) };
+            const queryFetchSpy = jest.fn().mockResolvedValue([mockJournal]);
             (database.collections.get as jest.Mock).mockReturnValue({
                 query: jest.fn().mockReturnThis(),
                 fetch: queryFetchSpy,
             });
 
-            const postJournalSpy = jest.spyOn(journalService, 'postJournal').mockResolvedValue({} as any);
             const updatePpSpy = jest.spyOn(plannedPaymentRepository, 'update').mockResolvedValue({} as any);
 
             await plannedPaymentService.postOccurrence(mockPP as any, mockPP.nextOccurrence);
 
-            expect(postJournalSpy).toHaveBeenCalledWith('existing-j-1');
+            // Should use database.write to patch status, NOT ledgerWriteService.createJournal
+            expect(database.write).toHaveBeenCalled();
             expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
             expect(updatePpSpy).toHaveBeenCalled();
         });
@@ -183,7 +186,7 @@ describe('PlannedPaymentService', () => {
                 fetch: queryFetchSpy,
             });
 
-            const deleteJournalSpy = jest.spyOn(journalService, 'deleteJournal').mockResolvedValue(undefined);
+            const deleteJournalSpy = jest.spyOn(journalRepository, 'deleteJournal').mockResolvedValue(undefined);
             const updatePpSpy = jest.spyOn(plannedPaymentRepository, 'update').mockResolvedValue({} as any);
 
             await plannedPaymentService.skipOccurrence(mockPP as any, mockPP.nextOccurrence);

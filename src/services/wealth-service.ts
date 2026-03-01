@@ -35,33 +35,32 @@ export const wealthService = {
      * converting all amounts to the specified target currency.
      */
     async calculateSummary(balances: AccountBalance[], targetCurrency: string): Promise<WealthSummary> {
-        let totalAssets = 0;
-        let totalLiabilities = 0;
-        let totalEquity = 0;
-        let totalIncome = 0;
-        let totalExpense = 0;
-
-        // Process conversions in parallel for better performance
-        await Promise.all(balances.map(async b => {
+        // H-5 fix: collect results first, then reduce synchronously.
+        // Mutating closed-over variables inside Promise.all is semantically wrong
+        // even in single-threaded JS — this pattern makes order non-deterministic.
+        const converted = await Promise.all(balances.map(async b => {
             const balanceCurrency = b.currencyCode || targetCurrency;
             const { convertedAmount } = await exchangeRateService.convert(
                 b.balance,
                 balanceCurrency,
                 targetCurrency
             );
-
-            if (b.accountType === AccountType.ASSET) {
-                totalAssets += convertedAmount;
-            } else if (b.accountType === AccountType.LIABILITY) {
-                totalLiabilities += convertedAmount;
-            } else if (b.accountType === AccountType.EQUITY) {
-                totalEquity += convertedAmount;
-            } else if (b.accountType === AccountType.INCOME) {
-                totalIncome += convertedAmount;
-            } else if (b.accountType === AccountType.EXPENSE) {
-                totalExpense += convertedAmount;
-            }
+            return { type: b.accountType, amount: convertedAmount };
         }));
+
+        let totalAssets = 0;
+        let totalLiabilities = 0;
+        let totalEquity = 0;
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        for (const r of converted) {
+            if (r.type === AccountType.ASSET) totalAssets += r.amount;
+            else if (r.type === AccountType.LIABILITY) totalLiabilities += r.amount;
+            else if (r.type === AccountType.EQUITY) totalEquity += r.amount;
+            else if (r.type === AccountType.INCOME) totalIncome += r.amount;
+            else if (r.type === AccountType.EXPENSE) totalExpense += r.amount;
+        }
 
         return {
             totalAssets,
@@ -102,22 +101,23 @@ export const wealthService = {
 
         if (relevantBalances.length === 0) return [];
 
-        // 2. Convert CURRENT state to target currency (Parallel)
-        let runningAssets = 0;
-        let runningLiabilities = 0;
-
-        await Promise.all(relevantBalances.map(async (acc) => {
+        // 2. Convert CURRENT state to target currency — collect then reduce (H-5 fix)
+        const currentBalances = await Promise.all(relevantBalances.map(async (acc) => {
             const { convertedAmount } = await exchangeRateService.convert(
                 acc.balance,
                 acc.currencyCode,
                 currency
             );
-            if (acc.accountType === AccountType.ASSET) {
-                runningAssets += convertedAmount;
-            } else {
-                runningLiabilities += convertedAmount;
-            }
+            return { type: acc.accountType, amount: convertedAmount };
         }));
+
+        let runningAssets = 0;
+        let runningLiabilities = 0;
+
+        for (const r of currentBalances) {
+            if (r.type === AccountType.ASSET) runningAssets += r.amount;
+            else if (r.type === AccountType.LIABILITY) runningLiabilities += r.amount;
+        }
 
         // 3. BULK FETCH all transactions needed for the rewind (from start till now)
         const accountIds = relevantBalances.map(b => b.accountId);

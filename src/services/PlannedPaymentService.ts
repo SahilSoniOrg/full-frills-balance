@@ -2,10 +2,12 @@ import { AppConfig } from '@/src/constants'
 import { database } from '@/src/data/database/Database'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import PlannedPayment, { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment'
-import { TransactionType } from '@/src/data/models/Transaction'
+import Transaction, { TransactionType } from '@/src/data/models/Transaction'
+import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository'
-import { journalService } from '@/src/features/journal';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { ledgerWriteService } from '@/src/services/ledger'
+import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 import { logger } from '@/src/utils/logger'
 import { Q } from '@nozbe/watermelondb'
 
@@ -137,8 +139,17 @@ export class PlannedPaymentService {
             ).fetch()
 
             if (existingPlanned.length > 0) {
-                // Better to promote existing instead of creating new
-                await journalService.postJournal(existingPlanned[0].id)
+                // Promote to POSTED by patching status only — no tx churn needed.
+                const j = existingPlanned[0];
+                await database.write(async () => {
+                    await j.update((record: Journal) => {
+                        record.status = JournalStatus.POSTED;
+                        record.updatedAt = new Date();
+                    });
+                });
+                // Rebuild balance for affected accounts.
+                const txs = await transactionRepository.findByJournal(j.id);
+                rebuildQueueService.enqueueMany(new Set(txs.map((t: Transaction) => t.accountId)), j.journalDate);
             } else {
                 // Fallback: Create new POSTED journal if none existed
                 if (!pp.toAccountId) {
@@ -214,7 +225,7 @@ export class PlannedPaymentService {
             ).fetch()
 
             for (const journal of existingPlanned) {
-                await journalService.deleteJournal(journal.id)
+                await journalRepository.deleteJournal(journal.id)
             }
 
             // 2. Advance the schedule
@@ -248,39 +259,52 @@ export class PlannedPaymentService {
     async processDuePayments(): Promise<void> {
         const activePayments = await plannedPaymentRepository.findAllActive()
         const nowTime = this.normalizeToStartOfDay(Date.now())
-
         const horizon = nowTime + (AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay)
+
+        // H-3 fix: pre-fetch all relevant journals in ONE query before the loop.
+        // Without this, the while-loop issues a fetchCount() per occurrence —
+        // O(N×occurrences) sequential DB round-trips at startup.
+        const allPlannedIds = activePayments.map(p => p.id);
+        const existingJournals = allPlannedIds.length > 0
+            ? await database.collections.get<Journal>('journals').query(
+                Q.where('planned_payment_id', Q.oneOf(allPlannedIds)),
+                Q.where('deleted_at', Q.eq(null))
+            ).fetch()
+            : [];
+
+        // Build a quick-lookup: paymentId → Set of day-start timestamps already journalled
+        const journalledDays = new Map<string, Set<number>>();
+        for (const j of existingJournals) {
+            const dayStart = this.normalizeToStartOfDay(j.journalDate);
+            if (!journalledDays.has(j.plannedPaymentId!)) {
+                journalledDays.set(j.plannedPaymentId!, new Set());
+            }
+            journalledDays.get(j.plannedPaymentId!)!.add(dayStart);
+        }
 
         for (const pp of activePayments) {
             let nextOcc = this.normalizeToStartOfDay(pp.nextOccurrence)
 
-            // If the payment is strictly in the future beyond our horizon, skip
             if (nextOcc > horizon) continue
 
             let generationsCount = 0;
             const MAX_GENERATIONS = 365;
 
-            // Generate journals up to the horizon
             while (nextOcc <= horizon && generationsCount < MAX_GENERATIONS) {
                 generationsCount++;
 
-                // Check if we already have a journal for this day for this planned payment to avoid duplicates.
-                // This is crucial for imports where existing journals might have specific times (e.g. 11:56 AM)
-                // whereas auto-generated ones are usually 12:00 AM.
-                const dayEnd = nextOcc + (AppConfig.time.msPerDay - 1);
-                const existing = await database.collections.get<Journal>('journals').query(
-                    Q.where('planned_payment_id', pp.id),
-                    Q.where('journal_date', Q.between(nextOcc, dayEnd)),
-                    Q.where('deleted_at', Q.eq(null))
-                ).fetchCount() || 0;
+                // In-memory duplicate check — no DB query per occurrence.
+                const alreadyExists = journalledDays.get(pp.id)?.has(nextOcc) ?? false;
 
-                if (existing === 0) {
+                if (!alreadyExists) {
                     await this.generatePlannedJournal(pp, nextOcc)
+                    // Register the new day so back-to-back occurrences don't double-generate.
+                    if (!journalledDays.has(pp.id)) journalledDays.set(pp.id, new Set());
+                    journalledDays.get(pp.id)!.add(nextOcc);
                 }
 
                 nextOcc = this.calculateNextOccurrence(nextOcc, pp)
 
-                // Handle completed payments (if end_date exists)
                 if (pp.endDate && nextOcc > pp.endDate) {
                     await plannedPaymentRepository.update(pp, { status: PlannedPaymentStatus.COMPLETED })
                     break
@@ -291,7 +315,6 @@ export class PlannedPaymentService {
                 logger.warn(`[PlannedPaymentService] Safety cap reached for payment ${pp.id}. Generated ${MAX_GENERATIONS} journals.`);
             }
 
-            // Update the record to the actual next occurrence strictly after the horizon or now
             if (nextOcc !== pp.nextOccurrence) {
                 await plannedPaymentRepository.update(pp, { nextOccurrence: nextOcc })
             }

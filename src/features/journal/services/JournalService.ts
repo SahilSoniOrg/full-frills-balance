@@ -146,22 +146,10 @@ export class JournalService {
             throw new Error(`Cannot post journal with status ${journal.status}. Only PLANNED journals can be posted.`);
         }
 
-        const transactions = await transactionRepository.findByJournal(journalId);
-
-        // 1. Update status to POSTED
-        const updatedJournal = await journalRepository.updateJournalWithTransactions(journalId, {
-            journalDate: journal.journalDate,
-            description: journal.description || '',
-            currencyCode: journal.currencyCode,
-            transactions: transactions.map(t => ({
-                accountId: t.accountId,
-                amount: t.amount,
-                transactionType: t.transactionType as TransactionType,
-                notes: t.notes,
-                exchangeRate: t.exchangeRate
-            })),
-            status: JournalStatus.POSTED
-        });
+        // M-3 fix: status-only patch — updateJournalWithTransactions was soft-deleting
+        // and re-creating every transaction line just to flip a status field, which
+        // (a) produced spurious audit log noise and (b) unnecessarily churned balances.
+        const updatedJournal = await journalRepository.updateJournalStatus(journalId, JournalStatus.POSTED);
 
         // 2. Audit log
         await auditService.log({
@@ -171,7 +159,8 @@ export class JournalService {
             changes: { status: JournalStatus.POSTED }
         });
 
-        // 3. Rebuild balances
+        // 3. Rebuild balances for the accounts involved in this journal
+        const transactions = await transactionRepository.findByJournal(journalId);
         const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
         rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
 
@@ -416,6 +405,18 @@ export class JournalService {
                         accounts: enrichedAccounts
                     } as EnrichedJournal;
                 });
+            }),
+            // M-6 fix: deduplicate identical subsequent emissions
+            distinctUntilChanged((prev, curr) => {
+                if (prev.length !== curr.length) return false;
+                for (let i = 0; i < prev.length; i++) {
+                    // Simple deep check for the parts of the journal that trigger list re-renders
+                    if (prev[i].id !== curr[i].id ||
+                        prev[i].status !== curr[i].status ||
+                        prev[i].totalAmount !== curr[i].totalAmount ||
+                        prev[i].transactionCount !== curr[i].transactionCount) return false;
+                }
+                return true;
             })
         );
     }

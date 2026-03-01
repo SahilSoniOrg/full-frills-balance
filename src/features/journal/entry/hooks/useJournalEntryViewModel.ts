@@ -4,6 +4,7 @@ import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/us
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
+import { smsService } from '@/src/services/sms-service';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
@@ -58,18 +59,23 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
     const { accounts, isLoading: isLoadingAccounts } = useAccounts();
 
+    const smsId = params.smsId as string | undefined;
+
     const editor = useJournalEditor({
         journalId: params.journalId as string,
         initialMode,
         initialType,
         initialAmount: params.amount as string,
         initialDescription: params.notes as string,
-        smsId: params.smsId as string,
+        smsId,
         smsSender: params.smsSender as string,
         rawSmsBody: params.rawSmsBody as string,
         initialDate: params.initialDate as string,
         initialSourceId: params.sourceAccountId as string,
         initialDestinationId: params.destinationAccountId as string,
+        // M-9 fix: sms processing is a screen-level concern, not a journal editor concern.
+        // The hook calls this callback after a successful save without knowing what it does.
+        onAfterSave: smsId ? () => smsService.markSmsAsProcessed(smsId) : undefined,
         onSuccess: () => AppNavigation.back(),
     });
 

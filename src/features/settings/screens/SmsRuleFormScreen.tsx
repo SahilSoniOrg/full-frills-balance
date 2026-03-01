@@ -36,7 +36,7 @@ export default function SmsRuleFormScreen() {
                     setSourceAccountId(rule.sourceAccountId);
                     setCategoryAccountId(rule.categoryAccountId);
                     setIsActive(rule.isActive);
-                } catch (e) {
+                } catch {
                     toast.error('Failed to load rule');
                     router.back();
                 }
@@ -49,6 +49,17 @@ export default function SmsRuleFormScreen() {
 
     const handleSave = async () => {
         if (!isValid) return;
+
+        // H-2 fix: validate regex compilation to prevent saving invalid patterns
+        // that would later crash the background parsing loop
+        try {
+            new RegExp(senderMatch.trim(), 'i');
+            if (bodyMatch.trim()) new RegExp(bodyMatch.trim(), 'i');
+        } catch {
+            toast.error('Invalid Regex syntax in match fields');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             await smsService.saveAutoPostRule({
@@ -61,7 +72,7 @@ export default function SmsRuleFormScreen() {
             });
             toast.success('Rule saved');
             router.back();
-        } catch (e) {
+        } catch {
             toast.error('Failed to save rule');
         } finally {
             setIsSubmitting(false);
@@ -75,7 +86,7 @@ export default function SmsRuleFormScreen() {
             await smsService.deleteAutoPostRule(id);
             toast.success('Rule deleted');
             router.back();
-        } catch (e) {
+        } catch {
             toast.error('Failed to delete rule');
         } finally {
             setIsSubmitting(false);

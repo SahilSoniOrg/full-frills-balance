@@ -1,9 +1,14 @@
 import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { database } from '@/src/data/database/Database';
+import { JournalStatus } from '@/src/data/models/Journal';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { journalService } from '@/src/features/journal';
+// H-1 fix: use ledgerWriteService (services layer) instead of journalService
+// (feature layer) to avoid a service→feature import boundary violation.
+import { AppConfig } from '@/src/constants';
+import { ledgerWriteService } from '@/src/services/ledger';
 import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
 import { Q } from '@nozbe/watermelondb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -202,63 +207,61 @@ class SmsService {
                 // 1. Process Auto-Post Rules
                 if (activeRules.length > 0) {
                     for (const rule of activeRules) {
-                        try {
-                            const senderRegex = new RegExp(rule.senderMatch, 'i');
-                            const senderMatch = senderRegex.test(msg.address);
+                        // H-2 fix: ReDoS safety guard. Limit string length before matching to prevent
+                        // maliciously crafted complex regexes from hanging the JS thread.
+                        // Max sender length is 100, max body is 1000.
+                        const safeAddress = msg.address.substring(0, 100);
+                        const safeBody = msg.body.substring(0, 1000);
 
-                            let bodyMatch = true;
-                            if (rule.bodyMatch) {
-                                const bodyRegex = new RegExp(rule.bodyMatch, 'i');
-                                bodyMatch = bodyRegex.test(msg.body);
-                            }
+                        const senderRegex = new RegExp(rule.senderMatch, 'i');
+                        const senderMatch = senderRegex.test(safeAddress);
 
-                            if (senderMatch && bodyMatch) {
-                                // Rule matches! Auto-post this journal entry.
-                                logger.info(`Auto-posting SMS ${msg.id} using rule ${rule.id}`);
-                                const isExpense = parsed.type === 'debit';
-                                const lines = [
+                        let bodyMatch = true;
+                        if (rule.bodyMatch) {
+                            const bodyRegex = new RegExp(rule.bodyMatch, 'i');
+                            bodyMatch = bodyRegex.test(safeBody);
+                        }
+
+                        if (senderMatch && bodyMatch) {
+                            // Rule matches! Auto-post this journal entry.
+                            logger.info(`Auto-posting SMS ${msg.id} using rule ${rule.id}`);
+                            const isExpense = parsed.type === 'debit';
+
+                            const description = parsed.merchant
+                                ? `Auto-Posted: ${parsed.merchant}`
+                                : 'Auto-Posted SMS Transaction';
+
+                            const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+                            await ledgerWriteService.createJournal({
+                                journalDate: parsed.date || Date.now(),
+                                description,
+                                currencyCode,
+                                status: JournalStatus.POSTED,
+                                metadata: {
+                                    importSource: 'sms',
+                                    originalSmsId: parsed.id,
+                                    originalSmsSender: parsed.address,
+                                    originalSmsBody: parsed.rawBody,
+                                },
+                                transactions: [
                                     {
-                                        id: `src-${parsed.id}`,
                                         accountId: rule.sourceAccountId,
-                                        accountName: '', // not strictly needed by service, just UI type
-                                        accountType: 'ASSET' as any,
-                                        amount: parsed.amount.toString(),
+                                        amount: parsed.amount,
                                         transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
-                                        notes: '',
-                                        exchangeRate: ''
+                                        currencyCode,
                                     },
                                     {
-                                        id: `dst-${parsed.id}`,
                                         accountId: rule.categoryAccountId,
-                                        accountName: '',
-                                        accountType: 'EXPENSE' as any,
-                                        amount: parsed.amount.toString(),
+                                        amount: parsed.amount,
                                         transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
-                                        notes: '',
-                                        exchangeRate: ''
-                                    }
-                                ];
+                                        currencyCode,
+                                    },
+                                ],
+                            });
 
-                                const description = parsed.merchant
-                                    ? `Auto-Posted: ${parsed.merchant}`
-                                    : 'Auto-Posted SMS Transaction';
-
-                                await journalService.saveJournalEntry({
-                                    lines,
-                                    description,
-                                    journalDate: parsed.date || Date.now(),
-                                    smsId: parsed.id,
-                                    smsSender: parsed.address,
-                                    rawSmsBody: parsed.rawBody,
-                                    mode: 'import'
-                                });
-
-                                await this.markSmsAsProcessed(msg.id);
-                                isAutoPosted = true;
-                                break; // Stop evaluating rules
-                            }
-                        } catch (err) {
-                            logger.warn(`Rule parsing error for rule ${rule.id}`, { error: (err as Error).message });
+                            await this.markSmsAsProcessed(msg.id);
+                            isAutoPosted = true;
+                            break; // Stop evaluating rules
                         }
                     }
                 }

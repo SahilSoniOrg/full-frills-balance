@@ -231,6 +231,41 @@ export class TransactionRepository {
       .observeWithColumns(columns)
   }
 
+  /**
+   * Observe transactions within a date range.
+   * Use this instead of observeActive() when you only need a bounded window —
+   * avoids deserializing the entire transaction history across the bridge.
+   */
+  observeByDateRange(startDate: number, endDate?: number) {
+    const clauses: any[] = [
+      Q.experimentalJoinTables(['journals']),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('transaction_date', Q.gte(startDate))
+    ]
+
+    if (endDate !== undefined) {
+      clauses.push(Q.where('transaction_date', Q.lte(endDate)))
+    }
+
+    clauses.push(
+      Q.on('journals', [
+        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+        Q.where('deleted_at', Q.eq(null))
+      ])
+    )
+
+    return this.transactions
+      .query(...clauses)
+      .observeWithColumns([
+        'amount',
+        'account_id',
+        'transaction_date',
+        'journal_id',
+        'currency_code',
+        'transaction_type',
+      ])
+  }
+
   observeActiveCount(shouldThrottle: boolean = true) {
     return this.transactions
       .query(

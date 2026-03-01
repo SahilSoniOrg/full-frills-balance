@@ -219,13 +219,16 @@ export class InsightService {
         const lookbackDays = insightsConfig.lookbackDays;
         const ninetyDaysAgo = Date.now() - (lookbackDays * 24 * 60 * 60 * 1000);
 
+        // PERF: Scope to the lookback window only — never observe all transactions.
+        // ninetyDaysAgo is calculated once at observable construction time;
+        // if the app runs across a day boundary the window shifts on next refresh trigger.
         return combineLatest([
-            transactionRepository.observeActive(),
+            transactionRepository.observeByDateRange(ninetyDaysAgo),
             accountRepository.observeAll(),
-            plannedPaymentRepository.observeActive(), // Added for deduplication
+            plannedPaymentRepository.observeActive(), // For deduplication against planned payments
             this.refreshTrigger
         ]).pipe(
-            debounceTime(500), // Performance optimization
+            debounceTime(500),
             map(([transactions, accounts, activePlannedPayments]) => {
                 const accountMap = new Map(accounts.map(a => [a.id, a]));
                 const recentTransactions = transactions.filter(t => t.transactionDate >= ninetyDaysAgo);
@@ -324,7 +327,26 @@ export class InsightService {
 
                 currentWeekBySubcategory.forEach((amount, subcategory) => {
                     const historyTotal = totalBySubcategory.get(subcategory) || 0;
-                    const historyAverage = historyTotal / 12; // TODO: Calculate actual week count or move to config
+
+                    // M-2 fix: derive the actual number of *previous* weeks from the oldest
+                    // transaction timestamp in history, rather than hardcoding 12.
+                    // If we have fewer than MIN_WEEKS of history the baseline is unreliable —
+                    // skip the comparison to avoid noisy false-positives.
+                    const MIN_WEEKS = 4;
+                    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+                    const historicalTxs = previousWeeksTransactions.filter(
+                        t => accountMap.get(t.accountId)?.accountSubcategory === subcategory
+                    );
+                    const oldestDate = historicalTxs.length > 0
+                        ? Math.min(...historicalTxs.map(t => t.transactionDate))
+                        : null;
+                    const weeksOfHistory = oldestDate
+                        ? Math.max(1, (last7Days - oldestDate) / WEEK_MS)
+                        : 0;
+
+                    if (weeksOfHistory < MIN_WEEKS) return; // Not enough history for a reliable baseline
+
+                    const historyAverage = historyTotal / weeksOfHistory;
 
                     const spikeMultiplier = insightsConfig.spendingSpikeMultiplier;
                     if (historyAverage > 0 && amount > historyAverage * spikeMultiplier) {

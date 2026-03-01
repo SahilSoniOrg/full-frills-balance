@@ -165,6 +165,8 @@ export default class Account extends Model {
   static table = 'accounts'
   static associations = {
     transactions: { type: 'has_many', foreignKey: 'account_id' },
+    // Self-referential association used for direct child account queries (e.g., parent.subAccounts.fetch()).
+    // For deep hierarchy traversal, prefer getDescendantIdsFromList() which avoids N+1 DB queries.
     accounts: { type: 'has_many', foreignKey: 'parent_account_id' },
     account_metadata: { type: 'has_many', foreignKey: 'account_id' },
   } as const
@@ -178,9 +180,6 @@ export default class Account extends Model {
   @field('icon') icon?: string
   @field('order_num') orderNum?: number
 
-  @field('drift_delta') driftDelta?: number // For O(1) responsive historical edits
-  @field('drift_effective_date') driftEffectiveDate?: number // Earliest date affected by drift
-
   @date('created_at') createdAt!: Date
   @date('updated_at') updatedAt!: Date
   @date('deleted_at') deletedAt?: Date
@@ -190,3 +189,4 @@ export default class Account extends Model {
   @children('accounts') subAccounts!: Query<Account>
   @children('account_metadata') metadataRecords!: Query<AccountMetadata>
 }
+

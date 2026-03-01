@@ -29,7 +29,8 @@ describe('InsightService', () => {
         (accountRepository.observeByType as jest.Mock).mockReturnValue(of([]));
         (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
         (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(of([]));
-        (transactionRepository.observeActive as jest.Mock).mockReturnValue(of([]));
+        // C-2: insightService now uses observeByDateRange instead of observeActive.
+        (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
         (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
     });
 
@@ -81,15 +82,15 @@ describe('InsightService', () => {
 
             const now = Date.now();
             const threeDaysAgo = now - (3 * 24 * 60 * 60 * 1000);
-            const twoWeeksAgo = now - (14 * 24 * 60 * 60 * 1000);
+            // M-2 guard requires at least 4 weeks of history — put past transactions 5 weeks back
+            const fiveWeeksAgo = now - (35 * 24 * 60 * 60 * 1000);
 
-            // Set up a scenario where past spending was low, but recent spending across BOTH accounts is high
-            // Total history over 12 weeks = 120 (Avg 10/week)
-            // Spike multiplier is 1.5, so > 15 triggers spike
+            // History: both accounts spent 60 total, 5 weeks ago (avg ~12/week over 5 weeks)
+            // Current week: 50 total (~4x the average) — well above the 1.5x spike multiplier
             const mockTransactions = [
-                // Past transactions (Sum = 120)
-                { id: 't1', accountId: 'acc1', amount: 60, transactionDate: twoWeeksAgo, transactionType: 'DEBIT', currencyCode: 'USD', journalId: 'j1' },
-                { id: 't2', accountId: 'acc2', amount: 60, transactionDate: twoWeeksAgo, transactionType: 'DEBIT', currencyCode: 'USD', journalId: 'j2' },
+                // Past transactions (Sum = 120, ~5 weeks ago)
+                { id: 't1', accountId: 'acc1', amount: 60, transactionDate: fiveWeeksAgo, transactionType: 'DEBIT', currencyCode: 'USD', journalId: 'j1' },
+                { id: 't2', accountId: 'acc2', amount: 60, transactionDate: fiveWeeksAgo, transactionType: 'DEBIT', currencyCode: 'USD', journalId: 'j2' },
 
                 // Current week transactions (Sum = 50)
                 { id: 't3', accountId: 'acc1', amount: 20, transactionDate: threeDaysAgo, transactionType: 'DEBIT', currencyCode: 'USD', journalId: 'j3' },
@@ -97,7 +98,8 @@ describe('InsightService', () => {
             ];
 
             (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
-            (transactionRepository.observeActive as jest.Mock).mockReturnValue(of(mockTransactions));
+            // Use mockImplementation to ignore startDate/endDate args from observeByDateRange
+            (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of(mockTransactions));
 
             insightService.observePatterns().subscribe(patterns => {
                 expect(patterns).toContainEqual(

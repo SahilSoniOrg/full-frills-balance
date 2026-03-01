@@ -9,6 +9,7 @@
  */
 
 import { AppConfig } from '@/src/constants/app-config'
+import { schema } from '@/src/data/database/schema'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
@@ -18,6 +19,7 @@ import { accountingRebuildService } from '@/src/services/AccountingRebuildServic
 import { accountingService } from '@/src/utils/accountingService'
 import { logger } from '@/src/utils/logger'
 import { amountsAreEqual } from '@/src/utils/money'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export interface BalanceVerificationResult {
     accountId: string
@@ -232,8 +234,59 @@ export class IntegrityService {
         }
     }
 
+    // ─── Crash-flag helpers (H-6) ────────────────────────────────────────────────
+    private static readonly CRASH_FLAG_KEY = '@integrity_crash_flag'
+    private static readonly SCHEMA_VERSION_KEY = '@integrity_schema_version'
+
+    /**
+     * Returns true if the full balance-verification scan should run.
+     * Criteria:
+     *  - A crash flag exists (written by the global error handler before a crash).
+     *  - OR the stored schema version differs from the current one (migration happened).
+     */
+    private async shouldRunIntegrityCheck(): Promise<boolean> {
+        const [crashFlag, storedVersion] = await Promise.all([
+            AsyncStorage.getItem(IntegrityService.CRASH_FLAG_KEY),
+            AsyncStorage.getItem(IntegrityService.SCHEMA_VERSION_KEY),
+        ]);
+
+        const currentVersion = String(schema.version);
+
+        if (crashFlag !== null) {
+            logger.warn('[IntegrityService] Crash flag detected — running full integrity check.');
+            return true;
+        }
+        if (storedVersion !== currentVersion) {
+            logger.info(`[IntegrityService] Schema changed (${storedVersion} → ${currentVersion}) — running full integrity check.`);
+            // Update stored version proactively so a crash during check doesn't loop forever.
+            await AsyncStorage.setItem(IntegrityService.SCHEMA_VERSION_KEY, currentVersion);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Clears the crash flag after a successful integrity check.
+     */
+    private async clearCrashFlag(): Promise<void> {
+        await AsyncStorage.removeItem(IntegrityService.CRASH_FLAG_KEY);
+    }
+
+    /**
+     * Writes a crash flag. Call this from the global error handler / ErrorBoundary.
+     */
+    async writeCrashFlag(): Promise<void> {
+        await AsyncStorage.setItem(IntegrityService.CRASH_FLAG_KEY, Date.now().toString());
+    }
+
     /**
      * Runs startup integrity check and seeds defaults if database is empty.
+     *
+     * H-6 fix: The full balance verification is expensive (O(accounts × transactions)).
+     * We only run it when truly necessary:
+     *  - On first launch (no stored schema version → could be corrupted fresh install).
+     *  - When a crash flag was written by the previous session.
+     * Normal warm starts skip it entirely.
      */
     async runStartupCheck(): Promise<IntegrityCheckResult> {
         logger.info('[IntegrityService] Starting startup integrity check...')
@@ -243,6 +296,20 @@ export class IntegrityService {
             logger.info('[IntegrityService] No accounts found. Skipping default seeding (onboarding handles data creation).')
         }
 
+        const shouldRun = await this.shouldRunIntegrityCheck()
+        if (!shouldRun) {
+            logger.info('[IntegrityService] Skipping balance verification (no crash flag, schema unchanged).')
+            return {
+                totalAccounts: 0,
+                accountsChecked: 0,
+                discrepanciesFound: 0,
+                repairsAttempted: 0,
+                repairsSuccessful: 0,
+                results: [],
+            }
+        }
+
+        logger.info('[IntegrityService] Running full balance verification...')
         const results = await this.verifyAllAccountBalances()
         const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted)
 
@@ -262,6 +329,9 @@ export class IntegrityService {
                 repairsSuccessful++
             }
         }
+
+        // Clear the crash flag now that we have successfully verified.
+        await this.clearCrashFlag()
 
         const summary: IntegrityCheckResult = {
             totalAccounts: results.length,

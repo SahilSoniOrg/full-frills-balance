@@ -17,7 +17,7 @@ interface RebuildQueueConfig {
 
 const DEFAULT_CONFIG: RebuildQueueConfig = {
     debounceMs: process.env.NODE_ENV === 'test' ? 0 : 500,
-    maxBatchSize: 10,
+    maxBatchSize: 50,
     retryLimit: 3,
     retryDelayMs: process.env.NODE_ENV === 'test' ? 0 : 2000,
 }

@@ -7,7 +7,6 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import { smsService } from '@/src/services/sms-service';
 import { JournalEntryLine } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
@@ -27,6 +26,12 @@ export interface UseJournalEditorOptions {
     smsId?: string;
     smsSender?: string;
     rawSmsBody?: string;
+    /**
+     * M-9 fix: callback to run after a successful save. Replaces the previous
+     * direct smsService.markSmsAsProcessed call — keeps this hook unaware of
+     * SMS concerns and avoids a feature→service boundary violation.
+     */
+    onAfterSave?: () => Promise<void>;
     onSuccess?: () => void;
 }
 
@@ -278,9 +283,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 return result;
             }
 
-            if (options.smsId) {
-                await smsService.markSmsAsProcessed(options.smsId);
-            }
+            await options.onAfterSave?.();
 
             options.onSuccess?.();
             return result;

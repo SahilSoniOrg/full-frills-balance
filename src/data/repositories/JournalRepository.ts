@@ -5,6 +5,8 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
 import dayjs from 'dayjs'
 import { map, of } from 'rxjs'
+// Imported here so the flush runs synchronously outside the write block —
+// before any observer sees the new transaction rows.
 
 export interface CreateJournalData {
   journalDate: number
@@ -260,6 +262,8 @@ export class JournalRepository {
 
     const oldTransactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch()
 
+    // C-1 fix reverted: return database.write directly.
+    // Ensure the caller delegates flush triggering to the domain service layer.
     return await database.write(async () => {
       const now = new Date()
 
@@ -307,6 +311,25 @@ export class JournalRepository {
 
       return existingJournal
     })
+  }
+
+  /**
+   * M-3 fix: Patches only the journal status field.
+   * Cheaper than updateJournalWithTransactions — no transaction soft-delete/re-create,
+   * no balance churn. Use this whenever only the status needs to change.
+   */
+  async updateJournalStatus(journalId: string, status: JournalStatus): Promise<Journal> {
+    const journal = await this.find(journalId)
+    if (!journal) throw new Error(`Journal ${journalId} not found`)
+
+    await database.write(async () => {
+      await journal.update((record) => {
+        record.status = status
+        record.updatedAt = new Date()
+      })
+    })
+
+    return journal
   }
 
   async deleteJournal(journalId: string): Promise<void> {

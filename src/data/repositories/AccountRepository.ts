@@ -222,7 +222,19 @@ export class AccountRepository {
     })
   }
 
-  async getDescendantIds(accountId: string): Promise<string[]> {
+  /**
+   * Returns all descendant account IDs for the given account.
+   *
+   * M-5 fix: pass `allAccounts` if you already have the full list to avoid N+1 DB
+   * queries. When omitted the old recursive-fetch behaviour is preserved.
+   */
+  async getDescendantIds(accountId: string, allAccounts?: Account[]): Promise<string[]> {
+    if (allAccounts) {
+      // In-memory BFS — O(n), zero DB round-trips.
+      return this.getDescendantIdsFromList(accountId, allAccounts);
+    }
+
+    // Legacy path: fetch each level from the DB (retained for backward compat).
     const children = await this.accounts.query(
       Q.where('parent_account_id', accountId),
       Q.where('deleted_at', Q.eq(null))
@@ -234,6 +246,33 @@ export class AccountRepository {
       ids = [...ids, ...descendantIds]
     }
     return ids
+  }
+
+  /**
+   * Pure in-memory BFS traversal given a pre-fetched flat account list.
+   * Zero DB queries — call this whenever you already have all accounts in memory.
+   */
+  getDescendantIdsFromList(accountId: string, allAccounts: Account[]): string[] {
+    const childrenMap = new Map<string, string[]>();
+    for (const acc of allAccounts) {
+      if (acc.parentAccountId && !acc.deletedAt) {
+        const arr = childrenMap.get(acc.parentAccountId) ?? [];
+        arr.push(acc.id);
+        childrenMap.set(acc.parentAccountId, arr);
+      }
+    }
+
+    const result: string[] = [];
+    const queue: string[] = [accountId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const children = childrenMap.get(current) ?? [];
+      for (const childId of children) {
+        result.push(childId);
+        queue.push(childId);
+      }
+    }
+    return result;
   }
 
   async hasChildren(accountId: string): Promise<boolean> {
