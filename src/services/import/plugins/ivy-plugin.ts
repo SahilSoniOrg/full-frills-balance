@@ -389,7 +389,7 @@ export const ivyPlugin: ImportPlugin = {
             if (!ivyCat) continue;
 
             const id = categoryAccountMap.get(key)!;
-            const name = `${ivyCat.name} - ${currency}`;
+            const name = `${ivyCat.name} (${currency})`;
 
             let type = AccountType.EXPENSE;
             if (stats.incomeCount > stats.expenseCount) {
@@ -465,6 +465,13 @@ export const ivyPlugin: ImportPlugin = {
             const timestamp = tx.dateTime ? new Date(tx.dateTime).getTime() : Date.now();
             const description = tx.title || tx.description || (tx.type === 'TRANSFER' ? 'Transfer' : 'Transaction');
 
+            // Check for special system transactions
+            const descLower = description.toLowerCase();
+            const catLower = tx.categoryId ? ivyCategoryLookup.get(tx.categoryId)?.name?.toLowerCase() || '' : '';
+
+            const isOpeningBalance = descLower.includes('opening balance') || catLower.includes('opening balance');
+            const isAdjustBalance = descLower.includes('adjust balance') || catLower.includes('adjust balance');
+
             let sourceId: string | undefined;
             let destId: string | undefined;
             let displayType = 'EXPENSE';
@@ -474,7 +481,47 @@ export const ivyPlugin: ImportPlugin = {
                 currencyCode = rawIvyAccountCurrency.get(tx.accountId)!;
             }
 
-            if (tx.type === 'TRANSFER') {
+            if (isOpeningBalance || isAdjustBalance) {
+                // Route to the dedicated Equity account based on type
+                const accountConfig = isOpeningBalance
+                    ? AppConfig.systemAccounts.openingBalances
+                    : AppConfig.systemAccounts.balanceCorrections;
+
+                const name = `${accountConfig.namePrefix} (${currencyCode})`;
+                const key = `SYSTEM_${isOpeningBalance ? 'OPENING_BALANCE' : 'BALANCE_CORRECTION'}:::${currencyCode}`;
+
+                if (!categoryAccountMap.has(key)) {
+                    categoryAccountMap.set(key, generateId());
+                    accountCurrencyMap.set(categoryAccountMap.get(key)!, currencyCode);
+
+                    // Add this to our accounts to be created
+                    accountImports.push({
+                        id: categoryAccountMap.get(key)!,
+                        name,
+                        accountType: AccountType.EQUITY,
+                        currencyCode,
+                        description: accountConfig.description,
+                        icon: accountConfig.icon,
+                        orderNum: accountImports.length + 1
+                    });
+                }
+
+                // For INCOME (positive adjustment): money comes FROM equity TO account
+                // For EXPENSE (negative adjustment): money goes FROM account TO equity
+                if (tx.type === 'INCOME') {
+                    sourceId = categoryAccountMap.get(key);
+                    destId = accountMap.get(tx.accountId);
+                    displayType = 'INCOME';
+                } else {
+                    sourceId = accountMap.get(tx.accountId);
+                    destId = categoryAccountMap.get(key);
+                    displayType = 'EXPENSE';
+                }
+
+                if (!sourceId || !destId) {
+                    skippedItems.push({ id: tx.id, reason: `Missing account mapping for system tx (${key})`, description: txDesc });
+                }
+            } else if (tx.type === 'TRANSFER') {
                 sourceId = accountMap.get(tx.accountId);
                 destId = accountMap.get(tx.toAccountId || '');
                 displayType = 'TRANSFER';
