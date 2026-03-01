@@ -7,7 +7,9 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { RecurringPattern } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -22,7 +24,7 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
-import { debounceTime, map, switchMap } from 'rxjs/operators';
+import { debounceTime, switchMap } from 'rxjs/operators';
 
 const DEFAULT_INSIGHTS_CONFIG = {
     lookbackDays: 90,
@@ -83,8 +85,23 @@ export class InsightService {
             this.observePatterns(),
             accountRepository.observeAll(),
             journalRepository.observePlannedForMonth(dayjs().format('YYYY-MM')),
-        ] as [Observable<Account[]>, Observable<Account[]>, Observable<Budget[]>, Observable<PlannedPayment[]>, Observable<Pattern[]>, Observable<Account[]>, Observable<Journal[]>]
+            // BalanceService derives from running_balance + active journal status;
+            // observe both so safe-to-spend refreshes after async rebuild/status-only updates.
+            transactionRepository.observeActiveWithColumns(['running_balance']),
+            journalRepository.observeStatusMeta(),
+        ] as [
+            Observable<Account[]>,
+            Observable<Account[]>,
+            Observable<Budget[]>,
+            Observable<PlannedPayment[]>,
+            Observable<Pattern[]>,
+            Observable<Account[]>,
+            Observable<Journal[]>,
+            Observable<unknown[]>,
+            Observable<Journal[]>
+        ]
         ).pipe(
+            debounceTime(250),
             switchMap(([assets, liabilities, budgets, plannedPayments, patterns, allAccounts, plannedJournals]) => {
                 const liquidAssets = assets.filter(a => isLiquidAssetSubcategory(a.accountSubcategory));
                 const liquidLiabilities = liabilities.filter(l => isLiquidLiabilitySubcategory(l.accountSubcategory));
@@ -229,66 +246,74 @@ export class InsightService {
             this.refreshTrigger
         ]).pipe(
             debounceTime(500),
-            map(([transactions, accounts, activePlannedPayments]) => {
+            switchMap(async ([_, accounts, activePlannedPayments]) => {
                 const accountMap = new Map(accounts.map(a => [a.id, a]));
-                const recentTransactions = transactions.filter(t => t.transactionDate >= ninetyDaysAgo);
+                const minCount = insightsConfig.minRecurringCount;
 
-                const expenseTransactions = recentTransactions.filter(t => {
-                    const acc = accountMap.get(t.accountId);
-                    return acc?.accountType === AccountType.EXPENSE;
-                });
-
+                // 1. Subscription Amnesia Detection (SQL-optimized)
+                const recurringCandidates: RecurringPattern[] = await transactionRawRepository.getRecurringPatternsRaw(
+                    ninetyDaysAgo,
+                    minCount
+                );
                 const patterns: Pattern[] = [];
 
-                // 1. Subscription Amnesia Detection
-                const expenseGroups = new Map<string, typeof expenseTransactions>();
-                expenseTransactions.forEach(t => {
-                    const key = `${Math.abs(t.amount)}_${t.accountId}`;
-                    const group = expenseGroups.get(key) || [];
-                    group.push(t);
-                    expenseGroups.set(key, group);
-                });
+                for (const candidate of recurringCandidates) {
+                    const acc = accountMap.get(candidate.accountId);
+                    if (acc?.accountType !== AccountType.EXPENSE) continue;
 
-                expenseGroups.forEach((group, key) => {
-                    const minCount = insightsConfig.minRecurringCount;
-                    if (group.length >= minCount) {
-                        group.sort((a, b) => a.transactionDate - b.transactionDate);
-                        const intervals = [];
-                        for (let i = 1; i < group.length; i++) {
-                            intervals.push(group[i].transactionDate - group[i - 1].transactionDate);
-                        }
+                    // Fetch the actual transactions for this candidate group more precisely 
+                    // to validate intervals. This is still O(1) queries per pattern vs O(N) globally.
+                    const journalIds = (candidate.journalIds || '').split(',');
+                    const transactions = await transactionRepository.findByJournals(journalIds);
 
-                        const isRecurring = intervals.every(interval => {
-                            const days = interval / (24 * 60 * 60 * 1000);
-                            const minD = insightsConfig.minRecurringIntervalDays;
-                            const maxD = insightsConfig.maxRecurringIntervalDays;
-                            const minA = insightsConfig.minAnnualRecurringIntervalDays;
-                            const maxA = insightsConfig.maxAnnualRecurringIntervalDays;
-                            return (days >= minD && days <= maxD) || (days >= minA && days <= maxA);
-                        });
-
-                        if (isRecurring) {
-                            const amount = Math.abs(group[0].amount);
-                            const account = accountMap.get(group[0].accountId);
-                            const accountName = account?.name || 'Unknown Spending';
-                            const formattedAmount = CurrencyFormatter.format(amount, group[0].currencyCode);
-
-                            patterns.push({
-                                id: `sub_${key}`,
-                                type: 'subscription-amnesiac',
-                                severity: amount > insightsConfig.spendingSpikeSeverityThreshold ? 'high' : 'medium',
-                                message: 'Subscription Amnesia',
-                                description: `You have a recurring payment of ${formattedAmount} in "${accountName}".`,
-                                suggestion: 'Review this regular expense to see if it still provides value.',
-                                journalIds: Array.from(new Set(group.map(t => t.journalId))),
-                                amount,
-                                currencyCode: group[0].currencyCode,
-                                accountSubcategory: account?.accountSubcategory,
-                                accountName,
-                            });
-                        }
+                    transactions.sort((a, b) => a.transactionDate - b.transactionDate);
+                    const intervals = [];
+                    for (let i = 1; i < transactions.length; i++) {
+                        intervals.push(transactions[i].transactionDate - transactions[i - 1].transactionDate);
                     }
-                });
+
+                    const isRecurring = intervals.every(interval => {
+                        const days = interval / (24 * 60 * 60 * 1000);
+                        const minD = insightsConfig.minRecurringIntervalDays;
+                        const maxD = insightsConfig.maxRecurringIntervalDays;
+                        const minA = insightsConfig.minAnnualRecurringIntervalDays;
+                        const maxA = insightsConfig.maxAnnualRecurringIntervalDays;
+                        return (days >= minD && days <= maxD) || (days >= minA && days <= maxA);
+                    });
+
+                    if (isRecurring) {
+                        const amount = Math.abs(candidate.amount);
+                        const accountName = acc.name || 'Unknown Spending';
+                        const formattedAmount = CurrencyFormatter.format(amount, candidate.currencyCode);
+
+                        patterns.push({
+                            id: `sub_${candidate.amount}_${candidate.accountId}`,
+                            type: 'subscription-amnesiac',
+                            severity: amount > insightsConfig.spendingSpikeSeverityThreshold ? 'high' : 'medium',
+                            message: 'Subscription Amnesia',
+                            description: `You have a recurring payment of ${formattedAmount} in "${accountName}".`,
+                            suggestion: 'Review this regular expense to see if it still provides value.',
+                            journalIds: journalIds,
+                            amount,
+                            currencyCode: candidate.currencyCode,
+                            accountSubcategory: acc.accountSubcategory,
+                            accountName,
+                        });
+                    }
+                }
+
+                // 2. Slow Leak Detection (Temporary fallback to in-memory)
+                // For slow leak, we still need recent transactions to compare against history.
+                // We'll fetch only the transactions we need for the spike window + historical baseline.
+                const spikeWindow = insightsConfig.spikeWindowDays;
+                const last7Days = Date.now() - (spikeWindow * 24 * 60 * 60 * 1000);
+
+                // Fetch only expense transactions for lookback window
+                const expenseTransactions = await transactionRepository.findByAccountsAndDateRange(
+                    accounts.filter(a => a.accountType === AccountType.EXPENSE).map(a => a.id),
+                    ninetyDaysAgo,
+                    Date.now()
+                );
 
                 // Deduplicate subscription patterns against manual Planned Payments
                 const finalPatterns = patterns.filter((p: Pattern) => {
@@ -305,8 +330,6 @@ export class InsightService {
                 });
 
                 // 2. Slow Leak Detection (Spike in spending categories)
-                const spikeWindow = insightsConfig.spikeWindowDays;
-                const last7Days = Date.now() - (spikeWindow * 24 * 60 * 60 * 1000);
                 const currentWeekTransactions = expenseTransactions.filter(t => t.transactionDate >= last7Days);
                 const previousWeeksTransactions = expenseTransactions.filter(t => t.transactionDate < last7Days);
 

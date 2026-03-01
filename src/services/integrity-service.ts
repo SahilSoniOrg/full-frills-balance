@@ -9,17 +9,24 @@
  */
 
 import { AppConfig } from '@/src/constants/app-config'
+import { database } from '@/src/data/database/Database'
 import { schema } from '@/src/data/database/schema'
+import Account from '@/src/data/models/Account'
+import BalanceSnapshot from '@/src/data/models/BalanceSnapshot'
+import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
-import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository'
+import { balanceSnapshotRepository, SnapshotData } from '@/src/data/repositories/BalanceSnapshotRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository'
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService'
 import { accountingService } from '@/src/utils/accountingService'
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { logger } from '@/src/utils/logger'
 import { amountsAreEqual } from '@/src/utils/money'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { getRawAdapter } from '../data/database/DatabaseUtils'
 
 export interface BalanceVerificationResult {
     accountId: string
@@ -47,36 +54,32 @@ export interface IntegrityCheckResult {
 
 export class IntegrityService {
     /**
-     * Computes account balance from scratch by iterating all transactions.
+     * Computes account balance from scratch.
      * 
-     * Optimized: if a balance snapshot exists before cutoffDate, we use it as
-     * the starting point (absoluteBalance) and only iterate subsequent transactions.
-     * This reduces the scan from O(N_total) to O(N_since_last_checkpoint).
+     * Optimized: Uses a raw SQL aggregate (SUM) if available on the adapter, 
+     * otherwise falls back to the ORM-based iteration.
      */
     async computeBalanceFromTransactions(accountId: string, cutoffDate?: number): Promise<number> {
         const account = await accountRepository.find(accountId)
-        if (!account) {
-            throw new Error(`Account ${accountId} not found`)
-        }
+        if (!account) throw new Error(`Account ${accountId} not found`)
 
         const effectiveCutoff = cutoffDate ?? Date.now()
         const precision = await currencyRepository.getPrecision(account.currencyCode)
 
-        // Try to find the latest snapshot before the cutoff as a checkpoint
+        // Try to find the latest snapshot as a checkpoint
         const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, effectiveCutoff)
 
-        let balance = 0
-        let startDate = 0
+        const startBalance = snapshot?.absoluteBalance || 0;
+        const startDate = snapshot?.transactionDate || 0;
 
-        if (snapshot) {
-            // Start from the snapshot's known-good balance
-            balance = snapshot.absoluteBalance
-            startDate = snapshot.transactionDate
-            logger.debug(
-                `[IntegrityService] Using snapshot at ${startDate} as base ` +
-                `(balance=${balance}) for account ${accountId}`
-            )
+        // Attempt raw SQL optimization first (O(1) memory, O(N) DB scan)
+        const rawResult = await this.computeBalanceRaw(account, effectiveCutoff, snapshot)
+        if (rawResult !== null) {
+            return startBalance + rawResult
         }
+
+        // --- Fallback Path (ORM-based, O(N) memory) ---
+        logger.debug(`[IntegrityService] Falling back to ORM balance computation for ${account.name}`)
 
         // Only iterate delta transactions after the snapshot checkpoint
         let transactions = await transactionRepository.findByAccount(accountId, undefined, {
@@ -95,11 +98,11 @@ export class IntegrityService {
             if (snapshotIdx !== -1) {
                 sortedAsc = sortedAsc.slice(snapshotIdx + 1);
             } else {
-                // Fallback for edge cases where snapshot transaction is missing
                 sortedAsc = sortedAsc.filter(tx => tx.transactionDate > startDate);
             }
         }
 
+        let balance = startBalance
         for (const tx of sortedAsc) {
             balance = accountingService.calculateNewBalance(
                 balance,
@@ -111,6 +114,78 @@ export class IntegrityService {
         }
 
         return balance
+    }
+
+    /**
+     * Uses raw SQL to compute the SUM of transaction impacts.
+     * Returns null if raw SQL is not supported.
+     */
+    private async computeBalanceRaw(account: Account, cutoffDate: number, snapshot: SnapshotData | BalanceSnapshot | null): Promise<number | null> {
+        const sqlAdapter = getRawAdapter(database)
+        if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') return null
+
+        // SQL math logic mirroring getBalanceImpactMultiplier
+        // Asset/Expense: Debit=+1, Credit=-1
+        // Liability/Equity/Income: Debit=-1, Credit=+1
+        const isNormalDebit = ['ASSET', 'EXPENSE'].includes(account.accountType)
+
+        const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+
+        let sql = `
+                SELECT SUM(
+                    CASE 
+                        WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN (CASE WHEN ? = 1 THEN t.amount ELSE -t.amount END)
+                        WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN (CASE WHEN ? = 1 THEN -t.amount ELSE t.amount END)
+                        ELSE 0
+                    END
+                ) as delta
+                FROM transactions t
+                JOIN journals j ON t.journal_id = j.id
+                WHERE t.account_id = ?
+                  AND t.deleted_at IS NULL
+                  AND j.deleted_at IS NULL
+                  AND j.status IN (${activeStatusesStr})
+                  AND t.transaction_date <= ?
+        `
+
+        // Parameters: isNormalDebit(1/0), isNormalDebit(1/0), accountId, cutoffDate
+        const args: Array<string | number> = [
+            isNormalDebit ? 1 : 0,
+            isNormalDebit ? 1 : 0,
+            account.id,
+            cutoffDate,
+        ]
+
+        if (snapshot?.transactionId) {
+            // Strictly include only rows after the checkpoint transaction, not after snapshot-row creation.
+            sql += `
+              AND (
+                  t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
+                  OR (
+                      t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
+                      AND (
+                          t.created_at > (SELECT created_at FROM transactions WHERE id = ?)
+                          OR (t.created_at = (SELECT created_at FROM transactions WHERE id = ?) AND t.id > ?)
+                      )
+                  )
+              )
+            `
+            args.push(
+                snapshot.transactionId,
+                snapshot.transactionId,
+                snapshot.transactionId,
+                snapshot.transactionId,
+                snapshot.transactionId
+            )
+        }
+
+        try {
+            const rows = await transactionRawRepository.queryRaw<{ delta: number }>(sql, args)
+            return rows[0]?.delta || 0
+        } catch (error) {
+            logger.error(`[IntegrityService] Failed to compute raw balance for account ${account.id}`, error)
+            return null
+        }
     }
 
     /**
@@ -127,9 +202,9 @@ export class IntegrityService {
 
         const precision = await currencyRepository.getPrecision(account.currencyCode)
 
-        // 1. Get the "Cached" balance (the running_balance of the latest transaction)
-        const latestTx = await transactionRepository.findLatestForAccount(accountId, cutoffDate)
-        const cachedBalance = latestTx?.runningBalance || 0
+        // 1. Get the "Cached" balance (the actual running_balance column of the latest transaction)
+        const latestBalances = await transactionRawRepository.getLatestBalancesRaw([accountId], cutoffDate);
+        const cachedBalance = latestBalances.get(accountId) || 0;
 
         // 2. Compute the "Real" balance using the snapshot-optimized path
         const computedBalance = await this.computeBalanceFromTransactions(accountId, cutoffDate)
@@ -234,49 +309,62 @@ export class IntegrityService {
         }
     }
 
-    // ─── Crash-flag helpers (H-6) ────────────────────────────────────────────────
-    private static readonly CRASH_FLAG_KEY = '@integrity_crash_flag'
+    // ─── Schema-version guard ────────────────────────────────────────────────────
     private static readonly SCHEMA_VERSION_KEY = '@integrity_schema_version'
 
     /**
      * Returns true if the full balance-verification scan should run.
-     * Criteria:
-     *  - A crash flag exists (written by the global error handler before a crash).
-     *  - OR the stored schema version differs from the current one (migration happened).
+     * Runs when the stored schema version differs from the current one (i.e. after a migration).
      */
     private async shouldRunIntegrityCheck(): Promise<boolean> {
-        const [crashFlag, storedVersion] = await Promise.all([
-            AsyncStorage.getItem(IntegrityService.CRASH_FLAG_KEY),
-            AsyncStorage.getItem(IntegrityService.SCHEMA_VERSION_KEY),
-        ]);
-
+        const storedVersion = await AsyncStorage.getItem(IntegrityService.SCHEMA_VERSION_KEY);
         const currentVersion = String(schema.version);
 
-        if (crashFlag !== null) {
-            logger.warn('[IntegrityService] Crash flag detected — running full integrity check.');
-            return true;
-        }
         if (storedVersion !== currentVersion) {
             logger.info(`[IntegrityService] Schema changed (${storedVersion} → ${currentVersion}) — running full integrity check.`);
-            // Update stored version proactively so a crash during check doesn't loop forever.
             await AsyncStorage.setItem(IntegrityService.SCHEMA_VERSION_KEY, currentVersion);
             return true;
         }
         return false;
     }
 
-    /**
-     * Clears the crash flag after a successful integrity check.
-     */
-    private async clearCrashFlag(): Promise<void> {
-        await AsyncStorage.removeItem(IntegrityService.CRASH_FLAG_KEY);
-    }
 
     /**
-     * Writes a crash flag. Call this from the global error handler / ErrorBoundary.
+     * Forces a full balance verification and repair, regardless of crash flag or schema version.
+     * Use this for **manual** invocations (e.g. the Settings "Fix Integrity Issues" button).
+     * Unlike runStartupCheck(), this always scans every account.
      */
-    async writeCrashFlag(): Promise<void> {
-        await AsyncStorage.setItem(IntegrityService.CRASH_FLAG_KEY, Date.now().toString());
+    async forceRunCheck(): Promise<IntegrityCheckResult> {
+        logger.info('[IntegrityService] Force-running full balance verification (manual trigger)...')
+
+        const results = await this.verifyAllAccountBalances()
+        const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted)
+
+        let repairsAttempted = 0
+        let repairsSuccessful = 0
+
+        for (const discrepancy of discrepancies) {
+            logger.warn(
+                `[IntegrityService] Balance discrepancy for ${discrepancy.accountName}: ` +
+                `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}` +
+                (discrepancy.snapshotCorrupted ? ' [snapshot corrupted]' : '')
+            )
+
+            repairsAttempted++
+            const success = await this.repairAccountBalance(discrepancy.accountId)
+            if (success) {
+                repairsSuccessful++
+            }
+        }
+
+        return {
+            totalAccounts: results.length,
+            accountsChecked: results.length,
+            discrepanciesFound: discrepancies.length,
+            repairsAttempted,
+            repairsSuccessful,
+            results,
+        }
     }
 
     /**
@@ -329,9 +417,6 @@ export class IntegrityService {
                 repairsSuccessful++
             }
         }
-
-        // Clear the crash flag now that we have successfully verified.
-        await this.clearCrashFlag()
 
         const summary: IntegrityCheckResult = {
             totalAccounts: results.length,

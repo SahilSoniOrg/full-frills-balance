@@ -12,7 +12,7 @@ jest.mock('@/src/data/repositories/ImportRepository', () => ({
 jest.mock('@/src/services/integrity-service', () => ({
     integrityService: {
         resetDatabase: jest.fn().mockResolvedValue(true),
-        runStartupCheck: jest.fn().mockResolvedValue({ discrepanciesFound: 0, repairsSuccessful: true }),
+        forceRunCheck: jest.fn().mockResolvedValue({ discrepanciesFound: 0, repairsSuccessful: 0 }),
     }
 }));
 

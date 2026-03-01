@@ -2,8 +2,10 @@ import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountType } from '@/src/data/models/Account';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 
@@ -51,9 +53,44 @@ export class ReportService {
      * Aggregates expenses by account for a period.
      */
     async getExpenseBreakdown(startDate: number, endDate: number, targetCurrency?: string): Promise<ExpenseCategory[]> {
-        const { currency, expenseAccounts } = await this.getReportAccounts(targetCurrency);
-        const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, expenseAccounts);
-        return this.buildBreakdown(expenseAccounts, convertedTransactions, AccountType.EXPENSE);
+        return this.getBreakdownInternal(AccountType.EXPENSE, startDate, endDate, targetCurrency);
+    }
+
+    /**
+     * Aggregates income by account for a period.
+     */
+    async getIncomeBreakdown(startDate: number, endDate: number, targetCurrency?: string): Promise<ExpenseCategory[]> {
+        return this.getBreakdownInternal(AccountType.INCOME, startDate, endDate, targetCurrency);
+    }
+
+    private async getBreakdownInternal(type: AccountType, startDate: number, endDate: number, targetCurrency?: string): Promise<ExpenseCategory[]> {
+        const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(targetCurrency);
+        const accounts = type === AccountType.INCOME ? incomeAccounts : expenseAccounts;
+        const accountIds = accounts.map(a => a.id);
+        const rawDeltas = await transactionRawRepository.getAccountDeltasGroupedRaw(accountIds, startDate, endDate);
+
+        if (rawDeltas.length === 0 && accountIds.length > 0) {
+            const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, accounts);
+            const sums = new Map<string, number>();
+            for (const tx of convertedTransactions) {
+                const current = sums.get(tx.accountId) || 0;
+                const amount = type === AccountType.EXPENSE
+                    ? (tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount)
+                    : (tx.transactionType === TransactionType.CREDIT ? tx.amount : -tx.amount);
+                sums.set(tx.accountId, current + amount);
+            }
+            return this.buildBreakdownFromSums(accounts, sums);
+        }
+
+        const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
+        const sums = new Map<string, number>();
+
+        for (const d of normalized) {
+            const amount = d.delta;
+            sums.set(d.accountId, (sums.get(d.accountId) || 0) + amount);
+        }
+
+        return this.buildBreakdownFromSums(accounts, sums);
     }
 
     /**
@@ -61,13 +98,41 @@ export class ReportService {
      */
     async getIncomeVsExpense(startDate: number, endDate: number, targetCurrency?: string): Promise<{ income: number, expense: number }> {
         const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(targetCurrency);
-        const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, [...incomeAccounts, ...expenseAccounts]);
-        return this.buildIncomeVsExpenseFromConverted(convertedTransactions);
+        const allIds = [...incomeAccounts, ...expenseAccounts].map(a => a.id);
+        const rawDeltas = await transactionRawRepository.getAccountDeltasGroupedRaw(allIds, startDate, endDate);
+
+        if (rawDeltas.length === 0 && allIds.length > 0) {
+            const convertedTransactions = await this.getConvertedReportTransactions(
+                startDate,
+                endDate,
+                currency,
+                [...incomeAccounts, ...expenseAccounts]
+            );
+            return this.buildIncomeVsExpenseFromConverted(convertedTransactions);
+        }
+
+        const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
+
+        const accountTypeMap = new Map([...incomeAccounts, ...expenseAccounts].map(a => [a.id, a.accountType]));
+        let income = 0;
+        let expense = 0;
+
+        for (const d of normalized) {
+            const type = accountTypeMap.get(d.accountId);
+            if (type === AccountType.INCOME) {
+                income += d.delta;
+            } else if (type === AccountType.EXPENSE) {
+                expense += d.delta;
+            } else {
+                logger.error(`[ReportService] Unknown account type for report: ${type} (ID: ${d.accountId})`);
+            }
+        }
+
+        return { income, expense };
     }
 
     /**
      * Calculates Income vs Expense from an in-memory transaction list.
-     * Useful for reactive hooks that already subscribe to transactions.
      */
     async getIncomeVsExpenseFromTransactions(
         transactions: Transaction[],
@@ -85,13 +150,11 @@ export class ReportService {
         const conversions = await Promise.all(transactions.map(async (tx) => {
             if (tx.transactionDate < startDate || tx.transactionDate > endDate) return null;
             const acc = accountMap.get(tx.accountId);
-            if (!acc) return null;
-            if (acc.accountType !== AccountType.INCOME && acc.accountType !== AccountType.EXPENSE) return null;
+            if (!acc || (acc.accountType !== AccountType.INCOME && acc.accountType !== AccountType.EXPENSE)) return null;
 
-            const txCurrency = tx.currencyCode || acc.currencyCode || currency;
             const { convertedAmount } = await exchangeRateService.convert(
                 tx.amount,
-                txCurrency,
+                tx.currencyCode || acc.currencyCode || currency,
                 currency
             );
 
@@ -115,48 +178,159 @@ export class ReportService {
     }
 
     /**
-     * Aggregates income by account for a period.
-     */
-    async getIncomeBreakdown(startDate: number, endDate: number, targetCurrency?: string): Promise<ExpenseCategory[]> {
-        const { currency, incomeAccounts } = await this.getReportAccounts(targetCurrency);
-        const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, incomeAccounts);
-        return this.buildBreakdown(incomeAccounts, convertedTransactions, AccountType.INCOME);
-    }
-
-    /**
      * Calculates Income vs Expense history bucketed by month or day.
      */
     async getIncomeVsExpenseHistory(startDate: number, endDate: number, targetCurrency?: string): Promise<IncomeVsExpense[]> {
         const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(targetCurrency);
-        const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, [...incomeAccounts, ...expenseAccounts]);
-        return this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate);
+        const rawDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(
+            [...incomeAccounts, ...expenseAccounts].map(a => a.id),
+            startDate,
+            endDate
+        );
+
+        if (rawDeltas.length === 0 && (incomeAccounts.length + expenseAccounts.length) > 0) {
+            const convertedTransactions = await this.getConvertedReportTransactions(
+                startDate,
+                endDate,
+                currency,
+                [...incomeAccounts, ...expenseAccounts]
+            );
+            return this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate);
+        }
+
+        const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
+        const historyMap = this.initializeHistoryMap(startDate, endDate);
+        const { bucketUnit } = this.getHistoryConfig(startDate, endDate);
+
+        for (const d of normalized) {
+            const bucketKey = dayjs(d.dayStart).startOf(bucketUnit).valueOf();
+            const bucket = historyMap.get(bucketKey);
+            if (!bucket) continue;
+
+            if (d.accountType === AccountType.INCOME) {
+                bucket.income += d.delta;
+            } else if (d.accountType === AccountType.EXPENSE) {
+                bucket.expense += d.delta;
+            }
+        }
+
+        return Array.from(historyMap.values()).sort((a, b) => a.startDate - b.startDate);
     }
 
     /**
      * Calculates Daily Income vs Expense for the period.
-     * Guaranteed 1-day granularity for mapping to Net Worth chart.
      */
     async getDailyIncomeVsExpense(startDate: number, endDate: number, targetCurrency?: string): Promise<{ date: number, income: number, expense: number }[]> {
         const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(targetCurrency);
-        const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, [...incomeAccounts, ...expenseAccounts]);
-        return this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate);
+        const rawDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(
+            [...incomeAccounts, ...expenseAccounts].map(a => a.id),
+            startDate,
+            endDate
+        );
+
+        if (rawDeltas.length === 0 && (incomeAccounts.length + expenseAccounts.length) > 0) {
+            const convertedTransactions = await this.getConvertedReportTransactions(
+                startDate,
+                endDate,
+                currency,
+                [...incomeAccounts, ...expenseAccounts]
+            );
+            return this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate);
+        }
+
+        const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
+        const dailyMap = new Map<number, { income: number; expense: number }>();
+
+        let current = dayjs(startDate).startOf('day');
+        const end = dayjs(endDate).endOf('day');
+        while (current.isBefore(end) || current.isSame(end, 'day')) {
+            dailyMap.set(current.valueOf(), { income: 0, expense: 0 });
+            current = current.add(1, 'day');
+        }
+
+        for (const d of normalized) {
+            const bucket = dailyMap.get(dayjs(d.dayStart).startOf('day').valueOf());
+            if (!bucket) continue;
+
+            if (d.accountType === AccountType.INCOME) {
+                bucket.income += d.delta;
+            } else if (d.accountType === AccountType.EXPENSE) {
+                bucket.expense += d.delta;
+            }
+        }
+
+        return Array.from(dailyMap.entries())
+            .map(([date, data]) => ({ date, ...data }))
+            .sort((a, b) => a.date - b.date);
     }
 
-    /**
-     * Consolidated report payload for dashboards/hooks that need multiple projections
-     * for the same range. This avoids repeated account queries and currency conversions.
-     */
+    /** Helper to centralize currency conversion and rate caching */
+    private async getNormalizedDeltas<T extends { currencyCode: string; delta: number }>(deltas: T[], targetCurrency: string): Promise<T[]> {
+        const rates = new Map<string, number>();
+        const results = [];
+
+        for (const d of deltas) {
+            if (!rates.has(d.currencyCode)) {
+                const { convertedAmount } = await exchangeRateService.convert(1, d.currencyCode, targetCurrency);
+                rates.set(d.currencyCode, convertedAmount);
+            }
+            results.push({
+                ...d,
+                delta: d.delta * (rates.get(d.currencyCode) || 1)
+            });
+        }
+        return results;
+    }
+
     async getReportSnapshot(startDate: number, endDate: number, targetCurrency?: string): Promise<ReportSnapshot> {
         const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(targetCurrency);
-        const reportAccounts = [...incomeAccounts, ...expenseAccounts];
-        const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, reportAccounts);
+        const allAccounts = [...incomeAccounts, ...expenseAccounts];
+        const allIds = allAccounts.map((a) => a.id);
+
+        if (allIds.length > 0) {
+            const [accountDeltas, dailyDeltas] = await Promise.all([
+                transactionRawRepository.getAccountDeltasGroupedRaw(allIds, startDate, endDate),
+                transactionRawRepository.getDailyDeltasGroupedRaw(allIds, startDate, endDate),
+            ]);
+
+            if (accountDeltas.length === 0 && dailyDeltas.length === 0) {
+                const convertedTransactions = await this.getConvertedReportTransactions(
+                    startDate,
+                    endDate,
+                    currency,
+                    allAccounts
+                );
+
+                return {
+                    expenseBreakdown: this.buildBreakdownFromSums(expenseAccounts, this.buildSumsFromConverted(convertedTransactions, AccountType.EXPENSE)),
+                    incomeBreakdown: this.buildBreakdownFromSums(incomeAccounts, this.buildSumsFromConverted(convertedTransactions, AccountType.INCOME)),
+                    incomeVsExpenseHistory: this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate),
+                    incomeVsExpense: this.buildIncomeVsExpenseFromConverted(convertedTransactions),
+                    dailyIncomeVsExpense: this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate),
+                };
+            }
+        }
+
+        const [
+            expenseBreakdown,
+            incomeBreakdown,
+            incomeVsExpenseHistory,
+            incomeVsExpense,
+            dailyIncomeVsExpense
+        ] = await Promise.all([
+            this.getExpenseBreakdown(startDate, endDate, targetCurrency),
+            this.getIncomeBreakdown(startDate, endDate, targetCurrency),
+            this.getIncomeVsExpenseHistory(startDate, endDate, targetCurrency),
+            this.getIncomeVsExpense(startDate, endDate, targetCurrency),
+            this.getDailyIncomeVsExpense(startDate, endDate, targetCurrency)
+        ]);
 
         return {
-            expenseBreakdown: this.buildBreakdown(expenseAccounts, convertedTransactions, AccountType.EXPENSE),
-            incomeBreakdown: this.buildBreakdown(incomeAccounts, convertedTransactions, AccountType.INCOME),
-            incomeVsExpenseHistory: this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate),
-            incomeVsExpense: this.buildIncomeVsExpenseFromConverted(convertedTransactions),
-            dailyIncomeVsExpense: this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate),
+            expenseBreakdown,
+            incomeBreakdown,
+            incomeVsExpenseHistory,
+            incomeVsExpense,
+            dailyIncomeVsExpense,
         };
     }
 
@@ -193,82 +367,55 @@ export class ReportService {
         currency: string,
         accounts: ReportAccount[]
     ): Promise<ConvertedReportTransaction[]> {
-        const accountMap = new Map<string, ReportAccount>();
-        for (const account of accounts) {
-            if (!accountMap.has(account.id)) {
-                accountMap.set(account.id, account);
-            }
-        }
         const accountIds = accounts.map((account) => account.id);
-        if (accountIds.length === 0) {
-            return [];
-        }
+        if (accountIds.length === 0) return [];
 
+        const accountTypeById = new Map(accounts.map((account) => [account.id, account.accountType]));
+        const accountCurrencyById = new Map(accounts.map((account) => [account.id, account.currencyCode]));
         const transactions = await transactionRepository.findByAccountsAndDateRange(accountIds, startDate, endDate);
 
-        // Group transactions by currency to fetch exchange rates efficiently
-        const transactionsByCurrency = new Map<string, typeof transactions>();
-        for (const tx of transactions) {
-            const account = accountMap.get(tx.accountId);
-            if (!account) continue;
-            const txCurrency = tx.currencyCode || account.currencyCode || currency;
-            const group = transactionsByCurrency.get(txCurrency);
-            if (group) {
-                group.push(tx);
-            } else {
-                transactionsByCurrency.set(txCurrency, [tx]);
-            }
-        }
+        const converted = await Promise.all(transactions.map(async (tx) => {
+            const accountType = accountTypeById.get(tx.accountId);
+            if (!accountType) return null;
 
-        // Fetch rates concurrently for each unique currency (K unique currencies vs N transactions)
-        const currencyRates = new Map<string, number>();
-        await Promise.all(
-            Array.from(transactionsByCurrency.keys()).map(async (txCurrency) => {
-                if (txCurrency === currency) {
-                    currencyRates.set(txCurrency, 1);
-                } else {
-                    const { convertedAmount } = await exchangeRateService.convert(1, txCurrency, currency);
-                    currencyRates.set(txCurrency, convertedAmount);
-                }
-            })
-        );
+            const { convertedAmount } = await exchangeRateService.convert(
+                tx.amount,
+                tx.currencyCode || accountCurrencyById.get(tx.accountId) || currency,
+                currency
+            );
 
-        // Apply conversions synchronously
-        const convertedTransactions: ConvertedReportTransaction[] = [];
-        for (const [txCurrency, txs] of transactionsByCurrency.entries()) {
-            const rate = currencyRates.get(txCurrency) || 1;
-            for (const tx of txs) {
-                const account = accountMap.get(tx.accountId)!;
-                convertedTransactions.push({
-                    accountId: tx.accountId,
-                    accountType: account.accountType,
-                    transactionType: tx.transactionType,
-                    transactionDate: tx.transactionDate,
-                    amount: tx.amount * rate,
-                });
-            }
-        }
+            return {
+                accountId: tx.accountId,
+                accountType,
+                transactionType: tx.transactionType,
+                transactionDate: tx.transactionDate,
+                amount: convertedAmount,
+            } as ConvertedReportTransaction;
+        }));
 
-        return convertedTransactions;
+        return converted.filter((row): row is ConvertedReportTransaction => !!row);
     }
 
-    private buildBreakdown(
-        scopedAccounts: ReportAccount[],
+    private buildSumsFromConverted(
         convertedTransactions: ConvertedReportTransaction[],
         accountType: AccountType
-    ): ExpenseCategory[] {
-        if (scopedAccounts.length === 0) return [];
-
+    ): Map<string, number> {
         const sums = new Map<string, number>();
         for (const tx of convertedTransactions) {
             if (tx.accountType !== accountType) continue;
             const current = sums.get(tx.accountId) || 0;
-            const change = accountType === AccountType.EXPENSE
+            const delta = accountType === AccountType.EXPENSE
                 ? (tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount)
                 : (tx.transactionType === TransactionType.CREDIT ? tx.amount : -tx.amount);
-            sums.set(tx.accountId, current + change);
+            sums.set(tx.accountId, current + delta);
         }
+        return sums;
+    }
 
+    private buildBreakdownFromSums(
+        scopedAccounts: ReportAccount[],
+        sums: Map<string, number>
+    ): ExpenseCategory[] {
         const result: ExpenseCategory[] = [];
         let totalPositiveAmount = 0;
         for (const account of scopedAccounts) {
@@ -308,26 +455,8 @@ export class ReportService {
         startDate: number,
         endDate: number
     ): IncomeVsExpense[] {
-        const historyMap = new Map<number, IncomeVsExpense>();
-        const start = dayjs(startDate);
-        const end = dayjs(endDate);
-        const diffDays = end.diff(start, 'day');
-        const bucketUnit: 'day' | 'month' = diffDays > 60 ? 'month' : 'day';
-        const format = diffDays > 60 ? 'MMM YYYY' : 'DD MMM';
-
-        let current = start.startOf(bucketUnit);
-        while (current.isBefore(end) || current.isSame(end, bucketUnit)) {
-            const bucketStart = current.startOf(bucketUnit).valueOf();
-            const bucketEnd = current.endOf(bucketUnit).valueOf();
-            historyMap.set(bucketStart, {
-                period: current.format(format),
-                startDate: Math.max(bucketStart, startDate),
-                endDate: Math.min(bucketEnd, endDate),
-                income: 0,
-                expense: 0,
-            });
-            current = current.add(1, bucketUnit);
-        }
+        const historyMap = this.initializeHistoryMap(startDate, endDate);
+        const { bucketUnit } = this.getHistoryConfig(startDate, endDate);
 
         for (const tx of convertedTransactions) {
             const bucketKey = dayjs(tx.transactionDate).startOf(bucketUnit).valueOf();
@@ -373,6 +502,37 @@ export class ReportService {
         return Array.from(dailyMap.entries())
             .map(([date, data]) => ({ date, ...data }))
             .sort((a, b) => a.date - b.date);
+    }
+
+    private getHistoryConfig(startDate: number, endDate: number) {
+        const start = dayjs(startDate);
+        const end = dayjs(endDate);
+        const diffDays = end.diff(start, 'day');
+        const bucketUnit: 'day' | 'month' = diffDays > 60 ? 'month' : 'day';
+        const format = diffDays > 60 ? 'MMM YYYY' : 'DD MMM';
+        return { bucketUnit, format };
+    }
+
+    private initializeHistoryMap(startDate: number, endDate: number): Map<number, IncomeVsExpense> {
+        const historyMap = new Map<number, IncomeVsExpense>();
+        const start = dayjs(startDate);
+        const end = dayjs(endDate);
+        const { bucketUnit, format } = this.getHistoryConfig(startDate, endDate);
+
+        let current = start.startOf(bucketUnit);
+        while (current.isBefore(end) || current.isSame(end, bucketUnit)) {
+            const bucketStart = current.startOf(bucketUnit).valueOf();
+            const bucketEnd = current.endOf(bucketUnit).valueOf();
+            historyMap.set(bucketStart, {
+                period: current.format(format),
+                startDate: Math.max(bucketStart, startDate),
+                endDate: Math.min(bucketEnd, endDate),
+                income: 0,
+                expense: 0,
+            });
+            current = current.add(1, bucketUnit);
+        }
+        return historyMap;
     }
 }
 

@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
@@ -229,21 +230,49 @@ export class BalanceService {
         if (accounts.length === 0) return [];
 
         const cutoffDate = asOfDate ?? Date.now();
+        const accountIds = accounts.map(a => a.id);
 
-        // Optimized batch fetching with yielding to prevent UI freezes
-        const balances = await Promise.all(accounts.map(async (account, index) => {
-            // Yield every 10 accounts to allow UI to breathe
-            if (index % 10 === 0) {
-                await Promise.resolve();
-            }
-            return this.getAccountBalance(account.id, cutoffDate);
+        // 1. Batch fetch latest balances from transactions
+        const latestBalancesMap = await transactionRawRepository.getLatestBalancesRaw(accountIds, cutoffDate);
+
+        // 2. Batch fetch latest snapshots
+        const latestSnapshotsMap = await balanceSnapshotRepository.findLatestForAccountsRaw(accountIds, cutoffDate);
+
+        // 3. Prepare for batch count fetching
+        const countInput = accounts.map(a => ({
+            accountId: a.id,
+            startDate: latestSnapshotsMap.get(a.id)?.transactionDate || 0
         }));
+
+        // 4. Batch fetch transaction counts (O(1) round-trip vs O(N))
+        const deltaCountsMap = await transactionRawRepository.getAccountTransactionCountsRaw(countInput, cutoffDate);
+
+        // 5. Map results to AccountBalance objects
+        const balances = accounts.map(account => {
+            const snapshot = latestSnapshotsMap.get(account.id);
+            const baseCount = snapshot?.transactionCount || 0;
+            const deltaCount = deltaCountsMap.get(account.id) || 0;
+            const totalCount = baseCount + deltaCount;
+            const balanceValue = latestBalancesMap.get(account.id) || 0;
+
+            return {
+                accountId: account.id,
+                balance: balanceValue,
+                directBalance: balanceValue,
+                currencyCode: account.currencyCode,
+                transactionCount: totalCount,
+                directTransactionCount: totalCount,
+                asOfDate: cutoffDate,
+                accountType: account.accountType as AccountType,
+                monthlyIncome: 0,
+                monthlyExpenses: 0
+            } as AccountBalance;
+        });
 
         const balancesMap = new Map(balances.map(b => [b.accountId, b]));
 
         // Fetch currency precision for accurate rounding
         const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
-
         const precisionMap = new Map<string, number>();
         for (const account of accounts) {
             const precision = currencyPrecisionMap.get(account.currencyCode) ?? AppConfig.defaultCurrencyPrecision;

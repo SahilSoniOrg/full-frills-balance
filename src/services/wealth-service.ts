@@ -2,7 +2,9 @@ import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
@@ -119,42 +121,80 @@ export const wealthService = {
             else if (r.type === AccountType.LIABILITY) runningLiabilities += r.amount;
         }
 
-        // 3. BULK FETCH all transactions needed for the rewind (from start till now)
+        // 3. BULK FETCH daily deltas grouped by currency and type (O(1) round-trip, O(M) rows)
         const accountIds = relevantBalances.map(b => b.accountId);
-        const transactions = await transactionRepository.findByAccountsAndDateRange(
+        const deltas: DailyDelta[] = await transactionRawRepository.getDailyDeltasGroupedRaw(
             accountIds,
             start.valueOf(),
             now.valueOf()
         );
 
-        // 4. Pre-convert ALL transactions in parallel for O(1) lookup during rewind
-        const convertedTxs = await Promise.all(transactions.map(async (tx) => {
-            const acc = relevantBalances.find(a => a.accountId === tx.accountId);
-            if (!acc) return null;
+        // 4. Group and convert deltas per day
+        const dailyDeltas = new Map<string, { assets: number, liabilities: number }>();
+        const dateFormat = AppConfig.strings.formats.date;
 
-            const txCurrency = tx.currencyCode || acc.currencyCode || currency;
-            const { convertedAmount } = await exchangeRateService.convert(
-                tx.amount,
-                txCurrency,
-                currency
-            );
-
-            return {
-                date: tx.transactionDate,
-                convertedAmount,
-                type: acc.accountType,
-                transactionType: tx.transactionType
-            };
+        // Fetch required exchange rates in one pass for all currencies found in deltas
+        const uniqueCurrencies = Array.from(new Set(deltas.map(d => d.currencyCode)));
+        const rates = new Map<string, number>();
+        await Promise.all(uniqueCurrencies.map(async (c) => {
+            const { convertedAmount } = await exchangeRateService.convert(1, c, currency);
+            rates.set(c, convertedAmount);
         }));
 
-        // Group pre-converted transactions by date string
-        const txByDay = new Map<string, any[]>();
-        const dateFormat = AppConfig.strings.formats.date;
-        for (const ctx of convertedTxs) {
-            if (!ctx) continue;
-            const dayKey = dayjs(ctx.date).format(dateFormat);
-            if (!txByDay.has(dayKey)) txByDay.set(dayKey, []);
-            txByDay.get(dayKey)!.push(ctx);
+        if (deltas.length === 0) {
+            const accountTypeById = new Map(relevantBalances.map((a) => [a.accountId, a.accountType]));
+            const transactions = await transactionRepository.findByAccountsAndDateRange(
+                accountIds,
+                start.valueOf(),
+                now.valueOf()
+            );
+
+            const convertedTxs = await Promise.all(transactions.map(async (tx) => {
+                const accountType = accountTypeById.get(tx.accountId);
+                if (!accountType) return null;
+
+                const { convertedAmount } = await exchangeRateService.convert(
+                    tx.amount,
+                    tx.currencyCode,
+                    currency
+                );
+
+                return {
+                    dayKey: dayjs(tx.transactionDate).format(dateFormat),
+                    accountType,
+                    convertedAmount,
+                    transactionType: tx.transactionType,
+                };
+            }));
+
+            for (const tx of convertedTxs) {
+                if (!tx) continue;
+                const current = dailyDeltas.get(tx.dayKey) || { assets: 0, liabilities: 0 };
+                if (tx.accountType === AccountType.ASSET) {
+                    current.assets += tx.transactionType === TransactionType.DEBIT
+                        ? tx.convertedAmount
+                        : -tx.convertedAmount;
+                } else {
+                    current.liabilities += tx.transactionType === TransactionType.CREDIT
+                        ? tx.convertedAmount
+                        : -tx.convertedAmount;
+                }
+                dailyDeltas.set(tx.dayKey, current);
+            }
+        } else {
+            for (const d of deltas) {
+                const dayKey = dayjs(d.dayStart).format(dateFormat);
+                const rate = rates.get(d.currencyCode) || 1;
+                const convertedDelta = d.delta * rate;
+
+                const current = dailyDeltas.get(dayKey) || { assets: 0, liabilities: 0 };
+                if (d.accountType === AccountType.ASSET) {
+                    current.assets += convertedDelta;
+                } else {
+                    current.liabilities += convertedDelta;
+                }
+                dailyDeltas.set(dayKey, current);
+            }
         }
 
         const history: DailyNetWorth[] = [];
@@ -176,14 +216,11 @@ export const wealthService = {
 
             // Undo transactions for this day
             const dayKey = cursor.format(dateFormat);
-            const dayTxs = txByDay.get(dayKey) || [];
+            const dayDelta = dailyDeltas.get(dayKey);
 
-            for (const conv of dayTxs) {
-                if (conv.type === AccountType.ASSET) {
-                    runningAssets += conv.transactionType === TransactionType.DEBIT ? -conv.convertedAmount : conv.convertedAmount;
-                } else {
-                    runningLiabilities += conv.transactionType === TransactionType.CREDIT ? -conv.convertedAmount : conv.convertedAmount;
-                }
+            if (dayDelta) {
+                runningAssets -= dayDelta.assets;
+                runningLiabilities -= dayDelta.liabilities;
             }
 
             cursor = cursor.subtract(1, 'day');

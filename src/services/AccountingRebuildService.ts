@@ -1,10 +1,11 @@
 import { database } from '@/src/data/database/Database'
+import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository'
+import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes'
 import { accountingService } from '@/src/utils/accountingService'
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { logger } from '@/src/utils/logger'
 import { amountsAreEqual } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
@@ -37,35 +38,22 @@ export class AccountingRebuildService {
         let runningCount = snapshot?.transactionCount || 0;
         let startDate = snapshot?.transactionDate || 0;
 
-        // 2. Fetch all transactions from the checkpoint's date forward
-        const query = transactionRepository.transactionsQuery(
-            Q.experimentalJoinTables(['journals']),
-            Q.where('account_id', accountId),
-            Q.where('transaction_date', Q.gte(startDate)),
-            Q.where('deleted_at', Q.eq(null)),
-            Q.on('journals', [
-                Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-                Q.where('deleted_at', Q.eq(null))
-            ])
-        ).extend(Q.sortBy('transaction_date', 'asc'))
-            .extend(Q.sortBy('created_at', 'asc'))
-
-        let transactions = await query.fetch();
+        // 2. Fetch minimal raw transaction data for calculation
+        // This is significantly faster than fetching full models (O(1) memory per row vs O(Model))
+        let rawTransactions: RebuildTransaction[] = await transactionRawRepository.getRebuildDataRaw(accountId, startDate);
 
         // Precise Anchor: If we have a snapshot, find its transaction and skip everything up to it.
-        // This handles cases with multiple transactions on the same millisecond.
         if (snapshot) {
-            const snapshotIdx = transactions.findIndex(tx => tx.id === snapshot.transactionId);
+            const snapshotIdx = rawTransactions.findIndex(tx => tx.id === snapshot.transactionId);
             if (snapshotIdx !== -1) {
-                transactions = transactions.slice(snapshotIdx + 1);
+                rawTransactions = rawTransactions.slice(snapshotIdx + 1);
             } else {
-                // If snapshot transaction isn't found (rare/corrupt), fallback to date >
-                // we already have gte, so we just filter.
-                transactions = transactions.filter(tx => tx.transactionDate > startDate);
+                // Fallback: exclude snapshot date purely by timestamp if ID not found
+                rawTransactions = rawTransactions.filter(tx => tx.transactionDate > startDate);
             }
         }
 
-        const pendingUpdates: { tx: any; newBalance: number }[] = [];
+        const idsNeedingUpdate = new Map<string, number>(); // id -> newBalance
         const snapshotsToCreate: {
             transactionId: string,
             transactionDate: number,
@@ -76,29 +64,28 @@ export class AccountingRebuildService {
         let currentBalance = runningBalance;
         let currentCount = runningCount;
 
-        // 3. Calculate new balances and identify new snapshots
-        for (let i = 0; i < transactions.length; i++) {
-            const tx = transactions[i];
+        // 3. Calculate new balances and identify new snapshots using plain objects
+        for (let i = 0; i < rawTransactions.length; i++) {
+            const tx = rawTransactions[i];
             currentCount++;
 
             const newBalance = accountingService.calculateNewBalance(
                 currentBalance,
                 tx.amount,
                 account.accountType,
-                tx.transactionType,
+                tx.transactionType as TransactionType,
                 precision
             );
 
             const isSnapshotPoint = currentCount % CHECKPOINT_INTERVAL === 0;
 
-            // Update if balance changed OR if it's a snapshot point (to ensure consistency)
+            // Only mark for update if the DB value differs from calculated
             if (!amountsAreEqual(tx.runningBalance || 0, newBalance, precision) || isSnapshotPoint) {
-                pendingUpdates.push({ tx, newBalance });
+                idsNeedingUpdate.set(tx.id, newBalance);
             }
 
             currentBalance = newBalance;
 
-            // Create a snapshot every 1000 transactions
             if (isSnapshotPoint) {
                 snapshotsToCreate.push({
                     transactionId: tx.id,
@@ -109,19 +96,25 @@ export class AccountingRebuildService {
             }
         }
 
-        // 4. Batch updates in chunks
-        if (pendingUpdates.length > 0 || snapshotsToCreate.length > 0) {
+        // 4. Batch updates
+        if (idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0) {
             await database.write(async () => {
-                // Batch update transactions
+                // Fetch ONLY the models that actually need updating
+                const idsArray = Array.from(idsNeedingUpdate.keys());
                 const BATCH_SIZE = 500;
-                for (let i = 0; i < pendingUpdates.length; i += BATCH_SIZE) {
-                    const chunk = pendingUpdates.slice(i, i + BATCH_SIZE);
-                    const preparedChunk = chunk.map(({ tx, newBalance }) =>
-                        tx.prepareUpdate((txToUpdate: any) => {
-                            txToUpdate.runningBalance = newBalance
+
+                for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
+                    const chunkIds = idsArray.slice(i, i + BATCH_SIZE);
+                    const modelsToUpdate = await database.collections.get<Transaction>('transactions')
+                        .query(Q.where('id', Q.oneOf(chunkIds)))
+                        .fetch();
+
+                    const preparedUpdates = modelsToUpdate.map(m =>
+                        m.prepareUpdate((record: Transaction) => {
+                            record.runningBalance = idsNeedingUpdate.get(m.id) || 0;
                         })
                     );
-                    await database.batch(...preparedChunk);
+                    await database.batch(...preparedUpdates);
                 }
 
                 // Delete invalidated snapshots after the starting point
@@ -147,6 +140,16 @@ export class AccountingRebuildService {
                                 s.transactionCount = data.transactionCount;
                             })
                         )
+                    );
+                }
+
+                // Trigger lightweight reactive refreshes for account-centric views
+                // without observing the full transactions table.
+                if (idsNeedingUpdate.size > 0) {
+                    await database.batch(
+                        account.prepareUpdate((a) => {
+                            a.updatedAt = new Date();
+                        })
                     );
                 }
             });

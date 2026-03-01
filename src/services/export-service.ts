@@ -6,20 +6,12 @@
  */
 
 import { database } from '@/src/data/database/Database';
-import Account from '@/src/data/models/Account';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
-import AuditLog from '@/src/data/models/AuditLog';
-import Budget from '@/src/data/models/Budget';
-import BudgetScope from '@/src/data/models/BudgetScope';
-import Currency from '@/src/data/models/Currency';
-import ExchangeRate from '@/src/data/models/ExchangeRate';
-import Journal from '@/src/data/models/Journal';
-import JournalMetadata from '@/src/data/models/JournalMetadata';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
-import Transaction from '@/src/data/models/Transaction';
+import { schema } from '@/src/data/database/schema';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
+import { supportsRawSql } from '../data/database/DatabaseUtils';
 
 export interface AccountExport {
   id: string;
@@ -170,6 +162,9 @@ export interface PlannedPaymentExport {
   deletedAt?: string;
 }
 
+const snakeToCamel = (str: string) => str.replace(/(_\w)/g, (m) => m[1].toUpperCase());
+const DATE_COLUMN_NAMES = ['created_at', 'updated_at', 'deleted_at', 'journal_date', 'transaction_date', 'start_date', 'end_date', 'next_occurrence', 'effective_date'];
+
 export interface ExportData {
   exportDate: string;
   version: string;
@@ -208,11 +203,94 @@ function toIsoDate(value: Date | number | undefined | null): string | undefined 
 }
 
 class ExportService {
+  private typeSafeColumns(tableSchema: any): Array<{ name: string; type: string }> {
+    const rawColumns = Array.isArray(tableSchema?.columns)
+      ? tableSchema.columns
+      : Object.values(tableSchema?.columns || {});
+    return rawColumns as Array<{ name: string; type: string }>;
+  }
+
+  private getTableSchema(tableName: string) {
+    const tables = (schema as any).tables;
+    if (Array.isArray(tables)) {
+      return tables.find((table) => table.name === tableName);
+    }
+    if (tables && typeof tables === 'object') {
+      if (tables[tableName]) return tables[tableName];
+      return Object.values(tables).find((table: any) => table?.name === tableName);
+    }
+    return undefined;
+  }
+
   /**
-   * Exports all data as JSON
+   * Universal fetch and transform helper derived from database schema.
+   * Generates SQL with aliasing and handles value conversions centrally.
+   */
+  private async fetchAndTransformTable<T extends object>(tableName: string): Promise<T[]> {
+    const tableSchema = this.getTableSchema(tableName);
+    if (!tableSchema) throw new Error(`Missing schema for table: ${tableName}`);
+
+    const columns = this.typeSafeColumns(tableSchema);
+
+    const columnNames = ['id', ...columns.map((column: any) => column.name)];
+
+    // Identify Boolean and Date fields from schema
+    const booleanFields = columns
+      .filter((col: { name: string; type: string }) => col.type === 'boolean')
+      .map((col: { name: string; type: string }) => snakeToCamel(col.name));
+
+    const dateFields = columns
+      .filter((col: { name: string; type: string }) => col.type === 'number' && DATE_COLUMN_NAMES.includes(col.name))
+      .map((col: { name: string; type: string }) => snakeToCamel(col.name));
+
+    let raws: Record<string, unknown>[] = [];
+    if (supportsRawSql(database)) {
+      const selectFields = columnNames
+        .map(snake => `${snake} AS ${snakeToCamel(snake)}`)
+        .join(', ');
+      const sql = `SELECT ${selectFields} FROM ${tableName}`;
+      raws = await transactionRawRepository.queryRaw<Record<string, unknown>>(sql);
+    } else {
+      const collection = (database.collections as any).get?.(tableName);
+      if (!collection?.query) return [];
+      const rows = await collection.query().fetch();
+      raws = rows.map((row: any) => {
+        const source = row?._raw ?? row;
+        const mapped: Record<string, unknown> = {};
+        for (const snake of columnNames) {
+          const camel = snakeToCamel(snake);
+          mapped[camel] = source?.[snake] !== undefined ? source[snake] : source?.[camel];
+        }
+        return mapped;
+      });
+    }
+
+    return raws.map((raw) => {
+      const transformed = { ...raw } as Record<string, any>;
+
+      // Convert date numbers to ISO strings
+      dateFields.forEach((f: string) => {
+        if (transformed[f] !== undefined) {
+          transformed[f] = toIsoDate(transformed[f]);
+        }
+      });
+
+      // Convert 1/0 numbers to booleans
+      booleanFields.forEach((f: string) => {
+        if (transformed[f] !== undefined) {
+          transformed[f] = Boolean(transformed[f]);
+        }
+      });
+
+      return transformed as T;
+    });
+  }
+
+  /**
+   * Exports all data as JSON using raw SQL to bypass model instantiation overhead.
    */
   async exportToJSON(): Promise<string> {
-    logger.info('[ExportService] Starting JSON export...');
+    logger.info('[ExportService] Starting optimized JSON export...');
 
     try {
       const [
@@ -229,17 +307,17 @@ class ExportService {
         journalMetadata,
         userPreferences,
       ] = await Promise.all([
-        database.collections.get<Account>('accounts').query().fetch(),
-        database.collections.get<Journal>('journals').query().fetch(),
-        database.collections.get<Transaction>('transactions').query().fetch(),
-        database.collections.get<AuditLog>('audit_logs').query().fetch(),
-        database.collections.get<Budget>('budgets').query().fetch(),
-        database.collections.get<BudgetScope>('budget_scopes').query().fetch(),
-        database.collections.get<Currency>('currencies').query().fetch(),
-        database.collections.get<ExchangeRate>('exchange_rates').query().fetch(),
-        database.collections.get<AccountMetadata>('account_metadata').query().fetch(),
-        database.collections.get<PlannedPayment>('planned_payments').query().fetch(),
-        database.collections.get<JournalMetadata>('journal_metadata').query().fetch(),
+        this.fetchAndTransformTable<AccountExport>('accounts'),
+        this.fetchAndTransformTable<JournalExport>('journals'),
+        this.fetchAndTransformTable<TransactionExport>('transactions'),
+        this.fetchAndTransformTable<AuditLogExport>('audit_logs'),
+        this.fetchAndTransformTable<BudgetExport>('budgets'),
+        this.fetchAndTransformTable<BudgetScopeExport>('budget_scopes'),
+        this.fetchAndTransformTable<CurrencyExport>('currencies'),
+        this.fetchAndTransformTable<ExchangeRateExport>('exchange_rates'),
+        this.fetchAndTransformTable<AccountMetadataExport>('account_metadata'),
+        this.fetchAndTransformTable<PlannedPaymentExport>('planned_payments'),
+        this.fetchAndTransformTable<JournalMetadataExport>('journal_metadata'),
         preferences.loadPreferences(),
       ]);
 
@@ -247,144 +325,17 @@ class ExportService {
         exportDate: new Date().toISOString(),
         version: '1.2.0',
         preferences: userPreferences,
-        accounts: accounts.map((a) => ({
-          id: a.id,
-          name: a.name,
-          accountType: a.accountType,
-          accountSubcategory: a.accountSubcategory,
-          currencyCode: a.currencyCode,
-          parentAccountId: a.parentAccountId,
-          description: a.description,
-          icon: a.icon,
-          orderNum: a.orderNum,
-          createdAt: a.createdAt.toISOString(),
-          updatedAt: a.updatedAt.toISOString(),
-          deletedAt: toIsoDate(a.deletedAt),
-        })),
-        journals: journals.map((j) => ({
-          id: j.id,
-          journalDate: toIsoDate(j.journalDate) as string,
-          description: j.description,
-          currencyCode: j.currencyCode,
-          status: j.status,
-          originalJournalId: j.originalJournalId,
-          reversingJournalId: j.reversingJournalId,
-          totalAmount: j.totalAmount,
-          transactionCount: j.transactionCount,
-          displayType: j.displayType,
-          plannedPaymentId: j.plannedPaymentId,
-          createdAt: j.createdAt.toISOString(),
-          updatedAt: j.updatedAt.toISOString(),
-          deletedAt: toIsoDate(j.deletedAt),
-        })),
-        transactions: transactions.map((t) => ({
-          id: t.id,
-          journalId: t.journalId,
-          accountId: t.accountId,
-          amount: t.amount,
-          transactionType: t.transactionType,
-          currencyCode: t.currencyCode,
-          transactionDate: toIsoDate(t.transactionDate) as string,
-          notes: t.notes,
-          exchangeRate: t.exchangeRate,
-          runningBalance: t.runningBalance,
-          createdAt: t.createdAt.toISOString(),
-          updatedAt: t.updatedAt.toISOString(),
-          deletedAt: toIsoDate(t.deletedAt),
-        })),
-        auditLogs: auditLogs.map((log) => ({
-          id: log.id,
-          entityType: log.entityType,
-          entityId: log.entityId,
-          action: log.action,
-          changes: log.changes,
-          timestamp: log.timestamp,
-          createdAt: log.createdAt.toISOString(),
-        })),
-        budgets: budgets.map((b) => ({
-          id: b.id,
-          name: b.name,
-          amount: b.amount,
-          currencyCode: b.currencyCode,
-          startMonth: b.startMonth,
-          active: b.active,
-          createdAt: b.createdAt.toISOString(),
-          updatedAt: b.updatedAt.toISOString(),
-        })),
-        budgetScopes: budgetScopes.map((bs) => ({
-          id: bs.id,
-          budgetId: bs.budget.id,
-          accountId: bs.account.id,
-          createdAt: bs.createdAt.toISOString(),
-          updatedAt: bs.updatedAt.toISOString(),
-        })),
-        currencies: currencies.map((c) => ({
-          id: c.id,
-          code: c.code,
-          symbol: c.symbol,
-          name: c.name,
-          precision: c.precision,
-          createdAt: c.createdAt.toISOString(),
-          updatedAt: c.updatedAt.toISOString(),
-          deletedAt: toIsoDate(c.deletedAt),
-        })),
-        exchangeRates: exchangeRates.map((er) => ({
-          id: er.id,
-          fromCurrency: er.fromCurrency,
-          toCurrency: er.toCurrency,
-          rate: er.rate,
-          effectiveDate: toIsoDate(er.effectiveDate) as string,
-          source: er.source,
-          createdAt: er.createdAt.toISOString(),
-          updatedAt: er.updatedAt.toISOString(),
-        })),
-        accountMetadata: accountMetadata.map((metadata) => ({
-          id: metadata.id,
-          accountId: metadata.account.id,
-          statementDay: metadata.statementDay,
-          dueDay: metadata.dueDay,
-          minimumPaymentAmount: metadata.minimumPaymentAmount,
-          minimumBalanceAmount: metadata.minimumBalanceAmount,
-          creditLimitAmount: metadata.creditLimitAmount,
-          aprBps: metadata.aprBps,
-          emiDay: metadata.emiDay,
-          loanTenureMonths: metadata.loanTenureMonths,
-          autopayEnabled: metadata.autopayEnabled,
-          gracePeriodDays: metadata.gracePeriodDays,
-          notes: metadata.notes,
-          createdAt: metadata.createdAt.toISOString(),
-          updatedAt: metadata.updatedAt.toISOString(),
-        })),
-        plannedPayments: plannedPayments.map((pp) => ({
-          id: pp.id,
-          name: pp.name,
-          description: pp.description,
-          amount: pp.amount,
-          currencyCode: pp.currencyCode,
-          fromAccountId: pp.fromAccountId,
-          toAccountId: pp.toAccountId,
-          intervalN: pp.intervalN,
-          intervalType: pp.intervalType,
-          startDate: new Date(pp.startDate).toISOString(),
-          endDate: toIsoDate(pp.endDate),
-          nextOccurrence: new Date(pp.nextOccurrence).toISOString(),
-          status: pp.status,
-          isAutoPost: pp.isAutoPost,
-          createdAt: pp.createdAt.toISOString(),
-          updatedAt: pp.updatedAt.toISOString(),
-          deletedAt: toIsoDate(pp.deletedAt),
-        })),
-        journalMetadata: journalMetadata.map((meta) => ({
-          id: meta.id,
-          journalId: meta.journal.id, // Using .id directly over relation since export doesn't strictly need fetched relation objects
-          importSource: meta.importSource,
-          originalSmsId: meta.originalSmsId,
-          originalSmsSender: meta.originalSmsSender,
-          originalSmsBody: meta.originalSmsBody,
-          metadataJson: meta.metadataJson,
-          createdAt: meta.createdAt.toISOString(),
-          updatedAt: meta.updatedAt.toISOString(),
-        })),
+        accounts,
+        journals,
+        transactions,
+        auditLogs,
+        budgets,
+        budgetScopes,
+        currencies,
+        exchangeRates,
+        accountMetadata,
+        plannedPayments,
+        journalMetadata,
       };
 
       const json = JSON.stringify(exportData, null, 2);
@@ -415,6 +366,12 @@ class ExportService {
    * Get a summary of exportable data counts
    */
   async getExportSummary(): Promise<ExportSummary> {
+    const getCount = async (tableName: string): Promise<number> => {
+      const collection = (database.collections as any).get?.(tableName);
+      if (!collection?.query) return 0;
+      return collection.query().fetchCount();
+    };
+
     const [
       accounts,
       journals,
@@ -428,17 +385,17 @@ class ExportService {
       plannedPayments,
       journalMetadata,
     ] = await Promise.all([
-      database.collections.get<Account>('accounts').query().fetchCount(),
-      database.collections.get<Journal>('journals').query().fetchCount(),
-      database.collections.get<Transaction>('transactions').query().fetchCount(),
-      database.collections.get<AuditLog>('audit_logs').query().fetchCount(),
-      database.collections.get<Budget>('budgets').query().fetchCount(),
-      database.collections.get<BudgetScope>('budget_scopes').query().fetchCount(),
-      database.collections.get<Currency>('currencies').query().fetchCount(),
-      database.collections.get<ExchangeRate>('exchange_rates').query().fetchCount(),
-      database.collections.get<AccountMetadata>('account_metadata').query().fetchCount(),
-      database.collections.get<PlannedPayment>('planned_payments').query().fetchCount(),
-      database.collections.get<JournalMetadata>('journal_metadata').query().fetchCount(),
+      getCount('accounts'),
+      getCount('journals'),
+      getCount('transactions'),
+      getCount('audit_logs'),
+      getCount('budgets'),
+      getCount('budget_scopes'),
+      getCount('currencies'),
+      getCount('exchange_rates'),
+      getCount('account_metadata'),
+      getCount('planned_payments'),
+      getCount('journal_metadata'),
     ]);
 
     return {

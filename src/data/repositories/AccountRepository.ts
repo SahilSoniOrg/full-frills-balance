@@ -6,10 +6,12 @@ import Account, {
   isSubcategoryAllowedForType
 } from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository'
 import { ValidationError } from '@/src/utils/errors'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
 import { map, of } from 'rxjs'
+import { supportsRawSql } from '../database/DatabaseUtils'
 
 export interface AccountPersistenceInput {
   name: string
@@ -341,73 +343,79 @@ export class AccountRepository {
    * Returns accounts with direct balances and monthly stats in a single pass.
    */
   async getAccountListItemsRaw(startOfMonth: number, endOfMonth: number, includeDeleted: boolean = false): Promise<any[] | null> {
-    // WatermelonDB provides access to the underlying adapter
-    const adapter = this.db.adapter as any
+    if (!supportsRawSql(this.db)) return null;
 
-    // We only support raw SQL on SQLite (Native)
-    // The queryRaw signature for SQLiteAdapter is (sql, args)
-    // We try to find the specific adapter that supports queryRaw
-    const sqlAdapter = adapter.underlyingAdapter || adapter
+    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
-    if (sqlAdapter && typeof sqlAdapter.queryRaw === 'function') {
-      const sql = `
-        SELECT 
-          a.id as id, 
-          a.name as name, 
-          a.account_type as account_type, 
-          a.account_subtype as account_subtype, 
-          a.currency_code as currency_code, 
-          a.icon as icon, 
-          a.parent_account_id as parent_account_id,
-          (
-            SELECT t.running_balance 
-            FROM transactions t
-            JOIN journals j ON t.journal_id = j.id
-            WHERE t.account_id = a.id 
-              AND t.deleted_at IS NULL 
-              AND j.deleted_at IS NULL 
-              AND j.status IN ('POSTED', 'REVERSED')
-            ORDER BY t.transaction_date DESC, t.created_at DESC
-            LIMIT 1
-          ) as direct_balance,
-          IFNULL((
-            SELECT COUNT(*) 
-            FROM transactions t 
-            WHERE t.account_id = a.id AND t.deleted_at IS NULL
-          ), 0) as direct_transaction_count,
-          IFNULL((
-            SELECT SUM(CASE WHEN t.transaction_type = 'CREDIT' THEN t.amount ELSE 0 END)
-            FROM transactions t
-            JOIN journals j ON t.journal_id = j.id
-            WHERE t.account_id = a.id
-              AND t.deleted_at IS NULL 
-              AND j.deleted_at IS NULL 
-              AND j.status IN ('POSTED', 'REVERSED')
-              AND t.transaction_date >= ?
-              AND t.transaction_date <= ?
-          ), 0) as monthly_income,
-          IFNULL((
-            SELECT SUM(CASE WHEN t.transaction_type = 'DEBIT' THEN t.amount ELSE 0 END)
-            FROM transactions t
-            JOIN journals j ON t.journal_id = j.id
-            WHERE t.account_id = a.id
-              AND t.deleted_at IS NULL 
-              AND j.deleted_at IS NULL 
-              AND j.status IN ('POSTED', 'REVERSED')
-              AND t.transaction_date >= ?
-              AND t.transaction_date <= ?
-          ), 0) as monthly_expenses
-        FROM accounts a
-        WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'}
-        ORDER BY a.order_num ASC
-      `
-      // Correct signature for underlying bridge queryRaw is (sql, args)
-      return await sqlAdapter.queryRaw(sql, [startOfMonth, endOfMonth, startOfMonth, endOfMonth])
-    }
+    const sql = `
+      SELECT 
+        a.id as id, 
+        a.name as name, 
+        a.account_type as account_type, 
+        a.account_subtype as account_subtype, 
+        a.currency_code as currency_code, 
+        a.icon as icon, 
+        a.parent_account_id as parent_account_id,
+        (
+          SELECT t.running_balance 
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.account_id = a.id 
+            AND t.deleted_at IS NULL 
+            AND j.deleted_at IS NULL 
+            AND j.status IN (${activeStatusesStr})
+          ORDER BY t.transaction_date DESC, t.created_at DESC
+          LIMIT 1
+        ) as direct_balance,
+        IFNULL((
+          SELECT COUNT(*) 
+          FROM transactions t 
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.account_id = a.id 
+            AND t.deleted_at IS NULL
+            AND j.deleted_at IS NULL
+            AND j.status IN (${activeStatusesStr})
+        ), 0) as direct_transaction_count,
+        IFNULL((
+          SELECT SUM(CASE 
+            WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'CREDIT') THEN t.amount
+            WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'DEBIT') THEN -t.amount
+            WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'CREDIT') THEN -t.amount
+            WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'DEBIT') THEN t.amount
+            WHEN (a.account_type IN ('ASSET', 'LIABILITY', 'EQUITY') AND t.transaction_type = 'CREDIT') THEN t.amount
+            WHEN (a.account_type IN ('ASSET', 'LIABILITY', 'EQUITY') AND t.transaction_type = 'DEBIT') THEN -t.amount
+            ELSE 0 END)
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.account_id = a.id
+            AND t.transaction_date >= ?
+            AND t.transaction_date <= ?
+            AND t.deleted_at IS NULL
+            AND j.deleted_at IS NULL
+            AND j.status IN (${activeStatusesStr})
+        ), 0) as monthly_income,
+        -- We calculate monthly expense separately for UI if needed, but the above covers net delta.
+        -- Actually Ivy Wallet UI expects separate income/expense for specific views.
+        IFNULL((
+          SELECT SUM(CASE 
+            WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'DEBIT' THEN t.amount
+            WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'CREDIT' THEN -t.amount
+            ELSE 0 END)
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.account_id = a.id
+            AND t.transaction_date >= ?
+            AND t.transaction_date <= ?
+            AND t.deleted_at IS NULL
+            AND j.deleted_at IS NULL
+            AND j.status IN (${activeStatusesStr})
+        ), 0) as monthly_expenses
+      FROM accounts a
+      WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'}
+      ORDER BY a.order_num ASC
+    `;
 
-    // Fallback for LokiJS or other environments: 
-    // Return null to signal that optimized raw fetch is not supported.
-    return null
+    return await transactionRawRepository.queryRaw(sql, [startOfMonth, endOfMonth, startOfMonth, endOfMonth]);
   }
 }
 
