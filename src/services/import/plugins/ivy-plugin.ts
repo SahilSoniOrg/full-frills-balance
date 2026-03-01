@@ -188,6 +188,40 @@ export const ivyPlugin: ImportPlugin = {
             throw new Error('Invalid Ivy Wallet backup format');
         }
 
+        const UNKNOWN_CATEGORY_ID = 'ivy-unknown-category';
+        let needsUnknownCategory = false;
+
+        data.transactions.forEach(tx => {
+            if (!tx.title && !tx.description) {
+                tx.title = 'unknown';
+            }
+            if (tx.type !== 'TRANSFER' && !tx.categoryId) {
+                tx.categoryId = UNKNOWN_CATEGORY_ID;
+                needsUnknownCategory = true;
+            }
+        });
+
+        if (data.plannedPaymentRules) {
+            data.plannedPaymentRules.forEach(rule => {
+                if (!rule.title && !rule.description) {
+                    rule.title = 'unknown';
+                }
+                if (rule.type !== 'TRANSFER' && !rule.categoryId) {
+                    rule.categoryId = UNKNOWN_CATEGORY_ID;
+                    needsUnknownCategory = true;
+                }
+            });
+        }
+
+        if (needsUnknownCategory && !data.categories.some(c => c.id === UNKNOWN_CATEGORY_ID)) {
+            data.categories.push({
+                id: UNKNOWN_CATEGORY_ID,
+                name: 'unknown',
+                color: -984833, // Default grey color
+                icon: 'help-circle'
+            });
+        }
+
         logger.info('[IvyPlugin] Starting Import from Ivy Wallet JSON...');
         logger.info(`[IvyPlugin] Found ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions, ${data.budgets?.length || 0} budgets`);
 
