@@ -54,6 +54,37 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     // Currency search state
     const [currencySearchQuery, setCurrencySearchQuery] = useState('');
 
+    const currencyItems: SelectableItem[] = React.useMemo(() => {
+        if (props.kind !== 'currency') return [];
+
+        const uniqueCurrencies = Array.from(
+            new Map(currencies.map((c) => [c.code, c])).values()
+        );
+
+        let mappedItems = uniqueCurrencies.map((currency) => ({
+            id: currency.code,
+            name: currency.code,
+            symbol: currency.symbol,
+            subtitle: currency.name,
+        }));
+
+        if (currencySearchQuery.trim()) {
+            const query = currencySearchQuery.toLowerCase();
+            mappedItems = mappedItems.filter(i =>
+                i.name.toLowerCase().includes(query) ||
+                (i.subtitle && i.subtitle.toLowerCase().includes(query))
+            );
+        } else if (props.selectedCurrency) {
+            return [...mappedItems].sort((a, b) => {
+                if (a.id === props.selectedCurrency) return -1;
+                if (b.id === props.selectedCurrency) return 1;
+                return 0;
+            });
+        }
+
+        return mappedItems;
+    }, [currencies, currencySearchQuery, props]);
+
     const renderCategoryIcon = (item: SelectableItem, isSelected: boolean) => {
         const categoryType = item.subtitle === incomeLabel ? 'INCOME' : 'EXPENSE';
         const behaviorColor = categoryType === 'INCOME' ? theme.success : theme.error;
@@ -80,41 +111,11 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     };
 
     if (props.kind === 'currency') {
-        const items: SelectableItem[] = React.useMemo(() => {
-            const uniqueCurrencies = Array.from(
-                new Map(currencies.map((c) => [c.code, c])).values()
-            );
-
-            let mappedItems = uniqueCurrencies.map((currency) => ({
-                id: currency.code,
-                name: currency.code,
-                symbol: currency.symbol,
-                subtitle: currency.name,
-            }));
-
-            if (currencySearchQuery.trim()) {
-                const query = currencySearchQuery.toLowerCase();
-                mappedItems = mappedItems.filter(i =>
-                    i.name.toLowerCase().includes(query) ||
-                    (i.subtitle && i.subtitle.toLowerCase().includes(query))
-                );
-            } else if (props.selectedCurrency) {
-                // If a currency is selected & no search, move it to the top
-                return [...mappedItems].sort((a, b) => {
-                    if (a.id === props.selectedCurrency) return -1;
-                    if (b.id === props.selectedCurrency) return 1;
-                    return 0;
-                });
-            }
-
-            return mappedItems;
-        }, [currencies, props.selectedCurrency, currencySearchQuery]);
-
         return (
             <SelectableGrid
                 title={AppConfig.strings.onboarding.currency.title}
                 subtitle={AppConfig.strings.onboarding.currency.subtitle}
-                items={items}
+                items={currencyItems}
                 selectedIds={[props.selectedCurrency]}
                 onToggle={props.onSelectCurrency}
                 onContinue={props.onContinue}

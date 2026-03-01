@@ -107,6 +107,14 @@ export function useReportsViewModel(): ReportsViewModel {
         dateRange,
     });
 
+    const onRefresh = useCallback(() => {
+        resetSelections();
+        updateFilter(
+            { ...dateRange },
+            { ...periodFilter }
+        );
+    }, [dateRange, periodFilter, resetSelections, updateFilter]);
+
     return {
         // Date Filter
         showDatePicker: dateFilter.showDatePicker,
@@ -118,7 +126,7 @@ export function useReportsViewModel(): ReportsViewModel {
         // Reports state
         loading,
         periodFilter,
-        onRefresh: () => { },
+        onRefresh,
 
         // Chart Data
         netWorthSeries: chartData.netWorthSeries,

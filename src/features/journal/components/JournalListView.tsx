@@ -106,6 +106,8 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
     );
 });
 
+JournalListView.displayName = 'JournalListView';
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -114,4 +116,3 @@ const styles = StyleSheet.create({
         padding: Spacing.lg,
     },
 });
-

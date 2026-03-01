@@ -134,6 +134,10 @@ export const SafeToSpendCard = ({
                         variant="hero"
                         color={isOverCommitted ? "error" : (isPositiveSafeToSpend ? "success" : undefined)}
                         style={[styles.amount, { fontFamily: fonts.bold }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.55}
+                        ellipsizeMode="tail"
                     >
                         {format(isOverCommitted ? shortfall : safeToSpend)}
                     </AppText>
@@ -302,6 +306,8 @@ const styles = StyleSheet.create({
     },
     amount: {
         marginBottom: Spacing.xs,
+        width: '100%',
+        flexShrink: 1,
     },
     breakdownContainer: {
         marginTop: Spacing.sm,

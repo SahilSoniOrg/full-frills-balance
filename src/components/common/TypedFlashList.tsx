@@ -9,3 +9,5 @@ export const TypedFlashList = React.forwardRef((props: any, ref: any) => {
     const Component = FlashList as any;
     return <Component {...props} ref={ref} />;
 });
+
+TypedFlashList.displayName = 'TypedFlashList';

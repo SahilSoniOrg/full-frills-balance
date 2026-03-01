@@ -8,9 +8,9 @@ import { getContextualTokens, getFontTheme, getThemeColors } from '@/src/constan
 import { useThemeOverride, useUI } from '@/src/contexts/UIContext'
 
 export function useTheme() {
-    const { themePreference, themeId, fontId } = useUI()
+    const { themeMode: uiThemeMode, themeId, fontId } = useUI()
     const themeOverride = useThemeOverride()
-    const themeMode = themeOverride ?? (themePreference === 'system' ? 'dark' : themePreference)
+    const themeMode = themeOverride ?? uiThemeMode
 
     // Resolve dynamic theme and fonts
     const theme = getThemeColors(themeId, themeMode)

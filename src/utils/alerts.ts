@@ -210,16 +210,6 @@ export const showSuccessAlert = (title: string, message: string) => {
 
 // === CONFIRMATION DIALOGS ===
 
-export interface ConfirmOptions {
-  title: string
-  message: string
-  confirmText?: string
-  cancelText?: string
-  onConfirm: () => void
-  onCancel?: () => void
-  destructive?: boolean // If true, confirm button is red/destructive
-}
-
 export const confirm = {
   show: (options: ConfirmOptions) => {
     if (confirmListener) {

@@ -1,7 +1,8 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
+import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
-import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IconButton, IvyIcon } from '@/src/components/core';
+import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
@@ -77,39 +78,47 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     }
 
     const headerActionsNode = (
-        <View style={styles.headerActions}>
-            <IconButton
-                name="history"
-                onPress={onAuditPress}
-                variant="surface"
-                iconColor={theme.textSecondary}
-            />
-            {headerActions.canRecover ? (
-                <IconButton
-                    name="refresh"
-                    onPress={headerActions.onRecover}
-                    variant="surface"
-                    iconColor={theme.income}
-                />
-            ) : (
-                <>
-                    <IconButton
-                        testID="edit-button"
-                        name="edit"
-                        onPress={headerActions.onEdit}
-                        variant="surface"
-                        iconColor={theme.text}
-                    />
-                    <IconButton
-                        testID="delete-button"
-                        name="delete"
-                        onPress={headerActions.onDelete}
-                        variant="surface"
-                        iconColor={theme.error}
-                    />
-                </>
-            )}
-        </View>
+        <ScreenHeaderActions
+            actions={
+                headerActions.canRecover
+                    ? [
+                        {
+                            name: 'history',
+                            onPress: onAuditPress,
+                            variant: 'surface',
+                            iconColor: theme.textSecondary,
+                        },
+                        {
+                            name: 'refresh',
+                            onPress: headerActions.onRecover,
+                            variant: 'surface',
+                            iconColor: theme.income,
+                        },
+                    ]
+                    : [
+                        {
+                            name: 'history',
+                            onPress: onAuditPress,
+                            variant: 'surface',
+                            iconColor: theme.textSecondary,
+                        },
+                        {
+                            name: 'edit',
+                            onPress: headerActions.onEdit,
+                            variant: 'surface',
+                            iconColor: theme.text,
+                            testID: 'edit-button',
+                        },
+                        {
+                            name: 'delete',
+                            onPress: headerActions.onDelete,
+                            variant: 'surface',
+                            iconColor: theme.error,
+                            testID: 'delete-button',
+                        },
+                    ]
+            }
+        />
     );
 
     return (
@@ -248,10 +257,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: Spacing.lg,
         padding: Spacing.lg,
-    },
-    headerActions: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
     },
     headerListRegion: {
         paddingVertical: Spacing.md,

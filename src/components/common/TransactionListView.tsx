@@ -87,6 +87,8 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
     );
 });
 
+TransactionListView.displayName = 'TransactionListView';
+
 const styles = StyleSheet.create({
     loadingMore: {
         flexDirection: 'row',

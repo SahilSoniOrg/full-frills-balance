@@ -1,4 +1,5 @@
-import { AppButton, AppCard, AppIcon, AppText, Badge, IconButton, IconName, IvyIcon } from '@/src/components/core';
+import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { AppButton, AppCard, AppIcon, AppText, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
@@ -62,24 +63,24 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
     }
 
     const headerActionsNode = (
-        <View style={styles.headerActions}>
-            <IconButton
-                name="edit"
-                onPress={headerActions?.onEdit}
-                variant="clear"
-                size={Typography.sizes.xl}
-                iconColor={theme.text}
-                testID="edit-button"
-            />
-            <IconButton
-                name="delete"
-                onPress={headerActions?.onDelete}
-                variant="clear"
-                size={Typography.sizes.xl}
-                iconColor={theme.error}
-                testID="delete-button"
-            />
-        </View>
+        <ScreenHeaderActions
+            actions={[
+                {
+                    name: 'edit',
+                    onPress: headerActions?.onEdit,
+                    iconColor: theme.text,
+                    size: Typography.sizes.xl,
+                    testID: 'edit-button',
+                },
+                {
+                    name: 'delete',
+                    onPress: headerActions?.onDelete,
+                    iconColor: theme.error,
+                    size: Typography.sizes.xl,
+                    testID: 'delete-button',
+                },
+            ]}
+        />
     );
 
     const accentColor = theme[typeColorKey as keyof typeof theme] as string;
@@ -351,11 +352,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.xs,
     },
     sectionTitle: {
         marginBottom: Spacing.md,

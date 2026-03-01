@@ -1,4 +1,5 @@
-import { AppButton, AppCard, AppIcon, AppText, Badge, IconButton, ListRow } from '@/src/components/core';
+import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { AppButton, AppCard, AppIcon, AppText, Badge, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { TransactionDetailsViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
@@ -52,32 +53,31 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
     }
 
     const headerActionsNode = (
-        <View style={styles.headerActions}>
-            <IconButton
-                name="copy"
-                onPress={headerActions.onCopy}
-                variant="clear"
-                size={Typography.sizes.xl}
-                iconColor={theme.text}
-                testID="copy-button"
-            />
-            <IconButton
-                name="edit"
-                onPress={headerActions.onEdit}
-                variant="clear"
-                size={Typography.sizes.xl}
-                iconColor={theme.text}
-                testID="edit-button"
-            />
-            <IconButton
-                name="delete"
-                onPress={headerActions.onDelete}
-                variant="clear"
-                size={Typography.sizes.xl}
-                iconColor={theme.error}
-                testID="delete-button"
-            />
-        </View>
+        <ScreenHeaderActions
+            actions={[
+                {
+                    name: 'copy',
+                    onPress: headerActions.onCopy,
+                    iconColor: theme.text,
+                    size: Typography.sizes.xl,
+                    testID: 'copy-button',
+                },
+                {
+                    name: 'edit',
+                    onPress: headerActions.onEdit,
+                    iconColor: theme.text,
+                    size: Typography.sizes.xl,
+                    testID: 'edit-button',
+                },
+                {
+                    name: 'delete',
+                    onPress: headerActions.onDelete,
+                    iconColor: theme.error,
+                    size: Typography.sizes.xl,
+                    testID: 'delete-button',
+                },
+            ]}
+        />
     );
 
     return (
@@ -254,10 +254,5 @@ const styles = StyleSheet.create({
         borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.xs,
     },
 });
