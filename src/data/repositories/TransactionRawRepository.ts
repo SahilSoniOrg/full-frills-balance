@@ -92,34 +92,30 @@ class TransactionRawRepository {
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
     const sql = `
-      SELECT t.account_id AS accountId, t.running_balance AS runningBalance
-      FROM transactions t
-      JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id IN (${placeholders})
-      AND t.transaction_date <= ?
-      AND t.deleted_at IS NULL
-      AND j.deleted_at IS NULL
-      AND j.status IN (${activeStatusesStr})
-      AND NOT EXISTS (
-        SELECT 1
-        FROM transactions t_next
-        JOIN journals j_next ON t_next.journal_id = j_next.id
-        WHERE t_next.account_id = t.account_id
-          AND t_next.transaction_date <= ?
-          AND t_next.deleted_at IS NULL
-          AND j_next.deleted_at IS NULL
-          AND j_next.status IN (${activeStatusesStr})
-          AND (
-            t_next.transaction_date > t.transaction_date
-            OR (t_next.transaction_date = t.transaction_date AND t_next.created_at > t.created_at)
-            OR (t_next.transaction_date = t.transaction_date AND t_next.created_at = t.created_at AND t_next.id > t.id)
-          )
+      WITH RankedTransactions AS (
+        SELECT 
+          t.account_id AS accountId, 
+          t.running_balance AS runningBalance,
+          ROW_NUMBER() OVER (
+            PARTITION BY t.account_id 
+            ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
+          ) as rn
+        FROM transactions t
+        JOIN journals j ON t.journal_id = j.id
+        WHERE t.account_id IN (${placeholders})
+          AND t.transaction_date <= ?
+          AND t.deleted_at IS NULL
+          AND j.deleted_at IS NULL
+          AND j.status IN (${activeStatusesStr})
       )
+      SELECT accountId, runningBalance
+      FROM RankedTransactions
+      WHERE rn = 1
     `;
 
     const raws = await this.queryRaw<{ accountId: string; runningBalance: number }>(
       sql,
-      [...accountIds, cutoffDate, cutoffDate]
+      [...accountIds, cutoffDate]
     );
 
     if (raws.length > 0) {
@@ -507,28 +503,56 @@ class TransactionRawRepository {
     endDate: number
   ): Promise<Map<string, number>> {
     if (accountIdsWithStartDates.length === 0) return new Map();
-
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
-    // Use UNION ALL for batch count across different ranges
-    const queries = accountIdsWithStartDates.map(() => `
-      SELECT ? AS account_id, COUNT(*) as tx_count 
+    // To prevent O(N) UNION ALL growth, we can select all transactions for these accounts
+    // up to the endDate, and then group by account_id in SQLite. 
+    // Since each account has a different startDate, we handle that in JS or use 
+    // conditional aggregation if we can. 
+    // Wait, since SQLite doesn't have an easy array binding for complex tuples,
+    // and passing N separate start dates into SQL is complex without UNION ALL,
+    // simpler approach: filter by the MIN(startDate) globally, then group by, 
+    // and filter in JS if needed. Or construct a simpler CASE statement.
+    // Actually, generating a CASE statement for the dates is better than UNION ALL
+    // because it keeps the query plan as a single scan over the relevant accounts.
+
+    const accountIds = accountIdsWithStartDates.map(a => a.accountId);
+    const placeholders = accountIds.map(() => '?').join(',');
+
+    // Create a CASE statement to check start dates per account
+    const caseClauses = accountIdsWithStartDates.map(() => `WHEN ? THEN t.transaction_date > ?`).join(' ');
+
+    // We pass account ID, start date for each CASE branch
+    const caseParams: (string | number)[] = [];
+    accountIdsWithStartDates.forEach(item => {
+      caseParams.push(item.accountId, item.startDate);
+    });
+
+    const sql = `
+      SELECT t.account_id, COUNT(*) as tx_count 
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id = ?
-        AND t.transaction_date > ?
+      WHERE t.account_id IN (${placeholders})
         AND t.transaction_date <= ?
+        AND (
+          CASE t.account_id 
+            ${caseClauses}
+            ELSE 0
+          END
+        )
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${activeStatusesStr})
-    `).join(' UNION ALL ');
+      GROUP BY t.account_id
+    `;
 
-    const params: (string | number)[] = [];
-    accountIdsWithStartDates.forEach(item => {
-      params.push(item.accountId, item.accountId, item.startDate, endDate);
-    });
+    const params = [
+      ...accountIds,
+      endDate,
+      ...caseParams
+    ];
 
-    const raws = await this.queryRaw<{ account_id: string; tx_count: number }>(queries, params);
+    const raws = await this.queryRaw<{ account_id: string; tx_count: number }>(sql, params);
     if (raws.length > 0) {
       return new Map(raws.map(r => [r.account_id, r.tx_count || 0]));
     }

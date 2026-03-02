@@ -297,10 +297,23 @@ export class PlannedPaymentService {
                 const alreadyExists = journalledDays.get(pp.id)?.has(nextOcc) ?? false;
 
                 if (!alreadyExists) {
-                    await this.generatePlannedJournal(pp, nextOcc)
-                    // Register the new day so back-to-back occurrences don't double-generate.
-                    if (!journalledDays.has(pp.id)) journalledDays.set(pp.id, new Set());
-                    journalledDays.get(pp.id)!.add(nextOcc);
+                    // F-09 Fix: Add a secondary DB-level check right before generation
+                    // to prevent duplicate generation if processDuePayments runs concurrently
+                    const dayEnd = nextOcc + (AppConfig.time.msPerDay - 1);
+                    const dbExists = await database.collections.get<Journal>('journals').query(
+                        Q.where('planned_payment_id', pp.id),
+                        Q.where('journal_date', Q.between(nextOcc, dayEnd)),
+                        Q.where('deleted_at', Q.eq(null))
+                    ).fetchCount();
+
+                    if (dbExists === 0) {
+                        await this.generatePlannedJournal(pp, nextOcc)
+                        // Register the new day so back-to-back occurrences don't double-generate.
+                        if (!journalledDays.has(pp.id)) journalledDays.set(pp.id, new Set());
+                        journalledDays.get(pp.id)!.add(nextOcc);
+                    } else {
+                        logger.warn(`[PlannedPaymentService] Prevented duplicate journal generation for payment ${pp.id} via db-level check.`);
+                    }
                 }
 
                 nextOcc = this.calculateNextOccurrence(nextOcc, pp)

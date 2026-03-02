@@ -120,18 +120,8 @@ class ReactiveDataService {
      * Derives data from the shared dashboard observable.
      */
     observeMonthlyFlow(targetCurrency: string): Observable<MonthlyFlowData> {
-        return combineLatest([
-            accountRepository.observeAll(),
-            transactionRepository.observeActiveWithColumns([
-                'amount',
-                'transaction_type',
-                'transaction_date',
-                'currency_code',
-                'exchange_rate'
-            ])
-        ]).pipe(
-            debounceTime(Animation.dataRefreshDebounce),
-            switchMap(async ([accounts, transactions]) => {
+        return this.observeDashboardData(targetCurrency).pipe(
+            switchMap(async ({ accounts, transactions }) => {
                 try {
                     const now = new Date();
                     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();

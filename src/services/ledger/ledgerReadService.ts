@@ -95,9 +95,10 @@ export class LedgerReadService {
 
         const result: string[] = [];
         const queue: string[] = [rootAccountId];
+        let i = 0;
 
-        while (queue.length > 0) {
-            const current = queue.shift();
+        while (i < queue.length) {
+            const current = queue[i++];
             if (!current) continue;
             result.push(current);
             const children = childrenByParent.get(current) || [];

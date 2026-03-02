@@ -417,7 +417,7 @@ export class JournalRepository {
           t.transactionDate = reversalDate
           t.notes = `Reversal: ${tx.notes || ''}`
           t.exchangeRate = tx.exchangeRate || 1
-          t.runningBalance = 0
+          t.runningBalance = null // F-13 Fix: Let rebuild queue handle balance
           t.createdAt = now
           t.updatedAt = now
         })

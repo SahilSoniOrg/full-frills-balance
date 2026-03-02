@@ -23,7 +23,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
-import { BehaviorSubject, combineLatest, Observable, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 
 const DEFAULT_INSIGHTS_CONFIG = {
@@ -90,16 +90,16 @@ export class InsightService {
             transactionRepository.observeActiveWithColumns(['running_balance']),
             journalRepository.observeStatusMeta(),
         ] as [
-            Observable<Account[]>,
-            Observable<Account[]>,
-            Observable<Budget[]>,
-            Observable<PlannedPayment[]>,
-            Observable<Pattern[]>,
-            Observable<Account[]>,
-            Observable<Journal[]>,
-            Observable<unknown[]>,
-            Observable<Journal[]>
-        ]
+                Observable<Account[]>,
+                Observable<Account[]>,
+                Observable<Budget[]>,
+                Observable<PlannedPayment[]>,
+                Observable<Pattern[]>,
+                Observable<Account[]>,
+                Observable<Journal[]>,
+                Observable<unknown[]>,
+                Observable<Journal[]>
+            ]
         ).pipe(
             debounceTime(250),
             switchMap(([assets, liabilities, budgets, plannedPayments, patterns, allAccounts, plannedJournals]) => {
@@ -234,25 +234,32 @@ export class InsightService {
     private observePatternsInternal(onlyDismissed: boolean): Observable<Pattern[]> {
         const insightsConfig = AppConfig.insights ?? DEFAULT_INSIGHTS_CONFIG;
         const lookbackDays = insightsConfig.lookbackDays;
-        const ninetyDaysAgo = Date.now() - (lookbackDays * 24 * 60 * 60 * 1000);
 
-        // PERF: Scope to the lookback window only — never observe all transactions.
-        // ninetyDaysAgo is calculated once at observable construction time;
-        // if the app runs across a day boundary the window shifts on next refresh trigger.
-        return combineLatest([
-            transactionRepository.observeByDateRange(ninetyDaysAgo),
-            accountRepository.observeAll(),
-            plannedPaymentRepository.observeActive(), // For deduplication against planned payments
-            this.refreshTrigger
-        ]).pipe(
+        // F-08 Fix: Recalculate ninetyDaysAgo periodically (e.g. every hour) so the
+        // reactive window doesn't go stale in long-lived app sessions.
+        // We use a timer that fires immediately and then every hour.
+        const oneHour = 60 * 60 * 1000;
+
+        return timer(0, oneHour).pipe(
+            switchMap(() => {
+                const ninetyDaysAgo = Date.now() - (lookbackDays * 24 * 60 * 60 * 1000);
+
+                return combineLatest([
+                    transactionRepository.observeByDateRange(ninetyDaysAgo),
+                    accountRepository.observeAll(),
+                    plannedPaymentRepository.observeActive(), // For deduplication against planned payments
+                    this.refreshTrigger,
+                    of(ninetyDaysAgo)
+                ]);
+            }),
             debounceTime(500),
-            switchMap(async ([_, accounts, activePlannedPayments]) => {
-                const accountMap = new Map(accounts.map(a => [a.id, a]));
+            switchMap(async ([_, accounts, activePlannedPayments, __, ninetyDaysAgo]) => {
+                const accountMap = new Map((accounts as Account[]).map((a: Account) => [a.id, a]));
                 const minCount = insightsConfig.minRecurringCount;
 
                 // 1. Subscription Amnesia Detection (SQL-optimized)
                 const recurringCandidates: RecurringPattern[] = await transactionRawRepository.getRecurringPatternsRaw(
-                    ninetyDaysAgo,
+                    ninetyDaysAgo as number,
                     minCount
                 );
                 const patterns: Pattern[] = [];
@@ -310,8 +317,8 @@ export class InsightService {
 
                 // Fetch only expense transactions for lookback window
                 const expenseTransactions = await transactionRepository.findByAccountsAndDateRange(
-                    accounts.filter(a => a.accountType === AccountType.EXPENSE).map(a => a.id),
-                    ninetyDaysAgo,
+                    (accounts as Account[]).filter((a: Account) => a.accountType === AccountType.EXPENSE).map((a: Account) => a.id),
+                    ninetyDaysAgo as number,
                     Date.now()
                 );
 

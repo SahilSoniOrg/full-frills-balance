@@ -1,5 +1,5 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
-import { AppButton, AppCard, AppIcon, AppText, Badge, ListRow } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, Badge, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { TransactionDetailsViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
@@ -89,124 +89,124 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
             withPadding
         >
             <View style={styles.content}>
-                <AppCard elevation="md" radius="r2" padding="lg" style={styles.receiptCard}>
-                    <View style={styles.iconContainer}>
-                        <View style={[styles.bigIcon, { backgroundColor: withOpacity(theme.primary, Opacity.soft) }]}>
-                            <AppIcon name="receipt" size={32} color={theme.primary} />
-                        </View>
+                {/* <AppCard elevation="md" radius="r2" padding="lg" style={styles.receiptCard}> */}
+                <View style={styles.iconContainer}>
+                    <View style={[styles.bigIcon, { backgroundColor: withOpacity(theme.primary, Opacity.soft) }]}>
+                        <AppIcon name="receipt" size={32} color={theme.primary} />
                     </View>
+                </View>
 
-                    <View style={styles.headerSection}>
-                        <AppText variant="title" style={{ fontSize: Typography.sizes.xxxl, marginBottom: Spacing.sm }}>
-                            {amountText}
-                        </AppText>
-                        <AppText variant="body" color="secondary">
-                            {descriptionText}
-                        </AppText>
-                        <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md }}>
-                            <Badge variant={statusVariant} size="sm">
-                                {statusLabel}
+                <View style={styles.headerSection}>
+                    <AppText variant="title" style={{ fontSize: Typography.sizes.xxxl, marginBottom: Spacing.sm }}>
+                        {amountText}
+                    </AppText>
+                    <AppText variant="body" color="secondary">
+                        {descriptionText}
+                    </AppText>
+                    <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md }}>
+                        <Badge variant={statusVariant} size="sm">
+                            {statusLabel}
+                        </Badge>
+                        {displayTypeLabel && (
+                            <Badge variant="default" size="sm">
+                                {displayTypeLabel}
                             </Badge>
-                            {displayTypeLabel && (
-                                <Badge variant="default" size="sm">
-                                    {displayTypeLabel}
-                                </Badge>
-                            )}
-                        </View>
+                        )}
                     </View>
+                </View>
+                {/* <View style={[styles.divider, { backgroundColor: theme.divider }]} /> */}
 
-                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+                <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.md, paddingHorizontal: Spacing.md }}>
+                    BREAKDOWN
+                </AppText>
 
-                    <View style={styles.infoSection}>
-                        <ListRow
-                            title="Date"
-                            trailing={<AppText variant="body">{formattedDate}</AppText>}
-                            padding="sm"
-                        />
-                        <ListRow
-                            title="Journal ID"
-                            trailing={<AppText variant="body">{journalIdShort}</AppText>}
-                            padding="sm"
-                        />
-                        <ListRow
-                            title="History"
-                            trailing={
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                                    <AppText variant="body" color="primary">View Edit History</AppText>
-                                    <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.primary} />
+                {splitItems.map((item, index) => (
+                    <ListRow
+                        key={item.id}
+                        title={item.accountName}
+                        subtitle={item.transactionType}
+                        leading={
+                            <View style={[styles.directionIcon, { backgroundColor: item.iconBackground }]}>
+                                <AppIcon
+                                    name={item.iconName as any}
+                                    size={16}
+                                    color={item.iconColor}
+                                />
+                            </View>
+                        }
+                        trailing={
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                                <AppText variant="subheading" style={{ color: item.amountColor }}>
+                                    {item.amountText}
+                                </AppText>
+                                <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.textSecondary} />
+                            </View>
+                        }
+                        onPress={item.onPress}
+                        padding="md"
+                        showDivider={index < splitItems.length - 1}
+                    />
+                ))}
+
+                <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+
+                <View style={styles.infoSection}>
+                    <ListRow
+                        title="Date"
+                        trailing={<AppText variant="body">{formattedDate}</AppText>}
+                        padding="sm"
+                    />
+                    <ListRow
+                        title="Journal ID"
+                        trailing={<AppText variant="body">{journalIdShort}</AppText>}
+                        padding="sm"
+                    />
+                    <ListRow
+                        title="History"
+                        trailing={
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                                <AppText variant="body" color="primary">View Edit History</AppText>
+                                <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.primary} />
+                            </View>
+                        }
+                        onPress={onHistoryPress}
+                        padding="sm"
+                    />
+
+                    {vm.onPost && (
+                        <View style={{ padding: Spacing.md, gap: Spacing.sm }}>
+                            <AppButton
+                                variant="primary"
+                                onPress={vm.onPost}
+                                style={{ width: '100%' }}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                                    <AppIcon name="checkmark" size={18} color={theme.onPrimary} />
+                                    <AppText variant="body" weight="bold" style={{ color: theme.onPrimary }}>
+                                        Post Transaction Now
+                                    </AppText>
                                 </View>
-                            }
-                            onPress={onHistoryPress}
-                            padding="sm"
-                        />
+                            </AppButton>
 
-                        {vm.onPost && (
-                            <View style={{ padding: Spacing.md, gap: Spacing.sm }}>
+                            {vm.onSkip && (
                                 <AppButton
-                                    variant="primary"
-                                    onPress={vm.onPost}
+                                    variant="outline"
+                                    onPress={vm.onSkip}
                                     style={{ width: '100%' }}
                                 >
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                                        <AppIcon name="checkmark" size={18} color={theme.onPrimary} />
-                                        <AppText variant="body" weight="bold" style={{ color: theme.onPrimary }}>
-                                            Post Transaction Now
+                                        <AppIcon name="close" size={18} color={theme.text} />
+                                        <AppText variant="body" weight="bold">
+                                            Skip This Occurrence
                                         </AppText>
                                     </View>
                                 </AppButton>
+                            )}
+                        </View>
+                    )}
+                </View>
 
-                                {vm.onSkip && (
-                                    <AppButton
-                                        variant="outline"
-                                        onPress={vm.onSkip}
-                                        style={{ width: '100%' }}
-                                    >
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                                            <AppIcon name="close" size={18} color={theme.text} />
-                                            <AppText variant="body" weight="bold">
-                                                Skip This Occurrence
-                                            </AppText>
-                                        </View>
-                                    </AppButton>
-                                )}
-                            </View>
-                        )}
-                    </View>
-
-                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-
-                    <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.md, paddingHorizontal: Spacing.md }}>
-                        BREAKDOWN
-                    </AppText>
-
-                    {splitItems.map((item, index) => (
-                        <ListRow
-                            key={item.id}
-                            title={item.accountName}
-                            subtitle={item.transactionType}
-                            leading={
-                                <View style={[styles.directionIcon, { backgroundColor: item.iconBackground }]}>
-                                    <AppIcon
-                                        name={item.iconName as any}
-                                        size={16}
-                                        color={item.iconColor}
-                                    />
-                                </View>
-                            }
-                            trailing={
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                                    <AppText variant="subheading" style={{ color: item.amountColor }}>
-                                        {item.amountText}
-                                    </AppText>
-                                    <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.textSecondary} />
-                                </View>
-                            }
-                            onPress={item.onPress}
-                            padding="md"
-                            showDivider={index < splitItems.length - 1}
-                        />
-                    ))}
-                </AppCard>
+                {/* </AppCard> */}
             </View>
         </Screen>
     );
