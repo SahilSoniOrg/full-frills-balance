@@ -1,5 +1,6 @@
 import { CustomDateTimePicker } from '@/src/components/common/CustomDateTimePicker';
 import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
+import { Section } from '@/src/components/layout';
 import { Layout, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -225,14 +226,7 @@ export function DateRangePickerView({
     );
 }
 
-function Section({ title, children }: { title: string, children: React.ReactNode }) {
-    return (
-        <View style={styles.section}>
-            <AppText variant="heading" style={styles.sectionTitle}>{title}</AppText>
-            {children}
-        </View>
-    );
-}
+
 
 function RangeChip({ label, active, theme, fonts, onPress }: { label: string, active: boolean, theme: Theme, fonts: any, onPress: () => void }) {
     return (

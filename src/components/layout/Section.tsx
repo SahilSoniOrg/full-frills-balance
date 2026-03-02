@@ -5,17 +5,18 @@
  * NOT part of design system - reduces duplication in app screens only
  */
 
+import { AppText } from '@/src/components/core/AppText'
 import { Spacing } from '@/src/constants'
 import React from 'react'
 import { View, type ViewProps } from 'react-native'
 
 export type SectionProps = ViewProps & {
-  // No variants - this is a simple layout primitive
+  title?: string
   children: React.ReactNode
   padding?: 'sm' | 'md' | 'lg'
 }
 
-export function Section({ children, padding = 'md', style, ...props }: SectionProps) {
+export function Section({ title, children, padding = 'md', style, ...props }: SectionProps) {
   const getPadding = () => {
     switch (padding) {
       case 'sm':
@@ -28,15 +29,24 @@ export function Section({ children, padding = 'md', style, ...props }: SectionPr
         return Spacing.xxl
     }
   }
-  
+
   return (
-    <View 
+    <View
       style={[{
         paddingHorizontal: getPadding(),
         paddingVertical: getPadding() / 2,
       }, style]}
       {...props}
     >
+      {title && (
+        <AppText
+          variant="subheading"
+          color="secondary"
+          style={{ marginBottom: Spacing.md }}
+        >
+          {title.toUpperCase()}
+        </AppText>
+      )}
       {children}
     </View>
   )
