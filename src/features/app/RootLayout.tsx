@@ -6,7 +6,7 @@ import { database } from '@/src/data/database/Database';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
-import { posthogClient } from '@/src/services/analytics-service';
+import { analytics, posthogClient } from '@/src/services/analytics-service';
 import {
   DMSerifDisplay_400Regular,
 } from '@expo-google-fonts/dm-serif-display';
@@ -25,11 +25,28 @@ import {
 } from '@expo-google-fonts/raleway';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useSegments } from 'expo-router';
 import { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+function PostHogScreenTracker() {
+  const pathname = usePathname();
+  const segments = useSegments();
+
+  React.useEffect(() => {
+    if (pathname) {
+      // Screen name can be the pathname or a more descriptive string from segments
+      const screenName = segments.join('/') || 'index';
+      analytics.screen(screenName, {
+        pathname,
+      });
+    }
+  }, [pathname, segments]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -58,6 +75,7 @@ export default function RootLayout() {
               client={posthogClient ?? undefined}
               debug={__DEV__}
             >
+              <PostHogScreenTracker />
               <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                 <AppContent />
                 <AlertContainer />

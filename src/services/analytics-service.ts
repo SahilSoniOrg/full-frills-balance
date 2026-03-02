@@ -1,7 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { ImportStats } from '@/src/services/import';
 import { logger } from '@/src/utils/logger';
+import * as Device from 'expo-device';
 import PostHog from 'posthog-react-native';
+import { Platform } from 'react-native';
 
 /**
  * Analytics Service
@@ -43,16 +45,60 @@ export class AnalyticsService {
     /**
      * Track a custom event
      */
-    track(eventName: string, props?: Record<string, string | number | boolean>) {
+    track(eventName: string, props?: Record<string, string | number | boolean | null>) {
         if (!posthogClient) return;
 
         try {
-            posthogClient.capture(eventName, props);
+            const enrichedProps = {
+                ...props,
+                $app_version: AppConfig.appVersion,
+                $device_name: Device.deviceName,
+                $device_model: Device.modelName,
+                $os_name: Platform.OS,
+                $os_version: Device.osVersion,
+                $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
+                $is_dev: __DEV__ || !Device.isDevice,
+                $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
+            };
+
+            posthogClient.capture(eventName, enrichedProps);
             if (__DEV__) {
-                logger.debug(`[Analytics] Tracked: ${eventName}`, props);
+                logger.debug(`[Analytics] Tracked: ${eventName}`, enrichedProps);
             }
         } catch (error) {
             logger.error(`[Analytics] Failed to track event: ${eventName}`, error);
+        }
+    }
+
+    /**
+     * Identify the user/device
+     */
+    identify(distinctId: string, properties?: Record<string, string | number | boolean>) {
+        if (!posthogClient) return;
+
+        try {
+            posthogClient.identify(distinctId, properties);
+            if (__DEV__) {
+                logger.debug(`[Analytics] Identified: ${distinctId}`, properties);
+            }
+        } catch (error) {
+            logger.error(`[Analytics] Failed to identify user: ${distinctId}`, error);
+        }
+    }
+
+    /**
+     * Track a screen view
+     */
+    screen(screenName: string, props?: Record<string, string | number | boolean>) {
+        if (!posthogClient) return;
+
+        try {
+            posthogClient.screen(screenName, props);
+            if (__DEV__) {
+                logger.debug(`[Analytics] Screen: ${screenName}`, props);
+            }
+        } catch (error) {
+            logger.error(`[Analytics] Failed to track screen: ${screenName}`, error);
         }
     }
 

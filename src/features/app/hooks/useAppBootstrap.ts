@@ -3,6 +3,7 @@ import { currencyInitService } from '@/src/services/currency-init-service';
 import { integrityService } from '@/src/services/integrity-service';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
 import { useEffect } from 'react';
 
 /**
@@ -13,8 +14,22 @@ export function useAppBootstrap() {
     let isActive = true;
 
     const bootstrap = async () => {
-      // Initialize Analytics
-      analytics.initialize();
+      // 1. Load preferences first to get/set anonymizedId
+      try {
+        await preferences.loadPreferences();
+
+        let anonId = preferences.anonymizedId;
+        if (!anonId) {
+          anonId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          await preferences.setAnonymizedId(anonId);
+        }
+
+        // 2. Initialize Analytics with ID
+        analytics.initialize();
+        analytics.identify(anonId);
+      } catch (error) {
+        logger.error('[Bootstrap] Preferences/Analytics init failed', error);
+      }
 
       try {
         await currencyInitService.initialize();

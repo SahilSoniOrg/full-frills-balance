@@ -24,6 +24,7 @@ export interface UIPreferences {
   advancedMode: boolean;
   archetype?: string;
   dismissedPatternIds: string[];
+  anonymizedId?: string;
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -37,6 +38,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   fontId: FontIds.DEEP_SPACE,
   archetype: undefined,
   dismissedPatternIds: [],
+  anonymizedId: undefined,
 };
 
 class PreferencesHelper {
@@ -215,6 +217,14 @@ class PreferencesHelper {
 
   get dismissedPatternIds(): string[] {
     return this.preferences.dismissedPatternIds;
+  }
+
+  get anonymizedId(): string | undefined {
+    return this.preferences.anonymizedId;
+  }
+
+  async setAnonymizedId(id: string): Promise<void> {
+    await this.updatePreferences({ anonymizedId: id });
   }
 
   async dismissPattern(id: string): Promise<void> {

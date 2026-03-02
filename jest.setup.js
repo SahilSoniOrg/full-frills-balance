@@ -74,6 +74,20 @@ jest.mock('react-native/Libraries/Components/StatusBar/StatusBar', () => {
 // Mock Expo modules
 jest.mock('expo-font');
 jest.mock('expo-asset');
+jest.mock('expo-device', () => ({
+    deviceName: 'Test Device',
+    modelName: 'Test Model',
+    osName: 'iOS',
+    osVersion: '14.0',
+    deviceType: 1, // PHONE
+    DeviceType: {
+        UNKNOWN: 0,
+        PHONE: 1,
+        TABLET: 2,
+        TV: 3,
+        DESKTOP: 4,
+    },
+}));
 jest.mock('expo-localization', () => ({
     getLocales: () => [{ languageTag: 'en-US', currencyCode: 'USD' }],
     getCalendars: () => [{ timeZone: 'UTC' }],
