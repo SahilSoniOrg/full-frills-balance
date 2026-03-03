@@ -573,6 +573,79 @@ class TransactionRawRepository {
     }
     return results;
   }
+
+  /**
+   * Calculates the total increases and decreases for an account within a date range.
+   * Returns { totalIncrease: number, totalDecrease: number }
+   */
+  async getAccountPeriodMetricsRaw(
+    accountId: string,
+    startDate: number,
+    endDate: number,
+    isAssetOrExpense: boolean = true
+  ): Promise<{ totalIncrease: number; totalDecrease: number }> {
+    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+
+    // In SQL, we sum amounts grouped by debit/credit to get total increase and decrease.
+    const increaseSql = isAssetOrExpense
+      ? `SUM(CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END)`
+      : `SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END)`;
+
+    const decreaseSql = isAssetOrExpense
+      ? `SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END)`
+      : `SUM(CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END)`;
+
+    let sql = `
+      SELECT ${increaseSql} as total_increase, ${decreaseSql} as total_decrease
+      FROM transactions t
+      JOIN journals j ON t.journal_id = j.id
+      WHERE t.account_id = ?
+        AND t.transaction_date >= ?
+        AND t.transaction_date <= ?
+        AND t.deleted_at IS NULL
+        AND j.deleted_at IS NULL
+        AND j.status IN (${activeStatusesStr})
+    `;
+    const args = [accountId, startDate, endDate];
+
+    try {
+      const raws = await this.queryRaw<{ total_increase: number | null; total_decrease: number | null }>(sql, args);
+      if (raws.length > 0) {
+        return {
+          totalIncrease: raws[0]?.total_increase || 0,
+          totalDecrease: raws[0]?.total_decrease || 0
+        };
+      }
+    } catch (error) {
+      logger.error('Error fetching getAccountPeriodMetricsRaw', error);
+    }
+
+    // Fallback for LokiJS/Test
+    const txs = await database.collections.get<Transaction>('transactions')
+      .query(
+        Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+        Q.on('journals', 'deleted_at', Q.eq(null)),
+        Q.where('account_id', accountId),
+        Q.where('transaction_date', Q.gte(startDate)),
+        Q.where('transaction_date', Q.lte(endDate)),
+        Q.where('deleted_at', Q.eq(null))
+      ).fetch();
+
+    let totalIncrease = 0;
+    let totalDecrease = 0;
+
+    for (const tx of txs) {
+      if (isAssetOrExpense) {
+        if (tx.transactionType === TransactionType.DEBIT) totalIncrease += tx.amount;
+        else totalDecrease += tx.amount;
+      } else {
+        if (tx.transactionType === TransactionType.CREDIT) totalIncrease += tx.amount;
+        else totalDecrease += tx.amount;
+      }
+    }
+
+    return { totalIncrease, totalDecrease };
+  }
 }
 
 export const transactionRawRepository = new TransactionRawRepository();

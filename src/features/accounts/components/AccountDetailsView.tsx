@@ -1,3 +1,4 @@
+import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
@@ -8,6 +9,7 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatShortDate } from '@/src/utils/dateUtils';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -38,6 +40,10 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         navigatePrevious,
         navigateNext,
         onDateSelect,
+        chartData,
+        rollingAverageData,
+        xTicks,
+        periodMetricsFormatted,
         transactionsLoading,
         transactionsLoadingMore,
         transactionItems,
@@ -215,6 +221,49 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                 onNext={navigateNext}
                             />
                         </View>
+
+                        {chartData.length > 0 && (
+                            <View style={styles.chartContainer}>
+                                <AppText>Chart has {chartData.length} entries</AppText>
+                                <LineChart
+                                    data={chartData}
+                                    secondaryData={rollingAverageData}
+                                    secondaryColor={theme.warning}
+                                    xTicks={xTicks}
+                                    formatXTick={formatShortDate}
+                                    height={180}
+                                />
+                            </View>
+                        )}
+
+                        <View style={styles.metricsContainer}>
+                            <View style={styles.metricItem}>
+                                <AppText variant="caption" color="secondary">
+                                    {accountType === 'ASSET' ? 'Total In' :
+                                        (accountType === 'LIABILITY' || accountType === 'CREDIT_CARD' ? 'Total Spent' : 'Total In')}
+                                </AppText>
+                                <AppText variant="heading" color="income">
+                                    {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.totalIncreaseText}
+                                </AppText>
+                            </View>
+                            <View style={styles.metricItem}>
+                                <AppText variant="caption" color="secondary">
+                                    {accountType === 'ASSET' ? 'Total Out' :
+                                        (accountType === 'LIABILITY' || accountType === 'CREDIT_CARD' ? 'Total Paid' : 'Total Out')}
+                                </AppText>
+                                <AppText variant="heading" color="expense">
+                                    {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.totalDecreaseText}
+                                </AppText>
+                            </View>
+                            {periodMetricsFormatted.dailyAverageText && (
+                                <View style={styles.metricItem}>
+                                    <AppText variant="caption" color="secondary">Daily Avg</AppText>
+                                    <AppText variant="heading" color={periodMetricsFormatted.dailyAverageText.startsWith('-') ? 'expense' : 'income'}>
+                                        {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.dailyAverageText}
+                                    </AppText>
+                                </View>
+                            )}
+                        </View>
                     </View>
                 }
                 contentContainerStyle={styles.listContainer}
@@ -295,8 +344,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: Spacing.sm,
     },
+    chartContainer: {
+        marginTop: Spacing.md,
+        alignItems: 'center',
+    },
     listContainer: {
         paddingHorizontal: Spacing.lg,
         paddingBottom: Spacing.xxxxl * 2.5,
+    },
+    metricsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: Spacing.xl,
+        marginBottom: Spacing.md,
+        paddingHorizontal: Spacing.md,
+    },
+    metricItem: {
+        flex: 1,
+        alignItems: 'center',
+        gap: Spacing.xs,
     },
 });

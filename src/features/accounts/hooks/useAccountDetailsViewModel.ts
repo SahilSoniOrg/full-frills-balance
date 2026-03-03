@@ -1,10 +1,14 @@
 import { IconName } from '@/src/components/core';
 import { useUI } from '@/src/contexts/UIContext';
 import Account, { formatAccountSubcategoryLabel } from '@/src/data/models/Account';
+import Transaction from '@/src/data/models/Transaction';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useAccountActions, useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
+import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { AccountBalance, EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
@@ -16,8 +20,19 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
+import { Q } from '@nozbe/watermelondb';
+import dayjs from 'dayjs';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { of } from 'rxjs';
+
+export interface PeriodMetrics {
+    totalIncrease: number;
+    totalDecrease: number;
+    netChange: number;
+    dailyAverage: number | null;
+    isLoading: boolean;
+}
 
 export interface SubAccountViewModel {
     id: string;
@@ -60,6 +75,17 @@ export interface AccountDetailsViewModel {
     navigatePrevious?: () => void;
     navigateNext?: () => void;
     onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
+    chartData: { x: number; y: number }[];
+    rollingAverageData: { x: number; y: number }[];
+    xTicks: number[];
+    periodMetrics: PeriodMetrics;
+    periodMetricsFormatted: {
+        totalIncreaseText: string;
+        totalDecreaseText: string;
+        netChangeText: string;
+        dailyAverageText: string | null;
+        isLoading: boolean;
+    };
     transactionsLoading: boolean;
     transactionsLoadingMore: boolean;
     transactionItems: TransactionListItem[];
@@ -125,6 +151,24 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const { transactions, isLoading: transactionsLoading, isLoadingMore: transactionsLoadingMore, hasMore, loadMore } = useLedgerTransactionsForAccount(accountId, 50, dateRange || undefined);
     const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
 
+    // Chart-specific unpaginated transactions
+    const { data: chartTransactions } = useObservable<Transaction[]>(
+        () => {
+            if (!accountId) return of([]);
+            const MS_PER_DAY = 24 * 60 * 60 * 1000;
+            // Pad 7 days before and after
+            const start = dateRange ? dateRange.startDate - (7 * MS_PER_DAY) : dayjs().startOf('month').valueOf() - (7 * MS_PER_DAY);
+            const end = dateRange ? dateRange.endDate + (7 * MS_PER_DAY) : dayjs().endOf('month').valueOf() + (7 * MS_PER_DAY);
+
+            return transactionRepository.transactionsQuery(
+                Q.where('account_id', accountId),
+                Q.where('deleted_at', Q.eq(null)),
+                Q.where('transaction_date', Q.gte(start)),
+                Q.where('transaction_date', Q.lte(end)),
+                Q.sortBy('transaction_date', Q.asc)
+            ).observeWithColumns(['running_balance', 'transaction_date']);
+        }, [accountId, dateRange], []);
+
     const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
 
     // Build recursive sub-tree from all accounts
@@ -146,6 +190,69 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
         return buildSubTree(accountId, 0);
     }, [account, accounts, accountId]);
+
+    const accountType = account?.accountType || '';
+
+    const [periodMetrics, setPeriodMetrics] = useState<PeriodMetrics>({
+        totalIncrease: 0,
+        totalDecrease: 0,
+        netChange: 0,
+        dailyAverage: null,
+        isLoading: false,
+    });
+
+    useEffect(() => {
+        if (!dateRange || !accountId || !accountType) {
+            setPeriodMetrics({
+                totalIncrease: 0,
+                totalDecrease: 0,
+                netChange: 0,
+                dailyAverage: null,
+                isLoading: false,
+            });
+            return;
+        }
+
+        const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
+        let isMounted = true;
+
+        const fetchMetrics = async () => {
+            setPeriodMetrics(prev => ({ ...prev, isLoading: true }));
+            try {
+                const { totalIncrease, totalDecrease } = await transactionRawRepository.getAccountPeriodMetricsRaw(
+                    accountId,
+                    dateRange.startDate,
+                    dateRange.endDate,
+                    isAssetOrExpense
+                );
+
+                if (!isMounted) return;
+
+                const netChange = totalIncrease - totalDecrease;
+                // Calculate difference in days (end of day to start of day)
+                const ds = new Date(dateRange.startDate);
+                const de = new Date(dateRange.endDate);
+                const days = Math.max(1, Math.ceil((de.getTime() - ds.getTime()) / (1000 * 60 * 60 * 24)));
+                const dailyAverage = netChange / days;
+
+                setPeriodMetrics({
+                    totalIncrease,
+                    totalDecrease,
+                    netChange,
+                    dailyAverage,
+                    isLoading: false,
+                });
+            } catch (error) {
+                logger.error('Failed to fetch period metrics', error);
+                if (isMounted) {
+                    setPeriodMetrics(prev => ({ ...prev, isLoading: false }));
+                }
+            }
+        };
+
+        fetchMetrics();
+        return () => { isMounted = false; };
+    }, [accountId, dateRange, accountType]);
 
     const subBalances = useMemo(() => new Map<string, AccountBalance>(rawSubBalances.map((b: AccountBalance) => [b.accountId, b])), [rawSubBalances]);
     const subBalancesLoading = dashboardLoading;
@@ -222,7 +329,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         hideDatePicker();
     }, [hideDatePicker, setFilter]);
 
-    const accountType = account?.accountType || '';
     const accountSubcategoryLabel = account?.accountSubcategory
         ? formatAccountSubcategoryLabel(account.accountSubcategory)
         : '';
@@ -236,6 +342,16 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         : account
             ? CurrencyFormatter.format(balance, balanceCurrency)
             : '...';
+
+    const periodMetricsFormatted = useMemo(() => {
+        return {
+            totalIncreaseText: CurrencyFormatter.format(periodMetrics.totalIncrease, balanceCurrency),
+            totalDecreaseText: CurrencyFormatter.format(periodMetrics.totalDecrease, balanceCurrency),
+            netChangeText: CurrencyFormatter.format(periodMetrics.netChange, balanceCurrency),
+            dailyAverageText: periodMetrics.dailyAverage !== null ? CurrencyFormatter.format(periodMetrics.dailyAverage, balanceCurrency) : null,
+            isLoading: periodMetrics.isLoading,
+        };
+    }, [periodMetrics, balanceCurrency]);
 
     const secondaryBalances = useMemo(() => {
         if (!balanceData?.childBalances) return [];
@@ -349,6 +465,99 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
     const { groupedItems: transactionItems } = useTransactionGrouping(transactionGroupingOptions);
 
+    const { chartData, rollingAverageData, xTicks } = useMemo(() => {
+        if (!chartTransactions || !chartTransactions.length) return { chartData: [], rollingAverageData: [], xTicks: [] };
+
+        let lastValidBalance = chartTransactions[0].runningBalance || 0;
+        const pts = chartTransactions.map((t: Transaction) => {
+            if (t.runningBalance !== undefined && t.runningBalance !== null) {
+                lastValidBalance = t.runningBalance;
+            }
+            return {
+                x: t.transactionDate,
+                y: lastValidBalance,
+            };
+        });
+
+        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+        // Define visible bounds to match the filtered chart data
+        const calcMinX = pts[0].x;
+        const calcMaxX = pts[pts.length - 1].x;
+
+        const visibleStart = dateRange ? dateRange.startDate : calcMinX;
+        const visibleEnd = dateRange ? dateRange.endDate : calcMaxX;
+        const effectiveMaxX = visibleEnd + 7 * MS_PER_DAY; // include 7 day future padding
+
+        // Compute xTicks (e.g., 4 ticks spread across the expected visible range)
+        const ticks: number[] = [];
+        if (visibleStart !== effectiveMaxX) {
+            const numTicks = 4;
+            const step = (effectiveMaxX - visibleStart) / (numTicks - 1);
+            for (let i = 0; i < numTicks; i++) {
+                ticks.push(visibleStart + step * i);
+            }
+        } else {
+            ticks.push(visibleStart);
+        }
+
+        const sortedPts = [...pts].sort((a, b) => a.x - b.x);
+
+        // the boundaries for calculation (includes the +/- 7 padding days)
+        const calcFirstTime = sortedPts[0].x;
+        const calcLastTime = sortedPts[sortedPts.length - 1].x;
+
+        // Daily balances over the entire padded range
+        const dailyBalances: { x: number, y: number }[] = [];
+        let currentDayStart = new Date(calcFirstTime).setHours(0, 0, 0, 0);
+
+        // Let's extend the logic to fill all the way to `endDate + 7 days` if needed, 
+        // to naturally project a flat line for the future 7 days.
+        const targetEndDay = dateRange ? dateRange.endDate + (7 * MS_PER_DAY) : calcLastTime + (7 * MS_PER_DAY);
+        const calcLastDayEnd = new Date(targetEndDay).setHours(23, 59, 59, 999);
+
+        let lastKnownBalance = sortedPts[0].y;
+        let ptIndex = 0;
+
+        while (currentDayStart <= calcLastDayEnd) {
+            const nextDayStart = currentDayStart + MS_PER_DAY;
+            while (ptIndex < sortedPts.length && sortedPts[ptIndex].x < nextDayStart) {
+                lastKnownBalance = sortedPts[ptIndex].y;
+                ptIndex++;
+            }
+            dailyBalances.push({
+                x: currentDayStart,
+                y: lastKnownBalance
+            });
+            currentDayStart = nextDayStart;
+        }
+
+        // Compute the 7-day trailing average for each day
+        const fullRollingAverageData: { x: number, y: number }[] = [];
+        for (let i = 0; i < dailyBalances.length; i++) {
+            let sum = 0;
+            let count = 0;
+            // look back up to 7 days
+            for (let j = 0; j < 7; j++) {
+                if (i - j >= 0) {
+                    sum += dailyBalances[i - j].y;
+                    count++;
+                }
+            }
+            fullRollingAverageData.push({
+                x: dailyBalances[i].x,
+                y: count > 0 ? sum / count : 0,
+            });
+        }
+
+        // Cut off the padding days to keep graph strictly within the visible range or data bounds
+        const visibleChartData = dailyBalances.filter((pt: { x: number, y: number }) => pt.x >= visibleStart && pt.x <= effectiveMaxX);
+        // Include the requested "7 days future data" in the rolling average to complete the trailing overlap
+        const visibleRollingAvgData = fullRollingAverageData.filter((pt: { x: number, y: number }) => pt.x >= visibleStart && pt.x <= effectiveMaxX);
+
+        return { chartData: visibleChartData, rollingAverageData: visibleRollingAvgData, xTicks: ticks };
+    }, [chartTransactions, dateRange]);
+
     return {
         accountLoading,
         accountMissing: !accountLoading && !account,
@@ -379,6 +588,9 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         navigatePrevious,
         navigateNext,
         onDateSelect,
+        chartData,
+        rollingAverageData,
+        xTicks,
         transactionsLoading,
         transactionsLoadingMore,
         transactionItems,
@@ -392,5 +604,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         onShowSubAccounts,
         onHideSubAccounts,
         accountId,
+        periodMetrics,
+        periodMetricsFormatted,
     };
 }

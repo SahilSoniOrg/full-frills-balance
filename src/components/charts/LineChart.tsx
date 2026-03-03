@@ -28,6 +28,8 @@ interface LineChartProps {
     renderTooltip?: (params: { index: number; x: number; y: number; dataPoint: DataPoint }) => React.ReactNode;
     xTicks?: number[]; // Array of X values where ticks/grid lines should be drawn
     formatXTick?: (x: number) => string; // Function to format the tick labels
+    secondaryData?: DataPoint[]; // Optional secondary line data
+    secondaryColor?: string; // Color for the secondary line
 }
 
 export const LineChart = ({
@@ -41,7 +43,9 @@ export const LineChart = ({
     domainX,
     renderTooltip,
     xTicks,
-    formatXTick
+    formatXTick,
+    secondaryData,
+    secondaryColor,
 }: LineChartProps) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
@@ -52,11 +56,16 @@ export const LineChart = ({
     const PADDING_RIGHT = Spacing.lg; // Prevent right-side clipping
     const PLOT_WIDTH = Math.max(0, CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT);
 
-    const { path, gradientPath, minX, maxX, displayMinY, displayRange, maxValPoint } = useMemo(() => {
-        if (data.length === 0) return { path: "", gradientPath: "", minX: 0, maxX: 0, displayMinY: 0, displayRange: 0, maxValPoint: undefined };
+    const { path, secondaryPath, gradientPath, minX, maxX, displayMinY, displayRange, maxValPoint } = useMemo(() => {
+        if (data.length === 0) return { path: "", secondaryPath: "", gradientPath: "", minX: 0, maxX: 0, displayMinY: 0, displayRange: 0, maxValPoint: undefined };
 
         const yValues = data.map(d => d.y);
         const xValues = data.map(d => d.x);
+
+        if (secondaryData && secondaryData.length > 0) {
+            yValues.push(...secondaryData.map(d => d.y));
+            xValues.push(...secondaryData.map(d => d.x));
+        }
 
         const minX = domainX ? domainX[0] : Math.min(...xValues);
         const maxX = domainX ? domainX[1] : Math.max(...xValues);
@@ -70,9 +79,9 @@ export const LineChart = ({
         const displayRange = displayMaxY - displayMinY;
         const xRange = maxX - minX;
 
-        // Determine max value point for annotation
-        const maxValIndex = yValues.indexOf(maxY);
-        const maxValPoint = data[maxValIndex];
+        // Determine max value point for annotation (only from primary data)
+        const maxValIndex = data.map(d => d.y).indexOf(Math.max(...data.map(d => d.y)));
+        const maxValPoint = maxValIndex >= 0 ? data[maxValIndex] : undefined;
 
         let pathStr = "";
         let gradientPathStr = "";
@@ -100,8 +109,23 @@ export const LineChart = ({
             gradientPathStr += ` L ${lastX} ${height - PADDING_VERTICAL} L ${PADDING_LEFT} ${height - PADDING_VERTICAL} Z`;
         }
 
-        return { path: pathStr, gradientPath: gradientPathStr, minX, maxX, displayMinY, displayRange, maxValPoint };
-    }, [data, height, CHART_WIDTH, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX]);
+        let secondaryPathStr = "";
+        if (secondaryData && secondaryData.length > 0) {
+            secondaryData.forEach((point, index) => {
+                const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
+                const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
+                const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
+
+                if (index === 0) {
+                    secondaryPathStr += `M ${x} ${y}`;
+                } else {
+                    secondaryPathStr += ` L ${x} ${y}`;
+                }
+            });
+        }
+
+        return { path: pathStr, secondaryPath: secondaryPathStr, gradientPath: gradientPathStr, minX, maxX, displayMinY, displayRange, maxValPoint };
+    }, [data, height, CHART_WIDTH, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX, secondaryData]);
 
     const lastGestureIndex = useRef(-1);
 
@@ -282,6 +306,15 @@ export const LineChart = ({
                                     strokeLinejoin="round"
                                     opacity={selectedIndex !== undefined && selectedIndex !== -1 ? REPORT_CHART_LAYOUT.lineChartSelectedSeriesOpacity : 1}
                                 />
+                                {secondaryPath ? (
+                                    <Path
+                                        d={secondaryPath}
+                                        stroke={secondaryColor || theme.textSecondary}
+                                        strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
+                                        fill="none"
+                                        opacity={0.7}
+                                    />
+                                ) : null}
 
                                 {/* Interactive Points */}
                                 {data.map((point, index) => {
