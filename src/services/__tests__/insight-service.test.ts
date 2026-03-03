@@ -1,15 +1,22 @@
 import { AccountSubcategory, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { insightService } from '@/src/services/insight-service';
 import { of } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/BudgetRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/data/repositories/TransactionRawRepository');
+jest.mock('@/src/data/repositories/PlannedPaymentRepository');
+jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/utils/preferences', () => ({
@@ -29,8 +36,16 @@ describe('InsightService', () => {
         (accountRepository.observeByType as jest.Mock).mockReturnValue(of([]));
         (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
         (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(of([]));
+        (plannedPaymentRepository.observeAll as jest.Mock).mockReturnValue(of([]));
+        (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
+        (journalRepository.observePlannedForMonth as jest.Mock).mockReturnValue(of([]));
         // C-2: insightService now uses observeByDateRange instead of observeActive.
         (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
+        (transactionRepository.observeActiveWithColumns as jest.Mock).mockReturnValue(of([]));
+        (journalRepository.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
+        (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+        (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
+        (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
         (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
     });
 
@@ -98,10 +113,9 @@ describe('InsightService', () => {
             ];
 
             (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
-            // Use mockImplementation to ignore startDate/endDate args from observeByDateRange
-            (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of(mockTransactions));
+            (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(mockTransactions);
 
-            insightService.observePatterns().subscribe(patterns => {
+            insightService.observePatterns().pipe(take(1)).subscribe(patterns => {
                 expect(patterns).toContainEqual(
                     expect.objectContaining({
                         id: 'leak_FOOD',
@@ -126,7 +140,7 @@ describe('InsightService', () => {
 
             (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
 
-            insightService.observePatterns().subscribe(patterns => {
+            insightService.observePatterns().pipe(take(1)).subscribe(patterns => {
                 expect(patterns).toContainEqual(
                     expect.objectContaining({
                         id: 'no_emergency_fund',
@@ -147,7 +161,7 @@ describe('InsightService', () => {
 
             (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
 
-            insightService.observePatterns().subscribe(patterns => {
+            insightService.observePatterns().pipe(take(1)).subscribe(patterns => {
                 const emergencyPattern = patterns.find(p => p.id === 'no_emergency_fund');
                 expect(emergencyPattern).toBeUndefined();
                 done();

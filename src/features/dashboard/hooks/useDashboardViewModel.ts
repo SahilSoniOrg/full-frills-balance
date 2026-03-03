@@ -31,7 +31,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     const { userName, hasCompletedOnboarding, isInitialized } = useUI();
 
     const { data: safeToSpendData } = useObservable(
-        () => insightService.observeSafeToSpend(),
+        () => insightService.observeSafeToSpendProjection(),
         [],
         null
     );

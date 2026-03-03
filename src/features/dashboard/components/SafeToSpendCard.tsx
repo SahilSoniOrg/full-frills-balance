@@ -1,14 +1,18 @@
+import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AccountSubcategory, formatAccountSubcategoryLabel } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
+import { SafeToSpendProjection } from '@/src/services/insight-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SafeToSpendCardProps {
     safeToSpend: number;
+    projection?: SafeToSpendProjection;
     committedBudget: number;
     committedRecurring: number;
     committedPlanned: number;
@@ -28,6 +32,7 @@ interface SafeToSpendCardProps {
 
 export const SafeToSpendCard = ({
     safeToSpend,
+    projection,
     committedBudget,
     committedRecurring,
     committedPlanned,
@@ -189,6 +194,53 @@ export const SafeToSpendCard = ({
                         </View>
                     )}
                 </View>
+
+                {projection && projection.history.length > 0 && (() => {
+                    const chartData = [
+                        ...projection.history.map(p => ({ x: p.timestamp, y: p.value })),
+                        ...projection.projection.slice(1).map(p => ({ x: p.timestamp, y: p.value }))
+                    ];
+
+                    const minX = Math.min(...chartData.map(d => d.x));
+                    const maxX = Math.max(...chartData.map(d => d.x));
+
+                    const tickCount = 5;
+                    const xTicks = [];
+                    for (let i = 0; i < tickCount; i++) {
+                        xTicks.push(minX + ((maxX - minX) * i) / (tickCount - 1));
+                    }
+
+                    return (
+                        <View style={[styles.projectionContainer, { borderColor: theme.border }]}>
+                            <AppText variant="body" weight="medium" style={styles.projectionTitle}>
+                                Trajectory (60-day projected)
+                            </AppText>
+                            <LineChart
+                                data={chartData}
+                                height={150}
+                                color={isOverCommitted ? theme.error : theme.primary}
+                                xTicks={xTicks}
+                                formatXTick={(x) => dayjs(x).format('MMM D')}
+                            />
+                            {projection.safeDaysCount !== null && (
+                                <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
+                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={Size.sm} color={theme.success} />
+                                    <AppText variant="caption" weight="medium" color="success">
+                                        Safe for the next {projection.safeDaysCount > 99 ? '99+' : projection.safeDaysCount} days
+                                    </AppText>
+                                </View>
+                            )}
+                            {projection.safeDaysCount === null && (
+                                <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
+                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={Size.sm} color={theme.success} />
+                                    <AppText variant="caption" weight="medium" color="success">
+                                        Financially secure
+                                    </AppText>
+                                </View>
+                            )}
+                        </View>
+                    );
+                })()}
             </View>
 
             <PopupModal
@@ -343,6 +395,22 @@ const styles = StyleSheet.create({
     emptyState: {
         paddingVertical: Spacing.sm,
         alignItems: 'center',
+    },
+    projectionContainer: {
+        marginTop: Spacing.sm,
+        paddingTop: Spacing.md,
+        borderTopWidth: 1,
+    },
+    projectionTitle: {
+        marginBottom: Spacing.md,
+    },
+    safetyMetricContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        marginTop: Spacing.md,
+        padding: Spacing.sm,
+        borderRadius: Shape.radius.md,
     },
     modalHighlight: {
         padding: Spacing.md,

@@ -26,6 +26,8 @@ interface LineChartProps {
     selectedIndex?: number;
     domainX?: [number, number]; // [min, max] bound for the time range
     renderTooltip?: (params: { index: number; x: number; y: number; dataPoint: DataPoint }) => React.ReactNode;
+    xTicks?: number[]; // Array of X values where ticks/grid lines should be drawn
+    formatXTick?: (x: number) => string; // Function to format the tick labels
 }
 
 export const LineChart = ({
@@ -37,7 +39,9 @@ export const LineChart = ({
     onPress,
     selectedIndex,
     domainX,
-    renderTooltip
+    renderTooltip,
+    xTicks,
+    formatXTick
 }: LineChartProps) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
@@ -206,6 +210,36 @@ export const LineChart = ({
                                                 textAnchor="end"
                                             >
                                                 {CurrencyFormatter.formatShort(val)}
+                                            </SvgText>
+                                        </React.Fragment>
+                                    );
+                                })}
+
+                                {/* X-Axis Grid Lines & Ticks */}
+                                {xTicks && formatXTick && xTicks.map((xVal, i) => {
+                                    const normalizedX = maxX === minX ? 0.5 : (xVal - minX) / (maxX - minX);
+                                    if (normalizedX < 0 || normalizedX > 1) return null;
+                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
+                                    return (
+                                        <React.Fragment key={`xtick-${i}`}>
+                                            <Line
+                                                x1={x}
+                                                y1={PADDING_VERTICAL}
+                                                x2={x}
+                                                y2={height - Math.max(0, PADDING_VERTICAL - 5)}
+                                                stroke={theme.border}
+                                                strokeWidth={1}
+                                                strokeDasharray="4,4"
+                                                opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
+                                            />
+                                            <SvgText
+                                                x={x}
+                                                y={height - Math.max(0, PADDING_VERTICAL - 20)}
+                                                fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                                                fill={theme.textSecondary}
+                                                textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
+                                            >
+                                                {formatXTick(xVal)}
                                             </SvgText>
                                         </React.Fragment>
                                     );

@@ -1,8 +1,9 @@
 import { AppConfig } from '@/src/constants';
 import Account, { AccountSubcategory, AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
-import Journal from '@/src/data/models/Journal';
+import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -22,6 +23,7 @@ import {
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
@@ -37,6 +39,18 @@ const DEFAULT_INSIGHTS_CONFIG = {
     spendingSpikeSeverityThreshold: 1000,
     spikeWindowDays: 7,
 } as const;
+
+export interface SafeToSpendDataPoint {
+    timestamp: number;
+    value: number;
+    isProjected: boolean;
+}
+
+export interface SafeToSpendProjection {
+    history: SafeToSpendDataPoint[];
+    projection: SafeToSpendDataPoint[];
+    safeDaysCount: number | null;
+}
 
 export interface SafeToSpendResult {
     totalLiquidAssets: number;
@@ -54,6 +68,9 @@ export interface SafeToSpendResult {
     liquidLiabilityAccountNames: string[];
     budgetAccountNames: string[];
     recurringAccountNames: string[];
+    liquidAssetAccountIds: string[];
+    liquidLiabilityAccountIds: string[];
+    projection?: SafeToSpendProjection;
 }
 
 export interface Pattern {
@@ -123,6 +140,8 @@ export class InsightService {
                         liquidLiabilityAccountNames: [],
                         budgetAccountNames: [],
                         recurringAccountNames: [],
+                        liquidAssetAccountIds: [],
+                        liquidLiabilityAccountIds: [],
                     });
                 }
 
@@ -212,11 +231,215 @@ export class InsightService {
                             liquidLiabilityAccountNames,
                             budgetAccountNames,
                             recurringAccountNames,
+                            liquidAssetAccountIds: liquidAssets.map(a => a.id),
+                            liquidLiabilityAccountIds: liquidLiabilities.map(l => l.id),
                         };
                     })
                 );
             })
         );
+    }
+
+    /**
+     * Calculates Safe-to-Spend and appends 30-day historical and 100-day projected data.
+     */
+    observeSafeToSpendProjection(): Observable<SafeToSpendResult> {
+        return this.observeSafeToSpend().pipe(
+            switchMap(async (current) => {
+                if (current.safeToSpend === 0 && current.totalLiquidAssets === 0) {
+                    current.projection = { history: [], projection: [], safeDaysCount: null };
+                    return current;
+                }
+                const projection = await this.calculateSafeToSpendProjection(current);
+                return { ...current, projection };
+            })
+        );
+    }
+
+    private async calculateSafeToSpendProjection(current: SafeToSpendResult): Promise<SafeToSpendProjection> {
+        const now = dayjs().startOf('day');
+        const thirtyDaysAgo = now.subtract(30, 'day').valueOf();
+
+        // 1. History (Past 30 days)
+        const activeAccountsIds = [...current.liquidAssetAccountIds, ...current.liquidLiabilityAccountIds];
+        const rawDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(activeAccountsIds, thirtyDaysAgo, now.valueOf() + 86400000);
+
+        const netCashFlowByDay = new Map<number, number>();
+        for (const delta of rawDeltas) {
+            let amount = delta.delta;
+            if (delta.currencyCode !== current.currencyCode) {
+                try {
+                    const { convertedAmount } = await exchangeRateService.convert(amount, delta.currencyCode, current.currencyCode);
+                    amount = convertedAmount;
+                } catch (e) {
+                    logger.error("Failed to convert delta for history projection", e);
+                }
+            }
+
+            const isLiability = delta.accountType === AccountType.LIABILITY;
+            const effectiveDelta = isLiability ? -amount : amount;
+
+            const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
+            netCashFlowByDay.set(localDayStart, (netCashFlowByDay.get(localDayStart) || 0) + effectiveDelta);
+        }
+
+        const historyPoints: SafeToSpendDataPoint[] = [];
+        let runningBalance = current.totalLiquidAssets - current.totalLiabilities;
+
+        historyPoints.push({
+            timestamp: now.valueOf(),
+            value: runningBalance,
+            isProjected: false
+        });
+
+        for (let i = 0; i < 30; i++) {
+            const targetDay = now.subtract(i, 'day').valueOf();
+            const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
+            runningBalance -= flowThatDay;
+
+            historyPoints.push({
+                timestamp: now.subtract(i + 1, 'day').valueOf(),
+                value: runningBalance,
+                isProjected: false
+            });
+        }
+        historyPoints.reverse();
+
+        // 2. Average Burn Rate
+        const expenseAccs = await accountRepository.findByType(AccountType.EXPENSE);
+        const expenseDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(expenseAccs.map(a => a.id), thirtyDaysAgo, now.valueOf() + 86400000);
+
+        const dailyExpenses = new Map<number, number>();
+        for (const delta of expenseDeltas) {
+            let amount = delta.delta;
+            if (delta.currencyCode !== current.currencyCode) {
+                try {
+                    const { convertedAmount } = await exchangeRateService.convert(amount, delta.currencyCode, current.currencyCode);
+                    amount = convertedAmount;
+                } catch (e) { }
+            }
+            const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
+            dailyExpenses.set(localDayStart, (dailyExpenses.get(localDayStart) || 0) + Math.abs(amount));
+        }
+
+        const expenseValues = Array.from(dailyExpenses.values()).filter(v => v > 0);
+        let avgBurn = 0;
+        if (expenseValues.length > 0) {
+            expenseValues.sort((a, b) => a - b);
+            const p90Index = Math.floor(expenseValues.length * 0.9);
+            const normalExpenses = expenseValues.slice(0, p90Index); // exclude big spikes
+            const normalSum = normalExpenses.reduce((a, b) => a + b, 0);
+            avgBurn = normalSum / 30; // average over the 30 day period
+        }
+
+        // 3. Future Projection (100 days)
+        const futureDays = 100;
+        const projectionPoints: SafeToSpendDataPoint[] = [];
+        let projectedAmount = current.totalLiquidAssets - current.totalLiabilities;
+
+        const plannedPayments = await plannedPaymentRepository.findAllActive();
+        const plannedImpactByDay = new Map<number, number>();
+        const nowMs = now.valueOf();
+        const endMs = now.add(futureDays, 'day').valueOf();
+
+        for (const pp of plannedPayments) {
+            let curr = pp.nextOccurrence;
+            while (curr <= endMs) {
+                if (curr > nowMs) {
+                    const occurrenceDayStart = dayjs(curr).startOf('day').valueOf();
+                    let amount = pp.amount;
+                    if (pp.currencyCode !== current.currencyCode) {
+                        try {
+                            const { convertedAmount } = await exchangeRateService.convert(pp.amount, pp.currencyCode, current.currencyCode);
+                            amount = convertedAmount;
+                        } catch (e) { }
+                    }
+
+                    const isLiquidSource = current.liquidAssetAccountIds.includes(pp.fromAccountId) || current.liquidLiabilityAccountIds.includes(pp.fromAccountId);
+                    const isLiquidDest = current.liquidAssetAccountIds.includes(pp.toAccountId) || current.liquidLiabilityAccountIds.includes(pp.toAccountId);
+
+                    let impact = 0;
+                    if (isLiquidSource) impact -= amount;
+                    if (isLiquidDest) impact += amount;
+
+                    if (impact !== 0) {
+                        plannedImpactByDay.set(occurrenceDayStart, (plannedImpactByDay.get(occurrenceDayStart) || 0) + impact);
+                    }
+                }
+
+                if (pp.intervalType === 'DAILY') curr = dayjs(curr).add(pp.intervalN || 1, 'day').valueOf();
+                else if (pp.intervalType === 'WEEKLY') curr = dayjs(curr).add(pp.intervalN || 1, 'week').valueOf();
+                else if (pp.intervalType === 'MONTHLY') curr = dayjs(curr).add(pp.intervalN || 1, 'month').valueOf();
+                else if (pp.intervalType === 'YEARLY') curr = dayjs(curr).add(pp.intervalN || 1, 'year').valueOf();
+                else break; // Fallback to avoid infinite loops
+            }
+        }
+
+        const plannedJournals = await journalRepository.journalsQuery(
+            Q.where('status', JournalStatus.PLANNED),
+            Q.where('journal_date', Q.gt(nowMs)),
+            Q.where('journal_date', Q.lte(endMs)),
+            Q.where('deleted_at', Q.eq(null))
+        ).fetch();
+
+        if (plannedJournals.length > 0) {
+            const plannedJournalIds = plannedJournals.map(j => j.id);
+            const plannedTxs = await transactionRepository.findByJournals(plannedJournalIds);
+
+            for (const tx of plannedTxs) {
+                const journal = plannedJournals.find(j => j.id === tx.journalId);
+                if (!journal) continue;
+
+                const isLiquidAcc = current.liquidAssetAccountIds.includes(tx.accountId) || current.liquidLiabilityAccountIds.includes(tx.accountId);
+                if (!isLiquidAcc) continue;
+
+                const occurrenceDayStart = dayjs(journal.journalDate).startOf('day').valueOf();
+
+                let amount = tx.amount;
+                if (tx.currencyCode !== current.currencyCode) {
+                    try {
+                        const { convertedAmount } = await exchangeRateService.convert(amount, tx.currencyCode, current.currencyCode);
+                        amount = convertedAmount;
+                    } catch (e) { }
+                }
+
+                // DEBIT increases Net Cash, CREDIT decreases Net Cash
+                const impact = tx.transactionType === TransactionType.DEBIT ? amount : -amount;
+
+                plannedImpactByDay.set(occurrenceDayStart, (plannedImpactByDay.get(occurrenceDayStart) || 0) + impact);
+            }
+        }
+
+        let safeDaysCount: number | null = null;
+
+        projectionPoints.push({
+            timestamp: now.valueOf(),
+            value: projectedAmount,
+            isProjected: true
+        });
+
+        for (let i = 1; i <= futureDays; i++) {
+            const targetDayStart = now.add(i, 'day').valueOf();
+            projectedAmount -= avgBurn;
+            const plannedImpact = plannedImpactByDay.get(targetDayStart) || 0;
+            projectedAmount += plannedImpact;
+
+            projectionPoints.push({
+                timestamp: targetDayStart,
+                value: projectedAmount,
+                isProjected: true
+            });
+
+            if (projectedAmount < 0 && safeDaysCount === null) {
+                safeDaysCount = i;
+            }
+        }
+
+        return {
+            history: historyPoints,
+            projection: projectionPoints.slice(0, 31), // Return 30 future days for the graph
+            safeDaysCount
+        };
     }
 
     /**
