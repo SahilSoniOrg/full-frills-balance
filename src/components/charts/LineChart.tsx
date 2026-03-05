@@ -30,6 +30,7 @@ interface LineChartProps {
     formatXTick?: (x: number) => string; // Function to format the tick labels
     secondaryData?: DataPoint[]; // Optional secondary line data
     secondaryColor?: string; // Color for the secondary line
+    todayX?: number; // Timestamp for the 'Today' vertical marker
 }
 
 export const LineChart = ({
@@ -46,6 +47,7 @@ export const LineChart = ({
     formatXTick,
     secondaryData,
     secondaryColor,
+    todayX,
 }: LineChartProps) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
@@ -268,6 +270,36 @@ export const LineChart = ({
                                         </React.Fragment>
                                     );
                                 })}
+
+                                {/* Today marker */}
+                                {todayX !== undefined && (() => {
+                                    const normalizedX = maxX === minX ? 0.5 : (todayX - minX) / (maxX - minX);
+                                    if (normalizedX < 0 || normalizedX > 1) return null;
+                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
+                                    return (
+                                        <React.Fragment>
+                                            <Line
+                                                x1={x}
+                                                y1={PADDING_VERTICAL}
+                                                x2={x}
+                                                y2={height - PADDING_VERTICAL}
+                                                stroke={theme.textSecondary}
+                                                strokeWidth={1.5}
+                                                opacity={0.6}
+                                            />
+                                            <SvgText
+                                                x={x + 4}
+                                                y={PADDING_VERTICAL + 10}
+                                                fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                                                fill={theme.textSecondary}
+                                                textAnchor="start"
+                                                opacity={0.8}
+                                            >
+                                                Today
+                                            </SvgText>
+                                        </React.Fragment>
+                                    );
+                                })()}
 
                                 {/* Max Value Annotation */}
                                 {maxValPoint && (() => {

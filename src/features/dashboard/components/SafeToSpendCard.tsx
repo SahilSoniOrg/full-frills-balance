@@ -101,7 +101,7 @@ export const SafeToSpendCard = ({
 
     const committedTotal = committedBudget + committedRecurring + committedPlanned;
     const totalObligations = totalLiabilities + committedTotal;
-    const effectiveTotal = Math.max(totalLiquidAssets, totalObligations);
+    const effectiveTotal = safeToSpend + committedTotal + totalLiabilities;
 
     const shortfall = Math.max(0, totalObligations - totalLiquidAssets);
     const isOverCommitted = shortfall > 0;
@@ -221,6 +221,7 @@ export const SafeToSpendCard = ({
                                 color={isOverCommitted ? theme.error : theme.primary}
                                 xTicks={xTicks}
                                 formatXTick={(x) => dayjs(x).format('MMM D')}
+                                todayX={dayjs().startOf('day').valueOf()}
                             />
                             {projection.safeDaysCount !== null && (
                                 <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
