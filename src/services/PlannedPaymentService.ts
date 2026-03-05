@@ -80,6 +80,79 @@ export class PlannedPaymentService {
     }
 
     /**
+     * Computes the first occurrence date for a new planned payment.
+     * Unlike calculateNextOccurrence (which advances by one full interval),
+     * this aligns the startDate to the correct recurrence day within the
+     * same period if it hasn't passed yet, otherwise moves to the next period.
+     */
+    computeFirstOccurrence(
+        startDate: number,
+        pp: {
+            intervalN: number;
+            intervalType: PlannedPaymentInterval;
+            recurrenceDay?: number;
+            recurrenceMonth?: number;
+        }
+    ): number {
+        const start = new Date(this.normalizeToStartOfDay(startDate));
+        const { intervalType, recurrenceDay, recurrenceMonth } = pp;
+
+        switch (intervalType) {
+            case PlannedPaymentInterval.DAILY:
+                // First occurrence is the start date itself
+                return start.getTime();
+
+            case PlannedPaymentInterval.WEEKLY: {
+                if (recurrenceDay === undefined || recurrenceDay === null) {
+                    return start.getTime();
+                }
+                const startWeekday = start.getDay();
+                const daysUntilTarget = (recurrenceDay - startWeekday + 7) % 7;
+                start.setDate(start.getDate() + daysUntilTarget);
+                return start.getTime();
+            }
+
+            case PlannedPaymentInterval.MONTHLY: {
+                const targetDay = recurrenceDay ?? start.getDate();
+                // Try to land on targetDay in the same month
+                const candidate = new Date(start.getFullYear(), start.getMonth(), 1);
+                const lastDay = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+                candidate.setDate(Math.min(targetDay, lastDay));
+                if (candidate.getTime() >= start.getTime()) {
+                    return candidate.getTime();
+                }
+                // Target day already passed this month — move to next month
+                candidate.setDate(1);
+                candidate.setMonth(candidate.getMonth() + 1);
+                const lastDayNext = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+                candidate.setDate(Math.min(targetDay, lastDayNext));
+                return candidate.getTime();
+            }
+
+            case PlannedPaymentInterval.YEARLY: {
+                const targetMonth = recurrenceMonth !== undefined && recurrenceMonth !== null
+                    ? recurrenceMonth - 1
+                    : start.getMonth();
+                const targetDay = recurrenceDay ?? start.getDate();
+                // Try to land on target month/day in the same year
+                const candidate = new Date(start.getFullYear(), targetMonth, 1);
+                const lastDay = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+                candidate.setDate(Math.min(targetDay, lastDay));
+                if (candidate.getTime() >= start.getTime()) {
+                    return candidate.getTime();
+                }
+                // Already passed this year — advance to next year
+                candidate.setFullYear(candidate.getFullYear() + 1);
+                candidate.setDate(1);
+                candidate.setMonth(targetMonth);
+                const lastDayNext = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+                candidate.setDate(Math.min(targetDay, lastDayNext));
+                return candidate.getTime();
+            }
+        }
+    }
+
+    /**
      * Generates a PLANNED journal from a rule.
      */
     async generatePlannedJournal(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
@@ -127,8 +200,12 @@ export class PlannedPaymentService {
 
     async postOccurrence(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
         try {
+            // normalizedDate is midnight of the occurrence day — used only for day-window queries.
             const normalizedDate = this.normalizeToStartOfDay(occurrenceDate)
             const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1)
+            // Use current time as the actual journal timestamp so manually posted
+            // journals aren't all stamped at midnight (Bug 3 fix).
+            const postTime = Date.now()
 
             // 1. Check if we already have a PLANNED journal for this occurrence
             const existingPlanned = await database.collections.get<Journal>('journals').query(
@@ -139,17 +216,19 @@ export class PlannedPaymentService {
             ).fetch()
 
             if (existingPlanned.length > 0) {
-                // Promote to POSTED by patching status only — no tx churn needed.
+                // Promote to POSTED by patching status and updating the journal date
+                // to the current time so the post timestamp is accurate.
                 const j = existingPlanned[0];
                 await database.write(async () => {
                     await j.update((record: Journal) => {
                         record.status = JournalStatus.POSTED;
+                        record.journalDate = postTime;
                         record.updatedAt = new Date();
                     });
                 });
                 // Rebuild balance for affected accounts.
                 const txs = await transactionRepository.findByJournal(j.id);
-                rebuildQueueService.enqueueMany(new Set(txs.map((t: Transaction) => t.accountId)), j.journalDate);
+                rebuildQueueService.enqueueMany(new Set(txs.map((t: Transaction) => t.accountId)), postTime);
             } else {
                 // Fallback: Create new POSTED journal if none existed
                 if (!pp.toAccountId) {
@@ -174,7 +253,7 @@ export class PlannedPaymentService {
                 ]
 
                 await ledgerWriteService.createJournal({
-                    journalDate: normalizedDate,
+                    journalDate: postTime,
                     description: pp.name,
                     currencyCode: pp.currencyCode,
                     transactions,
@@ -198,7 +277,7 @@ export class PlannedPaymentService {
                 })
             }
 
-            logger.info(`Manually posted occurrence for planned payment ${pp.id} at ${new Date(normalizedDate).toLocaleDateString()}`)
+            logger.info(`Manually posted occurrence for planned payment ${pp.id} at ${new Date(postTime).toLocaleString()}`)
 
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error)

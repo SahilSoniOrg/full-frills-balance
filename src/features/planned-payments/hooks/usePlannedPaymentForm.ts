@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
@@ -105,11 +106,20 @@ export function usePlannedPaymentForm(id?: string) {
                     });
                 }
             } else {
+                const firstOccurrence = plannedPaymentService.computeFirstOccurrence(form.startDate, {
+                    intervalN: form.intervalN,
+                    intervalType: form.intervalType,
+                    recurrenceDay: form.recurrenceDay,
+                    recurrenceMonth: form.recurrenceMonth,
+                });
                 await plannedPaymentRepository.create({
                     ...data,
                     status: PlannedPaymentStatus.ACTIVE,
-                    nextOccurrence: form.startDate,
+                    nextOccurrence: firstOccurrence,
                 });
+                // Bug 1 fix: immediately generate journals for the new planned payment
+                // without requiring an app restart.
+                await plannedPaymentService.processDuePayments();
             }
             AppNavigation.back();
         } catch (error) {
