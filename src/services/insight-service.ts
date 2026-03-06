@@ -884,7 +884,7 @@ export class InsightService {
                 const expenseDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(
                     nonBudgetedAccs.map(a => a.id), thirtyDaysAgo, now.valueOf() + 86400000
                 );
-                let totalExpenses = 0;
+                const dailyExpenses = new Map<number, number>();
                 for (const delta of expenseDeltas) {
                     let amount = delta.delta;
                     if (delta.currencyCode !== resultCurrency) {
@@ -893,9 +893,19 @@ export class InsightService {
                             amount = convertedAmount;
                         } catch (e) { /* fallback */ }
                     }
-                    totalExpenses += Math.abs(amount);
+                    const dayKey = dayjs(delta.dayStart).startOf('day').valueOf();
+                    dailyExpenses.set(dayKey, (dailyExpenses.get(dayKey) || 0) + Math.abs(amount));
                 }
-                avgBurnNonBudgeted = totalExpenses / 30;
+                // p90 trim: exclude the top 10% spike days so one-off large expenses
+                // (rent, insurance, etc.) don't inflate the projected daily burn.
+                const expenseValues = Array.from(dailyExpenses.values()).filter(v => v > 0);
+                if (expenseValues.length > 0) {
+                    expenseValues.sort((a, b) => a - b);
+                    const p90Index = Math.floor(expenseValues.length * 0.9);
+                    const trimmed = expenseValues.slice(0, p90Index);
+                    const trimmedSum = trimmed.reduce((a, b) => a + b, 0);
+                    avgBurnNonBudgeted = trimmedSum / 30;
+                }
             }
         } catch (e) {
             logger.error('simulateSafeToSpend: failed to compute avgBurnNonBudgeted', e);
