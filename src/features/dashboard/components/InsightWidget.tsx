@@ -1,7 +1,7 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { insightService, Pattern } from '@/src/services/insight-service';
+import { Pattern, patternService } from '@/src/services/insight-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -19,7 +19,7 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
     const [isEmergencyFundInfoVisible, setEmergencyFundInfoVisible] = React.useState(false);
 
     const handleDismiss = async (id: string) => {
-        await insightService.dismissPattern(id);
+        await patternService.dismissPattern(id);
     };
 
     const isEmergencyFundPattern = (pattern: Pattern) => pattern.id === 'no_emergency_fund';

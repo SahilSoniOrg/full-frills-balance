@@ -128,7 +128,6 @@ export const AppConfig = {
           'Liquid Assets: Cash-like accounts available for near-term spending.',
           'Liquid Debts: Short-term liabilities that reduce available cash.',
           'Remaining Budgets: Unspent planned amounts in active budgets.',
-          'Recurring Bills: Detected repeating charges from your recent activity.',
         ],
         bucketTitle: 'What each bucket includes:',
         exampleTitle: 'Current snapshot:',
@@ -140,6 +139,14 @@ export const AppConfig = {
         ],
         footer: 'If a bucket looks off, update account subtypes or budget scopes to improve the estimate.',
         closeCta: 'Got it',
+      },
+      legendDetails: {
+        safeTitle: 'Safe to Spend',
+        safeDesc: "This is your discretionary balance. It's what's left after accounting for all your known obligations, bills, and budgets for the next 30 days.",
+        committedTitle: 'Committed Funds',
+        committedDesc: 'These are funds reserved for upcoming planned movements and active budget limits.',
+        debtsTitle: 'Debts & Liabilities',
+        debtsDesc: 'Currently owed amounts on your liquid liability accounts.',
       },
     },
     journal: {

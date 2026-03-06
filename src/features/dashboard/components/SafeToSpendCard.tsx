@@ -14,21 +14,22 @@ interface SafeToSpendCardProps {
     safeToSpend: number;
     projection?: SafeToSpendProjection;
     committedBudget: number;
-    committedRecurring: number;
     committedPlanned: number;
+    committedPlannedPayments: number;
+    committedPlannedJournals: number;
     totalFutureObligations: number;
     totalFutureInflow: number;
     totalLiquidAssets: number;
     totalLiabilities: number;
+    totalLiabilitiesCC: number;
+    totalLiabilitiesOther: number;
     currencyCode: string;
     liquidAssetSubtypes: AccountSubtype[];
     liquidLiabilitySubtypes: AccountSubtype[];
     budgetSubtypes: AccountSubtype[];
-    recurringSubtypes: AccountSubtype[];
     liquidAssetAccountNames: string[];
     liquidLiabilityAccountNames: string[];
     budgetAccountNames: string[];
-    recurringAccountNames: string[];
     isLoading?: boolean;
 }
 
@@ -36,25 +37,27 @@ export const SafeToSpendCard = ({
     safeToSpend,
     projection,
     committedBudget,
-    committedRecurring,
     committedPlanned,
+    committedPlannedPayments,
+    committedPlannedJournals,
     totalFutureObligations,
     totalFutureInflow,
     totalLiquidAssets,
     totalLiabilities,
+    totalLiabilitiesCC,
+    totalLiabilitiesOther,
     currencyCode,
     liquidAssetSubtypes,
     liquidLiabilitySubtypes,
     budgetSubtypes,
-    recurringSubtypes,
     liquidAssetAccountNames,
     liquidLiabilityAccountNames,
     budgetAccountNames,
-    recurringAccountNames,
     isLoading = false
 }: SafeToSpendCardProps) => {
     const { theme, fonts } = useTheme();
     const [isInfoVisible, setInfoVisible] = React.useState(false);
+    const [selectedLegendItem, setSelectedLegendItem] = React.useState<'safe' | 'committed' | 'debts' | null>(null);
     const info = AppConfig.strings.dashboard.safeToSpendExplanation;
 
     const format = (val: number) => {
@@ -183,18 +186,27 @@ export const SafeToSpendCard = ({
 
                             {/* Legend */}
                             <View style={styles.legendContainer}>
-                                <View style={styles.legendItem}>
+                                <TouchableOpacity
+                                    style={styles.legendItem}
+                                    onPress={() => setSelectedLegendItem('safe')}
+                                >
                                     <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
                                     <AppText variant="caption" color="secondary">Safe: {format(safeToSpend)}</AppText>
-                                </View>
-                                <View style={styles.legendItem}>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.legendItem}
+                                    onPress={() => setSelectedLegendItem('committed')}
+                                >
                                     <View style={[styles.legendDot, { backgroundColor: theme.warning }]} />
                                     <AppText variant="caption" color="secondary">Committed: {format(committedTotal)}</AppText>
-                                </View>
-                                <View style={styles.legendItem}>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.legendItem}
+                                    onPress={() => setSelectedLegendItem('debts')}
+                                >
                                     <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
                                     <AppText variant="caption" color="secondary">Debts: {format(totalLiabilities)}</AppText>
-                                </View>
+                                </TouchableOpacity>
                             </View>
                         </>
                     ) : (
@@ -300,7 +312,6 @@ export const SafeToSpendCard = ({
                     {renderSubtypeGroup('Assets bucket', info.formulaItems[0], liquidAssetSubtypes, liquidAssetAccountNames)}
                     {renderSubtypeGroup('Debts bucket', info.formulaItems[1], liquidLiabilitySubtypes, liquidLiabilityAccountNames)}
                     {renderSubtypeGroup('Budgets bucket', info.formulaItems[2], budgetSubtypes, budgetAccountNames)}
-                    {renderSubtypeGroup('Bills bucket', info.formulaItems[3], recurringSubtypes, recurringAccountNames)}
                 </View>
 
                 <View style={styles.modalSection}>
@@ -309,7 +320,7 @@ export const SafeToSpendCard = ({
                         <AppText variant="caption" color="secondary">Liquid Assets: {format(totalLiquidAssets)}</AppText>
                         <AppText variant="caption" color="secondary">Liquid Debts: {format(totalLiabilities)}</AppText>
                         <AppText variant="caption" color="secondary">Remaining Budgets: {format(committedBudget)}</AppText>
-                        <AppText variant="caption" color="secondary">Recurring Bills & Plans: {format(committedRecurring + committedPlanned)}</AppText>
+                        <AppText variant="caption" color="secondary">Planned Payments: {format(committedPlanned)}</AppText>
                         <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                         <AppText variant="body" weight="bold">Safe to Spend: {format(safeToSpend)}</AppText>
                     </View>
@@ -333,6 +344,87 @@ export const SafeToSpendCard = ({
                         {info.footer}
                     </AppText>
                 </View>
+            </PopupModal>
+
+            <PopupModal
+                visible={selectedLegendItem !== null}
+                title={
+                    selectedLegendItem === 'safe' ? AppConfig.strings.dashboard.legendDetails.safeTitle :
+                        selectedLegendItem === 'committed' ? AppConfig.strings.dashboard.legendDetails.committedTitle :
+                            AppConfig.strings.dashboard.legendDetails.debtsTitle
+                }
+                onClose={() => setSelectedLegendItem(null)}
+                actions={[
+                    {
+                        label: 'Got it',
+                        onPress: () => setSelectedLegendItem(null),
+                    }
+                ]}
+            >
+                {selectedLegendItem === 'safe' && (
+                    <View style={styles.modalSection}>
+                        <AppText variant="body">
+                            {AppConfig.strings.dashboard.legendDetails.safeDesc}
+                        </AppText>
+                        <View style={[styles.exampleBox, { backgroundColor: theme.surfaceSecondary }]}>
+                            <AppText variant="body" weight="bold">Calculation:</AppText>
+                            <AppText variant="caption">Assets - (Debts + Committed)</AppText>
+                            <AppText variant="caption">{format(totalLiquidAssets)} - ({format(totalLiabilities)} + {format(committedTotal)})</AppText>
+                            <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
+                            <AppText variant="body" weight="bold" color="primary">Total: {format(safeToSpend)}</AppText>
+                        </View>
+                    </View>
+                )}
+
+                {selectedLegendItem === 'committed' && (
+                    <View style={styles.modalSection}>
+                        <AppText variant="body">
+                            {AppConfig.strings.dashboard.legendDetails.committedDesc}
+                        </AppText>
+                        <View style={styles.breakdownList}>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="caption">Planned Payments</AppText>
+                                <AppText variant="caption" weight="bold">{format(committedPlannedPayments)}</AppText>
+                            </View>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="caption">Planned Journals/Transfers</AppText>
+                                <AppText variant="caption" weight="bold">{format(committedPlannedJournals)}</AppText>
+                            </View>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="caption">Active Budgets (Remaining)</AppText>
+                                <AppText variant="caption" weight="bold">{format(committedBudget)}</AppText>
+                            </View>
+                            <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="body" weight="bold">Total Committed</AppText>
+                                <AppText variant="body" weight="bold" color="warning">{format(committedTotal)}</AppText>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {selectedLegendItem === 'debts' && (
+                    <View style={styles.modalSection}>
+                        <AppText variant="body">
+                            {AppConfig.strings.dashboard.legendDetails.debtsDesc}
+                        </AppText>
+                        <View style={styles.breakdownList}>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="caption">Credit Card Statements</AppText>
+                                <AppText variant="caption" weight="bold">{format(totalLiabilitiesCC)}</AppText>
+                            </View>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="caption">Other Liquid Liabilities</AppText>
+                                <AppText variant="caption" weight="bold">{format(totalLiabilitiesOther)}</AppText>
+                            </View>
+                            <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="body" weight="bold">Total Debts</AppText>
+                                <AppText variant="body" weight="bold" color="error">{format(totalLiabilities)}</AppText>
+                            </View>
+                        </View>
+                    </View>
+                )}
             </PopupModal>
         </>
     );
@@ -467,6 +559,15 @@ const styles = StyleSheet.create({
     },
     benefitRow: {
         marginTop: Spacing.xs,
+    },
+    breakdownList: {
+        marginTop: Spacing.sm,
+        gap: Spacing.xs,
+    },
+    breakdownRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     modalFooter: {
         marginTop: Spacing.sm,

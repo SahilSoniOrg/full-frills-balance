@@ -1,11 +1,11 @@
-import { insightService } from '@/src/services/insight-service';
+import { patternService } from '@/src/services/insight-service';
 import { act, renderHook } from '@testing-library/react-native';
 import { of } from 'rxjs';
 import { useInsights } from '../useInsights';
 
-// Mock insightService
+// Mock patternService
 jest.mock('@/src/services/insight-service', () => ({
-    insightService: {
+    patternService: {
         observePatterns: jest.fn(),
         observeDismissedPatterns: jest.fn(),
         dismissPattern: jest.fn(),
@@ -23,15 +23,15 @@ describe('useInsights', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        (insightService.observePatterns as jest.Mock).mockReturnValue(of(mockActivePatterns));
-        (insightService.observeDismissedPatterns as jest.Mock).mockReturnValue(of(mockDismissedPatterns));
+        (patternService.observePatterns as jest.Mock).mockReturnValue(of(mockActivePatterns));
+        (patternService.observeDismissedPatterns as jest.Mock).mockReturnValue(of(mockDismissedPatterns));
     });
 
     it('should subscribe to active and dismissed patterns', () => {
         const { result } = renderHook(() => useInsights());
 
-        expect(insightService.observePatterns).toHaveBeenCalled();
-        expect(insightService.observeDismissedPatterns).toHaveBeenCalled();
+        expect(patternService.observePatterns).toHaveBeenCalled();
+        expect(patternService.observeDismissedPatterns).toHaveBeenCalled();
         expect(result.current.activePatterns).toEqual(mockActivePatterns);
         expect(result.current.dismissedPatterns).toEqual(mockDismissedPatterns);
     });
@@ -43,7 +43,7 @@ describe('useInsights', () => {
             await result.current.dismissInsight('1');
         });
 
-        expect(insightService.dismissPattern).toHaveBeenCalledWith('1');
+        expect(patternService.dismissPattern).toHaveBeenCalledWith('1');
     });
 
     it('should call undismissPattern on insightService', async () => {
@@ -53,6 +53,6 @@ describe('useInsights', () => {
             await result.current.restoreInsight('2');
         });
 
-        expect(insightService.undismissPattern).toHaveBeenCalledWith('2');
+        expect(patternService.undismissPattern).toHaveBeenCalledWith('2');
     });
 });

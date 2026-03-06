@@ -1,4 +1,4 @@
-import { insightService, Pattern } from '@/src/services/insight-service';
+import { Pattern, patternService } from '@/src/services/insight-service';
 import { useCallback, useEffect, useState } from 'react';
 
 /**
@@ -12,11 +12,11 @@ export function useInsights() {
 
     useEffect(() => {
         setIsLoading(true);
-        const activeSub = insightService.observePatterns().subscribe((patterns) => {
+        const activeSub = patternService.observePatterns().subscribe((patterns) => {
             setActivePatterns(patterns);
             setIsLoading(false);
         });
-        const dismissedSub = insightService.observeDismissedPatterns().subscribe(setDismissedPatterns);
+        const dismissedSub = patternService.observeDismissedPatterns().subscribe(setDismissedPatterns);
 
         return () => {
             activeSub.unsubscribe();
@@ -25,11 +25,11 @@ export function useInsights() {
     }, []);
 
     const dismissInsight = useCallback(async (id: string) => {
-        await insightService.dismissPattern(id);
+        await patternService.dismissPattern(id);
     }, []);
 
     const restoreInsight = useCallback(async (id: string) => {
-        await insightService.undismissPattern(id);
+        await patternService.undismissPattern(id);
     }, []);
 
     return {

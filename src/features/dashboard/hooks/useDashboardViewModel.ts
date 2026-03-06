@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
-import { insightService, Pattern, SafeToSpendResult } from '@/src/services/insight-service';
+import { insightService, Pattern, patternService, SafeToSpendResult } from '@/src/services/insight-service';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Platform, UIManager } from 'react-native';
@@ -37,7 +37,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     );
 
     const { data: patterns } = useObservable(
-        () => insightService.observePatterns(),
+        () => patternService.observePatterns(),
         [],
         []
     );
