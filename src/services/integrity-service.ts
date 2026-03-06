@@ -334,28 +334,47 @@ export class IntegrityService {
      * Use this for **manual** invocations (e.g. the Settings "Fix Integrity Issues" button).
      * Unlike runStartupCheck(), this always scans every account.
      */
-    async forceRunCheck(): Promise<IntegrityCheckResult> {
+    async forceRunCheck(onProgress?: (message: string, progress: number) => void): Promise<IntegrityCheckResult> {
         logger.info('[IntegrityService] Force-running full balance verification (manual trigger)...')
 
-        const results = await this.verifyAllAccountBalances()
+        const accounts = await accountRepository.findAll()
+        const total = accounts.length
+        const results: BalanceVerificationResult[] = []
+
+        for (let i = 0; i < accounts.length; i++) {
+            const account = accounts[i]
+            try {
+                const result = await this.verifyAccountBalance(account.id)
+                results.push(result)
+            } catch (error) {
+                logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error)
+            }
+            const verifyProgress = total > 0 ? ((i + 1) / total) * 0.7 : 0.7
+            onProgress?.(`Checking ${account.name}...`, verifyProgress)
+        }
+
         const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted)
 
         let repairsAttempted = 0
         let repairsSuccessful = 0
 
-        for (const discrepancy of discrepancies) {
+        for (let i = 0; i < discrepancies.length; i++) {
+            const discrepancy = discrepancies[i]
             logger.warn(
                 `[IntegrityService] Balance discrepancy for ${discrepancy.accountName}: ` +
                 `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}` +
                 (discrepancy.snapshotCorrupted ? ' [snapshot corrupted]' : '')
             )
-
             repairsAttempted++
+            const repairProgress = 0.7 + ((i + 1) / Math.max(discrepancies.length, 1)) * 0.2
+            onProgress?.(`Repairing ${discrepancy.accountName}...`, repairProgress)
             const success = await this.repairAccountBalance(discrepancy.accountId)
             if (success) {
                 repairsSuccessful++
             }
         }
+
+        onProgress?.('Finalizing...', 1)
 
         return {
             totalAccounts: results.length,

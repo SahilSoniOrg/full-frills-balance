@@ -12,8 +12,8 @@ export function useSettingsActions() {
         return exportService.exportToJSON();
     }, []);
 
-    const runIntegrityCheck = useCallback(async () => {
-        return integrityService.forceRunCheck();
+    const runIntegrityCheck = useCallback(async (onProgress?: (message: string, progress: number) => void) => {
+        return integrityService.forceRunCheck(onProgress);
     }, []);
 
     const cleanupDatabase = useCallback(async () => {

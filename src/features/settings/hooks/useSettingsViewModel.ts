@@ -34,6 +34,8 @@ export interface SettingsViewModel {
     onAuditLog: () => void;
     onManageSmsRules: () => void;
     onFixIntegrity: () => void;
+    integrityProgress: number;
+    integrityProgressMessage: string;
     onCleanup: () => void;
     onFactoryReset: () => void;
 }
@@ -57,6 +59,8 @@ export function useSettingsViewModel(): SettingsViewModel {
     const { isImporting: isImportingData } = useImport();
     const [isExporting, setIsExporting] = useState(false);
     const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+    const [integrityProgress, setIntegrityProgress] = useState(0);
+    const [integrityProgressMessage, setIntegrityProgressMessage] = useState('');
     const [isCleaning, setIsCleaning] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
 
@@ -106,9 +110,14 @@ export function useSettingsViewModel(): SettingsViewModel {
     }, [exportToJSON]);
 
     const onFixIntegrity = useCallback(async () => {
+        setIntegrityProgress(0);
+        setIntegrityProgressMessage('Starting check...');
         setIsMaintenanceMode(true);
         try {
-            const result = await runIntegrityCheck();
+            const result = await runIntegrityCheck((message, progress) => {
+                setIntegrityProgressMessage(message);
+                setIntegrityProgress(progress);
+            });
             alert.show({
                 title: 'Integrity Check Complete',
                 message: `Checked ${result.totalAccounts} accounts.\nFound ${result.discrepanciesFound} issues.\nRepaired ${result.repairsSuccessful} successfully.`
@@ -177,6 +186,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         isExporting,
         isImporting: isImportingData,
         isMaintenanceMode,
+        integrityProgress,
+        integrityProgressMessage,
         isCleaning,
         isResetting,
         onExport,

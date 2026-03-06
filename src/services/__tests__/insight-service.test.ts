@@ -1,4 +1,4 @@
-import { AccountSubcategory, AccountType } from '@/src/data/models/Account';
+import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -52,13 +52,13 @@ describe('InsightService', () => {
     describe('observeSafeToSpend', () => {
         it('should calculate safe to spend using only liquid assets and liquid liabilities', (done) => {
             const mockAssets = [
-                { id: 'a1', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.CASH }, // Liquid
-                { id: 'a2', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.RETIREMENT }, // Not liquid
+                { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH }, // Liquid
+                { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT }, // Not liquid
             ];
 
             const mockLiabilities = [
-                { id: 'l1', accountType: AccountType.LIABILITY, accountSubcategory: AccountSubcategory.CREDIT_CARD }, // Liquid liability
-                { id: 'l2', accountType: AccountType.LIABILITY, accountSubcategory: AccountSubcategory.MORTGAGE }, // Not liquid liability
+                { id: 'l1', accountType: AccountType.LIABILITY, accountSubtype: AccountSubtype.CREDIT_CARD }, // Liquid liability
+                { id: 'l2', accountType: AccountType.LIABILITY, accountSubtype: AccountSubtype.MORTGAGE }, // Not liquid liability
             ];
 
             const mockBalances = [
@@ -91,8 +91,8 @@ describe('InsightService', () => {
     describe('observePatterns', () => {
         it('should group slow leak expenses by subcategory instead of account id', (done) => {
             const mockAccounts = [
-                { id: 'acc1', name: 'Groceries 1', accountType: AccountType.EXPENSE, accountSubcategory: AccountSubcategory.FOOD },
-                { id: 'acc2', name: 'Groceries 2', accountType: AccountType.EXPENSE, accountSubcategory: AccountSubcategory.FOOD },
+                { id: 'acc1', name: 'Groceries 1', accountType: AccountType.EXPENSE, accountSubtype: AccountSubtype.FOOD },
+                { id: 'acc2', name: 'Groceries 2', accountType: AccountType.EXPENSE, accountSubtype: AccountSubtype.FOOD },
             ];
 
             const now = Date.now();
@@ -132,10 +132,10 @@ describe('InsightService', () => {
 
         it('should detect No Emergency Fund pattern', (done) => {
             const mockAccounts = [
-                { id: 'a1', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.BANK_CHECKING },
-                { id: 'a2', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.RETIREMENT },
-                { id: 'a3', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.INVESTMENT },
-                { id: 'a4', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.INVESTMENT },
+                { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.BANK_CHECKING },
+                { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT },
+                { id: 'a3', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.INVESTMENT },
+                { id: 'a4', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.INVESTMENT },
             ];
 
             (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
@@ -153,10 +153,10 @@ describe('InsightService', () => {
 
         it('should NOT detect No Emergency Fund pattern if they have one', (done) => {
             const mockAccounts = [
-                { id: 'a1', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.BANK_CHECKING },
-                { id: 'a2', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.RETIREMENT },
-                { id: 'a3', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.INVESTMENT },
-                { id: 'a4', accountType: AccountType.ASSET, accountSubcategory: AccountSubcategory.EMERGENCY_FUND },
+                { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.BANK_CHECKING },
+                { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT },
+                { id: 'a3', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.INVESTMENT },
+                { id: 'a4', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.EMERGENCY_FUND },
             ];
 
             (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));

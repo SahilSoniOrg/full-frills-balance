@@ -4,7 +4,7 @@
  */
 
 import { database } from '@/src/data/database/Database'
-import { AccountSubcategory, AccountType } from '@/src/data/models/Account'
+import { AccountSubtype, AccountType } from '@/src/data/models/Account'
 import { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
@@ -38,7 +38,7 @@ describe('AccountRepository', () => {
                 currencyCode: 'USD',
             })
 
-            expect(account.accountSubcategory).toBe(AccountSubcategory.CASH)
+            expect(account.accountSubtype).toBe(AccountSubtype.CASH)
         })
 
         it('should create account with initial balance', async () => {
@@ -57,7 +57,7 @@ describe('AccountRepository', () => {
             await expect(accountRepository.create({
                 name: 'Invalid Asset',
                 accountType: AccountType.ASSET,
-                accountSubcategory: AccountSubcategory.CREDIT_CARD,
+                accountSubtype: AccountSubtype.CREDIT_CARD,
                 currencyCode: 'USD',
             })).rejects.toThrow('Subcategory CREDIT_CARD is not valid for account type ASSET')
         })
@@ -68,7 +68,7 @@ describe('AccountRepository', () => {
             const account = await accountRepository.create({
                 name: 'Starter Asset',
                 accountType: AccountType.ASSET,
-                accountSubcategory: AccountSubcategory.CASH,
+                accountSubtype: AccountSubtype.CASH,
                 currencyCode: 'USD',
             })
 
@@ -77,7 +77,7 @@ describe('AccountRepository', () => {
             })
 
             expect(updated.accountType).toBe(AccountType.EQUITY)
-            expect(updated.accountSubcategory).toBe(AccountSubcategory.OPENING_BALANCE)
+            expect(updated.accountSubtype).toBe(AccountSubtype.OPENING_BALANCE)
         })
     })
 
