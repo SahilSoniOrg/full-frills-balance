@@ -26,7 +26,7 @@ import { preferences } from '@/src/utils/preferences';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
-import { debounceTime, switchMap } from 'rxjs/operators';
+import { debounceTime, switchMap, take } from 'rxjs/operators';
 
 const DEFAULT_INSIGHTS_CONFIG = {
     lookbackDays: 90,
@@ -58,6 +58,8 @@ export interface SafeToSpendResult {
     committedBudget: number;
     committedRecurring: number;
     committedPlanned: number;
+    totalFutureObligations: number;
+    totalFutureInflow: number;
     safeToSpend: number;
     currencyCode: string;
     liquidAssetSubtypes: AccountSubtype[];
@@ -103,9 +105,7 @@ export class InsightService {
             budgetRepository.observeAllActive(),
             plannedPaymentRepository.observeActive(),
             accountRepository.observeAll(),
-            journalRepository.observePlannedForMonth(dayjs().format('YYYY-MM')),
-            // BalanceService derives from running_balance + active journal status;
-            // observe both so safe-to-spend refreshes after async rebuild/status-only updates.
+            journalRepository.observePlannedInRange(dayjs().startOf('day').valueOf(), dayjs().add(30, 'day').endOf('day').valueOf()),
             transactionRepository.observeActiveWithColumns(['running_balance']),
             journalRepository.observeStatusMeta(),
         ] as [
@@ -155,6 +155,8 @@ export class InsightService {
                         liquidAssetAccountIds: [],
                         liquidLiabilityAccountIds: [],
                         dailyBudgetBurn: 0,
+                        totalFutureObligations: 0,
+                        totalFutureInflow: 0,
                     });
                 }
 
@@ -180,10 +182,10 @@ export class InsightService {
                             if (b) totalLiquid += b.balance;
                         });
 
-                        let totalLiabilities = 0;
+                        let currentLiabilitiesBalance = 0;
                         liquidLiabilities.forEach(l => {
                             const b = accountBalances.find(bal => bal.accountId === l.id);
-                            if (b) totalLiabilities += Math.abs(b.balance);
+                            if (b) currentLiabilitiesBalance += Math.abs(b.balance);
                         });
 
                         // Only count budgets that belong to the current month.
@@ -234,20 +236,29 @@ export class InsightService {
                             }
                         }
 
-                        const netCash = totalLiquid - totalLiabilities;
-
                         // 30-day cash flow simulation:
                         // Each day the balance depletes by dailyBudgetBurn. On specific days,
                         // planned payments inject (income) or withdraw (expense) amounts.
                         // Safe to Spend = the minimum the balance ever reaches in the window.
                         // If no budgets exist, fall back to avgBurn for a sensible baseline.
-                        const safeToSpend = await this.simulateSafeToSpend(
-                            netCash,
+                        const liabilityAccountBalances = liquidLiabilities.map(l => ({
+                            account: l,
+                            balance: Math.abs(accountBalances.find(bal => bal.accountId === l.id)?.balance || 0)
+                        }));
+
+                        const {
+                            safeToSpend,
+                            totalFutureObligations,
+                            totalFutureInflow,
+                            committedPlanned,
+                            totalLiabilities
+                        } = await this.simulateSafeToSpend(
+                            totalLiquid,
                             dailyBudgetBurn,
                             plannedPayments,
                             plannedJournals,
                             liquidAssetIds,
-                            liquidLiabilityIds,
+                            liabilityAccountBalances,
                             budgetCoveredExpenseAccountIds,
                             resultCurrency,
                         );
@@ -274,10 +285,12 @@ export class InsightService {
 
                         return {
                             totalLiquidAssets: totalLiquid,
-                            totalLiabilities,
+                            totalLiabilities: totalLiabilities,
                             committedBudget: remainingBudget,
-                            committedRecurring: 0, // Removed: managed via planned payments
-                            committedPlanned: 0,   // Absorbed into simulation
+                            committedRecurring: 0,
+                            committedPlanned,
+                            totalFutureObligations,
+                            totalFutureInflow,
                             safeToSpend,
                             currencyCode: resultCurrency,
                             liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
@@ -325,8 +338,8 @@ export class InsightService {
         const now = dayjs().startOf('day');
         const thirtyDaysAgo = now.subtract(30, 'day').valueOf();
 
-        // 1. History (Past 30 days)
-        const activeAccountsIds = [...current.liquidAssetAccountIds, ...current.liquidLiabilityAccountIds];
+        // 1. History (Past 30 days) - Track Liquid Assets only for the "Cash Position" trajectory
+        const activeAccountsIds = [...current.liquidAssetAccountIds];
         const rawDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(activeAccountsIds, thirtyDaysAgo, now.valueOf() + 86400000);
 
         const netCashFlowByDay = new Map<number, number>();
@@ -341,15 +354,14 @@ export class InsightService {
                 }
             }
 
-            const isLiability = delta.accountType === AccountType.LIABILITY;
-            const effectiveDelta = isLiability ? -amount : amount;
+            const effectiveDelta = amount; // Since we only track Assets here, delta is the flow.
 
             const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
             netCashFlowByDay.set(localDayStart, (netCashFlowByDay.get(localDayStart) || 0) + effectiveDelta);
         }
 
         const historyPoints: SafeToSpendDataPoint[] = [];
-        let runningBalance = current.totalLiquidAssets - current.totalLiabilities;
+        let runningBalance = current.totalLiquidAssets;
 
         historyPoints.push({
             timestamp: now.valueOf(),
@@ -370,121 +382,38 @@ export class InsightService {
         }
         historyPoints.reverse();
 
-        // 2. Average Burn Rate (non-budgeted accounts only)
-        // Budget-covered accounts use the precise dailyBudgetBurn from the simulation.
-        // Including them in the historical average would double-count their projected cost.
-        const allExpenseAccs = await accountRepository.findByType(AccountType.EXPENSE);
-        const nonBudgetedExpenseAccs = allExpenseAccs.filter(a => !budgetCoveredExpenseAccountIds.has(a.id));
-        const expenseDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(
-            nonBudgetedExpenseAccs.map(a => a.id), thirtyDaysAgo, now.valueOf() + 86400000
-        );
-
-        const dailyExpenses = new Map<number, number>();
-        for (const delta of expenseDeltas) {
-            let amount = delta.delta;
-            if (delta.currencyCode !== current.currencyCode) {
-                try {
-                    const { convertedAmount } = await exchangeRateService.convert(amount, delta.currencyCode, current.currencyCode);
-                    amount = convertedAmount;
-                } catch (e) { }
-            }
-            const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
-            dailyExpenses.set(localDayStart, (dailyExpenses.get(localDayStart) || 0) + Math.abs(amount));
-        }
-
-        const expenseValues = Array.from(dailyExpenses.values()).filter(v => v > 0);
-        let avgBurnNonBudgeted = 0;
-        if (expenseValues.length > 0) {
-            expenseValues.sort((a, b) => a - b);
-            const p90Index = Math.floor(expenseValues.length * 0.9);
-            const normalExpenses = expenseValues.slice(0, p90Index); // exclude big spikes
-            const normalSum = normalExpenses.reduce((a, b) => a + b, 0);
-            avgBurnNonBudgeted = normalSum / 30;
-        }
-
-        // Total projected daily drain:
-        //   dailyBudgetBurn  = precise committed daily spend for budgeted accounts
-        //   avgBurnNonBudgeted = historical average for everything else
-        const totalDailyDrain = (current.dailyBudgetBurn ?? 0) + avgBurnNonBudgeted;
-
-        // 3. Future Projection (100 days)
-        const futureDays = 100;
-        const projectionPoints: SafeToSpendDataPoint[] = [];
-        let projectedAmount = current.totalLiquidAssets - current.totalLiabilities;
+        // 2. Future Projection (30 days - unified via getSimulationFlows)
+        const simulationDays = 30;
+        const liabilityAccounts = await accountRepository.observeByIds(current.liquidLiabilityAccountIds).pipe(take(1)).toPromise() || [];
+        const accountBalances = await balanceService.getAccountBalances();
+        const liabilityAccountBalances = liabilityAccounts.map(l => ({
+            account: l,
+            balance: Math.abs(accountBalances.find(bal => bal.accountId === l.id)?.balance || 0)
+        }));
 
         const plannedPayments = await plannedPaymentRepository.findAllActive();
-        const plannedImpactByDay = new Map<number, number>();
-        const nowMs = now.valueOf();
-        const endMs = now.add(futureDays, 'day').valueOf();
-
-        for (const pp of plannedPayments) {
-            let curr = pp.nextOccurrence;
-            while (curr <= endMs) {
-                if (curr > nowMs) {
-                    const occurrenceDayStart = dayjs(curr).startOf('day').valueOf();
-                    let amount = pp.amount;
-                    if (pp.currencyCode !== current.currencyCode) {
-                        try {
-                            const { convertedAmount } = await exchangeRateService.convert(pp.amount, pp.currencyCode, current.currencyCode);
-                            amount = convertedAmount;
-                        } catch (e) { }
-                    }
-
-                    const isLiquidSource = current.liquidAssetAccountIds.includes(pp.fromAccountId) || current.liquidLiabilityAccountIds.includes(pp.fromAccountId);
-                    const isLiquidDest = current.liquidAssetAccountIds.includes(pp.toAccountId) || current.liquidLiabilityAccountIds.includes(pp.toAccountId);
-
-                    let impact = 0;
-                    if (isLiquidSource) impact -= amount;
-                    if (isLiquidDest) impact += amount;
-
-                    if (impact !== 0) {
-                        plannedImpactByDay.set(occurrenceDayStart, (plannedImpactByDay.get(occurrenceDayStart) || 0) + impact);
-                    }
-                }
-
-                if (pp.intervalType === 'DAILY') curr = dayjs(curr).add(pp.intervalN || 1, 'day').valueOf();
-                else if (pp.intervalType === 'WEEKLY') curr = dayjs(curr).add(pp.intervalN || 1, 'week').valueOf();
-                else if (pp.intervalType === 'MONTHLY') curr = dayjs(curr).add(pp.intervalN || 1, 'month').valueOf();
-                else if (pp.intervalType === 'YEARLY') curr = dayjs(curr).add(pp.intervalN || 1, 'year').valueOf();
-                else break; // Fallback to avoid infinite loops
-            }
-        }
-
         const plannedJournals = await journalRepository.journalsQuery(
             Q.where('status', JournalStatus.PLANNED),
-            Q.where('journal_date', Q.gt(nowMs)),
-            Q.where('journal_date', Q.lte(endMs)),
+            Q.where('journal_date', Q.gte(now.valueOf())),
+            Q.where('journal_date', Q.lte(now.add(simulationDays, 'day').valueOf())),
             Q.where('deleted_at', Q.eq(null))
         ).fetch();
 
-        if (plannedJournals.length > 0) {
-            const plannedJournalIds = plannedJournals.map(j => j.id);
-            const plannedTxs = await transactionRepository.findByJournals(plannedJournalIds);
+        const { flowByDayOffset, effectiveDailyDrain } = await this.getSimulationFlows(
+            simulationDays,
+            now,
+            current.dailyBudgetBurn,
+            plannedPayments,
+            plannedJournals,
+            new Set([...current.liquidAssetAccountIds, ...current.liquidLiabilityAccountIds]),
+            liabilityAccountBalances,
+            budgetCoveredExpenseAccountIds,
+            current.currencyCode
+        );
 
-            for (const tx of plannedTxs) {
-                const journal = plannedJournals.find(j => j.id === tx.journalId);
-                if (!journal) continue;
-
-                const isLiquidAcc = current.liquidAssetAccountIds.includes(tx.accountId) || current.liquidLiabilityAccountIds.includes(tx.accountId);
-                if (!isLiquidAcc) continue;
-
-                const occurrenceDayStart = dayjs(journal.journalDate).startOf('day').valueOf();
-
-                let amount = tx.amount;
-                if (tx.currencyCode !== current.currencyCode) {
-                    try {
-                        const { convertedAmount } = await exchangeRateService.convert(amount, tx.currencyCode, current.currencyCode);
-                        amount = convertedAmount;
-                    } catch (e) { }
-                }
-
-                // DEBIT increases Net Cash, CREDIT decreases Net Cash
-                const impact = tx.transactionType === TransactionType.DEBIT ? amount : -amount;
-
-                plannedImpactByDay.set(occurrenceDayStart, (plannedImpactByDay.get(occurrenceDayStart) || 0) + impact);
-            }
-        }
-
+        const projectionPoints: SafeToSpendDataPoint[] = [];
+        let projectedAmount = current.totalLiquidAssets;
+        let minBalanceFound = projectedAmount;
         let safeDaysCount: number | null = null;
 
         projectionPoints.push({
@@ -493,28 +422,28 @@ export class InsightService {
             isProjected: true
         });
 
-        for (let i = 1; i <= futureDays; i++) {
-            const targetDayStart = now.add(i, 'day').valueOf();
-            // Prefer the simulation-derived burn rate; fall back to historical avgBurn
-            const dailyDrain = totalDailyDrain;
-            projectedAmount -= dailyDrain;
-            const plannedImpact = plannedImpactByDay.get(targetDayStart) || 0;
-            projectedAmount += plannedImpact;
+        for (let d = 1; d <= simulationDays; d++) {
+            projectedAmount -= effectiveDailyDrain;
+            projectedAmount += flowByDayOffset.get(d) || 0;
 
+            const timestamp = now.add(d, 'day').valueOf();
             projectionPoints.push({
-                timestamp: targetDayStart,
+                timestamp,
                 value: projectedAmount,
                 isProjected: true
             });
 
+            if (projectedAmount < minBalanceFound) {
+                minBalanceFound = projectedAmount;
+            }
             if (projectedAmount < 0 && safeDaysCount === null) {
-                safeDaysCount = i;
+                safeDaysCount = d;
             }
         }
 
         return {
             history: historyPoints,
-            projection: projectionPoints.slice(0, 31), // Return 30 future days for the graph
+            projection: projectionPoints,
             safeDaysCount
         };
     }
@@ -763,54 +692,185 @@ export class InsightService {
      * payments, falls back to avgBurn from the past 30 days for a non-zero baseline.
      */
     private async simulateSafeToSpend(
-        netCash: number,
+        startingBalance: number,
         dailyBudgetBurn: number,
         plannedPayments: PlannedPayment[],
         plannedJournals: Journal[],
         liquidAssetIds: string[],
-        liquidLiabilityIds: string[],
+        liabilityAccountBalances: { account: Account, balance: number }[],
         budgetCoveredExpenseAccountIds: Set<string>,
         resultCurrency: string,
-    ): Promise<number> {
+    ): Promise<{
+        safeToSpend: number;
+        totalFutureObligations: number;
+        totalFutureInflow: number;
+        committedPlanned: number;
+        totalLiabilities: number;
+    }> {
         const now = dayjs().startOf('day');
         const SIMULATION_DAYS = 30;
-        const liquidAccountIds = new Set<string>([...liquidAssetIds, ...liquidLiabilityIds]);
 
-        // ── Build day-indexed cash flow map ──────────────────────────────────────
-        // Key: number of days offset from today (1..30)
-        const flowByDayOffset = new Map<number, number>();
-
-        const addFlow = (dayOffset: number, amount: number) => {
-            if (dayOffset < 1 || dayOffset > SIMULATION_DAYS) return;
-            flowByDayOffset.set(dayOffset, (flowByDayOffset.get(dayOffset) || 0) + amount);
-        };
-
-        // -- Planned Payments (recurring / one-shot with nextOccurrence) ----------
-        const nowMs = now.valueOf();
-        const endMs = now.add(SIMULATION_DAYS, 'day').valueOf();
-
-        // Track which planned-payment IDs already have a PLANNED journal this month
-        // (the journal is the authoritative entry, skip the PP itself for those)
-        const journalCoveredPPIds = new Set<string>(
-            plannedJournals
-                .map(pj => pj.plannedPaymentId)
-                .filter((id): id is string => Boolean(id))
+        const { flowByDayOffset, effectiveDailyDrain, totalFutureObligations, totalFutureInflow, committedPlanned, totalLiabilities } = await this.getSimulationFlows(
+            SIMULATION_DAYS,
+            now,
+            dailyBudgetBurn,
+            plannedPayments,
+            plannedJournals,
+            new Set([...liquidAssetIds, ...liabilityAccountBalances.map(l => l.account.id)]),
+            liabilityAccountBalances,
+            budgetCoveredExpenseAccountIds,
+            resultCurrency
         );
 
+        // ── Simulation Loop ──────────────────────────────────────────────────────
+        let currentBalance = startingBalance;
+        let minBalance = startingBalance;
+
+        for (let d = 1; d <= SIMULATION_DAYS; d++) {
+            currentBalance -= effectiveDailyDrain;
+            currentBalance += flowByDayOffset.get(d) || 0;
+            if (currentBalance < minBalance) minBalance = currentBalance;
+        }
+
+        return {
+            safeToSpend: Math.max(0, minBalance),
+            totalFutureObligations,
+            totalFutureInflow,
+            committedPlanned,
+            totalLiabilities
+        };
+    }
+
+    private async getSimulationFlows(
+        simulationDays: number,
+        now: dayjs.Dayjs,
+        dailyBudgetBurn: number,
+        plannedPayments: PlannedPayment[],
+        plannedJournals: Journal[],
+        liquidAccountIds: Set<string>,
+        liabilityAccountBalances: { account: Account, balance: number }[],
+        budgetCoveredExpenseAccountIds: Set<string>,
+        resultCurrency: string,
+    ): Promise<{
+        flowByDayOffset: Map<number, number>,
+        organicNetFlow: number,
+        effectiveDailyDrain: number,
+        totalFutureObligations: number,
+        totalFutureInflow: number,
+        committedPlanned: number,
+        totalLiabilities: number
+    }> {
+        const flowByDayOffset = new Map<number, number>();
+        let totalFutureObligations = 0;
+        let totalFutureInflow = 0;
+        let committedPlanned = 0;
+        let totalLiabilitiesSum = 0;
+
+        const addFlow = (dayOffset: number, amount: number, isPlanned = false) => {
+            if (dayOffset < 0 || dayOffset > simulationDays) return; // Allow 0 (today)
+            flowByDayOffset.set(dayOffset, (flowByDayOffset.get(dayOffset) || 0) + amount);
+            if (amount < 0) totalFutureObligations += Math.abs(amount);
+            if (amount > 0) totalFutureInflow += amount;
+            if (isPlanned && amount < 0) committedPlanned += Math.abs(amount);
+        };
+
+        // 1. Daily Budget Drain
+        // The balance changes each day by: -dailyBudgetBurn
+        const effectiveDailyDrain = dailyBudgetBurn;
+
+        // Add dailyBudgetBurn as an obligation for the full 30 days
+        totalFutureObligations += Math.max(0, dailyBudgetBurn * simulationDays);
+
+        // 2. Timed Liability Deductions
+        // Find if any liability account is already covered by a manual planned payment or journal transaction
+        const manualPaymentAccountIds = new Set<string>();
+        for (const pp of plannedPayments) manualPaymentAccountIds.add(pp.toAccountId);
+        if (plannedJournals.length > 0) {
+            const plannedTxs = await transactionRepository.findByJournals(plannedJournals.map(j => j.id));
+            for (const tx of plannedTxs) manualPaymentAccountIds.add(tx.accountId);
+        }
+
+        for (const { account, balance } of liabilityAccountBalances) {
+            if (balance <= 0) continue;
+            totalLiabilitiesSum += balance;
+
+            // If there's a manual planned payment or journal for this account, 
+            // the user wants us to skip the automated \"Timed Liability Deduction\".
+            if (manualPaymentAccountIds.has(account.id)) {
+                continue;
+            }
+
+            try {
+                const metadataRecords = await account.metadataRecords.fetch();
+                const metadata = metadataRecords[0];
+
+                const today = now.date();
+                const statementDay = metadata?.statementDay;
+                const dueDay = metadata?.dueDay || 20;
+
+                if (account.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
+                    let deductionAmount = balance;
+                    let targetDueDate: dayjs.Dayjs;
+
+                    // Logic:
+                    // If today <= statementDay: current balance will be part of the NEXT statement cycle.
+                    // Wait, that's wrong. If today is 5th and statement is 15th, 
+                    // the money I've spent so far WILL be on the statement on the 15th, due on the ~5th of NEXT month.
+                    // If today is 20th and statement was 15th,
+                    // the balance from the 15th is ALREADY on a statement, due on the ~5th of NEXT month.
+
+                    if (today > statementDay) {
+                        // We have a closed statement.
+                        const statementDate = now.date(statementDay).startOf('day').valueOf();
+                        const balancesAtStatement = await transactionRawRepository.getLatestBalancesRaw([account.id], statementDate);
+                        const statementBalance = Math.abs(balancesAtStatement.get(account.id) || 0);
+
+                        // Only deduct what was on the statement. Subsequent spending falls into the next cycle (beyond 30 days usually).
+                        deductionAmount = statementBalance;
+
+                        // targetDueDate is the next dueDay
+                        targetDueDate = now.date(dueDay);
+                        if (dueDay <= today) {
+                            targetDueDate = targetDueDate.add(1, 'month');
+                        }
+                    } else {
+                        // Statement hasn't closed yet. The entire current balance + future spending will be due 
+                        // on the due Day of NEXT month cycle.
+                        deductionAmount = balance;
+                        targetDueDate = now.date(dueDay).add(1, 'month');
+                    }
+
+                    const dayOffset = targetDueDate.startOf('day').diff(now, 'day');
+                    addFlow(dayOffset, -deductionAmount);
+                } else {
+                    // Loans, etc.
+                    let deductionDay = metadata?.dueDay || metadata?.emiDay || 28;
+                    let targetDate = now.date(deductionDay);
+                    if (deductionDay <= today) {
+                        targetDate = targetDate.add(1, 'month');
+                    }
+                    const dayOffset = targetDate.startOf('day').diff(now, 'day');
+                    addFlow(dayOffset, -balance);
+                }
+            } catch (e) {
+                logger.error('getSimulationFlows: liability metadata failed', e);
+                addFlow(15, -balance);
+            }
+        }
+
+        // 3. Planned Payments
+        const endMs = now.add(simulationDays, 'day').valueOf();
+        const nowMs = now.valueOf();
+        const journalCoveredPPIds = new Set<string>(plannedJournals.map(pj => pj.plannedPaymentId).filter((id): id is string => Boolean(id)));
+
         for (const pp of plannedPayments) {
-            // Skip if already covered by a planned journal (would double-count)
             if (journalCoveredPPIds.has(pp.id)) continue;
-            // Skip budget-covered expense flows
             if (budgetCoveredExpenseAccountIds.has(pp.toAccountId)) continue;
 
             const isLiquidFrom = liquidAccountIds.has(pp.fromAccountId);
             const isLiquidTo = liquidAccountIds.has(pp.toAccountId);
-            // Skip liquid→liquid transfers (neutral to net cash)
-            if (isLiquidFrom && isLiquidTo) continue;
-            // If neither side is liquid, this PP is irrelevant to safe-to-spend
-            if (!isLiquidFrom && !isLiquidTo) continue;
+            if ((isLiquidFrom && isLiquidTo) || (!isLiquidFrom && !isLiquidTo)) continue;
 
-            // Walk all occurrences within the window
             let curr = pp.nextOccurrence;
             while (curr <= endMs) {
                 if (curr > nowMs) {
@@ -818,18 +878,13 @@ export class InsightService {
                     let amount = pp.amount;
                     if (pp.currencyCode && pp.currencyCode !== resultCurrency) {
                         try {
-                            const { convertedAmount } = await exchangeRateService.convert(
-                                amount, pp.currencyCode, resultCurrency
-                            );
+                            const { convertedAmount } = await exchangeRateService.convert(amount, pp.currencyCode, resultCurrency);
                             amount = convertedAmount;
-                        } catch (e) { /* use unconverted as fallback */ }
+                        } catch (e) { }
                     }
-                    // Income: non-liquid → liquid (+), Expense: liquid → non-liquid (−)
                     const impact = isLiquidTo ? amount : -amount;
-                    addFlow(dayOffset, impact);
+                    addFlow(dayOffset, impact, true);
                 }
-
-                // Advance to next occurrence
                 if (pp.intervalType === 'DAILY') curr = dayjs(curr).add(pp.intervalN || 1, 'day').valueOf();
                 else if (pp.intervalType === 'WEEKLY') curr = dayjs(curr).add(pp.intervalN || 1, 'week').valueOf();
                 else if (pp.intervalType === 'MONTHLY') curr = dayjs(curr).add(pp.intervalN || 1, 'month').valueOf();
@@ -838,96 +893,29 @@ export class InsightService {
             }
         }
 
-        // -- Planned Journals (manually scheduled future entries) -----------------
-        // These represent commitments that already exist as double-entry records.
-        // We only count the legs that touch liquid accounts.
+        // 4. Planned Journals
         if (plannedJournals.length > 0) {
-            const plannedJournalIds = plannedJournals.map(j => j.id);
-            try {
-                const plannedTxs = await transactionRepository.findByJournals(plannedJournalIds);
-                for (const tx of plannedTxs) {
-                    const journal = plannedJournals.find(j => j.id === tx.journalId);
-                    if (!journal) continue;
-                    if (!liquidAccountIds.has(tx.accountId)) continue;
-                    const occurrenceMs = journal.journalDate;
-                    if (occurrenceMs <= nowMs || occurrenceMs > endMs) continue;
+            const plannedTxs = await transactionRepository.findByJournals(plannedJournals.map(j => j.id));
+            for (const tx of plannedTxs) {
+                const journal = plannedJournals.find(j => j.id === tx.journalId);
+                if (!journal || !liquidAccountIds.has(tx.accountId)) continue;
+                const occurrenceMs = journal.journalDate;
+                if (occurrenceMs <= nowMs || occurrenceMs > endMs) continue;
 
-                    const dayOffset = dayjs(occurrenceMs).startOf('day').diff(now, 'day');
-                    let amount = tx.amount;
-                    if (tx.currencyCode && tx.currencyCode !== resultCurrency) {
-                        try {
-                            const { convertedAmount } = await exchangeRateService.convert(
-                                amount, tx.currencyCode, resultCurrency
-                            );
-                            amount = convertedAmount;
-                        } catch (e) { /* fallback to unconverted */ }
-                    }
-                    // DEBIT = money coming into account (+), CREDIT = money leaving (−)
-                    const impact = tx.transactionType === TransactionType.DEBIT ? amount : -amount;
-                    addFlow(dayOffset, impact);
+                const dayOffset = dayjs(occurrenceMs).startOf('day').diff(now, 'day');
+                let amount = tx.amount;
+                if (tx.currencyCode && tx.currencyCode !== resultCurrency) {
+                    try {
+                        const { convertedAmount } = await exchangeRateService.convert(amount, tx.currencyCode, resultCurrency);
+                        amount = convertedAmount;
+                    } catch (e) { }
                 }
-            } catch (e) {
-                logger.error('simulateSafeToSpend: failed to fetch planned journal transactions', e);
+                const impact = tx.transactionType === TransactionType.DEBIT ? amount : -amount;
+                addFlow(dayOffset, impact, true);
             }
         }
 
-        // ── Daily burn = budget burn (exact) + historical avg for non-budgeted accounts ──
-        // We ALWAYS compute the non-budgeted avg, whether or not budgets exist.
-        // Without this, adding a small budget (e.g. ₹4k/month) would replace the full
-        // historical burn with just ₹149/day, inflating Safe to Spend by ~₹100k+.
-        let avgBurnNonBudgeted = 0;
-        try {
-            const thirtyDaysAgo = now.subtract(30, 'day').valueOf();
-            const allExpenseAccs = await accountRepository.findByType(AccountType.EXPENSE);
-            const nonBudgetedAccs = allExpenseAccs.filter(a => !budgetCoveredExpenseAccountIds.has(a.id));
-            if (nonBudgetedAccs.length > 0) {
-                const expenseDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(
-                    nonBudgetedAccs.map(a => a.id), thirtyDaysAgo, now.valueOf() + 86400000
-                );
-                const dailyExpenses = new Map<number, number>();
-                for (const delta of expenseDeltas) {
-                    let amount = delta.delta;
-                    if (delta.currencyCode !== resultCurrency) {
-                        try {
-                            const { convertedAmount } = await exchangeRateService.convert(amount, delta.currencyCode, resultCurrency);
-                            amount = convertedAmount;
-                        } catch (e) { /* fallback */ }
-                    }
-                    const dayKey = dayjs(delta.dayStart).startOf('day').valueOf();
-                    dailyExpenses.set(dayKey, (dailyExpenses.get(dayKey) || 0) + Math.abs(amount));
-                }
-                // p90 trim: exclude the top 10% spike days so one-off large expenses
-                // (rent, insurance, etc.) don't inflate the projected daily burn.
-                const expenseValues = Array.from(dailyExpenses.values()).filter(v => v > 0);
-                if (expenseValues.length > 0) {
-                    expenseValues.sort((a, b) => a - b);
-                    const p90Index = Math.floor(expenseValues.length * 0.9);
-                    const trimmed = expenseValues.slice(0, p90Index);
-                    const trimmedSum = trimmed.reduce((a, b) => a + b, 0);
-                    avgBurnNonBudgeted = trimmedSum / 30;
-                }
-            }
-        } catch (e) {
-            logger.error('simulateSafeToSpend: failed to compute avgBurnNonBudgeted', e);
-        }
-
-        // Total effective daily drain:
-        //   dailyBudgetBurn     = precise remaining budget ÷ days left (0 if no budget)
-        //   avgBurnNonBudgeted  = 30-day historical average for unbudgeted categories
-        const effectiveDailyBurn = dailyBudgetBurn + avgBurnNonBudgeted;
-
-        // ── Simulate 30 days ──────────────────────────────────────────────────────
-        let balance = netCash;
-        let minBalance = netCash;
-
-        for (let d = 1; d <= SIMULATION_DAYS; d++) {
-            balance -= effectiveDailyBurn;
-            balance += flowByDayOffset.get(d) || 0;
-            if (balance < minBalance) minBalance = balance;
-        }
-
-        // The minimum projected balance is the maximum safe withdrawal today.
-        return Math.max(0, minBalance);
+        return { flowByDayOffset, organicNetFlow: 0, effectiveDailyDrain, totalFutureObligations, totalFutureInflow, committedPlanned, totalLiabilities: totalLiabilitiesSum };
     }
 }
 

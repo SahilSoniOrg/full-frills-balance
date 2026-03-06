@@ -156,6 +156,17 @@ export class JournalRepository {
       .observe()
   }
 
+  observePlannedInRange(startDate: number, endDate: number) {
+    return this.journals
+      .query(
+        Q.where('status', JournalStatus.PLANNED),
+        Q.where('journal_date', Q.gte(startDate)),
+        Q.where('journal_date', Q.lte(endDate)),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .observe()
+  }
+
   /**
    * PURE PERSISTENCE METHODS
    */
@@ -181,6 +192,13 @@ export class JournalRepository {
       )
       .extend(Q.sortBy('journal_date', 'desc'))
       .fetch()
+  }
+
+  async findAllPlanned(): Promise<Journal[]> {
+    return this.journalsQuery(
+      Q.where('status', JournalStatus.PLANNED),
+      Q.where('deleted_at', Q.eq(null))
+    ).fetch()
   }
 
   async findAllNonDeleted(): Promise<Journal[]> {

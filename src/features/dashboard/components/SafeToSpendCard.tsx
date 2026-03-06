@@ -16,6 +16,8 @@ interface SafeToSpendCardProps {
     committedBudget: number;
     committedRecurring: number;
     committedPlanned: number;
+    totalFutureObligations: number;
+    totalFutureInflow: number;
     totalLiquidAssets: number;
     totalLiabilities: number;
     currencyCode: string;
@@ -36,6 +38,8 @@ export const SafeToSpendCard = ({
     committedBudget,
     committedRecurring,
     committedPlanned,
+    totalFutureObligations,
+    totalFutureInflow,
     totalLiquidAssets,
     totalLiabilities,
     currencyCode,
@@ -99,12 +103,16 @@ export const SafeToSpendCard = ({
         </View>
     );
 
-    const committedTotal = committedBudget + committedRecurring + committedPlanned;
+    // committedTotal represents all future obligations EXCEPT specific liquid liabilities (CCs/Loans).
+    // This allows the legend to show "Debts" (Liabilities) and "Committed" (planned/budget) separately.
+    const committedTotal = Math.max(0, totalFutureObligations - totalLiabilities);
     const totalObligations = totalLiabilities + committedTotal;
-    const effectiveTotal = safeToSpend + committedTotal + totalLiabilities;
 
-    const shortfall = Math.max(0, totalObligations - totalLiquidAssets);
-    const isOverCommitted = shortfall > 0;
+    // We want the bar to represent the total liquid assets + any projected inflow.
+    const effectiveTotal = Math.max(totalLiquidAssets + totalFutureInflow, totalObligations + safeToSpend);
+    const reserve = Math.max(0, effectiveTotal - (totalObligations + safeToSpend));
+
+    const isOverCommitted = totalObligations > totalLiquidAssets;
     const isPositiveSafeToSpend = !isOverCommitted && safeToSpend > 0;
 
     return (
@@ -144,7 +152,7 @@ export const SafeToSpendCard = ({
                         minimumFontScale={0.55}
                         ellipsizeMode="tail"
                     >
-                        {format(isOverCommitted ? shortfall : safeToSpend)}
+                        {format(isOverCommitted ? (totalObligations - totalLiquidAssets) : safeToSpend)}
                     </AppText>
                     <AppText
                         variant="caption"
@@ -160,13 +168,16 @@ export const SafeToSpendCard = ({
                             {/* Segmented Bar */}
                             <View style={[styles.progressBarContainer, { backgroundColor: theme.surfaceSecondary }]}>
                                 {totalLiabilities > 0 && (
-                                    <View style={[styles.progressSegment, { width: `${(totalLiabilities / effectiveTotal) * 100}%`, backgroundColor: theme.error }]} />
+                                    <View style={[styles.progressSegment, { flex: totalLiabilities, backgroundColor: theme.error }]} />
                                 )}
                                 {committedTotal > 0 && (
-                                    <View style={[styles.progressSegment, { width: `${(committedTotal / effectiveTotal) * 100}%`, backgroundColor: theme.warning }]} />
+                                    <View style={[styles.progressSegment, { flex: committedTotal, backgroundColor: theme.warning }]} />
                                 )}
                                 {safeToSpend > 0 && (
-                                    <View style={[styles.progressSegment, { width: `${(safeToSpend / effectiveTotal) * 100}%`, backgroundColor: theme.primary }]} />
+                                    <View style={[styles.progressSegment, { flex: safeToSpend, backgroundColor: theme.primary }]} />
+                                )}
+                                {reserve > 0 && (
+                                    <View style={[styles.progressSegment, { flex: reserve, backgroundColor: theme.surfaceSecondary }]} />
                                 )}
                             </View>
 
@@ -178,7 +189,7 @@ export const SafeToSpendCard = ({
                                 </View>
                                 <View style={styles.legendItem}>
                                     <View style={[styles.legendDot, { backgroundColor: theme.warning }]} />
-                                    <AppText variant="caption" color="secondary">Committed: {format(committedBudget + committedRecurring + committedPlanned)}</AppText>
+                                    <AppText variant="caption" color="secondary">Committed: {format(committedTotal)}</AppText>
                                 </View>
                                 <View style={styles.legendItem}>
                                     <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
