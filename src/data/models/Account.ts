@@ -11,7 +11,7 @@ export enum AccountType {
   EXPENSE = 'EXPENSE',
 }
 
-export enum AccountSubcategory {
+export enum AccountSubtype {
   CASH = 'CASH',
   WALLET = 'WALLET',
   BANK_CHECKING = 'BANK_CHECKING',
@@ -55,90 +55,90 @@ export enum AccountSubcategory {
   OTHER = 'OTHER',
 }
 
-export const ACCOUNT_SUBCATEGORIES_BY_TYPE: Record<AccountType, readonly AccountSubcategory[]> = {
+export const ACCOUNT_SUBTYPES_BY_TYPE: Record<AccountType, readonly AccountSubtype[]> = {
   [AccountType.ASSET]: [
-    AccountSubcategory.CASH,
-    AccountSubcategory.WALLET,
-    AccountSubcategory.BANK_CHECKING,
-    AccountSubcategory.BANK_SAVINGS,
-    AccountSubcategory.FIXED_DEPOSIT,
-    AccountSubcategory.MONEY_MARKET,
-    AccountSubcategory.INVESTMENT,
-    AccountSubcategory.BROKERAGE,
-    AccountSubcategory.RETIREMENT,
-    AccountSubcategory.EMERGENCY_FUND,
-    AccountSubcategory.RECEIVABLE,
-    AccountSubcategory.TAX_RECEIVABLE,
-    AccountSubcategory.OTHER,
+    AccountSubtype.CASH,
+    AccountSubtype.WALLET,
+    AccountSubtype.BANK_CHECKING,
+    AccountSubtype.BANK_SAVINGS,
+    AccountSubtype.FIXED_DEPOSIT,
+    AccountSubtype.MONEY_MARKET,
+    AccountSubtype.INVESTMENT,
+    AccountSubtype.BROKERAGE,
+    AccountSubtype.RETIREMENT,
+    AccountSubtype.EMERGENCY_FUND,
+    AccountSubtype.RECEIVABLE,
+    AccountSubtype.TAX_RECEIVABLE,
+    AccountSubtype.OTHER,
   ],
   [AccountType.LIABILITY]: [
-    AccountSubcategory.CREDIT_CARD,
-    AccountSubcategory.LINE_OF_CREDIT,
-    AccountSubcategory.OVERDRAFT,
-    AccountSubcategory.LOAN,
-    AccountSubcategory.MORTGAGE,
-    AccountSubcategory.STUDENT_LOAN,
-    AccountSubcategory.AUTO_LOAN,
-    AccountSubcategory.PERSONAL_LOAN,
-    AccountSubcategory.PAYABLE,
-    AccountSubcategory.TAX_PAYABLE,
-    AccountSubcategory.OTHER,
+    AccountSubtype.CREDIT_CARD,
+    AccountSubtype.LINE_OF_CREDIT,
+    AccountSubtype.OVERDRAFT,
+    AccountSubtype.LOAN,
+    AccountSubtype.MORTGAGE,
+    AccountSubtype.STUDENT_LOAN,
+    AccountSubtype.AUTO_LOAN,
+    AccountSubtype.PERSONAL_LOAN,
+    AccountSubtype.PAYABLE,
+    AccountSubtype.TAX_PAYABLE,
+    AccountSubtype.OTHER,
   ],
   [AccountType.EQUITY]: [
-    AccountSubcategory.OPENING_BALANCE,
-    AccountSubcategory.NET_WORTH_ADJUSTMENT,
-    AccountSubcategory.TRANSFER_CLEARING,
-    AccountSubcategory.OTHER,
+    AccountSubtype.OPENING_BALANCE,
+    AccountSubtype.NET_WORTH_ADJUSTMENT,
+    AccountSubtype.TRANSFER_CLEARING,
+    AccountSubtype.OTHER,
   ],
   [AccountType.INCOME]: [
-    AccountSubcategory.SALARY,
-    AccountSubcategory.BUSINESS_INCOME,
-    AccountSubcategory.INTEREST_INCOME,
-    AccountSubcategory.DIVIDEND_INCOME,
-    AccountSubcategory.RENT_INCOME,
-    AccountSubcategory.TAX,
-    AccountSubcategory.OTHER,
+    AccountSubtype.SALARY,
+    AccountSubtype.BUSINESS_INCOME,
+    AccountSubtype.INTEREST_INCOME,
+    AccountSubtype.DIVIDEND_INCOME,
+    AccountSubtype.RENT_INCOME,
+    AccountSubtype.TAX,
+    AccountSubtype.OTHER,
   ],
   [AccountType.EXPENSE]: [
-    AccountSubcategory.FOOD,
-    AccountSubcategory.HOUSING,
-    AccountSubcategory.TRANSPORT,
-    AccountSubcategory.UTILITIES,
-    AccountSubcategory.HEALTHCARE,
-    AccountSubcategory.EDUCATION,
-    AccountSubcategory.ENTERTAINMENT,
-    AccountSubcategory.SHOPPING,
-    AccountSubcategory.TAX,
-    AccountSubcategory.TRANSFER,
-    AccountSubcategory.OTHER,
+    AccountSubtype.FOOD,
+    AccountSubtype.HOUSING,
+    AccountSubtype.TRANSPORT,
+    AccountSubtype.UTILITIES,
+    AccountSubtype.HEALTHCARE,
+    AccountSubtype.EDUCATION,
+    AccountSubtype.ENTERTAINMENT,
+    AccountSubtype.SHOPPING,
+    AccountSubtype.TAX,
+    AccountSubtype.TRANSFER,
+    AccountSubtype.OTHER,
   ],
 }
 
-export const ACCOUNT_DEFAULT_SUBCATEGORY_BY_TYPE: Record<AccountType, AccountSubcategory> = {
-  [AccountType.ASSET]: AccountSubcategory.CASH,
-  [AccountType.LIABILITY]: AccountSubcategory.CREDIT_CARD,
-  [AccountType.EQUITY]: AccountSubcategory.OPENING_BALANCE,
-  [AccountType.INCOME]: AccountSubcategory.SALARY,
-  [AccountType.EXPENSE]: AccountSubcategory.FOOD,
+export const ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE: Record<AccountType, AccountSubtype> = {
+  [AccountType.ASSET]: AccountSubtype.CASH,
+  [AccountType.LIABILITY]: AccountSubtype.CREDIT_CARD,
+  [AccountType.EQUITY]: AccountSubtype.OPENING_BALANCE,
+  [AccountType.INCOME]: AccountSubtype.SALARY,
+  [AccountType.EXPENSE]: AccountSubtype.FOOD,
 }
 
-export function getAccountSubcategoriesForType(accountType: AccountType): readonly AccountSubcategory[] {
-  return ACCOUNT_SUBCATEGORIES_BY_TYPE[accountType]
+export function getAccountSubtypesForType(accountType: AccountType): readonly AccountSubtype[] {
+  return ACCOUNT_SUBTYPES_BY_TYPE[accountType]
 }
 
-export function getDefaultSubcategoryForType(accountType: AccountType): AccountSubcategory {
-  return ACCOUNT_DEFAULT_SUBCATEGORY_BY_TYPE[accountType] ?? AccountSubcategory.OTHER
+export function getDefaultSubtypeForType(accountType: AccountType): AccountSubtype {
+  return ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE[accountType] ?? AccountSubtype.OTHER
 }
 
-export function getDefaultSubcategoryForTypeLike(accountType: AccountType | string): AccountSubcategory {
+export function getDefaultSubtypeForTypeLike(accountType: AccountType | string): AccountSubtype {
   if (isAccountType(accountType)) {
-    return getDefaultSubcategoryForType(accountType)
+    return getDefaultSubtypeForType(accountType)
   }
-  return AccountSubcategory.OTHER
+  return AccountSubtype.OTHER
 }
 
-export function formatAccountSubcategoryLabel(subcategory: AccountSubcategory): string {
-  return subcategory
+export function formatAccountSubtypeLabel(subtype: AccountSubtype): string {
+  return subtype
     .toLowerCase()
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -149,16 +149,16 @@ export function isAccountType(value: string): value is AccountType {
   return Object.values(AccountType).includes(value as AccountType)
 }
 
-export function isAccountSubcategory(value: string): value is AccountSubcategory {
-  return Object.values(AccountSubcategory).includes(value as AccountSubcategory)
+export function isAccountSubtype(value: string): value is AccountSubtype {
+  return Object.values(AccountSubtype).includes(value as AccountSubtype)
 }
 
-export function isSubcategoryAllowedForType(
+export function isSubtypeAllowedForType(
   accountType: AccountType,
-  subcategory?: AccountSubcategory
+  subtype?: AccountSubtype
 ): boolean {
-  if (!subcategory) return true
-  return ACCOUNT_SUBCATEGORIES_BY_TYPE[accountType].includes(subcategory)
+  if (!subtype) return true
+  return ACCOUNT_SUBTYPES_BY_TYPE[accountType].includes(subtype)
 }
 
 export default class Account extends Model {
@@ -173,7 +173,7 @@ export default class Account extends Model {
 
   @field('name') name!: string
   @field('account_type') accountType!: AccountType
-  @field('account_subtype') accountSubcategory?: AccountSubcategory
+  @field('account_subtype') accountSubtype?: AccountSubtype
   @field('currency_code') currencyCode!: string
   @field('parent_account_id') parentAccountId?: string
   @field('description') description?: string

@@ -1,47 +1,47 @@
 import { AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import {
-    AccountSubcategory,
+    AccountSubtype,
     AccountType,
-    formatAccountSubcategoryLabel,
-    getAccountSubcategoriesForType,
+    formatAccountSubtypeLabel,
+    getAccountSubtypesForType,
 } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
-interface AccountSubcategorySelectorProps {
+interface AccountSubtypeSelectorProps {
     accountType: AccountType;
-    value: AccountSubcategory;
-    onChange: (subcategory: AccountSubcategory) => void;
+    value: AccountSubtype;
+    onChange: (subtype: AccountSubtype) => void;
     disabled?: boolean;
 }
 
-export const AccountSubcategorySelector: React.FC<AccountSubcategorySelectorProps> = ({
+export const AccountSubtypeSelector: React.FC<AccountSubtypeSelectorProps> = ({
     accountType,
     value,
     onChange,
     disabled,
 }) => {
     const { theme, fonts } = useTheme();
-    const subcategories = getAccountSubcategoriesForType(accountType);
+    const subtypes = getAccountSubtypesForType(accountType);
 
     return (
         <View style={styles.container}>
-            {subcategories.map((subcategory) => (
+            {subtypes.map((subtype) => (
                 <TouchableOpacity
-                    key={subcategory}
-                    testID={`account-subcategory-option-${subcategory}`}
+                    key={subtype}
+                    testID={`account-subtype-option-${subtype}`}
                     style={[
                         styles.button,
-                        value === subcategory && styles.buttonSelected,
+                        value === subtype && styles.buttonSelected,
                         {
                             borderColor: theme.border,
-                            backgroundColor: value === subcategory ? theme.primary : theme.surface,
+                            backgroundColor: value === subtype ? theme.primary : theme.surface,
                             opacity: disabled ? Opacity.medium : Opacity.solid,
                         },
                     ]}
-                    onPress={() => onChange(subcategory)}
+                    onPress={() => onChange(subtype)}
                     disabled={disabled}
                 >
                     <AppText
@@ -49,12 +49,12 @@ export const AccountSubcategorySelector: React.FC<AccountSubcategorySelectorProp
                         style={[
                             styles.text,
                             {
-                                color: value === subcategory ? theme.pureInverse : theme.text,
-                                fontFamily: value === subcategory ? fonts.bold : fonts.medium,
+                                color: value === subtype ? theme.pureInverse : theme.text,
+                                fontFamily: value === subtype ? fonts.bold : fonts.medium,
                             },
                         ]}
                     >
-                        {formatAccountSubcategoryLabel(subcategory)}
+                        {formatAccountSubtypeLabel(subtype)}
                     </AppText>
                 </TouchableOpacity>
             ))}

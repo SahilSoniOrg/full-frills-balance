@@ -55,7 +55,7 @@ export function EmergencyFundPopupModal({
                 <View style={styles.modalStepRow}>
                     <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
                     <AppText variant="caption" color="secondary" style={styles.modalStepText}>
-                        Select the Emergency Fund subcategory.
+                        Select the Emergency Fund subtype.
                     </AppText>
                 </View>
                 <View style={styles.modalStepRow}>

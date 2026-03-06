@@ -1,9 +1,9 @@
 import { database } from '@/src/data/database/Database'
 import Account, {
-  AccountSubcategory,
+  AccountSubtype,
   AccountType,
-  getDefaultSubcategoryForTypeLike,
-  isAccountSubcategory,
+  getDefaultSubtypeForTypeLike,
+  isAccountSubtype,
   isAccountType
 } from '@/src/data/models/Account'
 import AccountMetadata from '@/src/data/models/AccountMetadata'
@@ -22,7 +22,7 @@ export interface ImportedAccount {
   id: string
   name: string
   accountType: AccountType | string
-  accountSubcategory?: AccountSubcategory | string
+  accountSubtype?: AccountSubtype | string
   currencyCode: string
   parentAccountId?: string
   description?: string
@@ -194,13 +194,13 @@ function toAccountType(value: AccountType | string): AccountType {
   return isAccountType(value) ? value : DEFAULT_ACCOUNT_TYPE
 }
 
-function toAccountSubcategory(value?: AccountSubcategory | string): AccountSubcategory | undefined {
+function toAccountSubtype(value?: AccountSubtype | string): AccountSubtype | undefined {
   if (!value) return undefined
-  return isAccountSubcategory(value) ? value : undefined
+  return isAccountSubtype(value) ? value : undefined
 }
 
-function pickImportedSubcategory(account: ImportedAccount): AccountSubcategory | undefined {
-  return toAccountSubcategory(account.accountSubcategory) ?? getDefaultSubcategoryForTypeLike(account.accountType)
+function pickImportedSubtype(account: ImportedAccount): AccountSubtype | undefined {
+  return toAccountSubtype(account.accountSubtype) ?? getDefaultSubtypeForTypeLike(account.accountType)
 }
 
 function toJournalStatus(value: string): JournalStatus {
@@ -236,7 +236,7 @@ export class ImportRepository {
           record._raw.id = acc.id
           record.name = acc.name
           record.accountType = toAccountType(acc.accountType)
-          record.accountSubcategory = pickImportedSubcategory(acc)
+          record.accountSubtype = pickImportedSubtype(acc)
           record.currencyCode = acc.currencyCode
           record.parentAccountId = acc.parentAccountId
           record.description = acc.description
@@ -506,7 +506,7 @@ export class ImportRepository {
       ], (record: Account, acc: ImportedAccount) => {
         record.name = acc.name
         record.accountType = toAccountType(acc.accountType)
-        record.accountSubcategory = pickImportedSubcategory(acc)
+        record.accountSubtype = pickImportedSubtype(acc)
         record.currencyCode = acc.currencyCode
         record.parentAccountId = acc.parentAccountId
         record.description = acc.description

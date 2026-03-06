@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database'
-import { AccountSubcategory, AccountType } from '@/src/data/models/Account'
+import { AccountSubtype, AccountType } from '@/src/data/models/Account'
 import AccountMetadata from '@/src/data/models/AccountMetadata'
 import Currency from '@/src/data/models/Currency'
 import ExchangeRate from '@/src/data/models/ExchangeRate'
@@ -13,8 +13,8 @@ describe('ImportRepository', () => {
     })
   })
 
-  describe('batchInsert account subcategory defaults', () => {
-    it('should use type defaults when accountSubcategory is missing', async () => {
+  describe('batchInsert account subtype defaults', () => {
+    it('should use type defaults when accountSubtype is missing', async () => {
       await importRepository.batchInsert({
         accounts: [
           { id: 'a_asset', name: 'Asset A', accountType: AccountType.ASSET, currencyCode: 'USD' },
@@ -33,11 +33,11 @@ describe('ImportRepository', () => {
       const income = await accountRepository.find('a_income')
       const expense = await accountRepository.find('a_expense')
 
-      expect(asset?.accountSubcategory).toBe(AccountSubcategory.CASH)
-      expect(liability?.accountSubcategory).toBe(AccountSubcategory.CREDIT_CARD)
-      expect(equity?.accountSubcategory).toBe(AccountSubcategory.OPENING_BALANCE)
-      expect(income?.accountSubcategory).toBe(AccountSubcategory.SALARY)
-      expect(expense?.accountSubcategory).toBe(AccountSubcategory.FOOD)
+      expect(asset?.accountSubtype).toBe(AccountSubtype.CASH)
+      expect(liability?.accountSubtype).toBe(AccountSubtype.CREDIT_CARD)
+      expect(equity?.accountSubtype).toBe(AccountSubtype.OPENING_BALANCE)
+      expect(income?.accountSubtype).toBe(AccountSubtype.SALARY)
+      expect(expense?.accountSubtype).toBe(AccountSubtype.FOOD)
     })
 
     it('should default to OTHER for unknown imported account type', async () => {
@@ -50,7 +50,7 @@ describe('ImportRepository', () => {
       })
 
       const unknown = await accountRepository.find('a_unknown')
-      expect(unknown?.accountSubcategory).toBe(AccountSubcategory.OTHER)
+      expect(unknown?.accountSubtype).toBe(AccountSubtype.OTHER)
     })
   })
 

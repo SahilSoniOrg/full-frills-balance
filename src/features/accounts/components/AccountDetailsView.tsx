@@ -20,7 +20,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         accountMissing,
         accountName,
         accountType,
-        accountSubcategoryLabel,
+        accountSubtypeLabel,
         accountTypeVariant,
         accountIcon,
         accountTypeColorKey,
@@ -158,9 +158,9 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                         <Badge variant={accountTypeVariant as any}>
                                             {accountType}
                                         </Badge>
-                                        {accountSubcategoryLabel ? (
+                                        {accountSubtypeLabel ? (
                                             <Badge variant={accountTypeVariant as any}>
-                                                {accountSubcategoryLabel}
+                                                {accountSubtypeLabel}
                                             </Badge>
                                         ) : null}
                                         {isParent && (

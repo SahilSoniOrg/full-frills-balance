@@ -1,4 +1,4 @@
-import Account, { AccountSubcategory, AccountType } from '@/src/data/models/Account';
+import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
 import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
@@ -11,7 +11,7 @@ interface PersistenceResult {
     handleSave: (
         name: string,
         type: AccountType,
-        subcategory: AccountSubcategory,
+        subtype: AccountSubtype,
         currencyCode: string,
         icon: string,
         initialBalance?: string,
@@ -42,7 +42,7 @@ export function useAccountPersistence(
     const handleSave = async (
         accountName: string,
         accountType: AccountType,
-        accountSubcategory: AccountSubcategory,
+        accountSubtype: AccountSubtype,
         currencyCode: string,
         icon: string,
         initialBalance?: string,
@@ -60,7 +60,7 @@ export function useAccountPersistence(
                 const updatedAccount = await updateAccount(existingAccount, {
                     name: sanitizedName,
                     accountType: accountType,
-                    accountSubcategory: accountSubcategory,
+                    accountSubtype: accountSubtype,
                     icon: icon,
                     parentAccountId: parentAccountId,
                 });
@@ -85,7 +85,7 @@ export function useAccountPersistence(
                 await createAccount({
                     name: sanitizedName,
                     accountType: accountType,
-                    accountSubcategory: accountSubcategory,
+                    accountSubtype: accountSubtype,
                     currencyCode: currencyCode,
                     initialBalance: initialBalance ? parseFloat(initialBalance) : 0,
                     icon: icon,

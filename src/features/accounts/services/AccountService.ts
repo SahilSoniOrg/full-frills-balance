@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import Account, {
-    AccountSubcategory,
+    AccountSubtype,
     AccountType,
-    getDefaultSubcategoryForType,
+    getDefaultSubtypeForType,
 } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { TransactionType } from '@/src/data/models/Transaction';
@@ -22,7 +22,7 @@ import { preferences } from '@/src/utils/preferences';
 export interface CreateAccountData {
     name: string;
     accountType: AccountType;
-    accountSubcategory?: AccountSubcategory;
+    accountSubtype?: AccountSubtype;
     currencyCode: string;
     description?: string;
     icon?: string;
@@ -59,7 +59,7 @@ export class AccountService {
         const account = await accountRepository.create({
             name: data.name,
             accountType: data.accountType,
-            accountSubcategory: data.accountSubcategory ?? getDefaultSubcategoryForType(data.accountType),
+            accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType),
             currencyCode: currencyCode,
             description: data.description,
             icon: data.icon,
@@ -76,7 +76,7 @@ export class AccountService {
             changes: {
                 name: account.name,
                 accountType: account.accountType,
-                accountSubcategory: account.accountSubcategory,
+                accountSubtype: account.accountSubtype,
                 currencyCode: account.currencyCode,
                 initialBalance: data.initialBalance ? roundToPrecision(data.initialBalance, precision) : undefined
             }
@@ -127,7 +127,7 @@ export class AccountService {
         const beforeState = {
             name: account.name,
             accountType: account.accountType,
-            accountSubcategory: account.accountSubcategory,
+            accountSubtype: account.accountSubtype,
             currencyCode: account.currencyCode,
             description: account.description
         };
@@ -163,7 +163,7 @@ export class AccountService {
         const updatePayload: any = {};
         if (updates.name !== undefined) updatePayload.name = updates.name;
         if (updates.accountType !== undefined) updatePayload.accountType = updates.accountType as AccountType;
-        if (updates.accountSubcategory !== undefined) updatePayload.accountSubcategory = updates.accountSubcategory;
+        if (updates.accountSubtype !== undefined) updatePayload.accountSubtype = updates.accountSubtype;
         if (updates.currencyCode !== undefined) updatePayload.currencyCode = updates.currencyCode;
         if (updates.description !== undefined) updatePayload.description = updates.description;
         if (updates.icon !== undefined) updatePayload.icon = updates.icon;
@@ -236,7 +236,7 @@ export class AccountService {
         return (await accountRepository.create({
             name,
             accountType: AccountType.EQUITY,
-            accountSubcategory: getDefaultSubcategoryForType(AccountType.EQUITY),
+            accountSubtype: getDefaultSubtypeForType(AccountType.EQUITY),
             currencyCode,
             description: openingBalances.description,
             icon: openingBalances.icon as any
@@ -329,7 +329,7 @@ export class AccountService {
         return (await accountRepository.create({
             name,
             accountType: AccountType.EQUITY,
-            accountSubcategory: AccountSubcategory.OPENING_BALANCE,
+            accountSubtype: AccountSubtype.OPENING_BALANCE,
             currencyCode: targetCurrency,
             description: balanceCorrections.description,
             icon: balanceCorrections.icon as any

@@ -4,7 +4,7 @@
 import { Animation } from '@/src/constants'
 import { AppConfig } from '@/src/constants/app-config'
 import { useUI } from '@/src/contexts/UIContext'
-import Account, { AccountSubcategory, AccountType } from '@/src/data/models/Account'
+import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
@@ -172,7 +172,7 @@ export function useAccountActions() {
     const createAccount = useCallback(async (data: {
         name: string;
         accountType: AccountType;
-        accountSubcategory?: AccountSubcategory;
+        accountSubtype?: AccountSubtype;
         currencyCode: string;
         icon?: string;
         initialBalance?: number;
@@ -184,7 +184,7 @@ export function useAccountActions() {
     const updateAccount = useCallback(async (account: Account, data: {
         name?: string;
         accountType?: AccountType;
-        accountSubcategory?: AccountSubcategory;
+        accountSubtype?: AccountSubtype;
         currencyCode?: string;
         description?: string;
         icon?: string;

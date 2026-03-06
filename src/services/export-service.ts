@@ -17,7 +17,7 @@ export interface AccountExport {
   id: string;
   name: string;
   accountType: string;
-  accountSubcategory?: string;
+  accountSubtype?: string;
   currencyCode: string;
   parentAccountId?: string;
   description?: string;

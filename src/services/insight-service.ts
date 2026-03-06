@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import Account, { AccountSubcategory, AccountType } from '@/src/data/models/Account';
+import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
@@ -15,11 +15,11 @@ import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import {
-    isLiquidAssetSubcategory,
-    isLiquidLiabilitySubcategory,
-    LIQUID_ASSET_SUBCATEGORIES,
-    LIQUID_LIABILITY_SUBCATEGORIES
-} from '@/src/utils/accountSubcategoryUtils';
+    isLiquidAssetSubtype,
+    isLiquidLiabilitySubtype,
+    LIQUID_ASSET_SUBTYPES,
+    LIQUID_LIABILITY_SUBTYPES
+} from '@/src/utils/accountSubtypeUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -60,10 +60,10 @@ export interface SafeToSpendResult {
     committedPlanned: number;
     safeToSpend: number;
     currencyCode: string;
-    liquidAssetSubcategories: AccountSubcategory[];
-    liquidLiabilitySubcategories: AccountSubcategory[];
-    budgetSubcategories: AccountSubcategory[];
-    recurringSubcategories: AccountSubcategory[];
+    liquidAssetSubtypes: AccountSubtype[];
+    liquidLiabilitySubtypes: AccountSubtype[];
+    budgetSubtypes: AccountSubtype[];
+    recurringSubtypes: AccountSubtype[];
     liquidAssetAccountNames: string[];
     liquidLiabilityAccountNames: string[];
     budgetAccountNames: string[];
@@ -86,7 +86,7 @@ export interface Pattern {
     journalIds: string[];
     amount?: number;
     currencyCode?: string;
-    accountSubcategory?: AccountSubcategory;
+    accountSubtype?: AccountSubtype;
     accountName?: string;
 }
 
@@ -129,10 +129,10 @@ export class InsightService {
                 );
 
                 const liquidAssets = assets.filter(a =>
-                    isLiquidAssetSubcategory(a.accountSubcategory) && !parentIds.has(a.id)
+                    isLiquidAssetSubtype(a.accountSubtype) && !parentIds.has(a.id)
                 );
                 const liquidLiabilities = liabilities.filter(l =>
-                    isLiquidLiabilitySubcategory(l.accountSubcategory) && !parentIds.has(l.id)
+                    isLiquidLiabilitySubtype(l.accountSubtype) && !parentIds.has(l.id)
                 );
 
                 if (liquidAssets.length === 0) {
@@ -144,10 +144,10 @@ export class InsightService {
                         committedPlanned: 0,
                         safeToSpend: 0,
                         currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
-                        liquidAssetSubcategories: [...LIQUID_ASSET_SUBCATEGORIES],
-                        liquidLiabilitySubcategories: [...LIQUID_LIABILITY_SUBCATEGORIES],
-                        budgetSubcategories: [],
-                        recurringSubcategories: [],
+                        liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
+                        liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],
+                        budgetSubtypes: [],
+                        recurringSubtypes: [],
                         liquidAssetAccountNames: [],
                         liquidLiabilityAccountNames: [],
                         budgetAccountNames: [],
@@ -252,12 +252,12 @@ export class InsightService {
                             resultCurrency,
                         );
 
-                        const budgetSubcategories = Array.from(
+                        const budgetSubtypes = Array.from(
                             new Set(
                                 scopeGroups
                                     .flatMap(scopes => scopes)
-                                    .map((scope: any) => accountById.get(scope.account.id)?.accountSubcategory)
-                                    .filter((subcategory): subcategory is AccountSubcategory => Boolean(subcategory))
+                                    .map((scope: any) => accountById.get(scope.account.id)?.accountSubtype)
+                                    .filter((subtype): subtype is AccountSubtype => Boolean(subtype))
                             )
                         );
 
@@ -280,10 +280,10 @@ export class InsightService {
                             committedPlanned: 0,   // Absorbed into simulation
                             safeToSpend,
                             currencyCode: resultCurrency,
-                            liquidAssetSubcategories: [...LIQUID_ASSET_SUBCATEGORIES],
-                            liquidLiabilitySubcategories: [...LIQUID_LIABILITY_SUBCATEGORIES],
-                            budgetSubcategories,
-                            recurringSubcategories: [],
+                            liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
+                            liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],
+                            budgetSubtypes,
+                            recurringSubtypes: [],
                             liquidAssetAccountNames,
                             liquidLiabilityAccountNames,
                             budgetAccountNames,
@@ -603,7 +603,7 @@ export class InsightService {
                             journalIds: journalIds,
                             amount,
                             currencyCode: candidate.currencyCode,
-                            accountSubcategory: acc.accountSubcategory,
+                            accountSubtype: acc.accountSubtype,
                             accountName,
                         });
                     }
@@ -640,23 +640,23 @@ export class InsightService {
                 const currentWeekTransactions = expenseTransactions.filter(t => t.transactionDate >= last7Days);
                 const previousWeeksTransactions = expenseTransactions.filter(t => t.transactionDate < last7Days);
 
-                // Group by subcategory to catch spending across multiple checking/credit cards
-                const currentWeekBySubcategory = new Map<string, number>();
+                // Group by subtype to catch spending across multiple checking/credit cards
+                const currentWeekBySubtype = new Map<string, number>();
                 currentWeekTransactions.forEach(t => {
                     const acc = accountMap.get(t.accountId);
-                    const subcat = acc?.accountSubcategory || 'UNKNOWN';
-                    currentWeekBySubcategory.set(subcat, (currentWeekBySubcategory.get(subcat) || 0) + Math.abs(t.amount));
+                    const subcat = acc?.accountSubtype || 'UNKNOWN';
+                    currentWeekBySubtype.set(subcat, (currentWeekBySubtype.get(subcat) || 0) + Math.abs(t.amount));
                 });
 
-                const totalBySubcategory = new Map<string, number>();
+                const totalBySubtype = new Map<string, number>();
                 previousWeeksTransactions.forEach(t => {
                     const acc = accountMap.get(t.accountId);
-                    const subcat = acc?.accountSubcategory || 'UNKNOWN';
-                    totalBySubcategory.set(subcat, (totalBySubcategory.get(subcat) || 0) + Math.abs(t.amount));
+                    const subcat = acc?.accountSubtype || 'UNKNOWN';
+                    totalBySubtype.set(subcat, (totalBySubtype.get(subcat) || 0) + Math.abs(t.amount));
                 });
 
-                currentWeekBySubcategory.forEach((amount, subcategory) => {
-                    const historyTotal = totalBySubcategory.get(subcategory) || 0;
+                currentWeekBySubtype.forEach((amount, subtype) => {
+                    const historyTotal = totalBySubtype.get(subtype) || 0;
 
                     // M-2 fix: derive the actual number of *previous* weeks from the oldest
                     // transaction timestamp in history, rather than hardcoding 12.
@@ -665,7 +665,7 @@ export class InsightService {
                     const MIN_WEEKS = 4;
                     const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
                     const historicalTxs = previousWeeksTransactions.filter(
-                        t => accountMap.get(t.accountId)?.accountSubcategory === subcategory
+                        t => accountMap.get(t.accountId)?.accountSubtype === subtype
                     );
                     const oldestDate = historicalTxs.length > 0
                         ? Math.min(...historicalTxs.map(t => t.transactionDate))
@@ -680,15 +680,15 @@ export class InsightService {
 
                     const spikeMultiplier = insightsConfig.spendingSpikeMultiplier;
                     if (historyAverage > 0 && amount > historyAverage * spikeMultiplier) {
-                        const formattedSubcategory = subcategory.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                        const formattedSubtype = subtype.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
                         finalPatterns.push({
-                            id: `leak_${subcategory}`,
+                            id: `leak_${subtype}`,
                             type: 'slow-leak',
                             severity: 'low',
                             message: 'Spending Spike',
-                            description: `Spending on "${formattedSubcategory}" is 50% higher than your weekly average.`,
+                            description: `Spending on "${formattedSubtype}" is 50% higher than your weekly average.`,
                             suggestion: 'Check your recent activity in this category for any unusual spends.',
-                            journalIds: Array.from(new Set(currentWeekTransactions.filter(t => accountMap.get(t.accountId)?.accountSubcategory === subcategory).map(t => t.journalId)))
+                            journalIds: Array.from(new Set(currentWeekTransactions.filter(t => accountMap.get(t.accountId)?.accountSubtype === subtype).map(t => t.journalId)))
                         });
                     }
                 });
@@ -701,7 +701,7 @@ export class InsightService {
                     // we'll rely on the existing balance logic or skip it if we can't get it synchronously here.
                     // Actually, the pattern observation is already asynchronous/switchMap heavy.
                     // For now, let's keep it simple: we just highlight if they have NO emergency fund account
-                    const hasEmergencyFund = assets.some(a => a.accountSubcategory === 'EMERGENCY_FUND');
+                    const hasEmergencyFund = assets.some(a => a.accountSubtype === 'EMERGENCY_FUND');
                     const hasSignificantAssets = assets.length > 3; // Rough proxy for "established user"
 
                     if (!hasEmergencyFund && hasSignificantAssets) {

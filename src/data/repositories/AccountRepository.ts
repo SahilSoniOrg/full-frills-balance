@@ -1,9 +1,9 @@
 import { database } from '@/src/data/database/Database'
 import Account, {
-  AccountSubcategory,
+  AccountSubtype,
   AccountType,
-  getDefaultSubcategoryForType,
-  isSubcategoryAllowedForType
+  getDefaultSubtypeForType,
+  isSubtypeAllowedForType
 } from '@/src/data/models/Account'
 import Transaction from '@/src/data/models/Transaction'
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository'
@@ -16,7 +16,7 @@ import { supportsRawSql } from '../database/DatabaseUtils'
 export interface AccountPersistenceInput {
   name: string
   accountType: AccountType
-  accountSubcategory?: AccountSubcategory
+  accountSubtype?: AccountSubtype
   currencyCode: string
   description?: string
   icon?: string
@@ -156,9 +156,9 @@ export class AccountRepository {
   async seedDefaults(defaults: AccountPersistenceInput[]): Promise<void> {
     const normalizedDefaults = defaults.map((entry) => ({
       ...entry,
-      accountSubcategory: entry.accountSubcategory ?? getDefaultSubcategoryForType(entry.accountType)
+      accountSubtype: entry.accountSubtype ?? getDefaultSubtypeForType(entry.accountType)
     }))
-    normalizedDefaults.forEach((entry) => this.validateSubcategory(entry.accountType, entry.accountSubcategory))
+    normalizedDefaults.forEach((entry) => this.validateSubtype(entry.accountType, entry.accountSubtype))
     await this.db.write(async () => {
       const creates = normalizedDefaults.map((data) =>
         this.accounts.prepareCreate((account) => {
@@ -177,9 +177,9 @@ export class AccountRepository {
     await this.ensureUniqueName(data.name)
     const payload: AccountPersistenceInput = {
       ...data,
-      accountSubcategory: data.accountSubcategory ?? getDefaultSubcategoryForType(data.accountType)
+      accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType)
     }
-    this.validateSubcategory(payload.accountType, payload.accountSubcategory)
+    this.validateSubtype(payload.accountType, payload.accountSubtype)
     return await this.db.write(async () => {
       return this.accounts.create((account) => {
         Object.assign(account, payload)
@@ -194,18 +194,18 @@ export class AccountRepository {
       await this.ensureUniqueName(updates.name, account.id)
     }
     const normalizedUpdates: Partial<AccountPersistenceInput> = { ...updates }
-    if (normalizedUpdates.accountType && normalizedUpdates.accountSubcategory === undefined) {
-      normalizedUpdates.accountSubcategory = isSubcategoryAllowedForType(
+    if (normalizedUpdates.accountType && normalizedUpdates.accountSubtype === undefined) {
+      normalizedUpdates.accountSubtype = isSubtypeAllowedForType(
         normalizedUpdates.accountType,
-        account.accountSubcategory
+        account.accountSubtype
       )
-        ? account.accountSubcategory
-        : getDefaultSubcategoryForType(normalizedUpdates.accountType)
+        ? account.accountSubtype
+        : getDefaultSubtypeForType(normalizedUpdates.accountType)
     }
 
     const nextType = normalizedUpdates.accountType ?? account.accountType
-    const nextSubcategory = normalizedUpdates.accountSubcategory ?? account.accountSubcategory
-    this.validateSubcategory(nextType, nextSubcategory)
+    const nextSubtype = normalizedUpdates.accountSubtype ?? account.accountSubtype
+    this.validateSubtype(nextType, nextSubtype)
     return await this.db.write(async () => {
       await account.update((acc) => {
         Object.assign(acc, normalizedUpdates)
@@ -332,9 +332,9 @@ export class AccountRepository {
     }
   }
 
-  private validateSubcategory(accountType: AccountType, subcategory?: AccountSubcategory): void {
-    if (!isSubcategoryAllowedForType(accountType, subcategory)) {
-      throw new ValidationError(`Subcategory ${subcategory} is not valid for account type ${accountType}`)
+  private validateSubtype(accountType: AccountType, subtype?: AccountSubtype): void {
+    if (!isSubtypeAllowedForType(accountType, subtype)) {
+      throw new ValidationError(`Subtype ${subtype} is not valid for account type ${accountType}`)
     }
   }
 

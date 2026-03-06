@@ -2,7 +2,7 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
-import { AccountSubcategory, formatAccountSubcategoryLabel } from '@/src/data/models/Account';
+import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SafeToSpendProjection } from '@/src/services/insight-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -19,10 +19,10 @@ interface SafeToSpendCardProps {
     totalLiquidAssets: number;
     totalLiabilities: number;
     currencyCode: string;
-    liquidAssetSubcategories: AccountSubcategory[];
-    liquidLiabilitySubcategories: AccountSubcategory[];
-    budgetSubcategories: AccountSubcategory[];
-    recurringSubcategories: AccountSubcategory[];
+    liquidAssetSubtypes: AccountSubtype[];
+    liquidLiabilitySubtypes: AccountSubtype[];
+    budgetSubtypes: AccountSubtype[];
+    recurringSubtypes: AccountSubtype[];
     liquidAssetAccountNames: string[];
     liquidLiabilityAccountNames: string[];
     budgetAccountNames: string[];
@@ -39,10 +39,10 @@ export const SafeToSpendCard = ({
     totalLiquidAssets,
     totalLiabilities,
     currencyCode,
-    liquidAssetSubcategories,
-    liquidLiabilitySubcategories,
-    budgetSubcategories,
-    recurringSubcategories,
+    liquidAssetSubtypes,
+    liquidLiabilitySubtypes,
+    budgetSubtypes,
+    recurringSubtypes,
     liquidAssetAccountNames,
     liquidLiabilityAccountNames,
     budgetAccountNames,
@@ -61,10 +61,10 @@ export const SafeToSpendCard = ({
         });
     };
 
-    const renderSubcategoryGroup = (
+    const renderSubtypeGroup = (
         title: string,
         subtitle: string,
-        subcategories: AccountSubcategory[],
+        subtypes: AccountSubtype[],
         accountNames: string[]
     ) => (
         <View style={styles.modalSection}>
@@ -74,9 +74,9 @@ export const SafeToSpendCard = ({
             </AppText>
             <View style={styles.modalMetaGroup}>
                 <AppText variant="caption" weight="bold">Categories used</AppText>
-                {subcategories.length > 0 ? (
+                {subtypes.length > 0 ? (
                     <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
-                        {subcategories.map(formatAccountSubcategoryLabel).join(', ')}
+                        {subtypes.map(formatAccountSubtypeLabel).join(', ')}
                     </AppText>
                 ) : (
                     <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
@@ -286,10 +286,10 @@ export const SafeToSpendCard = ({
 
                 <View style={styles.modalSection}>
                     <AppText variant="heading" style={styles.modalSectionTitle}>{info.bucketTitle}</AppText>
-                    {renderSubcategoryGroup('Assets bucket', info.formulaItems[0], liquidAssetSubcategories, liquidAssetAccountNames)}
-                    {renderSubcategoryGroup('Debts bucket', info.formulaItems[1], liquidLiabilitySubcategories, liquidLiabilityAccountNames)}
-                    {renderSubcategoryGroup('Budgets bucket', info.formulaItems[2], budgetSubcategories, budgetAccountNames)}
-                    {renderSubcategoryGroup('Bills bucket', info.formulaItems[3], recurringSubcategories, recurringAccountNames)}
+                    {renderSubtypeGroup('Assets bucket', info.formulaItems[0], liquidAssetSubtypes, liquidAssetAccountNames)}
+                    {renderSubtypeGroup('Debts bucket', info.formulaItems[1], liquidLiabilitySubtypes, liquidLiabilityAccountNames)}
+                    {renderSubtypeGroup('Budgets bucket', info.formulaItems[2], budgetSubtypes, budgetAccountNames)}
+                    {renderSubtypeGroup('Bills bucket', info.formulaItems[3], recurringSubtypes, recurringAccountNames)}
                 </View>
 
                 <View style={styles.modalSection}>

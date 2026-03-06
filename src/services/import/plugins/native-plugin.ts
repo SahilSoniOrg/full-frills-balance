@@ -110,7 +110,7 @@ export const nativePlugin: ImportPlugin = {
                     id: acc.id,
                     name: acc.name,
                     accountType: acc.accountType,
-                    accountSubcategory: acc.accountSubcategory,
+                    accountSubtype: acc.accountSubtype,
                     currencyCode: acc.currencyCode || defaultCurrencyCode,
                     parentAccountId: acc.parentAccountId,
                     description: acc.description,
