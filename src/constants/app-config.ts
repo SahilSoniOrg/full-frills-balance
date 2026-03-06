@@ -126,8 +126,8 @@ export const AppConfig = {
         formulaTitle: 'Formula:',
         formulaItems: [
           'Liquid Assets: Cash-like accounts available for near-term spending.',
-          'Liquid Debts: Short-term liabilities that reduce available cash.',
-          'Remaining Budgets: Unspent planned amounts in active budgets.',
+          'Committed: 30-day forecasted outflows (Bills, Debt payments, and Budgets).',
+          'Safe = Assets - Committed',
         ],
         bucketTitle: 'What each bucket includes:',
         exampleTitle: 'Current snapshot:',
@@ -142,11 +142,11 @@ export const AppConfig = {
       },
       legendDetails: {
         safeTitle: 'Safe to Spend',
-        safeDesc: "This is your discretionary balance. It's what's left after accounting for all your known obligations, bills, and budgets for the next 30 days.",
+        safeDesc: "This is your discretionary balance. It's the portion of your liquid assets remaining after reserving funds for all known 30-day obligations (bills, debt payments, and active budgets).",
         committedTitle: 'Committed Funds',
-        committedDesc: 'These are funds reserved for upcoming planned movements and active budget limits.',
-        debtsTitle: 'Debts & Liabilities',
-        debtsDesc: 'Currently owed amounts on your liquid liability accounts.',
+        committedDesc: 'These are funds reserved for upcoming planned payments (including credit card dues), journal transfers, and your active budget limits for the next 30 days.',
+        debtsTitle: 'Total Debts',
+        debtsDesc: 'This shows your total outstanding liability balance. Note that only the portion due within the next 30 days affects your Safe to Spend (and is already included in Committed Funds).',
       },
     },
     journal: {

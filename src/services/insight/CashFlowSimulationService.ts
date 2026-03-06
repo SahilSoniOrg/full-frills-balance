@@ -23,11 +23,11 @@ export class CashFlowSimulationService {
         resultCurrency: string,
     ): Promise<{
         safeToSpend: number;
-        totalFutureObligations: number;
         totalFutureInflow: number;
         committedPlanned: number;
         committedPlannedPayments: number;
         committedPlannedJournals: number;
+        committedLiabilities: number;
         totalLiabilities: number;
         totalLiabilitiesCC: number;
         totalLiabilitiesOther: number;
@@ -38,11 +38,11 @@ export class CashFlowSimulationService {
         const {
             flowByDayOffset,
             effectiveDailyDrain,
-            totalFutureObligations,
             totalFutureInflow,
             committedPlanned,
             committedPlannedPayments,
             committedPlannedJournals,
+            committedLiabilities,
             totalLiabilities,
             totalLiabilitiesCC,
             totalLiabilitiesOther
@@ -69,11 +69,11 @@ export class CashFlowSimulationService {
 
         return {
             safeToSpend: Math.max(0, minBalance),
-            totalFutureObligations,
             totalFutureInflow,
             committedPlanned,
             committedPlannedPayments,
             committedPlannedJournals,
+            committedLiabilities,
             totalLiabilities,
             totalLiabilitiesCC,
             totalLiabilitiesOther
@@ -94,31 +94,33 @@ export class CashFlowSimulationService {
         flowByDayOffset: Map<number, number>,
         organicNetFlow: number,
         effectiveDailyDrain: number,
-        totalFutureObligations: number,
         totalFutureInflow: number,
         committedPlanned: number,
         committedPlannedPayments: number,
         committedPlannedJournals: number,
+        committedLiabilities: number,
         totalLiabilities: number,
         totalLiabilitiesCC: number,
         totalLiabilitiesOther: number
     }> {
         const flowByDayOffset = new Map<number, number>();
-        let totalFutureObligations = 0;
         let totalFutureInflow = 0;
         let committedPlanned = 0;
         let committedPlannedPayments = 0;
         let committedPlannedJournals = 0;
+        let committedLiabilities = 0;
         let totalLiabilitiesSum = 0;
         let totalLiabilitiesCC = 0;
         let totalLiabilitiesOther = 0;
+
+        const liabilityAccountIds = new Set(liabilityAccountBalances.map(lb => lb.account.id));
+        const liabilityAccountSubtypes = new Map(liabilityAccountBalances.map(lb => [lb.account.id, lb.account.accountSubtype]));
 
         const addFlow = (dayOffset: number, amount: number, type: 'PLAN_PAYMENT' | 'PLAN_JOURNAL' | 'LIABILITY_CC' | 'LIABILITY_OTHER' | 'DAILY_BUDGET' | 'OTHER' = 'OTHER', context?: string) => {
             if (dayOffset < 0 || dayOffset > simulationDays) return;
             const current = flowByDayOffset.get(dayOffset) || 0;
             flowByDayOffset.set(dayOffset, current + amount);
 
-            if (amount < 0) totalFutureObligations += Math.abs(amount);
             if (amount > 0) totalFutureInflow += amount;
 
             if (amount < 0) {
@@ -130,10 +132,9 @@ export class CashFlowSimulationService {
                     committedPlannedJournals += Math.abs(amount);
                     committedPlanned += Math.abs(amount);
                     logger.info(`[SafeToSpend] Committed: ${context || 'Planned'} impact ${amount} on day ${dayOffset}`);
-                } else if (type === 'LIABILITY_CC') {
-                    totalLiabilitiesCC += Math.abs(amount);
-                } else if (type === 'LIABILITY_OTHER') {
-                    totalLiabilitiesOther += Math.abs(amount);
+                } else if (type === 'LIABILITY_CC' || type === 'LIABILITY_OTHER') {
+                    committedLiabilities += Math.abs(amount);
+                    logger.info(`[SafeToSpend] Committed: ${context || 'Liability'} impact ${amount} on day ${dayOffset}`);
                 }
             }
 
@@ -143,7 +144,6 @@ export class CashFlowSimulationService {
         };
 
         const effectiveDailyDrain = dailyBudgetBurn;
-        totalFutureObligations += Math.max(0, dailyBudgetBurn * simulationDays);
 
         const manualPaymentAccountIds = new Set<string>();
         for (const pp of plannedPayments) manualPaymentAccountIds.add(pp.toAccountId);
@@ -155,6 +155,11 @@ export class CashFlowSimulationService {
         for (const { account, balance } of liabilityAccountBalances) {
             if (balance <= 0) continue;
             totalLiabilitiesSum += balance;
+            if (account.accountSubtype === AccountSubtype.CREDIT_CARD) {
+                totalLiabilitiesCC += balance;
+            } else {
+                totalLiabilitiesOther += balance;
+            }
 
             if (manualPaymentAccountIds.has(account.id)) {
                 continue;
@@ -227,7 +232,12 @@ export class CashFlowSimulationService {
                         } catch { }
                     }
                     const impact = isLiquidTo ? amount : -amount;
-                    addFlow(dayOffset, impact, 'PLAN_PAYMENT', `Planned Payment: ${pp.description || 'unnamed'} (${isLiquidTo ? 'Inflow' : 'Outflow'})`);
+                    const isDebtOutflow = !isLiquidTo && liabilityAccountIds.has(pp.toAccountId);
+                    const flowType = isDebtOutflow ?
+                        (liabilityAccountSubtypes.get(pp.toAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
+                        : 'PLAN_PAYMENT';
+
+                    addFlow(dayOffset, impact, flowType, `Planned Payment: ${pp.description || 'unnamed'} (${isLiquidTo ? 'Inflow' : 'Outflow'})`);
                 }
                 if (pp.intervalType === 'DAILY') curr = dayjs(curr).add(pp.intervalN || 1, 'day').valueOf();
                 else if (pp.intervalType === 'WEEKLY') curr = dayjs(curr).add(pp.intervalN || 1, 'week').valueOf();
@@ -274,8 +284,15 @@ export class CashFlowSimulationService {
                             amount = convertedAmount;
                         } catch { }
                     }
+                    const otherSideAccountId = journalTxs.find(otx => otx.accountId !== tx.accountId)?.accountId;
+                    const isDebtOutflow = tx.transactionType === TransactionType.CREDIT && otherSideAccountId && liabilityAccountIds.has(otherSideAccountId);
+
+                    const flowType = isDebtOutflow ?
+                        (liabilityAccountSubtypes.get(otherSideAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
+                        : 'PLAN_JOURNAL';
+
                     const impact = tx.transactionType === TransactionType.DEBIT ? amount : -amount;
-                    addFlow(dayOffset, impact, 'PLAN_JOURNAL', `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`);
+                    addFlow(dayOffset, impact, flowType, `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`);
                 }
             }
         }
@@ -284,11 +301,11 @@ export class CashFlowSimulationService {
             flowByDayOffset,
             organicNetFlow: 0,
             effectiveDailyDrain,
-            totalFutureObligations,
             totalFutureInflow,
             committedPlanned,
             committedPlannedPayments,
             committedPlannedJournals,
+            committedLiabilities,
             totalLiabilities: totalLiabilitiesSum,
             totalLiabilitiesCC,
             totalLiabilitiesOther

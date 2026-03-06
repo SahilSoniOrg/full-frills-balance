@@ -50,7 +50,7 @@ export interface SafeToSpendResult {
     committedPlanned: number;
     committedPlannedPayments: number;
     committedPlannedJournals: number;
-    totalFutureObligations: number;
+    committedLiabilities: number;
     totalFutureInflow: number;
     safeToSpend: number;
     currencyCode: string;
@@ -115,6 +115,7 @@ export class InsightService {
                         committedPlanned: 0,
                         committedPlannedPayments: 0,
                         committedPlannedJournals: 0,
+                        committedLiabilities: 0,
                         safeToSpend: 0,
                         currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
                         liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
@@ -126,7 +127,6 @@ export class InsightService {
                         liquidAssetAccountIds: [],
                         liquidLiabilityAccountIds: [],
                         dailyBudgetBurn: 0,
-                        totalFutureObligations: 0,
                         totalFutureInflow: 0,
                         budgetCoveredExpenseAccountIds: new Set<string>(),
                     });
@@ -204,11 +204,11 @@ export class InsightService {
 
                         const {
                             safeToSpend,
-                            totalFutureObligations,
                             totalFutureInflow,
                             committedPlanned,
                             committedPlannedPayments,
                             committedPlannedJournals,
+                            committedLiabilities,
                             totalLiabilities,
                             totalLiabilitiesCC,
                             totalLiabilitiesOther
@@ -252,7 +252,7 @@ export class InsightService {
                             committedPlanned,
                             committedPlannedPayments,
                             committedPlannedJournals,
-                            totalFutureObligations,
+                            committedLiabilities,
                             totalFutureInflow,
                             safeToSpend,
                             currencyCode: resultCurrency,

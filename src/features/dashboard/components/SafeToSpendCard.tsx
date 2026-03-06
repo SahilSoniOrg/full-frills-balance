@@ -15,9 +15,9 @@ interface SafeToSpendCardProps {
     projection?: SafeToSpendProjection;
     committedBudget: number;
     committedPlanned: number;
+    committedLiabilities: number;
     committedPlannedPayments: number;
     committedPlannedJournals: number;
-    totalFutureObligations: number;
     totalFutureInflow: number;
     totalLiquidAssets: number;
     totalLiabilities: number;
@@ -38,9 +38,9 @@ export const SafeToSpendCard = ({
     projection,
     committedBudget,
     committedPlanned,
+    committedLiabilities,
     committedPlannedPayments,
     committedPlannedJournals,
-    totalFutureObligations,
     totalFutureInflow,
     totalLiquidAssets,
     totalLiabilities,
@@ -106,16 +106,18 @@ export const SafeToSpendCard = ({
         </View>
     );
 
-    // committedTotal represents all future obligations EXCEPT specific liquid liabilities (CCs/Loans).
-    // This allows the legend to show "Debts" (Liabilities) and "Committed" (planned/budget) separately.
-    const committedTotal = Math.max(0, totalFutureObligations - totalLiabilities);
-    const totalObligations = totalLiabilities + committedTotal;
+    // committedTotal represents planned outflows and remaining budgets.
+    const committedTotal = committedPlanned + committedBudget;
 
-    // We want the bar to represent the total liquid assets + any projected inflow.
-    const effectiveTotal = Math.max(totalLiquidAssets + totalFutureInflow, totalObligations + safeToSpend);
-    const reserve = Math.max(0, effectiveTotal - (totalObligations + safeToSpend));
+    // effectiveTotal represents the total liquid assets + inflows.
+    // The bar segments should add up to this total.
+    const effectiveTotal = Math.max(
+        totalLiquidAssets + totalFutureInflow,
+        committedTotal + committedLiabilities + safeToSpend
+    );
+    const reserve = Math.max(0, effectiveTotal - (committedTotal + committedLiabilities + safeToSpend));
 
-    const isOverCommitted = totalObligations > totalLiquidAssets;
+    const isOverCommitted = (committedTotal + committedLiabilities) > totalLiquidAssets;
     const isPositiveSafeToSpend = !isOverCommitted && safeToSpend > 0;
 
     return (
@@ -155,7 +157,7 @@ export const SafeToSpendCard = ({
                         minimumFontScale={0.55}
                         ellipsizeMode="tail"
                     >
-                        {format(isOverCommitted ? (totalObligations - totalLiquidAssets) : safeToSpend)}
+                        {format(isOverCommitted ? (committedTotal + committedLiabilities - totalLiquidAssets) : safeToSpend)}
                     </AppText>
                     <AppText
                         variant="caption"
@@ -170,11 +172,12 @@ export const SafeToSpendCard = ({
                         <>
                             {/* Segmented Bar */}
                             <View style={[styles.progressBarContainer, { backgroundColor: theme.surfaceSecondary }]}>
-                                {totalLiabilities > 0 && (
-                                    <View style={[styles.progressSegment, { flex: totalLiabilities, backgroundColor: theme.error }]} />
-                                )}
+
                                 {committedTotal > 0 && (
                                     <View style={[styles.progressSegment, { flex: committedTotal, backgroundColor: theme.warning }]} />
+                                )}
+                                {committedLiabilities > 0 && (
+                                    <View style={[styles.progressSegment, { flex: committedLiabilities, backgroundColor: theme.error }]} />
                                 )}
                                 {safeToSpend > 0 && (
                                     <View style={[styles.progressSegment, { flex: safeToSpend, backgroundColor: theme.primary }]} />
@@ -205,7 +208,7 @@ export const SafeToSpendCard = ({
                                     onPress={() => setSelectedLegendItem('debts')}
                                 >
                                     <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
-                                    <AppText variant="caption" color="secondary">Debts: {format(totalLiabilities)}</AppText>
+                                    <AppText variant="caption" color="secondary">Debts: {format(committedLiabilities)}</AppText>
                                 </TouchableOpacity>
                             </View>
                         </>
@@ -317,10 +320,9 @@ export const SafeToSpendCard = ({
                 <View style={styles.modalSection}>
                     <AppText variant="heading" style={styles.modalSectionTitle}>{info.exampleTitle}</AppText>
                     <View style={[styles.exampleBox, { borderColor: theme.border }]}>
-                        <AppText variant="caption" color="secondary">Liquid Assets: {format(totalLiquidAssets)}</AppText>
-                        <AppText variant="caption" color="secondary">Liquid Debts: {format(totalLiabilities)}</AppText>
-                        <AppText variant="caption" color="secondary">Remaining Budgets: {format(committedBudget)}</AppText>
-                        <AppText variant="caption" color="secondary">Planned Payments: {format(committedPlanned)}</AppText>
+                        <AppText variant="caption" color="secondary">Projected Liquidity (Assets + Inflow): {format(totalLiquidAssets + totalFutureInflow)}</AppText>
+                        <AppText variant="caption" color="secondary">Committed (Budgets + Planned): -{format(committedTotal)}</AppText>
+                        <AppText variant="caption" color="secondary">Debts (Liability payments due): -{format(committedLiabilities)}</AppText>
                         <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                         <AppText variant="body" weight="bold">Safe to Spend: {format(safeToSpend)}</AppText>
                     </View>
@@ -368,8 +370,8 @@ export const SafeToSpendCard = ({
                         </AppText>
                         <View style={[styles.exampleBox, { backgroundColor: theme.surfaceSecondary }]}>
                             <AppText variant="body" weight="bold">Calculation:</AppText>
-                            <AppText variant="caption">Assets - (Debts + Committed)</AppText>
-                            <AppText variant="caption">{format(totalLiquidAssets)} - ({format(totalLiabilities)} + {format(committedTotal)})</AppText>
+                            <AppText variant="caption">Assets - Committed - Debt Dues</AppText>
+                            <AppText variant="caption">{format(totalLiquidAssets)} - {format(committedTotal)} - {format(committedLiabilities)}</AppText>
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                             <AppText variant="body" weight="bold" color="primary">Total: {format(safeToSpend)}</AppText>
                         </View>
@@ -417,10 +419,14 @@ export const SafeToSpendCard = ({
                                 <AppText variant="caption">Other Liquid Liabilities</AppText>
                                 <AppText variant="caption" weight="bold">{format(totalLiabilitiesOther)}</AppText>
                             </View>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="body" weight="bold">Total Due (30d)</AppText>
+                                <AppText variant="body" weight="bold" color="error">{format(committedLiabilities)}</AppText>
+                            </View>
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                             <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="bold">Total Debts</AppText>
-                                <AppText variant="body" weight="bold" color="error">{format(totalLiabilities)}</AppText>
+                                <AppText variant="caption">Total Balance (Informational)</AppText>
+                                <AppText variant="caption">{format(totalLiabilities)}</AppText>
                             </View>
                         </View>
                     </View>
