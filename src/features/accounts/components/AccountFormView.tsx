@@ -58,10 +58,10 @@ export function AccountFormView(vm: AccountFormViewModel) {
                 style={{ flex: 1 }}
             >
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                    <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold }]}>
+                    <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold, color: theme.text }]}>
                         {heroTitle}
                     </AppText>
-                    <AppText variant="body" color="secondary" style={styles.subtitle}>
+                    <AppText variant="body" color="secondary" style={[styles.subtitle, { color: theme.textSecondary }]}>
                         {heroSubtitle}
                     </AppText>
 
@@ -90,38 +90,58 @@ export function AccountFormView(vm: AccountFormViewModel) {
                                     value={accountName}
                                     onChangeText={setAccountName}
                                     placeholder={AppConfig.strings.accounts.form.accountNamePlaceholder}
-                                    autoFocus
                                     maxLength={AppConfig.input.maxAccountNameLength}
                                     returnKeyType="next"
                                 />
                             </View>
                         </View>
                     </AppCard>
-                    {showInitialBalance && (
+                    {(showInitialBalance || showCurrency) && (
                         <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                            <AppInput
-                                label={isEditMode ? AppConfig.strings.accounts.form.currentBalance : AppConfig.strings.accounts.form.initialBalance}
-                                value={initialBalance}
-                                onChangeText={onInitialBalanceChange}
-                                placeholder={AppConfig.strings.accounts.form.balancePlaceholder}
-                                keyboardType="decimal-pad"
-                                returnKeyType="next"
-                                testID="initial-balance-input"
-                            />
+                            <View style={styles.balanceRow}>
+                                {showInitialBalance && (
+                                    <View style={{ flex: 1, marginRight: Spacing.sm }}>
+                                        <AppInput
+                                            label={isEditMode ? AppConfig.strings.accounts.form.currentBalance : AppConfig.strings.accounts.form.initialBalance}
+                                            value={initialBalance}
+                                            onChangeText={onInitialBalanceChange}
+                                            placeholder={AppConfig.strings.accounts.form.balancePlaceholder}
+                                            keyboardType="decimal-pad"
+                                            returnKeyType="next"
+                                            testID="initial-balance-input"
+                                            containerStyle={{ marginBottom: 0 }}
+                                        />
+                                    </View>
+                                )}
+                                {showCurrency && (
+                                    <View style={styles.currencyWrapper}>
+                                        <AppText variant="body" weight="medium" style={styles.label}>
+                                            {currencyLabel}
+                                        </AppText>
+                                        <CurrencySelector
+                                            selectedCurrency={selectedCurrency}
+                                            currencies={currencies}
+                                            onSelect={setSelectedCurrency}
+                                            disabled={isEditMode}
+                                            variant="compact"
+                                        />
+                                    </View>
+                                )}
+                            </View>
                         </AppCard>
                     )}
 
                     <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{AppConfig.strings.accounts.form.accountType}</AppText>
+                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text }]}>
+                            {AppConfig.strings.accounts.form.accountType}
+                        </AppText>
                         <AccountTypeSelector
                             value={accountType}
                             onChange={setAccountType}
                             disabled={isParent}
                         />
-                    </AppCard>
-
-                    <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>
+                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text, marginTop: Spacing.md }]}>
                             {AppConfig.strings.accounts.form.accountSubtype}
                         </AppText>
                         <AccountSubtypeSelector
@@ -131,18 +151,6 @@ export function AccountFormView(vm: AccountFormViewModel) {
                             disabled={isParent}
                         />
                     </AppCard>
-
-                    {showCurrency && (
-                        <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                            <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{currencyLabel}</AppText>
-                            <CurrencySelector
-                                selectedCurrency={selectedCurrency}
-                                currencies={currencies}
-                                onSelect={setSelectedCurrency}
-                                disabled={isEditMode}
-                            />
-                        </AppCard>
-                    )}
 
                     <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
                         <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{AppConfig.strings.accounts.form.parentAccount}</AppText>
@@ -160,7 +168,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                                             e.stopPropagation();
                                             setParentAccountId('');
                                         }}
-                                        style={styles.clearButton}
+                                        style={[styles.clearButton, { backgroundColor: withOpacity(theme.text, Opacity.hover) }]}
                                     >
                                         <AppText variant="caption" color="secondary">{AppConfig.strings.accounts.form.clear}</AppText>
                                     </TouchableOpacity>
@@ -211,24 +219,28 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: Typography.sizes.xxl,
-        textAlign: 'center',
-        marginBottom: Spacing.sm,
+        textAlign: 'left',
+        marginBottom: Spacing.xs,
     },
     subtitle: {
-        textAlign: 'center',
-        marginBottom: Spacing.xl,
-    },
-    inputContainer: {
+        textAlign: 'left',
         marginBottom: Spacing.lg,
     },
+    inputContainer: {
+        marginBottom: Spacing.md,
+    },
     label: {
-        marginBottom: Spacing.sm,
+        marginBottom: Spacing.xs,
+    },
+    divider: {
+        height: 1,
+        marginVertical: Spacing.md,
     },
     errorContainer: {
         padding: Spacing.md,
         borderRadius: Shape.radius.sm,
         borderWidth: 1,
-        marginBottom: Spacing.lg,
+        marginBottom: Spacing.md,
     },
     nameRow: {
         flexDirection: 'row',
@@ -256,6 +268,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.sm,
         paddingVertical: 2,
         borderRadius: Shape.radius.xs,
-        backgroundColor: withOpacity('#000000', Opacity.hover),
+    },
+    balanceRow: {
+        flexDirection: 'row',
+        gap: Spacing.md,
+        alignItems: 'flex-start',
+    },
+    currencyWrapper: {
+        width: 100,
     },
 });

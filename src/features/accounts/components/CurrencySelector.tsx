@@ -11,6 +11,7 @@ interface CurrencySelectorProps {
     currencies: Currency[];
     onSelect: (currencyCode: string) => void;
     disabled?: boolean;
+    variant?: 'default' | 'compact';
 }
 
 export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
@@ -18,10 +19,12 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
     currencies,
     onSelect,
     disabled = false,
+    variant = 'default',
 }) => {
     const { theme } = useTheme();
     const [showModal, setShowModal] = useState(false);
 
+    const isCompact = variant === 'compact';
     const selectedCurrencyObj = currencies.find((c) => c.code === selectedCurrency);
 
     const handleSelect = (code: string) => {
@@ -39,14 +42,23 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                         backgroundColor: theme.surface,
                         opacity: disabled ? Opacity.medium : Opacity.solid,
                     },
+                    isCompact && styles.compactInput,
                 ]}
                 onPress={() => !disabled && setShowModal(true)}
                 disabled={disabled}
             >
-                <AppText variant="body">{selectedCurrencyObj?.name || selectedCurrency}</AppText>
-                <AppText variant="body" color="secondary">
-                    {selectedCurrency} {selectedCurrencyObj?.symbol}
-                </AppText>
+                {isCompact ? (
+                    <AppText variant="body" weight="semibold">
+                        {selectedCurrency} {selectedCurrencyObj?.symbol}
+                    </AppText>
+                ) : (
+                    <>
+                        <AppText variant="body">{selectedCurrencyObj?.name || selectedCurrency}</AppText>
+                        <AppText variant="body" color="secondary">
+                            {selectedCurrency} {selectedCurrencyObj?.symbol}
+                        </AppText>
+                    </>
+                )}
             </TouchableOpacity>
 
             <CurrencyPickerSheet
@@ -74,5 +86,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    compactInput: {
+        minHeight: 48,
+        paddingHorizontal: Spacing.sm,
+        justifyContent: 'center',
     },
 });
