@@ -77,18 +77,6 @@ export function useBudgetEditViewModel() {
         }
     }, [budget, name, amount, startMonth, selectedAccountIds, currencyCode])
 
-    const deleteBudget = useCallback(async () => {
-        if (budget) {
-            setIsSaving(true)
-            try {
-                await budgetWriteService.deleteBudget(budget)
-                router.back()
-            } finally {
-                setIsSaving(false)
-            }
-        }
-    }, [budget])
-
     return {
         expenseAccounts,
         budget,
@@ -104,7 +92,6 @@ export function useBudgetEditViewModel() {
         currencyCode,
         setCurrencyCode,
         save,
-        deleteBudget,
         loading,
         isSaving,
         isFormValid: name.trim() && amount && selectedAccountIds.length > 0

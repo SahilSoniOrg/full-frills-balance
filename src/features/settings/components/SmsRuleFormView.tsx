@@ -1,11 +1,12 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppCard, AppInput, AppText, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
 
 export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
     const {
@@ -34,64 +35,61 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
             title={id ? "Edit Auto-Post Rule" : "New Auto-Post Rule"}
             showBack={true}
         >
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
+            <FormScreenWrapper
+                footerSlot={
+                    <SubmitFooter
+                        label={isSubmitting ? "Saving..." : "Save Rule"}
+                        onPress={handleSave}
+                        disabled={!isValid || isSubmitting}
+                    />
+                }
             >
-                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                    <View style={styles.formSection}>
-                        <AppCard padding="lg">
-                            <AppInput
-                                label="Sender Match"
-                                value={senderMatch}
-                                onChangeText={setSenderMatch}
-                                placeholder="E.g., SWIGGY, HDFCBK (Exact or partial)"
+                <View style={styles.formSection}>
+                    <AppCard padding="lg">
+                        <AppInput
+                            label="Sender Match"
+                            value={senderMatch}
+                            onChangeText={setSenderMatch}
+                            placeholder="E.g., SWIGGY, HDFCBK (Exact or partial)"
+                        />
+
+                        <AppInput
+                            label="Body Match (Optional)"
+                            value={bodyMatch}
+                            onChangeText={setBodyMatch}
+                            placeholder="E.g., UPI, **1234 (Exact or partial)"
+                        />
+
+                        <ListRow
+                            title="Source Account"
+                            subtitle={accounts.find((a: any) => a.id === sourceAccountId)?.name || "Select paying/receiving account"}
+                            onPress={() => setPickingAccountFor('source')}
+                        />
+
+                        <ListRow
+                            title="Category Account"
+                            subtitle={accounts.find((a: any) => a.id === categoryAccountId)?.name || "Select expense/income category"}
+                            onPress={() => setPickingAccountFor('category')}
+                        />
+
+                        <View style={styles.switchRow}>
+                            <AppText>Rule Active</AppText>
+                            <Switch
+                                value={isActive}
+                                onValueChange={setIsActive}
                             />
+                        </View>
+                    </AppCard>
 
-                            <AppInput
-                                label="Body Match (Optional)"
-                                value={bodyMatch}
-                                onChangeText={setBodyMatch}
-                                placeholder="E.g., UPI, **1234 (Exact or partial)"
-                            />
-
-                            <ListRow
-                                title="Source Account"
-                                subtitle={accounts.find((a: any) => a.id === sourceAccountId)?.name || "Select paying/receiving account"}
-                                onPress={() => setPickingAccountFor('source')}
-                            />
-
-                            <ListRow
-                                title="Category Account"
-                                subtitle={accounts.find((a: any) => a.id === categoryAccountId)?.name || "Select expense/income category"}
-                                onPress={() => setPickingAccountFor('category')}
-                            />
-
-                            <View style={styles.switchRow}>
-                                <AppText>Rule Active</AppText>
-                                <Switch
-                                    value={isActive}
-                                    onValueChange={setIsActive}
-                                />
-                            </View>
-                        </AppCard>
-
-                        {id && (
-                            <SubmitFooter
-                                label="Delete Rule"
-                                onPress={handleDelete}
-                                disabled={isSubmitting}
-                            />
-                        )}
-                    </View>
-                </ScrollView>
-
-                <SubmitFooter
-                    label={isSubmitting ? "Saving..." : "Save Rule"}
-                    onPress={handleSave}
-                    disabled={!isValid || isSubmitting}
-                />
-            </KeyboardAvoidingView>
+                    {id && (
+                        <SubmitFooter
+                            label="Delete Rule"
+                            onPress={handleDelete}
+                            disabled={isSubmitting}
+                        />
+                    )}
+                </View>
+            </FormScreenWrapper>
 
             <AccountPickerModal
                 visible={pickingAccountFor !== null}
@@ -113,7 +111,6 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
 
 const styles = StyleSheet.create({
     content: {
-        flex: 1,
     },
     formSection: {
         padding: Spacing.lg,

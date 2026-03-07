@@ -1,17 +1,18 @@
-import { TypedFlashList } from '@/src/components/common/TypedFlashList';
+import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { AppText } from '@/src/components/core';
+import { IconName } from '@/src/components/core/AppIcon';
 import { Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import React from 'react';
+import { useTheme } from '@/src/hooks/use-theme';
+import { getAccountAccentColor } from '@/src/utils/accountCategory';
+import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import { AccountTile } from './AccountTile';
 
 export interface AccountTileListProps {
     title?: string;
     accounts: Account[];
     selectedId: string;
     onSelect: (id: string) => void;
-    horizontal?: boolean;
 }
 
 export const AccountTileList = ({
@@ -19,8 +20,18 @@ export const AccountTileList = ({
     accounts,
     selectedId,
     onSelect,
-    horizontal = true,
 }: AccountTileListProps) => {
+    const { theme } = useTheme();
+
+    const items = useMemo(() => {
+        return accounts.map(account => ({
+            id: account.id,
+            label: account.name,
+            icon: account.icon as IconName,
+            color: getAccountAccentColor(account.accountType, theme)
+        }));
+    }, [accounts, theme]);
+
     return (
         <View style={{ gap: Spacing.xs, marginVertical: Spacing.sm }}>
             {title && (
@@ -29,21 +40,11 @@ export const AccountTileList = ({
                 </AppText>
             )}
             <View>
-                <TypedFlashList
-                    data={accounts}
-                    horizontal={horizontal}
-                    showsHorizontalScrollIndicator={false}
-                    estimatedItemSize={120}
-                    initialScrollIndex={Math.max(0, accounts.findIndex(a => a.id === selectedId))}
-                    renderItem={({ item: account }: { item: Account }) => (
-                        <AccountTile
-                            account={account}
-                            isSelected={selectedId === account.id}
-                            onSelect={onSelect}
-                        />
-                    )}
-                    contentContainerStyle={{ paddingHorizontal: horizontal ? 0 : Spacing.xs }}
-                    ItemSeparatorComponent={() => <View style={horizontal ? { width: Spacing.sm } : { height: Spacing.sm }} />}
+                <SelectionTileList
+                    items={items}
+                    selectedId={selectedId}
+                    onSelect={(id) => onSelect(id)}
+                    testIDPrefix="account-option"
                 />
             </View>
         </View>

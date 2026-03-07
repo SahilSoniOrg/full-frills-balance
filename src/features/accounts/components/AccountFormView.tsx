@@ -1,4 +1,5 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
@@ -10,7 +11,7 @@ import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFo
 import { IconPickerModal } from '@/src/features/onboarding';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
@@ -69,160 +70,158 @@ export function AccountFormView(vm: AccountFormViewModel) {
 
     return (
         <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
-            >
-                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                    <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold, color: theme.text }]}>
-                        {heroTitle}
-                    </AppText>
-                    <AppText variant="body" color="secondary" style={[styles.subtitle, { color: theme.textSecondary }]}>
-                        {heroSubtitle}
-                    </AppText>
-
-                    {formError && (
-                        <View style={[styles.errorContainer, { backgroundColor: withOpacity(theme.error, Opacity.soft), borderColor: theme.error }]}
-                        >
-                            <AppText variant="body" style={{ color: theme.error }}>{formError}</AppText>
-                        </View>
-                    )}
-
-                    <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <View style={styles.nameRow}>
-                            <TouchableOpacity
-                                onPress={() => setIsIconPickerVisible(true)}
-                                style={styles.iconButton}
-                            >
-                                <IvyIcon
-                                    name={selectedIcon as IconName}
-                                    color={theme.primary}
-                                    size={Size.iconXl}
-                                />
-                            </TouchableOpacity>
-                            <View style={{ flex: 1 }}>
-                                <AppInput
-                                    label={AppConfig.strings.accounts.form.accountName}
-                                    value={accountName}
-                                    onChangeText={setAccountName}
-                                    placeholder={AppConfig.strings.accounts.form.accountNamePlaceholder}
-                                    maxLength={AppConfig.input.maxAccountNameLength}
-                                    returnKeyType="next"
-                                />
-                            </View>
-                        </View>
-                    </AppCard>
-                    {(showInitialBalance || showCurrency) && (
-                        <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                            <View style={styles.balanceRow}>
-                                {showInitialBalance && (
-                                    <View style={{ flex: 1, marginRight: Spacing.sm }}>
-                                        <AppInput
-                                            label={isEditMode ? AppConfig.strings.accounts.form.currentBalance : AppConfig.strings.accounts.form.initialBalance}
-                                            value={initialBalance}
-                                            onChangeText={onInitialBalanceChange}
-                                            placeholder={AppConfig.strings.accounts.form.balancePlaceholder}
-                                            keyboardType="decimal-pad"
-                                            returnKeyType="next"
-                                            testID="initial-balance-input"
-                                            containerStyle={{ marginBottom: 0 }}
-                                        />
-                                    </View>
-                                )}
-                                {showCurrency && (
-                                    <View style={styles.currencyWrapper}>
-                                        <AppText variant="body" weight="medium" style={styles.label}>
-                                            {currencyLabel}
-                                        </AppText>
-                                        <CurrencySelector
-                                            selectedCurrency={selectedCurrency}
-                                            currencies={currencies}
-                                            onSelect={setSelectedCurrency}
-                                            disabled={isEditMode}
-                                            variant="compact"
-                                        />
-                                    </View>
-                                )}
-                            </View>
-                        </AppCard>
-                    )}
-
-                    <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text }]}>
-                            {AppConfig.strings.accounts.form.accountType}
-                        </AppText>
-                        <AccountTypeSelector
-                            value={accountType}
-                            onChange={setAccountType}
-                            disabled={isParent}
-                        />
-                        <View style={[styles.divider, { backgroundColor: theme.border }]} />
-                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text, marginTop: Spacing.md }]}>
-                            {AppConfig.strings.accounts.form.accountSubtype}
-                        </AppText>
-                        <AccountSubtypeSelector
-                            accountType={accountType}
-                            value={accountSubtype}
-                            onChange={setAccountSubtype}
-                            disabled={isParent}
-                        />
-                    </AppCard>
-
-                    <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
-                        <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{AppConfig.strings.accounts.form.parentAccount}</AppText>
-                        <TouchableOpacity
-                            onPress={() => setIsParentPickerVisible(true)}
-                            style={[styles.selectorButton, { borderColor: theme.border, backgroundColor: theme.surface }]}
-                        >
-                            <AppText variant="body" style={{ color: parentAccountId ? theme.text : theme.textSecondary }}>
-                                {parentAccountName}
-                            </AppText>
-                            <View style={styles.selectorActions}>
-                                {parentAccountId && (
-                                    <TouchableOpacity
-                                        onPress={(e) => {
-                                            e.stopPropagation();
-                                            setParentAccountId('');
-                                        }}
-                                        style={[styles.clearButton, { backgroundColor: withOpacity(theme.text, Opacity.hover) }]}
-                                    >
-                                        <AppText variant="caption" color="secondary">{AppConfig.strings.accounts.form.clear}</AppText>
-                                    </TouchableOpacity>
-                                )}
-                                <IvyIcon name="chevronDown" size={Size.iconSm} color={theme.textSecondary} />
-                            </View>
-                        </TouchableOpacity>
-                    </AppCard>
-
-                    <AccountMetadataSection
-                        accountType={accountType}
-                        accountSubtype={accountSubtype}
-                        statementDay={statementDay}
-                        setStatementDay={setStatementDay}
-                        dueDay={dueDay}
-                        setDueDay={setDueDay}
-                        creditLimitAmount={creditLimitAmount}
-                        setCreditLimitAmount={setCreditLimitAmount}
-                        emiDay={emiDay}
-                        setEmiDay={setEmiDay}
-                        loanTenureMonths={loanTenureMonths}
-                        setLoanTenureMonths={setLoanTenureMonths}
-                        minimumPaymentAmount={minimumPaymentAmount}
-                        setMinimumPaymentAmount={setMinimumPaymentAmount}
-                        apr={apr}
-                        setApr={setApr}
-                        notes={notes}
-                        setNotes={setNotes}
+            <FormScreenWrapper
+                contentContainerStyle={styles.content}
+                footerSlot={
+                    <SubmitFooter
+                        onPress={onSave}
+                        label={saveLabel}
+                        disabled={isSaveDisabled}
                     />
+                }
+            >
+                <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold, color: theme.text }]}>
+                    {heroTitle}
+                </AppText>
+                <AppText variant="body" color="secondary" style={[styles.subtitle, { color: theme.textSecondary }]}>
+                    {heroSubtitle}
+                </AppText>
 
-                </ScrollView>
-                <SubmitFooter
-                    onPress={onSave}
-                    label={saveLabel}
-                    disabled={isSaveDisabled}
+                {formError && (
+                    <View style={[styles.errorContainer, { backgroundColor: withOpacity(theme.error, Opacity.soft), borderColor: theme.error }]}
+                    >
+                        <AppText variant="body" style={{ color: theme.error }}>{formError}</AppText>
+                    </View>
+                )}
+
+                <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                    <View style={styles.nameRow}>
+                        <TouchableOpacity
+                            onPress={() => setIsIconPickerVisible(true)}
+                            style={styles.iconButton}
+                        >
+                            <IvyIcon
+                                name={selectedIcon as IconName}
+                                color={theme.primary}
+                                size={Size.iconXl}
+                            />
+                        </TouchableOpacity>
+                        <View style={{ flex: 1 }}>
+                            <AppInput
+                                label={AppConfig.strings.accounts.form.accountName}
+                                value={accountName}
+                                onChangeText={setAccountName}
+                                placeholder={AppConfig.strings.accounts.form.accountNamePlaceholder}
+                                maxLength={AppConfig.input.maxAccountNameLength}
+                                returnKeyType="next"
+                            />
+                        </View>
+                    </View>
+                </AppCard>
+                {(showInitialBalance || showCurrency) && (
+                    <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                        <View style={styles.balanceRow}>
+                            {showInitialBalance && (
+                                <View style={{ flex: 1, marginRight: Spacing.sm }}>
+                                    <AppInput
+                                        label={isEditMode ? AppConfig.strings.accounts.form.currentBalance : AppConfig.strings.accounts.form.initialBalance}
+                                        value={initialBalance}
+                                        onChangeText={onInitialBalanceChange}
+                                        placeholder={AppConfig.strings.accounts.form.balancePlaceholder}
+                                        keyboardType="decimal-pad"
+                                        returnKeyType="next"
+                                        testID="initial-balance-input"
+                                        containerStyle={{ marginBottom: 0 }}
+                                    />
+                                </View>
+                            )}
+                            {showCurrency && (
+                                <View style={styles.currencyWrapper}>
+                                    <AppText variant="body" weight="medium" style={styles.label}>
+                                        {currencyLabel}
+                                    </AppText>
+                                    <CurrencySelector
+                                        selectedCurrency={selectedCurrency}
+                                        currencies={currencies}
+                                        onSelect={setSelectedCurrency}
+                                        disabled={isEditMode}
+                                        variant="compact"
+                                    />
+                                </View>
+                            )}
+                        </View>
+                    </AppCard>
+                )}
+
+                <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                    <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text }]}>
+                        {AppConfig.strings.accounts.form.accountType}
+                    </AppText>
+                    <AccountTypeSelector
+                        value={accountType}
+                        onChange={setAccountType}
+                        disabled={isParent}
+                    />
+                    <View style={[styles.divider, { backgroundColor: theme.border }]} />
+                    <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text, marginTop: Spacing.md }]}>
+                        {AppConfig.strings.accounts.form.accountSubtype}
+                    </AppText>
+                    <AccountSubtypeSelector
+                        accountType={accountType}
+                        value={accountSubtype}
+                        onChange={setAccountSubtype}
+                        disabled={isParent}
+                    />
+                </AppCard>
+
+                <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                    <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{AppConfig.strings.accounts.form.parentAccount}</AppText>
+                    <TouchableOpacity
+                        onPress={() => setIsParentPickerVisible(true)}
+                        style={[styles.selectorButton, { borderColor: theme.border, backgroundColor: theme.surface }]}
+                    >
+                        <AppText variant="body" style={{ color: parentAccountId ? theme.text : theme.textSecondary }}>
+                            {parentAccountName}
+                        </AppText>
+                        <View style={styles.selectorActions}>
+                            {parentAccountId && (
+                                <TouchableOpacity
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        setParentAccountId('');
+                                    }}
+                                    style={[styles.clearButton, { backgroundColor: withOpacity(theme.text, Opacity.hover) }]}
+                                >
+                                    <AppText variant="caption" color="secondary">{AppConfig.strings.accounts.form.clear}</AppText>
+                                </TouchableOpacity>
+                            )}
+                            <IvyIcon name="chevronDown" size={Size.iconSm} color={theme.textSecondary} />
+                        </View>
+                    </TouchableOpacity>
+                </AppCard>
+
+                <AccountMetadataSection
+                    accountType={accountType}
+                    accountSubtype={accountSubtype}
+                    statementDay={statementDay}
+                    setStatementDay={setStatementDay}
+                    dueDay={dueDay}
+                    setDueDay={setDueDay}
+                    creditLimitAmount={creditLimitAmount}
+                    setCreditLimitAmount={setCreditLimitAmount}
+                    emiDay={emiDay}
+                    setEmiDay={setEmiDay}
+                    loanTenureMonths={loanTenureMonths}
+                    setLoanTenureMonths={setLoanTenureMonths}
+                    minimumPaymentAmount={minimumPaymentAmount}
+                    setMinimumPaymentAmount={setMinimumPaymentAmount}
+                    apr={apr}
+                    setApr={setApr}
+                    notes={notes}
+                    setNotes={setNotes}
                 />
-            </KeyboardAvoidingView>
+
+            </FormScreenWrapper>
 
             <IconPickerModal
                 visible={isIconPickerVisible}
@@ -249,7 +248,6 @@ export function AccountFormView(vm: AccountFormViewModel) {
 
 const styles = StyleSheet.create({
     content: {
-        flex: 1,
         padding: Spacing.lg,
     },
     container: {

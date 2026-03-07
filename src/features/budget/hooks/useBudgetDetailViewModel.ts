@@ -7,9 +7,11 @@ import { useExchangeRates } from '@/src/hooks/useExchangeRates'
 import { useObservable } from '@/src/hooks/useObservable'
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping'
 import { budgetReadService } from '@/src/services/budget/budgetReadService'
+import { budgetWriteService } from '@/src/services/budget/budgetWriteService'
 import { exchangeRateService } from '@/src/services/exchange-rate-service'
 import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain'
 import { getAccountTypeVariant } from '@/src/utils/accountCategory'
+import { confirm } from '@/src/utils/alerts'
 import { journalPresenter } from '@/src/utils/journalPresenter'
 import { logger } from '@/src/utils/logger'
 import { safeAdd, safeSubtract } from '@/src/utils/money'
@@ -215,6 +217,24 @@ export function useBudgetDetailViewModel() {
 
     const isCurrentMonth = targetMonth === dayjs().format('YYYY-MM')
 
+    const handleDelete = useCallback(() => {
+        if (!budget) return
+        confirm.show({
+            title: 'Delete Budget',
+            message: 'Are you sure you want to delete this budget?',
+            confirmText: 'Delete',
+            destructive: true,
+            onConfirm: async () => {
+                try {
+                    await budgetWriteService.deleteBudget(budget)
+                    AppNavigation.back()
+                } catch (e: any) {
+                    logger.error('Failed to delete budget', e)
+                }
+            }
+        })
+    }, [budget])
+
     return {
         budget,
         usage,
@@ -224,6 +244,7 @@ export function useBudgetDetailViewModel() {
         nextMonth,
         prevMonth,
         isCurrentMonth,
-        chartData
+        chartData,
+        handleDelete
     }
 }

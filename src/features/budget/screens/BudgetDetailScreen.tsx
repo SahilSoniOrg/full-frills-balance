@@ -1,8 +1,9 @@
 import { LineChart } from '@/src/components/charts/LineChart'
+import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions'
 import { TransactionListView } from '@/src/components/common/TransactionListView'
 import { AppButton, AppCard, AppIcon, AppText, IvyIcon, LoadingView } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
-import { Shape, Size, Spacing } from '@/src/constants'
+import { Shape, Size, Spacing, Typography } from '@/src/constants'
 import { useTheme } from '@/src/hooks/use-theme'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { AppNavigation } from '@/src/utils/navigation'
@@ -123,13 +124,24 @@ export function BudgetDetailScreen() {
             backIcon="back"
             title="Budget Details"
             headerActions={
-                <AppButton
-                    variant="ghost"
-                    onPress={() => AppNavigation.toBudgetForm(budget.id)}
-                    style={{ marginRight: -Spacing.sm }}
-                >
-                    <AppIcon name="edit" size={24} color={theme.primary} />
-                </AppButton>
+                <ScreenHeaderActions
+                    actions={[
+                        {
+                            name: 'edit',
+                            onPress: () => AppNavigation.toBudgetForm(budget.id),
+                            iconColor: theme.text,
+                            size: Typography.sizes.xl,
+                            testID: 'edit-button',
+                        },
+                        {
+                            name: 'delete',
+                            onPress: vm.handleDelete,
+                            iconColor: theme.error,
+                            size: Typography.sizes.xl,
+                            testID: 'delete-button',
+                        },
+                    ]}
+                />
             }
         >
 
