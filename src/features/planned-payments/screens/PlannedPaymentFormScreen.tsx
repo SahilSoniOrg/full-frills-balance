@@ -1,8 +1,8 @@
+import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
-import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper';
+import { FormScreenScaffold } from '@/src/components/common/FormScreenScaffold';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppCard, AppInput, AppText, ListRow } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
 import { useAccounts } from '@/src/features/accounts';
@@ -21,11 +21,9 @@ export default function PlannedPaymentFormScreen() {
     const [pickingAccountFor, setPickingAccountFor] = useState<'from' | 'to' | null>(null);
 
     return (
-        <Screen
-            title={id ? AppConfig.strings.plannedPayments.formTitleEdit : AppConfig.strings.plannedPayments.formTitleNew}
-            showBack={true}
-        >
-            <FormScreenWrapper
+        <>
+            <FormScreenScaffold
+                title={id ? AppConfig.strings.plannedPayments.formTitleEdit : AppConfig.strings.plannedPayments.formTitleNew}
                 footerSlot={
                     <SubmitFooter
                         label={vm.isSubmitting ? AppConfig.strings.plannedPayments.savingLabel : AppConfig.strings.plannedPayments.saveLabel}
@@ -51,15 +49,19 @@ export default function PlannedPaymentFormScreen() {
                             keyboardType="numeric"
                         />
 
-                        <ListRow
+                        <AccountSelectionRow
                             title={AppConfig.strings.plannedPayments.fromAccountLabel}
-                            subtitle={accounts.find(a => a.id === vm.form.fromAccountId)?.name || AppConfig.strings.plannedPayments.selectAccount}
+                            accounts={accounts}
+                            selectedAccountId={vm.form.fromAccountId}
+                            placeholder={AppConfig.strings.plannedPayments.selectAccount}
                             onPress={() => setPickingAccountFor('from')}
                         />
 
-                        <ListRow
+                        <AccountSelectionRow
                             title={AppConfig.strings.plannedPayments.toAccountLabel}
-                            subtitle={accounts.find(a => a.id === vm.form.toAccountId)?.name || AppConfig.strings.plannedPayments.selectAccount}
+                            accounts={accounts}
+                            selectedAccountId={vm.form.toAccountId}
+                            placeholder={AppConfig.strings.plannedPayments.selectAccount}
                             onPress={() => setPickingAccountFor('to')}
                         />
                     </AppCard>
@@ -76,7 +78,11 @@ export default function PlannedPaymentFormScreen() {
 
                                 // Set defaults when changing type
                                 const d = new Date(vm.form.startDate);
-                                let updates: Partial<any> = { intervalType: next };
+                                const updates: {
+                                    intervalType: PlannedPaymentInterval;
+                                    recurrenceDay?: number;
+                                    recurrenceMonth?: number;
+                                } = { intervalType: next };
 
                                 if (next === PlannedPaymentInterval.WEEKLY) {
                                     updates.recurrenceDay = d.getDay();
@@ -164,11 +170,11 @@ export default function PlannedPaymentFormScreen() {
                         </View>
                     </AppCard>
                 </View>
-            </FormScreenWrapper>
+            </FormScreenScaffold>
 
             <AccountPickerModal
                 visible={pickingAccountFor !== null}
-                accounts={accounts as any}
+                accounts={accounts}
                 selectedId={pickingAccountFor === 'from' ? vm.form.fromAccountId : vm.form.toAccountId}
                 onClose={() => setPickingAccountFor(null)}
                 onSelect={(accId: string) => {
@@ -180,7 +186,7 @@ export default function PlannedPaymentFormScreen() {
                     setPickingAccountFor(null);
                 }}
             />
-        </Screen>
+        </>
     );
 }
 

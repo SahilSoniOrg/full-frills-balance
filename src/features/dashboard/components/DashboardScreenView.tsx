@@ -3,8 +3,8 @@ import { AppConfig, Spacing } from '@/src/constants';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
+import { AppNavigation } from '@/src/utils/navigation';
 
-import { useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeToSpendCard } from './SafeToSpendCard';
@@ -20,7 +20,6 @@ export function DashboardScreenView({
     listRef,
 }: DashboardViewModel & { listRef?: React.RefObject<any> }) {
     const { strings } = AppConfig;
-    const router = useRouter();
 
     if (!isInitialized) {
         return (
@@ -47,7 +46,7 @@ export function DashboardScreenView({
                     <View>
                         <DashboardHeader
                             {...headerProps}
-                            onInsightsPress={() => router.push('/insights')}
+                            onInsightsPress={AppNavigation.toInsights}
                         />
                         {safeToSpendData && (
                             <SafeToSpendCard

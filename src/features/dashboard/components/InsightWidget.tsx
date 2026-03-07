@@ -3,7 +3,7 @@ import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants'
 import { useTheme } from '@/src/hooks/use-theme';
 import { Pattern, patternService } from '@/src/services/insight-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';
@@ -15,7 +15,6 @@ interface InsightWidgetProps {
 
 export const InsightWidget = ({ patterns, hideManageDismissed = false }: InsightWidgetProps) => {
     const { theme, fonts } = useTheme();
-    const router = useRouter();
     const [isEmergencyFundInfoVisible, setEmergencyFundInfoVisible] = React.useState(false);
 
     const handleDismiss = async (id: string) => {
@@ -25,18 +24,15 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
     const isEmergencyFundPattern = (pattern: Pattern) => pattern.id === 'no_emergency_fund';
 
     const handleOpenInsightDetails = (pattern: Pattern) => {
-        router.push({
-            pathname: '/insight-details',
-            params: {
-                id: pattern.id,
-                message: pattern.message,
-                description: pattern.description,
-                suggestion: pattern.suggestion,
-                journalIds: pattern.journalIds.join(','),
-                severity: pattern.severity,
-                amount: typeof pattern.amount === 'number' ? String(pattern.amount) : undefined,
-                currencyCode: pattern.currencyCode,
-            }
+        AppNavigation.toInsightDetails({
+            id: pattern.id,
+            message: pattern.message,
+            description: pattern.description,
+            suggestion: pattern.suggestion,
+            journalIds: pattern.journalIds,
+            severity: pattern.severity,
+            amount: pattern.amount,
+            currencyCode: pattern.currencyCode,
         });
     };
 
@@ -53,7 +49,7 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
     if (patterns.length === 0) return null;
 
     const handleManageDismissed = () => {
-        router.push('/insights');
+        AppNavigation.toInsights();
     };
 
     const getSeverityMeta = (severity: Pattern['severity']) => {
@@ -232,7 +228,7 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
                 onClose={() => setEmergencyFundInfoVisible(false)}
                 onCreateAccount={() => {
                     setEmergencyFundInfoVisible(false);
-                    router.push('/account-creation?type=ASSET');
+                    AppNavigation.toAccountCreation('ASSET');
                 }}
             />
         </>

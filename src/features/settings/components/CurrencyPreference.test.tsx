@@ -55,7 +55,7 @@ describe('CurrencyPreference', () => {
         const { getByText, getByPlaceholderText, queryByText } = render(<CurrencyPreference />);
 
         // Open modal
-        fireEvent.press(getByText('USD'));
+        fireEvent.press(getByText('USD $'));
 
         // Verify initial list shows all
         expect(getByText('US Dollar')).toBeTruthy();

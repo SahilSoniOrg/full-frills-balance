@@ -4,8 +4,8 @@ import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AppNavigation } from '@/src/utils/navigation';
 import { withObservables } from '@nozbe/watermelondb/react';
-import { useRouter } from 'expo-router';
 import React from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -15,7 +15,6 @@ interface Props {
 
 function SmsRulesList({ rules }: Props) {
     const { theme } = useTheme();
-    const router = useRouter();
 
     if (rules.length === 0) {
         return (
@@ -34,7 +33,7 @@ function SmsRulesList({ rules }: Props) {
             renderItem={({ item }) => (
                 <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => router.push(`/sms-rule-form?id=${item.id}` as any)}
+                    onPress={() => AppNavigation.toSmsRuleForm(item.id)}
                 >
                     <AppCard elevation="sm" style={styles.card}>
                         <View style={styles.cardHeader}>
@@ -76,8 +75,6 @@ const EnhancedSmsRulesList = withObservables([], () => ({
 }))(SmsRulesList);
 
 export default function SmsRulesScreen() {
-    const router = useRouter();
-
     return (
         <Screen
             title="SMS Auto-Post Rules"
@@ -86,7 +83,7 @@ export default function SmsRulesScreen() {
         >
             <EnhancedSmsRulesList />
             <FloatingActionButton
-                onPress={() => router.push('/sms-rule-form' as any)}
+                onPress={() => AppNavigation.toSmsRuleForm()}
             />
         </Screen>
     );

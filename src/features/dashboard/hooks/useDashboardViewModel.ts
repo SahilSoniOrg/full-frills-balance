@@ -3,7 +3,7 @@ import { useUI } from '@/src/contexts/UIContext';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { insightService, Pattern, patternService, SafeToSpendResult } from '@/src/services/insight-service';
-import { useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo } from 'react';
 import { Platform, UIManager } from 'react-native';
 
@@ -27,7 +27,6 @@ export interface DashboardViewModel {
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
-    const router = useRouter();
     const { userName, hasCompletedOnboarding, isInitialized } = useUI();
 
     const { data: safeToSpendData } = useObservable(
@@ -54,8 +53,8 @@ export function useDashboardViewModel(): DashboardViewModel {
     });
 
     const onAddPress = useCallback(() => {
-        router.push('/journal-entry');
-    }, [router]);
+        AppNavigation.toJournalEntry();
+    }, []);
 
     const greeting = useMemo(() => strings.dashboard.greeting(userName), [userName, strings.dashboard]);
     const sectionTitle = vm.searchQuery ? strings.dashboard.searchResults : strings.dashboard.recentTransactions;

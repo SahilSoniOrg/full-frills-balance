@@ -1,12 +1,12 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal'
-import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper'
+import { FormScreenScaffold } from '@/src/components/common/FormScreenScaffold'
 import { SubmitFooter } from '@/src/components/common/SubmitFooter'
-import { AppButton, AppCard, AppText, ListRow } from '@/src/components/core'
+import { AppButton, AppCard, AppText, ListRow, LoadingView } from '@/src/components/core'
 import { AppInput } from '@/src/components/core/AppInput'
-import { Screen, ScreenHeader } from '@/src/components/layout'
+import { Screen } from '@/src/components/layout'
 import { CurrencySelector } from '@/src/features/accounts'
 import { toast } from '@/src/utils/alerts'
-import { router } from 'expo-router'
+import { AppNavigation } from '@/src/utils/navigation'
 import React, { useState } from 'react'
 import { useBudgetEditViewModel } from '../hooks/useBudgetEditViewModel'
 
@@ -24,13 +24,11 @@ export default function BudgetEditScreen() {
 
     if (loading) {
         return (
-            <Screen>
-                <ScreenHeader
-                    title="Loading..."
-                    actions={
-                        <AppButton variant="ghost" onPress={() => router.back()}>Cancel</AppButton>
-                    }
-                />
+            <Screen
+                title="Loading..."
+                headerActions={<AppButton variant="ghost" onPress={AppNavigation.back}>Cancel</AppButton>}
+            >
+                <LoadingView loading={true} text="Loading budget..." />
             </Screen>
         )
     }
@@ -46,16 +44,15 @@ export default function BudgetEditScreen() {
     }
 
     return (
-        <Screen edges={['top', 'bottom']}>
-            <ScreenHeader
+        <>
+            <FormScreenScaffold
                 title={budget ? 'Edit Budget' : 'New Budget'}
-                actions={
-                    <AppButton variant="ghost" onPress={() => router.back()}>
+                edges={['top', 'bottom']}
+                headerActions={
+                    <AppButton variant="ghost" onPress={AppNavigation.back}>
                         Cancel
                     </AppButton>
                 }
-            />
-            <FormScreenWrapper
                 contentContainerStyle={{ padding: 16 }}
                 footerSlot={
                     <SubmitFooter
@@ -100,7 +97,7 @@ export default function BudgetEditScreen() {
                         onPress={() => setIsAccountPickerVisible(true)}
                     />
                 </AppCard>
-            </FormScreenWrapper>
+            </FormScreenScaffold>
 
             <AccountPickerModal
                 multiple
@@ -114,6 +111,6 @@ export default function BudgetEditScreen() {
                     setIsAccountPickerVisible(false);
                 }}
             />
-        </Screen>
+        </>
     )
 }

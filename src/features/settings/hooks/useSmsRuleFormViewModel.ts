@@ -1,9 +1,10 @@
 import { database } from '@/src/data/database/Database';
+import Account from '@/src/data/models/Account';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import { useAccounts } from '@/src/features/accounts';
 import { smsService } from '@/src/services/sms-service';
 import { toast } from '@/src/utils/alerts';
-import { useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useEffect, useState } from 'react';
 
 export interface SmsRuleFormViewModel {
@@ -24,11 +25,10 @@ export interface SmsRuleFormViewModel {
     isValid: boolean;
     handleSave: () => Promise<void>;
     handleDelete: () => Promise<void>;
-    accounts: any[]; // Using the inferred type from useAccounts
+    accounts: Account[];
 }
 
 export function useSmsRuleFormViewModel(id?: string): SmsRuleFormViewModel {
-    const router = useRouter();
     const { accounts } = useAccounts();
 
     const [senderMatch, setSenderMatch] = useState('');
@@ -52,12 +52,12 @@ export function useSmsRuleFormViewModel(id?: string): SmsRuleFormViewModel {
                     setIsActive(rule.isActive);
                 } catch {
                     toast.error('Failed to load rule');
-                    router.back();
+                    AppNavigation.back();
                 }
             };
             loadRule();
         }
-    }, [id, router]);
+    }, [id]);
 
     const isValid = senderMatch.trim().length > 0 && !!sourceAccountId && !!categoryAccountId;
 
@@ -83,7 +83,7 @@ export function useSmsRuleFormViewModel(id?: string): SmsRuleFormViewModel {
                 isActive
             });
             toast.success('Rule saved');
-            router.back();
+            AppNavigation.back();
         } catch {
             toast.error('Failed to save rule');
         } finally {
@@ -97,7 +97,7 @@ export function useSmsRuleFormViewModel(id?: string): SmsRuleFormViewModel {
         try {
             await smsService.deleteAutoPostRule(id);
             toast.success('Rule deleted');
-            router.back();
+            AppNavigation.back();
         } catch {
             toast.error('Failed to delete rule');
         } finally {

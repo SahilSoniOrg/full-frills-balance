@@ -14,10 +14,6 @@ export type { ScreenProps } from './Screen'
 export { Section } from './Section'
 export type { SectionProps } from './Section'
 
-export { ScreenHeader } from './ScreenHeader'
-export type { ScreenHeaderProps } from './ScreenHeader'
-
 export { NavigationBar } from './NavigationBar'
 export type { NavigationBarProps } from './NavigationBar'
-
 

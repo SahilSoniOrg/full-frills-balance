@@ -1,8 +1,8 @@
+import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
-import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper';
+import { FormScreenScaffold } from '@/src/components/common/FormScreenScaffold';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
-import { AppCard, AppInput, AppText, ListRow } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
+import { AppCard, AppInput, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
 import React from 'react';
@@ -31,11 +31,9 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
     } = vm;
 
     return (
-        <Screen
-            title={id ? "Edit Auto-Post Rule" : "New Auto-Post Rule"}
-            showBack={true}
-        >
-            <FormScreenWrapper
+        <>
+            <FormScreenScaffold
+                title={id ? "Edit Auto-Post Rule" : "New Auto-Post Rule"}
                 footerSlot={
                     <SubmitFooter
                         label={isSubmitting ? "Saving..." : "Save Rule"}
@@ -60,15 +58,19 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                             placeholder="E.g., UPI, **1234 (Exact or partial)"
                         />
 
-                        <ListRow
+                        <AccountSelectionRow
                             title="Source Account"
-                            subtitle={accounts.find((a: any) => a.id === sourceAccountId)?.name || "Select paying/receiving account"}
+                            accounts={accounts}
+                            selectedAccountId={sourceAccountId}
+                            placeholder="Select paying/receiving account"
                             onPress={() => setPickingAccountFor('source')}
                         />
 
-                        <ListRow
+                        <AccountSelectionRow
                             title="Category Account"
-                            subtitle={accounts.find((a: any) => a.id === categoryAccountId)?.name || "Select expense/income category"}
+                            accounts={accounts}
+                            selectedAccountId={categoryAccountId}
+                            placeholder="Select expense/income category"
                             onPress={() => setPickingAccountFor('category')}
                         />
 
@@ -89,11 +91,11 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                         />
                     )}
                 </View>
-            </FormScreenWrapper>
+            </FormScreenScaffold>
 
             <AccountPickerModal
                 visible={pickingAccountFor !== null}
-                accounts={accounts as any}
+                accounts={accounts}
                 selectedId={pickingAccountFor === 'source' ? sourceAccountId : categoryAccountId}
                 onClose={() => setPickingAccountFor(null)}
                 onSelect={(accId: string) => {
@@ -105,7 +107,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                     setPickingAccountFor(null);
                 }}
             />
-        </Screen>
+        </>
     );
 }
 

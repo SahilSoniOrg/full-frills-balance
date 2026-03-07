@@ -1,7 +1,6 @@
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
@@ -55,7 +54,6 @@ export interface ReportsViewModel {
 
 export function useReportsViewModel(): ReportsViewModel {
     const { theme } = useTheme();
-    const router = useRouter();
 
     const {
         netWorthHistory,
@@ -102,7 +100,6 @@ export function useReportsViewModel(): ReportsViewModel {
     });
 
     const actions = useReportActions({
-        router,
         selectedPeriod: breakdownDetails.selectedPeriod,
         dateRange,
     });

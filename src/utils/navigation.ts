@@ -43,6 +43,19 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to the Journal list filtered by a date range.
+     */
+    toJournalWithDateRange: (startDate: number, endDate: number) => {
+        router.push({
+            pathname: '/journal',
+            params: {
+                startDate: startDate.toString(),
+                endDate: endDate.toString(),
+            },
+        } as any);
+    },
+
+    /**
      * Navigate to the Transaction Details screen.
      */
     toTransactionDetails: (journalId: string) => {
@@ -52,8 +65,19 @@ export const AppNavigation = {
     /**
      * Navigate to the Account Details screen.
      */
-    toAccountDetails: (accountId: string) => {
-        router.push(`/accounts/${accountId}` as any);
+    toAccountDetails: (accountId: string, options?: { startDate?: number; endDate?: number }) => {
+        const params: Record<string, string> = { accountId };
+        if (typeof options?.startDate === 'number') {
+            params.startDate = options.startDate.toString();
+        }
+        if (typeof options?.endDate === 'number') {
+            params.endDate = options.endDate.toString();
+        }
+
+        router.push({
+            pathname: '/account-details',
+            params,
+        } as any);
     },
 
     /**
@@ -64,6 +88,17 @@ export const AppNavigation = {
             router.push(`/accounts/form?id=${accountId}` as any);
         } else {
             router.push('/accounts/form' as any);
+        }
+    },
+
+    /**
+     * Navigate to account creation route with optional preselected type.
+     */
+    toAccountCreation: (type?: string) => {
+        if (type) {
+            router.push(`/account-creation?type=${type}` as any);
+        } else {
+            router.push('/account-creation' as any);
         }
     },
 
@@ -100,10 +135,17 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to appearance settings.
+     */
+    toAppearanceSettings: () => {
+        router.push('/appearance-settings' as any);
+    },
+
+    /**
      * Navigate to the Audit Log screen.
      */
     toAuditLog: () => {
-        router.push('/audit/log' as any);
+        router.push('/audit-log' as any);
     },
 
     /**
@@ -136,5 +178,65 @@ export const AppNavigation = {
         } else {
             router.push('/planned-payment-form' as any);
         }
+    },
+
+    /**
+     * Navigate to import selection screen.
+     */
+    toImportSelection: () => {
+        router.push('/import-selection' as any);
+    },
+
+    /**
+     * Navigate to SMS rules list.
+     */
+    toSmsRules: () => {
+        router.push('/sms-rules' as any);
+    },
+
+    /**
+     * Navigate to SMS rule form (new or edit).
+     */
+    toSmsRuleForm: (id?: string) => {
+        if (id) {
+            router.push(`/sms-rule-form?id=${id}` as any);
+        } else {
+            router.push('/sms-rule-form' as any);
+        }
+    },
+
+    /**
+     * Navigate to insights list.
+     */
+    toInsights: () => {
+        router.push('/insights' as any);
+    },
+
+    /**
+     * Navigate to insight details with route params.
+     */
+    toInsightDetails: (params: {
+        id: string;
+        message: string;
+        description: string;
+        suggestion: string;
+        journalIds: string[];
+        severity: string;
+        amount?: number;
+        currencyCode?: string;
+    }) => {
+        router.push({
+            pathname: '/insight-details',
+            params: {
+                id: params.id,
+                message: params.message,
+                description: params.description,
+                suggestion: params.suggestion,
+                journalIds: params.journalIds.join(','),
+                severity: params.severity,
+                amount: typeof params.amount === 'number' ? String(params.amount) : undefined,
+                currencyCode: params.currencyCode,
+            },
+        } as any);
     }
 };

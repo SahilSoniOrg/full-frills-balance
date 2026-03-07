@@ -1,19 +1,19 @@
-import { AppButton, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { ArchetypePreference } from '@/src/features/settings/components/ArchetypePreference';
 import { CurrencyPreference } from '@/src/features/settings/components/CurrencyPreference';
+import { SettingsActionRow } from '@/src/features/settings/components/SettingsActionRow';
+import { SettingsSection } from '@/src/features/settings/components/SettingsSection';
 import { SettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Linking, Modal, StyleSheet, View } from 'react-native';
 
 export function SettingsView(vm: SettingsViewModel) {
-    const router = useRouter();
-    const { theme, fonts } = useTheme();
+    const { theme } = useTheme();
     const [localName, setLocalName] = useState(vm.userName);
 
     const {
@@ -50,10 +50,7 @@ export function SettingsView(vm: SettingsViewModel) {
                 withPadding
             >
                 <View style={styles.inner}>
-                    <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
-                        Personalization
-                    </AppText>
-                    <AppCard elevation="sm" padding="md" style={styles.card}>
+                    <SettingsSection title="Personalization">
                         <View style={styles.rowBetween}>
                             <View style={{ flex: 1 }}>
                                 <AppInput
@@ -74,31 +71,19 @@ export function SettingsView(vm: SettingsViewModel) {
 
                         <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
 
-                        <View style={styles.rowBetween}>
-                            <View style={{ flex: 1, marginRight: Spacing.md }}>
-                                <AppText variant="body" weight="semibold">Theme & Typography</AppText>
-                                <AppText variant="caption" color="secondary">
-                                    Customize colors, fonts, and dark mode
-                                </AppText>
-                            </View>
-                            <AppButton
-                                variant="secondary"
-                                size="sm"
-                                onPress={() => router.push('/appearance-settings')}
-                            >
-                                Customize
-                            </AppButton>
-                        </View>
+                        <SettingsActionRow
+                            title="Theme & Typography"
+                            description="Customize colors, fonts, and dark mode"
+                            actionLabel="Customize"
+                            onPress={vm.onAppearanceSettings}
+                        />
 
                         <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
 
                         <ArchetypePreference />
-                    </AppCard>
+                    </SettingsSection>
 
-                    <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
-                        Preferences
-                    </AppText>
-                    <AppCard elevation="sm" padding="md" style={styles.card}>
+                    <SettingsSection title="Preferences">
                         <View style={styles.rowBetween}>
                             <View style={{ flex: 1, marginRight: Spacing.md }}>
                                 <AppText variant="body" weight="semibold">{AppConfig.strings.settings.privacy.title}</AppText>
@@ -130,85 +115,43 @@ export function SettingsView(vm: SettingsViewModel) {
                         </View>
                         <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
 
-                        <View style={styles.rowBetween}>
-                            <View style={{ flex: 1, marginRight: Spacing.md }}>
-                                <AppText variant="body" weight="semibold">SMS Auto-Post Rules</AppText>
-                                <AppText variant="caption" color="secondary">Manage rules to automatically post imported SMS</AppText>
-                            </View>
-                            <AppButton
-                                variant="secondary"
-                                size="sm"
-                                onPress={vm.onManageSmsRules}
-                            >
-                                Manage
-                            </AppButton>
-                        </View>
-                    </AppCard>
+                        <SettingsActionRow
+                            title="SMS Auto-Post Rules"
+                            description="Manage rules to automatically post imported SMS"
+                            actionLabel="Manage"
+                            onPress={vm.onManageSmsRules}
+                        />
+                    </SettingsSection>
 
-                    <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
-                        Community & Support
-                    </AppText>
-                    <AppCard elevation="sm" padding="md" style={styles.card}>
-                        <View style={styles.rowBetween}>
-                            <AppIcon name="messageCircle" size={24} color={theme.primary} style={{ marginRight: Spacing.md }} />
-                            <View style={{ flex: 1, marginRight: Spacing.md }}>
-                                <AppText variant="body" weight="semibold">Telegram Community</AppText>
-                                <AppText variant="caption" color="secondary">
-                                    Join our group for discussions and support
-                                </AppText>
-                            </View>
-                            <AppButton
-                                variant="secondary"
-                                size="sm"
-                                onPress={() => Linking.openURL('https://t.me/FullFrills')}
-                            >
-                                Join
-                            </AppButton>
-                        </View>
+                    <SettingsSection title="Community & Support">
+                        <SettingsActionRow
+                            icon="messageCircle"
+                            title="Telegram Community"
+                            description="Join our group for discussions and support"
+                            actionLabel="Join"
+                            onPress={() => Linking.openURL('https://t.me/FullFrills')}
+                            withDivider
+                        />
 
-                        <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+                        <SettingsActionRow
+                            icon="playSquare"
+                            title="Rate on Play Store"
+                            description="Love the app? Leave a review"
+                            actionLabel="Rate"
+                            onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=in.sahilsoni.fullfrillsbalance')}
+                            withDivider
+                        />
 
-                        <View style={styles.rowBetween}>
-                            <AppIcon name="playSquare" size={24} color={theme.primary} style={{ marginRight: Spacing.md }} />
-                            <View style={{ flex: 1, marginRight: Spacing.md }}>
-                                <AppText variant="body" weight="semibold">Rate on Play Store</AppText>
-                                <AppText variant="caption" color="secondary">
-                                    Love the app? Leave a review
-                                </AppText>
-                            </View>
-                            <AppButton
-                                variant="secondary"
-                                size="sm"
-                                onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=in.sahilsoni.fullfrillsbalance')}
-                            >
-                                Rate
-                            </AppButton>
-                        </View>
+                        <SettingsActionRow
+                            icon="github"
+                            title="GitHub Source"
+                            description="Star the repo or contribute"
+                            actionLabel="View"
+                            onPress={() => Linking.openURL('https://github.com/SahilSoniOrg/full-frills-balance')}
+                        />
+                    </SettingsSection>
 
-                        <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
-
-                        <View style={styles.rowBetween}>
-                            <AppIcon name="github" size={24} color={theme.primary} style={{ marginRight: Spacing.md }} />
-                            <View style={{ flex: 1, marginRight: Spacing.md }}>
-                                <AppText variant="body" weight="semibold">GitHub Source</AppText>
-                                <AppText variant="caption" color="secondary">
-                                    Star the repo or contribute
-                                </AppText>
-                            </View>
-                            <AppButton
-                                variant="secondary"
-                                size="sm"
-                                onPress={() => Linking.openURL('https://github.com/SahilSoniOrg/full-frills-balance')}
-                            >
-                                View
-                            </AppButton>
-                        </View>
-                    </AppCard>
-
-                    <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
-                        {AppConfig.strings.settings.sections.dataManagement}
-                    </AppText>
-                    <AppCard elevation="sm" padding="md" style={styles.card}>
+                    <SettingsSection title={AppConfig.strings.settings.sections.dataManagement}>
                         <AppText variant="body" style={styles.cardDesc}>
                             {AppConfig.strings.settings.data.exportDesc}
                         </AppText>
@@ -240,12 +183,9 @@ export function SettingsView(vm: SettingsViewModel) {
                         >
                             {AppConfig.strings.settings.data.auditBtn}
                         </AppButton>
-                    </AppCard>
+                    </SettingsSection>
 
-                    <AppText variant="subheading" style={[styles.sectionTitle, { fontFamily: fonts.bold }]}>
-                        {AppConfig.strings.settings.sections.maintenance}
-                    </AppText>
-                    <AppCard elevation="sm" padding="md" style={styles.card}>
+                    <SettingsSection title={AppConfig.strings.settings.sections.maintenance}>
                         <AppText variant="body" style={styles.cardDesc}>
                             {AppConfig.strings.settings.maintenance.integrityDesc}
                         </AppText>
@@ -256,13 +196,11 @@ export function SettingsView(vm: SettingsViewModel) {
                         >
                             {AppConfig.strings.settings.maintenance.integrityBtn}
                         </AppButton>
-                    </AppCard>
+                    </SettingsSection>
 
-                    <AppText variant="subheading" style={[styles.sectionTitle, { color: theme.error, fontFamily: fonts.bold }]}
-                    >
-                        {AppConfig.strings.settings.sections.dangerZone}
-                    </AppText>
-                    <AppCard elevation="sm" padding="md" style={[styles.card, { borderColor: withOpacity(theme.error, Opacity.soft), borderWidth: 1 }]}
+                    <SettingsSection
+                        title={AppConfig.strings.settings.sections.dangerZone}
+                        danger
                     >
                         <AppText variant="body" style={styles.cardDesc}>
                             {AppConfig.strings.settings.danger.cleanupDesc}
@@ -289,7 +227,7 @@ export function SettingsView(vm: SettingsViewModel) {
                         >
                             {AppConfig.strings.settings.danger.resetBtn}
                         </AppButton>
-                    </AppCard>
+                    </SettingsSection>
 
                     <View style={styles.footer}>
                         <AppText variant="caption" color="secondary">
@@ -347,14 +285,6 @@ const styles = StyleSheet.create({
     inner: {
         paddingVertical: Spacing.md,
     },
-    sectionTitle: {
-        marginBottom: Spacing.sm,
-        marginTop: Spacing.md,
-        // dynamic font
-    },
-    card: {
-        marginBottom: Spacing.md,
-    },
     rowBetween: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -362,14 +292,6 @@ const styles = StyleSheet.create({
     },
     cardDesc: {
         marginBottom: Spacing.md,
-    },
-    themeOptions: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    themeButton: {
-        flex: 1,
-        marginHorizontal: Spacing.xs,
     },
     divider: {
         height: 1,

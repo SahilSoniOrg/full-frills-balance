@@ -3,8 +3,8 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
 import { alert, confirm, toast } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/utils/navigation';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
@@ -33,6 +33,7 @@ export interface SettingsViewModel {
     onImport: () => void;
     onAuditLog: () => void;
     onManageSmsRules: () => void;
+    onAppearanceSettings: () => void;
     onFixIntegrity: () => void;
     integrityProgress: number;
     integrityProgressMessage: string;
@@ -41,7 +42,6 @@ export interface SettingsViewModel {
 }
 
 export function useSettingsViewModel(): SettingsViewModel {
-    const router = useRouter();
     const ui = useUI();
     const {
         userName,
@@ -191,9 +191,10 @@ export function useSettingsViewModel(): SettingsViewModel {
         isCleaning,
         isResetting,
         onExport,
-        onImport: () => router.push('/import-selection'),
-        onAuditLog: () => router.push('/audit-log'),
-        onManageSmsRules: () => router.push('/sms-rules' as any),
+        onImport: AppNavigation.toImportSelection,
+        onAuditLog: AppNavigation.toAuditLog,
+        onManageSmsRules: AppNavigation.toSmsRules,
+        onAppearanceSettings: AppNavigation.toAppearanceSettings,
         onFixIntegrity,
         onCleanup,
         onFactoryReset,
