@@ -3,6 +3,7 @@ import { ToastContainer } from '@/src/components/common/Toast';
 import { ErrorBoundary } from '@/src/components/core';
 import { UIProvider, useUI } from '@/src/contexts/UIContext';
 import { database } from '@/src/data/database/Database';
+import { AppLockInterceptor } from '@/src/features/app/components/AppLockInterceptor';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
@@ -77,7 +78,9 @@ export default function RootLayout() {
             >
               <PostHogScreenTracker />
               <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <AppContent />
+                <AppLockInterceptor>
+                  <AppContent />
+                </AppLockInterceptor>
                 <AlertContainer />
                 <ToastContainer />
               </ThemeProvider>

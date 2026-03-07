@@ -38,6 +38,7 @@ interface UIState {
 
   // Privacy
   isPrivacyMode: boolean
+  isAppLockEnabled: boolean
 
   // Account Display
   showAccountMonthlyStats: boolean
@@ -62,6 +63,7 @@ interface UIContextType extends UIState {
   setFontId: (fontId: FontId) => Promise<void>
   updateUserDetails: (name: string, currency: string, archetype?: string) => Promise<void>
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
+  setAppLockEnabled: (enabled: boolean) => Promise<void>
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>
   setArchetype: (archetype: string) => Promise<void>
   setAdvancedMode: (advancedMode: boolean) => Promise<void>
@@ -83,6 +85,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     userName: '',
     defaultCurrency: AppConfig.defaultCurrency,
     isPrivacyMode: false,
+    isAppLockEnabled: false,
     showAccountMonthlyStats: true,
     advancedMode: false,
     isRestartRequired: false,
@@ -112,6 +115,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           userName: loadedPreferences.userName || '',
           defaultCurrency: loadedPreferences.defaultCurrencyCode || AppConfig.defaultCurrency,
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
+          isAppLockEnabled: loadedPreferences.isAppLockEnabled || false,
           showAccountMonthlyStats: loadedPreferences.showAccountMonthlyStats ?? true,
           advancedMode: loadedPreferences.advancedMode || false,
           isRestartRequired: false,
@@ -208,6 +212,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const setAppLockEnabled = useCallback(async (isAppLockEnabled: boolean) => {
+    try {
+      await preferences.setAppLockEnabled(isAppLockEnabled)
+      setUIState(prev => ({ ...prev, isAppLockEnabled }))
+    } catch (error) {
+      logger.warn('Failed to save app lock preference', { error })
+      setUIState(prev => ({ ...prev, isAppLockEnabled }))
+    }
+  }, [])
+
   const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
     try {
       await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats)
@@ -255,6 +269,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setFontId,
     updateUserDetails,
     setPrivacyMode,
+    setAppLockEnabled,
     setShowAccountMonthlyStats,
     setArchetype,
     setAdvancedMode,
