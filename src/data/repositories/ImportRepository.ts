@@ -15,6 +15,7 @@ import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import JournalMetadata from '@/src/data/models/JournalMetadata'
 import PlannedPayment from '@/src/data/models/PlannedPayment'
+import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule'
 import SmsInboxRecord, { SmsDirection, SmsParseStatus, SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { Q } from '@nozbe/watermelondb'
@@ -197,6 +198,20 @@ export interface ImportedSmsInboxRecord {
   updatedAt?: number
 }
 
+export interface ImportedSmsAutoPostRule {
+  id: string
+  senderMatch: string
+  bodyMatch?: string
+  conditionsJson?: string
+  actionsJson?: string
+  priority?: number
+  sourceAccountId: string
+  categoryAccountId: string
+  isActive: boolean
+  createdAt?: number
+  updatedAt?: number
+}
+
 export interface ChangeSet<T> {
   created?: T[]
   updated?: T[]
@@ -215,6 +230,7 @@ export interface BatchImportData {
   accountMetadata?: ImportedAccountMetadata[]
   plannedPayments?: ImportedPlannedPayment[]
   journalMetadata?: ImportedJournalMetadata[]
+  smsAutoPostRules?: ImportedSmsAutoPostRule[]
   smsInboxRecords?: ImportedSmsInboxRecord[]
 }
 
@@ -278,6 +294,7 @@ export class ImportRepository {
       const accountMetadataCollection = database.collections.get<AccountMetadata>('account_metadata')
       const plannedPaymentsCollection = database.collections.get<PlannedPayment>('planned_payments')
       const journalMetadataCollection = database.collections.get<JournalMetadata>('journal_metadata')
+      const smsAutoPostRulesCollection = database.collections.get<SmsAutoPostRule>('sms_auto_post_rules')
       const smsInboxCollection = database.collections.get<SmsInboxRecord>('sms_inbox_records')
 
       const accountPrepares = data.accounts.map(acc =>
@@ -463,6 +480,23 @@ export class ImportRepository {
         })
       )
 
+      const smsAutoPostRulePrepares = (data.smsAutoPostRules || []).map((rule) =>
+        smsAutoPostRulesCollection.prepareCreate((record) => {
+          record._raw.id = rule.id
+          record.senderMatch = rule.senderMatch
+          record.bodyMatch = rule.bodyMatch
+          record.conditionsJson = rule.conditionsJson
+          record.actionsJson = rule.actionsJson
+          record.priority = rule.priority
+          record.sourceAccountId = rule.sourceAccountId
+          record.categoryAccountId = rule.categoryAccountId
+          record.isActive = rule.isActive
+          record._raw._status = 'synced'
+          if (rule.createdAt) (record as any)._raw.created_at = rule.createdAt
+          if (rule.updatedAt) (record as any)._raw.updated_at = rule.updatedAt
+        })
+      )
+
       const smsInboxPrepares = (data.smsInboxRecords || []).map((sms) =>
         smsInboxCollection.prepareCreate((record) => {
           record._raw.id = sms.id
@@ -506,6 +540,7 @@ export class ImportRepository {
         ...accountMetadataPrepares,
         ...plannedPaymentPrepares,
         ...journalMetadataPrepares,
+        ...smsAutoPostRulePrepares,
         ...smsInboxPrepares
       ]
 

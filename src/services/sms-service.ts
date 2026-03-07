@@ -55,6 +55,53 @@ export interface SmsRuleSuggestion {
   sampleMerchants: string[]
 }
 
+export type SmsRuleMode = 'builder' | 'regex'
+export type SmsRuleDisposition = 'auto_post' | 'review' | 'ignore'
+export type SmsRuleField = 'sender' | 'body' | 'merchant' | 'account_source' | 'direction' | 'currency' | 'amount'
+export type SmsRuleStringOperator = 'contains' | 'is'
+export type SmsRuleAmountOperator = 'eq' | 'gt' | 'lt' | 'between'
+
+export interface SmsRuleCondition {
+  field: SmsRuleField
+  operator: SmsRuleStringOperator | SmsRuleAmountOperator | 'is'
+  value?: string
+  minValue?: number
+  maxValue?: number
+}
+
+export interface SmsRuleActions {
+  disposition: SmsRuleDisposition
+  sourceAccountId?: string
+  categoryAccountId?: string
+}
+
+export interface SmsRuleDraftInput {
+  id?: string
+  mode: SmsRuleMode
+  senderMatch?: string
+  bodyMatch?: string
+  conditions?: SmsRuleCondition[]
+  actions: SmsRuleActions
+  isActive: boolean
+  priority?: number
+}
+
+export interface SmsRulePreviewInput {
+  mode: SmsRuleMode
+  senderMatch?: string
+  bodyMatch?: string
+  conditions?: SmsRuleCondition[]
+}
+
+type ResolvedSmsRule = {
+  mode: SmsRuleMode
+  senderMatch?: string
+  bodyMatch?: string
+  conditions: SmsRuleCondition[]
+  actions: SmsRuleActions
+  priority: number
+}
+
 type DuplicateMatch = {
   journalId: string
   score: number
@@ -186,15 +233,13 @@ class SmsService {
     await AsyncStorage.removeItem(this.PROCESSED_SMS_KEY)
   }
 
-  async previewRuleMatches(senderMatch: string, bodyMatch?: string): Promise<SmsInboxRecord[]> {
-    const senderRegex = this.buildRegex(senderMatch)
-    const bodyRegex = bodyMatch ? this.buildRegex(bodyMatch) : null
+  async previewRuleMatches(inputOrSender: SmsRulePreviewInput | string, bodyMatch?: string): Promise<SmsInboxRecord[]> {
+    const previewInput: SmsRulePreviewInput = typeof inputOrSender === 'string'
+      ? { mode: 'regex', senderMatch: inputOrSender, bodyMatch }
+      : inputOrSender
+
     const items = await this.inbox.query(Q.sortBy('sms_date', Q.desc), Q.take(50)).fetch()
-    return items.filter((item) => {
-      const senderOk = senderRegex?.test(item.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength))
-      const bodyOk = bodyRegex ? bodyRegex.test(item.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength)) : true
-      return !!senderOk && bodyOk
-    }).slice(0, 5)
+    return items.filter((item) => this.matchesPreviewRule(item, previewInput)).slice(0, 5)
   }
 
   async getRuleSuggestions(): Promise<SmsRuleSuggestion[]> {
@@ -323,23 +368,42 @@ class SmsService {
     }
   }
 
-  async saveAutoPostRule(data: { id?: string, senderMatch: string, bodyMatch?: string, sourceAccountId: string, categoryAccountId: string, isActive: boolean }) {
+  async saveAutoPostRule(data: SmsRuleDraftInput) {
+    const normalizedConditions = (data.conditions || []).filter((condition) => this.isMeaningfulCondition(condition))
+    const normalizedActions: SmsRuleActions = {
+      disposition: data.actions.disposition,
+      sourceAccountId: data.actions.sourceAccountId || undefined,
+      categoryAccountId: data.actions.categoryAccountId || undefined,
+    }
+    const senderFallback = data.mode === 'regex'
+      ? (data.senderMatch || '')
+      : normalizedConditions.find((condition) => condition.field === 'sender')?.value || 'structured'
+    const bodyFallback = data.mode === 'regex'
+      ? (data.bodyMatch || undefined)
+      : normalizedConditions.find((condition) => condition.field === 'body')?.value
+
     await database.write(async () => {
       if (data.id) {
         const rule = await this.rules.find(data.id)
         await rule.update((record) => {
-          record.senderMatch = data.senderMatch
-          record.bodyMatch = data.bodyMatch
-          record.sourceAccountId = data.sourceAccountId
-          record.categoryAccountId = data.categoryAccountId
+          record.senderMatch = senderFallback
+          record.bodyMatch = bodyFallback
+          record.conditionsJson = data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined
+          record.actionsJson = JSON.stringify(normalizedActions)
+          record.priority = data.priority ?? 100
+          record.sourceAccountId = normalizedActions.sourceAccountId || ''
+          record.categoryAccountId = normalizedActions.categoryAccountId || ''
           record.isActive = data.isActive
         })
       } else {
         await this.rules.create((record) => {
-          record.senderMatch = data.senderMatch
-          record.bodyMatch = data.bodyMatch
-          record.sourceAccountId = data.sourceAccountId
-          record.categoryAccountId = data.categoryAccountId
+          record.senderMatch = senderFallback
+          record.bodyMatch = bodyFallback
+          record.conditionsJson = data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined
+          record.actionsJson = JSON.stringify(normalizedActions)
+          record.priority = data.priority ?? 100
+          record.sourceAccountId = normalizedActions.sourceAccountId || ''
+          record.categoryAccountId = normalizedActions.categoryAccountId || ''
           record.isActive = data.isActive
         })
       }
@@ -358,7 +422,8 @@ class SmsService {
     if (messages.length === 0) {
       return 0
     }
-    const activeRules = await this.rules.query(Q.where('is_active', true)).fetch()
+    const activeRules = (await this.rules.query(Q.where('is_active', true)).fetch())
+      .sort((a, b) => this.getRulePriority(b) - this.getRulePriority(a))
     const processedIds = new Set(await this.getProcessedSmsIds())
     const existing = await this.inbox.query(Q.where('device_sms_id', Q.oneOf(messages.map((message) => message.id)))).fetch()
     const existingMap = new Map(existing.map((record) => [record.deviceSmsId, record]))
@@ -389,8 +454,8 @@ class SmsService {
       const record = await this.upsertInboxRecord(message, parsed, smsFingerprint, existingRecord, nextStatus, exactJournal?.id || fingerprintJournal?.id, duplicate)
 
       if (parsed.parseStatus === SmsParseStatus.PARSED && nextStatus === SmsProcessingStatus.PENDING) {
-        const autoPosted = await this.tryAutoPostRecord(record, parsed, activeRules)
-        if (autoPosted) {
+        const ruleResult = await this.tryAutoPostRecord(record, parsed, activeRules)
+        if (ruleResult === 'auto_posted') {
           importedCount += 1
         }
       }
@@ -399,16 +464,31 @@ class SmsService {
     return importedCount
   }
 
-  private async tryAutoPostRecord(record: SmsInboxRecord, parsed: ParsedTransaction, activeRules: SmsAutoPostRule[]): Promise<boolean> {
-    if (activeRules.length === 0 || !parsed.amount) return false
+  private async tryAutoPostRecord(
+    record: SmsInboxRecord,
+    parsed: ParsedTransaction,
+    activeRules: SmsAutoPostRule[]
+  ): Promise<'auto_posted' | 'ignored' | 'review' | 'none'> {
+    if (activeRules.length === 0 || !parsed.amount) return 'none'
 
     for (const rule of activeRules) {
-      const senderRegex = this.buildRegex(rule.senderMatch)
-      const bodyRegex = rule.bodyMatch ? this.buildRegex(rule.bodyMatch) : null
-      const senderOk = senderRegex?.test(record.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength))
-      const bodyOk = bodyRegex ? bodyRegex.test(record.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength)) : true
-      if (!senderOk || !bodyOk) {
+      const definition = this.getRuleDefinition(rule)
+      if (!this.matchesResolvedRule(record, definition)) {
         continue
+      }
+
+      if (definition.actions.disposition === 'ignore') {
+        await this.markInboxRecordStatus(record.id, SmsProcessingStatus.DISMISSED)
+        await this.markSmsAsProcessed(record.deviceSmsId)
+        return 'ignored'
+      }
+
+      if (definition.actions.disposition === 'review') {
+        return 'review'
+      }
+
+      if (!definition.actions.sourceAccountId || !definition.actions.categoryAccountId) {
+        return 'none'
       }
 
       const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency
@@ -434,13 +514,13 @@ class SmsService {
         },
         transactions: [
           {
-            accountId: rule.sourceAccountId,
+            accountId: definition.actions.sourceAccountId,
             amount: parsed.amount,
             transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
             currencyCode,
           },
           {
-            accountId: rule.categoryAccountId,
+            accountId: definition.actions.categoryAccountId,
             amount: parsed.amount,
             transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
             currencyCode,
@@ -450,10 +530,10 @@ class SmsService {
 
       await this.linkSmsToJournal(record.id, journal.id, SmsProcessingStatus.AUTO_POSTED)
       await this.markSmsAsProcessed(record.deviceSmsId)
-      return true
+      return 'auto_posted'
     }
 
-    return false
+    return 'none'
   }
 
   private async upsertInboxRecord(
@@ -747,6 +827,156 @@ class SmsService {
     } catch {
       return null
     }
+  }
+
+  private matchesPreviewRule(record: SmsInboxRecord, input: SmsRulePreviewInput): boolean {
+    if (input.mode === 'builder') {
+      const conditions = (input.conditions || []).filter((condition) => this.isMeaningfulCondition(condition))
+      if (conditions.length === 0) return false
+      return this.matchesStructuredConditions(record, conditions)
+    }
+
+    const senderRegex = this.buildRegex(input.senderMatch)
+    const bodyRegex = input.bodyMatch ? this.buildRegex(input.bodyMatch) : null
+    const senderOk = senderRegex?.test(record.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength))
+    const bodyOk = bodyRegex ? bodyRegex.test(record.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength)) : true
+    return !!senderOk && bodyOk
+  }
+
+  private getRulePriority(rule: SmsAutoPostRule): number {
+    return typeof rule.priority === 'number' ? rule.priority : 100
+  }
+
+  private getRuleDefinition(rule: SmsAutoPostRule): ResolvedSmsRule {
+    let conditions: SmsRuleCondition[] = []
+    let actions: SmsRuleActions = {
+      disposition: 'auto_post',
+      sourceAccountId: rule.sourceAccountId || undefined,
+      categoryAccountId: rule.categoryAccountId || undefined,
+    }
+    let mode: SmsRuleMode = 'regex'
+
+    if (rule.conditionsJson) {
+      try {
+        const parsed = JSON.parse(rule.conditionsJson)
+        if (Array.isArray(parsed)) {
+          conditions = parsed.filter((condition) => this.isMeaningfulCondition(condition))
+          if (conditions.length > 0) {
+            mode = 'builder'
+          }
+        }
+      } catch {
+        conditions = []
+      }
+    }
+
+    if (rule.actionsJson) {
+      try {
+        const parsed = JSON.parse(rule.actionsJson)
+        if (parsed && typeof parsed === 'object') {
+          actions = {
+            disposition: parsed.disposition === 'ignore' || parsed.disposition === 'review' ? parsed.disposition : 'auto_post',
+            sourceAccountId: parsed.sourceAccountId || actions.sourceAccountId,
+            categoryAccountId: parsed.categoryAccountId || actions.categoryAccountId,
+          }
+        }
+      } catch {
+        // keep fallback actions
+      }
+    }
+
+    return {
+      mode,
+      senderMatch: rule.senderMatch || undefined,
+      bodyMatch: rule.bodyMatch || undefined,
+      conditions,
+      actions,
+      priority: this.getRulePriority(rule),
+    }
+  }
+
+  private matchesResolvedRule(record: SmsInboxRecord, definition: ResolvedSmsRule): boolean {
+    if (definition.mode === 'builder' && definition.conditions.length > 0) {
+      return this.matchesStructuredConditions(record, definition.conditions)
+    }
+
+    const senderRegex = this.buildRegex(definition.senderMatch)
+    const bodyRegex = definition.bodyMatch ? this.buildRegex(definition.bodyMatch) : null
+    const senderOk = senderRegex?.test(record.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength))
+    const bodyOk = bodyRegex ? bodyRegex.test(record.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength)) : true
+    return !!senderOk && bodyOk
+  }
+
+  private matchesStructuredConditions(record: SmsInboxRecord, conditions: SmsRuleCondition[]): boolean {
+    return conditions.every((condition) => this.matchesCondition(record, condition))
+  }
+
+  private matchesCondition(record: SmsInboxRecord, condition: SmsRuleCondition): boolean {
+    const normalizedValue = condition.value?.trim()
+
+    switch (condition.field) {
+      case 'sender':
+        return this.matchesStringCondition(record.senderAddress, condition.operator as SmsRuleStringOperator, normalizedValue)
+      case 'body':
+        return this.matchesStringCondition(record.rawBody, condition.operator as SmsRuleStringOperator, normalizedValue)
+      case 'merchant':
+        return this.matchesStringCondition(record.parsedMerchant, condition.operator as SmsRuleStringOperator, normalizedValue)
+      case 'account_source':
+        return this.matchesStringCondition(record.parsedAccountSource, condition.operator as SmsRuleStringOperator, normalizedValue)
+      case 'direction':
+        return this.matchesStringCondition(record.direction, 'is', normalizedValue)
+      case 'currency':
+        return this.matchesStringCondition(record.parsedCurrencyCode, 'is', normalizedValue)
+      case 'amount':
+        return this.matchesAmountCondition(record.parsedAmount, condition)
+      default:
+        return false
+    }
+  }
+
+  private matchesStringCondition(
+    source: string | undefined,
+    operator: SmsRuleStringOperator,
+    value?: string
+  ): boolean {
+    if (!source || !value) return false
+    const left = source.toLowerCase()
+    const right = value.toLowerCase()
+    return operator === 'is' ? left === right : left.includes(right)
+  }
+
+  private matchesAmountCondition(amount: number | undefined, condition: SmsRuleCondition): boolean {
+    if (typeof amount !== 'number') return false
+    const operator = condition.operator as SmsRuleAmountOperator
+    const minValue = typeof condition.minValue === 'number' ? condition.minValue : undefined
+    const maxValue = typeof condition.maxValue === 'number' ? condition.maxValue : undefined
+    const exactValue = typeof condition.minValue === 'number' ? condition.minValue : undefined
+
+    switch (operator) {
+      case 'eq':
+        return exactValue !== undefined ? Math.abs(amount - exactValue) < 0.0001 : false
+      case 'gt':
+        return minValue !== undefined ? amount > minValue : false
+      case 'lt':
+        return minValue !== undefined ? amount < minValue : false
+      case 'between':
+        return minValue !== undefined && maxValue !== undefined
+          ? amount >= Math.min(minValue, maxValue) && amount <= Math.max(minValue, maxValue)
+          : false
+      default:
+        return false
+    }
+  }
+
+  private isMeaningfulCondition(condition: Partial<SmsRuleCondition> | null | undefined): condition is SmsRuleCondition {
+    if (!condition?.field || !condition.operator) return false
+    if (condition.field === 'amount') {
+      if (condition.operator === 'between') {
+        return typeof condition.minValue === 'number' && typeof condition.maxValue === 'number'
+      }
+      return typeof condition.minValue === 'number'
+    }
+    return !!condition.value?.trim()
   }
 
   private async getProcessedSmsIds(): Promise<string[]> {

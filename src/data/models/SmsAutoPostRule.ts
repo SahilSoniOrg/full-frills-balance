@@ -7,6 +7,9 @@ export default class SmsAutoPostRule extends Model {
 
     @field('sender_match') senderMatch!: string;
     @field('body_match') bodyMatch?: string;
+    @field('conditions_json') conditionsJson?: string;
+    @field('actions_json') actionsJson?: string;
+    @field('priority') priority?: number;
     @field('source_account_id') sourceAccountId!: string;
     @field('category_account_id') categoryAccountId!: string;
     @field('is_active') isActive!: boolean;

@@ -190,6 +190,20 @@ export interface SmsInboxRecordExport {
   updatedAt: string;
 }
 
+export interface SmsAutoPostRuleExport {
+  id: string;
+  senderMatch: string;
+  bodyMatch?: string;
+  conditionsJson?: string;
+  actionsJson?: string;
+  priority?: number;
+  sourceAccountId: string;
+  categoryAccountId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const snakeToCamel = (str: string) => str.replace(/(_\w)/g, (m) => m[1].toUpperCase());
 const DATE_COLUMN_NAMES = ['created_at', 'updated_at', 'deleted_at', 'journal_date', 'transaction_date', 'start_date', 'end_date', 'next_occurrence', 'effective_date'];
 
@@ -208,6 +222,7 @@ export interface ExportData {
   accountMetadata: AccountMetadataExport[];
   plannedPayments: PlannedPaymentExport[];
   journalMetadata: JournalMetadataExport[];
+  smsAutoPostRules: SmsAutoPostRuleExport[];
   smsInboxRecords: SmsInboxRecordExport[];
 }
 
@@ -223,6 +238,7 @@ interface ExportSummary {
   accountMetadata: number;
   plannedPayments: number;
   journalMetadata: number;
+  smsAutoPostRules: number;
   smsInboxRecords: number;
 }
 
@@ -335,6 +351,7 @@ class ExportService {
         accountMetadata,
         plannedPayments,
         journalMetadata,
+        smsAutoPostRules,
         smsInboxRecords,
         userPreferences,
       ] = await Promise.all([
@@ -349,6 +366,7 @@ class ExportService {
         this.fetchAndTransformTable<AccountMetadataExport>('account_metadata'),
         this.fetchAndTransformTable<PlannedPaymentExport>('planned_payments'),
         this.fetchAndTransformTable<JournalMetadataExport>('journal_metadata'),
+        this.fetchAndTransformTable<SmsAutoPostRuleExport>('sms_auto_post_rules'),
         this.fetchAndTransformTable<SmsInboxRecordExport>('sms_inbox_records'),
         preferences.loadPreferences(),
       ]);
@@ -368,6 +386,7 @@ class ExportService {
         accountMetadata,
         plannedPayments,
         journalMetadata,
+        smsAutoPostRules,
         smsInboxRecords,
       };
 
@@ -386,6 +405,7 @@ class ExportService {
         accountMetadata: exportData.accountMetadata.length,
         plannedPayments: exportData.plannedPayments.length,
         journalMetadata: exportData.journalMetadata.length,
+        smsAutoPostRules: exportData.smsAutoPostRules.length,
         smsInboxRecords: exportData.smsInboxRecords.length,
       });
 
@@ -418,6 +438,7 @@ class ExportService {
       accountMetadata,
       plannedPayments,
       journalMetadata,
+      smsAutoPostRules,
       smsInboxRecords,
     ] = await Promise.all([
       getCount('accounts'),
@@ -431,6 +452,7 @@ class ExportService {
       getCount('account_metadata'),
       getCount('planned_payments'),
       getCount('journal_metadata'),
+      getCount('sms_auto_post_rules'),
       getCount('sms_inbox_records'),
     ]);
 
@@ -446,6 +468,7 @@ class ExportService {
       accountMetadata,
       plannedPayments,
       journalMetadata,
+      smsAutoPostRules,
       smsInboxRecords,
     };
   }

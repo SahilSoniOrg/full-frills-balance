@@ -270,6 +270,14 @@ export const migrations = schemaMigrations({
                         { name: 'updated_at', type: 'number' },
                     ],
                 }),
+                addColumns({
+                    table: 'sms_auto_post_rules',
+                    columns: [
+                        { name: 'conditions_json', type: 'string', isOptional: true },
+                        { name: 'actions_json', type: 'string', isOptional: true },
+                        { name: 'priority', type: 'number', isOptional: true, isIndexed: true },
+                    ],
+                }),
             ],
         },
     ],

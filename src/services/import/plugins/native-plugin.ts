@@ -17,6 +17,7 @@ import {
     ImportedJournal,
     ImportedJournalMetadata,
     ImportedPlannedPayment,
+    ImportedSmsAutoPostRule,
     ImportedSmsInboxRecord,
     ImportedTransaction, importRepository
 } from '@/src/data/repositories/ImportRepository';
@@ -39,6 +40,7 @@ interface NativeImportData {
     accountMetadata?: ImportedAccountMetadata[];
     plannedPayments?: ImportedPlannedPayment[];
     journalMetadata?: ImportedJournalMetadata[];
+    smsAutoPostRules?: ImportedSmsAutoPostRule[];
     smsInboxRecords?: ImportedSmsInboxRecord[];
 }
 
@@ -246,6 +248,19 @@ export const nativePlugin: ImportPlugin = {
                     metadataJson: meta.metadataJson,
                     createdAt: parseTimestamp(meta.createdAt),
                     updatedAt: parseTimestamp(meta.updatedAt),
+                })),
+                smsAutoPostRules: (data.smsAutoPostRules || []).map((rule) => ({
+                    id: rule.id,
+                    senderMatch: rule.senderMatch,
+                    bodyMatch: rule.bodyMatch,
+                    conditionsJson: rule.conditionsJson,
+                    actionsJson: rule.actionsJson,
+                    priority: rule.priority,
+                    sourceAccountId: rule.sourceAccountId,
+                    categoryAccountId: rule.categoryAccountId,
+                    isActive: rule.isActive,
+                    createdAt: parseTimestamp(rule.createdAt),
+                    updatedAt: parseTimestamp(rule.updatedAt),
                 })),
                 smsInboxRecords: (data.smsInboxRecords || []).map((sms) => ({
                     id: sms.id,

@@ -185,6 +185,9 @@ export const schema = appSchema({
       columns: [
         { name: 'sender_match', type: 'string', isIndexed: true },
         { name: 'body_match', type: 'string', isOptional: true },
+        { name: 'conditions_json', type: 'string', isOptional: true },
+        { name: 'actions_json', type: 'string', isOptional: true },
+        { name: 'priority', type: 'number', isOptional: true, isIndexed: true },
         { name: 'source_account_id', type: 'string', isIndexed: true },
         { name: 'category_account_id', type: 'string', isIndexed: true },
         { name: 'is_active', type: 'boolean' },
