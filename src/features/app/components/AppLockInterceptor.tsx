@@ -1,6 +1,7 @@
 import { AppButton, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { Lock } from 'lucide-react-native';
@@ -21,7 +22,7 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
                 nextAppState === 'active'
             ) {
                 // Don't lock if we are currently showing the auth prompt or just did
-                const justUnlocked = Date.now() - lastUnlockTime.current < 2000;
+                const justUnlocked = Date.now() - lastUnlockTime.current < AppConfig.timing.appLockGracePeriodMs;
 
                 if (isAppLockEnabled && !isAuthenticating.current && !justUnlocked) {
                     setIsUnlocked(false);
@@ -74,7 +75,7 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
             // Small delay before resetting isAuthenticating to catch delayed app state changes
             setTimeout(() => {
                 isAuthenticating.current = false;
-            }, 500);
+            }, AppConfig.timing.appLockAuthTransitionMs);
         }
     };
 

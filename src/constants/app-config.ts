@@ -31,6 +31,8 @@ export const AppConfig = {
     debounceMs: 300,    // Input debounce timing
     focusDelayMs: 100,
     toastDurationMs: 3000,
+    appLockGracePeriodMs: 2000,
+    appLockAuthTransitionMs: 500,
   },
 
   // Input constraints
@@ -38,6 +40,7 @@ export const AppConfig = {
     maxAccountNameLength: 100,
     maxDescriptionLength: 255,
     maxNotesLength: 500,
+    maxDayOfMonthLength: 2,
     sms: {
       maxSenderMatchLength: 100,
       maxBodyMatchLength: 1000,

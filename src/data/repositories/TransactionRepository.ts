@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config'
 import { database } from '@/src/data/database/Database'
 import Transaction from '@/src/data/models/Transaction'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
@@ -104,7 +105,7 @@ export class TransactionRepository {
     return query.fetch()
   }
 
-  observeByAccounts(accountIds: string[], limit: number = 50, dateRange?: { startDate: number, endDate: number }) {
+  observeByAccounts(accountIds: string[], limit: number = AppConfig.pagination.dashboardPageSize, dateRange?: { startDate: number, endDate: number }) {
     const clauses: any[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('account_id', Q.oneOf(accountIds)),
@@ -174,7 +175,7 @@ export class TransactionRepository {
       ])
   }
 
-  async findTransactionsByAccounts(accountIds: string[], limit: number = 50, dateRange?: { startDate: number, endDate: number }): Promise<Transaction[]> {
+  async findTransactionsByAccounts(accountIds: string[], limit: number = AppConfig.pagination.dashboardPageSize, dateRange?: { startDate: number, endDate: number }): Promise<Transaction[]> {
     const clauses: any[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('account_id', Q.oneOf(accountIds)),

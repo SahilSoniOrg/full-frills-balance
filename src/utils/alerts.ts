@@ -13,16 +13,16 @@
  *   confirm.show({ title: 'Delete?', message: 'This cannot be undone', onConfirm: () => {} })
  */
 
+import { AppConfig } from '@/src/constants'
 import { handleError } from '@/src/utils/errors'
 import { logger } from '@/src/utils/logger'
-import { AppConfig } from '@/src/constants'
 import { Alert, Platform } from 'react-native'
 
 // Toast configuration
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
 export interface ToastOptions {
-  duration?: number // milliseconds, default 3000
+  duration?: number // milliseconds, default AppConfig.timing.toastDurationMs
   type?: ToastType
 }
 

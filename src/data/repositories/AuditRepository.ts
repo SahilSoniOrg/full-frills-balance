@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config'
 import { database } from '@/src/data/database/Database'
 import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog'
 import { Q } from '@nozbe/watermelondb'
@@ -65,7 +66,7 @@ export class AuditRepository {
     /**
      * Observe recent audit logs
      */
-    observeRecent(limit: number = 100) {
+    observeRecent(limit: number = AppConfig.pagination.auditRecentLimit) {
         return this.auditLogs
             .query(
                 Q.sortBy('timestamp', Q.desc),
@@ -77,7 +78,7 @@ export class AuditRepository {
     /**
      * Fetch recent audit logs
      */
-    async fetchRecent(limit: number = 100): Promise<AuditLog[]> {
+    async fetchRecent(limit: number = AppConfig.pagination.auditRecentLimit): Promise<AuditLog[]> {
         return this.auditLogs
             .query(
                 Q.sortBy('timestamp', Q.desc),

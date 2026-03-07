@@ -1,5 +1,6 @@
 import { AppInput } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -34,7 +35,7 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
                         onChangeText={setStatementDay}
                         placeholder="e.g. 15"
                         keyboardType="number-pad"
-                        maxLength={2}
+                        maxLength={AppConfig.input.maxDayOfMonthLength}
                     />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -44,7 +45,7 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
                         onChangeText={setDueDay}
                         placeholder="e.g. 5"
                         keyboardType="number-pad"
-                        maxLength={2}
+                        maxLength={AppConfig.input.maxDayOfMonthLength}
                     />
                 </View>
             </View>
