@@ -50,9 +50,9 @@ export function useBudgetDetailViewModel() {
 
     const { data: budgetData, isLoading } = useObservable(() => budgetData$, [budgetId, targetMonth], null)
 
-    const budget = budgetData ? budgetData[0] : null
-    const usage = budgetData ? budgetData[1] : null
-    const transactions = budgetData ? budgetData[2] : []
+    const budget = useMemo(() => budgetData ? budgetData[0] : null, [budgetData])
+    const usage = useMemo(() => budgetData ? budgetData[1] : null, [budgetData])
+    const transactions = useMemo(() => budgetData ? budgetData[2] : [], [budgetData])
 
     const transactionGroupingOptions = useMemo(() => ({
         items: transactions,

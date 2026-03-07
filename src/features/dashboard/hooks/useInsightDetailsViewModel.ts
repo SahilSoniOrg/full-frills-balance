@@ -47,7 +47,7 @@ export function useInsightDetailsViewModel({
         return allJournals;
     }, [allJournals]);
 
-    const { precision } = useCurrencyPrecision(baseCurrency);
+    useCurrencyPrecision(baseCurrency);
 
     const transactionGroupingOptions = useMemo(() => ({
         items: enrichedJournals,
@@ -112,7 +112,7 @@ export function useInsightDetailsViewModel({
                 }
             };
         }
-    }), [enrichedJournals, baseCurrency, precision]);
+    }), [enrichedJournals, baseCurrency]);
 
     const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
 

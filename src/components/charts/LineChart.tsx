@@ -127,7 +127,7 @@ export const LineChart = ({
         }
 
         return { path: pathStr, secondaryPath: secondaryPathStr, gradientPath: gradientPathStr, minX, maxX, displayMinY, displayRange, maxValPoint };
-    }, [data, height, CHART_WIDTH, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX, secondaryData]);
+    }, [data, height, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX, secondaryData]);
 
     const lastGestureIndex = useRef(-1);
 
@@ -188,7 +188,7 @@ export const LineChart = ({
         const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
 
         return { x, y, point };
-    }, [selectedIndex, data, minX, maxX, displayMinY, displayRange, height, CHART_WIDTH, PLOT_WIDTH, PADDING_LEFT, PADDING_VERTICAL]);
+    }, [selectedIndex, data, minX, maxX, displayMinY, displayRange, height, PLOT_WIDTH, PADDING_LEFT, PADDING_VERTICAL]);
 
     if (data.length === 0) {
         return (

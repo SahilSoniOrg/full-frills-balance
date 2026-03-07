@@ -149,7 +149,7 @@ export class IntegrityService {
         `
 
         // Parameters: isNormalDebit(1/0), isNormalDebit(1/0), accountId, cutoffDate
-        const args: Array<string | number> = [
+        const args: (string | number)[] = [
             isNormalDebit ? 1 : 0,
             isNormalDebit ? 1 : 0,
             account.id,

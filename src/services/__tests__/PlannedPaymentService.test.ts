@@ -1,3 +1,4 @@
+import { database } from '@/src/data/database/Database';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -25,7 +26,7 @@ jest.mock('@/src/data/database/Database', () => ({
     },
 }));
 
-import { database } from '@/src/data/database/Database';
+
 
 describe('PlannedPaymentService', () => {
     describe('calculateNextOccurrence', () => {

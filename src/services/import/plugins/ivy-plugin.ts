@@ -104,7 +104,7 @@ function parseSerializedIds(serialized?: string): string[] {
         const parsed = JSON.parse(serialized);
         if (Array.isArray(parsed)) return parsed;
         return [String(parsed)];
-    } catch (e) {
+    } catch {
         // If it's not JSON, it might be a raw ID string
         return [serialized];
     }

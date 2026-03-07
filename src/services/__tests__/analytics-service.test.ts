@@ -2,6 +2,7 @@
 process.env.EXPO_PUBLIC_POSTHOG_API_KEY = 'test-key';
 process.env.EXPO_PUBLIC_POSTHOG_HOST = 'https://test.posthog.com';
 
+// eslint-disable-next-line import/first
 import { AnalyticsService } from '../analytics-service';
 
 // Mock PostHog

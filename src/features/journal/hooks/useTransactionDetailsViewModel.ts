@@ -60,7 +60,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
     const { journal, isLoading: isLoadingJournal } = useJournal(journalId);
 
-    const journalInfo = journal ? {
+    const journalInfo = useMemo(() => journal ? {
         description: journal.description,
         date: journal.journalDate,
         status: journal.status,
@@ -69,7 +69,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         totalAmount: journal.totalAmount || 0,
         plannedPaymentId: journal.plannedPaymentId,
         journalDate: journal.journalDate
-    } : null;
+    } : null, [journal]);
 
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
@@ -165,7 +165,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 }
             }
         );
-    }, [journalId, journalInfo, router, amountText]);
+    }, [journalInfo, router, amountText]);
 
     const splitItems = useMemo(() => {
         return transactions.map((item: TransactionWithAccountInfo) => {

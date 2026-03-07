@@ -46,7 +46,7 @@ export function useBudgetEditViewModel() {
                 setLoading(false)
             })
         }
-    }, [budgetId])
+    }, [budgetId, defaultCurrency])
 
     const save = useCallback(async () => {
         if (!name.trim() || !amount || selectedAccountIds.length === 0) {
@@ -75,7 +75,7 @@ export function useBudgetEditViewModel() {
         } finally {
             setIsSaving(false)
         }
-    }, [budget, name, amount, startMonth, selectedAccountIds])
+    }, [budget, name, amount, startMonth, selectedAccountIds, currencyCode])
 
     const deleteBudget = useCallback(async () => {
         if (budget) {

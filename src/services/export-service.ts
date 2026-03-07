@@ -203,11 +203,11 @@ function toIsoDate(value: Date | number | undefined | null): string | undefined 
 }
 
 class ExportService {
-  private typeSafeColumns(tableSchema: any): Array<{ name: string; type: string }> {
+  private typeSafeColumns(tableSchema: any): { name: string; type: string }[] {
     const rawColumns = Array.isArray(tableSchema?.columns)
       ? tableSchema.columns
       : Object.values(tableSchema?.columns || {});
-    return rawColumns as Array<{ name: string; type: string }>;
+    return rawColumns as { name: string; type: string }[];
   }
 
   private getTableSchema(tableName: string) {

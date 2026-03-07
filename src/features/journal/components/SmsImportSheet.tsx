@@ -176,7 +176,7 @@ export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
                 <Text style={styles.bodyPreview} numberOfLines={2}>{item.rawBody}</Text>
             </TouchableOpacity>
         );
-    }, [handleTransactionPress]);
+    }, [handleTransactionPress, handleDismissTransaction]);
 
     return (
         <Modal visible={true} transparent={true} animationType="slide" onRequestClose={onClose}>

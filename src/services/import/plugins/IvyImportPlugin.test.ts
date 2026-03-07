@@ -1,6 +1,7 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { integrityService } from '@/src/services/integrity-service';
+import { preferences } from '@/src/utils/preferences';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/ImportRepository', () => ({
@@ -107,7 +108,6 @@ describe('IvyImportPlugin', () => {
             // The budget scopes both of them.
             expect(lastBatch.budgetScopes).toHaveLength(2);
 
-            const { preferences } = require('@/src/utils/preferences');
             expect(preferences.setUserName).toHaveBeenCalledWith('Sahil');
             expect(preferences.setDefaultCurrencyCode).toHaveBeenCalledWith('INR');
         });

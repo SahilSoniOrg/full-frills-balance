@@ -272,7 +272,7 @@ export function useSimpleJournalEditor({
                 }
             }
         });
-    }, [accounts, editor.lines, editor.updateLine]);
+    }, [accounts, editor.lines, editor.updateLine, editor]);
 
 
     const handleSave = useCallback(async () => {
