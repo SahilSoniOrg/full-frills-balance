@@ -177,6 +177,7 @@ export function useAccountActions() {
         icon?: string;
         initialBalance?: number;
         parentAccountId?: string | null;
+        metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
     }) => {
         return accountService.createAccount(data)
     }, [])
@@ -189,6 +190,7 @@ export function useAccountActions() {
         description?: string;
         icon?: string;
         parentAccountId?: string | null;
+        metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
     }) => {
         return accountService.updateAccount(account.id, data)
     }, [])

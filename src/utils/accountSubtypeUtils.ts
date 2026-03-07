@@ -35,3 +35,15 @@ export function isLiquidLiabilitySubtype(subtype?: AccountSubtype): boolean {
     if (!subtype) return false;
     return LIQUID_LIABILITY_SUBTYPES.includes(subtype);
 }
+export const LOAN_SUBTYPES: readonly AccountSubtype[] = [
+    AccountSubtype.LOAN,
+    AccountSubtype.MORTGAGE,
+    AccountSubtype.STUDENT_LOAN,
+    AccountSubtype.AUTO_LOAN,
+    AccountSubtype.PERSONAL_LOAN,
+];
+
+export function isLoanSubtype(subtype?: AccountSubtype): boolean {
+    if (!subtype) return false;
+    return LOAN_SUBTYPES.includes(subtype);
+}

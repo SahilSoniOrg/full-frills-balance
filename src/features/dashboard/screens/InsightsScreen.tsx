@@ -66,7 +66,7 @@ export default function InsightsScreen() {
                         <View style={styles.empty}>
                             <AppIcon name="info" size={Size.lg} color={theme.textTertiary} />
                             <AppText variant="body" color="secondary" style={styles.emptyText}>
-                                No active insights. You're all caught up!
+                                No active insights. You&apos;re all caught up!
                             </AppText>
                         </View>
                     )

@@ -56,6 +56,23 @@ export interface AccountFormViewModel {
     setIsParentPickerVisible: (visible: boolean) => void;
     isParent: boolean;
     showCurrency: boolean;
+    // Metadata fields
+    statementDay: string;
+    setStatementDay: (value: string) => void;
+    dueDay: string;
+    setDueDay: (value: string) => void;
+    creditLimitAmount: string;
+    setCreditLimitAmount: (value: string) => void;
+    apr: string;
+    setApr: (value: string) => void;
+    emiDay: string;
+    setEmiDay: (value: string) => void;
+    loanTenureMonths: string;
+    setLoanTenureMonths: (value: string) => void;
+    minimumPaymentAmount: string;
+    setMinimumPaymentAmount: (value: string) => void;
+    notes: string;
+    setNotes: (value: string) => void;
 }
 
 export function useAccountFormViewModel(): AccountFormViewModel {
@@ -100,6 +117,18 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     const [parentAccountId, setParentAccountId] = useState('');
     const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
     const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
+
+    // Metadata State
+    const [statementDay, setStatementDay] = useState('');
+    const [dueDay, setDueDay] = useState('');
+    const [creditLimitAmount, setCreditLimitAmount] = useState('');
+    const [apr, setApr] = useState('');
+    const [emiDay, setEmiDay] = useState('');
+    const [loanTenureMonths, setLoanTenureMonths] = useState('');
+    const [minimumPaymentAmount, setMinimumPaymentAmount] = useState('');
+    const [notes, setNotes] = useState('');
+    const [localFormError, setLocalFormError] = useState<string | null>(null);
+
     const hasExistingAccounts = accounts.length > 0;
 
     const formDirtyRef = useRef({
@@ -118,6 +147,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     // Sync Effects
     useEffect(() => {
         formDirtyRef.current = { name: false, type: false, subtype: false, currency: false, icon: false, balance: false };
+        setLocalFormError(null); // Clear local form error on accountId change
     }, [accountId]);
 
     useEffect(() => {
@@ -135,6 +165,20 @@ export function useAccountFormViewModel(): AccountFormViewModel {
             if (isEditMode && currentBalanceData && !formDirtyRef.current.balance) {
                 setInitialBalance(currentBalanceData.balance.toString());
             }
+
+            // Load Metadata
+            accountRepository.findMetadata(existingAccount.id).then(metadata => {
+                if (metadata) {
+                    if (metadata.statementDay !== undefined) setStatementDay(metadata.statementDay.toString());
+                    if (metadata.dueDay !== undefined) setDueDay(metadata.dueDay.toString());
+                    if (metadata.creditLimitAmount !== undefined) setCreditLimitAmount(metadata.creditLimitAmount.toString());
+                    if (metadata.aprBps !== undefined) setApr((metadata.aprBps / 100).toString());
+                    if (metadata.emiDay !== undefined) setEmiDay(metadata.emiDay.toString());
+                    if (metadata.loanTenureMonths !== undefined) setLoanTenureMonths(metadata.loanTenureMonths.toString());
+                    if (metadata.minimumPaymentAmount !== undefined) setMinimumPaymentAmount(metadata.minimumPaymentAmount.toString());
+                    if (metadata.notes !== undefined) setNotes(metadata.notes);
+                }
+            });
         }
     }, [existingAccount, accountVersion, isEditMode, currentBalanceData]);
 
@@ -165,9 +209,38 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         const nameValidation = validation.validateName(accountName);
         if (!nameValidation.isValid) {
             logger.warn(`[AccountCreation] Validation failed: ${nameValidation.error}`);
-            showErrorAlert(new ValidationError(nameValidation.error!));
+            setLocalFormError(nameValidation.error!);
             return;
         }
+
+        // Metadata Validation
+        if (accountType === 'LIABILITY') {
+            const dayFields: Record<string, string> = {
+                'Statement Day': statementDay,
+                'Due Day': dueDay,
+                'EMI Day': emiDay,
+            };
+
+            for (const [name, value] of Object.entries(dayFields)) {
+                if (value) {
+                    const day = parseInt(value, 10);
+                    if (isNaN(day) || day < 1 || day > 31) {
+                        setLocalFormError(`${name} must be between 1 and 31`);
+                        return;
+                    }
+                }
+            }
+
+            if (apr) {
+                const aprVal = parseFloat(apr);
+                if (isNaN(aprVal) || aprVal < 0 || aprVal > 100) {
+                    setLocalFormError('APR must be between 0 and 100');
+                    return;
+                }
+            }
+        }
+
+        setLocalFormError(null);
 
         if (validation.checkForDuplicates(accountName)) {
             // Error is already set in validation hook state, but we ensure we don't proceed
@@ -185,6 +258,17 @@ export function useAccountFormViewModel(): AccountFormViewModel {
             }
         }
 
+        const metadata = {
+            statementDay: statementDay ? parseInt(statementDay, 10) : undefined,
+            dueDay: dueDay ? parseInt(dueDay, 10) : undefined,
+            creditLimitAmount: creditLimitAmount ? parseFloat(creditLimitAmount) : undefined,
+            aprBps: apr ? Math.round(parseFloat(apr) * 100) : undefined,
+            emiDay: emiDay ? parseInt(emiDay, 10) : undefined,
+            loanTenureMonths: loanTenureMonths ? parseInt(loanTenureMonths, 10) : undefined,
+            minimumPaymentAmount: minimumPaymentAmount ? parseFloat(minimumPaymentAmount) : undefined,
+            notes: notes || undefined,
+        };
+
         await persistence.handleSave(
             accountName,
             accountType,
@@ -194,6 +278,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
             initialBalance,
             balanceDataPayload,
             parentAccountId || undefined,
+            metadata
         );
     };
 
@@ -256,12 +341,12 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         initialBalance,
         onInitialBalanceChange,
         isCreating: persistence.isCreating,
-        formError: validation.formError,
+        formError: validation.formError || localFormError,
         onSave,
         saveLabel,
         currencyLabel,
         showInitialBalance: showBalance,
-        isSaveDisabled: !accountName.trim() || persistence.isCreating || !!validation.formError,
+        isSaveDisabled: !accountName.trim() || persistence.isCreating || !!validation.formError || !!localFormError,
         parentAccountId,
         parentAccountName,
         setParentAccountId,
@@ -270,5 +355,21 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         setIsParentPickerVisible,
         isParent: effectiveIsParent,
         showCurrency,
+        statementDay,
+        setStatementDay,
+        dueDay,
+        setDueDay,
+        creditLimitAmount,
+        setCreditLimitAmount,
+        apr,
+        setApr,
+        emiDay,
+        setEmiDay,
+        loanTenureMonths,
+        setLoanTenureMonths,
+        minimumPaymentAmount,
+        setMinimumPaymentAmount,
+        notes,
+        setNotes,
     };
 }

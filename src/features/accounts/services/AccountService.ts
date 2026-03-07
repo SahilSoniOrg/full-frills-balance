@@ -29,6 +29,19 @@ export interface CreateAccountData {
     initialBalance?: number;
     orderNum?: number;
     parentAccountId?: string | null;
+    metadata?: Partial<{
+        statementDay: number;
+        dueDay: number;
+        minimumPaymentAmount: number;
+        minimumBalanceAmount: number;
+        creditLimitAmount: number;
+        aprBps: number;
+        emiDay: number;
+        loanTenureMonths: number;
+        autopayEnabled: boolean;
+        gracePeriodDays: number;
+        notes: string;
+    }>;
 }
 
 export class AccountService {
@@ -64,7 +77,8 @@ export class AccountService {
             description: data.description,
             icon: data.icon,
             orderNum: orderNum,
-            parentAccountId: data.parentAccountId || undefined
+            parentAccountId: data.parentAccountId || undefined,
+            metadata: data.metadata
         });
 
         // 2. Audit creation
@@ -160,9 +174,9 @@ export class AccountService {
         }
 
         // Build update object selectively to avoid overwriting existing fields with undefined
-        const updatePayload: any = {};
+        const updatePayload: Partial<import('@/src/data/repositories/AccountRepository').AccountPersistenceInput> = {};
         if (updates.name !== undefined) updatePayload.name = updates.name;
-        if (updates.accountType !== undefined) updatePayload.accountType = updates.accountType as AccountType;
+        if (updates.accountType !== undefined) updatePayload.accountType = updates.accountType;
         if (updates.accountSubtype !== undefined) updatePayload.accountSubtype = updates.accountSubtype;
         if (updates.currencyCode !== undefined) updatePayload.currencyCode = updates.currencyCode;
         if (updates.description !== undefined) updatePayload.description = updates.description;
@@ -171,7 +185,11 @@ export class AccountService {
 
         // Handle parentAccountId specifically as it can be null (to clear parent)
         if (updates.parentAccountId !== undefined) {
-            updatePayload.parentAccountId = updates.parentAccountId;
+            updatePayload.parentAccountId = updates.parentAccountId || undefined;
+        }
+
+        if (updates.metadata !== undefined) {
+            updatePayload.metadata = updates.metadata;
         }
 
         logger.info('[AccountService] updateAccount payload prepared', { accountId, updatePayload });

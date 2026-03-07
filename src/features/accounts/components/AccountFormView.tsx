@@ -12,6 +12,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
 export function AccountFormView(vm: AccountFormViewModel) {
     const { theme, fonts } = useTheme();
@@ -48,6 +49,22 @@ export function AccountFormView(vm: AccountFormViewModel) {
         showCurrency,
         isParentPickerVisible,
         setIsParentPickerVisible,
+        statementDay,
+        setStatementDay,
+        dueDay,
+        setDueDay,
+        creditLimitAmount,
+        setCreditLimitAmount,
+        apr,
+        setApr,
+        emiDay,
+        setEmiDay,
+        loanTenureMonths,
+        setLoanTenureMonths,
+        minimumPaymentAmount,
+        setMinimumPaymentAmount,
+        notes,
+        setNotes,
     } = vm;
 
     return (
@@ -178,6 +195,27 @@ export function AccountFormView(vm: AccountFormViewModel) {
                         </TouchableOpacity>
                     </AppCard>
 
+                    <AccountMetadataSection
+                        accountType={accountType}
+                        accountSubtype={accountSubtype}
+                        statementDay={statementDay}
+                        setStatementDay={setStatementDay}
+                        dueDay={dueDay}
+                        setDueDay={setDueDay}
+                        creditLimitAmount={creditLimitAmount}
+                        setCreditLimitAmount={setCreditLimitAmount}
+                        emiDay={emiDay}
+                        setEmiDay={setEmiDay}
+                        loanTenureMonths={loanTenureMonths}
+                        setLoanTenureMonths={setLoanTenureMonths}
+                        minimumPaymentAmount={minimumPaymentAmount}
+                        setMinimumPaymentAmount={setMinimumPaymentAmount}
+                        apr={apr}
+                        setApr={setApr}
+                        notes={notes}
+                        setNotes={setNotes}
+                    />
+
                 </ScrollView>
                 <SubmitFooter
                     onPress={onSave}
@@ -276,5 +314,19 @@ const styles = StyleSheet.create({
     },
     currencyWrapper: {
         width: 100,
+    },
+    metadataSection: {
+        marginTop: Spacing.sm,
+        marginBottom: Spacing.xl,
+    },
+    sectionTitle: {
+        fontSize: Typography.sizes.sm,
+        letterSpacing: 1.5,
+        marginLeft: Spacing.xs,
+        marginBottom: Spacing.sm,
+    },
+    metadataRow: {
+        flexDirection: 'row',
+        gap: Spacing.md,
     },
 });

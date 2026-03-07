@@ -5,6 +5,7 @@ import Account, {
   getDefaultSubtypeForType,
   isSubtypeAllowedForType
 } from '@/src/data/models/Account'
+import AccountMetadata from '@/src/data/models/AccountMetadata'
 import Transaction from '@/src/data/models/Transaction'
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository'
 import { ValidationError } from '@/src/utils/errors'
@@ -22,6 +23,19 @@ export interface AccountPersistenceInput {
   icon?: string
   orderNum?: number
   parentAccountId?: string
+  metadata?: Partial<{
+    statementDay: number
+    dueDay: number
+    minimumPaymentAmount: number
+    minimumBalanceAmount: number
+    creditLimitAmount: number
+    aprBps: number
+    emiDay: number
+    loanTenureMonths: number
+    autopayEnabled: boolean
+    gracePeriodDays: number
+    notes: string
+  }>
 }
 
 export class AccountRepository {
@@ -31,6 +45,10 @@ export class AccountRepository {
 
   private get accounts() {
     return this.db.collections.get<Account>('accounts')
+  }
+
+  private get metadata() {
+    return this.db.collections.get<AccountMetadata>('account_metadata')
   }
 
   /**
@@ -98,7 +116,17 @@ export class AccountRepository {
 
   async find(id: string): Promise<Account | null> {
     try {
-      return await this.accounts.find(id)
+      const account = await this.accounts.find(id)
+      return account.deletedAt ? null : account
+    } catch {
+      return null
+    }
+  }
+
+  async findMetadata(accountId: string): Promise<AccountMetadata | null> {
+    try {
+      const records = await this.metadata.query(Q.where('account_id', accountId)).fetch()
+      return records[0] || null
     } catch {
       return null
     }
@@ -180,12 +208,26 @@ export class AccountRepository {
       accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType)
     }
     this.validateSubtype(payload.accountType, payload.accountSubtype)
+
     return await this.db.write(async () => {
-      return this.accounts.create((account) => {
-        Object.assign(account, payload)
-        account.createdAt = new Date()
-        account.updatedAt = new Date()
+      const account = await this.accounts.create((acc) => {
+        const { metadata, ...accountData } = payload
+        Object.assign(acc, accountData)
+        // metadata is not a field on Account model
+        acc.createdAt = new Date()
+        acc.updatedAt = new Date()
       })
+
+      if (data.metadata) {
+        await this.metadata.create((meta) => {
+          Object.assign(meta, data.metadata)
+          meta.account.set(account)
+          meta.createdAt = new Date()
+          meta.updatedAt = new Date()
+        })
+      }
+
+      return account
     })
   }
 
@@ -206,11 +248,31 @@ export class AccountRepository {
     const nextType = normalizedUpdates.accountType ?? account.accountType
     const nextSubtype = normalizedUpdates.accountSubtype ?? account.accountSubtype
     this.validateSubtype(nextType, nextSubtype)
+
     return await this.db.write(async () => {
       await account.update((acc) => {
-        Object.assign(acc, normalizedUpdates)
+        const { metadata, ...accountUpdates } = normalizedUpdates
+        Object.assign(acc, accountUpdates)
         acc.updatedAt = new Date()
       })
+
+      if (updates.metadata) {
+        const existingMetadata = await this.findMetadata(account.id)
+        if (existingMetadata) {
+          await existingMetadata.update((meta) => {
+            Object.assign(meta, updates.metadata)
+            meta.updatedAt = new Date()
+          })
+        } else {
+          await this.metadata.create((meta) => {
+            Object.assign(meta, updates.metadata)
+            meta.account.set(account)
+            meta.createdAt = new Date()
+            meta.updatedAt = new Date()
+          })
+        }
+      }
+
       return account
     })
   }
