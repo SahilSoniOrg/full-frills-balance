@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
+import JournalMetadata from '@/src/data/models/JournalMetadata'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
@@ -42,7 +43,7 @@ export class JournalRepository {
   }
 
   private get journalMetadata() {
-    return database.collections.get<any>('journal_metadata')
+    return database.collections.get<JournalMetadata>('journal_metadata')
   }
 
   journalsQuery(...clauses: any[]) {
@@ -208,6 +209,70 @@ export class JournalRepository {
         Q.sortBy('journal_date', 'desc')
       )
       .fetch()
+  }
+
+  async findMetadataByJournalId(journalId: string): Promise<JournalMetadata | null> {
+    const records = await this.journalMetadata
+      .query(Q.where('journal_id', journalId))
+      .fetch()
+
+    return records[0] || null
+  }
+
+  async findJournalByOriginalSmsId(originalSmsId: string): Promise<Journal | null> {
+    const metadata = await this.journalMetadata
+      .query(Q.where('original_sms_id', originalSmsId))
+      .fetch()
+
+    if (metadata.length === 0) return null
+    return this.find(metadata[0].journal.id)
+  }
+
+  async findJournalBySmsFingerprint(smsFingerprint: string): Promise<Journal | null> {
+    const metadataRecords = await this.journalMetadata
+      .query(Q.where('import_source', 'sms'))
+      .fetch()
+
+    for (const metadata of metadataRecords) {
+      try {
+        const parsed = metadata.metadataJson ? JSON.parse(metadata.metadataJson) : {}
+        if (parsed?.smsFingerprint === smsFingerprint) {
+          return this.find(metadata.journal.id)
+        }
+      } catch {
+        continue
+      }
+    }
+
+    return null
+  }
+
+  async findNearbyJournals(params: {
+    centerDate: number
+    windowMs: number
+    amount?: number
+    excludeJournalId?: string
+    limit?: number
+  }): Promise<Journal[]> {
+    const { centerDate, windowMs, amount, excludeJournalId, limit = 10 } = params
+    const clauses: any[] = [
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+      Q.where('journal_date', Q.gte(centerDate - windowMs)),
+      Q.where('journal_date', Q.lte(centerDate + windowMs)),
+      Q.sortBy('journal_date', 'desc'),
+      Q.take(limit),
+    ]
+
+    if (typeof amount === 'number') {
+      clauses.unshift(Q.where('total_amount', amount))
+    }
+
+    if (excludeJournalId) {
+      clauses.unshift(Q.where('id', Q.notEq(excludeJournalId)))
+    }
+
+    return this.journals.query(...clauses).fetch()
   }
 
   async countNonDeleted(): Promise<number> {

@@ -48,6 +48,14 @@ export function SettingsView(vm: SettingsViewModel) {
                 <SettingsSection title="Automation">
                     <SettingsActionRow
                         icon="messageCircle"
+                        title="SMS Inbox"
+                        description="Review pending, processed, duplicate, and failed SMS imports"
+                        actionLabel="Open"
+                        onPress={vm.onSmsInbox}
+                        withDivider
+                    />
+                    <SettingsActionRow
+                        icon="messageCircle"
                         title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
                         description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
                         actionLabel="Rules"

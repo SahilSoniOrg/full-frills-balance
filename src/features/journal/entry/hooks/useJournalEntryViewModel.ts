@@ -60,6 +60,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     const { accounts, isLoading: isLoadingAccounts } = useAccounts();
 
     const smsId = params.smsId as string | undefined;
+    const smsRecordId = params.smsRecordId as string | undefined;
 
     const editor = useJournalEditor({
         journalId: params.journalId as string,
@@ -68,6 +69,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         initialAmount: params.amount as string,
         initialDescription: params.notes as string,
         smsId,
+        smsRecordId,
         smsSender: params.smsSender as string,
         rawSmsBody: params.rawSmsBody as string,
         initialDate: params.initialDate as string,
@@ -75,7 +77,16 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         initialDestinationId: params.destinationAccountId as string,
         // M-9 fix: sms processing is a screen-level concern, not a journal editor concern.
         // The hook calls this callback after a successful save without knowing what it does.
-        onAfterSave: smsId ? () => smsService.markSmsAsProcessed(smsId) : undefined,
+        onAfterSave: smsRecordId
+            ? async (result) => {
+                if (result.journalId) {
+                    await smsService.finalizeManualImport(smsRecordId, result.journalId);
+                }
+                if (smsId) {
+                    await smsService.markSmsAsProcessed(smsId);
+                }
+            }
+            : (smsId ? async () => smsService.markSmsAsProcessed(smsId) : undefined),
         onSuccess: () => AppNavigation.back(),
     });
 

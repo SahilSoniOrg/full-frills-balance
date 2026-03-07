@@ -22,6 +22,8 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
         formattedDate,
         journalIdShort,
         onHistoryPress,
+        smsInfo,
+        onOpenSmsInbox,
         onBack,
         splitItems,
     } = vm;
@@ -172,6 +174,68 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                         onPress={onHistoryPress}
                         padding="sm"
                     />
+
+                    {smsInfo && (
+                        <>
+                            <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+                            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.sm, paddingHorizontal: Spacing.md }}>
+                                IMPORTED FROM SMS
+                            </AppText>
+                            <ListRow
+                                title="Sender"
+                                trailing={<AppText variant="body">{smsInfo.sender || '-'}</AppText>}
+                                padding="sm"
+                            />
+                            {smsInfo.smsDate && (
+                                <ListRow
+                                    title="SMS Date"
+                                    trailing={<AppText variant="body">{smsInfo.smsDate}</AppText>}
+                                    padding="sm"
+                                />
+                            )}
+                            {smsInfo.amountText && (
+                                <ListRow
+                                    title="Parsed Amount"
+                                    trailing={<AppText variant="body">{smsInfo.amountText}</AppText>}
+                                    padding="sm"
+                                />
+                            )}
+                            {smsInfo.referenceNumber && (
+                                <ListRow
+                                    title="Reference"
+                                    trailing={<AppText variant="body">{smsInfo.referenceNumber}</AppText>}
+                                    padding="sm"
+                                />
+                            )}
+                            {smsInfo.accountSource && (
+                                <ListRow
+                                    title="Account Source"
+                                    trailing={<AppText variant="body">{smsInfo.accountSource}</AppText>}
+                                    padding="sm"
+                                />
+                            )}
+                            {smsInfo.parseReason && (
+                                <ListRow
+                                    title="Parse Note"
+                                    trailing={<AppText variant="body">{smsInfo.parseReason}</AppText>}
+                                    padding="sm"
+                                />
+                            )}
+                            {smsInfo.rawBody && (
+                                <View style={{ paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}>
+                                    <AppText variant="caption" color="secondary">RAW SMS</AppText>
+                                    <AppText variant="body" style={{ marginTop: Spacing.xs }}>{smsInfo.rawBody}</AppText>
+                                </View>
+                            )}
+                            {onOpenSmsInbox && (
+                                <View style={{ paddingHorizontal: Spacing.md, paddingTop: Spacing.sm }}>
+                                    <AppButton variant="ghost" onPress={onOpenSmsInbox}>
+                                        Open SMS Inbox
+                                    </AppButton>
+                                </View>
+                            )}
+                        </>
+                    )}
 
                     {vm.onPost && (
                         <View style={{ padding: Spacing.md, gap: Spacing.sm }}>

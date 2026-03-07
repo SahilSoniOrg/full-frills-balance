@@ -162,6 +162,34 @@ export interface PlannedPaymentExport {
   deletedAt?: string;
 }
 
+export interface SmsInboxRecordExport {
+  id: string;
+  deviceSmsId: string;
+  senderAddress: string;
+  rawBody: string;
+  smsDate: string;
+  smsFingerprint: string;
+  parseStatus: string;
+  parsedAmount?: number;
+  parsedCurrencyCode?: string;
+  parsedMerchant?: string;
+  parsedAccountSource?: string;
+  referenceNumber?: string;
+  direction: string;
+  processingStatus: string;
+  linkedJournalId?: string;
+  duplicateJournalId?: string;
+  duplicateConfidence?: number;
+  parseConfidence?: number;
+  parseReason?: string;
+  metadataJson?: string;
+  firstSeenAt: string;
+  lastScannedAt: string;
+  processedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const snakeToCamel = (str: string) => str.replace(/(_\w)/g, (m) => m[1].toUpperCase());
 const DATE_COLUMN_NAMES = ['created_at', 'updated_at', 'deleted_at', 'journal_date', 'transaction_date', 'start_date', 'end_date', 'next_occurrence', 'effective_date'];
 
@@ -180,6 +208,7 @@ export interface ExportData {
   accountMetadata: AccountMetadataExport[];
   plannedPayments: PlannedPaymentExport[];
   journalMetadata: JournalMetadataExport[];
+  smsInboxRecords: SmsInboxRecordExport[];
 }
 
 interface ExportSummary {
@@ -194,6 +223,7 @@ interface ExportSummary {
   accountMetadata: number;
   plannedPayments: number;
   journalMetadata: number;
+  smsInboxRecords: number;
 }
 
 function toIsoDate(value: Date | number | undefined | null): string | undefined {
@@ -305,6 +335,7 @@ class ExportService {
         accountMetadata,
         plannedPayments,
         journalMetadata,
+        smsInboxRecords,
         userPreferences,
       ] = await Promise.all([
         this.fetchAndTransformTable<AccountExport>('accounts'),
@@ -318,6 +349,7 @@ class ExportService {
         this.fetchAndTransformTable<AccountMetadataExport>('account_metadata'),
         this.fetchAndTransformTable<PlannedPaymentExport>('planned_payments'),
         this.fetchAndTransformTable<JournalMetadataExport>('journal_metadata'),
+        this.fetchAndTransformTable<SmsInboxRecordExport>('sms_inbox_records'),
         preferences.loadPreferences(),
       ]);
 
@@ -336,6 +368,7 @@ class ExportService {
         accountMetadata,
         plannedPayments,
         journalMetadata,
+        smsInboxRecords,
       };
 
       const json = JSON.stringify(exportData, null, 2);
@@ -353,6 +386,7 @@ class ExportService {
         accountMetadata: exportData.accountMetadata.length,
         plannedPayments: exportData.plannedPayments.length,
         journalMetadata: exportData.journalMetadata.length,
+        smsInboxRecords: exportData.smsInboxRecords.length,
       });
 
       return json;
@@ -384,6 +418,7 @@ class ExportService {
       accountMetadata,
       plannedPayments,
       journalMetadata,
+      smsInboxRecords,
     ] = await Promise.all([
       getCount('accounts'),
       getCount('journals'),
@@ -396,6 +431,7 @@ class ExportService {
       getCount('account_metadata'),
       getCount('planned_payments'),
       getCount('journal_metadata'),
+      getCount('sms_inbox_records'),
     ]);
 
     return {
@@ -410,6 +446,7 @@ class ExportService {
       accountMetadata,
       plannedPayments,
       journalMetadata,
+      smsInboxRecords,
     };
   }
 }

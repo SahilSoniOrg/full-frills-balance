@@ -17,6 +17,7 @@ import {
     ImportedJournal,
     ImportedJournalMetadata,
     ImportedPlannedPayment,
+    ImportedSmsInboxRecord,
     ImportedTransaction, importRepository
 } from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
@@ -38,6 +39,7 @@ interface NativeImportData {
     accountMetadata?: ImportedAccountMetadata[];
     plannedPayments?: ImportedPlannedPayment[];
     journalMetadata?: ImportedJournalMetadata[];
+    smsInboxRecords?: ImportedSmsInboxRecord[];
 }
 
 function parseTimestamp(value?: number | string): number | undefined {
@@ -244,6 +246,33 @@ export const nativePlugin: ImportPlugin = {
                     metadataJson: meta.metadataJson,
                     createdAt: parseTimestamp(meta.createdAt),
                     updatedAt: parseTimestamp(meta.updatedAt),
+                })),
+                smsInboxRecords: (data.smsInboxRecords || []).map((sms) => ({
+                    id: sms.id,
+                    deviceSmsId: sms.deviceSmsId,
+                    senderAddress: sms.senderAddress,
+                    rawBody: sms.rawBody,
+                    smsDate: parseTimestamp(sms.smsDate) ?? Date.now(),
+                    smsFingerprint: sms.smsFingerprint,
+                    parseStatus: sms.parseStatus,
+                    parsedAmount: sms.parsedAmount,
+                    parsedCurrencyCode: sms.parsedCurrencyCode,
+                    parsedMerchant: sms.parsedMerchant,
+                    parsedAccountSource: sms.parsedAccountSource,
+                    referenceNumber: sms.referenceNumber,
+                    direction: sms.direction,
+                    processingStatus: sms.processingStatus,
+                    linkedJournalId: sms.linkedJournalId,
+                    duplicateJournalId: sms.duplicateJournalId,
+                    duplicateConfidence: sms.duplicateConfidence,
+                    parseConfidence: sms.parseConfidence,
+                    parseReason: sms.parseReason,
+                    metadataJson: sms.metadataJson,
+                    firstSeenAt: parseTimestamp(sms.firstSeenAt) ?? Date.now(),
+                    lastScannedAt: parseTimestamp(sms.lastScannedAt) ?? Date.now(),
+                    processedAt: parseTimestamp(sms.processedAt),
+                    createdAt: parseTimestamp(sms.createdAt),
+                    updatedAt: parseTimestamp(sms.updatedAt),
                 })),
             });
 

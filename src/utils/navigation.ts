@@ -13,13 +13,16 @@ export const AppNavigation = {
     /**
      * Navigate to the Journal Entry screen (Create or Edit).
      */
-    toJournalEntry: (options?: { journalId?: string; smsId?: string; smsSender?: string; rawSmsBody?: string; initialDate?: string; params?: Record<string, string> }) => {
+    toJournalEntry: (options?: { journalId?: string; smsId?: string; smsRecordId?: string; smsSender?: string; rawSmsBody?: string; initialDate?: string; params?: Record<string, string> }) => {
         const queryParams = new URLSearchParams();
         if (options?.journalId) {
             queryParams.append('journalId', options.journalId);
         }
         if (options?.smsId) {
             queryParams.append('smsId', options.smsId);
+        }
+        if (options?.smsRecordId) {
+            queryParams.append('smsRecordId', options.smsRecordId);
         }
         if (options?.smsSender) {
             queryParams.append('smsSender', options.smsSender);
@@ -209,13 +212,31 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to SMS inbox.
+     */
+    toSmsInbox: () => {
+        router.push('/sms-inbox' as any);
+    },
+
+    /**
      * Navigate to SMS rule form (new or edit).
      */
-    toSmsRuleForm: (id?: string) => {
+    toSmsRuleForm: (id?: string, seed?: {
+        senderMatch?: string;
+        bodyMatch?: string;
+        sourceAccountId?: string;
+        categoryAccountId?: string;
+    }) => {
+        const seedParams = new URLSearchParams();
+        if (seed?.senderMatch) seedParams.append('senderMatch', seed.senderMatch);
+        if (seed?.bodyMatch) seedParams.append('bodyMatch', seed.bodyMatch);
+        if (seed?.sourceAccountId) seedParams.append('sourceAccountId', seed.sourceAccountId);
+        if (seed?.categoryAccountId) seedParams.append('categoryAccountId', seed.categoryAccountId);
+        const seedQuery = seedParams.toString();
         if (id) {
             router.push(`/sms-rule-form?id=${id}` as any);
         } else {
-            router.push('/sms-rule-form' as any);
+            router.push((seedQuery ? `/sms-rule-form?${seedQuery}` : '/sms-rule-form') as any);
         }
     },
 

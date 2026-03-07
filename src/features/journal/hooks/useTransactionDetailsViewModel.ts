@@ -1,10 +1,12 @@
 import { IconName } from '@/src/components/core';
 import { Opacity, withOpacity } from '@/src/constants';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
+import { smsService } from '@/src/services/sms-service';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { TransactionWithAccountInfo } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
@@ -12,7 +14,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export interface TransactionSplitItemViewModel {
     id: string;
@@ -47,6 +49,17 @@ export interface TransactionDetailsViewModel {
     formattedDate: string;
     journalIdShort: string;
     onHistoryPress: () => void;
+    smsInfo?: {
+        sender?: string;
+        rawBody?: string;
+        amountText?: string;
+        referenceNumber?: string;
+        accountSource?: string;
+        parseReason?: string;
+        smsDate?: string;
+        inboxRecordId?: string;
+    };
+    onOpenSmsInbox?: () => void;
     onPost?: () => void;
     onSkip?: () => void;
     splitItems: TransactionSplitItemViewModel[];
@@ -59,6 +72,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     const { deleteJournal, findJournal, duplicateJournal, postJournal } = useJournalActions();
     const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
     const { journal, isLoading: isLoadingJournal } = useJournal(journalId);
+    const [smsInfo, setSmsInfo] = useState<TransactionDetailsViewModel['smsInfo']>();
 
     const journalInfo = useMemo(() => journal ? {
         description: journal.description,
@@ -125,6 +139,40 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     const onBack = useCallback(() => {
         router.back();
     }, [router]);
+
+    useEffect(() => {
+        let isActive = true;
+        const loadSmsInfo = async () => {
+            if (!journalId) return;
+            const metadata = await journalRepository.findMetadataByJournalId(journalId);
+            if (!metadata || metadata.importSource !== 'sms') {
+                if (isActive) setSmsInfo(undefined);
+                return;
+            }
+
+            const inboxRecord = await smsService.findByLinkedJournalId(journalId);
+            const parsedMetadata = metadata.metadataJson ? JSON.parse(metadata.metadataJson) : {};
+            if (!isActive) return;
+
+            setSmsInfo({
+                sender: metadata.originalSmsSender,
+                rawBody: metadata.originalSmsBody,
+                amountText: typeof parsedMetadata.parsedAmount === 'number'
+                    ? CurrencyFormatter.format(parsedMetadata.parsedAmount, parsedMetadata.parsedCurrencyCode || undefined)
+                    : undefined,
+                referenceNumber: parsedMetadata.referenceNumber || inboxRecord?.referenceNumber,
+                accountSource: parsedMetadata.accountSource || inboxRecord?.parsedAccountSource,
+                parseReason: inboxRecord?.parseReason,
+                smsDate: inboxRecord ? formatDate(inboxRecord.smsDate, { includeTime: true }) : undefined,
+                inboxRecordId: inboxRecord?.id,
+            });
+        };
+
+        loadSmsInfo();
+        return () => {
+            isActive = false;
+        };
+    }, [journalId]);
 
     const handlePost = useCallback(async () => {
         if (!journalInfo || journalInfo.status !== 'PLANNED') return;
@@ -206,6 +254,8 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         formattedDate,
         journalIdShort: journalId?.substring(0, 8) || '...',
         onHistoryPress,
+        smsInfo,
+        onOpenSmsInbox: smsInfo?.inboxRecordId ? () => router.push('/sms-inbox') : undefined,
         onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
         onSkip: journalInfo?.status === 'PLANNED' ? handleSkip : undefined,
         splitItems,

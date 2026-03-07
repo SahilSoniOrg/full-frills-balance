@@ -32,6 +32,7 @@ export interface SettingsViewModel {
     onExport: () => void;
     onImport: () => void;
     onAuditLog: () => void;
+    onSmsInbox: () => void;
     onManageSmsRules: () => void;
     onPersonalizationSettings: () => void;
     onDataManagementSettings: () => void;
@@ -195,6 +196,7 @@ export function useSettingsViewModel(): SettingsViewModel {
         onExport,
         onImport: AppNavigation.toImportSelection,
         onAuditLog: AppNavigation.toAuditLog,
+        onSmsInbox: AppNavigation.toSmsInbox,
         onManageSmsRules: AppNavigation.toSmsRules,
         onPersonalizationSettings: AppNavigation.toPersonalizationSettings,
         onDataManagementSettings: AppNavigation.toDataManagementSettings,

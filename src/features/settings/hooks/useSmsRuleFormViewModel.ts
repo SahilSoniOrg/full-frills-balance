@@ -5,6 +5,7 @@ import { useAccounts } from '@/src/features/accounts';
 import { smsService } from '@/src/services/sms-service';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import { useEffect, useState } from 'react';
 
 export interface SmsRuleFormViewModel {
@@ -26,19 +27,26 @@ export interface SmsRuleFormViewModel {
     handleSave: () => Promise<void>;
     handleDelete: () => Promise<void>;
     accounts: Account[];
+    previewMatches: SmsInboxRecord[];
 }
 
-export function useSmsRuleFormViewModel(id?: string): SmsRuleFormViewModel {
+export function useSmsRuleFormViewModel(id?: string, seed?: {
+    senderMatch?: string;
+    bodyMatch?: string;
+    sourceAccountId?: string;
+    categoryAccountId?: string;
+}): SmsRuleFormViewModel {
     const { accounts } = useAccounts();
 
-    const [senderMatch, setSenderMatch] = useState('');
-    const [bodyMatch, setBodyMatch] = useState('');
-    const [sourceAccountId, setSourceAccountId] = useState('');
-    const [categoryAccountId, setCategoryAccountId] = useState('');
+    const [senderMatch, setSenderMatch] = useState(seed?.senderMatch || '');
+    const [bodyMatch, setBodyMatch] = useState(seed?.bodyMatch || '');
+    const [sourceAccountId, setSourceAccountId] = useState(seed?.sourceAccountId || '');
+    const [categoryAccountId, setCategoryAccountId] = useState(seed?.categoryAccountId || '');
     const [isActive, setIsActive] = useState(true);
 
     const [pickingAccountFor, setPickingAccountFor] = useState<'source' | 'category' | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [previewMatches, setPreviewMatches] = useState<SmsInboxRecord[]>([]);
 
     useEffect(() => {
         if (id) {
@@ -58,6 +66,32 @@ export function useSmsRuleFormViewModel(id?: string): SmsRuleFormViewModel {
             loadRule();
         }
     }, [id]);
+
+    useEffect(() => {
+        let isActive = true;
+        const loadPreview = async () => {
+            if (!senderMatch.trim()) {
+                setPreviewMatches([]);
+                return;
+            }
+
+            try {
+                const matches = await smsService.previewRuleMatches(senderMatch.trim(), bodyMatch.trim() || undefined);
+                if (isActive) {
+                    setPreviewMatches(matches);
+                }
+            } catch {
+                if (isActive) {
+                    setPreviewMatches([]);
+                }
+            }
+        };
+
+        loadPreview();
+        return () => {
+            isActive = false;
+        };
+    }, [senderMatch, bodyMatch]);
 
     const isValid = senderMatch.trim().length > 0 && !!sourceAccountId && !!categoryAccountId;
 
@@ -123,6 +157,7 @@ export function useSmsRuleFormViewModel(id?: string): SmsRuleFormViewModel {
         isValid,
         handleSave,
         handleDelete,
-        accounts
+        accounts,
+        previewMatches
     };
 }

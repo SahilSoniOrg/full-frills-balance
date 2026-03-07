@@ -24,6 +24,7 @@ export interface UseJournalEditorOptions {
     initialSourceId?: string;
     initialDestinationId?: string;
     smsId?: string;
+    smsRecordId?: string;
     smsSender?: string;
     rawSmsBody?: string;
     /**
@@ -31,7 +32,7 @@ export interface UseJournalEditorOptions {
      * direct smsService.markSmsAsProcessed call — keeps this hook unaware of
      * SMS concerns and avoids a feature→service boundary violation.
      */
-    onAfterSave?: () => Promise<void>;
+    onAfterSave?: (result: { journalId?: string; action?: 'created' | 'updated' }) => Promise<void>;
     onSuccess?: () => void;
 }
 
@@ -274,6 +275,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 journalId: isEdit ? journalId : undefined,
                 mode: isGuidedMode ? 'simple' : 'advanced',
                 smsId: options.smsId,
+                smsRecordId: options.smsRecordId,
                 smsSender: options.smsSender,
                 rawSmsBody: options.rawSmsBody
             });
@@ -283,7 +285,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
                 return result;
             }
 
-            await options.onAfterSave?.();
+            await options.onAfterSave?.({ journalId: result.journalId, action: result.action });
 
             options.onSuccess?.();
             return result;

@@ -15,6 +15,7 @@ import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import JournalMetadata from '@/src/data/models/JournalMetadata'
 import PlannedPayment from '@/src/data/models/PlannedPayment'
+import SmsInboxRecord, { SmsDirection, SmsParseStatus, SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { Q } from '@nozbe/watermelondb'
 
@@ -168,6 +169,34 @@ export interface ImportedJournalMetadata {
   updatedAt?: number
 }
 
+export interface ImportedSmsInboxRecord {
+  id: string
+  deviceSmsId: string
+  senderAddress: string
+  rawBody: string
+  smsDate: number
+  smsFingerprint: string
+  parseStatus: string
+  parsedAmount?: number
+  parsedCurrencyCode?: string
+  parsedMerchant?: string
+  parsedAccountSource?: string
+  referenceNumber?: string
+  direction: string
+  processingStatus: string
+  linkedJournalId?: string
+  duplicateJournalId?: string
+  duplicateConfidence?: number
+  parseConfidence?: number
+  parseReason?: string
+  metadataJson?: string
+  firstSeenAt: number
+  lastScannedAt: number
+  processedAt?: number
+  createdAt?: number
+  updatedAt?: number
+}
+
 export interface ChangeSet<T> {
   created?: T[]
   updated?: T[]
@@ -186,6 +215,7 @@ export interface BatchImportData {
   accountMetadata?: ImportedAccountMetadata[]
   plannedPayments?: ImportedPlannedPayment[]
   journalMetadata?: ImportedJournalMetadata[]
+  smsInboxRecords?: ImportedSmsInboxRecord[]
 }
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET
@@ -218,6 +248,24 @@ function toAuditAction(value: string): AuditAction {
   return actions.includes(value as AuditAction) ? (value as AuditAction) : AuditAction.UPDATE
 }
 
+function toSmsParseStatus(value: string): SmsParseStatus {
+  return Object.values(SmsParseStatus).includes(value as SmsParseStatus)
+    ? (value as SmsParseStatus)
+    : SmsParseStatus.PARSE_FAILED
+}
+
+function toSmsProcessingStatus(value: string): SmsProcessingStatus {
+  return Object.values(SmsProcessingStatus).includes(value as SmsProcessingStatus)
+    ? (value as SmsProcessingStatus)
+    : SmsProcessingStatus.PENDING
+}
+
+function toSmsDirection(value: string): SmsDirection {
+  return Object.values(SmsDirection).includes(value as SmsDirection)
+    ? (value as SmsDirection)
+    : SmsDirection.UNKNOWN
+}
+
 export class ImportRepository {
   async batchInsert(data: BatchImportData): Promise<void> {
     await database.write(async () => {
@@ -230,6 +278,7 @@ export class ImportRepository {
       const accountMetadataCollection = database.collections.get<AccountMetadata>('account_metadata')
       const plannedPaymentsCollection = database.collections.get<PlannedPayment>('planned_payments')
       const journalMetadataCollection = database.collections.get<JournalMetadata>('journal_metadata')
+      const smsInboxCollection = database.collections.get<SmsInboxRecord>('sms_inbox_records')
 
       const accountPrepares = data.accounts.map(acc =>
         accountsCollection.prepareCreate(record => {
@@ -414,6 +463,37 @@ export class ImportRepository {
         })
       )
 
+      const smsInboxPrepares = (data.smsInboxRecords || []).map((sms) =>
+        smsInboxCollection.prepareCreate((record) => {
+          record._raw.id = sms.id
+          record.deviceSmsId = sms.deviceSmsId
+          record.senderAddress = sms.senderAddress
+          record.rawBody = sms.rawBody
+          record.smsDate = sms.smsDate
+          record.smsFingerprint = sms.smsFingerprint
+          record.parseStatus = toSmsParseStatus(sms.parseStatus)
+          record.parsedAmount = sms.parsedAmount
+          record.parsedCurrencyCode = sms.parsedCurrencyCode
+          record.parsedMerchant = sms.parsedMerchant
+          record.parsedAccountSource = sms.parsedAccountSource
+          record.referenceNumber = sms.referenceNumber
+          record.direction = toSmsDirection(sms.direction)
+          record.processingStatus = toSmsProcessingStatus(sms.processingStatus)
+          record.linkedJournalId = sms.linkedJournalId
+          record.duplicateJournalId = sms.duplicateJournalId
+          record.duplicateConfidence = sms.duplicateConfidence
+          record.parseConfidence = sms.parseConfidence
+          record.parseReason = sms.parseReason
+          record.metadataJson = sms.metadataJson
+          record.firstSeenAt = sms.firstSeenAt
+          record.lastScannedAt = sms.lastScannedAt
+          record.processedAt = sms.processedAt
+          record._raw._status = 'synced'
+          if (sms.createdAt) (record as any)._raw.created_at = sms.createdAt
+          if (sms.updatedAt) (record as any)._raw.updated_at = sms.updatedAt
+        })
+      )
+
       const operations = [
         ...accountPrepares,
         ...journalPrepares,
@@ -425,7 +505,8 @@ export class ImportRepository {
         ...exchangeRatePrepares,
         ...accountMetadataPrepares,
         ...plannedPaymentPrepares,
-        ...journalMetadataPrepares
+        ...journalMetadataPrepares,
+        ...smsInboxPrepares
       ]
 
       if (operations.length > 0) {

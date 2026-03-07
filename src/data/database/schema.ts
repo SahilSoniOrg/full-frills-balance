@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 12,
+  version: 13,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -191,6 +191,35 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
       ]
+    }),
+    tableSchema({
+      name: 'sms_inbox_records',
+      columns: [
+        { name: 'device_sms_id', type: 'string', isIndexed: true },
+        { name: 'sender_address', type: 'string', isIndexed: true },
+        { name: 'raw_body', type: 'string' },
+        { name: 'sms_date', type: 'number', isIndexed: true },
+        { name: 'sms_fingerprint', type: 'string', isIndexed: true },
+        { name: 'parse_status', type: 'string', isIndexed: true },
+        { name: 'parsed_amount', type: 'number', isOptional: true },
+        { name: 'parsed_currency_code', type: 'string', isOptional: true },
+        { name: 'parsed_merchant', type: 'string', isOptional: true },
+        { name: 'parsed_account_source', type: 'string', isOptional: true },
+        { name: 'reference_number', type: 'string', isOptional: true },
+        { name: 'direction', type: 'string', isIndexed: true },
+        { name: 'processing_status', type: 'string', isIndexed: true },
+        { name: 'linked_journal_id', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'duplicate_journal_id', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'duplicate_confidence', type: 'number', isOptional: true },
+        { name: 'parse_confidence', type: 'number', isOptional: true },
+        { name: 'parse_reason', type: 'string', isOptional: true },
+        { name: 'metadata_json', type: 'string', isOptional: true },
+        { name: 'first_seen_at', type: 'number', isIndexed: true },
+        { name: 'last_scanned_at', type: 'number', isIndexed: true },
+        { name: 'processed_at', type: 'number', isOptional: true, isIndexed: true },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
+      ],
     }),
   ],
 })

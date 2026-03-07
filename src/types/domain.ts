@@ -164,6 +164,49 @@ export interface EnrichedTransaction {
     semanticLabel?: string;
 }
 
+export interface SmsDuplicateCandidate {
+    journalId: string;
+    journalDate: number;
+    description?: string;
+    score: number;
+    reasons: string[];
+}
+
+export interface SmsLinkedJournalInfo {
+    journalId: string;
+    description?: string;
+    journalDate: number;
+    status: string;
+}
+
+export interface SmsInboxItem {
+    id: string;
+    deviceSmsId: string;
+    senderAddress: string;
+    rawBody: string;
+    smsDate: number;
+    parseStatus: string;
+    processingStatus: string;
+    parsedAmount?: number;
+    parsedCurrencyCode?: string;
+    parsedMerchant?: string;
+    parsedAccountSource?: string;
+    referenceNumber?: string;
+    direction: 'debit' | 'credit' | 'unknown';
+    parseConfidence?: number;
+    parseReason?: string;
+    linkedJournal?: SmsLinkedJournalInfo;
+    duplicateCandidate?: SmsDuplicateCandidate;
+}
+
+export interface JournalSmsMetadata {
+    importSource: string;
+    originalSmsId?: string;
+    originalSmsSender?: string;
+    originalSmsBody?: string;
+    metadataJson?: string;
+}
+
 /**
  * JournalEntryLine - UI-specific model for a single line in the journal editor.
  * Used in guided and advanced forms.

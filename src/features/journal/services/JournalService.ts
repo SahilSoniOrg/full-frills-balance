@@ -6,6 +6,8 @@ import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
+import { database } from '@/src/data/database/Database';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
@@ -36,6 +38,7 @@ export interface SubmitJournalResult {
     success: boolean;
     error?: string;
     action?: 'created' | 'updated';
+    journalId?: string;
 }
 
 export class JournalService {
@@ -178,11 +181,12 @@ export class JournalService {
         journalTime?: string,
         journalId?: string,
         smsId?: string,
+        smsRecordId?: string,
         smsSender?: string,
         rawSmsBody?: string,
         mode?: 'simple' | 'advanced' | 'import'
     }): Promise<SubmitJournalResult> {
-        const { lines, description, journalDate, journalTime, journalId, smsId, smsSender, rawSmsBody, mode = 'advanced' } = params;
+        const { lines, description, journalDate, journalTime, journalId, smsId, smsRecordId, smsSender, rawSmsBody, mode = 'advanced' } = params;
 
         // 1. Basic Content Validation
         const finalDescription = description.trim();
@@ -233,11 +237,29 @@ export class JournalService {
 
         // 4. Persistence
         try {
+            let smsMetadataJson: string | undefined;
+            if (smsRecordId) {
+                try {
+                    const smsRecord = await database.collections.get<SmsInboxRecord>('sms_inbox_records').find(smsRecordId);
+                    smsMetadataJson = JSON.stringify({
+                        smsFingerprint: smsRecord.smsFingerprint,
+                        parsedAmount: smsRecord.parsedAmount ?? null,
+                        parsedCurrencyCode: smsRecord.parsedCurrencyCode ?? null,
+                        parsedMerchant: smsRecord.parsedMerchant ?? null,
+                        referenceNumber: smsRecord.referenceNumber ?? null,
+                        accountSource: smsRecord.parsedAccountSource ?? null,
+                    });
+                } catch {
+                    smsMetadataJson = undefined;
+                }
+            }
+
             const metadata = (smsId || smsSender || rawSmsBody) ? {
                 importSource: smsId ? 'sms' : 'manual',
                 originalSmsId: smsId,
                 originalSmsSender: smsSender,
                 originalSmsBody: rawSmsBody,
+                metadataJson: smsMetadataJson,
             } : undefined;
 
             const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
@@ -258,13 +280,13 @@ export class JournalService {
             };
 
             if (journalId) {
-                await this.updateJournal(journalId, journalData);
+                const updatedJournal = await this.updateJournal(journalId, journalData);
                 analytics.logTransactionCreated(mode, 'update', currencyCode);
-                return { success: true, action: 'updated' };
+                return { success: true, action: 'updated', journalId: updatedJournal.id };
             } else {
-                await ledgerWriteService.createJournal(journalData);
+                const createdJournal = await ledgerWriteService.createJournal(journalData);
                 analytics.logTransactionCreated(mode, 'create', currencyCode);
-                return { success: true, action: 'created' };
+                return { success: true, action: 'created', journalId: createdJournal.id };
             }
         } catch (error) {
             logger.error('Failed to save journal entry:', error);

@@ -2,7 +2,6 @@ import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { ExpandableSearchButton, IconButton } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
-import { SmsImportSheet } from '@/src/features/journal/components/SmsImportSheet';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -12,7 +11,6 @@ import { Platform, StyleSheet, View } from 'react-native';
 export default function JournalScreen() {
     const initialDateRange = useJournalRouteDateRange();
     const [isSearching, setIsSearching] = useState(false);
-    const [isSmsSheetVisible, setIsSmsSheetVisible] = useState(false);
 
     const { listViewProps, vm } = useJournalListScreen({
         pageSize: AppConfig.pagination.dashboardPageSize,
@@ -36,7 +34,7 @@ export default function JournalScreen() {
                     name="messageCircle"
                     size={Size.iconSm}
                     variant="surface"
-                    onPress={() => setIsSmsSheetVisible(true)}
+                    onPress={AppNavigation.toSmsInbox}
                     accessibilityLabel="Import SMS"
                 />
             )}
@@ -90,9 +88,6 @@ export default function JournalScreen() {
                 isSearchActive={isSearching}
                 alignTitle="left"
             />
-            {isSmsSheetVisible && (
-                <SmsImportSheet onClose={() => setIsSmsSheetVisible(false)} />
-            )}
         </>
     );
 }
