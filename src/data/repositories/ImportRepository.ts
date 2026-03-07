@@ -8,6 +8,7 @@ import Account, {
 } from '@/src/data/models/Account'
 import AccountMetadata from '@/src/data/models/AccountMetadata'
 import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog'
+import BalanceSnapshot from '@/src/data/models/BalanceSnapshot'
 import Budget from '@/src/data/models/Budget'
 import BudgetScope from '@/src/data/models/BudgetScope'
 import Currency from '@/src/data/models/Currency'
@@ -212,6 +213,17 @@ export interface ImportedSmsAutoPostRule {
   updatedAt?: number
 }
 
+export interface ImportedBalanceSnapshot {
+  id: string
+  accountId: string
+  transactionId: string
+  transactionDate: number
+  absoluteBalance: number
+  transactionCount: number
+  createdAt?: number
+  updatedAt?: number
+}
+
 export interface ChangeSet<T> {
   created?: T[]
   updated?: T[]
@@ -232,6 +244,7 @@ export interface BatchImportData {
   journalMetadata?: ImportedJournalMetadata[]
   smsAutoPostRules?: ImportedSmsAutoPostRule[]
   smsInboxRecords?: ImportedSmsInboxRecord[]
+  balanceSnapshots?: ImportedBalanceSnapshot[]
 }
 
 const DEFAULT_ACCOUNT_TYPE = AccountType.ASSET
@@ -296,6 +309,7 @@ export class ImportRepository {
       const journalMetadataCollection = database.collections.get<JournalMetadata>('journal_metadata')
       const smsAutoPostRulesCollection = database.collections.get<SmsAutoPostRule>('sms_auto_post_rules')
       const smsInboxCollection = database.collections.get<SmsInboxRecord>('sms_inbox_records')
+      const balanceSnapshotsCollection = database.collections.get<BalanceSnapshot>('balance_snapshots')
 
       const accountPrepares = data.accounts.map(acc =>
         accountsCollection.prepareCreate(record => {
@@ -528,6 +542,20 @@ export class ImportRepository {
         })
       )
 
+      const balanceSnapshotPrepares = (data.balanceSnapshots || []).map((bs) =>
+        balanceSnapshotsCollection.prepareCreate((record) => {
+          record._raw.id = bs.id
+            ; (record as any)._raw.account_id = bs.accountId
+            ; (record as any)._raw.transaction_id = bs.transactionId
+          record.transactionDate = bs.transactionDate
+          record.absoluteBalance = bs.absoluteBalance
+          record.transactionCount = bs.transactionCount
+          record._raw._status = 'synced'
+          if (bs.createdAt) (record as any)._raw.created_at = bs.createdAt
+          if (bs.updatedAt) (record as any)._raw.updated_at = bs.updatedAt
+        })
+      )
+
       const operations = [
         ...accountPrepares,
         ...journalPrepares,
@@ -541,7 +569,8 @@ export class ImportRepository {
         ...plannedPaymentPrepares,
         ...journalMetadataPrepares,
         ...smsAutoPostRulePrepares,
-        ...smsInboxPrepares
+        ...smsInboxPrepares,
+        ...balanceSnapshotPrepares
       ]
 
       if (operations.length > 0) {

@@ -47,6 +47,7 @@ describe('ExportService', () => {
         ['currencies', createCollectionMock([{ id: 'c1', code: 'USD', symbol: '$', name: 'US Dollar', precision: 2, createdAt: FIXED_DATE, updatedAt: FIXED_DATE }])],
         ['exchange_rates', createCollectionMock([{ id: 'er1', fromCurrency: 'USD', toCurrency: 'INR', rate: 80, effectiveDate: FIXED_DATE.valueOf(), source: 'manual', createdAt: FIXED_DATE, updatedAt: FIXED_DATE }])],
         ['account_metadata', createCollectionMock([{ id: 'm1', account: { id: 'acc1' }, statementDay: 1, createdAt: FIXED_DATE, updatedAt: FIXED_DATE }])],
+        ['balance_snapshots', createCollectionMock([{ id: 'bs1', account: { id: 'acc1' }, transactionId: 't1', transactionDate: FIXED_DATE.valueOf(), absoluteBalance: 100, transactionCount: 1, createdAt: FIXED_DATE, updatedAt: FIXED_DATE }])],
       ]);
 
       mockGet.mockImplementation((tableName: string) => mockCollections.get(tableName));
@@ -65,6 +66,7 @@ describe('ExportService', () => {
       expect(data.currencies).toHaveLength(1);
       expect(data.exchangeRates).toHaveLength(1);
       expect(data.accountMetadata).toHaveLength(1);
+      expect(data.balanceSnapshots).toHaveLength(1);
       expect(data.preferences.theme).toBe('dark');
     });
 
@@ -90,6 +92,7 @@ describe('ExportService', () => {
         ['currencies', createCollectionMock([], 2)],
         ['exchange_rates', createCollectionMock([], 7)],
         ['account_metadata', createCollectionMock([], 8)],
+        ['balance_snapshots', createCollectionMock([], 9)],
       ]);
 
       mockGet.mockImplementation((tableName: string) => mockCollections.get(tableName));
@@ -105,6 +108,7 @@ describe('ExportService', () => {
       expect(summary.currencies).toBe(2);
       expect(summary.exchangeRates).toBe(7);
       expect(summary.accountMetadata).toBe(8);
+      expect(summary.balanceSnapshots).toBe(9);
     });
   });
 });

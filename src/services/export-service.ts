@@ -28,6 +28,17 @@ export interface AccountExport {
   deletedAt?: string;
 }
 
+export interface BalanceSnapshotExport {
+  id: string;
+  accountId: string;
+  transactionId: string;
+  transactionDate: string;
+  absoluteBalance: number;
+  transactionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface JournalExport {
   id: string;
   journalDate: string;
@@ -224,6 +235,7 @@ export interface ExportData {
   journalMetadata: JournalMetadataExport[];
   smsAutoPostRules: SmsAutoPostRuleExport[];
   smsInboxRecords: SmsInboxRecordExport[];
+  balanceSnapshots: BalanceSnapshotExport[];
 }
 
 interface ExportSummary {
@@ -240,6 +252,7 @@ interface ExportSummary {
   journalMetadata: number;
   smsAutoPostRules: number;
   smsInboxRecords: number;
+  balanceSnapshots: number;
 }
 
 function toIsoDate(value: Date | number | undefined | null): string | undefined {
@@ -353,6 +366,7 @@ class ExportService {
         journalMetadata,
         smsAutoPostRules,
         smsInboxRecords,
+        balanceSnapshots,
         userPreferences,
       ] = await Promise.all([
         this.fetchAndTransformTable<AccountExport>('accounts'),
@@ -368,6 +382,7 @@ class ExportService {
         this.fetchAndTransformTable<JournalMetadataExport>('journal_metadata'),
         this.fetchAndTransformTable<SmsAutoPostRuleExport>('sms_auto_post_rules'),
         this.fetchAndTransformTable<SmsInboxRecordExport>('sms_inbox_records'),
+        this.fetchAndTransformTable<BalanceSnapshotExport>('balance_snapshots'),
         preferences.loadPreferences(),
       ]);
 
@@ -388,6 +403,7 @@ class ExportService {
         journalMetadata,
         smsAutoPostRules,
         smsInboxRecords,
+        balanceSnapshots,
       };
 
       const json = JSON.stringify(exportData, null, 2);
@@ -407,6 +423,7 @@ class ExportService {
         journalMetadata: exportData.journalMetadata.length,
         smsAutoPostRules: exportData.smsAutoPostRules.length,
         smsInboxRecords: exportData.smsInboxRecords.length,
+        balanceSnapshots: exportData.balanceSnapshots.length,
       });
 
       return json;
@@ -440,6 +457,7 @@ class ExportService {
       journalMetadata,
       smsAutoPostRules,
       smsInboxRecords,
+      balanceSnapshots,
     ] = await Promise.all([
       getCount('accounts'),
       getCount('journals'),
@@ -454,6 +472,7 @@ class ExportService {
       getCount('journal_metadata'),
       getCount('sms_auto_post_rules'),
       getCount('sms_inbox_records'),
+      getCount('balance_snapshots'),
     ]);
 
     return {
@@ -470,6 +489,7 @@ class ExportService {
       journalMetadata,
       smsAutoPostRules,
       smsInboxRecords,
+      balanceSnapshots,
     };
   }
 }

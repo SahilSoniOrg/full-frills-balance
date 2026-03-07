@@ -13,6 +13,7 @@ jest.mock('@/src/data/repositories/ImportRepository', () => ({
 jest.mock('@/src/services/integrity-service', () => ({
     integrityService: {
         resetDatabase: jest.fn().mockResolvedValue(true),
+        forceRunCheck: jest.fn().mockResolvedValue({}),
     }
 }));
 
@@ -35,6 +36,7 @@ describe('NativeImportPlugin', () => {
         currencies: [{ id: 'c1', code: 'USD', symbol: '$', name: 'US Dollar', precision: 2 }],
         exchangeRates: [{ id: 'er1', fromCurrency: 'USD', toCurrency: 'INR', rate: 80, effectiveDate: '2024-01-01T00:00:00Z', source: 'manual' }],
         accountMetadata: [{ id: 'm1', accountId: 'a1', statementDay: 5 }],
+        balanceSnapshots: [{ id: 'bs1', accountId: 'a1', transactionId: 't1', transactionDate: '2024-01-01T00:00:00Z', absoluteBalance: 10, transactionCount: 1 }],
     };
 
     describe('detect', () => {
@@ -71,7 +73,10 @@ describe('NativeImportPlugin', () => {
                 currencies: expect.any(Array),
                 exchangeRates: expect.any(Array),
                 accountMetadata: expect.any(Array),
+                balanceSnapshots: expect.any(Array),
             }));
+
+            expect(integrityService.forceRunCheck).toHaveBeenCalled();
 
             expect(stats.accounts).toBe(1);
             expect(stats.journals).toBe(1);

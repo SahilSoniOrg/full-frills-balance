@@ -10,6 +10,7 @@ import {
     ImportedAccount,
     ImportedAccountMetadata,
     ImportedAuditLog,
+    ImportedBalanceSnapshot,
     ImportedBudget,
     ImportedBudgetScope,
     ImportedCurrency,
@@ -19,7 +20,8 @@ import {
     ImportedPlannedPayment,
     ImportedSmsAutoPostRule,
     ImportedSmsInboxRecord,
-    ImportedTransaction, importRepository
+    ImportedTransaction,
+    importRepository
 } from '@/src/data/repositories/ImportRepository';
 import { ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
@@ -42,6 +44,7 @@ interface NativeImportData {
     journalMetadata?: ImportedJournalMetadata[];
     smsAutoPostRules?: ImportedSmsAutoPostRule[];
     smsInboxRecords?: ImportedSmsInboxRecord[];
+    balanceSnapshots?: ImportedBalanceSnapshot[];
 }
 
 function parseTimestamp(value?: number | string): number | undefined {
@@ -289,7 +292,20 @@ export const nativePlugin: ImportPlugin = {
                     createdAt: parseTimestamp(sms.createdAt),
                     updatedAt: parseTimestamp(sms.updatedAt),
                 })),
+                balanceSnapshots: (data.balanceSnapshots || []).map((snapshot) => ({
+                    id: snapshot.id,
+                    accountId: snapshot.accountId,
+                    transactionId: snapshot.transactionId as string,
+                    transactionDate: parseTimestamp(snapshot.transactionDate as any) ?? Date.now(),
+                    absoluteBalance: snapshot.absoluteBalance as number,
+                    transactionCount: snapshot.transactionCount as number,
+                    createdAt: parseTimestamp(snapshot.createdAt as any),
+                    updatedAt: parseTimestamp(snapshot.updatedAt as any),
+                })),
             });
+
+            logger.info('[NativePlugin] Triggering integrity checks...');
+            await integrityService.forceRunCheck(onProgress);
 
             onProgress?.('Finalizing import...', 0.95);
             logger.info('[NativePlugin] Import successful.');
