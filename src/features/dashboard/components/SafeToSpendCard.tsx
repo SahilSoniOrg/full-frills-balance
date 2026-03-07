@@ -34,6 +34,12 @@ interface SafeToSpendCardProps {
     currentMonthBudgetRemaining: number;
     nextMonthBudgetProjected: number;
     nextMonthProjectionDays: number;
+    committedAmountByAccount: {
+        accountId: string,
+        accountName: string,
+        amount: number,
+        budgets: { budgetId: string, name: string, amount: number }[]
+    }[];
     isLoading?: boolean;
 }
 
@@ -60,6 +66,7 @@ export const SafeToSpendCard = ({
     currentMonthBudgetRemaining,
     nextMonthBudgetProjected,
     nextMonthProjectionDays,
+    committedAmountByAccount,
     isLoading = false
 }: SafeToSpendCardProps) => {
     const { theme, fonts } = useTheme();
@@ -118,13 +125,14 @@ export const SafeToSpendCard = ({
     // committedTotal represents planned outflows and remaining budgets.
     const committedTotal = committedPlanned + committedBudget;
 
-    // effectiveTotal represents the total liquid assets + inflows.
-    // The bar segments should add up to this total.
+    // effectiveTotal represents the pool we are currently allocating.
+    // It's the maximum of our current liquid assets OR the sum of our segments.
+    // We use totalLiabilities here because safeToSpend is calculated after subtracting ALL liquid debt.
     const effectiveTotal = Math.max(
-        totalLiquidAssets + totalFutureInflow,
-        committedTotal + committedLiabilities + safeToSpend
+        totalLiquidAssets,
+        committedTotal + totalLiabilities + safeToSpend
     );
-    const reserve = Math.max(0, effectiveTotal - (committedTotal + committedLiabilities + safeToSpend));
+    // Reserve is removed to prevent the "black sliver". The bar is now always "full" relative to current/required liquidity.
 
     const isOverCommitted = (committedTotal + committedLiabilities) > totalLiquidAssets;
     const isPositiveSafeToSpend = !isOverCommitted && safeToSpend > 0;
@@ -185,14 +193,11 @@ export const SafeToSpendCard = ({
                                 {committedTotal > 0 && (
                                     <View style={[styles.progressSegment, { flex: committedTotal, backgroundColor: theme.warning }]} />
                                 )}
-                                {committedLiabilities > 0 && (
-                                    <View style={[styles.progressSegment, { flex: committedLiabilities, backgroundColor: theme.error }]} />
+                                {totalLiabilities > 0 && (
+                                    <View style={[styles.progressSegment, { flex: totalLiabilities, backgroundColor: theme.error }]} />
                                 )}
                                 {safeToSpend > 0 && (
                                     <View style={[styles.progressSegment, { flex: safeToSpend, backgroundColor: theme.primary }]} />
-                                )}
-                                {reserve > 0 && (
-                                    <View style={[styles.progressSegment, { flex: reserve, backgroundColor: theme.surfaceSecondary }]} />
                                 )}
                             </View>
 
@@ -217,7 +222,7 @@ export const SafeToSpendCard = ({
                                     onPress={() => setSelectedLegendItem('debts')}
                                 >
                                     <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
-                                    <AppText variant="caption" color="secondary">{labels.debtsPrefix} {format(committedLiabilities)}</AppText>
+                                    <AppText variant="caption" color="secondary">{labels.debtsPrefix} {format(totalLiabilities)}</AppText>
                                 </TouchableOpacity>
                             </View>
                         </>
@@ -414,6 +419,37 @@ export const SafeToSpendCard = ({
                                 </View>
                                 <AppText variant="caption" weight="bold">{format(committedBudget)}</AppText>
                             </View>
+
+                            {committedAmountByAccount.length > 0 && (
+                                <View style={styles.accountBreakdownContainer}>
+                                    <View style={[styles.snapshotDivider, { backgroundColor: theme.border, opacity: 0.5 }]} />
+                                    <AppText variant="caption" weight="bold" style={styles.accountBreakdownTitle}>
+                                        {labels.breakdownByAccount}
+                                    </AppText>
+                                    {committedAmountByAccount.map((item) => (
+                                        <View key={item.accountId} style={{ marginBottom: Spacing.xs }}>
+                                            <View style={styles.breakdownRow}>
+                                                <AppText variant="caption" color="secondary" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                                                    • {item.accountName}
+                                                </AppText>
+                                                <AppText variant="caption" color="secondary" weight="bold">
+                                                    {format(item.amount)}
+                                                </AppText>
+                                            </View>
+                                            {item.budgets.map((b) => (
+                                                <View key={b.budgetId} style={[styles.breakdownRow, { paddingLeft: Spacing.md, marginTop: 2 }]}>
+                                                    <AppText variant="caption" color="secondary" numberOfLines={1} style={{ flex: 1, fontSize: 11 }}>
+                                                        {b.name}
+                                                    </AppText>
+                                                    <AppText variant="caption" color="secondary" style={{ fontSize: 11 }}>
+                                                        {format(b.amount)}
+                                                    </AppText>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                             <View style={styles.breakdownRow}>
                                 <AppText variant="body" weight="bold">{labels.totalCommitted}</AppText>
@@ -596,5 +632,12 @@ const styles = StyleSheet.create({
     modalFooter: {
         marginTop: Spacing.sm,
         paddingTop: Spacing.md,
+    },
+    accountBreakdownContainer: {
+        marginTop: Spacing.sm,
+    },
+    accountBreakdownTitle: {
+        marginBottom: Spacing.xs,
+        opacity: Opacity.heavy,
     },
 });

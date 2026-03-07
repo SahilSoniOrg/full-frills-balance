@@ -69,6 +69,12 @@ export interface SafeToSpendResult {
     nextMonthBudgetProjected: number;
     nextMonthProjectionDays: number;
     budgetCoveredExpenseAccountIds: Set<string>;
+    committedAmountByAccount: {
+        accountId: string,
+        accountName: string,
+        amount: number,
+        budgets: { budgetId: string, name: string, amount: number }[]
+    }[];
     projection?: SafeToSpendProjection;
 }
 
@@ -140,6 +146,7 @@ export class InsightService {
                         nextMonthProjectionDays: 0,
                         totalFutureInflow: 0,
                         budgetCoveredExpenseAccountIds: new Set<string>(),
+                        committedAmountByAccount: [],
                     });
                 }
 
@@ -179,14 +186,23 @@ export class InsightService {
                         let currentMonthBudgetRemaining = 0;
                         let nextMonthBudgetProjected = 0;
 
+                        // AccountID -> Daily burns for the 30-day projection
+                        const accountMaxDailyBurns = new Map<string, number[]>();
+                        // AccountID -> BudgetID -> Total contribution (before maxing)
+                        const accountBudgetBuckets = new Map<string, Map<string, { name: string, amount: number }>>();
+
                         await Promise.all(
                             (usages as any[]).map(async (usage, idx) => {
                                 const budget = budgets[idx];
                                 if (budget.startMonth !== currentMonth) return;
-                                const remaining = Math.max(0, usage.remaining);
-                                if (remaining === 0) return;
-                                const budgetCurrency = budget.currencyCode || resultCurrency;
 
+                                const scope = (scopeGroups[idx] || []) as any[];
+                                if (scope.length === 0) return;
+
+                                const remaining = Math.max(0, usage.remaining);
+                                if (remaining === 0 && budget.amount === 0) return;
+
+                                const budgetCurrency = budget.currencyCode || resultCurrency;
                                 let remainingInDefault = remaining;
                                 let amountInDefault = budget.amount;
 
@@ -207,19 +223,52 @@ export class InsightService {
                                 }
 
                                 const currentMonthDaily = remainingInDefault / Math.max(1, daysLeftInMonth);
-                                const nextMonthDaily = amountInDefault / nextMonthDays;
+                                const nextMonthDaily = amountInDefault / Math.max(1, nextMonthDays);
 
-                                for (let i = 0; i < simulationDays; i++) {
-                                    if (i < daysLeftInMonth) {
-                                        dailyBudgetBurns[i] += currentMonthDaily;
-                                        currentMonthBudgetRemaining += currentMonthDaily;
-                                    } else {
-                                        dailyBudgetBurns[i] += nextMonthDaily;
-                                        nextMonthBudgetProjected += nextMonthDaily;
+                                const shareOfCurrent = currentMonthDaily / scope.length;
+                                const shareOfNext = nextMonthDaily / scope.length;
+
+                                for (const s of scope) {
+                                    const accountId = s.account.id;
+                                    let burns = accountMaxDailyBurns.get(accountId);
+                                    if (!burns) {
+                                        burns = new Array(simulationDays).fill(0);
+                                        accountMaxDailyBurns.set(accountId, burns);
                                     }
+                                    for (let i = 0; i < simulationDays; i++) {
+                                        const dailyShare = i < daysLeftInMonth ? shareOfCurrent : shareOfNext;
+                                        burns[i] = Math.max(burns[i], dailyShare);
+                                    }
+
+                                    // Track contribution for breakdown
+                                    let accountBudgets = accountBudgetBuckets.get(accountId);
+                                    if (!accountBudgets) {
+                                        accountBudgets = new Map();
+                                        accountBudgetBuckets.set(accountId, accountBudgets);
+                                    }
+                                    const totalContribution = (shareOfCurrent * daysLeftInMonth) + (shareOfNext * (simulationDays - daysLeftInMonth));
+                                    accountBudgets.set(budget.id, { name: budget.name, amount: totalContribution });
                                 }
                             })
                         );
+
+                        // Finalize the daily budget burns
+                        for (const burns of accountMaxDailyBurns.values()) {
+                            for (let i = 0; i < simulationDays; i++) {
+                                dailyBudgetBurns[i] += burns[i];
+                            }
+                        }
+
+                        // Recalculate the subtotals from the finalized dailyBudgetBurns array for the UI breakdown
+                        currentMonthBudgetRemaining = 0;
+                        nextMonthBudgetProjected = 0;
+                        for (let i = 0; i < simulationDays; i++) {
+                            if (i < daysLeftInMonth) {
+                                currentMonthBudgetRemaining += dailyBudgetBurns[i];
+                            } else {
+                                nextMonthBudgetProjected += dailyBudgetBurns[i];
+                            }
+                        }
 
                         // Ensure breakdown sums to total committed budget over simulationDays
                         const committedBudget = dailyBudgetBurns.reduce((sum, val) => sum + val, 0);
@@ -256,7 +305,7 @@ export class InsightService {
                             dailyBudgetBurns,
                             plannedPayments,
                             plannedJournals,
-                            liquidAssetIds.map(id => id),
+                            [...liquidAssetIds, ...liquidLiabilityIds],
                             liabilityAccountBalances,
                             budgetCoveredExpenseAccountIds,
                             resultCurrency,
@@ -311,6 +360,24 @@ export class InsightService {
                             liquidAssetAccountIds: liquidAssetIds,
                             liquidLiabilityAccountIds: liquidLiabilityIds,
                             budgetCoveredExpenseAccountIds,
+                            committedAmountByAccount: Array.from(accountMaxDailyBurns.entries())
+                                .map(([accountId, burns]) => {
+                                    const budgetsMap = accountBudgetBuckets.get(accountId);
+                                    const budgetsList = budgetsMap ? Array.from(budgetsMap.entries()).map(([budgetId, b]) => ({
+                                        budgetId,
+                                        name: b.name,
+                                        amount: b.amount
+                                    })) : [];
+
+                                    return {
+                                        accountId,
+                                        accountName: accountById.get(accountId)?.name || 'Unknown',
+                                        amount: burns.reduce((sum, b) => sum + b, 0),
+                                        budgets: budgetsList.sort((a, b) => b.amount - a.amount)
+                                    };
+                                })
+                                .filter(a => a.amount > 0)
+                                .sort((a, b) => b.amount - a.amount),
                         };
                     })
                 );

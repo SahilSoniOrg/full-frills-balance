@@ -201,6 +201,7 @@ export const AppConfig = {
         plannedPayments: 'Planned Payments',
         plannedJournals: 'Planned Journals/Transfers',
         activeBudgets: 'Active Budgets (30-day proj.)',
+        breakdownByAccount: 'Breakdown by Account',
         totalCommitted: 'Total Committed',
         creditCardStatements: 'Credit Card Statements',
         otherLiquidLiabilities: 'Other Liquid Liabilities',

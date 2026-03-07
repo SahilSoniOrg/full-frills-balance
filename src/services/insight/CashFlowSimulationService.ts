@@ -59,8 +59,9 @@ export class CashFlowSimulationService {
             resultCurrency
         );
 
-        let currentBalance = startingBalance;
-        let minBalance = startingBalance;
+        // Safe to spend starts with (Assets - Liabilities)
+        let currentBalance = startingBalance - totalLiabilities;
+        let minBalance = currentBalance;
 
         for (let d = 0; d < SIMULATION_DAYS; d++) {
             const drain = Array.isArray(effectiveDailyDrain) ? (effectiveDailyDrain[d] || 0) : effectiveDailyDrain;
@@ -118,25 +119,24 @@ export class CashFlowSimulationService {
         const liabilityAccountIds = new Set(liabilityAccountBalances.map(lb => lb.account.id));
         const liabilityAccountSubtypes = new Map(liabilityAccountBalances.map(lb => [lb.account.id, lb.account.accountSubtype]));
 
-        const addFlow = (dayOffset: number, amount: number, type: 'PLAN_PAYMENT' | 'PLAN_JOURNAL' | 'LIABILITY_CC' | 'LIABILITY_OTHER' | 'DAILY_BUDGET' | 'OTHER' = 'OTHER', context?: string) => {
+        const addFlow = (dayOffset: number, amount: number, type: 'PLAN_PAYMENT' | 'PLAN_JOURNAL' | 'LIABILITY_CC' | 'LIABILITY_OTHER' | 'DAILY_BUDGET' | 'OTHER' = 'OTHER', context?: string, commitAmount?: number) => {
             if (dayOffset < 0 || dayOffset > simulationDays) return;
             const current = flowByDayOffset.get(dayOffset) || 0;
             flowByDayOffset.set(dayOffset, current + amount);
 
             if (amount > 0) totalFutureInflow += amount;
 
-            if (amount < 0) {
-                if (type === 'PLAN_PAYMENT') {
-                    committedPlannedPayments += Math.abs(amount);
-                    committedPlanned += Math.abs(amount);
-                    logger.info(`[SafeToSpend] Committed: ${context || 'Planned'} impact ${amount} on day ${dayOffset}`);
-                } else if (type === 'PLAN_JOURNAL') {
-                    committedPlannedJournals += Math.abs(amount);
-                    committedPlanned += Math.abs(amount);
-                    logger.info(`[SafeToSpend] Committed: ${context || 'Planned'} impact ${amount} on day ${dayOffset}`);
+            const effectiveCommit = commitAmount ?? (amount < 0 ? Math.abs(amount) : 0);
+
+            if (effectiveCommit > 0) {
+                if (type === 'PLAN_PAYMENT' || type === 'PLAN_JOURNAL') {
+                    if (type === 'PLAN_PAYMENT') committedPlannedPayments += effectiveCommit;
+                    if (type === 'PLAN_JOURNAL') committedPlannedJournals += effectiveCommit;
+                    committedPlanned += effectiveCommit;
+                    logger.info(`[SafeToSpend] Committed: ${context || 'Planned'} impact ${effectiveCommit} on day ${dayOffset}`);
                 } else if (type === 'LIABILITY_CC' || type === 'LIABILITY_OTHER') {
-                    committedLiabilities += Math.abs(amount);
-                    logger.info(`[SafeToSpend] Committed: ${context || 'Liability'} impact ${amount} on day ${dayOffset}`);
+                    committedLiabilities += effectiveCommit;
+                    logger.info(`[SafeToSpend] Committed: ${context || 'Liability'} impact ${effectiveCommit} on day ${dayOffset}`);
                 }
             }
 
@@ -211,21 +211,40 @@ export class CashFlowSimulationService {
         }
 
         const endMs = now.add(simulationDays, 'day').valueOf();
-        const nowMs = now.valueOf();
         const journalCoveredPPIds = new Set<string>(plannedJournals.map(pj => pj.plannedPaymentId).filter((id): id is string => Boolean(id)));
 
         for (const pp of plannedPayments) {
-            if (journalCoveredPPIds.has(pp.id)) continue;
-            if (budgetCoveredExpenseAccountIds.has(pp.toAccountId)) continue;
+            if (journalCoveredPPIds.has(pp.id)) {
+                logger.info(`[SafeToSpend] Skipping PP ${pp.name}: covered by planned journal`);
+                continue;
+            }
 
-            const isLiquidFrom = liquidAccountIds.has(pp.fromAccountId);
-            const isLiquidTo = liquidAccountIds.has(pp.toAccountId);
-            if ((isLiquidFrom && isLiquidTo) || (!isLiquidFrom && !isLiquidTo)) continue;
+            const isLiquidFrom = liquidAccountIds.has(pp.fromAccountId) || liabilityAccountIds.has(pp.fromAccountId);
+            const isLiquidTo = liquidAccountIds.has(pp.toAccountId) || liabilityAccountIds.has(pp.toAccountId);
+
+            if (!isLiquidFrom && !isLiquidTo) {
+                logger.info(`[SafeToSpend] Skipping PP ${pp.name}: neither side is liquid (from: ${pp.fromAccountId}, to: ${pp.toAccountId})`);
+                continue;
+            }
+
+            const isInternalTransfer = (liquidAccountIds.has(pp.fromAccountId) || liabilityAccountIds.has(pp.fromAccountId)) &&
+                (liquidAccountIds.has(pp.toAccountId) || liabilityAccountIds.has(pp.toAccountId));
+
+            // Budget exclusion logic:
+            // If the destination is covered by a budget, we MUST still simulate this PP if it's an outflow from liquid.
+            // However, to avoid double counting, we should ideally subtract this PP amount from the budget drain that day.
+            // For now, if it's explicitly planned, we prioritize the PP and let the budget handle the "residual".
+            // If we skip the PP here, it won't show up in "Committed Planned" which the user specifically wants.
+            const isBudgetCovered = budgetCoveredExpenseAccountIds.has(pp.toAccountId);
+            if (isBudgetCovered) {
+                logger.info(`[SafeToSpend] PP ${pp.name} is budget-covered. We will include it in simulation but note potential double-counting with budget.`);
+            }
 
             let curr = pp.nextOccurrence;
             while (curr <= endMs) {
-                if (curr > nowMs) {
-                    const dayOffset = dayjs(curr).startOf('day').diff(now, 'day');
+                // Include payments that are due today or in the future
+                if (dayjs(curr).isAfter(now.subtract(1, 'minute'))) {
+                    const dayOffset = dayjs(curr).startOf('day').diff(now.startOf('day'), 'day');
                     let amount = pp.amount;
                     if (pp.currencyCode && pp.currencyCode !== resultCurrency) {
                         try {
@@ -233,13 +252,18 @@ export class CashFlowSimulationService {
                             amount = convertedAmount;
                         } catch { }
                     }
-                    const impact = isLiquidTo ? amount : -amount;
-                    const isDebtOutflow = !isLiquidTo && liabilityAccountIds.has(pp.toAccountId);
+                    const impact = isInternalTransfer ? 0 : (isLiquidTo ? amount : -amount);
+                    const isDebtOutflow = liabilityAccountIds.has(pp.toAccountId);
                     const flowType = isDebtOutflow ?
                         (liabilityAccountSubtypes.get(pp.toAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
                         : 'PLAN_PAYMENT';
 
-                    addFlow(dayOffset, impact, flowType, `Planned Payment: ${pp.description || 'unnamed'} (${isLiquidTo ? 'Inflow' : 'Outflow'})`);
+                    // For internal transfers to a liability, the net impact is 0, but it satisfies a commitment.
+                    // We track it as a commitment to fill the safe-to-spend bar correctly.
+                    const commitAmount = (isInternalTransfer && isDebtOutflow) ? amount : undefined;
+
+                    logger.info(`[SafeToSpend] Simulating PP ${pp.name}: impact ${impact} on day ${dayOffset} (type: ${flowType})`);
+                    addFlow(dayOffset, impact, flowType, `Planned Payment: ${pp.name || 'unnamed'} (${isLiquidTo ? 'Inflow' : 'Outflow'})`, commitAmount);
                 }
                 if (pp.intervalType === 'DAILY') curr = dayjs(curr).add(pp.intervalN || 1, 'day').valueOf();
                 else if (pp.intervalType === 'WEEKLY') curr = dayjs(curr).add(pp.intervalN || 1, 'week').valueOf();
@@ -261,24 +285,27 @@ export class CashFlowSimulationService {
             for (const journal of plannedJournals) {
                 const journalTxs = txByJournalId.get(journal.id) || [];
 
-                // Identify which transactions touch liquid accounts
-                const liquidTxs = journalTxs.filter(tx => liquidAccountIds.has(tx.accountId));
+                // A journal is relevant if it involves at least one liquid/liability account.
+                const hasLiquidSide = journalTxs.some(tx => liquidAccountIds.has(tx.accountId) || liabilityAccountIds.has(tx.accountId));
+                if (!hasLiquidSide) continue;
 
-                // Skip internal transfers (liquid-to-liquid) or non-liquid journals
-                if (liquidTxs.length === 0 || journalTxs.every(tx => liquidAccountIds.has(tx.accountId))) continue;
+                // Transfers between Assets and Liabilities are "net zero" in terms of total net cash.
+                // Spending from an Asset or a Liability to an Expense reduces net cash.
 
-                // Skip budget-covered (avoid double counting with dailyBudgetBurn)
-                // If any side of the journal is for a budgeted expense, we skip it
+                const isInternalTransfer = journalTxs.every(tx => liquidAccountIds.has(tx.accountId) || liabilityAccountIds.has(tx.accountId));
+
+                // Budget exclusion logic for journals
                 if (journalTxs.some(tx => budgetCoveredExpenseAccountIds.has(tx.accountId))) {
-                    logger.info(`[SafeToSpend] Skipping budget-covered journal: ${journal.description}`);
-                    continue;
+                    logger.info(`[SafeToSpend] Journal ${journal.description} is budget-covered. Including it for committed visibility.`);
                 }
 
-                for (const tx of liquidTxs) {
-                    const occurrenceMs = journal.journalDate;
-                    if (occurrenceMs <= nowMs || occurrenceMs > endMs) continue;
+                for (const tx of journalTxs) {
+                    if (!liquidAccountIds.has(tx.accountId) && !liabilityAccountIds.has(tx.accountId)) continue;
 
-                    const dayOffset = dayjs(occurrenceMs).startOf('day').diff(now, 'day');
+                    const occurrenceMs = journal.journalDate;
+                    if (occurrenceMs <= now.subtract(1, 'minute').valueOf() || occurrenceMs > endMs) continue;
+
+                    const dayOffset = dayjs(occurrenceMs).startOf('day').diff(now.startOf('day'), 'day');
                     let amount = tx.amount;
                     if (tx.currencyCode && tx.currencyCode !== resultCurrency) {
                         try {
@@ -286,15 +313,20 @@ export class CashFlowSimulationService {
                             amount = convertedAmount;
                         } catch { }
                     }
+
                     const otherSideAccountId = journalTxs.find(otx => otx.accountId !== tx.accountId)?.accountId;
-                    const isDebtOutflow = tx.transactionType === TransactionType.CREDIT && otherSideAccountId && liabilityAccountIds.has(otherSideAccountId);
+                    const isDebtOutflow = otherSideAccountId && liabilityAccountIds.has(otherSideAccountId);
 
                     const flowType = isDebtOutflow ?
                         (liabilityAccountSubtypes.get(otherSideAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
                         : 'PLAN_JOURNAL';
 
-                    const impact = tx.transactionType === TransactionType.DEBIT ? amount : -amount;
-                    addFlow(dayOffset, impact, flowType, `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`);
+                    const impact = isInternalTransfer ? 0 : (tx.transactionType === TransactionType.DEBIT ? amount : -amount);
+
+                    // Similarly to PP, internal transfers to debt should be tracked for commitment display.
+                    const commitAmount = (isInternalTransfer && isDebtOutflow && tx.transactionType === TransactionType.CREDIT) ? amount : undefined;
+
+                    addFlow(dayOffset, impact, flowType, `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`, commitAmount);
                 }
             }
         }
