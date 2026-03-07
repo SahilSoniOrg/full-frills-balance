@@ -1,12 +1,13 @@
 import { IconButton } from '@/src/components/core';
 import { AppConfig, Colors, Size, Spacing } from '@/src/constants';
 import { useAccounts } from '@/src/features/accounts';
+import { useTheme } from '@/src/hooks/use-theme';
 import { ParsedTransaction, smsService } from '@/src/services/sms-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
 import dayjs from 'dayjs';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface SmsImportSheetProps {
@@ -15,6 +16,8 @@ interface SmsImportSheetProps {
 
 export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
     const { accounts } = useAccounts();
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
     const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -162,8 +165,9 @@ export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
                         <View style={styles.dismissBtn}>
                             <IconButton
                                 name="close"
+                                variant="clear"
                                 size={Size.iconSm}
-                                iconColor={Colors.light.textSecondary}
+                                iconColor={theme.textSecondary}
                                 onPress={() => handleDismissTransaction(item)}
                             />
                         </View>
@@ -186,16 +190,16 @@ export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
                         <Text style={styles.title}>Import from SMS</Text>
                         <View style={styles.headerActions}>
                             {transactions.length > 0 && !isLoading && (
-                                <IconButton name="checkCircle" size={Size.iconSm} onPress={handleDismissAll} style={styles.headerIcon} />
+                                <IconButton name="checkCircle" variant="clear" size={Size.iconSm} onPress={handleDismissAll} style={styles.headerIcon} />
                             )}
-                            <IconButton name="refresh" size={Size.iconSm} onPress={loadMessages} style={styles.headerIcon} />
-                            <IconButton name="error" size={Size.iconSm} onPress={onClose} style={styles.headerIcon} />
+                            <IconButton name="refresh" variant="clear" size={Size.iconSm} onPress={loadMessages} style={styles.headerIcon} />
+                            <IconButton name="close" variant="clear" size={Size.iconSm} onPress={onClose} style={styles.headerIcon} />
                         </View>
                     </View>
 
                     {isLoading ? (
                         <View style={styles.center}>
-                            <ActivityIndicator color={Colors.light.primary} />
+                            <ActivityIndicator color={theme.primary} />
                             <Text style={styles.loadingText}>Scanning messages...</Text>
                         </View>
                     ) : error ? (
@@ -222,7 +226,7 @@ export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: typeof Colors.light) => StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -230,7 +234,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 0.8,
-        backgroundColor: Colors.light.surface,
+        backgroundColor: theme.surface,
         borderTopLeftRadius: Size.lg,
         borderTopRightRadius: Size.lg,
         paddingHorizontal: Spacing.md,
@@ -241,7 +245,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: theme.border,
         marginBottom: Spacing.sm,
     },
     headerActions: {
@@ -254,7 +258,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: Colors.light.text,
+        color: theme.text,
     },
     center: {
         flex: 1,
@@ -264,25 +268,25 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: Spacing.md,
-        color: Colors.light.textSecondary,
+        color: theme.textSecondary,
     },
     errorText: {
-        color: Colors.light.error,
+        color: theme.error,
         textAlign: 'center',
         marginBottom: Spacing.lg,
     },
     emptyText: {
-        color: Colors.light.textSecondary,
+        color: theme.textSecondary,
         textAlign: 'center',
     },
     button: {
-        backgroundColor: Colors.light.primary,
+        backgroundColor: theme.primary,
         paddingHorizontal: Spacing.lg,
         paddingVertical: Spacing.sm,
         borderRadius: Size.md,
     },
     buttonText: {
-        color: '#fff',
+        color: theme.pureInverse,
         fontWeight: '600',
     },
     listContent: {
@@ -291,7 +295,7 @@ const styles = StyleSheet.create({
     itemContainer: {
         paddingVertical: Spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.light.border,
+        borderBottomColor: theme.border,
     },
     itemHeader: {
         flexDirection: 'row',
@@ -302,7 +306,7 @@ const styles = StyleSheet.create({
     merchant: {
         fontSize: 16,
         fontWeight: '600',
-        color: Colors.light.text,
+        color: theme.text,
         flex: 1,
         marginRight: Spacing.sm,
     },
@@ -318,10 +322,10 @@ const styles = StyleSheet.create({
         marginLeft: Spacing.xs,
     },
     debitAmount: {
-        color: Colors.light.text,
+        color: theme.text,
     },
     creditAmount: {
-        color: Colors.light.success,
+        color: theme.success,
     },
     itemFooter: {
         flexDirection: 'row',
@@ -331,13 +335,13 @@ const styles = StyleSheet.create({
     },
     date: {
         fontSize: 14,
-        color: Colors.light.textSecondary,
+        color: theme.textSecondary,
     },
     type: {
         fontSize: 12,
-        color: Colors.light.textSecondary,
+        color: theme.textSecondary,
         fontWeight: '600',
-        backgroundColor: Colors.light.surface,
+        backgroundColor: theme.surface,
         paddingHorizontal: Spacing.xs,
         paddingVertical: 2,
         borderRadius: 4,
@@ -345,7 +349,7 @@ const styles = StyleSheet.create({
     },
     bodyPreview: {
         fontSize: 14,
-        color: Colors.light.textSecondary,
+        color: theme.textSecondary,
         fontStyle: 'italic',
     }
 });
