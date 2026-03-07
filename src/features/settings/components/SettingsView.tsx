@@ -8,7 +8,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import React from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 
 export function SettingsView(vm: SettingsViewModel) {
     const { theme } = useTheme();
@@ -45,23 +45,25 @@ export function SettingsView(vm: SettingsViewModel) {
                     />
                 </SettingsSection>
 
-                <SettingsSection title="Automation">
-                    <SettingsActionRow
-                        icon="messageCircle"
-                        title="SMS Inbox"
-                        description="Review pending, processed, duplicate, and failed SMS imports"
-                        actionLabel="Open"
-                        onPress={vm.onSmsInbox}
-                        withDivider
-                    />
-                    <SettingsActionRow
-                        icon="messageCircle"
-                        title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
-                        description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
-                        actionLabel="Rules"
-                        onPress={vm.onManageSmsRules}
-                    />
-                </SettingsSection>
+                {Platform.OS === 'android' && (
+                    <SettingsSection title="Automation">
+                        <SettingsActionRow
+                            icon="messageCircle"
+                            title="SMS Inbox"
+                            description="Review pending, processed, duplicate, and failed SMS imports"
+                            actionLabel="Open"
+                            onPress={vm.onSmsInbox}
+                            withDivider
+                        />
+                        <SettingsActionRow
+                            icon="messageCircle"
+                            title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
+                            description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
+                            actionLabel="Rules"
+                            onPress={vm.onManageSmsRules}
+                        />
+                    </SettingsSection>
+                )}
 
                 <SettingsSection title="Privacy">
                     <View style={styles.rowBetween}>
