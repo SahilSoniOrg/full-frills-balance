@@ -1,9 +1,9 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { CurrencySelector } from '@/src/features/accounts';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 

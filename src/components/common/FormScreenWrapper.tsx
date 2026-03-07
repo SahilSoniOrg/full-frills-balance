@@ -27,7 +27,7 @@ export function useBehavior() {
             showListener.remove()
             hideListener.remove()
         }
-    }, [])
+    }, [defaultValue])
 
     return behaviour
 }
