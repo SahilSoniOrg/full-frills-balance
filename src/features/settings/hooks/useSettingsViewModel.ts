@@ -33,6 +33,8 @@ export interface SettingsViewModel {
     onImport: () => void;
     onAuditLog: () => void;
     onManageSmsRules: () => void;
+    onPersonalizationSettings: () => void;
+    onDataManagementSettings: () => void;
     onAppearanceSettings: () => void;
     onFixIntegrity: () => void;
     integrityProgress: number;
@@ -194,6 +196,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         onImport: AppNavigation.toImportSelection,
         onAuditLog: AppNavigation.toAuditLog,
         onManageSmsRules: AppNavigation.toSmsRules,
+        onPersonalizationSettings: AppNavigation.toPersonalizationSettings,
+        onDataManagementSettings: AppNavigation.toDataManagementSettings,
         onAppearanceSettings: AppNavigation.toAppearanceSettings,
         onFixIntegrity,
         onCleanup,

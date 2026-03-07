@@ -142,6 +142,20 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to personalization settings.
+     */
+    toPersonalizationSettings: () => {
+        router.push('/personalization-settings' as any);
+    },
+
+    /**
+     * Navigate to data management settings.
+     */
+    toDataManagementSettings: () => {
+        router.push('/data-management-settings' as any);
+    },
+
+    /**
      * Navigate to the Audit Log screen.
      */
     toAuditLog: () => {
