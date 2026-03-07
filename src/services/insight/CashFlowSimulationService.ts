@@ -29,6 +29,8 @@ export class CashFlowSimulationService {
         committedPlannedPayments: number;
         committedPlannedJournals: number;
         committedLiabilities: number;
+        committedLiabilitiesCC: number;
+        committedLiabilitiesOther: number;
         totalLiabilities: number;
         totalLiabilitiesCC: number;
         totalLiabilitiesOther: number;
@@ -44,6 +46,8 @@ export class CashFlowSimulationService {
             committedPlannedPayments,
             committedPlannedJournals,
             committedLiabilities,
+            committedLiabilitiesCC,
+            committedLiabilitiesOther,
             totalLiabilities,
             totalLiabilitiesCC,
             totalLiabilitiesOther
@@ -59,8 +63,9 @@ export class CashFlowSimulationService {
             resultCurrency
         );
 
-        // Safe to spend starts with (Assets - Liabilities)
-        let currentBalance = startingBalance - totalLiabilities;
+        // Only liability payments due inside the simulation window reduce spendable cash.
+        // Outstanding balances remain informational unless a due payment is scheduled.
+        let currentBalance = startingBalance;
         let minBalance = currentBalance;
 
         for (let d = 0; d < SIMULATION_DAYS; d++) {
@@ -77,6 +82,8 @@ export class CashFlowSimulationService {
             committedPlannedPayments,
             committedPlannedJournals,
             committedLiabilities,
+            committedLiabilitiesCC,
+            committedLiabilitiesOther,
             totalLiabilities,
             totalLiabilitiesCC,
             totalLiabilitiesOther
@@ -102,6 +109,8 @@ export class CashFlowSimulationService {
         committedPlannedPayments: number,
         committedPlannedJournals: number,
         committedLiabilities: number,
+        committedLiabilitiesCC: number,
+        committedLiabilitiesOther: number,
         totalLiabilities: number,
         totalLiabilitiesCC: number,
         totalLiabilitiesOther: number
@@ -112,6 +121,8 @@ export class CashFlowSimulationService {
         let committedPlannedPayments = 0;
         let committedPlannedJournals = 0;
         let committedLiabilities = 0;
+        let committedLiabilitiesCC = 0;
+        let committedLiabilitiesOther = 0;
         let totalLiabilitiesSum = 0;
         let totalLiabilitiesCC = 0;
         let totalLiabilitiesOther = 0;
@@ -136,6 +147,11 @@ export class CashFlowSimulationService {
                     logger.info(`[SafeToSpend] Committed: ${context || 'Planned'} impact ${effectiveCommit} on day ${dayOffset}`);
                 } else if (type === 'LIABILITY_CC' || type === 'LIABILITY_OTHER') {
                     committedLiabilities += effectiveCommit;
+                    if (type === 'LIABILITY_CC') {
+                        committedLiabilitiesCC += effectiveCommit;
+                    } else {
+                        committedLiabilitiesOther += effectiveCommit;
+                    }
                     logger.info(`[SafeToSpend] Committed: ${context || 'Liability'} impact ${effectiveCommit} on day ${dayOffset}`);
                 }
             }
@@ -168,7 +184,9 @@ export class CashFlowSimulationService {
             }
 
             try {
-                const metadataRecords = await account.metadataRecords.fetch();
+                const metadataRecords = account.metadataRecords
+                    ? await account.metadataRecords.fetch()
+                    : [];
                 const metadata = metadataRecords[0];
 
                 const today = now.date();
@@ -252,14 +270,15 @@ export class CashFlowSimulationService {
                             amount = convertedAmount;
                         } catch { }
                     }
-                    const impact = isInternalTransfer ? 0 : (isLiquidTo ? amount : -amount);
                     const isDebtOutflow = liabilityAccountIds.has(pp.toAccountId);
+                    const impact = isDebtOutflow
+                        ? -amount
+                        : (isInternalTransfer ? 0 : (isLiquidTo ? amount : -amount));
                     const flowType = isDebtOutflow ?
                         (liabilityAccountSubtypes.get(pp.toAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
                         : 'PLAN_PAYMENT';
 
-                    // For internal transfers to a liability, the net impact is 0, but it satisfies a commitment.
-                    // We track it as a commitment to fill the safe-to-spend bar correctly.
+                    // Liability payments reduce liquid cash even when the destination is another tracked account.
                     const commitAmount = (isInternalTransfer && isDebtOutflow) ? amount : undefined;
 
                     logger.info(`[SafeToSpend] Simulating PP ${pp.name}: impact ${impact} on day ${dayOffset} (type: ${flowType})`);
@@ -321,7 +340,9 @@ export class CashFlowSimulationService {
                         (liabilityAccountSubtypes.get(otherSideAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
                         : 'PLAN_JOURNAL';
 
-                    const impact = isInternalTransfer ? 0 : (tx.transactionType === TransactionType.DEBIT ? amount : -amount);
+                    const impact = (isInternalTransfer && isDebtOutflow)
+                        ? (tx.transactionType === TransactionType.CREDIT ? -amount : 0)
+                        : (isInternalTransfer ? 0 : (tx.transactionType === TransactionType.DEBIT ? amount : -amount));
 
                     // Similarly to PP, internal transfers to debt should be tracked for commitment display.
                     const commitAmount = (isInternalTransfer && isDebtOutflow && tx.transactionType === TransactionType.CREDIT) ? amount : undefined;
@@ -340,6 +361,8 @@ export class CashFlowSimulationService {
             committedPlannedPayments,
             committedPlannedJournals,
             committedLiabilities,
+            committedLiabilitiesCC,
+            committedLiabilitiesOther,
             totalLiabilities: totalLiabilitiesSum,
             totalLiabilitiesCC,
             totalLiabilitiesOther

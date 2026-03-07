@@ -17,6 +17,8 @@ interface SafeToSpendCardProps {
     committedBudget: number;
     committedPlanned: number;
     committedLiabilities: number;
+    committedLiabilitiesCC: number;
+    committedLiabilitiesOther: number;
     committedPlannedPayments: number;
     committedPlannedJournals: number;
     totalFutureInflow: number;
@@ -50,6 +52,8 @@ export const SafeToSpendCard = ({
     committedBudget,
     committedPlanned,
     committedLiabilities,
+    committedLiabilitiesCC,
+    committedLiabilitiesOther,
     committedPlannedPayments,
     committedPlannedJournals,
     totalFutureInflow,
@@ -128,12 +132,11 @@ export const SafeToSpendCard = ({
     // committedTotal represents planned outflows and remaining budgets.
     const committedTotal = committedPlanned + committedBudget;
 
-    // effectiveTotal represents the pool we are currently allocating.
-    // It's the maximum of our current liquid assets OR the sum of our segments.
-    // We use totalLiabilities here because safeToSpend is calculated after subtracting ALL liquid debt.
+    // The bar should match the actual safe-to-spend formula:
+    // liquid assets minus committed funds minus liabilities due in the window.
     const effectiveTotal = Math.max(
         totalLiquidAssets,
-        committedTotal + totalLiabilities + safeToSpend
+        committedTotal + committedLiabilities + safeToSpend
     );
     // Reserve is removed to prevent the "black sliver". The bar is now always "full" relative to current/required liquidity.
 
@@ -196,8 +199,8 @@ export const SafeToSpendCard = ({
                                 {committedTotal > 0 && (
                                     <View style={[styles.progressSegment, { flex: committedTotal, backgroundColor: theme.warning }]} />
                                 )}
-                                {totalLiabilities > 0 && (
-                                    <View style={[styles.progressSegment, { flex: totalLiabilities, backgroundColor: theme.error }]} />
+                                {committedLiabilities > 0 && (
+                                    <View style={[styles.progressSegment, { flex: committedLiabilities, backgroundColor: theme.error }]} />
                                 )}
                                 {safeToSpend > 0 && (
                                     <View style={[styles.progressSegment, { flex: safeToSpend, backgroundColor: theme.primary }]} />
@@ -225,7 +228,7 @@ export const SafeToSpendCard = ({
                                     onPress={() => setSelectedLegendItem('debts')}
                                 >
                                     <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
-                                    <AppText variant="caption" color="secondary">{labels.debtsPrefix} {format(totalLiabilities)}</AppText>
+                                    <AppText variant="caption" color="secondary">{labels.debtsPrefix} {format(committedLiabilities)}</AppText>
                                 </TouchableOpacity>
                             </View>
                         </>
@@ -471,11 +474,11 @@ export const SafeToSpendCard = ({
                         <View style={styles.breakdownList}>
                             <View style={styles.breakdownRow}>
                                 <AppText variant="caption">{labels.creditCardStatements}</AppText>
-                                <AppText variant="caption" weight="bold">{format(totalLiabilitiesCC)}</AppText>
+                                <AppText variant="caption" weight="bold">{format(committedLiabilitiesCC)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
                                 <AppText variant="caption">{labels.otherLiquidLiabilities}</AppText>
-                                <AppText variant="caption" weight="bold">{format(totalLiabilitiesOther)}</AppText>
+                                <AppText variant="caption" weight="bold">{format(committedLiabilitiesOther)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
                                 <AppText variant="body" weight="bold">{`Total Due (${AppConfig.defaults.safeToSpendDays}d)`}</AppText>

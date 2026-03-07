@@ -52,6 +52,8 @@ export interface SafeToSpendResult {
     committedPlannedPayments: number;
     committedPlannedJournals: number;
     committedLiabilities: number;
+    committedLiabilitiesCC: number;
+    committedLiabilitiesOther: number;
     totalFutureInflow: number;
     safeToSpend: number;
     currencyCode: string;
@@ -129,6 +131,8 @@ export class InsightService {
                         committedPlannedPayments: 0,
                         committedPlannedJournals: 0,
                         committedLiabilities: 0,
+                        committedLiabilitiesCC: 0,
+                        committedLiabilitiesOther: 0,
                         safeToSpend: 0,
                         currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
                         liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
@@ -297,6 +301,8 @@ export class InsightService {
                             committedPlannedPayments,
                             committedPlannedJournals,
                             committedLiabilities,
+                            committedLiabilitiesCC,
+                            committedLiabilitiesOther,
                             totalLiabilities,
                             totalLiabilitiesCC,
                             totalLiabilitiesOther
@@ -348,6 +354,8 @@ export class InsightService {
                             committedPlannedPayments,
                             committedPlannedJournals,
                             committedLiabilities,
+                            committedLiabilitiesCC,
+                            committedLiabilitiesOther,
                             totalFutureInflow,
                             safeToSpend,
                             currencyCode: resultCurrency,
