@@ -169,14 +169,14 @@ export function useAccountFormViewModel(): AccountFormViewModel {
             // Load Metadata
             accountRepository.findMetadata(existingAccount.id).then(metadata => {
                 if (metadata) {
-                    if (metadata.statementDay !== undefined) setStatementDay(metadata.statementDay.toString());
-                    if (metadata.dueDay !== undefined) setDueDay(metadata.dueDay.toString());
-                    if (metadata.creditLimitAmount !== undefined) setCreditLimitAmount(metadata.creditLimitAmount.toString());
-                    if (metadata.aprBps !== undefined) setApr((metadata.aprBps / 100).toString());
-                    if (metadata.emiDay !== undefined) setEmiDay(metadata.emiDay.toString());
-                    if (metadata.loanTenureMonths !== undefined) setLoanTenureMonths(metadata.loanTenureMonths.toString());
-                    if (metadata.minimumPaymentAmount !== undefined) setMinimumPaymentAmount(metadata.minimumPaymentAmount.toString());
-                    if (metadata.notes !== undefined) setNotes(metadata.notes);
+                    if (metadata.statementDay != null) setStatementDay(metadata.statementDay.toString());
+                    if (metadata.dueDay != null) setDueDay(metadata.dueDay.toString());
+                    if (metadata.creditLimitAmount != null) setCreditLimitAmount(metadata.creditLimitAmount.toString());
+                    if (metadata.aprBps != null) setApr((metadata.aprBps / 100).toString());
+                    if (metadata.emiDay != null) setEmiDay(metadata.emiDay.toString());
+                    if (metadata.loanTenureMonths != null) setLoanTenureMonths(metadata.loanTenureMonths.toString());
+                    if (metadata.minimumPaymentAmount != null) setMinimumPaymentAmount(metadata.minimumPaymentAmount.toString());
+                    if (metadata.notes != null) setNotes(metadata.notes);
                 }
             });
         }
