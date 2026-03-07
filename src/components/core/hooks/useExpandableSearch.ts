@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { AppConfig } from '@/src/constants';
 import { LayoutAnimation, TextInput } from 'react-native';
 
 interface UseExpandableSearchProps {
@@ -18,7 +19,7 @@ export function useExpandableSearch({ value, onChangeText, onExpandChange }: Use
         setIsExpanded(true);
         onExpandChange?.(true);
         // Small delay to ensure input is rendered before focus
-        setTimeout(() => inputRef.current?.focus(), 100);
+        setTimeout(() => inputRef.current?.focus(), AppConfig.timing.focusDelayMs);
     }, [onExpandChange]);
 
     const handleCollapse = useCallback(() => {

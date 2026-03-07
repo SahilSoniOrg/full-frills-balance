@@ -4,6 +4,7 @@ import { SubmitFooter } from '@/src/components/common/SubmitFooter'
 import { AppButton, AppCard, AppText, ListRow, LoadingView } from '@/src/components/core'
 import { AppInput } from '@/src/components/core/AppInput'
 import { Screen } from '@/src/components/layout'
+import { AppConfig, Spacing } from '@/src/constants'
 import { CurrencySelector } from '@/src/features/accounts'
 import { toast } from '@/src/utils/alerts'
 import { AppNavigation } from '@/src/utils/navigation'
@@ -25,8 +26,8 @@ export default function BudgetEditScreen() {
     if (loading) {
         return (
             <Screen
-                title="Loading..."
-                headerActions={<AppButton variant="ghost" onPress={AppNavigation.back}>Cancel</AppButton>}
+                title={AppConfig.strings.common.loading}
+                headerActions={<AppButton variant="ghost" onPress={AppNavigation.back}>{AppConfig.strings.common.cancel}</AppButton>}
             >
                 <LoadingView loading={true} text="Loading budget..." />
             </Screen>
@@ -50,10 +51,10 @@ export default function BudgetEditScreen() {
                 edges={['top', 'bottom']}
                 headerActions={
                     <AppButton variant="ghost" onPress={AppNavigation.back}>
-                        Cancel
+                        {AppConfig.strings.common.cancel}
                     </AppButton>
                 }
-                contentContainerStyle={{ padding: 16 }}
+                contentContainerStyle={{ padding: Spacing.lg }}
                 footerSlot={
                     <SubmitFooter
                         onPress={handleSave}
@@ -63,7 +64,7 @@ export default function BudgetEditScreen() {
                     />
                 }
             >
-                <AppCard style={{ marginBottom: 24 }}>
+                <AppCard style={{ marginBottom: Spacing.xxl }}>
                     <AppInput
                         label="Budget Name"
                         value={name}
@@ -77,9 +78,9 @@ export default function BudgetEditScreen() {
                         onChangeText={setAmount}
                         placeholder="0.00"
                         keyboardType="decimal-pad"
-                        style={{ marginTop: 16 }}
+                        style={{ marginTop: Spacing.lg }}
                     />
-                    <AppText variant="body" style={{ marginTop: 16, marginBottom: 8 }}>Currency</AppText>
+                    <AppText variant="body" style={{ marginTop: Spacing.lg, marginBottom: Spacing.sm }}>Currency</AppText>
                     <CurrencySelector
                         selectedCurrency={currencyCode}
                         currencies={currencies}
@@ -87,10 +88,10 @@ export default function BudgetEditScreen() {
                     />
                 </AppCard>
 
-                <AppText variant="subheading" style={{ marginBottom: 12 }}>
+                <AppText variant="subheading" style={{ marginBottom: Spacing.md }}>
                     Scope (Accounts)
                 </AppText>
-                <AppCard style={{ marginBottom: 32 }}>
+                <AppCard style={{ marginBottom: Spacing.xxxl }}>
                     <ListRow
                         title={selectedAccountIds.length > 0 ? `${selectedAccountIds.length} accounts selected` : 'Select accounts'}
                         subtitle="Choose which accounts this budget applies to"

@@ -59,6 +59,8 @@ export const SafeToSpendCard = ({
     const [isInfoVisible, setInfoVisible] = React.useState(false);
     const [selectedLegendItem, setSelectedLegendItem] = React.useState<'safe' | 'committed' | 'debts' | null>(null);
     const info = AppConfig.strings.dashboard.safeToSpendExplanation;
+    const labels = AppConfig.strings.dashboard.safeToSpendUi;
+    const projectionWindowDays = AppConfig.defaults.safeToSpendDays * 2;
 
     const format = (val: number) => {
         if (isLoading) return '...';
@@ -80,26 +82,26 @@ export const SafeToSpendCard = ({
                 {subtitle}
             </AppText>
             <View style={styles.modalMetaGroup}>
-                <AppText variant="caption" weight="bold">Categories used</AppText>
+                <AppText variant="caption" weight="bold">{labels.categoriesUsed}</AppText>
                 {subtypes.length > 0 ? (
                     <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
                         {subtypes.map(formatAccountSubtypeLabel).join(', ')}
                     </AppText>
                 ) : (
                     <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
-                        None detected yet
+                        {labels.noneDetectedYet}
                     </AppText>
                 )}
             </View>
             <View style={styles.modalMetaGroup}>
-                <AppText variant="caption" weight="bold">Accounts used</AppText>
+                <AppText variant="caption" weight="bold">{labels.accountsUsed}</AppText>
                 {accountNames.length > 0 ? (
                     <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
                         {accountNames.join(', ')}
                     </AppText>
                 ) : (
                     <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
-                        None detected yet
+                        {labels.noneDetectedYet}
                     </AppText>
                 )}
             </View>
@@ -194,21 +196,21 @@ export const SafeToSpendCard = ({
                                     onPress={() => setSelectedLegendItem('safe')}
                                 >
                                     <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
-                                    <AppText variant="caption" color="secondary">Safe: {format(safeToSpend)}</AppText>
+                                    <AppText variant="caption" color="secondary">{labels.safePrefix} {format(safeToSpend)}</AppText>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.legendItem}
                                     onPress={() => setSelectedLegendItem('committed')}
                                 >
                                     <View style={[styles.legendDot, { backgroundColor: theme.warning }]} />
-                                    <AppText variant="caption" color="secondary">Committed: {format(committedTotal)}</AppText>
+                                    <AppText variant="caption" color="secondary">{labels.committedPrefix} {format(committedTotal)}</AppText>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.legendItem}
                                     onPress={() => setSelectedLegendItem('debts')}
                                 >
                                     <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
-                                    <AppText variant="caption" color="secondary">Debts: {format(committedLiabilities)}</AppText>
+                                    <AppText variant="caption" color="secondary">{labels.debtsPrefix} {format(committedLiabilities)}</AppText>
                                 </TouchableOpacity>
                             </View>
                         </>
@@ -230,7 +232,7 @@ export const SafeToSpendCard = ({
                     const minX = Math.min(...chartData.map(d => d.x));
                     const maxX = Math.max(...chartData.map(d => d.x));
 
-                    const tickCount = 5;
+                    const tickCount = AppConfig.defaults.chartTickCount;
                     const xTicks = [];
                     for (let i = 0; i < tickCount; i++) {
                         xTicks.push(minX + ((maxX - minX) * i) / (tickCount - 1));
@@ -239,11 +241,11 @@ export const SafeToSpendCard = ({
                     return (
                         <View style={[styles.projectionContainer, { borderColor: theme.border }]}>
                             <AppText variant="body" weight="medium" style={styles.projectionTitle}>
-                                Trajectory (60-day projected)
+                                {`Trajectory (${projectionWindowDays}-day projected)`}
                             </AppText>
                             <LineChart
                                 data={chartData}
-                                height={150}
+                                height={AppConfig.layout.safeToSpendChartHeight}
                                 color={isOverCommitted ? theme.error : theme.primary}
                                 xTicks={xTicks}
                                 formatXTick={(x) => dayjs(x).format('MMM D')}
@@ -253,7 +255,7 @@ export const SafeToSpendCard = ({
                                 <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
                                     <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={Size.sm} color={theme.success} />
                                     <AppText variant="caption" weight="medium" color="success">
-                                        Safe for the next {projection.safeDaysCount > 99 ? '99+' : projection.safeDaysCount} days
+                                        Safe for the next {projection.safeDaysCount > AppConfig.defaults.safeToSpendDaysCap ? `${AppConfig.defaults.safeToSpendDaysCap}+` : projection.safeDaysCount} days
                                     </AppText>
                                 </View>
                             )}
@@ -261,7 +263,7 @@ export const SafeToSpendCard = ({
                                 <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
                                     <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={Size.sm} color={theme.success} />
                                     <AppText variant="caption" weight="medium" color="success">
-                                        Financially secure
+                                        {labels.financiallySecure}
                                     </AppText>
                                 </View>
                             )}
@@ -274,7 +276,6 @@ export const SafeToSpendCard = ({
                 visible={isInfoVisible}
                 title={info.title}
                 onClose={() => setInfoVisible(false)}
-                maxHeightPercent={84}
                 accessibilityCloseLabel="Close safe-to-spend info"
                 actions={[
                     {
@@ -312,19 +313,19 @@ export const SafeToSpendCard = ({
 
                 <View style={styles.modalSection}>
                     <AppText variant="heading" style={styles.modalSectionTitle}>{info.bucketTitle}</AppText>
-                    {renderSubtypeGroup('Assets bucket', info.formulaItems[0], liquidAssetSubtypes, liquidAssetAccountNames)}
-                    {renderSubtypeGroup('Debts bucket', info.formulaItems[1], liquidLiabilitySubtypes, liquidLiabilityAccountNames)}
-                    {renderSubtypeGroup('Budgets bucket', info.formulaItems[2], budgetSubtypes, budgetAccountNames)}
+                    {renderSubtypeGroup(labels.assetsBucket, info.formulaItems[0], liquidAssetSubtypes, liquidAssetAccountNames)}
+                    {renderSubtypeGroup(labels.debtsBucket, info.formulaItems[1], liquidLiabilitySubtypes, liquidLiabilityAccountNames)}
+                    {renderSubtypeGroup(labels.budgetsBucket, info.formulaItems[2], budgetSubtypes, budgetAccountNames)}
                 </View>
 
                 <View style={styles.modalSection}>
                     <AppText variant="heading" style={styles.modalSectionTitle}>{info.exampleTitle}</AppText>
                     <View style={[styles.exampleBox, { borderColor: theme.border }]}>
-                        <AppText variant="caption" color="secondary">Projected Liquidity (Assets + Inflow): {format(totalLiquidAssets + totalFutureInflow)}</AppText>
-                        <AppText variant="caption" color="secondary">Committed (Budgets + Planned): -{format(committedTotal)}</AppText>
-                        <AppText variant="caption" color="secondary">Debts (Liability payments due): -{format(committedLiabilities)}</AppText>
+                        <AppText variant="caption" color="secondary">{labels.projectedLiquidity} {format(totalLiquidAssets + totalFutureInflow)}</AppText>
+                        <AppText variant="caption" color="secondary">{labels.committedLine} -{format(committedTotal)}</AppText>
+                        <AppText variant="caption" color="secondary">{labels.debtsLine} -{format(committedLiabilities)}</AppText>
                         <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
-                        <AppText variant="body" weight="bold">Safe to Spend: {format(safeToSpend)}</AppText>
+                        <AppText variant="body" weight="bold">{labels.safeToSpendLine} {format(safeToSpend)}</AppText>
                     </View>
                 </View>
 
@@ -358,7 +359,7 @@ export const SafeToSpendCard = ({
                 onClose={() => setSelectedLegendItem(null)}
                 actions={[
                     {
-                        label: 'Got it',
+                        label: info.closeCta,
                         onPress: () => setSelectedLegendItem(null),
                     }
                 ]}
@@ -369,8 +370,8 @@ export const SafeToSpendCard = ({
                             {AppConfig.strings.dashboard.legendDetails.safeDesc}
                         </AppText>
                         <View style={[styles.exampleBox, { backgroundColor: theme.surfaceSecondary }]}>
-                            <AppText variant="body" weight="bold">Calculation:</AppText>
-                            <AppText variant="caption">Assets - Committed - Debt Dues</AppText>
+                            <AppText variant="body" weight="bold">{labels.calculationTitle}</AppText>
+                            <AppText variant="caption">{labels.calculationFormula}</AppText>
                             <AppText variant="caption">{format(totalLiquidAssets)} - {format(committedTotal)} - {format(committedLiabilities)}</AppText>
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                             <AppText variant="body" weight="bold" color="primary">Total: {format(safeToSpend)}</AppText>
@@ -385,20 +386,20 @@ export const SafeToSpendCard = ({
                         </AppText>
                         <View style={styles.breakdownList}>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">Planned Payments</AppText>
+                                <AppText variant="caption">{labels.plannedPayments}</AppText>
                                 <AppText variant="caption" weight="bold">{format(committedPlannedPayments)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">Planned Journals/Transfers</AppText>
+                                <AppText variant="caption">{labels.plannedJournals}</AppText>
                                 <AppText variant="caption" weight="bold">{format(committedPlannedJournals)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">Active Budgets (Remaining)</AppText>
+                                <AppText variant="caption">{labels.activeBudgets}</AppText>
                                 <AppText variant="caption" weight="bold">{format(committedBudget)}</AppText>
                             </View>
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                             <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="bold">Total Committed</AppText>
+                                <AppText variant="body" weight="bold">{labels.totalCommitted}</AppText>
                                 <AppText variant="body" weight="bold" color="warning">{format(committedTotal)}</AppText>
                             </View>
                         </View>
@@ -412,20 +413,20 @@ export const SafeToSpendCard = ({
                         </AppText>
                         <View style={styles.breakdownList}>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">Credit Card Statements</AppText>
+                                <AppText variant="caption">{labels.creditCardStatements}</AppText>
                                 <AppText variant="caption" weight="bold">{format(totalLiabilitiesCC)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">Other Liquid Liabilities</AppText>
+                                <AppText variant="caption">{labels.otherLiquidLiabilities}</AppText>
                                 <AppText variant="caption" weight="bold">{format(totalLiabilitiesOther)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="bold">Total Due (30d)</AppText>
+                                <AppText variant="body" weight="bold">{`Total Due (${AppConfig.defaults.safeToSpendDays}d)`}</AppText>
                                 <AppText variant="body" weight="bold" color="error">{format(committedLiabilities)}</AppText>
                             </View>
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">Total Balance (Informational)</AppText>
+                                <AppText variant="caption">{labels.totalBalanceInfo}</AppText>
                                 <AppText variant="caption">{format(totalLiabilities)}</AppText>
                             </View>
                         </View>

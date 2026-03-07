@@ -1,5 +1,6 @@
 import { PopupModal } from '@/src/components/common/PopupModal'
 import { AppText } from '@/src/components/core/AppText'
+import { AppConfig } from '@/src/constants'
 import { AlertPayload, clearAlertListener, clearConfirmListener, ConfirmPayload, setAlertListener, setConfirmListener } from '@/src/utils/alerts'
 import React, { useEffect, useState } from 'react'
 
@@ -36,11 +37,11 @@ export function AlertContainer() {
         return (
             <PopupModal
                 visible={true}
-                title={payload.title || 'Alert'}
+                title={payload.title || AppConfig.strings.common.alert}
                 onClose={() => setActiveAlert(null)}
                 actions={[
                     {
-                        label: 'OK',
+                        label: AppConfig.strings.common.ok,
                         onPress: () => setActiveAlert(null),
                         variant: 'primary',
                     }
@@ -64,7 +65,7 @@ export function AlertContainer() {
                 }}
                 actions={[
                     {
-                        label: payload.cancelText || 'Cancel',
+                        label: payload.cancelText || AppConfig.strings.common.cancel,
                         onPress: () => {
                             payload.onCancel()
                             setActiveAlert(null)
@@ -72,7 +73,7 @@ export function AlertContainer() {
                         variant: 'outline',
                     },
                     {
-                        label: payload.confirmText || 'Confirm',
+                        label: payload.confirmText || AppConfig.strings.common.confirm,
                         onPress: () => {
                             payload.onConfirm()
                             setActiveAlert(null)

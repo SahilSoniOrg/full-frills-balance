@@ -72,13 +72,15 @@ export class InsightService {
      * Calculates "Safe-to-Spend" based on liquid assets minus remaining budgets for the month.
      */
     observeSafeToSpend(): Observable<SafeToSpendResult> {
+        const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
+
         return combineLatest([
             accountRepository.observeByType(AccountType.ASSET),
             accountRepository.observeByType(AccountType.LIABILITY),
             budgetRepository.observeAllActive(),
             plannedPaymentRepository.observeActive(),
             accountRepository.observeAll(),
-            journalRepository.observePlannedInRange(dayjs().startOf('day').valueOf(), dayjs().add(30, 'day').endOf('day').valueOf()),
+            journalRepository.observePlannedInRange(dayjs().startOf('day').valueOf(), dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf()),
             transactionRepository.observeActiveWithColumns(['running_balance']),
             journalRepository.observeStatusMeta(),
         ] as [
@@ -92,7 +94,7 @@ export class InsightService {
                 Observable<Journal[]>
             ]
         ).pipe(
-            debounceTime(250),
+            debounceTime(AppConfig.insights.observeDebounceMs),
             switchMap(([assets, liabilities, budgets, plannedPayments, allAccounts, plannedJournals]) => {
                 const parentIds = new Set<string>(
                     allAccounts.map(a => a.parentAccountId).filter((id): id is string => Boolean(id))
@@ -274,7 +276,7 @@ export class InsightService {
     }
 
     /**
-     * Calculates Safe-to-Spend and appends 30-day historical and 100-day projected data.
+     * Calculates Safe-to-Spend and appends configured-day historical and projected data.
      */
     observeSafeToSpendProjection(): Observable<SafeToSpendResult> {
         return this.observeSafeToSpend().pipe(
@@ -297,10 +299,15 @@ export class InsightService {
         budgetCoveredExpenseAccountIds: Set<string> = new Set(),
     ): Promise<SafeToSpendProjection> {
         const now = dayjs().startOf('day');
-        const thirtyDaysAgo = now.subtract(30, 'day').valueOf();
+        const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
+        const thirtyDaysAgo = now.subtract(safeToSpendDays, 'day').valueOf();
 
         const activeAccountsIds = [...current.liquidAssetAccountIds];
-        const rawDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(activeAccountsIds, thirtyDaysAgo, now.valueOf() + 86400000);
+        const rawDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(
+            activeAccountsIds,
+            thirtyDaysAgo,
+            now.valueOf() + AppConfig.time.msPerDay
+        );
 
         const netCashFlowByDay = new Map<number, number>();
         for (const delta of rawDeltas) {
@@ -322,7 +329,7 @@ export class InsightService {
 
         historyPoints.push({ timestamp: now.valueOf(), value: runningBalance, isProjected: false });
 
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < safeToSpendDays; i++) {
             const targetDay = now.subtract(i, 'day').valueOf();
             const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
             runningBalance -= flowThatDay;
@@ -330,7 +337,7 @@ export class InsightService {
         }
         historyPoints.reverse();
 
-        const simulationDays = 30;
+        const simulationDays = safeToSpendDays;
         const liabilityAccounts = await accountRepository.observeByIds(current.liquidLiabilityAccountIds).pipe(take(1)).toPromise() || [];
         const accountBalances = await balanceService.getAccountBalances();
         const liabilityAccountBalances = liabilityAccounts.map(l => ({

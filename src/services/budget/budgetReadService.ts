@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database'
+import { AppConfig } from '@/src/constants'
 import { AccountType } from '@/src/data/models/Account'
 import Budget from '@/src/data/models/Budget'
 import Transaction from '@/src/data/models/Transaction'
@@ -134,7 +135,7 @@ export class BudgetReadService {
 
                 return ledgerReadService.observeEnrichedForAccounts(
                     rootAccountIds,
-                    1000,
+                    AppConfig.pagination.budgetDetailsTransactionsPageSize,
                     { startDate: startOfMonth, endDate: endOfMonth }
                 )
             })

@@ -367,7 +367,7 @@ export class PlannedPaymentService {
             if (nextOcc > horizon) continue
 
             let generationsCount = 0;
-            const MAX_GENERATIONS = 365;
+            const MAX_GENERATIONS = AppConfig.insights.maxPlannedPaymentGenerations;
 
             while (nextOcc <= horizon && generationsCount < MAX_GENERATIONS) {
                 generationsCount++;

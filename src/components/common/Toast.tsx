@@ -1,5 +1,6 @@
 import { AppIcon, IconName } from '@/src/components/core/AppIcon'
 import { AppText } from '@/src/components/core/AppText'
+import { AppConfig } from '@/src/constants'
 import { Size, Spacing, ZIndex } from '@/src/constants/design-tokens'
 import { useTheme } from '@/src/hooks/use-theme'
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener'
@@ -34,12 +35,12 @@ function ToastItemView({ toast, theme }: { toast: ToastItem; theme: any }) {
     Animated.parallel([
       Animated.timing(animatedValue, {
         toValue: 1,
-        duration: 200,
+        duration: AppConfig.toast.animationDurationMs,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 200,
+        duration: AppConfig.toast.animationDurationMs,
         useNativeDriver: true,
       }),
     ]).start()
@@ -47,7 +48,7 @@ function ToastItemView({ toast, theme }: { toast: ToastItem; theme: any }) {
 
   const translateY = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [-20, 0],
+    outputRange: [-AppConfig.toast.enterOffsetY, 0],
   })
 
   const colors = getToastColors(toast.type, theme)
@@ -127,7 +128,7 @@ function getToastIcon(type: ToastPayload['type']): IconName {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 60,
+    top: AppConfig.layout.toastTopOffset,
     left: 0,
     right: 0,
     zIndex: ZIndex.toast,

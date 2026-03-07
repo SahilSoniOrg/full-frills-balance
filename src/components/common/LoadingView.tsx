@@ -1,5 +1,6 @@
 import { AppText } from '@/src/components/core/AppText'
 import { Spacing } from '@/src/constants'
+import { AppConfig } from '@/src/constants/app-config'
 import React from 'react'
 import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native'
 
@@ -10,7 +11,7 @@ export interface LoadingViewProps {
     style?: ViewStyle
 }
 
-export function LoadingView({ loading, text = 'Loading...', size = 'large', style }: LoadingViewProps) {
+export function LoadingView({ loading, text = AppConfig.strings.common.loading, size = 'large', style }: LoadingViewProps) {
     if (!loading) return null
 
     return (

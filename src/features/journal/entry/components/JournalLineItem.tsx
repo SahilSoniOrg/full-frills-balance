@@ -1,5 +1,5 @@
 import { AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Shape, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalEntryLine } from '@/src/types/domain';
@@ -140,7 +140,7 @@ export const JournalLineItem = React.memo(({
                             placeholder="1.0"
                             keyboardType="decimal-pad"
                             variant="minimal"
-                            containerStyle={{ width: 60, minHeight: 0 }}
+                            containerStyle={{ width: Size.buttonXl, minHeight: 0 }}
                             style={{ fontSize: 13, textAlign: 'right' }}
                         />
                         {onBalanceLine && (

@@ -29,6 +29,8 @@ export const AppConfig = {
     successDelay: 1000,  // Delay after success before navigation
     loadingDelay: 500,   // Minimum loading time
     debounceMs: 300,    // Input debounce timing
+    focusDelayMs: 100,
+    toastDurationMs: 3000,
   },
 
   // Input constraints
@@ -36,6 +38,12 @@ export const AppConfig = {
     maxAccountNameLength: 100,
     maxDescriptionLength: 255,
     maxNotesLength: 500,
+    sms: {
+      maxSenderMatchLength: 100,
+      maxBodyMatchLength: 1000,
+      maxStoredProcessedIds: 1000,
+      previewBodyChars: 100,
+    },
   },
 
   // Pagination
@@ -43,6 +51,11 @@ export const AppConfig = {
     defaultPageSize: 20,
     dashboardPageSize: 50,
     maxPageSize: 100,
+    budgetDetailsTransactionsPageSize: 1000,
+    auditRecentLimit: 100,
+    auditScreenLimit: 200,
+    smsImportScanLimit: 50,
+    smsImportSheetLimit: 200,
   },
 
   // Feature toggles
@@ -56,6 +69,16 @@ export const AppConfig = {
   performance: {
     maxConcurrentOperations: 5,
     cacheTimeoutMs: 300000,  // 5 minutes
+    rebuild: {
+      checkpointInterval: 1000,
+      batchSize: 500,
+      queue: {
+        debounceMs: 500,
+        maxBatchSize: 50,
+        retryLimit: 3,
+        retryDelayMs: 2000,
+      },
+    },
   },
 
   // External API endpoints
@@ -70,6 +93,10 @@ export const AppConfig = {
       minAccountNameLength: 2,
       maxAccountNameLength: 100,
       maxTrimLength: 500,
+      minDayOfMonth: 1,
+      maxDayOfMonth: 31,
+      minAprPercent: 0,
+      maxAprPercent: 100,
     },
   },
 
@@ -92,9 +119,15 @@ export const AppConfig = {
   strings: {
     common: {
       loading: 'Loading...',
+      loadingMore: 'Loading more...',
       save: 'Save',
       cancel: 'Cancel',
       delete: 'Delete',
+      alert: 'Alert',
+      confirm: 'Confirm',
+      ok: 'OK',
+      noTransactions: 'No transactions',
+      tryChangingFilters: 'Try changing your filters',
       allTime: 'All Time',
       searchPlaceholder: 'Search...',
     },
@@ -148,6 +181,31 @@ export const AppConfig = {
         debtsTitle: 'Total Debts',
         debtsDesc: 'This shows your total outstanding liability balance. Note that only the portion due within the next 30 days affects your Safe to Spend (and is already included in Committed Funds).',
       },
+      safeToSpendUi: {
+        safePrefix: 'Safe:',
+        committedPrefix: 'Committed:',
+        debtsPrefix: 'Debts:',
+        financiallySecure: 'Financially secure',
+        assetsBucket: 'Assets bucket',
+        debtsBucket: 'Debts bucket',
+        budgetsBucket: 'Budgets bucket',
+        categoriesUsed: 'Categories used',
+        accountsUsed: 'Accounts used',
+        noneDetectedYet: 'None detected yet',
+        projectedLiquidity: 'Projected Liquidity (Assets + Inflow):',
+        committedLine: 'Committed (Budgets + Planned):',
+        debtsLine: 'Debts (Liability payments due):',
+        safeToSpendLine: 'Safe to Spend:',
+        calculationTitle: 'Calculation:',
+        calculationFormula: 'Assets - Committed - Debt Dues',
+        plannedPayments: 'Planned Payments',
+        plannedJournals: 'Planned Journals/Transfers',
+        activeBudgets: 'Active Budgets (Remaining)',
+        totalCommitted: 'Total Committed',
+        creditCardStatements: 'Credit Card Statements',
+        otherLiquidLiabilities: 'Other Liquid Liabilities',
+        totalBalanceInfo: 'Total Balance (Informational)',
+      },
     },
     journal: {
       emptyTitle: 'No transactions found',
@@ -181,6 +239,9 @@ export const AppConfig = {
     settings: {
       title: 'Settings',
       sections: {
+        personalization: 'Personalization',
+        preferences: 'Preferences',
+        communitySupport: 'Community & Support',
         general: 'General',
         appearance: 'Appearance',
         dataManagement: 'Data Management',
@@ -236,6 +297,9 @@ export const AppConfig = {
       maintenance: {
         integrityDesc: 'Verify and repair account balance inconsistencies if needed.',
         integrityBtn: 'Fix Integrity Issues',
+        integrityTitle: 'Running Integrity Check',
+        integrityWait: 'Please wait...',
+        integrityHint: 'Do not close the app while this is running.',
       },
       danger: {
         cleanupDesc: 'Permanently delete soft-deleted records to free up space.',
@@ -244,6 +308,22 @@ export const AppConfig = {
         resetBtn: 'Factory Reset',
       },
       version: (v: string) => `Balance v${v}`,
+      personalization: {
+        yourName: 'Your Name',
+        yourNamePlaceholder: 'How should we call you?',
+        themeTypographyTitle: 'Theme & Typography',
+        themeTypographyDesc: 'Customize colors, fonts, and dark mode',
+        smsAutoPostTitle: 'SMS Auto-Post Rules',
+        smsAutoPostDesc: 'Manage rules to automatically post imported SMS',
+      },
+      community: {
+        telegramTitle: 'Telegram Community',
+        telegramDesc: 'Join our group for discussions and support',
+        playStoreTitle: 'Rate on Play Store',
+        playStoreDesc: 'Love the app? Leave a review',
+        githubTitle: 'GitHub Source',
+        githubDesc: 'Star the repo or contribute',
+      },
       importTitle: 'Import Data',
       importIntro: 'Choose the format of your backup file to restore your data.',
       importNote: 'Note: Importing will replace all existing data on this device.',
@@ -436,6 +516,13 @@ export const AppConfig = {
     },
     plannedPayments: {
       title: 'Planned Payments',
+      details: {
+        deleteConfirmTitle: 'Delete Planned Payment?',
+        deleteConfirmMessage: 'Are you sure you want to delete this planned payment?',
+        postNowTitle: 'Post Transaction Now?',
+        skipTitle: 'Skip Occurrence?',
+        skipConfirm: 'Skip',
+      },
       emptyTitle: 'No Planned Payments',
       emptySubtitle: 'Create your first recurring payment rule to automate your tracking.',
       nameLabel: 'Rule Name',
@@ -466,27 +553,59 @@ export const AppConfig = {
       monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
       dayNames: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     },
+    budget: {
+      details: {
+        deleteTitle: 'Delete Budget',
+        deleteConfirm: 'Are you sure you want to delete this budget?',
+      },
+    },
+    alerts: {
+      success: 'Success',
+      error: 'Error',
+      warning: 'Warning',
+      info: 'Info',
+      validationError: 'Validation Error',
+      databaseError: 'Database Error',
+      connectionError: 'Connection Error',
+      genericError: 'Something went wrong. Please try again.',
+      databaseErrorMessage: 'There was a problem saving your data. Please try again.',
+      networkErrorMessage: 'Please check your internet connection and try again.',
+    },
   },
 
   // Layout Constants
   layout: {
     maxContentWidth: 400,
+    popupModalMaxWidth: 460,
+    popupModalHeightPercent: 84,
+    safeToSpendChartHeight: 150,
+    listEstimatedItemSize: 120,
+    compactListEstimatedItemSize: 100,
     modalHeightPercent: '70%',
     hierarchyModalHeightPercent: '80%',
     iconCircleSize: 32, // Match Size.iconLg or similar
     finalizeIconSize: 84, // Size.xxl * 2 or similar
     finalizeSubtitleMaxWidth: 300,
+    toastTopOffset: 60,
   },
 
   // Default Values
   defaults: {
     reportDays: 30,
+    safeToSpendDays: 30,
+    chartTickCount: 5,
+    safeToSpendDaysCap: 99,
+    reportMonthlyBucketThresholdDays: 60,
     journalPageSize: 50,
+    insightDetailsFetchLimit: 100,
     plannedJournalLimit: 10,
   },
   // Insight Configuration
   insights: {
     lookbackDays: 90,
+    refreshIntervalMs: 60 * 60 * 1000,
+    observeDebounceMs: 250,
+    patternDebounceMs: 500,
     minRecurringIntervalDays: 25,
     maxRecurringIntervalDays: 35,
     minAnnualRecurringIntervalDays: 360,
@@ -496,8 +615,27 @@ export const AppConfig = {
     spendingSpikeSeverityThreshold: 1000,
     spikeWindowDays: 7,
     recurringHorizonDays: 25,
+    maxPlannedPaymentGenerations: 365,
+    liabilityDefaultDueDay: 20,
+    liabilityFallbackDeductionDay: 28,
+    liabilityErrorFallbackOffsetDays: 15,
+  },
+  dateTimePicker: {
+    hoursInDay: 24,
+    minutesInHour: 60,
+    columnHeight: 150,
+    containerHeight: 180,
+    labelHeight: 30,
+    scrollSnapDelayMs: 100,
+  },
+  toast: {
+    animationDurationMs: 200,
+    enterOffsetY: 20,
   },
   time: {
+    msPerMinute: 60 * 1000,
+    msPerHour: 60 * 60 * 1000,
     msPerDay: 24 * 60 * 60 * 1000,
+    daysPerWeek: 7,
   },
 } as const

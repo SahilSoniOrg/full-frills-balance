@@ -31,7 +31,7 @@ class SmsService {
     /**
      * Fetches the latest SMS messages. Throws an error if on iOS.
      */
-    async getLatestMessages(limit: number = 50): Promise<SmsMessage[]> {
+    async getLatestMessages(limit: number = AppConfig.pagination.smsImportScanLimit): Promise<SmsMessage[]> {
         if (Platform.OS !== 'android') {
             throw new Error('Reading SMS is only supported on Android.');
         }
@@ -44,7 +44,7 @@ class SmsService {
                     title: 'SMS Permission',
                     message: 'Full Frills Balance needs access to read your SMS to import transactions securely.',
                     buttonNeutral: 'Ask Me Later',
-                    buttonNegative: 'Cancel',
+                    buttonNegative: AppConfig.strings.common.cancel,
                     buttonPositive: 'OK',
                 }
             );
@@ -160,7 +160,7 @@ class SmsService {
     /**
      * Fetches and parses recent financial SMS messages.
      */
-    async getRecentTransactions(limit: number = 50): Promise<ParsedTransaction[]> {
+    async getRecentTransactions(limit: number = AppConfig.pagination.smsImportScanLimit): Promise<ParsedTransaction[]> {
         const messages = await this.getLatestMessages(limit);
         const processedIds = await this.getProcessedSmsIds();
         const parsedTransactions: ParsedTransaction[] = [];
@@ -210,8 +210,8 @@ class SmsService {
                         // H-2 fix: ReDoS safety guard. Limit string length before matching to prevent
                         // maliciously crafted complex regexes from hanging the JS thread.
                         // Max sender length is 100, max body is 1000.
-                        const safeAddress = msg.address.substring(0, 100);
-                        const safeBody = msg.body.substring(0, 1000);
+                        const safeAddress = msg.address.substring(0, AppConfig.input.sms.maxSenderMatchLength);
+                        const safeBody = msg.body.substring(0, AppConfig.input.sms.maxBodyMatchLength);
 
                         const senderRegex = new RegExp(rule.senderMatch, 'i');
                         const senderMatch = senderRegex.test(safeAddress);
@@ -298,9 +298,10 @@ class SmsService {
             const processedIds = await this.getProcessedSmsIds();
             if (!processedIds.includes(smsId)) {
                 processedIds.push(smsId);
-                // Keep only the last 1000 to prevent unbounded growth
-                if (processedIds.length > 1000) {
-                    processedIds.splice(0, processedIds.length - 1000);
+                const maxStored = AppConfig.input.sms.maxStoredProcessedIds;
+                // Keep only the latest IDs to prevent unbounded growth
+                if (processedIds.length > maxStored) {
+                    processedIds.splice(0, processedIds.length - maxStored);
                 }
                 await AsyncStorage.setItem(this.PROCESSED_SMS_KEY, JSON.stringify(processedIds));
             }

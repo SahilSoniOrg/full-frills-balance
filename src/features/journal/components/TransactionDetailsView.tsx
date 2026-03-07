@@ -1,7 +1,7 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { AppButton, AppIcon, AppText, Badge, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { TransactionDetailsViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -29,7 +29,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
     if (isLoading) {
         return (
             <Screen title="Details">
-                <View style={styles.center}><AppText variant="body">Loading...</AppText></View>
+                <View style={styles.center}><AppText variant="body">{AppConfig.strings.common.loading}</AppText></View>
             </Screen>
         );
     }
@@ -38,7 +38,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
         return (
             <Screen title="Details" backIcon="close">
                 <View style={styles.center}>
-                    <AppIcon name="error" size={48} color={theme.textSecondary} />
+                    <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
                     <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Transaction not found</AppText>
                     <AppButton
                         variant="ghost"

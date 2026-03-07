@@ -63,12 +63,12 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
 
         let detailLabel = '';
         if (type === 'WEEKLY' && item.recurrenceDay !== undefined && item.recurrenceDay !== null) {
-            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const days = AppConfig.strings.plannedPayments.dayNames;
             detailLabel = ` on ${days[item.recurrenceDay]}`;
         } else if (type === 'MONTHLY' && item.recurrenceDay !== undefined && item.recurrenceDay !== null) {
             detailLabel = ` on day ${item.recurrenceDay}`;
         } else if (type === 'YEARLY') {
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const months = AppConfig.strings.plannedPayments.monthNames;
             const monthStr = item.recurrenceMonth ? months[item.recurrenceMonth - 1] : '';
             const dayStr = item.recurrenceDay ? ` day ${item.recurrenceDay}` : '';
             if (monthStr || dayStr) {
@@ -82,10 +82,10 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
             onEdit: handleEdit,
             onDelete: () => {
                 confirm.show({
-                    title: 'Delete Planned Payment?',
-                    message: 'Are you sure you want to delete this planned payment?',
+                    title: AppConfig.strings.plannedPayments.details.deleteConfirmTitle,
+                    message: AppConfig.strings.plannedPayments.details.deleteConfirmMessage,
                     destructive: true,
-                    confirmText: 'Delete',
+                    confirmText: AppConfig.strings.common.delete,
                     onConfirm: handleDelete,
                 });
             },
@@ -93,7 +93,7 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
 
         const onPost = () => {
             confirm.show({
-                title: 'Post Transaction Now?',
+                title: AppConfig.strings.plannedPayments.details.postNowTitle,
                 message: `This will post the upcoming instance for ${CurrencyFormatter.format(item.amount, item.currencyCode)} and advance the schedule to the next occurrence.`,
                 onConfirm: handlePostNow,
             });
@@ -101,9 +101,9 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
 
         const onSkip = () => {
             confirm.show({
-                title: 'Skip Occurrence?',
+                title: AppConfig.strings.plannedPayments.details.skipTitle,
                 message: `This will skip the upcoming instance on ${new Date(item.nextOccurrence).toLocaleDateString()} and advance the schedule without creating a transaction.`,
-                confirmText: 'Skip',
+                confirmText: AppConfig.strings.plannedPayments.details.skipConfirm,
                 destructive: true,
                 onConfirm: handleSkip,
             });

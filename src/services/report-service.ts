@@ -508,8 +508,9 @@ export class ReportService {
         const start = dayjs(startDate);
         const end = dayjs(endDate);
         const diffDays = end.diff(start, 'day');
-        const bucketUnit: 'day' | 'month' = diffDays > 60 ? 'month' : 'day';
-        const format = diffDays > 60 ? 'MMM YYYY' : 'DD MMM';
+        const monthlyThreshold = AppConfig.defaults.reportMonthlyBucketThresholdDays;
+        const bucketUnit: 'day' | 'month' = diffDays > monthlyThreshold ? 'month' : 'day';
+        const format = diffDays > monthlyThreshold ? 'MMM YYYY' : 'DD MMM';
         return { bucketUnit, format };
     }
 

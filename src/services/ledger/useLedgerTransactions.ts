@@ -1,11 +1,12 @@
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
+import { AppConfig } from '@/src/constants';
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
 import { EnrichedTransaction } from '@/src/types/domain';
 import { useCallback } from 'react';
 
 export function useLedgerTransactionsForAccount(
     accountId: string,
-    pageSize: number = 50,
+    pageSize: number = AppConfig.defaults.journalPageSize,
     dateRange?: { startDate: number; endDate: number },
 ) {
     const observe = useCallback(

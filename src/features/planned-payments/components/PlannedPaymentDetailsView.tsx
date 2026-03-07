@@ -1,7 +1,7 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { AppButton, AppCard, AppIcon, AppText, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
@@ -39,7 +39,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
     if (isLoading) {
         return (
             <Screen title="Details">
-                <View style={styles.center}><AppText variant="body">Loading...</AppText></View>
+                <View style={styles.center}><AppText variant="body">{AppConfig.strings.common.loading}</AppText></View>
             </Screen>
         );
     }
@@ -48,7 +48,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
         return (
             <Screen title="Details">
                 <View style={styles.center}>
-                    <AppIcon name="error" size={48} color={theme.textSecondary} />
+                    <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
                     <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Planned Payment not found</AppText>
                     <AppButton
                         variant="ghost"
@@ -165,7 +165,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                                     shape="circle"
                                 />
                                 <AppText variant="body" weight="bold" numberOfLines={1} style={styles.accountNameLeft}>
-                                    {fromAccount?.name || 'Loading...'}
+                                    {fromAccount?.name || AppConfig.strings.common.loading}
                                 </AppText>
                             </View>
                             <View style={styles.arrowContainer}>
@@ -173,7 +173,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                             </View>
                             <View style={[styles.accountInfo, { justifyContent: 'flex-end' }]}>
                                 <AppText variant="body" weight="bold" align="right" numberOfLines={1} style={styles.accountNameRight}>
-                                    {toAccount?.name || 'Loading...'}
+                                    {toAccount?.name || AppConfig.strings.common.loading}
                                 </AppText>
                                 <IvyIcon
                                     name={toAccount?.icon as any}

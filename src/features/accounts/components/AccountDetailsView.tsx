@@ -5,7 +5,7 @@ import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -267,7 +267,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                     </View>
                 }
                 contentContainerStyle={styles.listContainer}
-                estimatedItemSize={120}
+                estimatedItemSize={AppConfig.layout.listEstimatedItemSize}
             />
 
             {showFab && (

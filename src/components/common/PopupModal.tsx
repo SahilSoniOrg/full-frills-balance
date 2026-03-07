@@ -1,5 +1,5 @@
 import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -28,7 +28,7 @@ export function PopupModal({
     onClose,
     children,
     actions,
-    maxHeightPercent = 84,
+    maxHeightPercent = AppConfig.layout.popupModalHeightPercent,
     accessibilityCloseLabel = 'Close popup',
     fixedHeight = true,
     scrollable = true,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         width: '100%',
-        maxWidth: 460,
+        maxWidth: AppConfig.layout.popupModalMaxWidth,
         flexShrink: 1,
     },
     modalCard: {

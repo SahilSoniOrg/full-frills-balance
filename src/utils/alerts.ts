@@ -15,6 +15,7 @@
 
 import { handleError } from '@/src/utils/errors'
 import { logger } from '@/src/utils/logger'
+import { AppConfig } from '@/src/constants'
 import { Alert, Platform } from 'react-native'
 
 // Toast configuration
@@ -114,7 +115,7 @@ export const toast = {
 }
 
 function showToast(message: string, type: ToastType, duration?: number) {
-  const resolvedDuration = duration ?? 3000
+  const resolvedDuration = duration ?? AppConfig.timing.toastDurationMs
 
   // Emit to registered listener (ToastProvider)
   if (toastListener) {
@@ -132,10 +133,10 @@ function showToast(message: string, type: ToastType, duration?: number) {
 
 function typeToTitle(type: ToastType): string {
   switch (type) {
-    case 'success': return 'Success'
-    case 'error': return 'Error'
-    case 'warning': return 'Warning'
-    case 'info': return 'Info'
+    case 'success': return AppConfig.strings.alerts.success
+    case 'error': return AppConfig.strings.alerts.error
+    case 'warning': return AppConfig.strings.alerts.warning
+    case 'info': return AppConfig.strings.alerts.info
   }
 }
 
@@ -173,24 +174,24 @@ export const showErrorAlert = (error: unknown, customTitle?: string, useSameErro
     statusCode: appError.statusCode,
   })
 
-  let title = customTitle || 'Error'
+  let title = customTitle || AppConfig.strings.alerts.error
   let message = appError.message
 
   // Provide user-friendly messages for common errors
   switch (appError.code) {
     case 'VALIDATION_ERROR':
-      title = 'Validation Error'
+      title = AppConfig.strings.alerts.validationError
       break
     case 'DATABASE_ERROR':
-      title = 'Database Error'
-      message = 'There was a problem saving your data. Please try again.'
+      title = AppConfig.strings.alerts.databaseError
+      message = AppConfig.strings.alerts.databaseErrorMessage
       break
     case 'NETWORK_ERROR':
-      title = 'Connection Error'
-      message = 'Please check your internet connection and try again.'
+      title = AppConfig.strings.alerts.connectionError
+      message = AppConfig.strings.alerts.networkErrorMessage
       break
     default:
-      message = 'Something went wrong. Please try again.'
+      message = AppConfig.strings.alerts.genericError
   }
 
   if (useSameErrorMessage) {
@@ -226,8 +227,8 @@ export const confirm = {
     const {
       title,
       message,
-      confirmText = 'Confirm',
-      cancelText = 'Cancel',
+      confirmText = AppConfig.strings.common.confirm,
+      cancelText = AppConfig.strings.common.cancel,
       onConfirm,
       onCancel,
       destructive = false,

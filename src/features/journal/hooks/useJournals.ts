@@ -1,4 +1,5 @@
 import { journalService } from '@/src/features/journal/services/JournalService'
+import { AppConfig } from '@/src/constants'
 import { transactionService } from '@/src/features/journal/services/TransactionService'
 import { useObservable } from '@/src/hooks/useObservable'
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable'
@@ -12,7 +13,7 @@ import { JournalStatus } from '@/src/data/models/Journal'
 /**
  * Hook to reactively get journals with pagination and account enrichment
  */
-export function useJournals(pageSize: number = 50, dateRange?: { startDate: number, endDate: number }, searchQuery?: string, status?: JournalStatus[], plannedPaymentId?: string) {
+export function useJournals(pageSize: number = AppConfig.defaults.journalPageSize, dateRange?: { startDate: number, endDate: number }, searchQuery?: string, status?: JournalStatus[], plannedPaymentId?: string) {
     const observe = useCallback((limit: number, range?: { startDate: number, endDate: number }, query?: string) => {
         return journalService.observeEnrichedJournals(limit, { ...range, plannedPaymentId } as any, query, status)
     }, [status, plannedPaymentId])
@@ -34,7 +35,7 @@ export function useJournals(pageSize: number = 50, dateRange?: { startDate: numb
  * 
  * Note: This hook uses repository-owned enriched observables to react to account changes.
  */
-export function useAccountTransactions(accountId: string, pageSize: number = 50, dateRange?: { startDate: number, endDate: number }) {
+export function useAccountTransactions(accountId: string, pageSize: number = AppConfig.defaults.journalPageSize, dateRange?: { startDate: number, endDate: number }) {
     return useLedgerTransactionsForAccount(accountId, pageSize, dateRange)
 }
 

@@ -220,9 +220,9 @@ export function useBudgetDetailViewModel() {
     const handleDelete = useCallback(() => {
         if (!budget) return
         confirm.show({
-            title: 'Delete Budget',
-            message: 'Are you sure you want to delete this budget?',
-            confirmText: 'Delete',
+            title: AppConfig.strings.budget.details.deleteTitle,
+            message: AppConfig.strings.budget.details.deleteConfirm,
+            confirmText: AppConfig.strings.common.delete,
             destructive: true,
             onConfirm: async () => {
                 try {

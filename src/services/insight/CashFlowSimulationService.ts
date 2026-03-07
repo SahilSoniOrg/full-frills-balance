@@ -1,4 +1,5 @@
 import Account, { AccountSubtype } from '@/src/data/models/Account';
+import { AppConfig } from '@/src/constants';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { TransactionType } from '@/src/data/models/Transaction';
@@ -10,7 +11,7 @@ import dayjs from 'dayjs';
 
 export class CashFlowSimulationService {
     /**
-     * 30-day cash flow simulation for Safe to Spend.
+     * Configured-day cash flow simulation for Safe to Spend.
      */
     async simulateSafeToSpend(
         startingBalance: number,
@@ -33,7 +34,7 @@ export class CashFlowSimulationService {
         totalLiabilitiesOther: number;
     }> {
         const now = dayjs().startOf('day');
-        const SIMULATION_DAYS = 30;
+        const SIMULATION_DAYS = AppConfig.defaults.safeToSpendDays;
 
         const {
             flowByDayOffset,
@@ -171,7 +172,7 @@ export class CashFlowSimulationService {
 
                 const today = now.date();
                 const statementDay = metadata?.statementDay;
-                const dueDay = metadata?.dueDay || 20;
+                const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
 
                 if (account.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
                     let deductionAmount = balance;
@@ -194,7 +195,7 @@ export class CashFlowSimulationService {
                     const dayOffset = targetDueDate.startOf('day').diff(now, 'day');
                     addFlow(dayOffset, -deductionAmount, 'LIABILITY_CC', `Liability: ${account.name} (Credit Card Statement)`);
                 } else {
-                    let deductionDay = metadata?.dueDay || metadata?.emiDay || 28;
+                    let deductionDay = metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
                     let targetDate = now.date(deductionDay);
                     if (deductionDay <= today) {
                         targetDate = targetDate.add(1, 'month');
@@ -204,7 +205,7 @@ export class CashFlowSimulationService {
                 }
             } catch (e) {
                 logger.error('getSimulationFlows: liability metadata failed', e);
-                addFlow(15, -balance, 'LIABILITY_OTHER');
+                addFlow(AppConfig.insights.liabilityErrorFallbackOffsetDays, -balance, 'LIABILITY_OTHER');
             }
         }
 

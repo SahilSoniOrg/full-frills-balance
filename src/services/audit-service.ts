@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database'
+import { AppConfig } from '@/src/constants'
 import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog'
 import { AuditEntry, auditRepository } from '@/src/data/repositories/AuditRepository'
 
@@ -28,7 +29,7 @@ export class AuditService {
     /**
      * Get recent audit logs (for audit viewer)
      */
-    async getRecentLogs(limit: number = 100): Promise<AuditLog[]> {
+    async getRecentLogs(limit: number = AppConfig.pagination.auditRecentLimit): Promise<AuditLog[]> {
         return auditRepository.fetchRecent(limit)
     }
 
@@ -42,7 +43,7 @@ export class AuditService {
     /**
      * Observe recent audit logs
      */
-    observeRecentLogs(limit: number = 100) {
+    observeRecentLogs(limit: number = AppConfig.pagination.auditRecentLimit) {
         return auditRepository.observeRecent(limit)
     }
 
@@ -58,8 +59,9 @@ export class AuditService {
 
         await database.write(async () => {
             const batches = []
-            for (let i = 0; i < uppercaseLogs.length; i += 100) {
-                batches.push(uppercaseLogs.slice(i, i + 100))
+            const batchSize = AppConfig.pagination.auditRecentLimit;
+            for (let i = 0; i < uppercaseLogs.length; i += batchSize) {
+                batches.push(uppercaseLogs.slice(i, i + batchSize))
             }
 
             for (const batch of batches) {

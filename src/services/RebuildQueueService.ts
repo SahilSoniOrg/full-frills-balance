@@ -6,6 +6,7 @@
  */
 
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService'
+import { AppConfig } from '@/src/constants'
 import { logger } from '@/src/utils/logger'
 
 interface RebuildQueueConfig {
@@ -16,10 +17,10 @@ interface RebuildQueueConfig {
 }
 
 const DEFAULT_CONFIG: RebuildQueueConfig = {
-    debounceMs: process.env.NODE_ENV === 'test' ? 0 : 500,
-    maxBatchSize: 50,
-    retryLimit: 3,
-    retryDelayMs: process.env.NODE_ENV === 'test' ? 0 : 2000,
+    debounceMs: process.env.NODE_ENV === 'test' ? 0 : AppConfig.performance.rebuild.queue.debounceMs,
+    maxBatchSize: AppConfig.performance.rebuild.queue.maxBatchSize,
+    retryLimit: AppConfig.performance.rebuild.queue.retryLimit,
+    retryDelayMs: process.env.NODE_ENV === 'test' ? 0 : AppConfig.performance.rebuild.queue.retryDelayMs,
 }
 
 

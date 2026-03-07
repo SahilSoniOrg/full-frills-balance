@@ -2,7 +2,7 @@ import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Spacing } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { EnrichedJournal } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -86,7 +86,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
                     ListHeaderComponent={listHeader}
                     onEndReached={onEndReached}
                     contentContainerStyle={[styles.listContent, listContentStyle]}
-                    estimatedItemSize={120}
+                    estimatedItemSize={AppConfig.layout.listEstimatedItemSize}
                     plannedJournals={plannedJournals}
                     onPlannedJournalPress={onPlannedJournalPress}
                 />

@@ -1,5 +1,5 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import Currency from '@/src/data/models/Currency';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ export function CurrencyPickerSheet({
     title,
     currencies,
     selectedCode,
-    searchPlaceholder = 'Search...',
+    searchPlaceholder = AppConfig.strings.common.searchPlaceholder,
     selectedBackgroundColor,
     onClose,
     onSelect,

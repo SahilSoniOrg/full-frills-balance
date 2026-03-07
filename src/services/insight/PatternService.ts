@@ -11,18 +11,6 @@ import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 
-export const DEFAULT_INSIGHTS_CONFIG = {
-    lookbackDays: 90,
-    minRecurringIntervalDays: 25,
-    maxRecurringIntervalDays: 35,
-    minAnnualRecurringIntervalDays: 360,
-    maxAnnualRecurringIntervalDays: 370,
-    minRecurringCount: 3,
-    spendingSpikeMultiplier: 1.5,
-    spendingSpikeSeverityThreshold: 1000,
-    spikeWindowDays: 7,
-} as const;
-
 export interface Pattern {
     id: string;
     type: 'slow-leak' | 'phantom-surplus' | 'subscription-amnesiac' | 'lifestyle-drift';
@@ -49,14 +37,14 @@ export class PatternService {
     }
 
     private observePatternsInternal(onlyDismissed: boolean): Observable<Pattern[]> {
-        const insightsConfig = AppConfig.insights ?? DEFAULT_INSIGHTS_CONFIG;
+        const insightsConfig = AppConfig.insights;
         const lookbackDays = insightsConfig.lookbackDays;
 
-        const oneHour = 60 * 60 * 1000;
+        const oneHour = insightsConfig.refreshIntervalMs;
 
         return timer(0, oneHour).pipe(
             switchMap(() => {
-                const ninetyDaysAgo = Date.now() - (lookbackDays * 24 * 60 * 60 * 1000);
+                const ninetyDaysAgo = Date.now() - (lookbackDays * AppConfig.time.msPerDay);
 
                 return combineLatest([
                     transactionRepository.observeByDateRange(ninetyDaysAgo),
@@ -66,7 +54,7 @@ export class PatternService {
                     of(ninetyDaysAgo)
                 ]);
             }),
-            debounceTime(500),
+            debounceTime(insightsConfig.patternDebounceMs),
             switchMap(async ([_, accounts, activePlannedPayments, __, ninetyDaysAgo]) => {
                 const accountMap = new Map((accounts as Account[]).map((a: Account) => [a.id, a]));
                 const minCount = insightsConfig.minRecurringCount;
@@ -103,7 +91,7 @@ export class PatternService {
                         }
 
                         const isRecurring = intervals.every(interval => {
-                            const days = interval / (24 * 60 * 60 * 1000);
+                            const days = interval / AppConfig.time.msPerDay;
                             const minD = insightsConfig.minRecurringIntervalDays;
                             const maxD = insightsConfig.maxRecurringIntervalDays;
                             const minA = insightsConfig.minAnnualRecurringIntervalDays;
@@ -134,7 +122,7 @@ export class PatternService {
                 }
 
                 const spikeWindow = insightsConfig.spikeWindowDays;
-                const last7Days = Date.now() - (spikeWindow * 24 * 60 * 60 * 1000);
+                const last7Days = Date.now() - (spikeWindow * AppConfig.time.msPerDay);
 
                 const expenseTransactions = await transactionRepository.findByAccountsAndDateRange(
                     (accounts as Account[]).filter((a: Account) => a.accountType === AccountType.EXPENSE).map((a: Account) => a.id),
@@ -175,7 +163,7 @@ export class PatternService {
                     const historyTotal = totalBySubtype.get(subtype) || 0;
 
                     const MIN_WEEKS = 4;
-                    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+                    const WEEK_MS = 7 * AppConfig.time.msPerDay;
                     const historicalTxs = previousWeeksTransactions.filter(
                         t => accountMap.get(t.accountId)?.accountSubtype === subtype
                     );

@@ -1,4 +1,5 @@
 import { IconName } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import Account, { formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
@@ -148,14 +149,18 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const isParent = useMemo(() => accounts.some((a: Account) => a.parentAccountId === accountId && a.deletedAt === null), [accounts, accountId]);
     const subAccountCount = useMemo(() => accounts.filter((a: Account) => a.parentAccountId === accountId && a.deletedAt === null).length, [accounts, accountId]);
 
-    const { transactions, isLoading: transactionsLoading, isLoadingMore: transactionsLoadingMore, hasMore, loadMore } = useLedgerTransactionsForAccount(accountId, 50, dateRange || undefined);
+    const { transactions, isLoading: transactionsLoading, isLoadingMore: transactionsLoadingMore, hasMore, loadMore } = useLedgerTransactionsForAccount(
+        accountId,
+        AppConfig.defaults.journalPageSize,
+        dateRange || undefined
+    );
     const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
 
     // Chart-specific unpaginated transactions
     const { data: chartTransactions } = useObservable<Transaction[]>(
         () => {
             if (!accountId) return of([]);
-            const MS_PER_DAY = 24 * 60 * 60 * 1000;
+            const MS_PER_DAY = AppConfig.time.msPerDay;
             // Pad 7 days before and after
             const start = dateRange ? dateRange.startDate - (7 * MS_PER_DAY) : dayjs().startOf('month').valueOf() - (7 * MS_PER_DAY);
             const end = dateRange ? dateRange.endDate + (7 * MS_PER_DAY) : dayjs().endOf('month').valueOf() + (7 * MS_PER_DAY);
@@ -232,7 +237,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                 // Calculate difference in days (end of day to start of day)
                 const ds = new Date(dateRange.startDate);
                 const de = new Date(dateRange.endDate);
-                const days = Math.max(1, Math.ceil((de.getTime() - ds.getTime()) / (1000 * 60 * 60 * 24)));
+                const days = Math.max(1, Math.ceil((de.getTime() - ds.getTime()) / AppConfig.time.msPerDay));
                 const dailyAverage = netChange / days;
 
                 setPeriodMetrics({
@@ -479,7 +484,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             };
         });
 
-        const MS_PER_DAY = 24 * 60 * 60 * 1000;
+        const MS_PER_DAY = AppConfig.time.msPerDay;
 
         // Define visible bounds to match the filtered chart data
         const calcMinX = pts[0].x;

@@ -25,9 +25,9 @@ export function useInsightDetailsViewModel({
     const journals$ = useMemo(() => {
         if (journalIds.length === 0) return of([]);
 
-        return journalService.observeEnrichedJournals(100, {
+        return journalService.observeEnrichedJournals(AppConfig.defaults.insightDetailsFetchLimit, {
             startDate: 0,
-            endDate: Date.now() + 86400000,
+            endDate: Date.now() + AppConfig.time.msPerDay,
             journalIds: journalIds
         });
     }, [journalIds]);

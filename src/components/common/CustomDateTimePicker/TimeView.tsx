@@ -1,5 +1,5 @@
 import { AppText } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React, { useEffect, useRef } from 'react';
@@ -10,10 +10,10 @@ interface TimeViewProps {
     onChange: (date: dayjs.Dayjs) => void;
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+const HOURS = Array.from({ length: AppConfig.dateTimePicker.hoursInDay }, (_, i) => i);
+const MINUTES = Array.from({ length: AppConfig.dateTimePicker.minutesInHour }, (_, i) => i);
 
-const ITEM_HEIGHT = 44;
+const ITEM_HEIGHT = Size.touchTarget;
 
 export function TimeView({ date, onChange }: TimeViewProps) {
     const { theme, fonts } = useTheme();
@@ -35,24 +35,24 @@ export function TimeView({ date, onChange }: TimeViewProps) {
         if (hoursRef.current && Platform.OS !== 'web') {
             setTimeout(() => {
                 hoursRef.current?.scrollToOffset({ offset: currentHour * ITEM_HEIGHT, animated: true });
-            }, 100);
+            }, AppConfig.dateTimePicker.scrollSnapDelayMs);
         }
         if (minutesRef.current && Platform.OS !== 'web') {
             setTimeout(() => {
                 minutesRef.current?.scrollToOffset({ offset: currentMinute * ITEM_HEIGHT, animated: true });
-            }, 100);
+            }, AppConfig.dateTimePicker.scrollSnapDelayMs);
         }
     }, [currentHour, currentMinute]);
 
     const onHourScrollEnd = (e: any) => {
         const y = e.nativeEvent.contentOffset.y;
-        const index = Math.max(0, Math.min(23, Math.round(y / ITEM_HEIGHT)));
+        const index = Math.max(0, Math.min(AppConfig.dateTimePicker.hoursInDay - 1, Math.round(y / ITEM_HEIGHT)));
         if (index !== currentHour) handleHourSelect(index);
     };
 
     const onMinuteScrollEnd = (e: any) => {
         const y = e.nativeEvent.contentOffset.y;
-        const index = Math.max(0, Math.min(59, Math.round(y / ITEM_HEIGHT)));
+        const index = Math.max(0, Math.min(AppConfig.dateTimePicker.minutesInHour - 1, Math.round(y / ITEM_HEIGHT)));
         if (index !== currentMinute) handleMinuteSelect(index);
     };
 
@@ -72,7 +72,7 @@ export function TimeView({ date, onChange }: TimeViewProps) {
         </View>
     );
 
-    const listPadding = (150 - ITEM_HEIGHT) / 2; // FlatList height is exactly 150.
+    const listPadding = (AppConfig.dateTimePicker.columnHeight - ITEM_HEIGHT) / 2;
 
     return (
         <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -120,7 +120,7 @@ export function TimeView({ date, onChange }: TimeViewProps) {
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        height: 180,
+        height: AppConfig.dateTimePicker.containerHeight,
         borderRadius: Shape.radius.md,
         borderWidth: 1,
         overflow: 'hidden',
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     labelContainer: {
-        height: 30,
+        height: AppConfig.dateTimePicker.labelHeight,
         borderBottomWidth: StyleSheet.hairlineWidth,
         paddingVertical: Spacing.xs,
         alignItems: 'center',

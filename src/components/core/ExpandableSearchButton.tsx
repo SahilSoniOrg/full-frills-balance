@@ -1,5 +1,5 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
-import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
 import {
@@ -51,7 +51,7 @@ interface ExpandableSearchButtonProps {
 export const ExpandableSearchButton = ({
     value,
     onChangeText,
-    placeholder = "Search...",
+    placeholder = AppConfig.strings.common.searchPlaceholder,
     onExpandChange,
     onPress,
 }: ExpandableSearchButtonProps) => {

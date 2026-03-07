@@ -24,7 +24,7 @@ export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
         setIsLoading(true);
         setError(null);
         try {
-            const parsed = await smsService.getRecentTransactions(200);
+            const parsed = await smsService.getRecentTransactions(AppConfig.pagination.smsImportSheetLimit);
             setTransactions(parsed);
         } catch (e: any) {
             if (e?.message?.toLowerCase()?.includes('permission') || e?.message?.toLowerCase()?.includes('security')) {
@@ -103,7 +103,7 @@ export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
         const params: Record<string, string> = {
             type,
             amount: tx.amount.toString(),
-            notes: `Imported from: ${tx.merchant}${tx.referenceNumber ? `\nRef: ${tx.referenceNumber}` : ''}\n\n${tx.rawBody.substring(0, 100)}...`
+            notes: `Imported from: ${tx.merchant}${tx.referenceNumber ? `\nRef: ${tx.referenceNumber}` : ''}\n\n${tx.rawBody.substring(0, AppConfig.input.sms.previewBodyChars)}...`
         };
 
         // Assign to Source/Destination based on debit vs credit flow

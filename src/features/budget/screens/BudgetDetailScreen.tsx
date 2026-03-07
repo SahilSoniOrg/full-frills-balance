@@ -3,7 +3,7 @@ import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions
 import { TransactionListView } from '@/src/components/common/TransactionListView'
 import { AppButton, AppCard, AppIcon, AppText, IvyIcon, LoadingView } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
-import { Shape, Size, Spacing, Typography } from '@/src/constants'
+import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants'
 import { useTheme } from '@/src/hooks/use-theme'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { AppNavigation } from '@/src/utils/navigation'
@@ -154,7 +154,7 @@ export function BudgetDetailScreen() {
                     emptySubtitle="No transactions found for this budget in the selected month."
                     ListHeaderComponent={listHeader}
                     contentContainerStyle={styles.listContent}
-                    estimatedItemSize={100}
+                    estimatedItemSize={AppConfig.layout.compactListEstimatedItemSize}
                 />
             </View>
         </Screen>
@@ -228,4 +228,3 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xxl,
     },
 });
-

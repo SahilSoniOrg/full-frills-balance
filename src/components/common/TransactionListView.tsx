@@ -1,5 +1,6 @@
 import { AppText, EmptyStateView, LoadingView } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
 import { EnrichedJournal } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import React from 'react';
@@ -31,15 +32,15 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
         isLoadingMore,
         loadingText,
         loadingMoreText,
-        emptyTitle = 'No transactions',
-        emptySubtitle = 'Try changing your filters',
+        emptyTitle = AppConfig.strings.common.noTransactions,
+        emptySubtitle = AppConfig.strings.common.tryChangingFilters,
         ListHeaderComponent,
         onEndReached,
         contentContainerStyle,
-        estimatedItemSize = 120,
+        estimatedItemSize = AppConfig.layout.listEstimatedItemSize,
     } = props;
     const listEmpty = (isLoading && items.length === 0) ? (
-        <LoadingView loading={isLoading} text={loadingText || 'Loading...'} size="small" />
+        <LoadingView loading={isLoading} text={loadingText || AppConfig.strings.common.loading} size="small" />
     ) : (
         <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
     );
@@ -48,7 +49,7 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
         <View style={styles.loadingMore}>
             <ActivityIndicator size="small" />
             <AppText variant="caption" color="secondary">
-                {loadingMoreText || 'Loading more...'}
+                {loadingMoreText || AppConfig.strings.common.loadingMore}
             </AppText>
         </View>
     ) : null;

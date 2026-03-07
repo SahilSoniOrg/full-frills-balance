@@ -91,9 +91,9 @@ export const formatRelativeTime = (value: number | Date): string => {
   const timestamp = typeof value === 'number' ? value : value.getTime();
   const now = Date.now();
   const diffMs = now - timestamp;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffDays = Math.floor(diffMs / AppConfig.time.msPerDay);
+  const diffHours = Math.floor(diffMs / AppConfig.time.msPerHour);
+  const diffMinutes = Math.floor(diffMs / AppConfig.time.msPerMinute);
 
   if (diffDays > 0) {
     return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;

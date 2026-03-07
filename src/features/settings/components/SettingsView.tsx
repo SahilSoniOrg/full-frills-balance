@@ -50,16 +50,16 @@ export function SettingsView(vm: SettingsViewModel) {
                 withPadding
             >
                 <View style={styles.inner}>
-                    <SettingsSection title="Personalization">
+                    <SettingsSection title={AppConfig.strings.settings.sections.personalization}>
                         <View style={styles.rowBetween}>
                             <View style={{ flex: 1 }}>
                                 <AppInput
-                                    label="Your Name"
+                                    label={AppConfig.strings.settings.personalization.yourName}
                                     value={localName}
                                     onChangeText={setLocalName}
                                     onBlur={handleNameSave}
                                     onSubmitEditing={handleNameSave}
-                                    placeholder="How should we call you?"
+                                    placeholder={AppConfig.strings.settings.personalization.yourNamePlaceholder}
                                     leftIcon="user"
                                 />
                             </View>
@@ -72,8 +72,8 @@ export function SettingsView(vm: SettingsViewModel) {
                         <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
 
                         <SettingsActionRow
-                            title="Theme & Typography"
-                            description="Customize colors, fonts, and dark mode"
+                            title={AppConfig.strings.settings.personalization.themeTypographyTitle}
+                            description={AppConfig.strings.settings.personalization.themeTypographyDesc}
                             actionLabel="Customize"
                             onPress={vm.onAppearanceSettings}
                         />
@@ -83,7 +83,7 @@ export function SettingsView(vm: SettingsViewModel) {
                         <ArchetypePreference />
                     </SettingsSection>
 
-                    <SettingsSection title="Preferences">
+                    <SettingsSection title={AppConfig.strings.settings.sections.preferences}>
                         <View style={styles.rowBetween}>
                             <View style={{ flex: 1, marginRight: Spacing.md }}>
                                 <AppText variant="body" weight="semibold">{AppConfig.strings.settings.privacy.title}</AppText>
@@ -116,18 +116,18 @@ export function SettingsView(vm: SettingsViewModel) {
                         <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
 
                         <SettingsActionRow
-                            title="SMS Auto-Post Rules"
-                            description="Manage rules to automatically post imported SMS"
+                            title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
+                            description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
                             actionLabel="Manage"
                             onPress={vm.onManageSmsRules}
                         />
                     </SettingsSection>
 
-                    <SettingsSection title="Community & Support">
+                    <SettingsSection title={AppConfig.strings.settings.sections.communitySupport}>
                         <SettingsActionRow
                             icon="messageCircle"
-                            title="Telegram Community"
-                            description="Join our group for discussions and support"
+                            title={AppConfig.strings.settings.community.telegramTitle}
+                            description={AppConfig.strings.settings.community.telegramDesc}
                             actionLabel="Join"
                             onPress={() => Linking.openURL('https://t.me/FullFrills')}
                             withDivider
@@ -135,8 +135,8 @@ export function SettingsView(vm: SettingsViewModel) {
 
                         <SettingsActionRow
                             icon="playSquare"
-                            title="Rate on Play Store"
-                            description="Love the app? Leave a review"
+                            title={AppConfig.strings.settings.community.playStoreTitle}
+                            description={AppConfig.strings.settings.community.playStoreDesc}
                             actionLabel="Rate"
                             onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=in.sahilsoni.fullfrillsbalance')}
                             withDivider
@@ -144,8 +144,8 @@ export function SettingsView(vm: SettingsViewModel) {
 
                         <SettingsActionRow
                             icon="github"
-                            title="GitHub Source"
-                            description="Star the repo or contribute"
+                            title={AppConfig.strings.settings.community.githubTitle}
+                            description={AppConfig.strings.settings.community.githubDesc}
                             actionLabel="View"
                             onPress={() => Linking.openURL('https://github.com/SahilSoniOrg/full-frills-balance')}
                         />
@@ -252,7 +252,7 @@ export function SettingsView(vm: SettingsViewModel) {
                         </View>
 
                         <AppText variant="subheading" style={styles.modalTitle}>
-                            Running Integrity Check
+                            {AppConfig.strings.settings.maintenance.integrityTitle}
                         </AppText>
 
                         <View style={[styles.progressBarBg, { backgroundColor: theme.surfaceSecondary }]}>
@@ -268,11 +268,11 @@ export function SettingsView(vm: SettingsViewModel) {
                         </View>
 
                         <AppText variant="body" color="secondary" style={styles.modalStatus}>
-                            {integrityProgressMessage || 'Please wait...'}
+                            {integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait}
                         </AppText>
 
                         <AppText variant="caption" color="secondary" style={styles.modalHint}>
-                            Do not close the app while this is running.
+                            {AppConfig.strings.settings.maintenance.integrityHint}
                         </AppText>
                     </View>
                 </View>

@@ -224,8 +224,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
             for (const [name, value] of Object.entries(dayFields)) {
                 if (value) {
                     const day = parseInt(value, 10);
-                    if (isNaN(day) || day < 1 || day > 31) {
-                        setLocalFormError(`${name} must be between 1 and 31`);
+                    const minDay = AppConfig.constants.validation.minDayOfMonth;
+                    const maxDay = AppConfig.constants.validation.maxDayOfMonth;
+                    if (isNaN(day) || day < minDay || day > maxDay) {
+                        setLocalFormError(`${name} must be between ${minDay} and ${maxDay}`);
                         return;
                     }
                 }
@@ -233,8 +235,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
             if (apr) {
                 const aprVal = parseFloat(apr);
-                if (isNaN(aprVal) || aprVal < 0 || aprVal > 100) {
-                    setLocalFormError('APR must be between 0 and 100');
+                const minApr = AppConfig.constants.validation.minAprPercent;
+                const maxApr = AppConfig.constants.validation.maxAprPercent;
+                if (isNaN(aprVal) || aprVal < minApr || aprVal > maxApr) {
+                    setLocalFormError(`APR must be between ${minApr} and ${maxApr}`);
                     return;
                 }
             }

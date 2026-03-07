@@ -314,8 +314,8 @@ const styles = StyleSheet.create({
         gap: Spacing.md,
     },
     numberInputContainer: {
-        width: 60,
-        height: 48,
+        width: Size.buttonXl,
+        height: Size.inputMd,
         borderRadius: Shape.radius.md,
         justifyContent: 'center',
         alignItems: 'center',
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     unitSelector: {
         flex: 1,
         flexDirection: 'row',
-        height: 48,
+        height: Size.inputMd,
         borderRadius: Shape.radius.md,
         padding: Spacing.xs,
     },

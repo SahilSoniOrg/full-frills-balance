@@ -1,4 +1,5 @@
 import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
+import { AppConfig } from '@/src/constants';
 import { AuditLogEntry } from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
 import { useObservable } from '@/src/hooks/useObservable';
 import { auditService } from '@/src/services/audit-service';
@@ -10,7 +11,7 @@ export function useAuditLogs(params: { entityType?: AuditEntityType; entityId?: 
     const { data: rawLogs, isLoading, error, version } = useObservable(
         () => isFiltered
             ? auditService.observeAuditTrail(entityType!, entityId!)
-            : auditService.observeRecentLogs(200),
+            : auditService.observeRecentLogs(AppConfig.pagination.auditScreenLimit),
         [entityType, entityId, isFiltered],
         [] as AuditLog[]
     );

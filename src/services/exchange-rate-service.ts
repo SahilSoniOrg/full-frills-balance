@@ -19,7 +19,7 @@ export interface ExchangeRateData {
     source: string
 }
 
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hours
+const CACHE_DURATION_MS = AppConfig.time.msPerDay // 24 hours
 
 export class ExchangeRateService {
     private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> = new Map()

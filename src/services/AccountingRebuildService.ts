@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database'
+import { AppConfig } from '@/src/constants'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository'
@@ -10,7 +11,7 @@ import { logger } from '@/src/utils/logger'
 import { amountsAreEqual } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
-const CHECKPOINT_INTERVAL = 1000;
+const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
 
 export class AccountingRebuildService {
     /**
@@ -101,7 +102,7 @@ export class AccountingRebuildService {
             await database.write(async () => {
                 // Fetch ONLY the models that actually need updating
                 const idsArray = Array.from(idsNeedingUpdate.keys());
-                const BATCH_SIZE = 500;
+                const BATCH_SIZE = AppConfig.performance.rebuild.batchSize;
 
                 for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
                     const chunkIds = idsArray.slice(i, i + BATCH_SIZE);
