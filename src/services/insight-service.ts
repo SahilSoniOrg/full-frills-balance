@@ -39,6 +39,7 @@ export interface SafeToSpendProjection {
     history: SafeToSpendDataPoint[];
     projection: SafeToSpendDataPoint[];
     safeDaysCount: number | null;
+    safeToSpend: number;
 }
 
 export interface SafeToSpendResult {
@@ -63,6 +64,10 @@ export interface SafeToSpendResult {
     liquidAssetAccountIds: string[];
     liquidLiabilityAccountIds: string[];
     dailyBudgetBurn: number;
+    dailyBudgetBurns: number[];
+    currentMonthBudgetRemaining: number;
+    nextMonthBudgetProjected: number;
+    nextMonthProjectionDays: number;
     budgetCoveredExpenseAccountIds: Set<string>;
     projection?: SafeToSpendProjection;
 }
@@ -129,6 +134,10 @@ export class InsightService {
                         liquidAssetAccountIds: [],
                         liquidLiabilityAccountIds: [],
                         dailyBudgetBurn: 0,
+                        dailyBudgetBurns: [],
+                        currentMonthBudgetRemaining: 0,
+                        nextMonthBudgetProjected: 0,
+                        nextMonthProjectionDays: 0,
                         totalFutureInflow: 0,
                         budgetCoveredExpenseAccountIds: new Set<string>(),
                     });
@@ -162,8 +171,13 @@ export class InsightService {
                         const daysLeftInMonth = today.daysInMonth() - today.date() + 1; // inclusive of today
                         const scopeGroups = budgetScopeGroups as any[][];
 
-                        let dailyBudgetBurn = 0;
-                        let remainingBudget = 0;
+                        let dailyBudgetBurnAvg = 0;
+                        const simulationDays = AppConfig.defaults.safeToSpendDays;
+                        const dailyBudgetBurns = new Array(simulationDays).fill(0);
+                        const nextMonthDays = today.add(1, 'month').daysInMonth();
+
+                        let currentMonthBudgetRemaining = 0;
+                        let nextMonthBudgetProjected = 0;
 
                         await Promise.all(
                             (usages as any[]).map(async (usage, idx) => {
@@ -172,21 +186,44 @@ export class InsightService {
                                 const remaining = Math.max(0, usage.remaining);
                                 if (remaining === 0) return;
                                 const budgetCurrency = budget.currencyCode || resultCurrency;
+
                                 let remainingInDefault = remaining;
+                                let amountInDefault = budget.amount;
+
                                 if (budgetCurrency !== resultCurrency) {
                                     try {
-                                        const { convertedAmount } = await exchangeRateService.convert(
+                                        const { convertedAmount: convRem } = await exchangeRateService.convert(
                                             remaining, budgetCurrency, resultCurrency
                                         );
-                                        remainingInDefault = convertedAmount;
+                                        remainingInDefault = convRem;
+
+                                        const { convertedAmount: convAmt } = await exchangeRateService.convert(
+                                            budget.amount, budgetCurrency, resultCurrency
+                                        );
+                                        amountInDefault = convAmt;
                                     } catch (e) {
                                         logger.error('Failed to convert budget remaining for safe-to-spend', e);
                                     }
                                 }
-                                remainingBudget += remainingInDefault;
-                                dailyBudgetBurn += remainingInDefault / Math.max(1, daysLeftInMonth);
+
+                                const currentMonthDaily = remainingInDefault / Math.max(1, daysLeftInMonth);
+                                const nextMonthDaily = amountInDefault / nextMonthDays;
+
+                                for (let i = 0; i < simulationDays; i++) {
+                                    if (i < daysLeftInMonth) {
+                                        dailyBudgetBurns[i] += currentMonthDaily;
+                                        currentMonthBudgetRemaining += currentMonthDaily;
+                                    } else {
+                                        dailyBudgetBurns[i] += nextMonthDaily;
+                                        nextMonthBudgetProjected += nextMonthDaily;
+                                    }
+                                }
                             })
                         );
+
+                        // Ensure breakdown sums to total committed budget over simulationDays
+                        const committedBudget = dailyBudgetBurns.reduce((sum, val) => sum + val, 0);
+                        dailyBudgetBurnAvg = committedBudget / simulationDays;
 
                         const budgetCoveredExpenseAccountIds = new Set<string>();
                         for (let i = 0; i < budgets.length; i++) {
@@ -216,7 +253,7 @@ export class InsightService {
                             totalLiabilitiesOther
                         } = await cashFlowSimulationService.simulateSafeToSpend(
                             totalLiquid,
-                            dailyBudgetBurn,
+                            dailyBudgetBurns,
                             plannedPayments,
                             plannedJournals,
                             liquidAssetIds.map(id => id),
@@ -224,6 +261,8 @@ export class InsightService {
                             budgetCoveredExpenseAccountIds,
                             resultCurrency,
                         );
+
+                        const nextMonthProjectionDays = Math.max(0, simulationDays - daysLeftInMonth);
 
                         const budgetSubtypes = Array.from(
                             new Set(
@@ -250,7 +289,12 @@ export class InsightService {
                             totalLiabilities,
                             totalLiabilitiesCC,
                             totalLiabilitiesOther,
-                            committedBudget: remainingBudget,
+                            dailyBudgetBurn: dailyBudgetBurnAvg,
+                            dailyBudgetBurns,
+                            currentMonthBudgetRemaining,
+                            nextMonthBudgetProjected,
+                            nextMonthProjectionDays,
+                            committedBudget,
                             committedPlanned,
                             committedPlannedPayments,
                             committedPlannedJournals,
@@ -266,7 +310,6 @@ export class InsightService {
                             budgetAccountNames,
                             liquidAssetAccountIds: liquidAssetIds,
                             liquidLiabilityAccountIds: liquidLiabilityIds,
-                            dailyBudgetBurn,
                             budgetCoveredExpenseAccountIds,
                         };
                     })
@@ -282,7 +325,7 @@ export class InsightService {
         return this.observeSafeToSpend().pipe(
             switchMap(async (current) => {
                 if (current.safeToSpend === 0 && current.totalLiquidAssets === 0) {
-                    current.projection = { history: [], projection: [], safeDaysCount: null };
+                    current.projection = { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 };
                     return current;
                 }
                 const projection = await this.calculateSafeToSpendProjection(
@@ -354,7 +397,7 @@ export class InsightService {
         ).fetch();
 
         const { flowByDayOffset, effectiveDailyDrain } = await cashFlowSimulationService.getSimulationFlows(
-            simulationDays, now, current.dailyBudgetBurn, plannedPayments, plannedJournals,
+            simulationDays, now, current.dailyBudgetBurns, plannedPayments, plannedJournals,
             new Set([...current.liquidAssetAccountIds, ...current.liquidLiabilityAccountIds]),
             liabilityAccountBalances, budgetCoveredExpenseAccountIds, current.currencyCode
         );
@@ -367,14 +410,17 @@ export class InsightService {
         projectionPoints.push({ timestamp: now.valueOf(), value: projectedAmount, isProjected: true });
 
         for (let d = 1; d <= simulationDays; d++) {
-            projectedAmount -= effectiveDailyDrain;
+            const dailyDrain = Array.isArray(effectiveDailyDrain) ? (effectiveDailyDrain[d - 1] || 0) : effectiveDailyDrain;
+            projectedAmount -= dailyDrain;
             projectedAmount += flowByDayOffset.get(d) || 0;
             projectionPoints.push({ timestamp: now.add(d, 'day').valueOf(), value: projectedAmount, isProjected: true });
             if (projectedAmount < minBalanceFound) minBalanceFound = projectedAmount;
             if (projectedAmount < 0 && safeDaysCount === null) safeDaysCount = d;
         }
 
-        return { history: historyPoints, projection: projectionPoints, safeDaysCount };
+        const safeToSpend = Math.max(0, minBalanceFound);
+
+        return { history: historyPoints, projection: projectionPoints, safeDaysCount, safeToSpend };
     }
 
 }

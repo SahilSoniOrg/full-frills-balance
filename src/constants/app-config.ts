@@ -200,7 +200,7 @@ export const AppConfig = {
         calculationFormula: 'Assets - Committed - Debt Dues',
         plannedPayments: 'Planned Payments',
         plannedJournals: 'Planned Journals/Transfers',
-        activeBudgets: 'Active Budgets (Remaining)',
+        activeBudgets: 'Active Budgets (30-day proj.)',
         totalCommitted: 'Total Committed',
         creditCardStatements: 'Credit Card Statements',
         otherLiquidLiabilities: 'Other Liquid Liabilities',

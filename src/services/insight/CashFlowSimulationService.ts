@@ -1,5 +1,5 @@
-import Account, { AccountSubtype } from '@/src/data/models/Account';
 import { AppConfig } from '@/src/constants';
+import Account, { AccountSubtype } from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { TransactionType } from '@/src/data/models/Transaction';
@@ -15,7 +15,7 @@ export class CashFlowSimulationService {
      */
     async simulateSafeToSpend(
         startingBalance: number,
-        dailyBudgetBurn: number,
+        dailyBudgetBurn: number | number[],
         plannedPayments: PlannedPayment[],
         plannedJournals: Journal[],
         liquidAssetIds: string[],
@@ -62,8 +62,9 @@ export class CashFlowSimulationService {
         let currentBalance = startingBalance;
         let minBalance = startingBalance;
 
-        for (let d = 1; d <= SIMULATION_DAYS; d++) {
-            currentBalance -= effectiveDailyDrain;
+        for (let d = 0; d < SIMULATION_DAYS; d++) {
+            const drain = Array.isArray(effectiveDailyDrain) ? (effectiveDailyDrain[d] || 0) : effectiveDailyDrain;
+            currentBalance -= drain;
             currentBalance += flowByDayOffset.get(d) || 0;
             if (currentBalance < minBalance) minBalance = currentBalance;
         }
@@ -84,7 +85,7 @@ export class CashFlowSimulationService {
     async getSimulationFlows(
         simulationDays: number,
         now: dayjs.Dayjs,
-        dailyBudgetBurn: number,
+        dailyBudgetBurn: number | number[],
         plannedPayments: PlannedPayment[],
         plannedJournals: Journal[],
         liquidAccountIds: Set<string>,
@@ -94,7 +95,7 @@ export class CashFlowSimulationService {
     ): Promise<{
         flowByDayOffset: Map<number, number>,
         organicNetFlow: number,
-        effectiveDailyDrain: number,
+        effectiveDailyDrain: number | number[],
         totalFutureInflow: number,
         committedPlanned: number,
         committedPlannedPayments: number,

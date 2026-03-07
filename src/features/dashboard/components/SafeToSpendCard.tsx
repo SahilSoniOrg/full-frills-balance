@@ -30,6 +30,10 @@ interface SafeToSpendCardProps {
     liquidAssetAccountNames: string[];
     liquidLiabilityAccountNames: string[];
     budgetAccountNames: string[];
+    dailyBudgetBurn: number;
+    currentMonthBudgetRemaining: number;
+    nextMonthBudgetProjected: number;
+    nextMonthProjectionDays: number;
     isLoading?: boolean;
 }
 
@@ -53,6 +57,9 @@ export const SafeToSpendCard = ({
     liquidAssetAccountNames,
     liquidLiabilityAccountNames,
     budgetAccountNames,
+    currentMonthBudgetRemaining,
+    nextMonthBudgetProjected,
+    nextMonthProjectionDays,
     isLoading = false
 }: SafeToSpendCardProps) => {
     const { theme, fonts } = useTheme();
@@ -394,7 +401,17 @@ export const SafeToSpendCard = ({
                                 <AppText variant="caption" weight="bold">{format(committedPlannedJournals)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">{labels.activeBudgets}</AppText>
+                                <View style={{ flex: 1, paddingRight: Spacing.sm }}>
+                                    <AppText variant="caption">{labels.activeBudgets}</AppText>
+                                    <View style={{ marginTop: 2 }}>
+                                        <AppText variant="caption" color="secondary" style={styles.modalSectionHint}>
+                                            {`• This month remaining: ${format(currentMonthBudgetRemaining)}`}
+                                        </AppText>
+                                        <AppText variant="caption" color="secondary" style={styles.modalSectionHint}>
+                                            {`• Next month ${nextMonthProjectionDays} days projected: ${format(nextMonthBudgetProjected)}`}
+                                        </AppText>
+                                    </View>
+                                </View>
                                 <AppText variant="caption" weight="bold">{format(committedBudget)}</AppText>
                             </View>
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
