@@ -44,7 +44,7 @@ export const NetWorthCard = ({
 
     const formatCurrency = (amount: number) => {
         if (isLoading) return '...';
-        if (isActuallyHidden) return '••••••';
+        if (isActuallyHidden) return '••••';
         return CurrencyFormatter.format(amount, undefined, {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,

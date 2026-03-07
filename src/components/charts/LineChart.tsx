@@ -31,6 +31,7 @@ interface LineChartProps {
     secondaryData?: DataPoint[]; // Optional secondary line data
     secondaryColor?: string; // Color for the secondary line
     todayX?: number; // Timestamp for the 'Today' vertical marker
+    hideLabels?: boolean; // Whether to hide axis labels (Privacy Mode)
 }
 
 export const LineChart = ({
@@ -48,6 +49,7 @@ export const LineChart = ({
     secondaryData,
     secondaryColor,
     todayX,
+    hideLabels,
 }: LineChartProps) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
@@ -235,7 +237,7 @@ export const LineChart = ({
                                                 fill={theme.textSecondary}
                                                 textAnchor="end"
                                             >
-                                                {CurrencyFormatter.formatShort(val)}
+                                                {hideLabels ? '••••' : CurrencyFormatter.formatShort(val)}
                                             </SvgText>
                                         </React.Fragment>
                                     );

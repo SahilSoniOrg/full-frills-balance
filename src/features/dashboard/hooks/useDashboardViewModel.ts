@@ -18,6 +18,8 @@ export interface DashboardViewModel {
     headerProps: {
         greeting: string;
         patterns: Pattern[];
+        isPrivacyMode: boolean;
+        onTogglePrivacy: () => void;
     };
     transactionSectionTitle: string;
     fab: {
@@ -27,7 +29,11 @@ export interface DashboardViewModel {
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
-    const { userName, hasCompletedOnboarding, isInitialized } = useUI();
+    const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, setPrivacyMode } = useUI();
+
+    const onTogglePrivacy = useCallback(() => {
+        setPrivacyMode(!isPrivacyMode);
+    }, [isPrivacyMode, setPrivacyMode]);
 
     const { data: safeToSpendData } = useObservable(
         () => insightService.observeSafeToSpendProjection(),
@@ -63,7 +69,9 @@ export function useDashboardViewModel(): DashboardViewModel {
     const headerProps = useMemo(() => ({
         greeting,
         patterns,
-    }), [greeting, patterns]);
+        isPrivacyMode,
+        onTogglePrivacy,
+    }), [greeting, patterns, isPrivacyMode, onTogglePrivacy]);
 
     // Memoize fab object to prevent re-renders
     const fab = useMemo(() => ({

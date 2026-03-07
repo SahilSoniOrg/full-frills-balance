@@ -130,10 +130,11 @@ export function transformAccountsToSections(
             const monthlyExpenses = balanceData?.monthlyExpenses || 0
 
             const currencyCode = balanceData?.currencyCode || account.currencyCode
+            const mask = '••••'
 
-            const balanceText = isLoading ? '...' : CurrencyFormatter.format(balance, currencyCode)
-            const monthlyIncomeText = isLoading ? '...' : CurrencyFormatter.format(monthlyIncome, currencyCode)
-            const monthlyExpenseText = isLoading ? '...' : CurrencyFormatter.format(monthlyExpenses, currencyCode)
+            const balanceText = isLoading ? '...' : (isPrivacyMode ? mask : CurrencyFormatter.format(balance, currencyCode))
+            const monthlyIncomeText = isLoading ? '...' : (isPrivacyMode ? mask : CurrencyFormatter.format(monthlyIncome, currencyCode))
+            const monthlyExpenseText = isLoading ? '...' : (isPrivacyMode ? mask : CurrencyFormatter.format(monthlyExpenses, currencyCode))
 
             const isExpanded = expandedAccountIds.has(account.id)
             const children = accountsByParent.get(account.id) || []

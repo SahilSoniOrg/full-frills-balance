@@ -2,6 +2,7 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SafeToSpendProjection } from '@/src/services/insight-service';
@@ -70,6 +71,7 @@ export const SafeToSpendCard = ({
     isLoading = false
 }: SafeToSpendCardProps) => {
     const { theme, fonts } = useTheme();
+    const { isPrivacyMode } = useUI();
     const [isInfoVisible, setInfoVisible] = React.useState(false);
     const [selectedLegendItem, setSelectedLegendItem] = React.useState<'safe' | 'committed' | 'debts' | null>(null);
     const info = AppConfig.strings.dashboard.safeToSpendExplanation;
@@ -78,6 +80,7 @@ export const SafeToSpendCard = ({
 
     const format = (val: number) => {
         if (isLoading) return '...';
+        if (isPrivacyMode) return '••••';
         return CurrencyFormatter.format(val, currencyCode, {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -262,6 +265,7 @@ export const SafeToSpendCard = ({
                                 xTicks={xTicks}
                                 formatXTick={(x) => dayjs(x).format('MMM D')}
                                 todayX={dayjs().startOf('day').valueOf()}
+                                hideLabels={isPrivacyMode}
                             />
                             {projection.safeDaysCount !== null && (
                                 <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
