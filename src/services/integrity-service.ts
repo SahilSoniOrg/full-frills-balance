@@ -21,6 +21,7 @@ import { databaseRepository } from '@/src/data/repositories/DatabaseRepository'
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository'
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository'
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService'
+import { smsService } from '@/src/services/sms-service'
 import { accountingService } from '@/src/utils/accountingService'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { logger } from '@/src/utils/logger'
@@ -456,6 +457,7 @@ export class IntegrityService {
         logger.warn('[IntegrityService] STARTING FACTORY RESET...')
         try {
             await databaseRepository.resetDatabase()
+            await smsService.clearProcessedMessages()
             logger.info('[IntegrityService] Database reset successful.')
         } catch (error) {
             logger.error('[IntegrityService] CRITICAL: Factory reset failed:', error)

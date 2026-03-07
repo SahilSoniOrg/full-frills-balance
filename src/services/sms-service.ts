@@ -310,6 +310,18 @@ class SmsService {
         }
     }
 
+    /**
+     * Clears the list of processed SMS IDs. Used during factory reset.
+     */
+    async clearProcessedMessages(): Promise<void> {
+        try {
+            await AsyncStorage.removeItem(this.PROCESSED_SMS_KEY);
+            logger.info('Cleared processed SMS IDs');
+        } catch (error) {
+            logger.error('Failed to clear processed SMS IDs', error);
+        }
+    }
+
     async saveAutoPostRule(data: { id?: string, senderMatch: string, bodyMatch?: string, sourceAccountId: string, categoryAccountId: string, isActive: boolean }) {
         await database.write(async () => {
             if (data.id) {
