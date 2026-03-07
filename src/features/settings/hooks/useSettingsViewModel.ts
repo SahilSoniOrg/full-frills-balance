@@ -3,11 +3,12 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
 import { alert, confirm, toast } from '@/src/utils/alerts';
+import * as LocalAuthentication from '@/src/utils/auth';
 import { AppNavigation } from '@/src/utils/navigation';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 export interface SettingsViewModel {
     userName: string;
@@ -20,6 +21,8 @@ export interface SettingsViewModel {
     setFontId: (value: FontId) => void;
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
+    isAppLockEnabled: boolean;
+    onToggleAppLock: () => void;
     showAccountMonthlyStats: boolean;
     onToggleAccountMonthlyStats: () => void;
     archetype: string;
@@ -53,6 +56,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         setThemePreference,
         isPrivacyMode,
         setPrivacyMode,
+        isAppLockEnabled,
+        setAppLockEnabled,
         showAccountMonthlyStats,
         setShowAccountMonthlyStats,
         archetype,
@@ -171,6 +176,57 @@ export function useSettingsViewModel(): SettingsViewModel {
         });
     }, [resetApp]);
 
+    const onToggleAppLock = useCallback(async () => {
+        if (isAppLockEnabled) {
+            // Turning it off, maybe prompt for authentication to disable?
+            const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Authenticate to disable App Lock',
+            });
+            if (result.success) {
+                setAppLockEnabled(false);
+            }
+        } else {
+            // Turning it on
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+            if (!hasHardware || !isEnrolled) {
+                if (Platform.OS === 'web') {
+                    alert.show({
+                        title: 'Authentication not set up',
+                        message: 'Your browser does not support Passkeys (WebAuthn).',
+                        type: 'error'
+                    });
+                    return;
+                }
+
+                confirm.show({
+                    title: 'Setup Required',
+                    message: 'Your device does not have a screen lock or biometric authentication set up. Please configure one in your device settings to enable App Lock.',
+                    confirmText: 'Go to Settings',
+                    cancelText: 'Dismiss',
+                    onConfirm: () => {
+                        if (Platform.OS === 'android') {
+                            Linking.sendIntent('android.settings.SECURITY_SETTINGS').catch(() => {
+                                Linking.openSettings();
+                            });
+                        } else {
+                            Linking.openSettings();
+                        }
+                    }
+                });
+                return;
+            }
+
+            const result = await LocalAuthentication.enrollAsync({
+                promptMessage: 'Authenticate to enable App Lock',
+            });
+            if (result.success) {
+                setAppLockEnabled(true);
+            }
+        }
+    }, [isAppLockEnabled, setAppLockEnabled]);
+
     return {
         userName,
         setUserName,
@@ -182,6 +238,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         setFontId: ui.setFontId,
         isPrivacyMode,
         onTogglePrivacy: () => setPrivacyMode(!isPrivacyMode),
+        isAppLockEnabled,
+        onToggleAppLock,
         showAccountMonthlyStats,
         onToggleAccountMonthlyStats: () => setShowAccountMonthlyStats(!showAccountMonthlyStats),
         archetype,

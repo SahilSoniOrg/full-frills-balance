@@ -82,6 +82,20 @@ export function SettingsView(vm: SettingsViewModel) {
                     <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
                     <View style={styles.rowBetween}>
                         <View style={{ flex: 1, marginRight: Spacing.md }}>
+                            <AppText variant="body" weight="semibold">App Lock</AppText>
+                            <AppText variant="caption" color="secondary">Require biometric or passcode authentication to open the app</AppText>
+                        </View>
+                        <AppButton
+                            variant={vm.isAppLockEnabled ? 'primary' : 'outline'}
+                            size="sm"
+                            onPress={vm.onToggleAppLock}
+                        >
+                            {vm.isAppLockEnabled ? AppConfig.strings.settings.privacy.on : AppConfig.strings.settings.privacy.off}
+                        </AppButton>
+                    </View>
+                    <View style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.md }]} />
+                    <View style={styles.rowBetween}>
+                        <View style={{ flex: 1, marginRight: Spacing.md }}>
                             <AppText variant="body" weight="semibold">{AppConfig.strings.settings.stats.title}</AppText>
                             <AppText variant="caption" color="secondary">{AppConfig.strings.settings.stats.description}</AppText>
                         </View>
