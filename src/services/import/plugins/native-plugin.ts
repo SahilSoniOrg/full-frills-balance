@@ -23,7 +23,7 @@ import {
     ImportedTransaction,
     importRepository
 } from '@/src/data/repositories/ImportRepository';
-import { ImportPlugin, ImportStats } from '@/src/services/import/types';
+import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
@@ -61,10 +61,10 @@ export const nativePlugin: ImportPlugin = {
     description: 'Restore from a JSON backup file created by this app.',
     icon: '⚡️',
 
-    detect(data: unknown): boolean {
-        if (!data || typeof data !== 'object') return false;
+    detect(context: ImportFileContext): boolean {
+        if (!context.json || typeof context.json !== 'object') return false;
 
-        const obj = data as Record<string, unknown>;
+        const obj = context.json as Record<string, unknown>;
 
         // Native format has journals (not categories) and a version field
         const hasJournals = Array.isArray(obj.journals);
@@ -78,16 +78,14 @@ export const nativePlugin: ImportPlugin = {
         return hasJournals && hasAccounts && hasTransactions && hasVersion && !hasCategories;
     },
 
-    async import(jsonContent: string, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
+    async import(context: ImportFileContext, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
         logger.info('[NativePlugin] Starting import...');
 
-        let data: NativeImportData;
-        try {
-            data = JSON.parse(jsonContent);
-        } catch (error) {
-            logger.error('[NativePlugin] Failed to parse JSON', error);
+        if (!context.json) {
+            logger.error('[NativePlugin] No parsed JSON found in context');
             throw new Error('Invalid JSON file format');
         }
+        const data: NativeImportData = context.json as NativeImportData;
 
         // Basic validation
         if (!data.accounts || !data.journals || !data.transactions) {

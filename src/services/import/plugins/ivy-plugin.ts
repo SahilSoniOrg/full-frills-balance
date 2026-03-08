@@ -12,7 +12,7 @@ import { JournalStatus } from '@/src/data/models/Journal';
 import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
-import { ImportPlugin, ImportStats } from '@/src/services/import/types';
+import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -166,10 +166,10 @@ export const ivyPlugin: ImportPlugin = {
     description: 'Migrate data from an Ivy Wallet backup file.',
     icon: '🌱',
 
-    detect(data: unknown): boolean {
-        if (!data || typeof data !== 'object') return false;
+    detect(context: ImportFileContext): boolean {
+        if (!context.json || typeof context.json !== 'object') return false;
 
-        const obj = data as Record<string, unknown>;
+        const obj = context.json as Record<string, unknown>;
 
         // Ivy format has accounts, categories, and transactions
         // The presence of 'categories' is the strongest differentiator from native format
@@ -180,13 +180,13 @@ export const ivyPlugin: ImportPlugin = {
         return hasAccounts && hasCategories && hasTransactions;
     },
 
-    async import(jsonContent: string, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
+    async import(context: ImportFileContext, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
         const targetDefaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency
-        const data: IvyData = JSON.parse(jsonContent);
 
-        if (!this.detect(data)) {
+        if (!this.detect(context)) {
             throw new Error('Invalid Ivy Wallet backup format');
         }
+        const data: IvyData = context.json as IvyData;
 
         const UNKNOWN_CATEGORY_ID = 'ivy-unknown-category';
         let needsUnknownCategory = false;

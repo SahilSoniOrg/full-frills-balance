@@ -5,7 +5,7 @@
  * Handles plugin registration and format detection.
  */
 
-import { ImportPlugin } from '@/src/services/import/types';
+import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 
 class ImportRegistry {
     private plugins: Map<string, ImportPlugin> = new Map();
@@ -37,13 +37,13 @@ class ImportRegistry {
     }
 
     /**
-     * Auto-detect the format of parsed JSON data.
+     * Auto-detect the format of the given context.
      * Returns the first plugin whose detect() returns true.
      */
-    detect(data: unknown): ImportPlugin | undefined {
+    detect(context: ImportFileContext): ImportPlugin | undefined {
         for (const plugin of this.plugins.values()) {
             try {
-                if (plugin.detect(data)) {
+                if (plugin.detect(context)) {
                     return plugin;
                 }
             } catch {

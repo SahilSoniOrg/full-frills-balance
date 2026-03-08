@@ -9,6 +9,7 @@
  * 2. Import and register it here
  */
 
+import { cashewPlugin } from '@/src/services/import/plugins/cashew-plugin';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importRegistry } from '@/src/services/import/registry';
@@ -16,6 +17,7 @@ import { importRegistry } from '@/src/services/import/registry';
 // Register all plugins
 importRegistry.register(nativePlugin);
 importRegistry.register(ivyPlugin);
+importRegistry.register(cashewPlugin);
 
 // Re-export public API
 export {
@@ -25,5 +27,5 @@ export {
     sanitizeContent
 } from '@/src/services/import/orchestrator';
 export { importRegistry } from '@/src/services/import/registry';
-export type { ImportPlugin, ImportStats } from '@/src/services/import/types';
+export type { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 

@@ -19,6 +19,22 @@ export interface ImportStats {
 }
 
 /**
+ * Context provided to plugins during detection and import.
+ */
+export interface ImportFileContext {
+    /** The URI of the selected file */
+    uri: string;
+    /** The name of the selected file */
+    name: string;
+    /** The raw bytes of the file */
+    rawBytes: Uint8Array;
+    /** The decoded text of the file, if it could be decoded */
+    text?: string;
+    /** The successfully parsed JSON object, if the text is valid JSON */
+    json?: unknown;
+}
+
+/**
  * Plugin interface for data import formats.
  *
  * Each plugin handles detection and import for a specific format.
@@ -28,7 +44,7 @@ export interface ImportStats {
  * 3. Register in index.ts
  */
 export interface ImportPlugin {
-    /** Unique identifier for the plugin (e.g., 'native', 'ivy') */
+    /** Unique identifier for the plugin (e.g., 'native', 'ivy', 'cashew') */
     id: string;
 
     /** Display name shown in UI */
@@ -41,14 +57,14 @@ export interface ImportPlugin {
     icon: string;
 
     /**
-     * Quick check on parsed JSON to detect if this plugin can handle it.
+     * Check if this plugin can handle the given file context.
      * Should be fast and not throw errors.
      */
-    detect(data: unknown): boolean;
+    detect(context: ImportFileContext): boolean;
 
     /**
      * Execute the import operation.
      * WARNING: Implementations should wipe existing data before import.
      */
-    import(jsonContent: string, onProgress?: (message: string, progress: number) => void): Promise<ImportStats>;
+    import(context: ImportFileContext, onProgress?: (message: string, progress: number) => void): Promise<ImportStats>;
 }

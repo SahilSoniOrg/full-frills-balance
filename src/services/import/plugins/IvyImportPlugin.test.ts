@@ -1,5 +1,6 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
+import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
 
@@ -51,13 +52,15 @@ describe('IvyImportPlugin', () => {
 
     describe('detect', () => {
         it('returns true for valid Ivy format', () => {
-            expect(ivyPlugin.detect(validIvyData)).toBe(true);
+            const context = { json: validIvyData } as ImportFileContext;
+            expect(ivyPlugin.detect(context)).toBe(true);
         });
 
         it('returns false if categories is missing', () => {
             const data = { ...validIvyData };
             delete (data as any).categories;
-            expect(ivyPlugin.detect(data)).toBe(false);
+            const context = { json: data } as ImportFileContext;
+            expect(ivyPlugin.detect(context)).toBe(false);
         });
     });
 
@@ -67,7 +70,8 @@ describe('IvyImportPlugin', () => {
         });
 
         it('transforms and imports Ivy data correctly', async () => {
-            const stats = await ivyPlugin.import(JSON.stringify(validIvyData));
+            const context = { json: validIvyData } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
 
             expect(integrityService.resetDatabase).toHaveBeenCalled();
             expect(importRepository.batchInsert).toHaveBeenCalled();
@@ -124,7 +128,8 @@ describe('IvyImportPlugin', () => {
                 ]
             };
 
-            const stats = await ivyPlugin.import(JSON.stringify(dataWithTransfer));
+            const context = { json: dataWithTransfer } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
             expect(stats.journals).toBe(1);
             expect(stats.transactions).toBe(2);
 
@@ -145,7 +150,8 @@ describe('IvyImportPlugin', () => {
                 ]
             };
 
-            const stats = await ivyPlugin.import(JSON.stringify(dataWithSkipped));
+            const context = { json: dataWithSkipped } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
             expect(stats.skippedTransactions).toBe(2);
         });
 
@@ -162,7 +168,8 @@ describe('IvyImportPlugin', () => {
                 ]
             };
 
-            const stats = await ivyPlugin.import(JSON.stringify(dataWithBudgetedCategoryOnly));
+            const context = { json: dataWithBudgetedCategoryOnly } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
 
             // Should create 3 accounts: 1 Wallet + 1 Category Food (unused but in data, though we only create for usage)
             // Wait, IvyPlugin creates accounts for categories in categoryUsageMap.
@@ -193,7 +200,8 @@ describe('IvyImportPlugin', () => {
                 ]
             };
 
-            const stats = await ivyPlugin.import(JSON.stringify(dataWithRawId));
+            const context = { json: dataWithRawId } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
 
             const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][0];
             const rawAcc = lastBatch.accounts.find((a: any) => a.name === 'Raw Category (INR)');
@@ -215,7 +223,8 @@ describe('IvyImportPlugin', () => {
                 ]
             };
 
-            const stats = await ivyPlugin.import(JSON.stringify(dataWithOpeningBalance));
+            const context = { json: dataWithOpeningBalance } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
 
             const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][0];
             const obAcc = lastBatch.accounts.find((a: any) => a.name === 'Opening Balances (USD)' && a.accountType === 'EQUITY');
@@ -242,7 +251,8 @@ describe('IvyImportPlugin', () => {
                 ]
             };
 
-            const stats = await ivyPlugin.import(JSON.stringify(dataWithAdjustBalance));
+            const context = { json: dataWithAdjustBalance } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
 
             const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][0];
             const abAcc = lastBatch.accounts.find((a: any) => a.name === 'Balance Corrections (USD)' && a.accountType === 'EQUITY');

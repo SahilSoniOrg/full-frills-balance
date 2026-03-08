@@ -1,5 +1,6 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
+import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
 
@@ -41,18 +42,21 @@ describe('NativeImportPlugin', () => {
 
     describe('detect', () => {
         it('returns true for valid native format', () => {
-            expect(nativePlugin.detect(validNativeData)).toBe(true);
+            const context = { json: validNativeData } as ImportFileContext;
+            expect(nativePlugin.detect(context)).toBe(true);
         });
 
         it('returns false if version is missing', () => {
             const data = { ...validNativeData };
             delete (data as any).version;
-            expect(nativePlugin.detect(data)).toBe(false);
+            const context = { json: data } as ImportFileContext;
+            expect(nativePlugin.detect(context)).toBe(false);
         });
 
         it('returns false if categories is present (Ivy format)', () => {
             const data = { ...validNativeData, categories: [] };
-            expect(nativePlugin.detect(data)).toBe(false);
+            const context = { json: data } as ImportFileContext;
+            expect(nativePlugin.detect(context)).toBe(false);
         });
     });
 
@@ -62,7 +66,8 @@ describe('NativeImportPlugin', () => {
         });
 
         it('performs full import process', async () => {
-            const stats = await nativePlugin.import(JSON.stringify(validNativeData));
+            const context = { json: validNativeData } as ImportFileContext;
+            const stats = await nativePlugin.import(context);
 
             expect(integrityService.resetDatabase).toHaveBeenCalled();
             expect(preferences.restorePreferences).toHaveBeenCalledWith(validNativeData.preferences);
@@ -85,13 +90,15 @@ describe('NativeImportPlugin', () => {
             expect(stats.auditLogs).toBe(1);
         });
 
-        it('throws error for invalid JSON', async () => {
-            await expect(nativePlugin.import('invalid-json')).rejects.toThrow(/Invalid JSON/);
+        it('throws error for missing parsed JSON', async () => {
+            const context = { json: null } as unknown as ImportFileContext;
+            await expect(nativePlugin.import(context)).rejects.toThrow(/Invalid JSON/);
         });
 
         it('throws error for missing sections', async () => {
             const incompleteData = { version: '1.0' };
-            await expect(nativePlugin.import(JSON.stringify(incompleteData))).rejects.toThrow(/missing required data/);
+            const context = { json: incompleteData } as ImportFileContext;
+            await expect(nativePlugin.import(context)).rejects.toThrow(/missing required data/);
         });
     });
 });

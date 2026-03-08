@@ -59,8 +59,6 @@ export const SafeToSpendCard = ({
     totalFutureInflow,
     totalLiquidAssets,
     totalLiabilities,
-    totalLiabilitiesCC,
-    totalLiabilitiesOther,
     currencyCode,
     liquidAssetSubtypes,
     liquidLiabilitySubtypes,

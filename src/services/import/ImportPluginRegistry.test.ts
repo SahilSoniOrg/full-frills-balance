@@ -35,7 +35,7 @@ describe('ImportRegistry', () => {
             name: 'Other',
             description: 'Other Description',
             icon: 'other',
-            detect: (data: any) => data.type === 'other',
+            detect: (context: any) => context.json?.type === 'other',
             import: jest.fn(),
         };
 
@@ -43,7 +43,7 @@ describe('ImportRegistry', () => {
         importRegistry.register(otherPlugin);
 
         (mockPlugin.detect as jest.Mock).mockReturnValue(false);
-        const result = importRegistry.detect({ type: 'other' });
+        const result = importRegistry.detect({ json: { type: 'other' } } as any);
         expect(result).toBe(otherPlugin);
     });
 
@@ -51,7 +51,7 @@ describe('ImportRegistry', () => {
         (mockPlugin.detect as jest.Mock).mockReturnValue(false);
         importRegistry.register(mockPlugin);
 
-        const result = importRegistry.detect({ unknown: true });
+        const result = importRegistry.detect({ json: { unknown: true } } as any);
         expect(result).toBeUndefined();
     });
 });

@@ -3,6 +3,7 @@ import { analytics } from '@/src/services/analytics-service';
 import {
     decodeContent,
     extractIfZip,
+    ImportFileContext,
     importRegistry,
     readFileAsBytes,
     sanitizeContent
@@ -33,16 +34,29 @@ export function useImport() {
                 let rawBytes = await readFileAsBytes(file.uri);
                 rawBytes = await extractIfZip(rawBytes);
 
-                let content = decodeContent(rawBytes);
-                content = sanitizeContent(content);
+                const context: ImportFileContext = {
+                    uri: file.uri,
+                    name: file.name,
+                    rawBytes,
+                };
 
                 let detectedPlugin = undefined;
                 try {
-                    const data = JSON.parse(content);
-                    detectedPlugin = importRegistry.detect(data);
+                    let text = decodeContent(rawBytes);
+                    text = sanitizeContent(text);
+                    context.text = text;
+
+                    try {
+                        const data = JSON.parse(text);
+                        context.json = data;
+                    } catch (e) {
+                        logger.warn('[useImport] JSON Parse failed, might be a binary file', { error: e instanceof Error ? e.message : String(e) });
+                    }
                 } catch (e) {
-                    logger.warn('[useImport] JSON Parse failed', { error: e instanceof Error ? e.message : String(e) });
+                    logger.warn('[useImport] Text decode failed, processing as raw binary', { error: e instanceof Error ? e.message : String(e) });
                 }
+
+                detectedPlugin = importRegistry.detect(context);
 
                 if (expectedType && detectedPlugin && expectedType !== detectedPlugin.id) {
                     const continueWithMismatch = await new Promise<boolean>(resolve => {
@@ -70,7 +84,7 @@ export function useImport() {
 
                 logger.info(`[useImport] Using plugin: ${plugin.id}`);
 
-                const stats = await plugin.import(content, (msg, prog) => {
+                const stats = await plugin.import(context, (msg, prog) => {
                     setProgressMessage(msg);
                     setProgress(prog);
                 });
