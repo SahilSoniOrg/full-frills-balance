@@ -338,7 +338,7 @@ export class JournalRepository {
     journalId: string,
     journalData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
   ): Promise<Journal> {
-    const { transactions: transactionData, totalAmount, displayType, calculatedBalances, ...journalFields } = journalData
+    const { transactions: transactionData, totalAmount, displayType, calculatedBalances, metadata, ...journalFields } = journalData
 
     const existingJournal = await this.find(journalId)
     if (!existingJournal) throw new Error('Journal not found')
@@ -386,11 +386,40 @@ export class JournalRepository {
         j.updatedAt = new Date()
       })
 
-      await database.batch(
+      const batchOps: any[] = [
         journalUpdate,
         ...deleteUpdates,
         ...createUpdates
-      )
+      ]
+
+      if (metadata) {
+        const existingMeta = await this.findMetadataByJournalId(journalId)
+        if (existingMeta) {
+          const metaUpdate = existingMeta.prepareUpdate((m: any) => {
+            m.importSource = metadata.importSource
+            m.originalSmsId = metadata.originalSmsId
+            m.originalSmsSender = metadata.originalSmsSender
+            m.originalSmsBody = metadata.originalSmsBody
+            m.metadataJson = metadata.metadataJson
+            m.updatedAt = now
+          })
+          batchOps.push(metaUpdate)
+        } else {
+          const metaRecord = this.journalMetadata.prepareCreate((m: any) => {
+            m.journalId = journalId
+            m.importSource = metadata.importSource
+            m.originalSmsId = metadata.originalSmsId
+            m.originalSmsSender = metadata.originalSmsSender
+            m.originalSmsBody = metadata.originalSmsBody
+            m.metadataJson = metadata.metadataJson
+            m.createdAt = now
+            m.updatedAt = now
+          })
+          batchOps.push(metaRecord)
+        }
+      }
+
+      await database.batch(...batchOps)
 
       return existingJournal
     })

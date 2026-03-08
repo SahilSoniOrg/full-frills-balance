@@ -43,12 +43,12 @@ export function JournalMetaCard({
                 )}
 
                 <AppInput
-                    // label={AppConfig.strings.advancedEntry.description}
                     value={description}
                     onChangeText={setDescription}
                     placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-                    // multiline
+                    multiline
                     variant='minimal'
+                    style={{ textAlignVertical: 'top' }}
                 />
 
                 <ListRow

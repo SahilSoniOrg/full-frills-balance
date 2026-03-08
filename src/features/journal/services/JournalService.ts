@@ -1,13 +1,13 @@
 import { AppConfig } from '@/src/constants';
+import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
-import { database } from '@/src/data/database/Database';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
@@ -55,7 +55,8 @@ export class JournalService {
             transactions: prepared.transactions,
             totalAmount: prepared.totalAmount,
             displayType: prepared.displayType,
-            calculatedBalances: prepared.calculatedBalances
+            calculatedBalances: prepared.calculatedBalances,
+            metadata: data.metadata // Ensure metadata is passed for persistence
         });
 
         await auditService.log({

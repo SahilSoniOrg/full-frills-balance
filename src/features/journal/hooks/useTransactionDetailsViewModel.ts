@@ -1,14 +1,14 @@
 import { IconName } from '@/src/components/core';
 import { Opacity, withOpacity } from '@/src/constants';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
-import { smsService } from '@/src/services/sms-service';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { TransactionWithAccountInfo } from '@/src/types/domain';
+import { smsService } from '@/src/services/sms-service';
+import { JournalDisplayType, TransactionWithAccountInfo } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -42,6 +42,7 @@ export interface TransactionDetailsViewModel {
     };
     onBack: () => void;
     amountText: string;
+    amountColor: string;
     descriptionText: string;
     statusLabel: string;
     statusVariant: 'income' | 'expense';
@@ -63,6 +64,7 @@ export interface TransactionDetailsViewModel {
     onPost?: () => void;
     onSkip?: () => void;
     splitItems: TransactionSplitItemViewModel[];
+    isExpense: boolean;
 }
 
 export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
@@ -87,10 +89,24 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
 
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
-    const amountText = journalInfo ? CurrencyFormatter.format(journalInfo.totalAmount, journalInfo.currency) : '';
+    const journalDisplayType = journalInfo?.displayType as JournalDisplayType;
+    const isIncome = journalDisplayType === JournalDisplayType.INCOME;
+    const isExpense = journalDisplayType === JournalDisplayType.EXPENSE;
+
+    const amountColor = isIncome ? theme.income : isExpense ? theme.error : theme.primary;
+    const amountPrefix = isIncome ? '+' : isExpense ? '-' : '';
+    const amountText = journalInfo ? `${amountPrefix}${CurrencyFormatter.format(journalInfo.totalAmount, journalInfo.currency)}` : '';
+
     const formattedDate = journalInfo ? formatDate(journalInfo.date, { includeTime: true }) : '';
     const descriptionText = journalInfo?.description || 'No description';
-    const statusVariant = journalInfo?.status === 'POSTED' ? 'income' : 'expense';
+
+    const statusVariant = useMemo(() => {
+        if (!journalInfo) return 'default';
+        if (journalInfo.status === 'POSTED') return 'income';
+        if (journalInfo.status === 'PLANNED') return 'primary';
+        if (journalInfo.status === 'DRAFT') return 'default';
+        return 'default';
+    }, [journalInfo]);
 
     const handleDelete = useCallback(() => {
         showConfirmationAlert(
@@ -141,11 +157,12 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     }, [router]);
 
     useEffect(() => {
+        if (!journalId) return;
         let isActive = true;
+
         const loadSmsInfo = async () => {
-            if (!journalId) return;
             const metadata = await journalRepository.findMetadataByJournalId(journalId);
-            if (!metadata || metadata.importSource !== 'sms') {
+            if (!metadata) {
                 if (isActive) setSmsInfo(undefined);
                 return;
             }
@@ -217,16 +234,26 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
 
     const splitItems = useMemo(() => {
         return transactions.map((item: TransactionWithAccountInfo) => {
-            const isIn = item.flowDirection === 'IN';
-            const color = isIn ? theme.income : theme.error;
+            const isDebit = item.transactionType === 'DEBIT';
+
+            // Flow-based logic for visual consistency:
+            // Debit (+) is an Inflow/Arrival -> Green
+            // Credit (-) is an Outflow/Departure -> Red
+            // This ensures + is always Green and - is always Red, creating a clear "From -> To" flow.
+            const isPositiveSentiment = isDebit;
+            const color = isPositiveSentiment ? theme.income : theme.error;
+            const flowLabel = isDebit ? 'To' : 'From';
+
             return {
                 id: item.id,
                 accountId: item.accountId,
                 accountName: item.accountName,
-                transactionType: item.transactionType,
-                amountText: `${isIn ? '+' : '-'}${CurrencyFormatter.format(item.amount, item.currencyCode)}`,
+                transactionType: `${flowLabel} • ${item.transactionType}`,
+                // Signs should reflect flow direction: Debit (+) is INTO, Credit (-) is FROM
+                amountText: `${isDebit ? '+' : '-'}${CurrencyFormatter.format(item.amount, item.currencyCode)}`,
                 amountColor: color,
-                iconName: (isIn ? 'arrowDown' : 'arrowUp') as IconName,
+                // Icons should reflect flow: Down (+) to account, Up (-) from account
+                iconName: (isDebit ? 'arrowDown' : 'arrowUp') as IconName,
                 iconColor: color,
                 iconBackground: withOpacity(color, Opacity.soft),
                 onPress: () => router.push(`/account-details?accountId=${item.accountId}`),
@@ -247,9 +274,10 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         },
         onBack,
         amountText,
+        amountColor,
         descriptionText,
         statusLabel: journalInfo?.status || '',
-        statusVariant,
+        statusVariant: statusVariant as any,
         displayTypeLabel: journalInfo?.displayType,
         formattedDate,
         journalIdShort: journalId?.substring(0, 8) || '...',
@@ -259,5 +287,6 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
         onSkip: journalInfo?.status === 'PLANNED' ? handleSkip : undefined,
         splitItems,
+        isExpense,
     };
 }

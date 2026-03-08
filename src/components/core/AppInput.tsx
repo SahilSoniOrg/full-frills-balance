@@ -48,6 +48,7 @@ export function AppInput({
                 styles.inputContainer,
                 variant === 'hero' && styles.heroInputContainer,
                 variant === 'minimal' && styles.minimalInputContainer,
+                props.multiline && { alignItems: 'flex-start' },
                 {
                     borderColor: error ? theme.error : (variant === 'minimal' ? 'transparent' : theme.border),
                     backgroundColor: variant === 'minimal' ? 'transparent' : theme.surface,

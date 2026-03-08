@@ -28,9 +28,33 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
     testIDPrefix = 'selection-tile',
 }) => {
     const { theme } = useTheme();
+    const scrollViewRef = React.useRef<ScrollView>(null);
+    const itemLayouts = React.useRef<Record<string, { x: number, width: number }>>({});
+
+    const lastScrolledId = React.useRef<string | null>(null);
+
+    const scrollToSelected = React.useCallback((force = false) => {
+        if (selectedId && itemLayouts.current[selectedId] && (force || lastScrolledId.current !== selectedId)) {
+            const layout = itemLayouts.current[selectedId];
+            requestAnimationFrame(() => {
+                scrollViewRef.current?.scrollTo({
+                    x: Math.max(0, layout.x - Spacing.md),
+                    animated: true,
+                });
+            });
+            lastScrolledId.current = selectedId;
+        }
+    }, [selectedId]);
+
+    React.useEffect(() => {
+        // If selectedId changes, we want to try scrolling
+        // If layouts aren't ready, this will be called again by onLayout
+        scrollToSelected();
+    }, [selectedId, scrollToSelected]);
 
     return (
         <ScrollView
+            ref={scrollViewRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
@@ -43,6 +67,13 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
                     <TouchableOpacity
                         key={item.id}
                         testID={`${testIDPrefix}-${item.id}`}
+                        onLayout={(event) => {
+                            const isFirstLayout = !itemLayouts.current[item.id];
+                            itemLayouts.current[item.id] = event.nativeEvent.layout;
+                            if (item.id === selectedId) {
+                                scrollToSelected(isFirstLayout);
+                            }
+                        }}
                         style={[
                             styles.tile,
                             {

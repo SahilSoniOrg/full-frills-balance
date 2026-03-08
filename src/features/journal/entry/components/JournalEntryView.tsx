@@ -52,18 +52,6 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                 }
             />
 
-            <JournalMetaCard
-                date={vm.editor.journalDate}
-                setDate={vm.editor.setJournalDate}
-                time={vm.editor.journalTime}
-                setTime={vm.editor.setJournalTime}
-                description={vm.editor.description}
-                setDescription={vm.editor.setDescription}
-                style={{ marginHorizontal: Spacing.lg, marginBottom: Spacing.md }}
-                showBanner={showEditBanner}
-                bannerText={editBannerText}
-            />
-
             <FormScreenWrapper
                 contentContainerStyle={styles.content}
                 footerSlot={
@@ -91,6 +79,18 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                     />
                 }
             >
+                <JournalMetaCard
+                    date={vm.editor.journalDate}
+                    setDate={vm.editor.setJournalDate}
+                    time={vm.editor.journalTime}
+                    setTime={vm.editor.setJournalTime}
+                    description={vm.editor.description}
+                    setDescription={vm.editor.setDescription}
+                    style={{ marginHorizontal: Spacing.lg, marginBottom: Spacing.md }}
+                    showBanner={showEditBanner}
+                    bannerText={editBannerText}
+                />
+
                 {isGuidedMode ? (
                     <SimpleForm {...vm.simpleEditor} />
                 ) : (

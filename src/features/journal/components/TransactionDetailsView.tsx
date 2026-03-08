@@ -1,7 +1,7 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { AppButton, AppIcon, AppText, Badge, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { TransactionDetailsViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,6 +15,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
         backIcon,
         headerActions,
         amountText,
+        amountColor,
         descriptionText,
         statusLabel,
         statusVariant,
@@ -26,12 +27,13 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
         onOpenSmsInbox,
         onBack,
         splitItems,
+        isExpense,
     } = vm;
 
     if (isLoading) {
         return (
             <Screen title="Details">
-                <View style={styles.center}><AppText variant="body">{AppConfig.strings.common.loading}</AppText></View>
+                <View style={styles.container}><AppText variant="body">Loading...</AppText></View>
             </Screen>
         );
     }
@@ -39,7 +41,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
     if (isMissing) {
         return (
             <Screen title="Details" backIcon="close">
-                <View style={styles.center}>
+                <View style={styles.container}>
                     <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
                     <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Transaction not found</AppText>
                     <AppButton
@@ -87,22 +89,23 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
             title={title}
             backIcon={backIcon}
             headerActions={headerActionsNode}
+            onBack={onBack}
             scrollable
             withPadding
         >
             <View style={styles.content}>
                 {/* <AppCard elevation="md" radius="r2" padding="lg" style={styles.receiptCard}> */}
                 <View style={styles.iconContainer}>
-                    <View style={[styles.bigIcon, { backgroundColor: withOpacity(theme.primary, Opacity.soft) }]}>
-                        <AppIcon name="receipt" size={32} color={theme.primary} />
+                    <View style={[styles.mainIcon, { backgroundColor: withOpacity(amountColor, Opacity.soft) }]}>
+                        <AppIcon name={isExpense ? 'receipt' : 'receiptLong'} size={Size.xxl} color={amountColor} />
                     </View>
                 </View>
 
                 <View style={styles.headerSection}>
-                    <AppText variant="title" style={{ fontSize: Typography.sizes.xxxl, marginBottom: Spacing.sm }}>
+                    <AppText variant="title" style={{ fontSize: Typography.sizes.xxxl, marginBottom: Spacing.sm, color: vm.amountColor }}>
                         {amountText}
                     </AppText>
-                    <AppText variant="body" color="secondary">
+                    <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
                         {descriptionText}
                     </AppText>
                     <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md }}>
@@ -277,13 +280,13 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
 }
 
 const styles = StyleSheet.create({
-    center: {
+    container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
     content: {
-        paddingVertical: Spacing.lg,
+        paddingVertical: Spacing.md,
     },
     receiptCard: {
         width: '100%',
@@ -294,7 +297,7 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.lg,
         marginTop: Spacing.md,
     },
-    bigIcon: {
+    mainIcon: {
         width: Size.avatarLg,
         height: Size.avatarLg,
         borderRadius: Shape.radius.full,
@@ -319,4 +322,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    footer: {
+        backgroundColor: 'transparent',
+    }
 });
