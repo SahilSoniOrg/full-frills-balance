@@ -2,6 +2,7 @@ import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
+import { Screen } from '@/src/components/layout';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
@@ -12,7 +13,6 @@ import { IconPickerModal } from '@/src/features/onboarding';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
 export function AccountFormView(vm: AccountFormViewModel) {
@@ -20,6 +20,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
     const {
         heroTitle,
         heroSubtitle,
+        isLoading,
         isEditMode,
         accountName,
         setAccountName,
@@ -38,6 +39,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
         onInitialBalanceChange,
         formError,
         onSave,
+        onBack,
         saveLabel,
         currencyLabel,
         showInitialBalance,
@@ -69,7 +71,10 @@ export function AccountFormView(vm: AccountFormViewModel) {
     } = vm;
 
     return (
-        <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        <Screen
+            title={heroTitle}
+            onBack={onBack}
+        >
             <FormScreenWrapper
                 contentContainerStyle={styles.content}
                 footerSlot={
@@ -80,9 +85,6 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     />
                 }
             >
-                <AppText variant="heading" style={[styles.title, { fontFamily: fonts.bold, color: theme.text }]}>
-                    {heroTitle}
-                </AppText>
                 <AppText variant="body" color="secondary" style={[styles.subtitle, { color: theme.textSecondary }]}>
                     {heroSubtitle}
                 </AppText>
@@ -132,6 +134,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                                         returnKeyType="next"
                                         testID="initial-balance-input"
                                         containerStyle={{ marginBottom: 0 }}
+                                        editable={!isLoading}
                                     />
                                 </View>
                             )}
@@ -242,7 +245,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     setIsParentPickerVisible(false);
                 }}
             />
-        </SafeAreaView >
+        </Screen >
     );
 }
 
