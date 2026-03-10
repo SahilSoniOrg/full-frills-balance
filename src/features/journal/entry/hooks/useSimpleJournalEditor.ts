@@ -205,6 +205,8 @@ export function useSimpleJournalEditor({
 
     // Account defaulting logic (re-implemented to work with editor state)
     useEffect(() => {
+        if (editor.isEdit) return; // Never apply defaults in Edit mode - use the journal's data
+
         const lastSourceId = preferences.lastUsedSourceAccountId;
         const lastDestId = preferences.lastUsedDestinationAccountId;
 

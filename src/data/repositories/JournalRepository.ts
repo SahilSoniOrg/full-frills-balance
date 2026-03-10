@@ -112,7 +112,17 @@ export class JournalRepository {
         Q.where('id', journalId),
         Q.where('deleted_at', Q.eq(null))
       )
-      .observe()
+      .observeWithColumns([
+        'journal_date',
+        'description',
+        'currency_code',
+        'status',
+        'total_amount',
+        'transaction_count',
+        'display_type',
+        'updated_at',
+        'deleted_at'
+      ])
       .pipe(
         map((journals) => journals[0] || null)
       )
@@ -140,7 +150,7 @@ export class JournalRepository {
   observeStatusMeta() {
     return this.journals
       .query(Q.where('deleted_at', Q.eq(null)))
-      .observeWithColumns(['status', 'deleted_at', 'journal_date'])
+      .observeWithColumns(['status', 'deleted_at', 'journal_date', 'updated_at', 'total_amount'])
   }
 
   observePlannedForMonth(targetMonth: string) {

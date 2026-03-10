@@ -6,9 +6,11 @@ import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import { useAccounts } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleCondition, smsService, SmsRuleSuggestion } from '@/src/services/sms-service';
+import { useObservable } from '@/src/hooks/useObservable';
 import { AppNavigation } from '@/src/utils/navigation';
 import { withObservables } from '@nozbe/watermelondb/react';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { from } from 'rxjs';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Props {
@@ -72,21 +74,11 @@ function SmsRulesList({ rules }: Props) {
     const { theme } = useTheme();
     const { accounts } = useAccounts();
     const accountMap = new Map(accounts.map((account) => [account.id, account.name]));
-    const [suggestions, setSuggestions] = useState<SmsRuleSuggestion[]>([]);
-
-    useEffect(() => {
-        let isMounted = true;
-        smsService.getRuleSuggestions()
-            .then((items) => {
-                if (isMounted) setSuggestions(items);
-            })
-            .catch(() => {
-                if (isMounted) setSuggestions([]);
-            });
-        return () => {
-            isMounted = false;
-        };
-    }, [rules.length]);
+    const { data: suggestions = [] } = useObservable(
+        () => from(smsService.getRuleSuggestions()),
+        [rules.length],
+        [] as SmsRuleSuggestion[]
+    );
 
     if (rules.length === 0) {
         return (

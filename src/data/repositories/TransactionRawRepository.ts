@@ -11,6 +11,8 @@ import {
   RebuildTransaction,
   RecurringPattern
 } from './TransactionTypes';
+import { from, Observable } from 'rxjs';
+import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 /**
  * Specialized repository for high-performance raw SQL queries on transactions.
@@ -645,6 +647,40 @@ class TransactionRawRepository {
     }
 
     return { totalIncrease, totalDecrease };
+  }
+
+  /**
+   * Reactive version of getAccountPeriodMetricsRaw.
+   * Emits whenever active transactions change.
+   */
+  observeAccountPeriodMetricsRaw(
+    accountId: string,
+    startDate: number,
+    endDate: number,
+    isAssetOrExpense: boolean = true
+  ): Observable<{ totalIncrease: number; totalDecrease: number }> {
+    const { transactionRepository } = require('./TransactionRepository');
+    return transactionRepository.observeActive().pipe(
+      switchMap(() => from(this.getAccountPeriodMetricsRaw(accountId, startDate, endDate, isAssetOrExpense))),
+      distinctUntilChanged((prev: { totalIncrease: number; totalDecrease: number }, curr: { totalIncrease: number; totalDecrease: number }) => 
+        prev.totalIncrease === curr.totalIncrease && prev.totalDecrease === curr.totalDecrease
+      )
+    );
+  }
+
+  /**
+   * Reactive version of getAccountDeltasGroupedRaw.
+   * Emits whenever active transactions change.
+   */
+  observeAccountDeltasGroupedRaw(
+    accountIds: string[],
+    startDate: number,
+    endDate: number
+  ): Observable<AccountDelta[]> {
+    const { transactionRepository } = require('./TransactionRepository');
+    return transactionRepository.observeActive().pipe(
+      switchMap(() => from(this.getAccountDeltasGroupedRaw(accountIds, startDate, endDate)))
+    );
   }
 }
 

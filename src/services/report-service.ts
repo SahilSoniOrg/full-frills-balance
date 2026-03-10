@@ -8,6 +8,8 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
+import { from, Observable } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 export interface ExpenseCategory {
     accountId: string;
@@ -61,6 +63,24 @@ export class ReportService {
      */
     async getIncomeBreakdown(startDate: number, endDate: number, targetCurrency?: string): Promise<ExpenseCategory[]> {
         return this.getBreakdownInternal(AccountType.INCOME, startDate, endDate, targetCurrency);
+    }
+
+    /**
+     * Reactive version of getExpenseBreakdown.
+     */
+    observeExpenseBreakdown(startDate: number, endDate: number, targetCurrency?: string): Observable<ExpenseCategory[]> {
+        return transactionRepository.observeActive().pipe(
+            switchMap(() => from(this.getExpenseBreakdown(startDate, endDate, targetCurrency)))
+        );
+    }
+
+    /**
+     * Reactive version of getIncomeBreakdown.
+     */
+    observeIncomeBreakdown(startDate: number, endDate: number, targetCurrency?: string): Observable<ExpenseCategory[]> {
+        return transactionRepository.observeActive().pipe(
+            switchMap(() => from(this.getIncomeBreakdown(startDate, endDate, targetCurrency)))
+        );
     }
 
     private async getBreakdownInternal(type: AccountType, startDate: number, endDate: number, targetCurrency?: string): Promise<ExpenseCategory[]> {
@@ -332,6 +352,15 @@ export class ReportService {
             incomeVsExpense,
             dailyIncomeVsExpense,
         };
+    }
+
+    /**
+     * Reactive version of getReportSnapshot.
+     */
+    observeReportSnapshot(startDate: number, endDate: number, targetCurrency?: string): Observable<ReportSnapshot> {
+        return transactionRepository.observeActive().pipe(
+            switchMap(() => from(this.getReportSnapshot(startDate, endDate, targetCurrency)))
+        );
     }
 
     private async getReportAccounts(targetCurrency?: string): Promise<{

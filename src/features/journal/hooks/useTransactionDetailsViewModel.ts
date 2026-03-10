@@ -14,7 +14,10 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useObservable } from '@/src/hooks/useObservable';
+import { from, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 
 export interface TransactionSplitItemViewModel {
     id: string;
@@ -72,9 +75,40 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     const { journalId } = useLocalSearchParams<{ journalId: string }>();
     const { theme } = useTheme();
     const { deleteJournal, findJournal, duplicateJournal, postJournal } = useJournalActions();
-    const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
-    const { journal, isLoading: isLoadingJournal } = useJournal(journalId);
-    const [smsInfo, setSmsInfo] = useState<TransactionDetailsViewModel['smsInfo']>();
+    const { transactions, isLoading: isLoadingTransactions, version: transactionsVersion } = useJournalTransactions(journalId);
+    const { journal, isLoading: isLoadingJournal, version: journalVersion } = useJournal(journalId);
+
+    const { data: smsInfo } = useObservable(
+        () => {
+            if (!journalId) return of(undefined);
+
+            return from(journalRepository.findMetadataByJournalId(journalId)).pipe(
+                switchMap(metadata => {
+                    if (!metadata) return of(undefined);
+
+                    return from(smsService.findByLinkedJournalId(journalId)).pipe(
+                        map(inboxRecord => {
+                            const parsedMetadata = metadata.metadataJson ? JSON.parse(metadata.metadataJson) : {};
+                            return {
+                                sender: metadata.originalSmsSender,
+                                rawBody: metadata.originalSmsBody,
+                                amountText: typeof parsedMetadata.parsedAmount === 'number'
+                                    ? CurrencyFormatter.format(parsedMetadata.parsedAmount, parsedMetadata.parsedCurrencyCode || undefined)
+                                    : undefined,
+                                referenceNumber: parsedMetadata.referenceNumber || inboxRecord?.referenceNumber,
+                                accountSource: parsedMetadata.accountSource || inboxRecord?.parsedAccountSource,
+                                parseReason: inboxRecord?.parseReason,
+                                smsDate: inboxRecord ? formatDate(inboxRecord.smsDate, { includeTime: true }) : undefined,
+                                inboxRecordId: inboxRecord?.id,
+                            };
+                        })
+                    );
+                })
+            );
+        },
+        [journalId],
+        undefined
+    );
 
     const journalInfo = useMemo(() => journal ? {
         description: journal.description,
@@ -85,7 +119,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         totalAmount: journal.totalAmount || 0,
         plannedPaymentId: journal.plannedPaymentId,
         journalDate: journal.journalDate
-    } : null, [journal]);
+    } : null, [journal, journalVersion]);
 
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
@@ -156,40 +190,6 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         router.back();
     }, [router]);
 
-    useEffect(() => {
-        if (!journalId) return;
-        let isActive = true;
-
-        const loadSmsInfo = async () => {
-            const metadata = await journalRepository.findMetadataByJournalId(journalId);
-            if (!metadata) {
-                if (isActive) setSmsInfo(undefined);
-                return;
-            }
-
-            const inboxRecord = await smsService.findByLinkedJournalId(journalId);
-            const parsedMetadata = metadata.metadataJson ? JSON.parse(metadata.metadataJson) : {};
-            if (!isActive) return;
-
-            setSmsInfo({
-                sender: metadata.originalSmsSender,
-                rawBody: metadata.originalSmsBody,
-                amountText: typeof parsedMetadata.parsedAmount === 'number'
-                    ? CurrencyFormatter.format(parsedMetadata.parsedAmount, parsedMetadata.parsedCurrencyCode || undefined)
-                    : undefined,
-                referenceNumber: parsedMetadata.referenceNumber || inboxRecord?.referenceNumber,
-                accountSource: parsedMetadata.accountSource || inboxRecord?.parsedAccountSource,
-                parseReason: inboxRecord?.parseReason,
-                smsDate: inboxRecord ? formatDate(inboxRecord.smsDate, { includeTime: true }) : undefined,
-                inboxRecordId: inboxRecord?.id,
-            });
-        };
-
-        loadSmsInfo();
-        return () => {
-            isActive = false;
-        };
-    }, [journalId]);
 
     const handlePost = useCallback(async () => {
         if (!journalInfo || journalInfo.status !== 'PLANNED') return;
@@ -259,7 +259,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 onPress: () => router.push(`/account-details?accountId=${item.accountId}`),
             };
         });
-    }, [router, theme.error, theme.income, transactions]);
+    }, [router, theme.error, theme.income, transactions, transactionsVersion]);
 
     return {
         theme,

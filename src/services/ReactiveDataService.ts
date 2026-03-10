@@ -150,6 +150,7 @@ class ReactiveDataService {
         return combineLatest([
             accountRepository.observeAll(), // Still observe for structural changes
             journalRepository.observeStatusMeta(), // Observe for status changes (posted/reversed)
+            transactionRepository.observeActiveCount(), // Efficient trigger for balance changes
         ]).pipe(
             debounceTime(Animation.dataRefreshDebounce),
             switchMap(async ([accounts]) => {
@@ -235,6 +236,7 @@ class ReactiveDataService {
         return combineLatest([
             accountRepository.observeAll(), // structural + all accounts for tree
             journalRepository.observeStatusMeta(),
+            transactionRepository.observeActiveCount(), // Efficient trigger for balance changes
         ]).pipe(
             debounceTime(Animation.dataRefreshDebounce),
             switchMap(async ([accounts]) => {

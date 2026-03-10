@@ -1,8 +1,10 @@
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { useBreakdownViewState } from '@/src/features/reports/hooks/useBreakdownViewState';
-import { ExpenseCategory, reportService } from '@/src/services/report-service';
-import { logger } from '@/src/utils/logger';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { reportService } from '@/src/services/report-service';
+import { useObservable } from '@/src/hooks/useObservable';
+import { combineLatest, of } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { useMemo, useState } from 'react';
 
 interface UseReportBreakdownDetailsProps {
     globalExpenses: any[];
@@ -24,11 +26,6 @@ export function useReportBreakdownDetails({
     targetCurrency,
     theme,
 }: UseReportBreakdownDetailsProps) {
-    const [selectedExpenses, setSelectedExpenses] = useState<ExpenseCategory[] | null>(null);
-    const [selectedIncome, setSelectedIncome] = useState<ExpenseCategory[] | null>(null);
-    const [selectedPeriod, setSelectedPeriod] = useState<{ start: number; end: number } | null>(null);
-    const selectedBreakdownRequestId = useRef(0);
-
     const [expandedExpenses, setExpandedExpenses] = useState(false);
     const [expandedIncome, setExpandedIncome] = useState(false);
 
@@ -36,74 +33,48 @@ export function useReportBreakdownDetails({
     const toggleIncomeExpansion = () => setExpandedIncome(prev => !prev);
 
     const expensePalette = useMemo(
-        () => REPORT_CHART_COLOR_KEYS.expense.map((colorKey) => theme[colorKey]),
+        () => REPORT_CHART_COLOR_KEYS.expense.map((colorKey: string) => theme[colorKey]),
         [theme]
     );
 
     const incomePalette = useMemo(
-        () => REPORT_CHART_COLOR_KEYS.income.map((colorKey) => theme[colorKey]),
+        () => REPORT_CHART_COLOR_KEYS.income.map((colorKey: string) => theme[colorKey]),
         [theme]
     );
 
-    useEffect(() => {
-        let isMounted = true;
-        const requestId = ++selectedBreakdownRequestId.current;
+    const selectedPeriod = useMemo(() => {
+        if (selectedIncomeExpenseIndex === undefined || !incomeVsExpenseHistory[selectedIncomeExpenseIndex]) return null;
+        const item = incomeVsExpenseHistory[selectedIncomeExpenseIndex];
+        return { start: item.startDate, end: item.endDate };
+    }, [selectedIncomeExpenseIndex, incomeVsExpenseHistory]);
 
-        const fetchBreakdown = async () => {
-            if (selectedIncomeExpenseIndex === undefined || !incomeVsExpenseHistory[selectedIncomeExpenseIndex]) {
-                if (isMounted && selectedBreakdownRequestId.current === requestId) {
-                    setSelectedExpenses(null);
-                    setSelectedIncome(null);
-                    setSelectedPeriod(null);
-                    setExpandedExpenses(false);
-                    setExpandedIncome(false);
-                }
-                return;
-            }
+    const { data: selectedBreakdown } = useObservable(
+        () => {
+            if (!selectedPeriod) return of({ expenses: [] as any[], income: [] as any[] });
 
-            const item = incomeVsExpenseHistory[selectedIncomeExpenseIndex];
-            const start = item.startDate;
-            const end = item.endDate;
-
-            if (isMounted) setSelectedPeriod({ start, end });
-
-            try {
-                const [exp, inc] = await Promise.all([
-                    reportService.getExpenseBreakdown(start, end, targetCurrency),
-                    reportService.getIncomeBreakdown(start, end, targetCurrency)
-                ]);
-                if (!isMounted || selectedBreakdownRequestId.current !== requestId) return;
-
-                setSelectedExpenses(exp.map((e, index) => ({ ...e, color: expensePalette[index % expensePalette.length] })));
-                setSelectedIncome(inc.map((incomeItem, index) => ({ ...incomeItem, color: incomePalette[index % incomePalette.length] })));
-            } catch (error) {
-                logger.error('[useReportBreakdownDetails] Failed to fetch selected period breakdown', error, {
-                    selectedIncomeExpenseIndex,
-                    start,
-                    end,
-                });
-                if (!isMounted || selectedBreakdownRequestId.current !== requestId) return;
-                setSelectedExpenses(null);
-                setSelectedIncome(null);
-                setSelectedPeriod(null);
-                setExpandedExpenses(false);
-                setExpandedIncome(false);
-            }
-        };
-
-        fetchBreakdown();
-        return () => { isMounted = false; };
-    }, [selectedIncomeExpenseIndex, incomeVsExpenseHistory, expensePalette, incomePalette, targetCurrency]);
+            return combineLatest([
+                reportService.observeExpenseBreakdown(selectedPeriod.start, selectedPeriod.end, targetCurrency),
+                reportService.observeIncomeBreakdown(selectedPeriod.start, selectedPeriod.end, targetCurrency)
+            ]).pipe(
+                map(([expenses, income]) => ({
+                    expenses: expenses.map((e, index) => ({ ...e, color: expensePalette[index % expensePalette.length] })),
+                    income: income.map((i, index) => ({ ...i, color: incomePalette[index % incomePalette.length] }))
+                }))
+            );
+        },
+        [selectedPeriod, targetCurrency, expensePalette, incomePalette],
+        { expenses: [] as any[], income: [] as any[] }
+    );
 
     const expenseViewState = useBreakdownViewState({
         globalBreakdown: globalExpenses,
-        selectedBreakdown: selectedExpenses,
+        selectedBreakdown: selectedBreakdown.expenses.length > 0 ? selectedBreakdown.expenses : null,
         expanded: expandedExpenses,
         fallbackColor: theme.error,
     });
     const incomeViewState = useBreakdownViewState({
         globalBreakdown: globalIncomeBreakdown,
-        selectedBreakdown: selectedIncome,
+        selectedBreakdown: selectedBreakdown.income.length > 0 ? selectedBreakdown.income : null,
         expanded: expandedIncome,
         fallbackColor: theme.success,
     });

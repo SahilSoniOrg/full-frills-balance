@@ -24,8 +24,8 @@ import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { of } from 'rxjs';
+import { useCallback, useMemo, useState } from 'react';
+import { map, of } from 'rxjs';
 
 export interface PeriodMetrics {
     totalIncrease: number;
@@ -198,66 +198,56 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
     const accountType = account?.accountType || '';
 
-    const [periodMetrics, setPeriodMetrics] = useState<PeriodMetrics>({
-        totalIncrease: 0,
-        totalDecrease: 0,
-        netChange: 0,
-        dailyAverage: null,
-        isLoading: false,
-    });
+    const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
 
-    useEffect(() => {
-        if (!dateRange || !accountId || !accountType) {
-            setPeriodMetrics({
-                totalIncrease: 0,
-                totalDecrease: 0,
-                netChange: 0,
-                dailyAverage: null,
-                isLoading: false,
-            });
-            return;
-        }
-
-        const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
-        let isMounted = true;
-
-        const fetchMetrics = async () => {
-            setPeriodMetrics(prev => ({ ...prev, isLoading: true }));
-            try {
-                const { totalIncrease, totalDecrease } = await transactionRawRepository.getAccountPeriodMetricsRaw(
-                    accountId,
-                    dateRange.startDate,
-                    dateRange.endDate,
-                    isAssetOrExpense
-                );
-
-                if (!isMounted) return;
-
-                const netChange = totalIncrease - totalDecrease;
-                // Calculate difference in days (end of day to start of day)
-                const ds = new Date(dateRange.startDate);
-                const de = new Date(dateRange.endDate);
-                const days = Math.max(1, Math.ceil((de.getTime() - ds.getTime()) / AppConfig.time.msPerDay));
-                const dailyAverage = netChange / days;
-
-                setPeriodMetrics({
-                    totalIncrease,
-                    totalDecrease,
-                    netChange,
-                    dailyAverage,
+    const { data: periodMetricsResult, isLoading: metricsLoading } = useObservable<PeriodMetrics>(
+        () => {
+            if (!dateRange || !accountId || !accountType) {
+                return of({
+                    totalIncrease: 0,
+                    totalDecrease: 0,
+                    netChange: 0,
+                    dailyAverage: null,
                     isLoading: false,
                 });
-            } catch (error) {
-                logger.error('Failed to fetch period metrics', error);
-                if (isMounted) {
-                    setPeriodMetrics(prev => ({ ...prev, isLoading: false }));
-                }
             }
-        };
 
-        fetchMetrics();
-        return () => { isMounted = false; };
-    }, [accountId, dateRange, accountType]);
+            return transactionRawRepository.observeAccountPeriodMetricsRaw(
+                accountId,
+                dateRange.startDate,
+                dateRange.endDate,
+                isAssetOrExpense
+            ).pipe(
+                map(metrics => {
+                    const netChange = metrics.totalIncrease - metrics.totalDecrease;
+                    const ds = new Date(dateRange.startDate);
+                    const de = new Date(dateRange.endDate);
+                    const days = Math.max(1, Math.ceil((de.getTime() - ds.getTime()) / AppConfig.time.msPerDay));
+                    const dailyAverage = netChange / days;
+
+                    return {
+                        ...metrics,
+                        netChange,
+                        dailyAverage,
+                        isLoading: false
+                    };
+                })
+            );
+        },
+        [accountId, dateRange, accountType],
+        {
+            totalIncrease: 0,
+            totalDecrease: 0,
+            netChange: 0,
+            dailyAverage: null,
+            isLoading: true,
+        }
+    );
+
+    const periodMetrics = useMemo(() => ({
+        ...periodMetricsResult,
+        isLoading: metricsLoading || periodMetricsResult.isLoading
+    }), [periodMetricsResult, metricsLoading]);
 
     const subBalances = useMemo(() => new Map<string, AccountBalance>(rawSubBalances.map((b: AccountBalance) => [b.accountId, b])), [rawSubBalances]);
     const subBalancesLoading = dashboardLoading;

@@ -219,6 +219,23 @@ export class TransactionRepository {
       .observe()
   }
 
+  /**
+   * Observe the COUNT of active transactions.
+   * Efficient trigger: Signals changes without loading full models into memory.
+   */
+  observeActiveCount(shouldThrottle: boolean = true) {
+    return this.transactions
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.where('deleted_at', Q.eq(null))
+        ])
+      )
+      .observeCount(shouldThrottle)
+  }
+
   observeActiveWithColumns(columns: string[]) {
     return this.transactions
       .query(
@@ -265,19 +282,6 @@ export class TransactionRepository {
         'currency_code',
         'transaction_type',
       ])
-  }
-
-  observeActiveCount(shouldThrottle: boolean = true) {
-    return this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null))
-        ])
-      )
-      .observeCount(shouldThrottle)
   }
 
   /**

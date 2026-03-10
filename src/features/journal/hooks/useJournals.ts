@@ -18,7 +18,7 @@ export function useJournals(pageSize: number = AppConfig.defaults.journalPageSiz
         return journalService.observeEnrichedJournals(limit, { ...range, plannedPaymentId } as any, query, status)
     }, [status, plannedPaymentId])
 
-    const { items: journals, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<any, EnrichedJournal>({
+    const { items: journals, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<any, EnrichedJournal>({
         pageSize,
         dateRange: (dateRange || plannedPaymentId) ? { ...dateRange, plannedPaymentId } as any : undefined,
         searchQuery,
@@ -26,7 +26,7 @@ export function useJournals(pageSize: number = AppConfig.defaults.journalPageSiz
         suppressResetOnSearch: true,
     })
 
-    return { journals, isLoading, isLoadingMore, hasMore, loadMore }
+    return { journals, isLoading, isLoadingMore, hasMore, loadMore, version }
 }
 
 
@@ -40,11 +40,8 @@ export function useAccountTransactions(accountId: string, pageSize: number = App
 }
 
 
-/**
- * Hook to reactively get transactions for a specific journal with account names
- */
 export function useJournalTransactions(journalId: string | null) {
-    const { data: transactions, isLoading } = useObservable(
+    const { data: transactions, isLoading, version } = useObservable(
         () => journalId
             ? transactionService.observeTransactionsWithAccountInfo(journalId)
             : of([] as TransactionWithAccountInfo[]),
@@ -52,5 +49,5 @@ export function useJournalTransactions(journalId: string | null) {
         [] as TransactionWithAccountInfo[]
     );
 
-    return { transactions, isLoading }
+    return { transactions, isLoading, version }
 }
