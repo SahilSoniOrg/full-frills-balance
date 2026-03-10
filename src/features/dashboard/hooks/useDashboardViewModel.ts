@@ -36,7 +36,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     }, [isPrivacyMode, setPrivacyMode]);
 
     const { data: safeToSpendData } = useObservable(
-        () => insightService.observeSafeToSpendProjection(),
+        () => insightService.observeSafeToSpend(),
         [],
         null
     );

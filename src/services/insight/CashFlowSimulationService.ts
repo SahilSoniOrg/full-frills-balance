@@ -1,13 +1,15 @@
 import { AppConfig } from '@/src/constants';
-import Account, { AccountSubtype } from '@/src/data/models/Account';
+import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { TransactionType } from '@/src/data/models/Transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { TransactionType } from '@/src/data/models/Transaction';
 
 export class CashFlowSimulationService {
     /**
@@ -15,17 +17,20 @@ export class CashFlowSimulationService {
      */
     async simulateSafeToSpend(
         startingBalance: number,
-        dailyBudgetBurn: number | number[],
         plannedPayments: PlannedPayment[],
         plannedJournals: Journal[],
         liquidAssetIds: string[],
         liabilityAccountBalances: { account: Account, balance: number }[],
-        budgetCoveredExpenseAccountIds: Set<string>,
+        budgets: Budget[],
+        usages: BudgetUsage[],
+        scopeGroups: any[][],
+        allAccounts: Account[],
         resultCurrency: string,
     ): Promise<{
         safeToSpend: number;
         shortfall: number;
         totalFutureInflow: number;
+        committedBudget: number;
         committedPlanned: number;
         committedPlannedPayments: number;
         committedPlannedJournals: number;
@@ -35,6 +40,19 @@ export class CashFlowSimulationService {
         totalLiabilities: number;
         totalLiabilitiesCC: number;
         totalLiabilitiesOther: number;
+        currentMonthBudgetRemaining: number;
+        nextMonthBudgetProjected: number;
+        nextMonthProjectionDays: number;
+        dailyBudgetBurns: number[];
+        flowByDayOffset: Map<number, number>;
+        committedAmountByAccount: {
+            accountId: string,
+            accountName: string,
+            amount: number,
+            budgets: { budgetId: string, name: string, amount: number }[]
+        }[];
+        projectionPoints: { timestamp: number, value: number, isProjected: boolean }[];
+        safeDaysCount: number | null;
     }> {
         const now = dayjs().startOf('day');
         const SIMULATION_DAYS = AppConfig.defaults.safeToSpendDays;
@@ -42,29 +60,47 @@ export class CashFlowSimulationService {
         const flows = await this.getSimulationFlows(
             SIMULATION_DAYS,
             now,
-            dailyBudgetBurn,
             plannedPayments,
             plannedJournals,
             new Set(liquidAssetIds),
             liabilityAccountBalances,
-            budgetCoveredExpenseAccountIds,
+            budgets,
+            usages,
+            scopeGroups,
+            allAccounts,
             resultCurrency
         );
 
         let currentBalance = startingBalance;
         let minBalance = currentBalance;
+        const projectionPoints: { timestamp: number, value: number, isProjected: boolean }[] = [];
+        let safeDaysCount: number | null = null;
+
+        projectionPoints.push({ timestamp: now.valueOf(), value: currentBalance, isProjected: true });
 
         for (let d = 0; d < SIMULATION_DAYS; d++) {
             const drain = Array.isArray(flows.effectiveDailyDrain) ? (flows.effectiveDailyDrain[d] || 0) : flows.effectiveDailyDrain;
             currentBalance -= drain;
             currentBalance += flows.flowByDayOffset.get(d) || 0;
+            
+            const dayOffset = d + 1;
+            projectionPoints.push({
+                timestamp: now.add(dayOffset, 'day').valueOf(),
+                value: currentBalance,
+                isProjected: true
+            });
+
             if (currentBalance < minBalance) minBalance = currentBalance;
+            if (currentBalance < 0 && safeDaysCount === null) {
+                safeDaysCount = dayOffset;
+            }
         }
 
         return {
             safeToSpend: Math.max(0, minBalance),
             shortfall: minBalance < 0 ? Math.abs(minBalance) : 0,
             totalFutureInflow: flows.totalFutureInflow,
+            committedBudget: flows.committedBudget,
             committedPlanned: flows.committedPlanned,
             committedPlannedPayments: flows.committedPlannedPayments,
             committedPlannedJournals: flows.committedPlannedJournals,
@@ -73,25 +109,36 @@ export class CashFlowSimulationService {
             committedLiabilitiesOther: flows.committedLiabilitiesOther,
             totalLiabilities: flows.totalLiabilities,
             totalLiabilitiesCC: flows.totalLiabilitiesCC,
-            totalLiabilitiesOther: flows.totalLiabilitiesOther
+            totalLiabilitiesOther: flows.totalLiabilitiesOther,
+            currentMonthBudgetRemaining: flows.currentMonthBudgetRemaining,
+            nextMonthBudgetProjected: flows.nextMonthBudgetProjected,
+            nextMonthProjectionDays: flows.nextMonthProjectionDays,
+            dailyBudgetBurns: flows.dailyBudgetBurns,
+            flowByDayOffset: flows.flowByDayOffset,
+            committedAmountByAccount: flows.committedAmountByAccount,
+            projectionPoints,
+            safeDaysCount
         };
     }
 
     async getSimulationFlows(
         simulationDays: number,
         now: dayjs.Dayjs,
-        dailyBudgetBurn: number | number[],
         plannedPayments: PlannedPayment[],
         plannedJournals: Journal[],
         liquidAccountIds: Set<string>,
         liabilityAccountBalances: { account: Account, balance: number }[],
-        budgetCoveredExpenseAccountIds: Set<string>,
+        budgets: Budget[],
+        usages: BudgetUsage[],
+        scopeGroups: any[][],
+        allAccounts: Account[],
         resultCurrency: string,
     ): Promise<{
         flowByDayOffset: Map<number, number>,
         organicNetFlow: number,
         effectiveDailyDrain: number | number[],
         totalFutureInflow: number,
+        committedBudget: number,
         committedPlanned: number,
         committedPlannedPayments: number,
         committedPlannedJournals: number,
@@ -100,7 +147,17 @@ export class CashFlowSimulationService {
         committedLiabilitiesOther: number,
         totalLiabilities: number,
         totalLiabilitiesCC: number,
-        totalLiabilitiesOther: number
+        totalLiabilitiesOther: number,
+        currentMonthBudgetRemaining: number,
+        nextMonthBudgetProjected: number,
+        nextMonthProjectionDays: number,
+        dailyBudgetBurns: number[],
+        committedAmountByAccount: {
+            accountId: string,
+            accountName: string,
+            amount: number,
+            budgets: { budgetId: string, name: string, amount: number }[]
+        }[]
     }> {
         const flowByDayOffset = new Map<number, number>();
         let totalFutureInflow = 0;
@@ -148,7 +205,119 @@ export class CashFlowSimulationService {
             }
         };
 
-        const effectiveDailyDrain = dailyBudgetBurn;
+        // budget calculation logic
+        const currentMonth = now.format('YYYY-MM');
+        const daysLeftInMonth = now.daysInMonth() - now.date() + 1;
+        const dailyBudgetBurns = new Array(simulationDays).fill(0);
+        const nextMonthDays = now.add(1, 'month').daysInMonth();
+        const accountMaxDailyBurns = new Map<string, number[]>();
+        const accountBudgetBuckets = new Map<string, Map<string, { name: string, amount: number }>>();
+        const budgetCoveredExpenseAccountIds = new Set<string>();
+        const accountById = new Map(allAccounts.map(account => [account.id, account]));
+
+        await Promise.all(
+            usages.map(async (usage, idx) => {
+                const budget = budgets[idx];
+                if (budget.startMonth !== currentMonth) return;
+
+                const scope = (scopeGroups[idx] || []) as any[];
+                if (scope.length === 0) return;
+
+                const remaining = Math.max(0, usage.remaining);
+                if (remaining === 0 && budget.amount === 0) return;
+
+                const budgetCurrency = budget.currencyCode || resultCurrency;
+                let remainingInDefault = remaining;
+                let amountInDefault = budget.amount;
+
+                if (budgetCurrency !== resultCurrency) {
+                    try {
+                        const { convertedAmount: convRem } = await exchangeRateService.convert(
+                            remaining, budgetCurrency, resultCurrency
+                        );
+                        remainingInDefault = convRem;
+
+                        const { convertedAmount: convAmt } = await exchangeRateService.convert(
+                            budget.amount, budgetCurrency, resultCurrency
+                        );
+                        amountInDefault = convAmt;
+                    } catch (e) {
+                        logger.error('Failed to convert budget remaining for simulation', e);
+                    }
+                }
+
+                const currentMonthDaily = remainingInDefault / Math.max(1, daysLeftInMonth);
+                const nextMonthDaily = amountInDefault / Math.max(1, nextMonthDays);
+
+                const shareOfCurrent = currentMonthDaily / scope.length;
+                const shareOfNext = nextMonthDaily / scope.length;
+
+                for (const s of scope) {
+                    const accountId = s.account.id;
+                    const acc = accountById.get(accountId);
+                    if (acc?.accountType === AccountType.EXPENSE) {
+                        budgetCoveredExpenseAccountIds.add(accountId);
+                    }
+
+                    let burns = accountMaxDailyBurns.get(accountId);
+                    if (!burns) {
+                        burns = new Array(simulationDays).fill(0);
+                        accountMaxDailyBurns.set(accountId, burns);
+                    }
+                    for (let i = 0; i < simulationDays; i++) {
+                        const dailyShare = i < daysLeftInMonth ? shareOfCurrent : shareOfNext;
+                        burns[i] = Math.max(burns[i], dailyShare);
+                    }
+
+                    let accountBudgets = accountBudgetBuckets.get(accountId);
+                    if (!accountBudgets) {
+                        accountBudgets = new Map();
+                        accountBudgetBuckets.set(accountId, accountBudgets);
+                    }
+                    const totalContribution = (shareOfCurrent * daysLeftInMonth) + (shareOfNext * (simulationDays - daysLeftInMonth));
+                    accountBudgets.set(budget.id, { name: budget.name, amount: totalContribution });
+                }
+            })
+        );
+
+        for (const burns of accountMaxDailyBurns.values()) {
+            for (let i = 0; i < simulationDays; i++) {
+                dailyBudgetBurns[i] += burns[i];
+            }
+        }
+
+        let currentMonthBudgetRemaining = 0;
+        let nextMonthBudgetProjected = 0;
+        for (let i = 0; i < simulationDays; i++) {
+            if (i < daysLeftInMonth) {
+                currentMonthBudgetRemaining += dailyBudgetBurns[i];
+            } else {
+                nextMonthBudgetProjected += dailyBudgetBurns[i];
+            }
+        }
+
+        const committedBudget = dailyBudgetBurns.reduce((sum, val) => sum + val, 0);
+        const effectiveDailyDrain = dailyBudgetBurns;
+        const nextMonthProjectionDays = Math.max(0, simulationDays - daysLeftInMonth);
+
+        const committedAmountByAccount = Array.from(accountMaxDailyBurns.entries())
+            .map(([accountId, burns]) => {
+                const budgetsMap = accountBudgetBuckets.get(accountId);
+                const budgetsList = budgetsMap ? Array.from(budgetsMap.entries()).map(([budgetId, b]) => ({
+                    budgetId,
+                    name: b.name,
+                    amount: b.amount
+                })) : [];
+
+                return {
+                    accountId,
+                    accountName: accountById.get(accountId)?.name || 'Unknown',
+                    amount: burns.reduce((sum, b) => sum + b, 0),
+                    budgets: budgetsList.sort((a, b) => b.amount - a.amount)
+                };
+            })
+            .filter(a => a.amount > 0)
+            .sort((a, b) => b.amount - a.amount);
 
         const manualPaymentAccountIds = new Set<string>();
         for (const pp of plannedPayments) manualPaymentAccountIds.add(pp.toAccountId);
@@ -344,6 +513,7 @@ export class CashFlowSimulationService {
             organicNetFlow: 0,
             effectiveDailyDrain,
             totalFutureInflow,
+            committedBudget,
             committedPlanned,
             committedPlannedPayments,
             committedPlannedJournals,
@@ -352,7 +522,12 @@ export class CashFlowSimulationService {
             committedLiabilitiesOther,
             totalLiabilities: totalLiabilitiesSum,
             totalLiabilitiesCC,
-            totalLiabilitiesOther
+            totalLiabilitiesOther,
+            currentMonthBudgetRemaining,
+            nextMonthBudgetProjected,
+            nextMonthProjectionDays,
+            dailyBudgetBurns,
+            committedAmountByAccount
         };
     }
 }

@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
-import Journal, { JournalStatus } from '@/src/data/models/Journal';
+import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
@@ -10,7 +10,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
-import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import {
     isLiquidAssetSubtype,
@@ -20,10 +20,10 @@ import {
 } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { Q } from '@nozbe/watermelondb';
+
 import dayjs from 'dayjs';
-import { combineLatest, Observable, of } from 'rxjs';
-import { debounceTime, switchMap, take } from 'rxjs/operators';
+import { combineLatest, from, Observable, of } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 import { cashFlowSimulationService } from './insight/CashFlowSimulationService';
 import { Pattern, patternService } from './insight/PatternService';
 
@@ -71,14 +71,13 @@ export interface SafeToSpendResult {
     currentMonthBudgetRemaining: number;
     nextMonthBudgetProjected: number;
     nextMonthProjectionDays: number;
-    budgetCoveredExpenseAccountIds: Set<string>;
     committedAmountByAccount: {
         accountId: string,
         accountName: string,
         amount: number,
         budgets: { budgetId: string, name: string, amount: number }[]
     }[];
-    projection?: SafeToSpendProjection;
+    projection: SafeToSpendProjection;
 }
 
 export class InsightService {
@@ -97,7 +96,7 @@ export class InsightService {
             journalRepository.observePlannedInRange(dayjs().startOf('day').valueOf(), dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf()),
             transactionRepository.observeActiveWithColumns(['running_balance']),
             journalRepository.observeStatusMeta(),
-        ] as [
+            ] as [
                 Observable<Account[]>,
                 Observable<Account[]>,
                 Observable<Budget[]>,
@@ -110,6 +109,9 @@ export class InsightService {
         ).pipe(
             debounceTime(AppConfig.insights.observeDebounceMs),
             switchMap(([assets, liabilities, budgets, plannedPayments, allAccounts, plannedJournals]) => {
+                const now = dayjs().startOf('day');
+                const thirtyDaysAgo = now.subtract(safeToSpendDays, 'day').valueOf();
+
                 const parentIds = new Set<string>(
                     allAccounts.map(a => a.parentAccountId).filter((id): id is string => Boolean(id))
                 );
@@ -120,6 +122,16 @@ export class InsightService {
                 const liquidLiabilities = liabilities.filter(l =>
                     isLiquidLiabilitySubtype(l.accountSubtype) && !parentIds.has(l.id)
                 );
+
+                const liquidAssetIds = liquidAssets.map(a => a.id);
+                const liquidLiabilityIds = liquidLiabilities.map(l => l.id);
+
+                // Fetch historical deltas as part of the simulation flow
+                const history$ = from(transactionRawRepository.getDailyDeltasGroupedRaw(
+                    liquidAssetIds,
+                    thirtyDaysAgo,
+                    now.valueOf() + AppConfig.time.msPerDay
+                ));
 
                 if (liquidAssets.length === 0) {
                     return of({
@@ -151,8 +163,8 @@ export class InsightService {
                         nextMonthBudgetProjected: 0,
                         nextMonthProjectionDays: 0,
                         totalFutureInflow: 0,
-                        budgetCoveredExpenseAccountIds: new Set<string>(),
                         committedAmountByAccount: [],
+                        projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
                     });
                 }
 
@@ -160,17 +172,13 @@ export class InsightService {
 
                 const budgetUsageObservables = budgets.map(b => budgetReadService.observeBudgetUsage(b));
                 const budgetScopeObservables = budgets.map(b => budgetRepository.observeScopes(b.id));
-                const accountById = new Map(allAccounts.map(account => [account.id, account]));
 
-                const budgetUsage$ = budgetUsageObservables.length > 0 ? combineLatest(budgetUsageObservables) : of([]);
-                const budgetScopes$ = budgetScopeObservables.length > 0 ? combineLatest(budgetScopeObservables) : of([]);
+                const budgetUsage$ = budgetUsageObservables.length > 0 ? combineLatest(budgetUsageObservables) : of([] as BudgetUsage[]);
+                const budgetScopes$ = budgetScopeObservables.length > 0 ? combineLatest(budgetScopeObservables) : of([] as any[][]);
 
-                return combineLatest([budgetUsage$, budgetScopes$]).pipe(
-                    switchMap(async ([usages, budgetScopeGroups]) => {
+                return combineLatest([budgetUsage$, budgetScopes$, history$]).pipe(
+                    switchMap(async ([usages, budgetScopeGroups, rawDeltas]) => {
                         const accountBalances = await balanceService.getAccountBalances();
-
-                        const liquidAssetIds = liquidAssets.map(a => a.id);
-                        const liquidLiabilityIds = liquidLiabilities.map(l => l.id);
 
                         let totalLiquid = 0;
                         liquidAssets.forEach(a => {
@@ -178,155 +186,66 @@ export class InsightService {
                             if (b) totalLiquid += b.balance;
                         });
 
-                        // Only count budgets that belong to the current month.
-                        const currentMonth = dayjs().format('YYYY-MM');
-                        const today = dayjs();
-                        const daysLeftInMonth = today.daysInMonth() - today.date() + 1; // inclusive of today
-                        const scopeGroups = budgetScopeGroups as any[][];
-
-                        let dailyBudgetBurnAvg = 0;
-                        const simulationDays = AppConfig.defaults.safeToSpendDays;
-                        const dailyBudgetBurns = new Array(simulationDays).fill(0);
-                        const nextMonthDays = today.add(1, 'month').daysInMonth();
-
-                        let currentMonthBudgetRemaining = 0;
-                        let nextMonthBudgetProjected = 0;
-
-                        // AccountID -> Daily burns for the 30-day projection
-                        const accountMaxDailyBurns = new Map<string, number[]>();
-                        // AccountID -> BudgetID -> Total contribution (before maxing)
-                        const accountBudgetBuckets = new Map<string, Map<string, { name: string, amount: number }>>();
-
-                        await Promise.all(
-                            (usages as any[]).map(async (usage, idx) => {
-                                const budget = budgets[idx];
-                                if (budget.startMonth !== currentMonth) return;
-
-                                const scope = (scopeGroups[idx] || []) as any[];
-                                if (scope.length === 0) return;
-
-                                const remaining = Math.max(0, usage.remaining);
-                                if (remaining === 0 && budget.amount === 0) return;
-
-                                const budgetCurrency = budget.currencyCode || resultCurrency;
-                                let remainingInDefault = remaining;
-                                let amountInDefault = budget.amount;
-
-                                if (budgetCurrency !== resultCurrency) {
-                                    try {
-                                        const { convertedAmount: convRem } = await exchangeRateService.convert(
-                                            remaining, budgetCurrency, resultCurrency
-                                        );
-                                        remainingInDefault = convRem;
-
-                                        const { convertedAmount: convAmt } = await exchangeRateService.convert(
-                                            budget.amount, budgetCurrency, resultCurrency
-                                        );
-                                        amountInDefault = convAmt;
-                                    } catch (e) {
-                                        logger.error('Failed to convert budget remaining for safe-to-spend', e);
-                                    }
-                                }
-
-                                const currentMonthDaily = remainingInDefault / Math.max(1, daysLeftInMonth);
-                                const nextMonthDaily = amountInDefault / Math.max(1, nextMonthDays);
-
-                                const shareOfCurrent = currentMonthDaily / scope.length;
-                                const shareOfNext = nextMonthDaily / scope.length;
-
-                                for (const s of scope) {
-                                    const accountId = s.account.id;
-                                    let burns = accountMaxDailyBurns.get(accountId);
-                                    if (!burns) {
-                                        burns = new Array(simulationDays).fill(0);
-                                        accountMaxDailyBurns.set(accountId, burns);
-                                    }
-                                    for (let i = 0; i < simulationDays; i++) {
-                                        const dailyShare = i < daysLeftInMonth ? shareOfCurrent : shareOfNext;
-                                        burns[i] = Math.max(burns[i], dailyShare);
-                                    }
-
-                                    // Track contribution for breakdown
-                                    let accountBudgets = accountBudgetBuckets.get(accountId);
-                                    if (!accountBudgets) {
-                                        accountBudgets = new Map();
-                                        accountBudgetBuckets.set(accountId, accountBudgets);
-                                    }
-                                    const totalContribution = (shareOfCurrent * daysLeftInMonth) + (shareOfNext * (simulationDays - daysLeftInMonth));
-                                    accountBudgets.set(budget.id, { name: budget.name, amount: totalContribution });
-                                }
-                            })
-                        );
-
-                        // Finalize the daily budget burns
-                        for (const burns of accountMaxDailyBurns.values()) {
-                            for (let i = 0; i < simulationDays; i++) {
-                                dailyBudgetBurns[i] += burns[i];
-                            }
-                        }
-
-                        // Recalculate the subtotals from the finalized dailyBudgetBurns array for the UI breakdown
-                        currentMonthBudgetRemaining = 0;
-                        nextMonthBudgetProjected = 0;
-                        for (let i = 0; i < simulationDays; i++) {
-                            if (i < daysLeftInMonth) {
-                                currentMonthBudgetRemaining += dailyBudgetBurns[i];
-                            } else {
-                                nextMonthBudgetProjected += dailyBudgetBurns[i];
-                            }
-                        }
-
-                        // Ensure breakdown sums to total committed budget over simulationDays
-                        const committedBudget = dailyBudgetBurns.reduce((sum, val) => sum + val, 0);
-                        dailyBudgetBurnAvg = committedBudget / simulationDays;
-
-                        const budgetCoveredExpenseAccountIds = new Set<string>();
-                        for (let i = 0; i < budgets.length; i++) {
-                            if (budgets[i].startMonth !== currentMonth) continue;
-                            for (const scope of (scopeGroups[i] ?? [])) {
-                                const acc = accountById.get((scope as any).account.id);
-                                if (acc?.accountType === AccountType.EXPENSE) {
-                                    budgetCoveredExpenseAccountIds.add((scope as any).account.id);
-                                }
-                            }
-                        }
-
                         const liabilityAccountBalances = liquidLiabilities.map(l => ({
                             account: l,
                             balance: Math.abs(accountBalances.find(bal => bal.accountId === l.id)?.balance || 0)
                         }));
 
-                        const {
-                            safeToSpend,
-                            shortfall,
-                            totalFutureInflow,
-                            committedPlanned,
-                            committedPlannedPayments,
-                            committedPlannedJournals,
-                            committedLiabilities,
-                            committedLiabilitiesCC,
-                            committedLiabilitiesOther,
-                            totalLiabilities,
-                            totalLiabilitiesCC,
-                            totalLiabilitiesOther
-                        } = await cashFlowSimulationService.simulateSafeToSpend(
+                        const simulationResults = await cashFlowSimulationService.simulateSafeToSpend(
                             totalLiquid,
-                            dailyBudgetBurns,
                             plannedPayments,
                             plannedJournals,
                             [...liquidAssetIds, ...liquidLiabilityIds],
                             liabilityAccountBalances,
-                            budgetCoveredExpenseAccountIds,
+                            budgets,
+                            usages,
+                            budgetScopeGroups,
+                            allAccounts,
                             resultCurrency,
                         );
 
-                        const nextMonthProjectionDays = Math.max(0, simulationDays - daysLeftInMonth);
+                        // Calculate History Points
+                        const netCashFlowByDay = new Map<number, number>();
+                        const deltas = rawDeltas || [];
+                        for (const delta of deltas) {
+                            let amount = delta.delta;
+                            if (delta.currencyCode !== resultCurrency) {
+                                try {
+                                    const { convertedAmount } = await exchangeRateService.convert(amount, delta.currencyCode, resultCurrency);
+                                    amount = convertedAmount;
+                                } catch (e) {
+                                    logger.error("Failed to convert delta for history projection", e);
+                                }
+                            }
+                            const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
+                            netCashFlowByDay.set(localDayStart, (netCashFlowByDay.get(localDayStart) || 0) + amount);
+                        }
 
+                        const historyPoints: SafeToSpendDataPoint[] = [];
+                        let runningBalance = totalLiquid;
+                        historyPoints.push({ timestamp: now.valueOf(), value: runningBalance, isProjected: false });
+
+                        for (let i = 0; i < safeToSpendDays; i++) {
+                            const targetDay = now.subtract(i, 'day').valueOf();
+                            const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
+                            runningBalance -= flowThatDay;
+                            historyPoints.push({ timestamp: now.subtract(i + 1, 'day').valueOf(), value: runningBalance, isProjected: false });
+                        }
+                        historyPoints.reverse();
+
+                        const projection: SafeToSpendProjection = {
+                            history: historyPoints,
+                            projection: simulationResults.projectionPoints,
+                            safeDaysCount: simulationResults.safeDaysCount,
+                            safeToSpend: simulationResults.safeToSpend
+                        };
+
+                        const scopes = budgetScopeGroups || [];
                         const budgetSubtypes = Array.from(
                             new Set(
-                                scopeGroups
-                                    .flatMap(scopes => scopes)
-                                    .map((scope: any) => accountById.get(scope.account.id)?.accountSubtype)
+                                scopes
+                                    .flatMap(s => s)
+                                    .map((scope: any) => allAccounts.find(a => a.id === scope.account.id)?.accountSubtype)
                                     .filter((subtype): subtype is AccountSubtype => Boolean(subtype))
                             )
                         );
@@ -335,33 +254,16 @@ export class InsightService {
                         const liquidLiabilityAccountNames = Array.from(new Set(liquidLiabilities.map(l => l.name)));
                         const budgetAccountNames = Array.from(
                             new Set(
-                                scopeGroups
-                                    .flatMap(scopes => scopes)
-                                    .map((scope: any) => accountById.get(scope.account.id)?.name)
+                                scopes
+                                    .flatMap(s => s)
+                                    .map((scope: any) => allAccounts.find(a => a.id === scope.account.id)?.name)
                                     .filter((name): name is string => Boolean(name))
                             )
                         );
 
                         return {
+                            ...simulationResults,
                             totalLiquidAssets: totalLiquid,
-                            totalLiabilities,
-                            totalLiabilitiesCC,
-                            totalLiabilitiesOther,
-                            dailyBudgetBurn: dailyBudgetBurnAvg,
-                            dailyBudgetBurns,
-                            currentMonthBudgetRemaining,
-                            nextMonthBudgetProjected,
-                            nextMonthProjectionDays,
-                            committedBudget,
-                            committedPlanned,
-                            committedPlannedPayments,
-                            committedPlannedJournals,
-                            committedLiabilities,
-                            committedLiabilitiesCC,
-                            committedLiabilitiesOther,
-                            totalFutureInflow,
-                            safeToSpend,
-                            shortfall,
                             currencyCode: resultCurrency,
                             liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
                             liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],
@@ -371,137 +273,14 @@ export class InsightService {
                             budgetAccountNames,
                             liquidAssetAccountIds: liquidAssetIds,
                             liquidLiabilityAccountIds: liquidLiabilityIds,
-                            budgetCoveredExpenseAccountIds,
-                            committedAmountByAccount: Array.from(accountMaxDailyBurns.entries())
-                                .map(([accountId, burns]) => {
-                                    const budgetsMap = accountBudgetBuckets.get(accountId);
-                                    const budgetsList = budgetsMap ? Array.from(budgetsMap.entries()).map(([budgetId, b]) => ({
-                                        budgetId,
-                                        name: b.name,
-                                        amount: b.amount
-                                    })) : [];
-
-                                    return {
-                                        accountId,
-                                        accountName: accountById.get(accountId)?.name || 'Unknown',
-                                        amount: burns.reduce((sum, b) => sum + b, 0),
-                                        budgets: budgetsList.sort((a, b) => b.amount - a.amount)
-                                    };
-                                })
-                                .filter(a => a.amount > 0)
-                                .sort((a, b) => b.amount - a.amount),
+                            dailyBudgetBurn: simulationResults.committedBudget / Math.max(1, AppConfig.defaults.safeToSpendDays),
+                            projection
                         };
                     })
                 );
             })
         );
     }
-
-    /**
-     * Calculates Safe-to-Spend and appends configured-day historical and projected data.
-     */
-    observeSafeToSpendProjection(): Observable<SafeToSpendResult> {
-        return this.observeSafeToSpend().pipe(
-            switchMap(async (current) => {
-                if (current.safeToSpend === 0 && current.totalLiquidAssets === 0) {
-                    current.projection = { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 };
-                    return current;
-                }
-                const projection = await this.calculateSafeToSpendProjection(
-                    current,
-                    current.budgetCoveredExpenseAccountIds,
-                );
-                return { ...current, projection };
-            })
-        );
-    }
-
-    private async calculateSafeToSpendProjection(
-        current: SafeToSpendResult,
-        budgetCoveredExpenseAccountIds: Set<string> = new Set(),
-    ): Promise<SafeToSpendProjection> {
-        const now = dayjs().startOf('day');
-        const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
-        const thirtyDaysAgo = now.subtract(safeToSpendDays, 'day').valueOf();
-
-        const activeAccountsIds = [...current.liquidAssetAccountIds];
-        const rawDeltas = await transactionRawRepository.getDailyDeltasGroupedRaw(
-            activeAccountsIds,
-            thirtyDaysAgo,
-            now.valueOf() + AppConfig.time.msPerDay
-        );
-
-        const netCashFlowByDay = new Map<number, number>();
-        for (const delta of rawDeltas) {
-            let amount = delta.delta;
-            if (delta.currencyCode !== current.currencyCode) {
-                try {
-                    const { convertedAmount } = await exchangeRateService.convert(amount, delta.currencyCode, current.currencyCode);
-                    amount = convertedAmount;
-                } catch (e) {
-                    logger.error("Failed to convert delta for history projection", e);
-                }
-            }
-            const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
-            netCashFlowByDay.set(localDayStart, (netCashFlowByDay.get(localDayStart) || 0) + amount);
-        }
-
-        const historyPoints: SafeToSpendDataPoint[] = [];
-        let runningBalance = current.totalLiquidAssets;
-
-        historyPoints.push({ timestamp: now.valueOf(), value: runningBalance, isProjected: false });
-
-        for (let i = 0; i < safeToSpendDays; i++) {
-            const targetDay = now.subtract(i, 'day').valueOf();
-            const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
-            runningBalance -= flowThatDay;
-            historyPoints.push({ timestamp: now.subtract(i + 1, 'day').valueOf(), value: runningBalance, isProjected: false });
-        }
-        historyPoints.reverse();
-
-        const simulationDays = safeToSpendDays;
-        const liabilityAccounts = await accountRepository.observeByIds(current.liquidLiabilityAccountIds).pipe(take(1)).toPromise() || [];
-        const accountBalances = await balanceService.getAccountBalances();
-        const liabilityAccountBalances = liabilityAccounts.map(l => ({
-            account: l,
-            balance: Math.abs(accountBalances.find(bal => bal.accountId === l.id)?.balance || 0)
-        }));
-
-        const plannedPayments = await plannedPaymentRepository.findAllActive();
-        const plannedJournals = await journalRepository.journalsQuery(
-            Q.where('status', JournalStatus.PLANNED),
-            Q.where('journal_date', Q.gte(now.valueOf())),
-            Q.where('journal_date', Q.lte(now.add(simulationDays, 'day').valueOf())),
-            Q.where('deleted_at', Q.eq(null))
-        ).fetch();
-
-        const { flowByDayOffset, effectiveDailyDrain } = await cashFlowSimulationService.getSimulationFlows(
-            simulationDays, now, current.dailyBudgetBurns, plannedPayments, plannedJournals,
-            new Set([...current.liquidAssetAccountIds, ...current.liquidLiabilityAccountIds]),
-            liabilityAccountBalances, budgetCoveredExpenseAccountIds, current.currencyCode
-        );
-
-        const projectionPoints: SafeToSpendDataPoint[] = [];
-        let projectedAmount = current.totalLiquidAssets;
-        let minBalanceFound = projectedAmount;
-        let safeDaysCount: number | null = null;
-
-        projectionPoints.push({ timestamp: now.valueOf(), value: projectedAmount, isProjected: true });
-
-        for (let d = 1; d <= simulationDays; d++) {
-            const dailyDrain = Array.isArray(effectiveDailyDrain) ? (effectiveDailyDrain[d - 1] || 0) : effectiveDailyDrain;
-            projectedAmount -= dailyDrain;
-            projectedAmount += flowByDayOffset.get(d) || 0;
-            projectionPoints.push({ timestamp: now.add(d, 'day').valueOf(), value: projectedAmount, isProjected: true });
-            if (projectedAmount < minBalanceFound) minBalanceFound = projectedAmount;
-            if (projectedAmount < 0 && safeDaysCount === null) safeDaysCount = d;
-        }
-
-        const safeToSpend = Math.max(0, minBalanceFound);
-
-        return { history: historyPoints, projection: projectionPoints, safeDaysCount, safeToSpend };
-    }
-
 }
 
 export const insightService = new InsightService();

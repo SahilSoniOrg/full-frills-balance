@@ -16,6 +16,13 @@ interface DataPoint {
     y: number; // value
 }
 
+export interface HorizontalLine {
+    value: number;
+    label?: string;
+    color?: string;
+    strokeDasharray?: string;
+}
+
 interface LineChartProps {
     data: DataPoint[];
     height?: number;
@@ -32,6 +39,7 @@ interface LineChartProps {
     secondaryColor?: string; // Color for the secondary line
     todayX?: number; // Timestamp for the 'Today' vertical marker
     hideLabels?: boolean; // Whether to hide axis labels (Privacy Mode)
+    extraHorizontalLines?: HorizontalLine[]; // Arbitrary reference lines (e.g., 0 balance, safe-to-spend floor)
 }
 
 export const LineChart = ({
@@ -50,6 +58,7 @@ export const LineChart = ({
     secondaryColor,
     todayX,
     hideLabels,
+    extraHorizontalLines,
 }: LineChartProps) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
@@ -299,9 +308,72 @@ export const LineChart = ({
                                             >
                                                 Today
                                             </SvgText>
+                                            {(() => {
+                                                const todayPoint = data.find(d => Math.abs(d.x - todayX) < 1000); // Allow some small gap
+                                                if (!todayPoint || hideLabels) return null;
+                                                const y = height - PADDING_VERTICAL - (((todayPoint.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
+
+                                                return (
+                                                    <React.Fragment>
+                                                        <Circle
+                                                            cx={x}
+                                                            cy={y}
+                                                            r={4}
+                                                            fill={chartColor}
+                                                            stroke={theme.surface}
+                                                            strokeWidth={1}
+                                                        />
+                                                        <SvgText
+                                                            x={x + 4}
+                                                            y={y - 8}
+                                                            fontSize={11}
+                                                            fontWeight="bold"
+                                                            fill={chartColor}
+                                                            textAnchor="start"
+                                                        >
+                                                            {CurrencyFormatter.formatShort(todayPoint.y)}
+                                                        </SvgText>
+                                                    </React.Fragment>
+                                                );
+                                            })()}
                                         </React.Fragment>
                                     );
                                 })()}
+
+                                {/* Extra Horizontal Reference Lines (e.g. 0 line, Safe-to-Spend floor) */}
+                                {extraHorizontalLines?.map((line, i) => {
+                                    if (line.value < displayMinY || line.value > displayMinY + displayRange) return null;
+                                    const y = height - PADDING_VERTICAL - (((line.value - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
+                                    const lineColor = line.color || theme.textSecondary;
+
+                                    return (
+                                        <React.Fragment key={`extra-h-${i}`}>
+                                            <Line
+                                                x1={PADDING_LEFT}
+                                                y1={y}
+                                                x2={CHART_WIDTH - PADDING_RIGHT}
+                                                y2={y}
+                                                stroke={lineColor}
+                                                strokeWidth={1}
+                                                strokeDasharray={line.strokeDasharray || "4,4"}
+                                                opacity={0.8}
+                                            />
+                                            {line.label && !hideLabels && (
+                                                <SvgText
+                                                    x={CHART_WIDTH - PADDING_RIGHT - 4}
+                                                    y={y - 6}
+                                                    fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                                                    fill={lineColor}
+                                                    textAnchor="end"
+                                                    fontWeight="bold"
+                                                    opacity={0.9}
+                                                >
+                                                    {line.label}
+                                                </SvgText>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
 
                                 {/* Max Value Annotation */}
                                 {maxValPoint && (() => {

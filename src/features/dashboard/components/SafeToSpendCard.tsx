@@ -256,6 +256,16 @@ export const SafeToSpendCard = ({
                         xTicks.push(minX + ((maxX - minX) * i) / (tickCount - 1));
                     }
 
+                    const extraHorizontalLines = [
+                        { value: 0, label: '0', color: theme.error, strokeDasharray: "2,2" },
+                        { 
+                            value: safeToSpend, 
+                            label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${format(safeToSpend)}`, 
+                            color: theme.primary, 
+                            strokeDasharray: "4,4" 
+                        }
+                    ];
+
                     return (
                         <View style={[styles.projectionContainer, { borderColor: theme.border }]}>
                             <AppText variant="body" weight="medium" style={styles.projectionTitle}>
@@ -269,6 +279,7 @@ export const SafeToSpendCard = ({
                                 formatXTick={(x) => dayjs(x).format('MMM D')}
                                 todayX={dayjs().startOf('day').valueOf()}
                                 hideLabels={isPrivacyMode}
+                                extraHorizontalLines={extraHorizontalLines}
                             />
                             {projection.safeDaysCount !== null && (
                                 <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
