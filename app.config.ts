@@ -45,7 +45,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     scheme: "fullfrillsbalance",
     userInterfaceStyle: "automatic",
     jsEngine: "hermes",
-    newArchEnabled: true,
     ios: {
         supportsTablet: true,
         bundleIdentifier: appConfig.bundleIdentifier,
@@ -57,7 +56,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             backgroundImage: "./assets/images/android-icon-background.png",
             monochromeImage: "./assets/images/android-icon-monochrome.png",
         },
-        edgeToEdgeEnabled: true,
         predictiveBackGestureEnabled: false,
         package: appConfig.package,
         permissions: ["READ_SMS"],
@@ -67,6 +65,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         favicon: "./assets/images/favicon.png",
     },
     plugins: [
+        "expo-font",
+        "expo-image",
+        "expo-sharing",
+        "expo-web-browser",
         "expo-sqlite",
         "@lovesworking/watermelondb-expo-plugin-sdk-52-plus",
         "expo-router",
