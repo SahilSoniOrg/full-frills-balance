@@ -1,2 +1,2 @@
-import DataManagementSettingsScreen from '@/src/features/settings/screens/DataManagementSettingsScreen';
+import { DataManagementSettingsScreen } from '@/src/features/settings';
 export default DataManagementSettingsScreen;

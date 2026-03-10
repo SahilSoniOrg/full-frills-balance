@@ -11,6 +11,7 @@ import {
   RebuildTransaction,
   RecurringPattern
 } from './TransactionTypes';
+import { transactionRepository } from './TransactionRepository';
 import { from, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 
@@ -659,7 +660,6 @@ class TransactionRawRepository {
     endDate: number,
     isAssetOrExpense: boolean = true
   ): Observable<{ totalIncrease: number; totalDecrease: number }> {
-    const { transactionRepository } = require('./TransactionRepository');
     return transactionRepository.observeActive().pipe(
       switchMap(() => from(this.getAccountPeriodMetricsRaw(accountId, startDate, endDate, isAssetOrExpense))),
       distinctUntilChanged((prev: { totalIncrease: number; totalDecrease: number }, curr: { totalIncrease: number; totalDecrease: number }) => 
@@ -677,7 +677,6 @@ class TransactionRawRepository {
     startDate: number,
     endDate: number
   ): Observable<AccountDelta[]> {
-    const { transactionRepository } = require('./TransactionRepository');
     return transactionRepository.observeActive().pipe(
       switchMap(() => from(this.getAccountDeltasGroupedRaw(accountIds, startDate, endDate)))
     );

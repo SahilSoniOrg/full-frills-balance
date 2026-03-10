@@ -166,7 +166,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
                 setNotes(existingMetadata.notes || '');
             }
         }
-    }, [existingAccount, accountVersion, existingMetadata, balanceData]);
+    }, [existingAccount, accountVersion, existingMetadata, balanceData, initialBalance]);
 
     const validation = useAccountValidation(
         accountName,

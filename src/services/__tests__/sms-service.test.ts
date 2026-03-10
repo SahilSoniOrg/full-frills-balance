@@ -1,12 +1,12 @@
+import { SmsParseStatus } from '@/src/data/models/SmsInboxRecord'
+import { smsService } from '@/src/services/sms-service'
+
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
   default: undefined,
 }))
 
 jest.mock('@/src/utils/logger')
-
-import { SmsParseStatus } from '@/src/data/models/SmsInboxRecord'
-import { smsService } from '@/src/services/sms-service'
 
 describe('smsService.parseTransactionMessage', () => {
   it('parses INR debit messages with merchant and account source', () => {

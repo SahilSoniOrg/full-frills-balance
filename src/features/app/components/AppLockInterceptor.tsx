@@ -5,7 +5,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { Lock } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, StyleSheet, View } from 'react-native';
 
 export function AppLockInterceptor({ children }: { children: React.ReactNode }) {
@@ -37,13 +37,7 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
     }, [isAppLockEnabled]);
 
     // Trigger authentication on app start or when returning from background
-    useEffect(() => {
-        if (isAppLockEnabled && !isUnlocked) {
-            handleUnlock();
-        }
-    }, [isAppLockEnabled]); // Removed isUnlocked from dependency array to prevent infinite loops
-
-    const handleUnlock = async () => {
+    const handleUnlock = useCallback(async () => {
         // Prevent double prompting if already authenticated or authenticating
         if (isUnlocked || isAuthenticating.current) return;
 
@@ -77,7 +71,13 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
                 isAuthenticating.current = false;
             }, AppConfig.timing.appLockAuthTransitionMs);
         }
-    };
+    }, [isUnlocked]);
+
+    useEffect(() => {
+        if (isAppLockEnabled && !isUnlocked) {
+            handleUnlock();
+        }
+    }, [handleUnlock, isAppLockEnabled, isUnlocked]);
 
     if (isAppLockEnabled && !isUnlocked) {
         return (

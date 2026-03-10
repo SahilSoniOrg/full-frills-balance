@@ -697,7 +697,7 @@ class SmsService {
   }
 
   private extractCurrencyAndAmount(body: string): { amount: number; currencyCode: string | null } | null {
-    const patterns: Array<{ regex: RegExp; currencyGroup?: number; amountGroup: number }> = [
+    const patterns: { regex: RegExp; currencyGroup?: number; amountGroup: number }[] = [
       { regex: /(?:amt|amount|txn(?: of)?|debited(?: by)?|credited(?: with)?|spent|paid|received|deposited)[^\dA-Z₹$€£¥]*((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY|₹|Rs\.?|INR\.?|US\$|A\$|C\$|\$|€|£|¥)?)\s*([\d,.]+(?:\.\d+)?)/i, currencyGroup: 1, amountGroup: 2 },
       { regex: /((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY|₹|Rs\.?|INR\.?|US\$|A\$|C\$|\$|€|£|¥))\s*([\d,.]+(?:\.\d+)?)/i, currencyGroup: 1, amountGroup: 2 },
       { regex: /([\d,.]+(?:\.\d+)?)\s*((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY))/i, currencyGroup: 2, amountGroup: 1 },

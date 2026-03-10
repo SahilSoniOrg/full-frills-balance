@@ -1,2 +1,2 @@
-import PersonalizationSettingsScreen from '@/src/features/settings/screens/PersonalizationSettingsScreen';
+import { PersonalizationSettingsScreen } from '@/src/features/settings';
 export default PersonalizationSettingsScreen;

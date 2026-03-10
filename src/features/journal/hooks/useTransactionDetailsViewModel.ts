@@ -75,8 +75,8 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     const { journalId } = useLocalSearchParams<{ journalId: string }>();
     const { theme } = useTheme();
     const { deleteJournal, findJournal, duplicateJournal, postJournal } = useJournalActions();
-    const { transactions, isLoading: isLoadingTransactions, version: transactionsVersion } = useJournalTransactions(journalId);
-    const { journal, isLoading: isLoadingJournal, version: journalVersion } = useJournal(journalId);
+    const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
+    const { journal, isLoading: isLoadingJournal } = useJournal(journalId);
 
     const { data: smsInfo } = useObservable(
         () => {
@@ -119,7 +119,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         totalAmount: journal.totalAmount || 0,
         plannedPaymentId: journal.plannedPaymentId,
         journalDate: journal.journalDate
-    } : null, [journal, journalVersion]);
+    } : null, [journal]);
 
     const isLoading = isLoadingTransactions || isLoadingJournal;
 
@@ -259,7 +259,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 onPress: () => router.push(`/account-details?accountId=${item.accountId}`),
             };
         });
-    }, [router, theme.error, theme.income, transactions, transactionsVersion]);
+    }, [router, theme.error, theme.income, transactions]);
 
     return {
         theme,

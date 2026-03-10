@@ -106,7 +106,7 @@ export class BudgetReadService {
                                     try {
                                         const { convertedAmount } = await exchangeRateService.convert(tx.amount, tx.currencyCode, budgetMoney.currencyCode);
                                         txAmount = convertedAmount;
-                                    } catch (e) {
+                                    } catch {
                                         // Fallback to raw amount if conversion fails (better than nothing or throwing)
                                     }
                                 }
