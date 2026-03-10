@@ -8,10 +8,12 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository'
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService'
 import { EnrichedTransaction } from '@/src/types/domain'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
+import { Money } from '@/src/utils/money'
+import { exchangeRateService } from '@/src/services/exchange-rate-service'
 import { Q } from '@nozbe/watermelondb'
 import dayjs from 'dayjs'
 import { combineLatest, Observable, of } from 'rxjs'
-import { map, switchMap } from 'rxjs/operators'
+import { switchMap } from 'rxjs/operators'
 
 export interface BudgetUsage {
     spent: number
@@ -92,24 +94,36 @@ export class BudgetReadService {
 
                 return database.collections.get<Transaction>('transactions')
                     .query(...clauses)
-                    .observeWithColumns(['amount', 'transaction_type'])
+                    .observeWithColumns(['amount', 'transaction_type', 'currency_code'])
                     .pipe(
-                        map(transactions => {
-                            let spent = 0
+                        switchMap(async transactions => {
+                            const budgetMoney = Money.from(observedBudget.amount, observedBudget.currencyCode);
+                            let spentMoney = Money.from(0, budgetMoney.currencyCode);
+
                             for (const tx of transactions) {
+                                let txAmount = tx.amount;
+                                if (tx.currencyCode !== budgetMoney.currencyCode) {
+                                    try {
+                                        const { convertedAmount } = await exchangeRateService.convert(tx.amount, tx.currencyCode, budgetMoney.currencyCode);
+                                        txAmount = convertedAmount;
+                                    } catch (e) {
+                                        // Fallback to raw amount if conversion fails (better than nothing or throwing)
+                                    }
+                                }
+
+                                const txMoney = Money.from(txAmount, budgetMoney.currencyCode);
                                 if (tx.transactionType === 'DEBIT') {
-                                    // money flowing into an expense account = spent
-                                    spent += tx.amount
+                                    spentMoney = spentMoney.add(txMoney);
                                 } else if (tx.transactionType === 'CREDIT') {
-                                    // money flowing out of an expense account = refund/reversal
-                                    spent -= tx.amount
+                                    spentMoney = spentMoney.subtract(txMoney);
                                 }
                             }
+
                             return {
-                                spent,
-                                remaining: observedBudget.amount - spent,
-                                budgetAmount: observedBudget.amount,
-                                usagePercent: observedBudget.amount > 0 ? spent / observedBudget.amount : 0
+                                spent: spentMoney.amount,
+                                remaining: budgetMoney.subtract(spentMoney).amount,
+                                budgetAmount: budgetMoney.amount,
+                                usagePercent: budgetMoney.amount > 0 ? spentMoney.amount / budgetMoney.amount : 0
                             }
                         })
                     )

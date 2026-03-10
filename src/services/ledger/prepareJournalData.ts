@@ -1,5 +1,6 @@
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
+import { JournalDisplayType } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
@@ -11,7 +12,7 @@ import { roundToPrecision } from '@/src/utils/money';
 export interface PreparedJournalData {
     transactions: CreateJournalData['transactions'];
     totalAmount: number;
-    displayType: string;
+    displayType: JournalDisplayType;
     calculatedBalances: Map<string, number>;
     accountsToRebuild: Set<string>;
 }

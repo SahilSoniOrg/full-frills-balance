@@ -9,6 +9,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { ledgerWriteService } from '@/src/services/ledger'
 import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 import { logger } from '@/src/utils/logger'
+import { Money } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
 
 export class PlannedPaymentService {
@@ -162,20 +163,21 @@ export class PlannedPaymentService {
                 return
             }
 
+            const amount = Money.from(pp.amount, pp.currencyCode);
             const transactions = [
                 {
                     accountId: pp.fromAccountId,
-                    amount: pp.amount,
+                    amount: amount.amount,
                     transactionType: TransactionType.CREDIT,
                     notes: pp.description,
-                    currencyCode: pp.currencyCode,
+                    currencyCode: amount.currencyCode,
                 },
                 {
                     accountId: pp.toAccountId,
-                    amount: pp.amount,
+                    amount: amount.amount,
                     transactionType: TransactionType.DEBIT,
                     notes: pp.description,
-                    currencyCode: pp.currencyCode,
+                    currencyCode: amount.currencyCode,
                 },
             ]
 
@@ -235,20 +237,21 @@ export class PlannedPaymentService {
                     throw new Error(`Planned payment ${pp.id} is missing toAccountId.`)
                 }
 
+                const amount = Money.from(pp.amount, pp.currencyCode);
                 const transactions = [
                     {
                         accountId: pp.fromAccountId,
-                        amount: pp.amount,
+                        amount: amount.amount,
                         transactionType: TransactionType.CREDIT,
                         notes: pp.description,
-                        currencyCode: pp.currencyCode,
+                        currencyCode: amount.currencyCode,
                     },
                     {
                         accountId: pp.toAccountId,
-                        amount: pp.amount,
+                        amount: amount.amount,
                         transactionType: TransactionType.DEBIT,
                         notes: pp.description,
-                        currencyCode: pp.currencyCode,
+                        currencyCode: amount.currencyCode,
                     },
                 ]
 

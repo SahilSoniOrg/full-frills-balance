@@ -15,6 +15,7 @@ import Currency from '@/src/data/models/Currency'
 import ExchangeRate from '@/src/data/models/ExchangeRate'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import JournalMetadata from '@/src/data/models/JournalMetadata'
+import { JournalDisplayType } from '@/src/types/domain'
 import PlannedPayment from '@/src/data/models/PlannedPayment'
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule'
 import SmsInboxRecord, { SmsDirection, SmsParseStatus, SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord'
@@ -44,7 +45,7 @@ export interface ImportedJournal {
   status: string
   totalAmount: number
   transactionCount: number
-  displayType: string
+  displayType: JournalDisplayType
   createdAt?: number
   updatedAt?: number
   deletedAt?: number

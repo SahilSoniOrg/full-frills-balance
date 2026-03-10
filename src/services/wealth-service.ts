@@ -8,6 +8,7 @@ import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
+import { Money } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 
@@ -47,30 +48,30 @@ export const wealthService = {
                 balanceCurrency,
                 targetCurrency
             );
-            return { type: b.accountType, amount: convertedAmount };
+            return { type: b.accountType, money: Money.from(convertedAmount, targetCurrency) };
         }));
 
-        let totalAssets = 0;
-        let totalLiabilities = 0;
-        let totalEquity = 0;
-        let totalIncome = 0;
-        let totalExpense = 0;
+        let assets = Money.from(0, targetCurrency);
+        let liabilities = Money.from(0, targetCurrency);
+        let equity = Money.from(0, targetCurrency);
+        let income = Money.from(0, targetCurrency);
+        let expense = Money.from(0, targetCurrency);
 
         for (const r of converted) {
-            if (r.type === AccountType.ASSET) totalAssets += r.amount;
-            else if (r.type === AccountType.LIABILITY) totalLiabilities += r.amount;
-            else if (r.type === AccountType.EQUITY) totalEquity += r.amount;
-            else if (r.type === AccountType.INCOME) totalIncome += r.amount;
-            else if (r.type === AccountType.EXPENSE) totalExpense += r.amount;
+            if (r.type === AccountType.ASSET) assets = assets.add(r.money);
+            else if (r.type === AccountType.LIABILITY) liabilities = liabilities.add(r.money);
+            else if (r.type === AccountType.EQUITY) equity = equity.add(r.money);
+            else if (r.type === AccountType.INCOME) income = income.add(r.money);
+            else if (r.type === AccountType.EXPENSE) expense = expense.add(r.money);
         }
 
         return {
-            totalAssets,
-            totalLiabilities,
-            totalEquity,
-            totalIncome,
-            totalExpense,
-            netWorth: totalAssets - totalLiabilities,
+            totalAssets: assets.amount,
+            totalLiabilities: liabilities.amount,
+            totalEquity: equity.amount,
+            totalIncome: income.amount,
+            totalExpense: expense.amount,
+            netWorth: assets.subtract(liabilities).amount,
         };
     },
 
@@ -113,12 +114,12 @@ export const wealthService = {
             return { type: acc.accountType, amount: convertedAmount };
         }));
 
-        let runningAssets = 0;
-        let runningLiabilities = 0;
+        let runningAssets = Money.from(0, currency);
+        let runningLiabilities = Money.from(0, currency);
 
         for (const r of currentBalances) {
-            if (r.type === AccountType.ASSET) runningAssets += r.amount;
-            else if (r.type === AccountType.LIABILITY) runningLiabilities += r.amount;
+            if (r.type === AccountType.ASSET) runningAssets = runningAssets.add(Money.from(r.amount, currency));
+            else if (r.type === AccountType.LIABILITY) runningLiabilities = runningLiabilities.add(Money.from(r.amount, currency));
         }
 
         // 3. BULK FETCH daily deltas grouped by currency and type (O(1) round-trip, O(M) rows)
@@ -208,9 +209,9 @@ export const wealthService = {
             if (isDayInRange) {
                 history.push({
                     date: cursor.startOf('day').valueOf(),
-                    netWorth: runningAssets - runningLiabilities,
-                    totalAssets: runningAssets,
-                    totalLiabilities: runningLiabilities
+                    netWorth: runningAssets.subtract(runningLiabilities).amount,
+                    totalAssets: runningAssets.amount,
+                    totalLiabilities: runningLiabilities.amount
                 });
             }
 
@@ -219,8 +220,8 @@ export const wealthService = {
             const dayDelta = dailyDeltas.get(dayKey);
 
             if (dayDelta) {
-                runningAssets -= dayDelta.assets;
-                runningLiabilities -= dayDelta.liabilities;
+                runningAssets = runningAssets.subtract(Money.from(dayDelta.assets, currency));
+                runningLiabilities = runningLiabilities.subtract(Money.from(dayDelta.liabilities, currency));
             }
 
             cursor = cursor.subtract(1, 'day');

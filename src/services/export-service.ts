@@ -8,6 +8,7 @@
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { JournalDisplayType } from '@/src/types/domain';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
@@ -49,7 +50,7 @@ export interface JournalExport {
   reversingJournalId?: string;
   totalAmount: number;
   transactionCount: number;
-  displayType: string;
+  displayType: JournalDisplayType;
   plannedPaymentId?: string;
   createdAt: string;
   updatedAt: string;

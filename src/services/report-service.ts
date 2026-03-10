@@ -6,6 +6,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
+import { Money } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import { from, Observable } from 'rxjs';
@@ -91,23 +92,23 @@ export class ReportService {
 
         if (rawDeltas.length === 0 && accountIds.length > 0) {
             const convertedTransactions = await this.getConvertedReportTransactions(startDate, endDate, currency, accounts);
-            const sums = new Map<string, number>();
+            const sums = new Map<string, Money>();
             for (const tx of convertedTransactions) {
-                const current = sums.get(tx.accountId) || 0;
-                const amount = type === AccountType.EXPENSE
-                    ? (tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount)
-                    : (tx.transactionType === TransactionType.CREDIT ? tx.amount : -tx.amount);
-                sums.set(tx.accountId, current + amount);
+                const current = sums.get(tx.accountId) || Money.from(0, currency);
+                const delta = type === AccountType.EXPENSE
+                    ? (tx.transactionType === TransactionType.DEBIT ? Money.from(tx.amount, currency) : Money.from(-tx.amount, currency))
+                    : (tx.transactionType === TransactionType.CREDIT ? Money.from(tx.amount, currency) : Money.from(-tx.amount, currency));
+                sums.set(tx.accountId, current.add(delta));
             }
             return this.buildBreakdownFromSums(accounts, sums);
         }
 
         const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
-        const sums = new Map<string, number>();
+        const sums = new Map<string, Money>();
 
         for (const d of normalized) {
-            const amount = d.delta;
-            sums.set(d.accountId, (sums.get(d.accountId) || 0) + amount);
+            const delta = Money.from(d.delta, currency);
+            sums.set(d.accountId, (sums.get(d.accountId) || Money.from(0, currency)).add(delta));
         }
 
         return this.buildBreakdownFromSums(accounts, sums);
@@ -128,27 +129,28 @@ export class ReportService {
                 currency,
                 [...incomeAccounts, ...expenseAccounts]
             );
-            return this.buildIncomeVsExpenseFromConverted(convertedTransactions);
+            return this.buildIncomeVsExpenseFromConverted(convertedTransactions, currency);
         }
 
         const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
 
         const accountTypeMap = new Map([...incomeAccounts, ...expenseAccounts].map(a => [a.id, a.accountType]));
-        let income = 0;
-        let expense = 0;
+        let income = Money.from(0, currency);
+        let expense = Money.from(0, currency);
 
         for (const d of normalized) {
             const type = accountTypeMap.get(d.accountId);
+            const delta = Money.from(d.delta, currency);
             if (type === AccountType.INCOME) {
-                income += d.delta;
+                income = income.add(delta);
             } else if (type === AccountType.EXPENSE) {
-                expense += d.delta;
+                expense = expense.add(delta);
             } else {
                 logger.error(`[ReportService] Unknown account type for report: ${type} (ID: ${d.accountId})`);
             }
         }
 
-        return { income, expense };
+        return { income: income.amount, expense: expense.amount };
     }
 
     /**
@@ -164,8 +166,8 @@ export class ReportService {
         const currency = targetCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
         const accountMap = new Map(accounts.map(a => [a.id, a]));
 
-        let income = 0;
-        let expense = 0;
+        let income = Money.from(0, currency);
+        let expense = Money.from(0, currency);
 
         const conversions = await Promise.all(transactions.map(async (tx) => {
             if (tx.transactionDate < startDate || tx.transactionDate > endDate) return null;
@@ -179,7 +181,7 @@ export class ReportService {
             );
 
             return {
-                amount: convertedAmount,
+                amount: Money.from(convertedAmount, currency),
                 type: acc.accountType,
                 transactionType: tx.transactionType
             };
@@ -188,13 +190,15 @@ export class ReportService {
         for (const conv of conversions) {
             if (!conv) continue;
             if (conv.type === AccountType.INCOME) {
-                income += conv.transactionType === TransactionType.CREDIT ? conv.amount : -conv.amount;
+                const delta = conv.transactionType === TransactionType.CREDIT ? conv.amount : Money.from(-conv.amount.amount, currency);
+                income = income.add(delta);
             } else {
-                expense += conv.transactionType === TransactionType.DEBIT ? conv.amount : -conv.amount;
+                const delta = conv.transactionType === TransactionType.DEBIT ? conv.amount : Money.from(-conv.amount.amount, currency);
+                expense = expense.add(delta);
             }
         }
 
-        return { income, expense };
+        return { income: income.amount, expense: expense.amount };
     }
 
     /**
@@ -215,7 +219,7 @@ export class ReportService {
                 currency,
                 [...incomeAccounts, ...expenseAccounts]
             );
-            return this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate);
+            return this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate, currency);
         }
 
         const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
@@ -227,10 +231,11 @@ export class ReportService {
             const bucket = historyMap.get(bucketKey);
             if (!bucket) continue;
 
+            const delta = Money.from(d.delta, currency);
             if (d.accountType === AccountType.INCOME) {
-                bucket.income += d.delta;
+                bucket.income = Money.from(bucket.income, currency).add(delta).amount;
             } else if (d.accountType === AccountType.EXPENSE) {
-                bucket.expense += d.delta;
+                bucket.expense = Money.from(bucket.expense, currency).add(delta).amount;
             }
         }
 
@@ -255,7 +260,7 @@ export class ReportService {
                 currency,
                 [...incomeAccounts, ...expenseAccounts]
             );
-            return this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate);
+            return this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate, currency);
         }
 
         const normalized = await this.getNormalizedDeltas(rawDeltas, currency);
@@ -272,10 +277,11 @@ export class ReportService {
             const bucket = dailyMap.get(dayjs(d.dayStart).startOf('day').valueOf());
             if (!bucket) continue;
 
+            const delta = Money.from(d.delta, currency);
             if (d.accountType === AccountType.INCOME) {
-                bucket.income += d.delta;
+                bucket.income = Money.from(bucket.income, currency).add(delta).amount;
             } else if (d.accountType === AccountType.EXPENSE) {
-                bucket.expense += d.delta;
+                bucket.expense = Money.from(bucket.expense, currency).add(delta).amount;
             }
         }
 
@@ -322,11 +328,11 @@ export class ReportService {
                 );
 
                 return {
-                    expenseBreakdown: this.buildBreakdownFromSums(expenseAccounts, this.buildSumsFromConverted(convertedTransactions, AccountType.EXPENSE)),
-                    incomeBreakdown: this.buildBreakdownFromSums(incomeAccounts, this.buildSumsFromConverted(convertedTransactions, AccountType.INCOME)),
-                    incomeVsExpenseHistory: this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate),
-                    incomeVsExpense: this.buildIncomeVsExpenseFromConverted(convertedTransactions),
-                    dailyIncomeVsExpense: this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate),
+                    expenseBreakdown: this.buildBreakdownFromSums(expenseAccounts, this.buildSumsFromConverted(convertedTransactions, AccountType.EXPENSE, currency)),
+                    incomeBreakdown: this.buildBreakdownFromSums(incomeAccounts, this.buildSumsFromConverted(convertedTransactions, AccountType.INCOME, currency)),
+                    incomeVsExpenseHistory: this.buildIncomeVsExpenseHistoryFromConverted(convertedTransactions, startDate, endDate, currency),
+                    incomeVsExpense: this.buildIncomeVsExpenseFromConverted(convertedTransactions, currency),
+                    dailyIncomeVsExpense: this.buildDailyIncomeVsExpenseFromConverted(convertedTransactions, startDate, endDate, currency),
                 };
             }
         }
@@ -427,36 +433,37 @@ export class ReportService {
 
     private buildSumsFromConverted(
         convertedTransactions: ConvertedReportTransaction[],
-        accountType: AccountType
-    ): Map<string, number> {
-        const sums = new Map<string, number>();
+        accountType: AccountType,
+        currency: string
+    ): Map<string, Money> {
+        const sums = new Map<string, Money>();
         for (const tx of convertedTransactions) {
             if (tx.accountType !== accountType) continue;
-            const current = sums.get(tx.accountId) || 0;
+            const current = sums.get(tx.accountId) || Money.from(0, currency);
             const delta = accountType === AccountType.EXPENSE
-                ? (tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount)
-                : (tx.transactionType === TransactionType.CREDIT ? tx.amount : -tx.amount);
-            sums.set(tx.accountId, current + delta);
+                ? (tx.transactionType === TransactionType.DEBIT ? Money.from(tx.amount, currency) : Money.from(-tx.amount, currency))
+                : (tx.transactionType === TransactionType.CREDIT ? Money.from(tx.amount, currency) : Money.from(-tx.amount, currency));
+            sums.set(tx.accountId, current.add(delta));
         }
         return sums;
     }
 
     private buildBreakdownFromSums(
         scopedAccounts: ReportAccount[],
-        sums: Map<string, number>
+        sums: Map<string, Money>
     ): ExpenseCategory[] {
         const result: ExpenseCategory[] = [];
         let totalPositiveAmount = 0;
         for (const account of scopedAccounts) {
-            const amount = sums.get(account.id) || 0;
-            if (amount > 0) {
+            const m = sums.get(account.id) || Money.from(0);
+            if (m.amount > 0) {
                 result.push({
                     accountId: account.id,
                     accountName: account.name,
-                    amount,
+                    amount: m.amount,
                     percentage: 0,
                 });
-                totalPositiveAmount += amount;
+                totalPositiveAmount += m.amount;
             }
         }
 
@@ -466,23 +473,27 @@ export class ReportService {
         return result.sort((a, b) => b.amount - a.amount);
     }
 
-    private buildIncomeVsExpenseFromConverted(convertedTransactions: ConvertedReportTransaction[]): { income: number; expense: number } {
-        let income = 0;
-        let expense = 0;
+    private buildIncomeVsExpenseFromConverted(convertedTransactions: ConvertedReportTransaction[], currency: string): { income: number; expense: number } {
+        let income = Money.from(0, currency);
+        let expense = Money.from(0, currency);
         for (const tx of convertedTransactions) {
+            const m = Money.from(tx.amount, currency);
             if (tx.accountType === AccountType.INCOME) {
-                income += tx.transactionType === TransactionType.CREDIT ? tx.amount : -tx.amount;
+                const delta = tx.transactionType === TransactionType.CREDIT ? m : Money.from(-m.amount, currency);
+                income = income.add(delta);
             } else if (tx.accountType === AccountType.EXPENSE) {
-                expense += tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount;
+                const delta = tx.transactionType === TransactionType.DEBIT ? m : Money.from(-m.amount, currency);
+                expense = expense.add(delta);
             }
         }
-        return { income, expense };
+        return { income: income.amount, expense: expense.amount };
     }
 
     private buildIncomeVsExpenseHistoryFromConverted(
         convertedTransactions: ConvertedReportTransaction[],
         startDate: number,
-        endDate: number
+        endDate: number,
+        currency: string
     ): IncomeVsExpense[] {
         const historyMap = this.initializeHistoryMap(startDate, endDate);
         const { bucketUnit } = this.getHistoryConfig(startDate, endDate);
@@ -492,10 +503,13 @@ export class ReportService {
             const bucket = historyMap.get(bucketKey);
             if (!bucket) continue;
 
+            const m = Money.from(tx.amount, currency);
             if (tx.accountType === AccountType.INCOME) {
-                bucket.income += tx.transactionType === TransactionType.CREDIT ? tx.amount : -tx.amount;
+                const delta = tx.transactionType === TransactionType.CREDIT ? m : Money.from(-m.amount, currency);
+                bucket.income = Money.from(bucket.income, currency).add(delta).amount;
             } else if (tx.accountType === AccountType.EXPENSE) {
-                bucket.expense += tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount;
+                const delta = tx.transactionType === TransactionType.DEBIT ? m : Money.from(-m.amount, currency);
+                bucket.expense = Money.from(bucket.expense, currency).add(delta).amount;
             }
         }
 
@@ -505,7 +519,8 @@ export class ReportService {
     private buildDailyIncomeVsExpenseFromConverted(
         convertedTransactions: ConvertedReportTransaction[],
         startDate: number,
-        endDate: number
+        endDate: number,
+        currency: string
     ): { date: number; income: number; expense: number }[] {
         const dailyMap = new Map<number, { income: number; expense: number }>();
         const start = dayjs(startDate).startOf('day');
@@ -521,10 +536,13 @@ export class ReportService {
             const bucket = dailyMap.get(dayjs(tx.transactionDate).startOf('day').valueOf());
             if (!bucket) continue;
 
+            const m = Money.from(tx.amount, currency);
             if (tx.accountType === AccountType.INCOME) {
-                bucket.income += tx.transactionType === TransactionType.CREDIT ? tx.amount : -tx.amount;
+                const delta = tx.transactionType === TransactionType.CREDIT ? m : Money.from(-m.amount, currency);
+                bucket.income = Money.from(bucket.income, currency).add(delta).amount;
             } else if (tx.accountType === AccountType.EXPENSE) {
-                bucket.expense += tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount;
+                const delta = tx.transactionType === TransactionType.DEBIT ? m : Money.from(-m.amount, currency);
+                bucket.expense = Money.from(bucket.expense, currency).add(delta).amount;
             }
         }
 

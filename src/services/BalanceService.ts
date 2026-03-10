@@ -7,7 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { roundToPrecision } from '@/src/utils/money';
+import { Money, roundToPrecision } from '../utils/money';
 import { preferences } from '../utils/preferences';
 
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
@@ -127,16 +127,21 @@ export class BalanceService {
                 // Conversion Logic
                 const processConversion = () => {
                     const precision = accountPrecisionMap.get(parentId) ?? AppConfig.defaultCurrencyPrecision;
-                    let amountToAdd = myBalance.balance;
-                    let incomeToAdd = myBalance.monthlyIncome;
-                    let expensesToAdd = myBalance.monthlyExpenses;
+                    
+                    const myBalanceMoney = Money.from(myBalance.balance, myBalance.currencyCode);
+                    const myIncomeMoney = Money.from(myBalance.monthlyIncome, myBalance.currencyCode);
+                    const myExpensesMoney = Money.from(myBalance.monthlyExpenses, myBalance.currencyCode);
+
+                    let convertedBalance = myBalanceMoney;
+                    let convertedIncome = myIncomeMoney;
+                    let convertedExpenses = myExpensesMoney;
 
                     if (myBalance.currencyCode !== targetCurrency) {
                         const rate = exchangeRateService.getRateSafe(myBalance.currencyCode, targetCurrency);
 
-                        amountToAdd = myBalance.balance * rate;
-                        incomeToAdd = myBalance.monthlyIncome * rate;
-                        expensesToAdd = myBalance.monthlyExpenses * rate;
+                        convertedBalance = myBalanceMoney.multiply(rate);
+                        convertedIncome = myIncomeMoney.multiply(rate);
+                        convertedExpenses = myExpensesMoney.multiply(rate);
 
                         // Track mixed child balances for UI "Multi-currency" indicator
                         if (!parentBalance.childBalances) parentBalance.childBalances = [];
@@ -152,9 +157,13 @@ export class BalanceService {
                         }
                     }
 
-                    parentBalance.balance = roundToPrecision(parentBalance.balance + amountToAdd, precision);
-                    parentBalance.monthlyIncome = roundToPrecision(parentBalance.monthlyIncome + incomeToAdd, precision);
-                    parentBalance.monthlyExpenses = roundToPrecision(parentBalance.monthlyExpenses + expensesToAdd, precision);
+                    const parentBalanceMoney = Money.from(parentBalance.balance, targetCurrency);
+                    const parentIncomeMoney = Money.from(parentBalance.monthlyIncome, targetCurrency);
+                    const parentExpensesMoney = Money.from(parentBalance.monthlyExpenses, targetCurrency);
+
+                    parentBalance.balance = parentBalanceMoney.add(convertedBalance).round(precision).amount;
+                    parentBalance.monthlyIncome = parentIncomeMoney.add(convertedIncome).round(precision).amount;
+                    parentBalance.monthlyExpenses = parentExpensesMoney.add(convertedExpenses).round(precision).amount;
                     parentBalance.transactionCount += myBalance.transactionCount;
                 };
 

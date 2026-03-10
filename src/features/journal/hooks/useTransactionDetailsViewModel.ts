@@ -247,7 +247,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
             return {
                 id: item.id,
                 accountId: item.accountId,
-                accountName: item.accountName,
+                accountName: item.accountName || 'Unknown Account',
                 transactionType: `${flowLabel} • ${item.transactionType}`,
                 // Signs should reflect flow direction: Debit (+) is INTO, Credit (-) is FROM
                 amountText: `${isDebit ? '+' : '-'}${CurrencyFormatter.format(item.amount, item.currencyCode)}`,

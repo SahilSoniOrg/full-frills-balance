@@ -2,6 +2,7 @@ import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account'
 import { cashFlowSimulationService } from '@/src/services/insight/CashFlowSimulationService';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository');
@@ -42,13 +43,15 @@ describe('CashFlowSimulationService', () => {
         );
 
         const result = await cashFlowSimulationService.simulateSafeToSpend(
-            1000,
-            new Array(30).fill(0),
+            Money.from(1000, 'USD'),
             [],
             [],
             ['cash-1'],
-            [{ account: creditCard, balance: 400 }],
-            new Set(),
+            [{ account: creditCard, balance: Money.from(400, 'USD') }],
+            [],
+            [],
+            [],
+            [],
             'USD',
         );
 
@@ -83,13 +86,15 @@ describe('CashFlowSimulationService', () => {
         };
 
         const result = await cashFlowSimulationService.simulateSafeToSpend(
-            1000,
-            new Array(30).fill(0),
+            Money.from(1000, 'USD'),
             [plannedPayment as any],
             [],
             ['cash-1'],
-            [{ account: creditCard, balance: 400 }],
-            new Set(),
+            [{ account: creditCard, balance: Money.from(400, 'USD') }],
+            [],
+            [],
+            [],
+            [],
             'USD',
         );
 

@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database'
 import Journal, { JournalStatus } from '@/src/data/models/Journal'
 import JournalMetadata from '@/src/data/models/JournalMetadata'
 import Transaction, { TransactionType } from '@/src/data/models/Transaction'
+import { JournalDisplayType } from '@/src/types/domain'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Q } from '@nozbe/watermelondb'
 import dayjs from 'dayjs'
@@ -292,7 +293,7 @@ export class JournalRepository {
   }
 
   async createJournalWithTransactions(
-    journalData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
+    journalData: CreateJournalData & { totalAmount?: number; displayType?: JournalDisplayType; calculatedBalances?: Map<string, number> }
   ): Promise<Journal> {
     const { transactions: transactionData, totalAmount, displayType, calculatedBalances, metadata, ...journalFields } = journalData
 
@@ -303,7 +304,7 @@ export class JournalRepository {
         j.plannedPaymentId = journalFields.plannedPaymentId
         j.totalAmount = totalAmount ?? 0
         j.transactionCount = transactionData.length
-        j.displayType = displayType ?? 'TRANSACTION'
+        j.displayType = displayType ?? JournalDisplayType.TRANSFER
         j.createdAt = new Date()
         j.updatedAt = new Date()
       })
@@ -346,7 +347,7 @@ export class JournalRepository {
 
   async updateJournalWithTransactions(
     journalId: string,
-    journalData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
+    journalData: CreateJournalData & { totalAmount?: number; displayType?: JournalDisplayType; calculatedBalances?: Map<string, number> }
   ): Promise<Journal> {
     const { transactions: transactionData, totalAmount, displayType, calculatedBalances, metadata, ...journalFields } = journalData
 
@@ -500,7 +501,7 @@ export class JournalRepository {
   async replaceJournalWithReversal(params: {
     originalJournal: Journal
     originalTransactions: Transaction[]
-    replacementData: CreateJournalData & { totalAmount?: number; displayType?: string; calculatedBalances?: Map<string, number> }
+    replacementData: CreateJournalData & { totalAmount?: number; displayType?: JournalDisplayType; calculatedBalances?: Map<string, number> }
   }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
     const { originalJournal, originalTransactions, replacementData } = params
     const {
@@ -558,7 +559,7 @@ export class JournalRepository {
         j.status = JournalStatus.POSTED
         j.totalAmount = totalAmount ?? 0
         j.transactionCount = replacementTransactions.length
-        j.displayType = displayType ?? 'TRANSACTION'
+        j.displayType = displayType ?? JournalDisplayType.TRANSFER
         j.createdAt = now
         j.updatedAt = now
       })

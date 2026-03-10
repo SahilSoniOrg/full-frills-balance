@@ -11,6 +11,14 @@ export enum JournalDisplayType {
 export { AccountType, TransactionType };
 
 /**
+ * Money - Standard value object for currency amounts.
+ */
+export interface Money {
+    amount: number;
+    currencyCode: string;
+}
+
+/**
  * Domain-owned models and read models for UI consumption.
  * These are types that often combine multiple entities for presentation.
  * Follows Rule 3: Data-Driven UI (these define the 'data' the UI consumes).
@@ -35,40 +43,53 @@ export interface AccountBalance {
 }
 
 /**
- * TransactionWithAccountInfo - Transaction data merged with metadata of the account it belongs to
+ * DisplayTransaction - Unified read model for transactions in the UI.
+ * Consolidates 'TransactionWithAccountInfo' and 'EnrichedTransaction'.
+ * Follows Rule 3: Data-Driven UI.
  */
-export interface TransactionWithAccountInfo {
+export interface DisplayTransaction {
     id: string;
+    journalId?: string;
+    accountId: string;
     amount: number;
-    transactionType: TransactionType;
     currencyCode: string;
+    transactionType: TransactionType;
     transactionDate: number;
     notes?: string;
-    accountId: string;
-    exchangeRate?: number;
+    journalDescription?: string;
 
     // Account information for display
-    accountName: string;
-    accountType: AccountType;
+    accountName?: string;
+    accountType?: AccountType;
     counterAccountName?: string;
     counterAccountType?: AccountType;
-    journalDescription?: string;
-    displayTitle?: string;
-    isIncrease?: boolean;
+    displayTitle: string;
+    displayType?: JournalDisplayType;
     icon?: string;
     counterAccountIcon?: string;
 
-    // Semantic flags
-    flowDirection: 'IN' | 'OUT';
-    balanceImpact: 'INCREASE' | 'DECREASE';
+    // Semantic and derived flags
+    isIncrease: boolean;
+    flowDirection?: 'IN' | 'OUT';
+    balanceImpact?: 'INCREASE' | 'DECREASE';
 
     // Running balance for this transaction
     runningBalance?: number;
+    exchangeRate?: number;
+
+    // Feature-specific metadata
+    semanticType?: string;
+    semanticLabel?: string;
 
     // Audit fields
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
+
+/**
+ * @deprecated Use DisplayTransaction instead
+ */
+export type TransactionWithAccountInfo = DisplayTransaction;
 
 /**
  * JournalWithTransactionSummary - Journal data with computed summary from its transactions
@@ -123,7 +144,7 @@ export interface EnrichedJournal {
     status: string;
     totalAmount: number;
     transactionCount: number;
-    displayType: string;
+    displayType: JournalDisplayType;
     accounts: {
         id: string;
         name: string;
@@ -137,32 +158,9 @@ export interface EnrichedJournal {
 }
 
 /**
- * EnrichedTransaction - Highly processed transaction data for transaction-specific lists
+ * @deprecated Use DisplayTransaction instead
  */
-export interface EnrichedTransaction {
-    id: string;
-    journalId: string;
-    accountId: string;
-    amount: number;
-    currencyCode: string;
-    transactionType: string;
-    transactionDate: number;
-    notes?: string;
-    journalDescription?: string;
-    accountName?: string;
-    accountType?: string;
-    counterAccountName?: string;
-    counterAccountType?: string;
-    runningBalance?: number;
-    displayTitle: string;
-    displayType: JournalDisplayType;
-    isIncrease: boolean;
-    icon?: string;
-    counterAccountIcon?: string;
-    exchangeRate?: number;
-    semanticType?: string;
-    semanticLabel?: string;
-}
+export type EnrichedTransaction = DisplayTransaction;
 
 export interface SmsDuplicateCandidate {
     journalId: string;
@@ -199,13 +197,35 @@ export interface SmsInboxItem {
     duplicateCandidate?: SmsDuplicateCandidate;
 }
 
-export interface JournalSmsMetadata {
-    importSource: string;
-    originalSmsId?: string;
-    originalSmsSender?: string;
-    originalSmsBody?: string;
-    metadataJson?: string;
+/**
+ * SmsSourceMetadata - Detailed metadata for entries imported from SMS.
+ */
+export interface SmsSourceMetadata {
+    smsFingerprint?: string;
+    deviceSmsId: string;
+    senderAddress: string;
+    rawBody: string;
+    smsDate: number;
+    parsedMerchant?: string;
+    parsedAmount?: number;
+    parsedCurrencyCode?: string;
+    referenceNumber?: string;
 }
+
+/**
+ * JournalMetadata - Consolidated domain metadata for a journal entry.
+ */
+export interface JournalMetadata {
+    importSource: 'SMS' | 'CASHEW' | 'MANUAL' | string;
+    sms?: SmsSourceMetadata;
+    externalId?: string;
+    metadataJson?: string; // Fallback for unstructured historical data
+}
+
+/**
+ * @deprecated Use JournalMetadata instead
+ */
+export type JournalSmsMetadata = JournalMetadata;
 
 /**
  * JournalEntryLine - UI-specific model for a single line in the journal editor.

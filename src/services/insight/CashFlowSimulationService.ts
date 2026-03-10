@@ -5,6 +5,7 @@ import Journal from '@/src/data/models/Journal';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
+import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -16,11 +17,11 @@ export class CashFlowSimulationService {
      * Configured-day cash flow simulation for Safe to Spend.
      */
     async simulateSafeToSpend(
-        startingBalance: number,
+        startingBalance: Money,
         plannedPayments: PlannedPayment[],
         plannedJournals: Journal[],
         liquidAssetIds: string[],
-        liabilityAccountBalances: { account: Account, balance: number }[],
+        liabilityAccountBalances: { account: Account, balance: Money }[],
         budgets: Budget[],
         usages: BudgetUsage[],
         scopeGroups: any[][],
@@ -76,34 +77,36 @@ export class CashFlowSimulationService {
         const projectionPoints: { timestamp: number, value: number, isProjected: boolean }[] = [];
         let safeDaysCount: number | null = null;
 
-        projectionPoints.push({ timestamp: now.valueOf(), value: currentBalance, isProjected: true });
+        projectionPoints.push({ timestamp: now.valueOf(), value: currentBalance.amount, isProjected: true });
 
         for (let d = 0; d < SIMULATION_DAYS; d++) {
             const drain = Array.isArray(flows.effectiveDailyDrain) ? (flows.effectiveDailyDrain[d] || 0) : flows.effectiveDailyDrain;
-            currentBalance -= drain;
-            currentBalance += flows.flowByDayOffset.get(d) || 0;
+            currentBalance = currentBalance.subtract(Money.from(drain, resultCurrency));
+            
+            const offsetFlow = flows.flowByDayOffset.get(d) || 0;
+            currentBalance = currentBalance.add(Money.from(offsetFlow, resultCurrency));
             
             const dayOffset = d + 1;
             projectionPoints.push({
                 timestamp: now.add(dayOffset, 'day').valueOf(),
-                value: currentBalance,
+                value: currentBalance.amount,
                 isProjected: true
             });
 
-            if (currentBalance < minBalance) minBalance = currentBalance;
-            if (currentBalance < 0 && safeDaysCount === null) {
+            if (currentBalance.amount < minBalance.amount) minBalance = currentBalance;
+            if (currentBalance.amount < 0 && safeDaysCount === null) {
                 safeDaysCount = dayOffset;
             }
         }
 
         return {
-            safeToSpend: Math.max(0, minBalance),
-            shortfall: minBalance < 0 ? Math.abs(minBalance) : 0,
+            safeToSpend: Math.max(0, minBalance.amount),
+            shortfall: minBalance.amount < 0 ? Math.abs(minBalance.amount) : 0,
             totalFutureInflow: flows.totalFutureInflow,
             committedBudget: flows.committedBudget,
             committedPlanned: flows.committedPlanned,
             committedPlannedPayments: flows.committedPlannedPayments,
-            committedPlannedJournals: flows.committedPlannedJournals,
+            committedPlannedJournals: flows.committedJournals,
             committedLiabilities: flows.committedLiabilities,
             committedLiabilitiesCC: flows.committedLiabilitiesCC,
             committedLiabilitiesOther: flows.committedLiabilitiesOther,
@@ -127,7 +130,7 @@ export class CashFlowSimulationService {
         plannedPayments: PlannedPayment[],
         plannedJournals: Journal[],
         liquidAccountIds: Set<string>,
-        liabilityAccountBalances: { account: Account, balance: number }[],
+        liabilityAccountBalances: { account: Account, balance: Money }[],
         budgets: Budget[],
         usages: BudgetUsage[],
         scopeGroups: any[][],
@@ -141,7 +144,7 @@ export class CashFlowSimulationService {
         committedBudget: number,
         committedPlanned: number,
         committedPlannedPayments: number,
-        committedPlannedJournals: number,
+        committedJournals: number,
         committedLiabilities: number,
         committedLiabilitiesCC: number,
         committedLiabilitiesOther: number,
@@ -160,16 +163,16 @@ export class CashFlowSimulationService {
         }[]
     }> {
         const flowByDayOffset = new Map<number, number>();
-        let totalFutureInflow = 0;
-        let committedPlanned = 0;
-        let committedPlannedPayments = 0;
-        let committedPlannedJournals = 0;
-        let committedLiabilities = 0;
-        let committedLiabilitiesCC = 0;
-        let committedLiabilitiesOther = 0;
-        let totalLiabilitiesSum = 0;
-        let totalLiabilitiesCC = 0;
-        let totalLiabilitiesOther = 0;
+        let futureInflow = Money.from(0, resultCurrency);
+        let planned = Money.from(0, resultCurrency);
+        let plannedPaymentsSum = Money.from(0, resultCurrency);
+        let plannedJournalsSum = Money.from(0, resultCurrency);
+        let liabilities = Money.from(0, resultCurrency);
+        let liabilitiesCC = Money.from(0, resultCurrency);
+        let liabilitiesOther = Money.from(0, resultCurrency);
+        let totalLiabs = Money.from(0, resultCurrency);
+        let totalLiabsCC = Money.from(0, resultCurrency);
+        let totalLiabsOther = Money.from(0, resultCurrency);
 
         const liabilityAccountIds = new Set(liabilityAccountBalances.map(lb => lb.account.id));
         const liabilityAccountSubtypes = new Map(liabilityAccountBalances.map(lb => [lb.account.id, lb.account.accountSubtype]));
@@ -179,22 +182,23 @@ export class CashFlowSimulationService {
             const current = flowByDayOffset.get(dayOffset) || 0;
             flowByDayOffset.set(dayOffset, current + amount);
 
-            if (amount > 0) totalFutureInflow += amount;
+            if (amount > 0) futureInflow = futureInflow.add(Money.from(amount, resultCurrency));
 
             const effectiveCommit = commitAmount ?? (amount < 0 ? Math.abs(amount) : 0);
+            const commitMoney = Money.from(effectiveCommit, resultCurrency);
 
             if (effectiveCommit > 0) {
                 if (type === 'PLAN_PAYMENT' || type === 'PLAN_JOURNAL') {
-                    if (type === 'PLAN_PAYMENT') committedPlannedPayments += effectiveCommit;
-                    if (type === 'PLAN_JOURNAL') committedPlannedJournals += effectiveCommit;
-                    committedPlanned += effectiveCommit;
+                    if (type === 'PLAN_PAYMENT') plannedPaymentsSum = plannedPaymentsSum.add(commitMoney);
+                    if (type === 'PLAN_JOURNAL') plannedJournalsSum = plannedJournalsSum.add(commitMoney);
+                    planned = planned.add(commitMoney);
                     logger.info(`[SafeToSpend] Committed: ${context || 'Planned'} impact ${effectiveCommit} on day ${dayOffset}`);
                 } else if (type === 'LIABILITY_CC' || type === 'LIABILITY_OTHER') {
-                    committedLiabilities += effectiveCommit;
+                    liabilities = liabilities.add(commitMoney);
                     if (type === 'LIABILITY_CC') {
-                        committedLiabilitiesCC += effectiveCommit;
+                        liabilitiesCC = liabilitiesCC.add(commitMoney);
                     } else {
-                        committedLiabilitiesOther += effectiveCommit;
+                        liabilitiesOther = liabilitiesOther.add(commitMoney);
                     }
                     logger.info(`[SafeToSpend] Committed: ${context || 'Liability'} impact ${effectiveCommit} on day ${dayOffset}`);
                 }
@@ -286,17 +290,18 @@ export class CashFlowSimulationService {
             }
         }
 
-        let currentMonthBudgetRemaining = 0;
-        let nextMonthBudgetProjected = 0;
+        let currentMonthBudgRem = Money.from(0, resultCurrency);
+        let nextMonthBudgProj = Money.from(0, resultCurrency);
         for (let i = 0; i < simulationDays; i++) {
+            const burn = Money.from(dailyBudgetBurns[i], resultCurrency);
             if (i < daysLeftInMonth) {
-                currentMonthBudgetRemaining += dailyBudgetBurns[i];
+                currentMonthBudgRem = currentMonthBudgRem.add(burn);
             } else {
-                nextMonthBudgetProjected += dailyBudgetBurns[i];
+                nextMonthBudgProj = nextMonthBudgProj.add(burn);
             }
         }
 
-        const committedBudget = dailyBudgetBurns.reduce((sum, val) => sum + val, 0);
+        const committedBudg = currentMonthBudgRem.add(nextMonthBudgProj);
         const effectiveDailyDrain = dailyBudgetBurns;
         const nextMonthProjectionDays = Math.max(0, simulationDays - daysLeftInMonth);
 
@@ -326,22 +331,26 @@ export class CashFlowSimulationService {
             for (const tx of plannedTxs) manualPaymentAccountIds.add(tx.accountId);
         }
 
-        for (const { account, balance } of liabilityAccountBalances) {
-            if (balance <= 0) continue;
-            totalLiabilitiesSum += balance;
-            if (account.accountSubtype === AccountSubtype.CREDIT_CARD) {
-                totalLiabilitiesCC += balance;
+        for (const lb of liabilityAccountBalances) {
+            const balanceMoney = lb.balance; // Already in resultCurrency from InsightService
+            if (balanceMoney.amount <= 0) continue;
+
+            const convMoney = balanceMoney;
+
+            totalLiabs = totalLiabs.add(convMoney);
+            if (lb.account.accountSubtype === AccountSubtype.CREDIT_CARD) {
+                totalLiabsCC = totalLiabsCC.add(convMoney);
             } else {
-                totalLiabilitiesOther += balance;
+                totalLiabsOther = totalLiabsOther.add(convMoney);
             }
 
-            if (manualPaymentAccountIds.has(account.id)) {
+            if (manualPaymentAccountIds.has(lb.account.id)) {
                 continue;
             }
 
             try {
-                const metadataRecords = account.metadataRecords
-                    ? await account.metadataRecords.fetch()
+                const metadataRecords = lb.account.metadataRecords
+                    ? await lb.account.metadataRecords.fetch()
                     : [];
                 const metadata = metadataRecords[0];
 
@@ -349,26 +358,30 @@ export class CashFlowSimulationService {
                 const statementDay = metadata?.statementDay;
                 const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
 
-                if (account.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
-                    let deductionAmount = balance;
+                if (lb.account.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
+                    let deductionMoney = convMoney;
                     let targetDueDate: dayjs.Dayjs;
 
                     if (today > statementDay) {
                         const statementDate = now.date(statementDay).startOf('day').valueOf();
-                        const balancesAtStatement = await transactionRawRepository.getLatestBalancesRaw([account.id], statementDate);
-                        const statementBalance = Math.abs(balancesAtStatement.get(account.id) || 0);
-                        deductionAmount = statementBalance;
+                        const balancesAtStatement = await transactionRawRepository.getLatestBalancesRaw([lb.account.id], statementDate);
+                        const statementBalanceRaw = balancesAtStatement.get(lb.account.id) || 0;
+                        const statementBalance = Math.abs(statementBalanceRaw);
+                        
+                        const convStatement = (await exchangeRateService.convert(statementBalance, lb.account.currencyCode || resultCurrency, resultCurrency)).convertedAmount;
+                        deductionMoney = Money.from(convStatement, resultCurrency);
+                        
                         targetDueDate = now.date(dueDay);
                         if (dueDay <= today) {
                             targetDueDate = targetDueDate.add(1, 'month');
                         }
                     } else {
-                        deductionAmount = balance;
+                        deductionMoney = convMoney;
                         targetDueDate = now.date(dueDay).add(1, 'month');
                     }
 
                     const dayOffset = targetDueDate.startOf('day').diff(now, 'day');
-                    addFlow(dayOffset, -deductionAmount, 'LIABILITY_CC', `Liability: ${account.name} (Credit Card Statement)`);
+                    addFlow(dayOffset, -deductionMoney.amount, 'LIABILITY_CC', `Liability: ${lb.account.name} (Credit Card Statement)`);
                 } else {
                     let deductionDay = metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
                     let targetDate = now.date(deductionDay);
@@ -376,11 +389,11 @@ export class CashFlowSimulationService {
                         targetDate = targetDate.add(1, 'month');
                     }
                     const dayOffset = targetDate.startOf('day').diff(now, 'day');
-                    addFlow(dayOffset, -balance, 'LIABILITY_OTHER', `Liability: ${account.name} (Other)`);
+                    addFlow(dayOffset, -convMoney.amount, 'LIABILITY_OTHER', `Liability: ${lb.account.name} (Other)`);
                 }
             } catch (e) {
                 logger.error('getSimulationFlows: liability metadata failed', e);
-                addFlow(AppConfig.insights.liabilityErrorFallbackOffsetDays, -balance, 'LIABILITY_OTHER');
+                addFlow(AppConfig.insights.liabilityErrorFallbackOffsetDays, -convMoney.amount, 'LIABILITY_OTHER');
             }
         }
 
@@ -419,23 +432,26 @@ export class CashFlowSimulationService {
                 // Include payments that are due today or in the future
                 if (dayjs(curr).isAfter(now.subtract(1, 'minute'))) {
                     const dayOffset = dayjs(curr).startOf('day').diff(now.startOf('day'), 'day');
-                    let amount = pp.amount;
-                    if (pp.currencyCode && pp.currencyCode !== resultCurrency) {
+                    
+                    const ppMoney = Money.from(pp.amount, pp.currencyCode || resultCurrency);
+                    let amountDefault = ppMoney.amount;
+                    if (ppMoney.currencyCode !== resultCurrency) {
                         try {
-                            const { convertedAmount } = await exchangeRateService.convert(amount, pp.currencyCode, resultCurrency);
-                            amount = convertedAmount;
+                            const { convertedAmount } = await exchangeRateService.convert(ppMoney.amount, ppMoney.currencyCode, resultCurrency);
+                            amountDefault = convertedAmount;
                         } catch { }
                     }
+                    
                     const isDebtOutflow = liabilityAccountIds.has(pp.toAccountId);
                     const impact = isDebtOutflow
-                        ? -amount
-                        : (isInternalTransfer ? 0 : (isLiquidTo ? amount : -amount));
+                        ? -amountDefault
+                        : (isInternalTransfer ? 0 : (isLiquidTo ? amountDefault : -amountDefault));
                     const flowType = isDebtOutflow ?
                         (liabilityAccountSubtypes.get(pp.toAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
                         : 'PLAN_PAYMENT';
 
                     // Liability payments reduce liquid cash even when the destination is another tracked account.
-                    const commitAmount = (isInternalTransfer && isDebtOutflow) ? amount : undefined;
+                    const commitAmount = (isInternalTransfer && isDebtOutflow) ? amountDefault : undefined;
 
                     logger.info(`[SafeToSpend] Simulating PP ${pp.name}: impact ${impact} on day ${dayOffset} (type: ${flowType})`);
                     addFlow(dayOffset, impact, flowType, `Planned Payment: ${pp.name || 'unnamed'} (${isLiquidTo ? 'Inflow' : 'Outflow'})`, commitAmount);
@@ -481,11 +497,12 @@ export class CashFlowSimulationService {
                     if (occurrenceMs <= now.subtract(1, 'minute').valueOf() || occurrenceMs > endMs) continue;
 
                     const dayOffset = dayjs(occurrenceMs).startOf('day').diff(now.startOf('day'), 'day');
-                    let amount = tx.amount;
-                    if (tx.currencyCode && tx.currencyCode !== resultCurrency) {
+                    const txMoney = Money.from(tx.amount, tx.currencyCode || resultCurrency);
+                    let amountDefault = txMoney.amount;
+                    if (txMoney.currencyCode !== resultCurrency) {
                         try {
-                            const { convertedAmount } = await exchangeRateService.convert(amount, tx.currencyCode, resultCurrency);
-                            amount = convertedAmount;
+                            const { convertedAmount } = await exchangeRateService.convert(txMoney.amount, txMoney.currencyCode, resultCurrency);
+                            amountDefault = convertedAmount;
                         } catch { }
                     }
 
@@ -497,11 +514,11 @@ export class CashFlowSimulationService {
                         : 'PLAN_JOURNAL';
 
                     const impact = (isInternalTransfer && isDebtOutflow)
-                        ? (tx.transactionType === TransactionType.CREDIT ? -amount : 0)
-                        : (isInternalTransfer ? 0 : (tx.transactionType === TransactionType.DEBIT ? amount : -amount));
+                        ? (tx.transactionType === TransactionType.CREDIT ? -amountDefault : 0)
+                        : (isInternalTransfer ? 0 : (tx.transactionType === TransactionType.DEBIT ? amountDefault : -amountDefault));
 
                     // Similarly to PP, internal transfers to debt should be tracked for commitment display.
-                    const commitAmount = (isInternalTransfer && isDebtOutflow && tx.transactionType === TransactionType.CREDIT) ? amount : undefined;
+                    const commitAmount = (isInternalTransfer && isDebtOutflow && tx.transactionType === TransactionType.CREDIT) ? amountDefault : undefined;
 
                     addFlow(dayOffset, impact, flowType, `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`, commitAmount);
                 }
@@ -512,19 +529,19 @@ export class CashFlowSimulationService {
             flowByDayOffset,
             organicNetFlow: 0,
             effectiveDailyDrain,
-            totalFutureInflow,
-            committedBudget,
-            committedPlanned,
-            committedPlannedPayments,
-            committedPlannedJournals,
-            committedLiabilities,
-            committedLiabilitiesCC,
-            committedLiabilitiesOther,
-            totalLiabilities: totalLiabilitiesSum,
-            totalLiabilitiesCC,
-            totalLiabilitiesOther,
-            currentMonthBudgetRemaining,
-            nextMonthBudgetProjected,
+            totalFutureInflow: futureInflow.amount,
+            committedBudget: committedBudg.amount,
+            committedPlanned: planned.amount,
+            committedPlannedPayments: plannedPaymentsSum.amount,
+            committedJournals: plannedJournalsSum.amount,
+            committedLiabilities: liabilities.amount,
+            committedLiabilitiesCC: liabilitiesCC.amount,
+            committedLiabilitiesOther: liabilitiesOther.amount,
+            totalLiabilities: totalLiabs.amount,
+            totalLiabilitiesCC: totalLiabsCC.amount,
+            totalLiabilitiesOther: totalLiabsOther.amount,
+            currentMonthBudgetRemaining: currentMonthBudgRem.amount,
+            nextMonthBudgetProjected: nextMonthBudgProj.amount,
             nextMonthProjectionDays,
             dailyBudgetBurns,
             committedAmountByAccount

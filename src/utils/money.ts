@@ -52,3 +52,65 @@ export const formatCurrency = (
     // Redirect to centralized CurrencyFormatter to ensure symbol fallback logic is applied
     return CurrencyFormatter.format(amount, currencyCode);
 };
+
+/**
+ * Money - Standard value object for currency amounts.
+ * Encapsulates amount and currencyCode.
+ */
+export class Money {
+    public readonly amount: number;
+    public readonly currencyCode: string;
+
+    constructor(amount: number, currencyCode: string = AppConfig.defaultCurrency) {
+        this.amount = amount;
+        this.currencyCode = currencyCode;
+    }
+
+    /**
+     * Creates a new Money instance with the amount rounded to the given precision.
+     */
+    public round(precision: number = AppConfig.defaultCurrencyPrecision): Money {
+        return new Money(roundToPrecision(this.amount, precision), this.currencyCode);
+    }
+
+    /**
+     * Adds another Money instance of the SAME currency.
+     */
+    public add(other: Money): Money {
+        if (this.currencyCode !== other.currencyCode) {
+            throw new Error(`Currency mismatch in addition: ${this.currencyCode} vs ${other.currencyCode}`);
+        }
+        return new Money(this.amount + other.amount, this.currencyCode);
+    }
+
+    /**
+     * Subtracts another Money instance of the SAME currency.
+     */
+    public subtract(other: Money): Money {
+        if (this.currencyCode !== other.currencyCode) {
+            throw new Error(`Currency mismatch in subtraction: ${this.currencyCode} vs ${other.currencyCode}`);
+        }
+        return new Money(this.amount - other.amount, this.currencyCode);
+    }
+
+    /**
+     * Multiplies the amount by a factor (e.g., exchange rate).
+     */
+    public multiply(factor: number): Money {
+        return new Money(this.amount * factor, this.currencyCode);
+    }
+
+    /**
+     * Formats the amount as a currency string.
+     */
+    public format(): string {
+        return formatCurrency(this.amount, this.currencyCode);
+    }
+
+    /**
+     * Static factory for easier creation.
+     */
+    public static from(amount: number, currencyCode?: string): Money {
+        return new Money(amount, currencyCode);
+    }
+}

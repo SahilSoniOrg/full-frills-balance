@@ -1,4 +1,5 @@
 import Transaction from '@/src/data/models/Transaction'
+import { JournalDisplayType } from '@/src/types/domain'
 import { Model, Query, Relation } from '@nozbe/watermelondb'
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators'
 
@@ -28,7 +29,7 @@ export default class Journal extends Model {
   // totalAmount is the magnitude of the journal (sum of all debits)
   @field('total_amount') totalAmount!: number
   @field('transaction_count') transactionCount!: number
-  @field('display_type') displayType!: string // INCOME, EXPENSE, TRANSFER, MIXED
+  @field('display_type') displayType!: JournalDisplayType // INCOME, EXPENSE, TRANSFER, MIXED
 
   @date('created_at') createdAt!: Date
   @date('updated_at') updatedAt!: Date

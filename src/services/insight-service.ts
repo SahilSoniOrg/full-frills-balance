@@ -19,6 +19,7 @@ import {
     LIQUID_LIABILITY_SUBTYPES
 } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
+import { Money } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 
 import dayjs from 'dayjs';
@@ -180,19 +181,36 @@ export class InsightService {
                     switchMap(async ([usages, budgetScopeGroups, rawDeltas]) => {
                         const accountBalances = await balanceService.getAccountBalances();
 
-                        let totalLiquid = 0;
-                        liquidAssets.forEach(a => {
+                        const targetMoney = Money.from(0, resultCurrency);
+                        let totalLiquidMoney = targetMoney;
+                        
+                        for (const a of liquidAssets) {
                             const b = accountBalances.find(bal => bal.accountId === a.id);
-                            if (b) totalLiquid += b.balance;
-                        });
+                            if (b) {
+                                let amount = b.balance;
+                                if (b.currencyCode !== resultCurrency) {
+                                    const { convertedAmount } = await exchangeRateService.convert(b.balance, b.currencyCode, resultCurrency);
+                                    amount = convertedAmount;
+                                }
+                                totalLiquidMoney = totalLiquidMoney.add(Money.from(amount, resultCurrency));
+                            }
+                        }
 
-                        const liabilityAccountBalances = liquidLiabilities.map(l => ({
-                            account: l,
-                            balance: Math.abs(accountBalances.find(bal => bal.accountId === l.id)?.balance || 0)
+                        const liabilityAccountBalances = await Promise.all(liquidLiabilities.map(async l => {
+                            const b = accountBalances.find(bal => bal.accountId === l.id);
+                            let balance = Math.abs(b?.balance || 0);
+                            if (b && b.currencyCode !== resultCurrency) {
+                                const { convertedAmount } = await exchangeRateService.convert(balance, b.currencyCode, resultCurrency);
+                                balance = convertedAmount;
+                            }
+                            return {
+                                account: l,
+                                balance: Money.from(balance, resultCurrency)
+                            };
                         }));
 
                         const simulationResults = await cashFlowSimulationService.simulateSafeToSpend(
-                            totalLiquid,
+                            totalLiquidMoney,
                             plannedPayments,
                             plannedJournals,
                             [...liquidAssetIds, ...liquidLiabilityIds],
@@ -222,7 +240,7 @@ export class InsightService {
                         }
 
                         const historyPoints: SafeToSpendDataPoint[] = [];
-                        let runningBalance = totalLiquid;
+                        let runningBalance = totalLiquidMoney.amount;
                         historyPoints.push({ timestamp: now.valueOf(), value: runningBalance, isProjected: false });
 
                         for (let i = 0; i < safeToSpendDays; i++) {
@@ -263,7 +281,7 @@ export class InsightService {
 
                         return {
                             ...simulationResults,
-                            totalLiquidAssets: totalLiquid,
+                            totalLiquidAssets: totalLiquidMoney.amount,
                             currencyCode: resultCurrency,
                             liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
                             liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],
