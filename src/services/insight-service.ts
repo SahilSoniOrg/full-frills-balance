@@ -56,6 +56,7 @@ export interface SafeToSpendResult {
     committedLiabilitiesOther: number;
     totalFutureInflow: number;
     safeToSpend: number;
+    shortfall: number;
     currencyCode: string;
     liquidAssetSubtypes: AccountSubtype[];
     liquidLiabilitySubtypes: AccountSubtype[];
@@ -134,6 +135,7 @@ export class InsightService {
                         committedLiabilitiesCC: 0,
                         committedLiabilitiesOther: 0,
                         safeToSpend: 0,
+                        shortfall: 0,
                         currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
                         liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
                         liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],
@@ -296,6 +298,7 @@ export class InsightService {
 
                         const {
                             safeToSpend,
+                            shortfall,
                             totalFutureInflow,
                             committedPlanned,
                             committedPlannedPayments,
@@ -358,6 +361,7 @@ export class InsightService {
                             committedLiabilitiesOther,
                             totalFutureInflow,
                             safeToSpend,
+                            shortfall,
                             currencyCode: resultCurrency,
                             liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
                             liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],

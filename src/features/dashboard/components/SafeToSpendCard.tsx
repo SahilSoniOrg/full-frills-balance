@@ -26,6 +26,7 @@ interface SafeToSpendCardProps {
     totalLiabilities: number;
     totalLiabilitiesCC: number;
     totalLiabilitiesOther: number;
+    shortfall: number;
     currencyCode: string;
     liquidAssetSubtypes: AccountSubtype[];
     liquidLiabilitySubtypes: AccountSubtype[];
@@ -48,6 +49,7 @@ interface SafeToSpendCardProps {
 
 export const SafeToSpendCard = ({
     safeToSpend,
+    shortfall,
     projection,
     committedBudget,
     committedPlanned,
@@ -138,8 +140,8 @@ export const SafeToSpendCard = ({
     );
     // Reserve is removed to prevent the "black sliver". The bar is now always "full" relative to current/required liquidity.
 
-    const isOverCommitted = (committedTotal + committedLiabilities) > totalLiquidAssets;
-    const isPositiveSafeToSpend = !isOverCommitted && safeToSpend > 0;
+    const isOverCommitted = shortfall > 0;
+    const isPositiveSafeToSpend = safeToSpend > 0;
 
     return (
         <>
@@ -178,7 +180,7 @@ export const SafeToSpendCard = ({
                         minimumFontScale={0.55}
                         ellipsizeMode="tail"
                     >
-                        {format(isOverCommitted ? (committedTotal + committedLiabilities - totalLiquidAssets) : safeToSpend)}
+                        {format(isOverCommitted ? shortfall : safeToSpend)}
                     </AppText>
                     <AppText
                         variant="caption"

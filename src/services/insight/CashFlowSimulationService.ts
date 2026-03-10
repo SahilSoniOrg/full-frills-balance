@@ -24,6 +24,7 @@ export class CashFlowSimulationService {
         resultCurrency: string,
     ): Promise<{
         safeToSpend: number;
+        shortfall: number;
         totalFutureInflow: number;
         committedPlanned: number;
         committedPlannedPayments: number;
@@ -37,21 +38,8 @@ export class CashFlowSimulationService {
     }> {
         const now = dayjs().startOf('day');
         const SIMULATION_DAYS = AppConfig.defaults.safeToSpendDays;
-
-        const {
-            flowByDayOffset,
-            effectiveDailyDrain,
-            totalFutureInflow,
-            committedPlanned,
-            committedPlannedPayments,
-            committedPlannedJournals,
-            committedLiabilities,
-            committedLiabilitiesCC,
-            committedLiabilitiesOther,
-            totalLiabilities,
-            totalLiabilitiesCC,
-            totalLiabilitiesOther
-        } = await this.getSimulationFlows(
+        
+        const flows = await this.getSimulationFlows(
             SIMULATION_DAYS,
             now,
             dailyBudgetBurn,
@@ -63,30 +51,29 @@ export class CashFlowSimulationService {
             resultCurrency
         );
 
-        // Only liability payments due inside the simulation window reduce spendable cash.
-        // Outstanding balances remain informational unless a due payment is scheduled.
         let currentBalance = startingBalance;
         let minBalance = currentBalance;
 
         for (let d = 0; d < SIMULATION_DAYS; d++) {
-            const drain = Array.isArray(effectiveDailyDrain) ? (effectiveDailyDrain[d] || 0) : effectiveDailyDrain;
+            const drain = Array.isArray(flows.effectiveDailyDrain) ? (flows.effectiveDailyDrain[d] || 0) : flows.effectiveDailyDrain;
             currentBalance -= drain;
-            currentBalance += flowByDayOffset.get(d) || 0;
+            currentBalance += flows.flowByDayOffset.get(d) || 0;
             if (currentBalance < minBalance) minBalance = currentBalance;
         }
 
         return {
             safeToSpend: Math.max(0, minBalance),
-            totalFutureInflow,
-            committedPlanned,
-            committedPlannedPayments,
-            committedPlannedJournals,
-            committedLiabilities,
-            committedLiabilitiesCC,
-            committedLiabilitiesOther,
-            totalLiabilities,
-            totalLiabilitiesCC,
-            totalLiabilitiesOther
+            shortfall: minBalance < 0 ? Math.abs(minBalance) : 0,
+            totalFutureInflow: flows.totalFutureInflow,
+            committedPlanned: flows.committedPlanned,
+            committedPlannedPayments: flows.committedPlannedPayments,
+            committedPlannedJournals: flows.committedPlannedJournals,
+            committedLiabilities: flows.committedLiabilities,
+            committedLiabilitiesCC: flows.committedLiabilitiesCC,
+            committedLiabilitiesOther: flows.committedLiabilitiesOther,
+            totalLiabilities: flows.totalLiabilities,
+            totalLiabilitiesCC: flows.totalLiabilitiesCC,
+            totalLiabilitiesOther: flows.totalLiabilitiesOther
         };
     }
 
