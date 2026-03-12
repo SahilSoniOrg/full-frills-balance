@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="horizontal"
+    android:paddingLeft="8dp"
+    android:paddingTop="6dp"
+    android:paddingRight="8dp"
+    android:paddingBottom="6dp">
+
+    <LinearLayout
+        android:id="@+id/widget_journal_launcher_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/widget_journal_launcher_background"
+        android:divider="@drawable/widget_journal_launcher_divider"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="14dp"
+        android:paddingTop="10dp"
+        android:paddingRight="14dp"
+        android:paddingBottom="10dp"
+        android:showDividers="middle">
+
+        <ImageView
+            android:id="@+id/widget_income_button"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/journal_widget_income"
+            android:padding="4dp"
+            android:src="@drawable/widget_journal_launcher_income" />
+
+        <ImageView
+            android:id="@+id/widget_expense_button"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/journal_widget_expense"
+            android:padding="4dp"
+            android:src="@drawable/widget_journal_launcher_expense" />
+
+        <ImageView
+            android:id="@+id/widget_transfer_button"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/journal_widget_transfer"
+            android:padding="4dp"
+            android:src="@drawable/widget_journal_launcher_transfer" />
+    </LinearLayout>
+
+</LinearLayout>

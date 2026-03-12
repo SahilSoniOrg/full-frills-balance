@@ -43,6 +43,7 @@ export interface JournalEntryViewModel {
     totalDebits: number;
     totalCredits: number;
     isBalanced: boolean;
+    launchSource?: string;
 }
 
 /**
@@ -56,6 +57,16 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     const params = useLocalSearchParams();
     const initialMode = params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
     const initialType = params.type === 'expense' || params.type === 'income' || params.type === 'transfer' ? params.type : undefined;
+    const initialSourceAccountId = typeof params.sourceAccountId === 'string'
+        ? params.sourceAccountId
+        : typeof params.sourceId === 'string'
+            ? params.sourceId
+            : undefined;
+    const initialDestinationAccountId = typeof params.destinationAccountId === 'string'
+        ? params.destinationAccountId
+        : typeof params.destinationId === 'string'
+            ? params.destinationId
+            : undefined;
 
     const { accounts, isLoading: isLoadingAccounts } = useAccounts();
 
@@ -73,8 +84,8 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         smsSender: params.smsSender as string,
         rawSmsBody: params.rawSmsBody as string,
         initialDate: params.initialDate as string,
-        initialSourceId: params.sourceAccountId as string,
-        initialDestinationId: params.destinationAccountId as string,
+        initialSourceId: initialSourceAccountId,
+        initialDestinationId: initialDestinationAccountId,
         // M-9 fix: sms processing is a screen-level concern, not a journal editor concern.
         // The hook calls this callback after a successful save without knowing what it does.
         onAfterSave: smsRecordId
@@ -226,5 +237,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         onSelectCurrency: setSelectedCurrency,
         totalDebits,
         totalCredits,
+        launchSource: typeof params.source === 'string' ? params.source : undefined,
     };
 }

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_safe_to_spend_actions_square_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_journal_launcher_background"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:paddingLeft="16dp"
+    android:paddingTop="16dp"
+    android:paddingRight="16dp"
+    android:paddingBottom="14dp">
+
+    <LinearLayout
+        android:id="@+id/widget_safe_to_spend_actions_square_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_safe_to_spend_actions_square_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/safe_to_spend_widget_title"
+            android:textAllCaps="true"
+            android:textColor="#B8D6EB"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_safe_to_spend_actions_square_amount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:maxLines="1"
+            android:text="@string/safe_to_spend_widget_amount_placeholder"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_safe_to_spend_actions_square_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:maxLines="1"
+            android:text="@string/safe_to_spend_widget_subtitle"
+            android:textColor="#D9EAF6"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/widget_journal_launcher_button"
+        android:divider="@drawable/widget_journal_launcher_divider"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="10dp"
+        android:paddingTop="8dp"
+        android:paddingRight="10dp"
+        android:paddingBottom="8dp"
+        android:showDividers="middle">
+
+        <ImageView
+            android:id="@+id/widget_safe_to_spend_actions_square_income_button"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/journal_widget_income"
+            android:padding="4dp"
+            android:src="@drawable/widget_journal_launcher_income" />
+
+        <ImageView
+            android:id="@+id/widget_safe_to_spend_actions_square_expense_button"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/journal_widget_expense"
+            android:padding="4dp"
+            android:src="@drawable/widget_journal_launcher_expense" />
+
+        <ImageView
+            android:id="@+id/widget_safe_to_spend_actions_square_transfer_button"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/journal_widget_transfer"
+            android:padding="4dp"
+            android:src="@drawable/widget_journal_launcher_transfer" />
+    </LinearLayout>
+
+</LinearLayout>

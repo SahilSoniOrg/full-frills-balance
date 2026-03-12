@@ -9,6 +9,9 @@ export type RootStackParamList = {
   'journal-entry': {
     mode?: 'simple' | 'advanced';
     type?: 'income' | 'expense' | 'transfer';
+    source?: 'widget';
+    sourceAccountId?: string;
+    destinationAccountId?: string;
   };
   'journal-list': undefined;
   'transaction-details': { journalId: string };

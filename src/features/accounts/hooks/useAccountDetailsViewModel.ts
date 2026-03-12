@@ -316,7 +316,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     }, [router]);
 
     const onAddPress = useCallback(() => {
-        router.push(`/journal-entry?sourceId=${accountId}`);
+        router.push(`/journal-entry?sourceAccountId=${accountId}`);
     }, [accountId, router]);
 
     const onDateSelect = useCallback((range: DateRange | null, filter: PeriodFilter) => {

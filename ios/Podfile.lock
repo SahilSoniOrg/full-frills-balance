@@ -285,6 +285,8 @@ PODS:
     - ExpoModulesCore
   - ExpoWebBrowser (55.0.9):
     - ExpoModulesCore
+  - ExpoWidgets (1.0.0):
+    - ExpoModulesCore
   - EXStructuredHeaders (55.0.0)
   - EXUpdates (55.0.12):
     - EASClient
@@ -2591,6 +2593,7 @@ DEPENDENCIES:
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
+  - ExpoWidgets (from `../modules/expo-widgets/ios`)
   - EXStructuredHeaders (from `../node_modules/expo-structured-headers/ios`)
   - EXUpdates (from `../node_modules/expo-updates/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
@@ -2764,6 +2767,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-system-ui/ios"
   ExpoWebBrowser:
     :path: "../node_modules/expo-web-browser/ios"
+  ExpoWidgets:
+    :path: "../modules/expo-widgets/ios"
   EXStructuredHeaders:
     :path: "../node_modules/expo-structured-headers/ios"
   EXUpdates:
@@ -2980,6 +2985,7 @@ SPEC CHECKSUMS:
   ExpoSymbols: 3d67a96643245a5d933ce7fbf535f95eb541f617
   ExpoSystemUI: ae936ff8f78ca3d6c13884704beb7705fe26d136
   ExpoWebBrowser: f13a6e46e44049bbb8ce49ff8aaa4d819c87d1fe
+  ExpoWidgets: a8bb2516b590674c21705db120332032f12741e4
   EXStructuredHeaders: aa49a5557fa24aa61dda4ac665f3987bf3e9e35d
   EXUpdates: daa019c52cf123eacb3f99a84575b3f520c55a86
   EXUpdatesInterface: d48f288b92900bd95a27c6cf92a7b9aff826d49a

@@ -1,0 +1,62 @@
+package `in`.sahilsoni.fullfrillsbalance
+
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.Context
+import android.widget.RemoteViews
+
+class SafeToSpendWidgetProvider : AppWidgetProvider() {
+  override fun onUpdate(
+    context: Context,
+    appWidgetManager: AppWidgetManager,
+    appWidgetIds: IntArray,
+  ) {
+    appWidgetIds.forEach { appWidgetId ->
+      appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+    }
+  }
+
+  override fun onEnabled(context: Context) {
+    super.onEnabled(context)
+    FullFrillsBalanceWidgetSupport.refreshAll(context)
+  }
+
+  override fun onAppWidgetOptionsChanged(
+    context: Context,
+    appWidgetManager: AppWidgetManager,
+    appWidgetId: Int,
+    newOptions: android.os.Bundle,
+  ) {
+    super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+    appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+  }
+
+  companion object {
+    private const val REQUEST_CODE_OPEN_APP = 2001
+
+    private fun buildRemoteViews(context: Context): RemoteViews {
+      return RemoteViews(context.packageName, R.layout.widget_safe_to_spend).apply {
+        FullFrillsBalanceWidgetSupport.bindSafeToSpend(
+          context = context,
+          remoteViews = this,
+          titleViewId = R.id.widget_safe_to_spend_title,
+          amountViewId = R.id.widget_safe_to_spend_amount,
+          subtitleViewId = R.id.widget_safe_to_spend_subtitle,
+        )
+        FullFrillsBalanceWidgetSupport.applySafeToSpendTheme(
+          context = context,
+          remoteViews = this,
+          rootViewId = R.id.widget_safe_to_spend_root,
+          titleViewId = R.id.widget_safe_to_spend_title,
+          amountViewId = R.id.widget_safe_to_spend_amount,
+          subtitleViewId = R.id.widget_safe_to_spend_subtitle,
+        )
+
+        setOnClickPendingIntent(
+          R.id.widget_safe_to_spend_root,
+          FullFrillsBalanceWidgetSupport.createOpenAppPendingIntent(context, REQUEST_CODE_OPEN_APP),
+        )
+      }
+    }
+  }
+}

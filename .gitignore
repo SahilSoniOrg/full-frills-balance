@@ -13,6 +13,10 @@ build-*
 
 # Native
 .kotlin/
+android/build/
+android/app/build/
+ios/build/
+modules/*/android/build/
 *.orig.*
 *.jks
 *.p8

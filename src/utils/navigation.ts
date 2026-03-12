@@ -248,6 +248,35 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to journal entry from a widget or other external launcher.
+     */
+    toWidgetJournalEntry: (options?: {
+        mode?: 'simple' | 'advanced';
+        type?: 'income' | 'expense' | 'transfer';
+        sourceAccountId?: string;
+        destinationAccountId?: string;
+    }) => {
+        const params: Record<string, string> = {
+            source: 'widget',
+        };
+
+        if (options?.mode) {
+            params.mode = options.mode;
+        }
+        if (options?.type) {
+            params.type = options.type;
+        }
+        if (options?.sourceAccountId) {
+            params.sourceAccountId = options.sourceAccountId;
+        }
+        if (options?.destinationAccountId) {
+            params.destinationAccountId = options.destinationAccountId;
+        }
+
+        AppNavigation.toJournalEntry({ params });
+    },
+
+    /**
      * Navigate to insight details with route params.
      */
     toInsightDetails: (params: {
