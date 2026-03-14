@@ -433,11 +433,19 @@ export class JournalService {
             distinctUntilChanged((prev, curr) => {
                 if (prev.length !== curr.length) return false;
                 for (let i = 0; i < prev.length; i++) {
+                    const p = prev[i];
+                    const c = curr[i];
                     // Simple deep check for the parts of the journal that trigger list re-renders
-                    if (prev[i].id !== curr[i].id ||
-                        prev[i].status !== curr[i].status ||
-                        prev[i].totalAmount !== curr[i].totalAmount ||
-                        prev[i].transactionCount !== curr[i].transactionCount) return false;
+                    if (p.id !== c.id ||
+                        p.status !== c.status ||
+                        p.totalAmount !== c.totalAmount ||
+                        p.transactionCount !== c.transactionCount ||
+                        p.accounts.length !== c.accounts.length) return false;
+
+                    // Quick check for account stability (ID + Name change should trigger re-render)
+                    for (let j = 0; j < p.accounts.length; j++) {
+                        if (p.accounts[j].id !== c.accounts[j].id || p.accounts[j].name !== c.accounts[j].name) return false;
+                    }
                 }
                 return true;
             })

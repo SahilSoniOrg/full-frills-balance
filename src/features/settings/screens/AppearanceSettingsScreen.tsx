@@ -17,6 +17,7 @@ export function AppearanceSettingsScreen() {
             showBack={true}
             scrollable
             withPadding
+            edges={['top', 'bottom']}
         >
             <View style={styles.container}>
 
@@ -178,7 +179,7 @@ export function AppearanceSettingsScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        paddingBottom: Spacing.xl,
+        paddingBottom: Spacing.xxxxl,
     },
     sectionTitle: {
         marginBottom: Spacing.xs,
