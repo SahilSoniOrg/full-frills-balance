@@ -8,7 +8,8 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository'
 import { useObservable } from '@/src/hooks/useObservable'
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService'
 import { logger } from '@/src/utils/logger'
-import { router, useLocalSearchParams } from 'expo-router'
+import { AppNavigation } from '@/src/utils/navigation'
+import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 
 export function useBudgetEditViewModel() {
@@ -71,7 +72,7 @@ export function useBudgetEditViewModel() {
             } else {
                 await budgetWriteService.createBudget(input, selectedAccountIds)
             }
-            router.back()
+            AppNavigation.back()
         } finally {
             setIsSaving(false)
         }

@@ -2,7 +2,7 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { useUI } from '@/src/contexts/UIContext';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
-import { router } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
 import { onboardingService } from '../services/OnboardingService';
@@ -110,7 +110,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
 
             logger.info('Onboarding complete, redirecting to dashboard');
             void triggerHaptic('success');
-            router.replace('/(tabs)');
+            AppNavigation.toDashboard();
         } catch (error) {
             logger.error('Failed to complete onboarding:', error);
             void triggerHaptic('error');

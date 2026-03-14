@@ -8,12 +8,53 @@ export const AppNavigation = {
     /**
      * Navigate back to the previous screen.
      */
-    back: () => router.back(),
+    back: () => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace('/');
+        }
+    },
+
+    /**
+     * Navigate to the Dashboard (Home tab).
+     */
+    toDashboard: () => {
+        router.replace('/');
+    },
+
+    /**
+     * Navigate to the Accounts List tab.
+     */
+    toAccounts: () => {
+        router.replace('/(tabs)/accounts');
+    },
+
+    /**
+     * Navigate to the Activity/Journal List tab.
+     */
+    toJournal: () => {
+        router.replace('/(tabs)/activity');
+    },
+
+    /**
+     * Navigate to the Commitments/Budget List tab.
+     */
+    toCommitments: () => {
+        router.replace('/(tabs)/commitments');
+    },
+
+    /**
+     * Navigate to the Settings tab.
+     */
+    toSettings: () => {
+        router.replace('/(tabs)/settings');
+    },
 
     /**
      * Navigate to the Journal Entry screen (Create or Edit).
      */
-    toJournalEntry: (options?: { journalId?: string; smsId?: string; smsRecordId?: string; smsSender?: string; rawSmsBody?: string; initialDate?: string; params?: Record<string, string> }) => {
+    toJournalEntry: (options?: { journalId?: string; smsId?: string; smsRecordId?: string; smsSender?: string; rawSmsBody?: string; initialDate?: string; sourceAccountId?: string; params?: Record<string, string> }) => {
         const queryParams = new URLSearchParams();
         if (options?.journalId) {
             queryParams.append('journalId', options.journalId);
@@ -32,6 +73,9 @@ export const AppNavigation = {
         }
         if (options?.initialDate) {
             queryParams.append('initialDate', options.initialDate);
+        }
+        if (options?.sourceAccountId) {
+            queryParams.append('sourceAccountId', options.sourceAccountId);
         }
         if (options?.params) {
             Object.entries(options.params).forEach(([key, value]) => {
@@ -84,13 +128,20 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to the Account Details screen, replacing the current route.
+     */
+    replaceToAccountDetails: (accountId: string) => {
+        router.replace(`/account-details?accountId=${accountId}` as any);
+    },
+
+    /**
      * Navigate to the Account Form screen (Create or Edit).
      */
     toAccountForm: (accountId?: string) => {
         if (accountId) {
-            router.push(`/accounts/form?id=${accountId}` as any);
+            router.push(`/account-creation?accountId=${accountId}` as any);
         } else {
-            router.push('/accounts/form' as any);
+            router.push('/account-creation' as any);
         }
     },
 
@@ -124,20 +175,6 @@ export const AppNavigation = {
     },
 
     /**
-     * Navigate to the Reports screen.
-     */
-    toReports: () => {
-        router.push('/reports' as any);
-    },
-
-    /**
-     * Navigate to the Settings screen.
-     */
-    toSettings: () => {
-        router.push('/settings' as any);
-    },
-
-    /**
      * Navigate to appearance settings.
      */
     toAppearanceSettings: () => {
@@ -161,15 +198,31 @@ export const AppNavigation = {
     /**
      * Navigate to the Audit Log screen.
      */
-    toAuditLog: () => {
-        router.push('/audit-log' as any);
+    toAuditLog: (options?: { entityType?: string; entityId?: string }) => {
+        const queryParams = new URLSearchParams();
+        if (options?.entityType) queryParams.append('entityType', options.entityType);
+        if (options?.entityId) queryParams.append('entityId', options.entityId);
+        const queryString = queryParams.toString();
+        const route = queryString ? `/audit-log?${queryString}` : '/audit-log';
+        router.push(route as any);
     },
 
     /**
      * Navigate to the Account Reorder screen.
      */
     toAccountReorder: () => {
-        router.push('/accounts/reorder' as any);
+        router.push('/account-reorder' as any);
+    },
+
+    /**
+     * Navigate to the Manage Hierarchy screen.
+     */
+    toManageHierarchy: (options?: { accountId?: string }) => {
+        if (options?.accountId) {
+            router.push(`/manage-hierarchy?accountId=${options.accountId}` as any);
+        } else {
+            router.push('/manage-hierarchy' as any);
+        }
     },
 
     /**
@@ -302,5 +355,23 @@ export const AppNavigation = {
                 currencyCode: params.currencyCode,
             },
         } as any);
+    },
+
+    /**
+     * Navigate to the Design Preview screen.
+     */
+    toDesignPreview: () => {
+        router.push('/_design-preview' as any);
+    },
+
+    /**
+     * Dismiss current modal or navigate back.
+     */
+    dismiss: () => {
+        if (router.canGoBack()) {
+            router.dismiss();
+        } else {
+            router.replace('/');
+        }
     }
 };

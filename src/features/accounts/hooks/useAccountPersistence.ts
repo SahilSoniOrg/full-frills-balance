@@ -3,7 +3,7 @@ import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
 import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { sanitizeInput } from '@/src/utils/validation';
-import { useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useRef, useState } from 'react';
 
 interface PersistenceResult {
@@ -27,17 +27,12 @@ export function useAccountPersistence(
     currentAccountId: string | undefined,
     hasExistingAccounts: boolean
 ): PersistenceResult {
-    const router = useRouter();
     const { createAccount, updateAccount, adjustBalance } = useAccountActions();
     const [isCreating, setIsCreating] = useState(false);
     const isSubmitting = useRef(false);
 
     const handleCancel = () => {
-        if (router.canGoBack()) {
-            router.back();
-        } else {
-            router.push('/accounts');
-        }
+        AppNavigation.back();
     };
 
     const handleSave = async (
@@ -82,7 +77,7 @@ export function useAccountPersistence(
                     `"${sanitizedName}" has been updated successfully!`
                 );
                 logger.info('[AccountPersistence] Account updated, calling back()');
-                router.back();
+                AppNavigation.back();
             } else {
                 logger.info(`[AccountPersistence] Creating account ${sanitizedName}...`);
                 await createAccount({
@@ -102,13 +97,9 @@ export function useAccountPersistence(
                 );
 
                 if (hasExistingAccounts) {
-                    if (router.canGoBack()) {
-                        router.back();
-                    } else {
-                        router.replace('/(tabs)/accounts');
-                    }
+                    AppNavigation.back();
                 } else {
-                    router.replace('/(tabs)/accounts');
+                    AppNavigation.toAccounts();
                 }
             }
         } catch (error) {

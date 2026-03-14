@@ -10,10 +10,11 @@ import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { smsService } from '@/src/services/sms-service';
 import { JournalDisplayType, TransactionWithAccountInfo } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/utils/navigation';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { useObservable } from '@/src/hooks/useObservable';
 import { from, of } from 'rxjs';
@@ -71,7 +72,6 @@ export interface TransactionDetailsViewModel {
 }
 
 export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
-    const router = useRouter();
     const { journalId } = useLocalSearchParams<{ journalId: string }>();
     const { theme } = useTheme();
     const { deleteJournal, findJournal, duplicateJournal, postJournal } = useJournalActions();
@@ -151,12 +151,12 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                     const found = await findJournal(journalId);
                     if (!found) {
                         showErrorAlert('Transaction not found. It may have already been deleted.');
-                        router.back();
+                        AppNavigation.back();
                         return;
                     }
                     await deleteJournal(found);
                     showSuccessAlert('Deleted', 'Transaction has been deleted.');
-                    router.back();
+                    AppNavigation.back();
                 } catch (error) {
                     logger.error('Failed to delete transaction:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -164,31 +164,31 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 }
             }
         );
-    }, [deleteJournal, findJournal, journalId, router]);
+    }, [deleteJournal, findJournal, journalId]);
 
     const handleCopy = useCallback(async () => {
         try {
             const newJournal = await duplicateJournal(journalId);
             showSuccessAlert('Copied', 'New transaction created from copy.');
-            router.push({ pathname: '/journal-entry', params: { journalId: newJournal.id } });
+            AppNavigation.toJournalEntry({ journalId: newJournal.id });
         } catch (error) {
             logger.error('Failed to copy transaction:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             showErrorAlert(`Could not copy transaction: ${errorMessage}`);
         }
-    }, [duplicateJournal, journalId, router]);
+    }, [duplicateJournal, journalId]);
 
     const handleEdit = useCallback(() => {
-        router.push({ pathname: '/journal-entry', params: { journalId } });
-    }, [journalId, router]);
+        AppNavigation.toJournalEntry({ journalId });
+    }, [journalId]);
 
     const onHistoryPress = useCallback(() => {
-        router.push(`/audit-log?entityType=journal&entityId=${journalId}`);
-    }, [journalId, router]);
+        AppNavigation.toAuditLog({ entityType: 'journal', entityId: journalId });
+    }, [journalId]);
 
     const onBack = useCallback(() => {
-        router.back();
-    }, [router]);
+        AppNavigation.back();
+    }, []);
 
 
     const handlePost = useCallback(async () => {
@@ -222,7 +222,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                     if (!pp) throw new Error('Planned payment rule not found.');
                     await plannedPaymentService.skipOccurrence(pp, journalInfo.journalDate);
                     showSuccessAlert('Skipped', 'Transaction has been skipped.');
-                    router.back();
+                    AppNavigation.back();
                 } catch (error) {
                     logger.error('Failed to skip transaction:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -230,7 +230,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 }
             }
         );
-    }, [journalInfo, router, amountText]);
+    }, [journalInfo, amountText]);
 
     const splitItems = useMemo(() => {
         return transactions.map((item: TransactionWithAccountInfo) => {
@@ -256,10 +256,10 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 iconName: (isDebit ? 'arrowDown' : 'arrowUp') as IconName,
                 iconColor: color,
                 iconBackground: withOpacity(color, Opacity.soft),
-                onPress: () => router.push(`/account-details?accountId=${item.accountId}`),
+                onPress: () => AppNavigation.toAccountDetails(item.accountId),
             };
         });
-    }, [router, theme.error, theme.income, transactions]);
+    }, [theme.error, theme.income, transactions]);
 
     return {
         theme,
@@ -283,7 +283,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         journalIdShort: journalId?.substring(0, 8) || '...',
         onHistoryPress,
         smsInfo,
-        onOpenSmsInbox: smsInfo?.inboxRecordId ? () => router.push('/sms-inbox') : undefined,
+        onOpenSmsInbox: smsInfo?.inboxRecordId ? AppNavigation.toSmsInbox : undefined,
         onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
         onSkip: journalInfo?.status === 'PLANNED' ? handleSkip : undefined,
         splitItems,

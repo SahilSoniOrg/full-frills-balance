@@ -1,7 +1,7 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import React, { ReactNode } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -12,10 +12,9 @@ interface JournalEntryHeaderProps {
 }
 
 export const JournalEntryHeader = ({ title, onClose, rightSlot }: JournalEntryHeaderProps) => {
-    const router = useRouter();
     const { theme, fonts } = useTheme();
 
-    const handleClose = onClose || (() => router.back());
+    const handleClose = onClose || (() => AppNavigation.back());
 
     return (
         <View style={[styles.header, { backgroundColor: theme.background }]}>

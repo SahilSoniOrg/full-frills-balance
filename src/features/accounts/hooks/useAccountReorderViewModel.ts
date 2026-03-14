@@ -3,7 +3,7 @@ import { useAccountActions, useAccounts } from '@/src/features/accounts/hooks/us
 import { useTheme } from '@/src/hooks/use-theme';
 import { ACCOUNT_TYPE_ORDER } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
-import { useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 export interface AccountReorderViewModel {
@@ -15,7 +15,6 @@ export interface AccountReorderViewModel {
 }
 
 export function useAccountReorderViewModel(): AccountReorderViewModel {
-    const router = useRouter();
     const { theme } = useTheme();
     const { accounts: initialAccounts, isLoading } = useAccounts();
     const { updateAccountOrder } = useAccountActions();
@@ -82,8 +81,8 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
     }, [accounts, initialAccounts, updateAccountOrder]);
 
     const onBack = useCallback(() => {
-        router.back();
-    }, [router]);
+        AppNavigation.back();
+    }, []);
 
     return {
         theme,

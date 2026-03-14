@@ -5,7 +5,7 @@ import { transformAccountsToSections } from '@/src/features/accounts/utils/trans
 import { useTheme } from '@/src/hooks/use-theme'
 import { useObservable } from '@/src/hooks/useObservable'
 import { reactiveDataService } from '@/src/services/ReactiveDataService'
-import { useRouter } from 'expo-router'
+import { AppNavigation } from '@/src/utils/navigation'
 import { useCallback, useMemo, useState } from 'react'
 
 export interface AccountCardViewModel {
@@ -58,7 +58,6 @@ export interface AccountsListViewModel {
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
-    const router = useRouter()
     const { theme } = useTheme()
     const { defaultCurrency, showAccountMonthlyStats, isPrivacyMode, setPrivacyMode } = useUI()
 
@@ -126,9 +125,9 @@ export function useAccountsListViewModel(): AccountsListViewModel {
                 return next
             })
         } else {
-            router.push(`/account-details?accountId=${accountId}`)
+            AppNavigation.toAccountDetails(accountId)
         }
-    }, [router, accounts, expandedAccountIds])
+    }, [accounts, expandedAccountIds])
 
     const onCollapseAccount = useCallback((accountId: string) => {
         setExpandedAccountIds(prev => {
@@ -139,20 +138,20 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     }, [])
 
     const onCreateAccount = useCallback(() => {
-        router.push('/account-creation')
-    }, [router])
+        AppNavigation.toAccountCreation()
+    }, [])
 
     const onReorderPress = useCallback(() => {
-        router.push('/account-reorder')
-    }, [router])
+        AppNavigation.toAccountReorder()
+    }, [])
 
     const onTogglePrivacy = useCallback(() => {
         togglePrivacyMode()
     }, [togglePrivacyMode])
 
     const onManageHierarchy = useCallback(() => {
-        router.push('/manage-hierarchy')
-    }, [router])
+        AppNavigation.toManageHierarchy()
+    }, [])
 
     const onRefresh = useCallback(() => {
         // Refresh is handled reactively by observables

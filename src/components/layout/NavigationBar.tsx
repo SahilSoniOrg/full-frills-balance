@@ -5,7 +5,7 @@
 
 import { AppText, IconButton } from '@/src/components/core'
 import { Spacing } from '@/src/constants/design-tokens'
-import { useRouter } from 'expo-router'
+import { AppNavigation } from '@/src/utils/navigation'
 import React from 'react'
 import { StyleSheet, View, type ViewStyle } from 'react-native'
 
@@ -32,13 +32,12 @@ export function NavigationBar({
     alignTitle = 'center',
     style
 }: NavigationBarProps) {
-    const router = useRouter()
 
     const handleBack = () => {
         if (onBack) {
             onBack()
         } else {
-            router.back()
+            AppNavigation.back()
         }
     }
 

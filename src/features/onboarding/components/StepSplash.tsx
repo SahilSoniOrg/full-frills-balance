@@ -2,7 +2,7 @@ import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { useImport } from '@/src/hooks/use-import';
 import { useTheme } from '@/src/hooks/use-theme';
-import { router } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -75,7 +75,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
                     <AppButton
                         variant="ghost"
                         size="md"
-                        onPress={() => router.push('/import-selection')}
+                        onPress={AppNavigation.toImportSelection}
                         loading={isImporting}
                         disabled={isImporting || isCompleting}
                         accessibilityLabel={AppConfig.strings.onboarding.splash.btnRestore}

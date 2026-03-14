@@ -3,7 +3,8 @@ import { useAccountActions, useAccountBalances, useAccounts } from '@/src/featur
 import { createAccountTypeRecord } from '@/src/utils/accountCategory';
 
 import { toast } from '@/src/utils/alerts';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutAnimation } from 'react-native';
 
@@ -28,7 +29,6 @@ export interface ManageHierarchyViewModel {
 }
 
 export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
-    const router = useRouter();
     const { accounts } = useAccounts();
     const { balancesByAccountId } = useAccountBalances(accounts);
     const { updateAccount } = useAccountActions();
@@ -201,8 +201,8 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     }, [accounts, updateAccount]);
 
     const onCreateParent = useCallback(() => {
-        router.push('/account-creation');
-    }, [router]);
+        AppNavigation.toAccountCreation();
+    }, []);
 
     const onSelectAccount = useCallback((accountId: string | null) => {
         setSelectedAccountId(accountId);

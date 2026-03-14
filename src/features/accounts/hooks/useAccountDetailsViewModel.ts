@@ -23,7 +23,8 @@ import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { map, of } from 'rxjs';
 
@@ -103,7 +104,6 @@ export interface AccountDetailsViewModel {
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const { defaultCurrency } = useUI();
-    const router = useRouter();
     const params = useLocalSearchParams();
     const accountId = params.accountId as string;
     const startDateParam = params.startDate as string;
@@ -271,7 +271,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                 try {
                     await deleteAccount(account);
                     showSuccessAlert('Deleted', 'Account has been deleted.');
-                    router.push('/(tabs)/accounts');
+                    AppNavigation.toAccounts();
                 } catch (error) {
                     logger.error('Failed to delete account:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -279,7 +279,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                 }
             }
         );
-    }, [account, deleteAccount, router, transactionCount]);
+    }, [account, deleteAccount, transactionCount]);
 
     const onRecover = useCallback(() => {
         showConfirmationAlert(
@@ -289,7 +289,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                 try {
                     await recoverAction(accountId);
                     showSuccessAlert('Recovered', 'Account has been restored.');
-                    router.replace(`/account-details?accountId=${accountId}`);
+                    AppNavigation.replaceToAccountDetails(accountId);
                 } catch (error) {
                     logger.error('Failed to recover account:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -297,27 +297,29 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                 }
             }
         );
-    }, [accountId, recoverAction, router]);
+    }, [accountId, recoverAction]);
 
     const onEdit = useCallback(() => {
-        router.push(`/account-creation?accountId=${accountId}`);
-    }, [accountId, router]);
+        AppNavigation.toAccountForm(accountId);
+    }, [accountId]);
 
     const onBack = useCallback(() => {
-        router.back();
-    }, [router]);
+        AppNavigation.back();
+    }, []);
 
     const onAuditPress = useCallback(() => {
-        router.push(`/audit-log?entityType=account&entityId=${accountId}`);
-    }, [accountId, router]);
+        AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId });
+    }, [accountId]);
 
     const onTransactionPress = useCallback((transaction: EnrichedTransaction) => {
-        router.push(`/transaction-details?journalId=${transaction.journalId}`);
-    }, [router]);
+        if (transaction.journalId) {
+            AppNavigation.toTransactionDetails(transaction.journalId);
+        }
+    }, []);
 
     const onAddPress = useCallback(() => {
-        router.push(`/journal-entry?sourceAccountId=${accountId}`);
-    }, [accountId, router]);
+        AppNavigation.toJournalEntry({ sourceAccountId: accountId });
+    }, [accountId]);
 
     const onDateSelect = useCallback((range: DateRange | null, filter: PeriodFilter) => {
         setFilter(range, filter);
