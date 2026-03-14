@@ -6,17 +6,17 @@ import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useObservable } from '@/src/hooks/useObservable';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { smsService } from '@/src/services/sms-service';
-import { JournalDisplayType, TransactionWithAccountInfo } from '@/src/types/domain';
+import { DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { useObservable } from '@/src/hooks/useObservable';
 import { from, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
@@ -233,7 +233,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     }, [journalInfo, amountText]);
 
     const splitItems = useMemo(() => {
-        return transactions.map((item: TransactionWithAccountInfo) => {
+        return transactions.map((item: DisplayTransaction) => {
             const isDebit = item.transactionType === 'DEBIT';
 
             // Flow-based logic for visual consistency:

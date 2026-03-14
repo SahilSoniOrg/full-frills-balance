@@ -1,7 +1,7 @@
-import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { AppConfig } from '@/src/constants';
+import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
-import { EnrichedTransaction } from '@/src/types/domain';
+import { DisplayTransaction } from '@/src/types/domain';
 import { useCallback } from 'react';
 
 export function useLedgerTransactionsForAccount(
@@ -16,7 +16,7 @@ export function useLedgerTransactionsForAccount(
         [accountId],
     );
 
-    const { items: transactions, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<EnrichedTransaction>({
+    const { items: transactions, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<DisplayTransaction>({
         pageSize,
         dateRange,
         observe,

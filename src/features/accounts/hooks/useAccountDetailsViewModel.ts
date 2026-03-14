@@ -12,7 +12,7 @@ import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
-import { AccountBalance, EnrichedTransaction, JournalDisplayType } from '@/src/types/domain';
+import { AccountBalance, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
@@ -21,9 +21,9 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
+import { AppNavigation } from '@/src/utils/navigation';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { map, of } from 'rxjs';
@@ -311,7 +311,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId });
     }, [accountId]);
 
-    const onTransactionPress = useCallback((transaction: EnrichedTransaction) => {
+    const onTransactionPress = useCallback((transaction: DisplayTransaction) => {
         if (transaction.journalId) {
             AppNavigation.toTransactionDetails(transaction.journalId);
         }
@@ -393,9 +393,9 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
     const transactionGroupingOptions = useMemo(() => ({
         items: transactions,
-        getDate: (t: EnrichedTransaction) => t.transactionDate,
+        getDate: (t: DisplayTransaction) => t.transactionDate,
         sortByDate: 'desc' as const,
-        getStats: (txnsForDay: EnrichedTransaction[]) => {
+        getStats: (txnsForDay: DisplayTransaction[]) => {
             let netAmount = 0;
             txnsForDay.forEach(t => {
                 if (t.isIncrease) {
@@ -410,24 +410,48 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                 currencyCode: balanceCurrency,
             };
         },
-        renderItem: (transaction: EnrichedTransaction) => {
+        renderItem: (transaction: DisplayTransaction & { counterAccounts?: any[] }) => {
             const displayAccounts = [] as any[];
 
-            if (transaction.counterAccountType) {
+            if (transaction.counterAccounts && transaction.counterAccounts.length > 0) {
+                // Show up to 2 counter accounts, or 1 + "+X more"
+                const visibleCount = transaction.counterAccounts.length > 2 ? 1 : transaction.counterAccounts.length;
+
+                for (let i = 0; i < visibleCount; i++) {
+                    const acc = transaction.counterAccounts[i];
+                    displayAccounts.push({
+                        id: acc.id,
+                        name: acc.name,
+                        accountType: acc.accountType,
+                        icon: acc.icon,
+                    });
+                }
+
+                if (transaction.counterAccounts.length > visibleCount) {
+                    displayAccounts.push({
+                        id: 'more',
+                        name: `+${transaction.counterAccounts.length - visibleCount} more`,
+                        accountType: 'NEUTRAL',
+                        icon: 'list',
+                    });
+                }
+            } else if (transaction.counterAccountType) {
+                // Fallback for singular counter account
                 displayAccounts.push({
                     id: 'counter',
                     name: transaction.counterAccountName || transaction.counterAccountType,
                     accountType: transaction.counterAccountType,
                     icon: transaction.counterAccountIcon,
                 });
+            } else {
+                // Last fallback: show current account if no counter-party found (e.g. adjustment)
+                displayAccounts.push({
+                    id: transaction.accountId,
+                    name: transaction.accountName || 'Unknown',
+                    accountType: transaction.accountType || 'ASSET',
+                    icon: transaction.icon,
+                });
             }
-
-            displayAccounts.push({
-                id: transaction.accountId,
-                name: transaction.accountName || 'Unknown',
-                accountType: transaction.accountType || 'ASSET',
-                icon: transaction.icon,
-            });
 
             const displayType = transaction.displayType as JournalDisplayType;
             const base = journalPresenter.getPresentation(displayType, transaction.semanticLabel);

@@ -9,7 +9,7 @@ import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping'
 import { budgetReadService } from '@/src/services/budget/budgetReadService'
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService'
 import { exchangeRateService } from '@/src/services/exchange-rate-service'
-import { EnrichedTransaction, JournalDisplayType } from '@/src/types/domain'
+import { DisplayTransaction, JournalDisplayType } from '@/src/types/domain'
 import { getAccountTypeVariant } from '@/src/utils/accountCategory'
 import { confirm } from '@/src/utils/alerts'
 import { journalPresenter } from '@/src/utils/journalPresenter'
@@ -33,7 +33,8 @@ export function useBudgetDetailViewModel() {
     const { rateMap: ratesMap = {} } = useExchangeRates(baseCurrency)
     const { precision } = useCurrencyPrecision(baseCurrency)
 
-    const handleJournalPress = useCallback((journalId: string) => {
+    const handleJournalPress = useCallback((journalId?: string) => {
+        if (!journalId) return
         AppNavigation.toTransactionDetails(journalId)
     }, [])
 
@@ -44,7 +45,7 @@ export function useBudgetDetailViewModel() {
                 return combineLatest([
                     of(budget),
                     budgetReadService.observeBudgetUsage(budget as any, targetMonth),
-                    budgetReadService.observeBudgetEnrichedTransactions(budget as any, targetMonth)
+                    budgetReadService.observeBudgetDisplayTransactions(budget as any, targetMonth)
                 ])
             })
         )
@@ -58,9 +59,9 @@ export function useBudgetDetailViewModel() {
 
     const transactionGroupingOptions = useMemo(() => ({
         items: transactions,
-        getDate: (t: EnrichedTransaction) => t.transactionDate,
+        getDate: (t: DisplayTransaction) => t.transactionDate,
         sortByDate: 'desc' as const,
-        getStats: (txsForDay: EnrichedTransaction[]) => {
+        getStats: (txsForDay: DisplayTransaction[]) => {
             let netAmount = 0
 
             txsForDay.forEach(tx => {
@@ -88,7 +89,7 @@ export function useBudgetDetailViewModel() {
                 currencyCode: baseCurrency,
             }
         },
-        renderItem: (tx: EnrichedTransaction) => {
+        renderItem: (tx: DisplayTransaction) => {
             const displayType = tx.displayType as JournalDisplayType
             const presentation = journalPresenter.getPresentation(displayType, tx.journalDescription || '')
 
@@ -136,7 +137,7 @@ export function useBudgetDetailViewModel() {
 
     useEffect(() => {
         const toFetch = new Set<string>()
-        transactions.forEach((tx: EnrichedTransaction) => {
+        transactions.forEach((tx: DisplayTransaction) => {
             if (tx.currencyCode !== baseCurrency) {
                 const rate = ratesMap[tx.currencyCode]
                 if (!rate || rate <= 0) {

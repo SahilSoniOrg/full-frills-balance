@@ -358,6 +358,13 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to the Reports screen.
+     */
+    toReports: () => {
+        router.push('/reports' as any);
+    },
+
+    /**
      * Navigate to the Design Preview screen.
      */
     toDesignPreview: () => {

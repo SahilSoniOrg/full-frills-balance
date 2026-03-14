@@ -4,6 +4,7 @@ import Transaction from '@/src/data/models/Transaction'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { roundToPrecision } from '@/src/utils/money'
 import { Q } from '@nozbe/watermelondb'
+import { of } from 'rxjs'
 
 export class TransactionRepository {
   private get transactions() {
@@ -143,10 +144,30 @@ export class TransactionRepository {
     if (journalIds.length === 0) return []
     return this.transactions
       .query(
-        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('id', Q.oneOf(journalIds)),
         Q.where('deleted_at', Q.eq(null))
       )
       .fetch()
+  }
+
+  observeByJournals(journalIds: string[]) {
+    if (journalIds.length === 0) return of([] as Transaction[])
+    return this.transactions
+      .query(
+        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null))
+      )
+      .observeWithColumns([
+        'amount',
+        'currency_code',
+        'transaction_type',
+        'transaction_date',
+        'notes',
+        'running_balance',
+        'exchange_rate',
+        'account_id',
+        'journal_id'
+      ])
   }
 
   observeByJournal(journalId: string) {

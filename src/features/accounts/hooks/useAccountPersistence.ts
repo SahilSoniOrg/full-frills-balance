@@ -1,6 +1,6 @@
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
-import { showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
+import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { sanitizeInput } from '@/src/utils/validation';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -72,10 +72,7 @@ export function useAccountPersistence(
                     }
                 }
 
-                showSuccessAlert(
-                    'Account Updated',
-                    `"${sanitizedName}" has been updated successfully!`
-                );
+                toast.success(`"${sanitizedName}" has been updated successfully!`);
                 logger.info('[AccountPersistence] Account updated, calling back()');
                 AppNavigation.back();
             } else {
@@ -91,10 +88,7 @@ export function useAccountPersistence(
                     metadata: metadata,
                 });
 
-                showSuccessAlert(
-                    'Account Created',
-                    `"${sanitizedName}" has been created successfully!`
-                );
+                toast.success(`"${sanitizedName}" has been created successfully!`);
 
                 if (hasExistingAccounts) {
                     AppNavigation.back();

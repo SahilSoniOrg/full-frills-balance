@@ -1,7 +1,7 @@
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { EnrichedTransaction, TransactionWithAccountInfo } from '@/src/types/domain';
+import { DisplayTransaction } from '@/src/types/domain';
 import { isBalanceIncrease, isValueEntering } from '@/src/utils/accountingHelpers';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
@@ -9,7 +9,7 @@ export class TransactionService {
     /**
      * Gets transactions for a journal with account information.
      */
-    async getTransactionsWithAccountInfo(journalId: string): Promise<TransactionWithAccountInfo[]> {
+    async getTransactionsWithAccountInfo(journalId: string): Promise<DisplayTransaction[]> {
         const journal = await journalRepository.find(journalId);
         const transactions = await transactionRepository.findByJournal(journalId);
 
@@ -35,14 +35,14 @@ export class TransactionService {
                 createdAt: tx.createdAt,
                 updatedAt: tx.updatedAt,
                 journalDescription: journal?.description
-            } as TransactionWithAccountInfo;
+            } as DisplayTransaction;
         });
     }
 
     /**
      * Gets enriched transactions for a journal.
      */
-    async getEnrichedByJournal(journalId: string): Promise<EnrichedTransaction[]> {
+    async getEnrichedByJournal(journalId: string): Promise<DisplayTransaction[]> {
         const journal = await journalRepository.find(journalId);
         const transactions = await transactionRepository.findByJournal(journalId);
 
@@ -58,7 +58,7 @@ export class TransactionService {
      * Replaces TransactionRepository.observeByJournalWithAccountInfo
      */
     observeTransactionsWithAccountInfo(journalId: string) {
-        if (!journalId) return of([] as TransactionWithAccountInfo[]);
+        if (!journalId) return of([] as DisplayTransaction[]);
 
         const journal$ = journalRepository.observeById(journalId);
         const transactions$ = transactionRepository.observeByJournal(journalId);
@@ -93,14 +93,14 @@ export class TransactionService {
                         createdAt: tx.createdAt,
                         updatedAt: tx.updatedAt,
                         journalDescription: journal?.description
-                    } as TransactionWithAccountInfo;
+                    } as DisplayTransaction;
                 });
             })
         );
     }
 
     observeEnrichedByJournal(journalId: string) {
-        if (!journalId) return of([] as EnrichedTransaction[]);
+        if (!journalId) return of([] as DisplayTransaction[]);
 
         const journal$ = journalRepository.observeById(journalId);
         const transactions$ = transactionRepository.observeByJournal(journalId);
@@ -122,7 +122,7 @@ export class TransactionService {
         );
     }
 
-    private mapToEnriched(tx: any, transactions: any[], accountMap: Map<string, any>, journal: any): EnrichedTransaction {
+    private mapToEnriched(tx: any, transactions: any[], accountMap: Map<string, any>, journal: any): DisplayTransaction {
         const account = accountMap.get(tx.accountId);
         const counterAccounts = transactions
             .filter(t => t.id !== tx.id)
@@ -152,7 +152,7 @@ export class TransactionService {
             displayType: journal?.displayType as any,
             isIncrease,
             exchangeRate: tx.exchangeRate
-        } as EnrichedTransaction;
+        } as DisplayTransaction;
     }
 }
 

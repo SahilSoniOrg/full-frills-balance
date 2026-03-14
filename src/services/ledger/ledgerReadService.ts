@@ -2,19 +2,19 @@ import { AppConfig } from '@/src/constants';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { EnrichedTransaction } from '@/src/types/domain';
+import { DisplayTransaction } from '@/src/types/domain';
 import { isBalanceIncrease } from '@/src/utils/accountingHelpers';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class LedgerReadService {
     observeEnrichedForAccount(accountId: string, limit: number, dateRange?: { startDate: number; endDate: number }) {
-        if (!accountId) return of([] as EnrichedTransaction[]);
+        if (!accountId) return of([] as DisplayTransaction[]);
 
         return this.observeEnrichedForAccounts([accountId], limit, dateRange);
     }
 
     observeEnrichedForAccounts(rootAccountIds: string[], limit: number, dateRange?: { startDate: number; endDate: number }) {
-        if (!rootAccountIds || rootAccountIds.length === 0) return of([] as EnrichedTransaction[]);
+        if (!rootAccountIds || rootAccountIds.length === 0) return of([] as DisplayTransaction[]);
 
         const descendantIds$ = accountRepository.observeAll().pipe(
             map((accounts) => {
@@ -41,24 +41,52 @@ export class LedgerReadService {
             switchMap((journalIds) => journalRepository.observeByIds(journalIds)),
         );
 
-        const allAccountIds$ = transactions$.pipe(
-            map((txs) => Array.from(new Set(txs.map((t) => t.accountId))).sort()),
+        const allJournalTransactions$ = journalIds$.pipe(
+            switchMap((ids) => transactionRepository.observeByJournals(ids)),
+        );
+
+        const allAccountIds$ = allJournalTransactions$.pipe(
+            map((txs: any[]) => Array.from(new Set(txs.map((t) => t.accountId as string))).sort()),
             distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
         );
 
         const allAccounts$ = allAccountIds$.pipe(
-            switchMap((ids) => accountRepository.observeByIds(ids)),
+            switchMap((ids: string[]) => accountRepository.observeByIds(ids)),
         );
 
-        return combineLatest([transactions$, journals$, allAccounts$]).pipe(
-            map(([transactions, journals, allAccounts]) => {
+        return combineLatest([transactions$, journals$, allAccounts$, allJournalTransactions$]).pipe(
+            map(([transactions, journals, allAccounts, allJournalTransactions]) => {
                 const journalMap = new Map(journals.map((j) => [j.id, j]));
                 const accountMap = new Map(allAccounts.map((a) => [a.id, a]));
+                const transactionsByJournal = new Map<string, any[]>();
+
+                for (const tx of allJournalTransactions as any[]) {
+                    const list = transactionsByJournal.get(tx.journalId) || [];
+                    list.push(tx);
+                    transactionsByJournal.set(tx.journalId, list);
+                }
 
                 return transactions.map((tx) => {
                     const journal = journalMap.get(tx.journalId);
                     const txAccount = accountMap.get(tx.accountId);
                     const isIncrease = isBalanceIncrease(txAccount?.accountType as any, tx.transactionType as any);
+
+                    // Find counter-accounts in the same journal (opposite type: Debit vs Credit)
+                    const journalTransactions = transactionsByJournal.get(tx.journalId) || [];
+                    const counterPartyTransactions = journalTransactions.filter((jtx: any) => jtx.transactionType !== tx.transactionType);
+
+                    const counterAccounts = counterPartyTransactions.map((ctx: any) => {
+                        const acc = accountMap.get(ctx.accountId);
+                        return {
+                            id: ctx.accountId,
+                            name: acc?.name || 'Unknown',
+                            accountType: acc?.accountType as any,
+                            icon: acc?.icon || null,
+                        };
+                    });
+
+                    // For backward compatibility or single counter-account cases
+                    const firstCounter = counterAccounts[0];
 
                     return {
                         id: tx.id,
@@ -78,7 +106,11 @@ export class LedgerReadService {
                         displayType: journal?.displayType as any,
                         isIncrease,
                         exchangeRate: tx.exchangeRate,
-                    } as EnrichedTransaction;
+                        counterAccountName: firstCounter?.name,
+                        counterAccountType: firstCounter?.accountType,
+                        counterAccountIcon: firstCounter?.icon,
+                        counterAccounts,
+                    } as DisplayTransaction;
                 });
             }),
         );

@@ -1,10 +1,10 @@
-import { journalService } from '@/src/features/journal/services/JournalService'
 import { AppConfig } from '@/src/constants'
+import { journalService } from '@/src/features/journal/services/JournalService'
 import { transactionService } from '@/src/features/journal/services/TransactionService'
 import { useObservable } from '@/src/hooks/useObservable'
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable'
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger'
-import { EnrichedJournal, TransactionWithAccountInfo } from '@/src/types/domain'
+import { DisplayTransaction, EnrichedJournal } from '@/src/types/domain'
 import { useCallback } from 'react'
 import { of } from 'rxjs'
 
@@ -44,9 +44,9 @@ export function useJournalTransactions(journalId: string | null) {
     const { data: transactions, isLoading, version } = useObservable(
         () => journalId
             ? transactionService.observeTransactionsWithAccountInfo(journalId)
-            : of([] as TransactionWithAccountInfo[]),
+            : of([] as DisplayTransaction[]),
         [journalId],
-        [] as TransactionWithAccountInfo[]
+        [] as DisplayTransaction[]
     );
 
     return { transactions, isLoading, version }

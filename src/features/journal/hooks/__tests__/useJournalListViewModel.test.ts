@@ -2,6 +2,7 @@ import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { logger } from '@/src/utils/logger';
 import { act, renderHook } from '@testing-library/react-native';
 import { useJournalListViewModel } from '../useJournalListViewModel';
+import { JournalDisplayType } from '@/src/types/domain';
 
 // Purely mock everything to avoid model compilation issues
 jest.mock('@/src/features/journal/hooks/useJournals', () => ({
@@ -75,7 +76,7 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     {
         id: 'j1',
         journalDate: new Date(2024, 2, 20, 10).getTime(), // March 20
-        displayType: 'INCOME',
+        displayType: JournalDisplayType.INCOME,
         totalAmount: 100,
         currencyCode: 'USD',
         description: 'Salary',
@@ -86,7 +87,7 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     {
         id: 'j2',
         journalDate: new Date(2024, 2, 20, 15).getTime(),
-        displayType: 'EXPENSE',
+        displayType: JournalDisplayType.EXPENSE,
         totalAmount: 20,
         currencyCode: 'USD',
         description: 'Coffee',
@@ -97,7 +98,7 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     {
         id: 'j3',
         journalDate: new Date(2024, 2, 21, 9).getTime(), // March 21
-        displayType: 'EXPENSE',
+        displayType: JournalDisplayType.EXPENSE,
         totalAmount: 50,
         currencyCode: 'EUR',
         description: 'Lunch',
@@ -118,7 +119,8 @@ describe('useJournalListViewModel', () => {
             isLoading: false,
             isLoadingMore: false,
             hasMore: true,
-            loadMore: jest.fn()
+            loadMore: jest.fn(),
+            version: 1
         });
     });
 

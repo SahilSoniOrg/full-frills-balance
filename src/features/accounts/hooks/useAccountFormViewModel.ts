@@ -241,7 +241,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         if (loanTenureMonths) metadata.loanTenureMonths = parseInt(loanTenureMonths, 10);
         if (minimumPaymentAmount) metadata.minimumPaymentAmount = parseFloat(minimumPaymentAmount);
         if (notes) metadata.notes = notes;
-
         try {
             await persistence.handleSave(
                 accountName,
@@ -250,7 +249,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
                 selectedCurrency,
                 selectedIcon,
                 initialBalance,
-                undefined, // currentBalanceData
+                balanceData || undefined, // currentBalanceData
                 parentAccountId || undefined,
                 Object.keys(metadata).length > 0 ? metadata : undefined
             );

@@ -10,6 +10,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { balanceService } from '@/src/services/BalanceService'
 import { accountService } from '../AccountService'
+import { JournalDisplayType } from '@/src/types/domain'
 
 describe('AccountRepository', () => {
     beforeEach(async () => {
@@ -112,7 +113,7 @@ describe('AccountRepository', () => {
                 journalDate: Date.now() - 2000,
                 currencyCode: 'USD',
                 totalAmount: 1000,
-                displayType: 'INCOME',
+                displayType: JournalDisplayType.INCOME,
                 transactions: [
                     { accountId: asset.id, amount: 1000, transactionType: TransactionType.DEBIT },
                     { accountId: equity.id, amount: 1000, transactionType: TransactionType.CREDIT },
@@ -126,7 +127,7 @@ describe('AccountRepository', () => {
                 journalDate: Date.now() - 1000,
                 currencyCode: 'USD',
                 totalAmount: 300,
-                displayType: 'EXPENSE',
+                displayType: JournalDisplayType.EXPENSE,
                 transactions: [
                     { accountId: asset.id, amount: 300, transactionType: TransactionType.CREDIT },
                     { accountId: equity.id, amount: 300, transactionType: TransactionType.DEBIT },
@@ -159,7 +160,7 @@ describe('AccountRepository', () => {
                 journalDate: earlierTime,
                 currencyCode: 'USD',
                 totalAmount: 500,
-                displayType: 'INCOME',
+                displayType: JournalDisplayType.INCOME,
                 transactions: [
                     { accountId: asset.id, amount: 500, transactionType: TransactionType.DEBIT },
                     { accountId: equity.id, amount: 500, transactionType: TransactionType.CREDIT },
@@ -172,7 +173,7 @@ describe('AccountRepository', () => {
                 journalDate: laterTime,
                 currencyCode: 'USD',
                 totalAmount: 200,
-                displayType: 'INCOME',
+                displayType: JournalDisplayType.INCOME,
                 transactions: [
                     { accountId: asset.id, amount: 200, transactionType: TransactionType.DEBIT },
                     { accountId: equity.id, amount: 200, transactionType: TransactionType.CREDIT },

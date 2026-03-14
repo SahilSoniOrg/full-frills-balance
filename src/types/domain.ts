@@ -44,8 +44,6 @@ export interface AccountBalance {
 
 /**
  * DisplayTransaction - Unified read model for transactions in the UI.
- * Consolidates 'TransactionWithAccountInfo' and 'EnrichedTransaction'.
- * Follows Rule 3: Data-Driven UI.
  */
 export interface DisplayTransaction {
     id: string;
@@ -85,11 +83,6 @@ export interface DisplayTransaction {
     createdAt?: Date;
     updatedAt?: Date;
 }
-
-/**
- * @deprecated Use DisplayTransaction instead
- */
-export type TransactionWithAccountInfo = DisplayTransaction;
 
 /**
  * JournalWithTransactionSummary - Journal data with computed summary from its transactions
@@ -156,11 +149,6 @@ export interface EnrichedJournal {
     semanticLabel?: string;
     notes?: string;
 }
-
-/**
- * @deprecated Use DisplayTransaction instead
- */
-export type EnrichedTransaction = DisplayTransaction;
 
 export interface SmsDuplicateCandidate {
     journalId: string;

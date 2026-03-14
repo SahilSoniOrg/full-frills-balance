@@ -6,6 +6,7 @@ import {
 } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
+import { JournalDisplayType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -367,7 +368,7 @@ export const cashewPlugin: ImportPlugin = {
                                     status: 'POSTED',
                                     totalAmount: absoluteAmount,
                                     transactionCount: 2,
-                                    displayType: 'TRANSFER',
+                                    displayType: JournalDisplayType.TRANSFER,
                                     description: t.name || 'Transfer',
                                 });
 
@@ -402,7 +403,7 @@ export const cashewPlugin: ImportPlugin = {
                                         status: 'PLANNED',
                                         totalAmount: absoluteAmount,
                                         transactionCount: 2,
-                                        displayType: 'TRANSFER',
+                                        displayType: JournalDisplayType.TRANSFER,
                                         description: t.name || 'Transfer',
                                     });
 
@@ -480,7 +481,7 @@ export const cashewPlugin: ImportPlugin = {
                         status: 'POSTED',
                         totalAmount: absoluteAmount,
                         transactionCount: t.objective_loan_fk ? 3 : 2, // 2 for normal, 3 if loan involved
-                        displayType: isIncome ? 'INCOME' : 'EXPENSE',
+                        displayType: isIncome ? JournalDisplayType.INCOME : JournalDisplayType.EXPENSE,
                         description: t.name || (isIncome ? 'Income' : 'Expense'),
                     });
 
@@ -516,7 +517,7 @@ export const cashewPlugin: ImportPlugin = {
                             status: 'PLANNED',
                             totalAmount: absoluteAmount,
                             transactionCount: 2,
-                            displayType: isIncome ? 'INCOME' : 'EXPENSE',
+                            displayType: isIncome ? JournalDisplayType.INCOME : JournalDisplayType.EXPENSE,
                             description: t.name || (isIncome ? 'Income' : 'Expense'),
                         });
 

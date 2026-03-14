@@ -1,15 +1,15 @@
-import { database } from '@/src/data/database/Database'
 import { AppConfig } from '@/src/constants'
+import { database } from '@/src/data/database/Database'
 import { AccountType } from '@/src/data/models/Account'
 import Budget from '@/src/data/models/Budget'
 import Transaction from '@/src/data/models/Transaction'
 import { accountRepository } from '@/src/data/repositories/AccountRepository'
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository'
+import { exchangeRateService } from '@/src/services/exchange-rate-service'
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService'
-import { EnrichedTransaction } from '@/src/types/domain'
+import { DisplayTransaction } from '@/src/types/domain'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { Money } from '@/src/utils/money'
-import { exchangeRateService } from '@/src/services/exchange-rate-service'
 import { Q } from '@nozbe/watermelondb'
 import dayjs from 'dayjs'
 import { combineLatest, Observable, of } from 'rxjs'
@@ -135,7 +135,7 @@ export class BudgetReadService {
      * Resolves scopes to leaf expense accounts and queries the ledger for enriched
      * transactions within the budget's targeted month bounds.
      */
-    observeBudgetEnrichedTransactions(budget: Budget, targetMonth?: string): Observable<EnrichedTransaction[]> {
+    observeBudgetDisplayTransactions(budget: Budget, targetMonth?: string): Observable<DisplayTransaction[]> {
         return budgetRepository.observeScopes(budget.id).pipe(
             switchMap(scopes => {
                 if (scopes.length === 0) return of([])

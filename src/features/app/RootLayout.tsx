@@ -34,8 +34,8 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, usePathname, useSegments } from 'expo-router';
 import { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
-import 'react-native-reanimated';
 import { Platform } from 'react-native';
+import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 function clampChannel(value: number) {
@@ -91,13 +91,6 @@ function mixHexColors(base: string, overlay: string, overlayWeight: number) {
     g: baseRgb.g * (1 - safeWeight) + overlayRgb.g * safeWeight,
     b: baseRgb.b * (1 - safeWeight) + overlayRgb.b * safeWeight,
   });
-}
-
-function withHexAlpha(color: string, alpha: number) {
-  const safeAlpha = Math.max(0, Math.min(1, alpha));
-  const normalized = normalizeHexColor(color).slice(1);
-  const alphaHex = clampChannel(255 * safeAlpha).toString(16).padStart(2, '0').toUpperCase();
-  return `#${alphaHex}${normalized}`;
 }
 
 function buildWidgetThemeSnapshot(
@@ -200,20 +193,20 @@ function WidgetDataSync() {
     void expoWidgetsModule.syncWidgetData({
       safeToSpend: safeToSpendData
         ? {
-            amount: displayAmount,
-            currencyCode: safeToSpendData.currencyCode,
-            formattedAmount: CurrencyFormatter.format(displayAmount, safeToSpendData.currencyCode, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0,
-            }),
-            title: isShortfall
-              ? AppConfig.strings.dashboard.shortfall
-              : AppConfig.strings.dashboard.safeToSpendTitle,
-            subtitle: isShortfall
-              ? AppConfig.strings.dashboard.neededForObligations
-              : AppConfig.strings.dashboard.afterObligations,
-            updatedAt: Date.now(),
-          }
+          amount: displayAmount,
+          currencyCode: safeToSpendData.currencyCode,
+          formattedAmount: CurrencyFormatter.format(displayAmount, safeToSpendData.currencyCode, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }),
+          title: isShortfall
+            ? AppConfig.strings.dashboard.shortfall
+            : AppConfig.strings.dashboard.safeToSpendTitle,
+          subtitle: isShortfall
+            ? AppConfig.strings.dashboard.neededForObligations
+            : AppConfig.strings.dashboard.afterObligations,
+          updatedAt: Date.now(),
+        }
         : undefined,
       theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
     }).catch(() => undefined);

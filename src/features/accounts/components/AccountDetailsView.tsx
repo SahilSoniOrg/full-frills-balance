@@ -223,17 +223,14 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                         </View>
 
                         {chartData.length > 0 && (
-                            <View style={styles.chartContainer}>
-                                <AppText>Chart has {chartData.length} entries</AppText>
-                                <LineChart
-                                    data={chartData}
-                                    secondaryData={rollingAverageData}
-                                    secondaryColor={theme.warning}
-                                    xTicks={xTicks}
-                                    formatXTick={formatShortDate}
-                                    height={180}
-                                />
-                            </View>
+                            <LineChart
+                                data={chartData}
+                                secondaryData={rollingAverageData}
+                                secondaryColor={theme.warning}
+                                xTicks={xTicks}
+                                formatXTick={formatShortDate}
+                                height={180}
+                            />
                         )}
 
                         <View style={styles.metricsContainer}>
