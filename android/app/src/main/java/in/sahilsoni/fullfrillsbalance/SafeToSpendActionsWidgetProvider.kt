@@ -1,4 +1,4 @@
-package `in`.sahilsoni.fullfrillsbalance
+package `in`.sahilsoni.fullfrillsbalance // expo-inject-androidpackage
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider

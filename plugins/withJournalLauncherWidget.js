@@ -26,25 +26,25 @@ const TEMPLATE_ROOT = path.join(__dirname, '..', 'modules', 'expo-widgets', 'tem
 const ANDROID_WIDGETS = [
   {
     className: 'JournalLauncherWidgetProvider',
-    template: 'JournalLauncherWidgetProvider.kt.template',
+    template: 'JournalLauncherWidgetProvider.kt',
     infoResource: 'journal_launcher_widget_info',
     infoFile: 'journal_launcher_widget_info.xml',
   },
   {
     className: 'SafeToSpendWidgetProvider',
-    template: 'SafeToSpendWidgetProvider.kt.template',
+    template: 'SafeToSpendWidgetProvider.kt',
     infoResource: 'safe_to_spend_widget_info',
     infoFile: 'safe_to_spend_widget_info.xml',
   },
   {
     className: 'SafeToSpendActionsWidgetProvider',
-    template: 'SafeToSpendActionsWidgetProvider.kt.template',
+    template: 'SafeToSpendActionsWidgetProvider.kt',
     infoResource: 'safe_to_spend_actions_widget_info',
     infoFile: 'safe_to_spend_actions_widget_info.xml',
   },
   {
     className: 'SafeToSpendActionsSquareWidgetProvider',
-    template: 'SafeToSpendActionsSquareWidgetProvider.kt.template',
+    template: 'SafeToSpendActionsSquareWidgetProvider.kt',
     infoResource: 'safe_to_spend_actions_square_widget_info',
     infoFile: 'safe_to_spend_actions_square_widget_info.xml',
   },
@@ -126,7 +126,45 @@ async function renderTemplate(templatePath, replacements = {}) {
   let contents = await fs.readFile(templatePath, 'utf8');
 
   Object.entries(replacements).forEach(([key, value]) => {
+    // 1. Traditional __PLACEHOLDER__ replacement
     contents = contents.replaceAll(key, value);
+
+    // 2. Marker-based replacement for IDE-friendly templates
+    const markerName = key.replaceAll('_', '').toLowerCase();
+    const markerComment = `// expo-inject-${markerName}`;
+
+    contents = contents.split('\n').map(line => {
+      if (!line.includes(markerComment)) return line;
+
+      // Case A: Package declaration (Android)
+      if (markerName === 'androidpackage' && line.trim().startsWith('package ')) {
+        return line.replace(/package\s+[^\s\n/]+/, `package ${value}`);
+      }
+
+      // Case B: Quoted string assignment: val = "value" // expo-inject-key
+      if (line.includes('"')) {
+        const parts = line.split(markerComment);
+        const beforeMarker = parts[0];
+        const afterMarker = parts.slice(1).join(markerComment);
+
+        // Find the LAST quoted string before the marker
+        const updatedBefore = beforeMarker.replace(/"[^"]*"(?=[^"]*$)/, `"${value}"`);
+        return updatedBefore + markerComment + afterMarker;
+      }
+
+      // Case C: Raw assignment: val = value // expo-inject-key
+      if (line.includes('=')) {
+        const parts = line.split(markerComment);
+        const beforeMarker = parts[0];
+        const afterMarker = parts.slice(1).join(markerComment);
+
+        // Replace everything after the last = before the marker
+        const updatedBefore = beforeMarker.replace(/=\s*[^=\s/]+(?=\s*$)/, `= ${value}`);
+        return updatedBefore + markerComment + afterMarker;
+      }
+
+      return line;
+    }).join('\n');
   });
 
   return contents;
@@ -192,7 +230,7 @@ async function writeAndroidWidgetFiles(projectRoot, config) {
 
   await writeFileIfChanged(
     path.join(basePath, 'java', packagePath, 'FullFrillsBalanceWidgetSupport.kt'),
-    await renderTemplate(path.join(TEMPLATE_ROOT, 'android', 'FullFrillsBalanceWidgetSupport.kt.template'), replacements)
+    await renderTemplate(path.join(TEMPLATE_ROOT, 'android', 'FullFrillsBalanceWidgetSupport.kt'), replacements)
   );
   for (const widget of ANDROID_WIDGETS) {
     await writeFileIfChanged(
@@ -284,7 +322,7 @@ async function writeIosWidgetFiles(projectRoot, config) {
   };
   await writeFileIfChanged(
     path.join(iosWidgetPath, IOS_WIDGET_SOURCE_FILE),
-    await renderTemplate(path.join(TEMPLATE_ROOT, 'ios', `${IOS_WIDGET_TARGET_NAME}.swift.template`), replacements)
+    await renderTemplate(path.join(TEMPLATE_ROOT, 'ios', `${IOS_WIDGET_TARGET_NAME}.swift`), replacements)
   );
   await writeFileIfChanged(
     path.join(iosWidgetPath, IOS_WIDGET_INFO_FILE),

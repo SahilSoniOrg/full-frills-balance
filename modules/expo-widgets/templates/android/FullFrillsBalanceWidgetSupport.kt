@@ -1,4 +1,4 @@
-package __ANDROID_PACKAGE__
+package `in`.sahilsoni.fullfrillsbalance // expo-inject-androidpackage
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -43,10 +43,11 @@ object FullFrillsBalanceWidgetSupport {
   private const val KEY_THEME_SECONDARY_TEXT_COLOR = "widget_theme_secondary_text_color"
   private const val KEY_THEME_ACTION_ICON_COLOR = "widget_theme_action_icon_color"
   private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
-  private const val APP_HOME_DEEP_LINK = "__APP_SCHEME__://"
-  private const val INCOME_DEEP_LINK = "__APP_SCHEME__://journal-entry?mode=simple&type=income&source=widget"
-  private const val EXPENSE_DEEP_LINK = "__APP_SCHEME__://journal-entry?mode=simple&type=expense&source=widget"
-  private const val TRANSFER_DEEP_LINK = "__APP_SCHEME__://journal-entry?mode=simple&type=transfer&source=widget"
+  private const val APP_SCHEME = "fullfrillsbalance" // expo-inject-appscheme
+  private const val APP_HOME_DEEP_LINK = "$APP_SCHEME://"
+  private const val INCOME_DEEP_LINK = "$APP_SCHEME://journal-entry?mode=simple&type=income&source=widget"
+  private const val EXPENSE_DEEP_LINK = "$APP_SCHEME://journal-entry?mode=simple&type=expense&source=widget"
+  private const val TRANSFER_DEEP_LINK = "$APP_SCHEME://journal-entry?mode=simple&type=transfer&source=widget"
 
   fun readSafeToSpendSnapshot(context: Context): SafeToSpendWidgetSnapshot? {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -57,7 +58,8 @@ object FullFrillsBalanceWidgetSupport {
       currencyCode = prefs.getString(KEY_SAFE_TO_SPEND_CURRENCY, "") ?: "",
       formattedAmount = formattedAmount,
       title = prefs.getString(KEY_SAFE_TO_SPEND_TITLE, context.getString(R.string.safe_to_spend_widget_title)) ?: "",
-      subtitle = prefs.getString(KEY_SAFE_TO_SPEND_SUBTITLE, context.getString(R.string.safe_to_spend_widget_subtitle)) ?: "",
+      subtitle = prefs.getString(KEY_SAFE_TO_SPEND_SUBTITLE, context.getString(R.string.safe_to_spend_widget_subtitle))
+        ?: "",
       updatedAt = prefs.getLong(KEY_SAFE_TO_SPEND_UPDATED_AT, 0L),
     )
   }
@@ -232,8 +234,8 @@ object FullFrillsBalanceWidgetSupport {
       requestCode,
       Intent(Intent.ACTION_VIEW, Uri.parse(deepLink), context, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-          Intent.FLAG_ACTIVITY_CLEAR_TOP or
-          Intent.FLAG_ACTIVITY_SINGLE_TOP
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
       },
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )

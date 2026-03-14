@@ -1,10 +1,11 @@
 import SwiftUI
 import WidgetKit
 
-private let incomeLaunchURL = URL(string: "fullfrillsbalance://journal-entry?mode=simple&type=income&source=widget")!
-private let expenseLaunchURL = URL(string: "fullfrillsbalance://journal-entry?mode=simple&type=expense&source=widget")!
-private let transferLaunchURL = URL(string: "fullfrillsbalance://journal-entry?mode=simple&type=transfer&source=widget")!
-private let appGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets"
+private let appScheme = "fullfrillsbalance" // expo-inject-appscheme
+private let incomeLaunchURL = URL(string: appScheme + "://journal-entry?mode=simple&type=income&source=widget")!
+private let expenseLaunchURL = URL(string: appScheme + "://journal-entry?mode=simple&type=expense&source=widget")!
+private let transferLaunchURL = URL(string: appScheme + "://journal-entry?mode=simple&type=transfer&source=widget")!
+private let appGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets" // expo-inject-iosappgroup
 
 struct SafeToSpendSnapshot {
   let amount: Double
