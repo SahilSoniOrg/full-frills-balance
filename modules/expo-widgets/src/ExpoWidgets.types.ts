@@ -26,4 +26,5 @@ export type WidgetThemeSnapshot = {
 export type WidgetDataSnapshot = {
   safeToSpend?: SafeToSpendSnapshot;
   theme?: WidgetThemeSnapshot;
+  isPrivacyEnabled?: boolean;
 };

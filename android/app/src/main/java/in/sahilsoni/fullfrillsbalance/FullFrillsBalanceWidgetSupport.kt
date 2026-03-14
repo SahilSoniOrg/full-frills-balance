@@ -42,6 +42,7 @@ object FullFrillsBalanceWidgetSupport {
   private const val KEY_THEME_PRIMARY_TEXT_COLOR = "widget_theme_primary_text_color"
   private const val KEY_THEME_SECONDARY_TEXT_COLOR = "widget_theme_secondary_text_color"
   private const val KEY_THEME_ACTION_ICON_COLOR = "widget_theme_action_icon_color"
+  private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
   private const val APP_HOME_DEEP_LINK = "fullfrillsbalance://"
   private const val INCOME_DEEP_LINK = "fullfrillsbalance://journal-entry?mode=simple&type=income&source=widget"
   private const val EXPENSE_DEEP_LINK = "fullfrillsbalance://journal-entry?mode=simple&type=expense&source=widget"
@@ -102,8 +103,12 @@ object FullFrillsBalanceWidgetSupport {
       return
     }
 
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val isPrivacyEnabled = prefs.getBoolean(KEY_IS_PRIVACY_ENABLED, false)
+    val displayAmount = if (isPrivacyEnabled) "****" else snapshot.formattedAmount
+
     remoteViews.setTextViewText(titleViewId, snapshot.title)
-    remoteViews.setTextViewText(amountViewId, snapshot.formattedAmount)
+    remoteViews.setTextViewText(amountViewId, displayAmount)
     remoteViews.setTextViewText(subtitleViewId, snapshot.subtitle)
   }
 

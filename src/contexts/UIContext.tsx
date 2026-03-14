@@ -38,6 +38,7 @@ interface UIState {
 
   // Privacy
   isPrivacyMode: boolean
+  isWidgetPrivacyEnabled: boolean
   isAppLockEnabled: boolean
 
   // Account Display
@@ -63,6 +64,7 @@ interface UIContextType extends UIState {
   setFontId: (fontId: FontId) => Promise<void>
   updateUserDetails: (name: string, currency: string, archetype?: string) => Promise<void>
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
+  setWidgetPrivacyEnabled: (enabled: boolean) => Promise<void>
   setAppLockEnabled: (enabled: boolean) => Promise<void>
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>
   setArchetype: (archetype: string) => Promise<void>
@@ -85,6 +87,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     userName: '',
     defaultCurrency: AppConfig.defaultCurrency,
     isPrivacyMode: false,
+    isWidgetPrivacyEnabled: false,
     isAppLockEnabled: false,
     showAccountMonthlyStats: true,
     advancedMode: false,
@@ -115,6 +118,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           userName: loadedPreferences.userName || '',
           defaultCurrency: loadedPreferences.defaultCurrencyCode || AppConfig.defaultCurrency,
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
+          isWidgetPrivacyEnabled: loadedPreferences.isWidgetPrivacyEnabled || false,
           isAppLockEnabled: loadedPreferences.isAppLockEnabled || false,
           showAccountMonthlyStats: loadedPreferences.showAccountMonthlyStats ?? true,
           advancedMode: loadedPreferences.advancedMode || false,
@@ -212,6 +216,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const setWidgetPrivacyEnabled = useCallback(async (isWidgetPrivacyEnabled: boolean) => {
+    try {
+      await preferences.setIsWidgetPrivacyEnabled(isWidgetPrivacyEnabled)
+      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }))
+    } catch (error) {
+      logger.warn('Failed to save widget privacy mode', { error })
+      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }))
+    }
+  }, [])
+
   const setAppLockEnabled = useCallback(async (isAppLockEnabled: boolean) => {
     try {
       await preferences.setAppLockEnabled(isAppLockEnabled)
@@ -269,6 +283,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setFontId,
     updateUserDetails,
     setPrivacyMode,
+    setWidgetPrivacyEnabled,
     setAppLockEnabled,
     setShowAccountMonthlyStats,
     setArchetype,

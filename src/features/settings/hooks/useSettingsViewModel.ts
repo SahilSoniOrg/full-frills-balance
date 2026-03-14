@@ -21,6 +21,8 @@ export interface SettingsViewModel {
     setFontId: (value: FontId) => void;
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
+    isWidgetPrivacyEnabled: boolean;
+    onToggleWidgetPrivacy: () => void;
     isAppLockEnabled: boolean;
     onToggleAppLock: () => void;
     showAccountMonthlyStats: boolean;
@@ -62,6 +64,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         setShowAccountMonthlyStats,
         archetype,
         setArchetype,
+        isWidgetPrivacyEnabled,
+        setWidgetPrivacyEnabled,
     } = ui;
     const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } = useSettingsActions();
     const { isImporting: isImportingData } = useImport();
@@ -244,6 +248,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         onToggleAccountMonthlyStats: () => setShowAccountMonthlyStats(!showAccountMonthlyStats),
         archetype,
         setArchetype,
+        isWidgetPrivacyEnabled,
+        onToggleWidgetPrivacy: () => setWidgetPrivacyEnabled(!isWidgetPrivacyEnabled),
         isExporting,
         isImporting: isImportingData,
         isMaintenanceMode,

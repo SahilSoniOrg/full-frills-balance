@@ -5,7 +5,7 @@ import { AppConfig, FontIds, FontSchemes, Spacing, ThemeIds } from '@/src/consta
 import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 export function AppearanceSettingsScreen() {
     const { theme } = useTheme();
@@ -151,6 +151,25 @@ export function AppearanceSettingsScreen() {
                         </AppButton>
                     ))}
                 </View>
+                
+                {/* WIDGET PRIVACY SECTION */}
+                <View style={styles.divider} />
+
+                <View style={styles.preferenceRow}>
+                    <View style={{ flex: 1 }}>
+                        <AppText weight="bold">
+                            {AppConfig.strings.settings.appearance.widgetPrivacyTitle}
+                        </AppText>
+                        <AppText variant="caption" color="secondary">
+                            {AppConfig.strings.settings.appearance.widgetPrivacyDesc}
+                        </AppText>
+                    </View>
+                    <Switch
+                        value={vm.isWidgetPrivacyEnabled}
+                        onValueChange={vm.onToggleWidgetPrivacy}
+                        trackColor={{ true: theme.primary }}
+                    />
+                </View>
 
             </View>
         </Screen>
@@ -200,5 +219,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: Spacing.sm,
         marginTop: Spacing.sm,
-    }
+    },
+    preferenceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.md,
+        paddingVertical: Spacing.xs,
+    },
 });

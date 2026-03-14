@@ -276,6 +276,8 @@ export const AppConfig = {
         },
         customize: 'Customize',
         preview: 'Aa',
+        widgetPrivacyTitle: 'Widget Privacy',
+        widgetPrivacyDesc: 'Hide balances on home screen widgets',
       },
       privacy: {
         title: 'Privacy Mode',

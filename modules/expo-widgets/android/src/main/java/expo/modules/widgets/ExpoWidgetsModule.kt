@@ -72,6 +72,7 @@ class ExpoWidgetsModule : Module() {
         putString(KEY_THEME_EXPENSE_ACCENT_COLOR, theme["expenseAccentColor"] as? String ?: "")
         putString(KEY_THEME_TRANSFER_ACCENT_COLOR, theme["transferAccentColor"] as? String ?: "")
       }
+      putBoolean(KEY_IS_PRIVACY_ENABLED, snapshot["isPrivacyEnabled"] as? Boolean ?: false)
     }.apply()
   }
 
@@ -118,6 +119,7 @@ class ExpoWidgetsModule : Module() {
     private const val KEY_THEME_INCOME_ACCENT_COLOR = "widget_theme_income_accent_color"
     private const val KEY_THEME_EXPENSE_ACCENT_COLOR = "widget_theme_expense_accent_color"
     private const val KEY_THEME_TRANSFER_ACCENT_COLOR = "widget_theme_transfer_accent_color"
+    private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
     private val WIDGET_PROVIDER_CLASS_NAMES = listOf(
       "JournalLauncherWidgetProvider",
       "SafeToSpendWidgetProvider",

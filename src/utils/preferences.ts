@@ -20,6 +20,7 @@ export interface UIPreferences {
   lastUsedSourceAccountId?: string;
   lastUsedDestinationAccountId?: string;
   isPrivacyMode: boolean;
+  isWidgetPrivacyEnabled: boolean;
   isAppLockEnabled: boolean;
   showAccountMonthlyStats: boolean;
   advancedMode: boolean;
@@ -33,6 +34,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   userName: '',
   defaultCurrencyCode: AppConfig.defaultCurrency,
   isPrivacyMode: false,
+  isWidgetPrivacyEnabled: false,
   isAppLockEnabled: false,
   showAccountMonthlyStats: true,
   advancedMode: false,
@@ -191,6 +193,14 @@ class PreferencesHelper {
 
   async setIsPrivacyMode(isPrivacyMode: boolean): Promise<void> {
     await this.updatePreferences({ isPrivacyMode });
+  }
+
+  get isWidgetPrivacyEnabled(): boolean {
+    return this.preferences.isWidgetPrivacyEnabled;
+  }
+
+  async setIsWidgetPrivacyEnabled(isEnabled: boolean): Promise<void> {
+    await this.updatePreferences({ isWidgetPrivacyEnabled: isEnabled });
   }
 
   get isAppLockEnabled(): boolean {

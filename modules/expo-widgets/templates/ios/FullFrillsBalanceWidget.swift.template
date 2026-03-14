@@ -104,6 +104,7 @@ struct JournalLauncherEntry: TimelineEntry {
   let date: Date
   let safeToSpend: SafeToSpendSnapshot?
   let theme: WidgetThemeSnapshot
+  let isPrivacyEnabled: Bool
 }
 
 struct JournalLauncherProvider: TimelineProvider {
@@ -118,28 +119,33 @@ struct JournalLauncherProvider: TimelineProvider {
         subtitle: "After obligations",
         updatedAt: Date()
       ),
-      theme: .fallback
+      theme: .fallback,
+      isPrivacyEnabled: false
     )
   }
 
   func getSnapshot(in context: Context, completion: @escaping (JournalLauncherEntry) -> Void) {
+    let defaults = UserDefaults(suiteName: appGroupId)
     completion(
       JournalLauncherEntry(
         date: Date(),
         safeToSpend: SafeToSpendSnapshot.load(),
-        theme: WidgetThemeSnapshot.load() ?? .fallback
+        theme: WidgetThemeSnapshot.load() ?? .fallback,
+        isPrivacyEnabled: defaults?.bool(forKey: "widget_is_privacy_enabled") ?? false
       )
     )
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<JournalLauncherEntry>) -> Void) {
+    let defaults = UserDefaults(suiteName: appGroupId)
     completion(
       Timeline(
         entries: [
           JournalLauncherEntry(
             date: Date(),
             safeToSpend: SafeToSpendSnapshot.load(),
-            theme: WidgetThemeSnapshot.load() ?? .fallback
+            theme: WidgetThemeSnapshot.load() ?? .fallback,
+            isPrivacyEnabled: defaults?.bool(forKey: "widget_is_privacy_enabled") ?? false
           )
         ],
         policy: .never
@@ -165,6 +171,12 @@ struct JournalLauncherWidgetView: View {
         launcherActions(spacing: 6, iconSize: 38, titleSize: 9, containerSpacing: 8, showsHeading: false)
       case .systemMedium:
         mediumLayout
+      case .accessoryCircular:
+        accessoryCircularView
+      case .accessoryRectangular:
+        accessoryRectangularView
+      case .accessoryInline:
+        accessoryInlineView
       default:
         largeLayout
       }
@@ -253,7 +265,8 @@ struct JournalLauncherWidgetView: View {
         .font(.system(size: titleSize, weight: .bold, design: .rounded))
         .foregroundStyle(entry.theme.titleColor)
 
-      Text(entry.safeToSpend?.formattedAmount ?? "--")
+      let displayAmount = entry.isPrivacyEnabled ? "****" : (entry.safeToSpend?.formattedAmount ?? "--")
+      Text(displayAmount)
         .font(.system(size: amountFontSize, weight: .bold, design: .rounded))
         .foregroundStyle(entry.theme.primaryTextColor)
         .lineLimit(1)
@@ -290,6 +303,44 @@ struct JournalLauncherWidgetView: View {
     }
     .buttonStyle(.plain)
   }
+
+  @ViewBuilder
+  private var accessoryCircularView: some View {
+    ZStack {
+      Circle()
+        .stroke(entry.theme.titleColor, lineWidth: 2)
+      
+      VStack(spacing: 0) {
+        let displayAmount = entry.isPrivacyEnabled ? "****" : (entry.safeToSpend?.formattedAmount ?? "--")
+        Text(displayAmount)
+          .font(.system(size: 10, weight: .bold, design: .rounded))
+          .minimumScaleFactor(0.5)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var accessoryRectangularView: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(entry.safeToSpend?.title.uppercased() ?? "SAFE TO SPEND")
+        .font(.system(size: 10, weight: .bold, design: .rounded))
+        .foregroundStyle(entry.theme.titleColor)
+      
+      let displayAmount = entry.isPrivacyEnabled ? "****" : (entry.safeToSpend?.formattedAmount ?? "--")
+      Text(displayAmount)
+        .font(.system(size: 16, weight: .bold, design: .rounded))
+      
+      Text(entry.safeToSpend?.subtitle ?? "")
+        .font(.system(size: 9, weight: .medium, design: .rounded))
+        .opacity(0.8)
+    }
+  }
+
+  @ViewBuilder
+  private var accessoryInlineView: some View {
+    let displayAmount = entry.isPrivacyEnabled ? "****" : (entry.safeToSpend?.formattedAmount ?? "--")
+    Text("\(entry.safeToSpend?.title ?? "Balance"): \(displayAmount)")
+  }
 }
 
 @main
@@ -306,6 +357,9 @@ struct FullFrillsBalanceWidget: Widget {
       .systemSmall,
       .systemMedium,
       .systemLarge,
+      .accessoryCircular,
+      .accessoryRectangular,
+      .accessoryInline,
     ])
   }
 }

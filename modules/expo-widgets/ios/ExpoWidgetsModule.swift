@@ -54,6 +54,12 @@ public final class ExpoWidgetsModule: Module {
         defaults.removeObject(forKey: "widget_theme_transfer_accent_color")
       }
 
+      if let isPrivacyEnabled = snapshot["isPrivacyEnabled"] as? Bool {
+        defaults.set(isPrivacyEnabled, forKey: "widget_is_privacy_enabled")
+      } else {
+        defaults.set(false, forKey: "widget_is_privacy_enabled")
+      }
+
       if #available(iOS 14.0, *) {
         WidgetCenter.shared.reloadAllTimelines()
       }
