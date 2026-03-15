@@ -16,8 +16,12 @@ export function BudgetListView({ onAddPress }: BudgetListViewProps) {
     const { items } = useBudgetListViewModel()
     const { theme } = useTheme()
 
-    const handlePress = (budgetId: string) => {
-        AppNavigation.toBudgetDetail(budgetId)
+    const handlePress = (item: BudgetItem) => {
+        AppNavigation.toBudgetDetail(item.budget.id, {
+            name: item.budget.name,
+            amount: item.budget.amount,
+            currency: item.budget.currencyCode,
+        })
     }
 
     const renderItem = ({ item }: { item: BudgetItem }) => {
@@ -36,7 +40,7 @@ export function BudgetListView({ onAddPress }: BudgetListViewProps) {
         return (
             <TouchableOpacity
                 style={styles.cardContainer}
-                onPress={() => handlePress(budget.id)}
+                onPress={() => handlePress(item)}
                 activeOpacity={0.8}
             >
                 <AppCard elevation="md" padding="lg" radius="r2">

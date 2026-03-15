@@ -7,10 +7,19 @@ import { confirm } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 
 export function usePlannedPaymentDetailsViewModel(id: string) {
     const { theme } = useTheme();
+    const params = useLocalSearchParams();
+
+    // Initial Data Injection: Extract preview data from params
+    const pDesc = params.pDesc as string;
+    const pAmount = params.pAmount as string;
+    const pCurrency = params.pCurrency as string;
+    const pDate = params.pDate as string;
+
     const {
         item,
         history,
@@ -27,8 +36,38 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
 
     const isMissing = !isLoading && !item;
 
+    // Build a preview-based skeleton if DB record is still loading
+    const isLoadingVisible = isLoading && !pDesc;
+
     return useMemo(() => {
         if (!item) {
+            // Show preview skeleton while loading
+            if (pDesc && isLoading) {
+                return {
+                    theme,
+                    isLoading: isLoadingVisible,
+                    isMissing: false,
+                    onBack: () => AppNavigation.back(),
+                    title: AppConfig.strings.plannedPayments.title,
+                    amountText: pAmount ? CurrencyFormatter.format(parseFloat(pAmount), pCurrency) : '...',
+                    nameText: pDesc,
+                    statusLabel: '',
+                    typeLabel: '',
+                    typeColorKey: 'primary',
+                    iconName: 'document',
+                    nextOccurrenceText: pDate ? new Date(parseInt(pDate)).toLocaleDateString() : '...',
+                    isAutoPost: false,
+                    fromAccount: null,
+                    toAccount: null,
+                    history: [],
+                    rawAmount: pAmount ? parseFloat(pAmount) : 0,
+                    rawName: pDesc,
+                    headerActions: { onEdit: handleEdit, onDelete: () => {} },
+                    onPost: () => {},
+                    onSkip: () => {},
+                    onToggleStatus: handleToggleStatus,
+                } as any;
+            }
             return {
                 theme,
                 isLoading,

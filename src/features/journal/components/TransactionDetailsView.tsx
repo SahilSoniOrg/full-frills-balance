@@ -27,7 +27,6 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
         onOpenSmsInbox,
         onBack,
         splitItems,
-        isExpense,
     } = vm;
 
     if (isLoading) {
@@ -97,7 +96,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                 {/* <AppCard elevation="md" radius="r2" padding="lg" style={styles.receiptCard}> */}
                 <View style={styles.iconContainer}>
                     <View style={[styles.mainIcon, { backgroundColor: withOpacity(amountColor, Opacity.soft) }]}>
-                        <AppIcon name={isExpense ? 'receipt' : 'receiptLong'} size={Size.xxl} color={amountColor} />
+                        <AppIcon name={vm.displayIcon} size={Size.xxl} color={amountColor} />
                     </View>
                 </View>
 

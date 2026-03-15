@@ -19,13 +19,18 @@ export function useBudgetEditViewModel() {
     const { data: expenseAccounts = [] } = useObservable(() => accountRepository.observeByType(AccountType.EXPENSE), [], [])
     const { data: currencies = [] } = useObservable(() => currencyRepository.observeAll(), [], [])
 
+    // Initial Data Injection: Extract preview data from params
+    const pName = params.pName as string;
+    const pAmount = params.pAmount as string;
+    const pCurrency = params.pCurrency as string;
+
     const [budget, setBudget] = useState<Budget | null>(null)
-    const [name, setName] = useState('')
-    const [amount, setAmount] = useState('')
-    const [currencyCode, setCurrencyCode] = useState<string>(defaultCurrency || AppConfig.defaultCurrency)
+    const [name, setName] = useState(pName || '')
+    const [amount, setAmount] = useState(pAmount || '')
+    const [currencyCode, setCurrencyCode] = useState<string>(pCurrency || defaultCurrency || AppConfig.defaultCurrency)
     const [startMonth, setStartMonth] = useState(new Date())
     const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
-    const [loading, setLoading] = useState(!!budgetId)
+    const [loading, setLoading] = useState(!!budgetId && !pName)
     const [isSaving, setIsSaving] = useState(false)
 
     useEffect(() => {

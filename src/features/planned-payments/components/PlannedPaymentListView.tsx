@@ -32,7 +32,12 @@ export function PlannedPaymentListView() {
             renderItem={({ item }) => (
                 <PlannedPaymentCard
                     item={item}
-                    onPress={() => AppNavigation.toPlannedPaymentDetails(item.id)}
+                    onPress={() => AppNavigation.toPlannedPaymentDetails(item.id, {
+                        description: item.name,
+                        amount: item.amount,
+                        currency: item.currencyCode,
+                        nextDate: item.nextOccurrence,
+                    })}
                 />
             )}
         />

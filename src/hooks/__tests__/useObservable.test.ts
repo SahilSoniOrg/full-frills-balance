@@ -90,6 +90,33 @@ describe('useObservable', () => {
 
         expect(result.current.data).toBe('B');
     });
+
+    it('should not update data when comparator returns true', async () => {
+        const subject = new Subject<string>();
+        const comparator = (prev: string, next: string) => prev.toLowerCase() === next.toLowerCase();
+        
+        const { result } = renderHook(() => 
+            useObservable(() => subject, [], 'Initial', { comparator })
+        );
+
+        act(() => {
+            subject.next('initial'); // Same as 'Initial' (case-insensitive)
+        });
+
+        // Data should NOT update to 'initial' because comparator returns true
+        await waitFor(() => {
+            expect(result.current.data).toBe('Initial');
+        });
+
+        act(() => {
+            subject.next('Updated');
+        });
+
+        // Data SHOULD update to 'Updated' because comparator returns false
+        await waitFor(() => {
+            expect(result.current.data).toBe('Updated');
+        });
+    });
 });
 
 describe('useObservableWithEnrichment', () => {

@@ -102,7 +102,9 @@ export function usePaginatedObservable<T, E = T>(
         if (isStructuralChange || isVersionChange) {
             const shouldSuppressReset = suppressResetOnSearch && prev.structuralKey !== structuralKey && prev.versionKey === versionKey;
 
-            if (!shouldSuppressReset) {
+            // Only show loading if it's a structural change or the list is currently empty.
+            // This prevents the "flash of loading" when adding a single transaction.
+            if (!shouldSuppressReset && (isStructuralChange || items.length === 0)) {
                 setIsLoading(true);
             }
 
@@ -111,7 +113,7 @@ export function usePaginatedObservable<T, E = T>(
 
             if (isStructuralChange) {
                 if (!shouldSuppressReset) {
-                    setItems([]); // Clear items only on structural changes (unless suppressed)
+                    setItems([]); // Clear items ONLY on structural changes
                 }
                 if (currentLimit !== pageSize) {
                     setCurrentLimit(pageSize); // Reset pagination

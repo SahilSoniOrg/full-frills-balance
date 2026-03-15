@@ -51,11 +51,47 @@ export function useBudgetDetailViewModel() {
         )
     }, [budgetId, targetMonth])
 
-    const { data: budgetData, isLoading } = useObservable(() => budgetData$, [budgetId, targetMonth], null)
+    const { data: dbBudgetData, isLoading: dbLoading } = useObservable(() => budgetData$, [budgetId, targetMonth], null)
 
-    const budget = useMemo(() => budgetData ? budgetData[0] : null, [budgetData])
-    const usage = useMemo(() => budgetData ? budgetData[1] : null, [budgetData])
-    const transactions = useMemo(() => budgetData ? budgetData[2] : [], [budgetData])
+    // Initial Data Injection: Extract preview data from params
+    const pName = params.pName as string;
+    const pAmount = params.pAmount as string;
+    const pCurrency = params.pCurrency as string;
+    const pPeriod = params.pPeriod as string;
+
+    const budget = useMemo(() => {
+        if (dbBudgetData) return dbBudgetData[0];
+        if (pName) {
+            return {
+                id: budgetId,
+                name: pName,
+                targetAmount: pAmount ? parseFloat(pAmount) : 0,
+                currencyCode: pCurrency || baseCurrency,
+                periodType: pPeriod || 'MONTHLY'
+            } as any;
+        }
+        return null;
+    }, [dbBudgetData, pName, pAmount, pCurrency, pPeriod, budgetId, baseCurrency]);
+
+    const usage = useMemo(() => {
+        if (dbBudgetData) return dbBudgetData[1];
+        if (pName) {
+            return {
+                budgetId,
+                targetMonth,
+                spentAmount: 0,
+                targetAmount: pAmount ? parseFloat(pAmount) : 0,
+                percentage: 0,
+                isOverBudget: false,
+                currencyCode: pCurrency || baseCurrency
+            } as any;
+        }
+        return null;
+    }, [dbBudgetData, pName, pAmount, pCurrency, budgetId, targetMonth, baseCurrency]);
+
+    const transactions = useMemo(() => dbBudgetData ? dbBudgetData[2] : [], [dbBudgetData])
+
+    const isLoading = dbLoading && !pName;
 
     const transactionGroupingOptions = useMemo(() => ({
         items: transactions,

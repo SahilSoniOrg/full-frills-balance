@@ -104,7 +104,19 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     );
     const existingMetadata = metadataRecords[0];
 
+    // Initial Data Injection: Extract preview data from params
+    const pName = params.pName as string;
+    const pType = params.pType as string;
+    const pCurrency = params.pCurrency as string;
+    const pIcon = params.pIcon as string;
+
     const getInitialAccountType = (): AccountType => {
+        if (pType) {
+            const upperType = pType.toUpperCase() as keyof typeof AccountType;
+            if (Object.values(AccountType).includes(upperType as AccountType)) {
+                return upperType as AccountType;
+            }
+        }
         if (typeParam) {
             const upperType = typeParam.toUpperCase() as keyof typeof AccountType;
             if (Object.values(AccountType).includes(upperType as AccountType)) {
@@ -115,13 +127,13 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     };
 
     // Form State
-    const [accountName, setAccountName] = useState('');
+    const [accountName, setAccountName] = useState(pName || '');
     const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType());
     const [accountSubtype, setAccountSubtype] = useState<AccountSubtype>(
         getDefaultSubtypeForType(getInitialAccountType())
     );
-    const [selectedCurrency, setSelectedCurrency] = useState<string>(defaultCurrency || AppConfig.defaultCurrency);
-    const [selectedIcon, setSelectedIcon] = useState<string>('wallet');
+    const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || defaultCurrency || AppConfig.defaultCurrency);
+    const [selectedIcon, setSelectedIcon] = useState<string>(pIcon || 'wallet');
     const [initialBalance, setInitialBalance] = useState('');
     const [parentAccountId, setParentAccountId] = useState('');
     const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);

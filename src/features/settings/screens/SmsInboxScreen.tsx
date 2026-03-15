@@ -293,7 +293,13 @@ export default function SmsInboxScreen() {
                   variant="ghost"
                   size="sm"
                   style={styles.inlineButton}
-                  onPress={() => AppNavigation.toTransactionDetails(item.duplicateCandidate!.journalId)}
+                onPress={() => AppNavigation.toTransactionDetails(item.duplicateCandidate!.journalId, {
+                  title: item.duplicateCandidate!.description || item.parsedMerchant || item.senderAddress,
+                  amount: item.parsedAmount || 0,
+                  currencyCode: item.parsedCurrencyCode || undefined,
+                  date: item.duplicateCandidate!.journalDate,
+                  displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE'
+                })}
                 >
                   Compare duplicate
                 </AppButton>
@@ -301,7 +307,13 @@ export default function SmsInboxScreen() {
 
               <View style={styles.actions}>
                 {item.linkedJournal ? (
-                  <AppButton size="sm" variant="outline" onPress={() => AppNavigation.toTransactionDetails(item.linkedJournal!.journalId)}>
+                  <AppButton size="sm" variant="outline" onPress={() => AppNavigation.toTransactionDetails(item.linkedJournal!.journalId, {
+                    title: item.linkedJournal!.description || item.parsedMerchant || item.senderAddress,
+                    amount: item.parsedAmount || 0,
+                    currencyCode: item.parsedCurrencyCode || undefined,
+                    date: item.linkedJournal!.journalDate,
+                    displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE'
+                  })}>
                     Open Journal
                   </AppButton>
                 ) : (

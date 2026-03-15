@@ -69,10 +69,29 @@ export interface TransactionDetailsViewModel {
     onSkip?: () => void;
     splitItems: TransactionSplitItemViewModel[];
     isExpense: boolean;
+    displayIcon: IconName;
 }
 
 export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
-    const { journalId } = useLocalSearchParams<{ journalId: string }>();
+    const { 
+        journalId, 
+        title: paramTitle, 
+        amount: paramAmount, 
+        currencyCode: paramCurrency, 
+        date: paramDate, 
+        typeColor: paramTypeColor, 
+        typeIcon: paramTypeIcon,
+        displayType: paramDisplayType
+    } = useLocalSearchParams<{ 
+        journalId: string;
+        title?: string;
+        amount?: string;
+        currencyCode?: string;
+        date?: string;
+        typeColor?: string;
+        typeIcon?: string;
+        displayType?: string;
+    }>();
     const { theme } = useTheme();
     const { deleteJournal, findJournal, duplicateJournal, postJournal } = useJournalActions();
     const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
@@ -110,24 +129,48 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         undefined
     );
 
-    const journalInfo = useMemo(() => journal ? {
-        description: journal.description,
-        date: journal.journalDate,
-        status: journal.status,
-        currency: journal.currencyCode,
-        displayType: journal.displayType,
-        totalAmount: journal.totalAmount || 0,
-        plannedPaymentId: journal.plannedPaymentId,
-        journalDate: journal.journalDate
-    } : null, [journal]);
+    const journalInfo = useMemo(() => {
+        if (journal) {
+            return {
+                description: journal.description,
+                date: journal.journalDate,
+                status: journal.status,
+                currency: journal.currencyCode,
+                displayType: journal.displayType,
+                totalAmount: journal.totalAmount || 0,
+                plannedPaymentId: journal.plannedPaymentId,
+                journalDate: journal.journalDate
+            };
+        }
 
-    const isLoading = isLoadingTransactions || isLoadingJournal;
+        // Fallback to params if database record isn't loaded yet
+        if (paramTitle || paramAmount) {
+            return {
+                description: paramTitle || 'Loading...',
+                date: paramDate ? Number(paramDate) : Date.now(),
+                status: 'DRAFT', // Default to draft until loaded
+                currency: paramCurrency || 'USD',
+                displayType: paramDisplayType || 'EXPENSE',
+                totalAmount: paramAmount ? Number(paramAmount) : 0,
+                plannedPaymentId: null,
+                journalDate: paramDate ? Number(paramDate) : Date.now()
+            };
+        }
+
+        return null;
+    }, [journal, paramTitle, paramAmount, paramDate, paramCurrency, paramDisplayType]);
+
+    const isLoading = (isLoadingTransactions || isLoadingJournal) && !journalInfo;
 
     const journalDisplayType = journalInfo?.displayType as JournalDisplayType;
     const isIncome = journalDisplayType === JournalDisplayType.INCOME;
     const isExpense = journalDisplayType === JournalDisplayType.EXPENSE;
 
-    const amountColor = isIncome ? theme.income : isExpense ? theme.error : theme.primary;
+    const amountColor = useMemo(() => {
+        if (paramTypeColor && !journal) return (theme[paramTypeColor as keyof typeof theme] as string) || theme.primary;
+        return isIncome ? theme.income : isExpense ? theme.error : theme.primary;
+    }, [isIncome, isExpense, theme, paramTypeColor, journal]);
+
     const amountPrefix = isIncome ? '+' : isExpense ? '-' : '';
     const amountText = journalInfo ? `${amountPrefix}${CurrencyFormatter.format(journalInfo.totalAmount, journalInfo.currency)}` : '';
 
@@ -288,5 +331,6 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         onSkip: journalInfo?.status === 'PLANNED' ? handleSkip : undefined,
         splitItems,
         isExpense,
+        displayIcon: (paramTypeIcon as IconName) || (isExpense ? 'receipt' : 'receiptLong'),
     };
 }

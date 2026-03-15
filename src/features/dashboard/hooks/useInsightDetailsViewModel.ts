@@ -92,24 +92,34 @@ export function useInsightDetailsViewModel({
                 ? AppConfig.strings.journal.transfer
                 : AppConfig.strings.journal.transaction;
 
+            const cardProps = {
+                title: journal.description || defaultTitle,
+                amount: journal.totalAmount,
+                currencyCode: journal.currencyCode,
+                transactionDate: journal.journalDate,
+                presentation: {
+                    label: presentation.label,
+                    typeColor: presentation.colorKey,
+                    typeIcon,
+                    amountPrefix,
+                },
+                badges,
+            };
+
             return {
                 id: journal.id,
                 type: 'transaction' as const,
                 date: journal.journalDate,
-                onPress: () => AppNavigation.toTransactionDetails(journal.id),
-                cardProps: {
-                    title: journal.description || defaultTitle,
-                    amount: journal.totalAmount,
-                    currencyCode: journal.currencyCode,
-                    transactionDate: journal.journalDate,
-                    presentation: {
-                        label: presentation.label,
-                        typeColor: presentation.colorKey,
-                        typeIcon,
-                        amountPrefix,
-                    },
-                    badges,
-                }
+                onPress: () => AppNavigation.toTransactionDetails(journal.id, {
+                    title: cardProps.title,
+                    amount: cardProps.amount,
+                    currencyCode: cardProps.currencyCode,
+                    date: cardProps.transactionDate,
+                    typeColor: cardProps.presentation.typeColor,
+                    typeIcon: cardProps.presentation.typeIcon,
+                    displayType: journal.displayType
+                }),
+                cardProps
             };
         }
     }), [enrichedJournals, baseCurrency]);

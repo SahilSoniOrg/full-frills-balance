@@ -104,21 +104,62 @@ export const AppNavigation = {
 
     /**
      * Navigate to the Transaction Details screen.
+     * Supports optional preview data for immediate rendering while the full record loads.
      */
-    toTransactionDetails: (journalId: string) => {
-        router.push(`/transaction-details?journalId=${journalId}` as any);
+    toTransactionDetails: (journalId: string, preview?: { 
+        title?: string; 
+        amount?: number; 
+        currencyCode?: string; 
+        date?: number; 
+        typeColor?: string; 
+        typeIcon?: string;
+        displayType?: string;
+    }) => {
+        const queryParams = new URLSearchParams();
+        queryParams.append('journalId', journalId);
+        
+        if (preview) {
+            if (preview.title) queryParams.append('title', preview.title);
+            if (preview.amount !== undefined) queryParams.append('amount', String(preview.amount));
+            if (preview.currencyCode) queryParams.append('currencyCode', preview.currencyCode);
+            if (preview.date) queryParams.append('date', String(preview.date));
+            if (preview.typeColor) queryParams.append('typeColor', preview.typeColor);
+            if (preview.typeIcon) queryParams.append('typeIcon', preview.typeIcon);
+            if (preview.displayType) queryParams.append('displayType', preview.displayType);
+        }
+
+        router.push(`/transaction-details?${queryParams.toString()}` as any);
     },
 
     /**
      * Navigate to the Account Details screen.
      */
-    toAccountDetails: (accountId: string, options?: { startDate?: number; endDate?: number }) => {
+    toAccountDetails: (accountId: string, options?: { 
+        startDate?: number; 
+        endDate?: number;
+        preview?: {
+            name?: string;
+            balance?: number;
+            currency?: string;
+            icon?: string;
+            type?: string;
+            colorKey?: string;
+        }
+    }) => {
         const params: Record<string, string> = { accountId };
         if (typeof options?.startDate === 'number') {
             params.startDate = options.startDate.toString();
         }
         if (typeof options?.endDate === 'number') {
             params.endDate = options.endDate.toString();
+        }
+        if (options?.preview) {
+            if (options.preview.name) params.pName = options.preview.name;
+            if (options.preview.balance !== undefined) params.pBalance = String(options.preview.balance);
+            if (options.preview.currency) params.pCurrency = options.preview.currency;
+            if (options.preview.icon) params.pIcon = options.preview.icon;
+            if (options.preview.type) params.pType = options.preview.type;
+            if (options.preview.colorKey) params.pColor = options.preview.colorKey;
         }
 
         router.push({
@@ -137,12 +178,22 @@ export const AppNavigation = {
     /**
      * Navigate to the Account Form screen (Create or Edit).
      */
-    toAccountForm: (accountId?: string) => {
-        if (accountId) {
-            router.push(`/account-creation?accountId=${accountId}` as any);
-        } else {
-            router.push('/account-creation' as any);
+    toAccountForm: (accountId?: string, preview?: {
+        name?: string;
+        type?: string;
+        currency?: string;
+        icon?: string;
+    }) => {
+        const queryParams = new URLSearchParams();
+        if (accountId) queryParams.append('accountId', accountId);
+        if (preview) {
+            if (preview.name) queryParams.append('pName', preview.name);
+            if (preview.type) queryParams.append('pType', preview.type);
+            if (preview.currency) queryParams.append('pCurrency', preview.currency);
+            if (preview.icon) queryParams.append('pIcon', preview.icon);
         }
+        const queryString = queryParams.toString();
+        router.push((queryString ? `/account-creation?${queryString}` : '/account-creation') as any);
     },
 
     /**
@@ -159,19 +210,40 @@ export const AppNavigation = {
     /**
      * Navigate to the Budget Detail screen.
      */
-    toBudgetDetail: (budgetId: string) => {
-        router.push(`/budget-details?id=${budgetId}`);
+    toBudgetDetail: (budgetId: string, preview?: {
+        name?: string;
+        amount?: number;
+        currency?: string;
+        period?: string;
+    }) => {
+        const queryParams = new URLSearchParams();
+        queryParams.append('id', budgetId);
+        if (preview) {
+            if (preview.name) queryParams.append('pName', preview.name);
+            if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
+            if (preview.currency) queryParams.append('pCurrency', preview.currency);
+            if (preview.period) queryParams.append('pPeriod', preview.period);
+        }
+        router.push(`/budget-details?${queryParams.toString()}`);
     },
 
     /**
      * Navigate to the Budget Form screen (Create or Edit).
      */
-    toBudgetForm: (budgetId?: string) => {
-        if (budgetId) {
-            router.push(`/budget-edit?id=${budgetId}`);
-        } else {
-            router.push('/budget-edit');
+    toBudgetForm: (budgetId?: string, preview?: {
+        name?: string;
+        amount?: number;
+        currency?: string;
+    }) => {
+        const queryParams = new URLSearchParams();
+        if (budgetId) queryParams.append('id', budgetId);
+        if (preview) {
+            if (preview.name) queryParams.append('pName', preview.name);
+            if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
+            if (preview.currency) queryParams.append('pCurrency', preview.currency);
         }
+        const queryString = queryParams.toString();
+        router.push((queryString ? `/budget-edit?${queryString}` : '/budget-edit') as any);
     },
 
     /**
@@ -235,19 +307,40 @@ export const AppNavigation = {
     /**
      * Navigate to the Planned Payment Details screen.
      */
-    toPlannedPaymentDetails: (id: string) => {
-        router.push(`/planned-payment-details?id=${id}` as any);
+    toPlannedPaymentDetails: (id: string, preview?: {
+        description?: string;
+        amount?: number;
+        currency?: string;
+        nextDate?: number;
+    }) => {
+        const queryParams = new URLSearchParams();
+        queryParams.append('id', id);
+        if (preview) {
+            if (preview.description) queryParams.append('pDesc', preview.description);
+            if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
+            if (preview.currency) queryParams.append('pCurrency', preview.currency);
+            if (preview.nextDate) queryParams.append('pDate', String(preview.nextDate));
+        }
+        router.push(`/planned-payment-details?${queryParams.toString()}` as any);
     },
 
     /**
      * Navigate to the Planned Payment Form screen.
      */
-    toPlannedPaymentForm: (id?: string) => {
-        if (id) {
-            router.push(`/planned-payment-form?id=${id}` as any);
-        } else {
-            router.push('/planned-payment-form' as any);
+    toPlannedPaymentForm: (id?: string, preview?: {
+        description?: string;
+        amount?: number;
+        currency?: string;
+    }) => {
+        const queryParams = new URLSearchParams();
+        if (id) queryParams.append('id', id);
+        if (preview) {
+            if (preview.description) queryParams.append('pDesc', preview.description);
+            if (preview.amount !== undefined) queryParams.append('pAmount', String(preview.amount));
+            if (preview.currency) queryParams.append('pCurrency', preview.currency);
         }
+        const queryString = queryParams.toString();
+        router.push((queryString ? `/planned-payment-form?${queryString}` : '/planned-payment-form') as any);
     },
 
     /**

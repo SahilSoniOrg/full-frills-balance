@@ -125,9 +125,18 @@ export function useAccountsListViewModel(): AccountsListViewModel {
                 return next
             })
         } else {
-            AppNavigation.toAccountDetails(accountId)
+            const balance = balancesByAccountId.get(accountId)
+            AppNavigation.toAccountDetails(accountId, {
+                preview: {
+                    name: account.name,
+                    balance: balance?.balance,
+                    currency: balance?.currencyCode || account.currencyCode,
+                    icon: account.icon || 'wallet',
+                    type: account.accountType,
+                }
+            })
         }
-    }, [accounts, expandedAccountIds])
+    }, [accounts, expandedAccountIds, balancesByAccountId])
 
     const onCollapseAccount = useCallback((accountId: string) => {
         setExpandedAccountIds(prev => {

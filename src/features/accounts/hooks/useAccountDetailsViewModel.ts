@@ -139,12 +139,40 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     });
 
     const {
-        account,
-        balanceData,
+        account: dbAccount,
+        balanceData: dbBalanceData,
         subAccounts: rawSubBalances,
         allAccounts: accounts,
         isLoading: dashboardLoading
     } = useAccountDashboard(accountId);
+
+    // Initial Data Injection: Extract preview data from params
+    const pName = params.pName as string;
+    const pBalance = params.pBalance as string;
+    const pCurrency = params.pCurrency as string;
+    const pIcon = params.pIcon as string;
+    const pType = params.pType as string;
+    const pColor = params.pColor as string;
+
+    const account = dbAccount || (pName ? {
+        id: accountId,
+        name: pName,
+        accountType: pType || 'ASSET',
+        currencyCode: pCurrency || defaultCurrency || 'USD',
+        icon: pIcon || 'wallet',
+        colorKey: pColor,
+        deletedAt: null,
+    } : null) as Account | null;
+
+    const balanceData = dbBalanceData || (pBalance ? {
+        accountId,
+        balance: parseFloat(pBalance),
+        currencyCode: pCurrency || account?.currencyCode || defaultCurrency || 'USD',
+        transactionCount: 0,
+    } : null) as AccountBalance | null;
+
+    // Perceived loading state: if we have preview metadata, we can show the header immediately
+    const accountLoading = dashboardLoading && !pName;
 
     const isParent = useMemo(() => accounts.some((a: Account) => a.parentAccountId === accountId && a.deletedAt === null), [accounts, accountId]);
     const subAccountCount = useMemo(() => accounts.filter((a: Account) => a.parentAccountId === accountId && a.deletedAt === null).length, [accounts, accountId]);
@@ -251,9 +279,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
     const subBalances = useMemo(() => new Map<string, AccountBalance>(rawSubBalances.map((b: AccountBalance) => [b.accountId, b])), [rawSubBalances]);
     const subBalancesLoading = dashboardLoading;
-    const accountLoading = dashboardLoading;
     const balanceLoading = dashboardLoading;
-    const balance = balanceData?.balance || 0;
+    const balance = dbBalanceData?.balance || 0;
     const transactionCount = balanceData?.transactionCount || 0;
     const isDeleted = account?.deletedAt != null;
 
@@ -300,8 +327,13 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     }, [accountId, recoverAction]);
 
     const onEdit = useCallback(() => {
-        AppNavigation.toAccountForm(accountId);
-    }, [accountId]);
+        AppNavigation.toAccountForm(accountId, account ? {
+            name: account.name,
+            type: account.accountType,
+            currency: account.currencyCode,
+            icon: account.icon || 'wallet',
+        } : undefined);
+    }, [accountId, account]);
 
     const onBack = useCallback(() => {
         AppNavigation.back();
@@ -313,7 +345,19 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
     const onTransactionPress = useCallback((transaction: DisplayTransaction) => {
         if (transaction.journalId) {
-            AppNavigation.toTransactionDetails(transaction.journalId);
+            const isIncrease = transaction.isIncrease;
+            const displayType = transaction.displayType as JournalDisplayType;
+            const base = journalPresenter.getPresentation(displayType, transaction.semanticLabel);
+
+            AppNavigation.toTransactionDetails(transaction.journalId, {
+                title: transaction.journalDescription || transaction.displayTitle || 'Transaction',
+                amount: transaction.amount,
+                currencyCode: transaction.currencyCode,
+                date: transaction.transactionDate,
+                typeColor: base.colorKey,
+                typeIcon: isIncrease ? 'arrowUp' : 'arrowDown',
+                displayType: transaction.displayType,
+            });
         }
     }, []);
 

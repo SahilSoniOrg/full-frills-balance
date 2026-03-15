@@ -27,9 +27,13 @@ export function usePlannedPaymentDetails(id: string) {
 
     const handleEdit = useCallback(() => {
         if (id) {
-            AppNavigation.toPlannedPaymentForm(id);
+            AppNavigation.toPlannedPaymentForm(id, item ? {
+                description: item.name,
+                amount: item.amount,
+                currency: item.currencyCode,
+            } : undefined);
         }
-    }, [id]);
+    }, [id, item]);
 
     const handleToggleStatus = useCallback(async () => {
         if (!item) return;

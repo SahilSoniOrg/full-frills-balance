@@ -22,9 +22,11 @@ export interface UseObservableResult<T> {
     version: number;
 }
 
-export interface UseObservableOptions {
+export interface UseObservableOptions<T> {
     /** Keep previous data while loading new data */
     keepPreviousData?: boolean;
+    /** Optional comparator to prevent re-renders when data hasn't changed */
+    comparator?: (prev: T, next: T) => boolean;
 }
 
 /**
@@ -39,7 +41,7 @@ export function useObservable<T>(
     observableFactory: () => Observable<T>,
     deps: DependencyList,
     initialValue: T,
-    options: UseObservableOptions = {}
+    options: UseObservableOptions<T> = {}
 ): UseObservableResult<T> {
     const { keepPreviousData = true } = options;
 
@@ -55,17 +57,28 @@ export function useObservable<T>(
 
     useEffect(() => {
         let isActive = true;
+        const { comparator } = options;
+
         if (!keepPreviousData) {
             setData(initialValue);
         }
-        setIsLoading(true);
+
+        // Only show loading if we don't have data yet or we're not keeping previous data
+        if (!keepPreviousData || (initialValue !== undefined && data === initialValue)) {
+            setIsLoading(true);
+        }
         setError(null);
 
         const subscription = stableFactory().subscribe({
             next: (result) => {
                 if (!isActive) return;
-                // WatermelonDB observables already return new array instances on emission.
-                // The version counter ensures React re-renders even with stable references.
+
+                // Apply comparator if provided to avoid redundant updates
+                if (comparator && comparator(data, result)) {
+                    setIsLoading(false);
+                    return;
+                }
+
                 setData(result);
                 setVersion(v => v + 1);
                 setIsLoading(false);
@@ -102,7 +115,8 @@ export function useObservableWithEnrichment<T, E>(
     observableFactory: () => Observable<T>,
     enricher: (data: T) => Promise<E>,
     deps: DependencyList,
-    initialValue: E
+    initialValue: E,
+    options: UseObservableOptions<E> = {}
 ): UseObservableResult<E> {
     const factoryRef = useRef(observableFactory);
     factoryRef.current = observableFactory;
@@ -121,7 +135,15 @@ export function useObservableWithEnrichment<T, E>(
     useEffect(() => {
         let isActive = true;
         let sequence = 0;
-        setIsLoading(true);
+        const { keepPreviousData = true, comparator } = options as UseObservableOptions<E>;
+
+        if (!keepPreviousData) {
+            setData(initialValue);
+        }
+
+        if (!keepPreviousData || data === initialValue) {
+            setIsLoading(true);
+        }
         setError(null);
 
         const subscription = stableFactory().subscribe({
@@ -130,6 +152,12 @@ export function useObservableWithEnrichment<T, E>(
                 try {
                     const enriched = await stableEnricher(result);
                     if (!isActive || current !== sequence) return;
+
+                    if (comparator && comparator(data, enriched)) {
+                        setIsLoading(false);
+                        return;
+                    }
+
                     setData(enriched);
                     setVersion(v => v + 1);
                     setIsLoading(false);

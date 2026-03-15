@@ -90,8 +90,22 @@ export function useJournalListViewModel({
     const { journals: plannedJournals } = useJournals(AppConfig.defaults.plannedJournalLimit, undefined, undefined, [JournalStatus.PLANNED]);
 
     const handleJournalPress = useCallback((journalId: string) => {
-        AppNavigation.toTransactionDetails(journalId);
-    }, []);
+        const journal = journals.find(j => j.id === journalId);
+        if (journal) {
+            const cardProps = mapJournalToCardProps(journal);
+            AppNavigation.toTransactionDetails(journalId, {
+                title: cardProps.title,
+                amount: cardProps.amount,
+                currencyCode: cardProps.currencyCode,
+                date: typeof cardProps.transactionDate === 'number' ? cardProps.transactionDate : (cardProps.transactionDate as Date).getTime(),
+                typeColor: cardProps.presentation.typeColor,
+                typeIcon: cardProps.presentation.typeIcon,
+                displayType: journal.displayType
+            });
+        } else {
+            AppNavigation.toTransactionDetails(journalId);
+        }
+    }, [journals]);
 
     const onSearchChange = useCallback((value: string) => {
         setSearchQuery(value);

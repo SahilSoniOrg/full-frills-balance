@@ -128,7 +128,11 @@ export function BudgetDetailScreen() {
                     actions={[
                         {
                             name: 'edit',
-                            onPress: () => AppNavigation.toBudgetForm(budget.id),
+                            onPress: () => AppNavigation.toBudgetForm(budget.id, {
+                                name: budget.name,
+                                amount: budget.amount,
+                                currency: budget.currencyCode,
+                            }),
                             iconColor: theme.text,
                             size: Typography.sizes.xl,
                             testID: 'edit-button',

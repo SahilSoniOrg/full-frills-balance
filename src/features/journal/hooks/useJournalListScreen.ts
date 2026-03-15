@@ -33,7 +33,16 @@ export function useJournalListScreen(config: Parameters<typeof useJournalListVie
                 if (item.plannedPaymentId) {
                     AppNavigation.toPlannedPaymentDetails(item.plannedPaymentId);
                 } else {
-                    AppNavigation.toTransactionDetails(item.id);
+                    const cardProps = require('../utils/journalUiUtils').mapJournalToCardProps(item);
+                    AppNavigation.toTransactionDetails(item.id, {
+                        title: cardProps.title,
+                        amount: cardProps.amount,
+                        currencyCode: cardProps.currencyCode,
+                        date: typeof cardProps.transactionDate === 'number' ? cardProps.transactionDate : (cardProps.transactionDate as Date).getTime(),
+                        typeColor: cardProps.presentation.typeColor,
+                        typeIcon: cardProps.presentation.typeIcon,
+                        displayType: item.displayType
+                    });
                 }
             },
             datePicker: {
