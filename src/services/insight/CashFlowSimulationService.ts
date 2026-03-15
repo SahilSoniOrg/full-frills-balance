@@ -30,6 +30,7 @@ export class CashFlowSimulationService {
     ): Promise<{
         safeToSpend: number;
         shortfall: number;
+        trajectoryMinBalance: number;
         totalFutureInflow: number;
         committedBudget: number;
         committedPlanned: number;
@@ -94,14 +95,21 @@ export class CashFlowSimulationService {
             });
 
             if (currentBalance.amount < minBalance.amount) minBalance = currentBalance;
+            
             if (currentBalance.amount < 0 && safeDaysCount === null) {
                 safeDaysCount = dayOffset;
             }
         }
 
+        // Dynamic Buffer Logic:
+        // Safe to Spend = min(Today's Cash, Lowest point in simulation)
+        // This means future income "buffers" future bills, but doesn't increase today's limit.
+        const safeToSpendValue = Math.min(startingBalance.amount, minBalance.amount);
+
         return {
-            safeToSpend: Math.max(0, minBalance.amount),
+            safeToSpend: Math.max(0, safeToSpendValue),
             shortfall: minBalance.amount < 0 ? Math.abs(minBalance.amount) : 0,
+            trajectoryMinBalance: minBalance.amount,
             totalFutureInflow: flows.totalFutureInflow,
             committedBudget: flows.committedBudget,
             committedPlanned: flows.committedPlanned,
@@ -443,14 +451,22 @@ export class CashFlowSimulationService {
                     }
                     
                     const isDebtOutflow = liabilityAccountIds.has(pp.toAccountId);
-                    const impact = isDebtOutflow
-                        ? -amountDefault
-                        : (isInternalTransfer ? 0 : (isLiquidTo ? amountDefault : -amountDefault));
+                    
+                    // Impact: 
+                    // 1. If it's an internal transfer, net impact is 0 (money stayed within our tracked liquid/liability sphere).
+                    // 2. Otherwise, if it's arriving at a liquid account, it's an inflow (+).
+                    // 3. Otherwise, it must be leaving a liquid account to a non-tracked account, so it's an outflow (-).
+                    const impact = isInternalTransfer
+                        ? 0
+                        : (isLiquidTo ? amountDefault : -amountDefault);
+
                     const flowType = isDebtOutflow ?
                         (liabilityAccountSubtypes.get(pp.toAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
                         : 'PLAN_PAYMENT';
 
-                    // Liability payments reduce liquid cash even when the destination is another tracked account.
+                    // Commit logic:
+                    // If it's an internal transfer from Liquid Asset to Liability, it's a "commitment" to pay debt.
+                    // Even if net impact is 0, we track it so the user sees it in "Committed Planned".
                     const commitAmount = (isInternalTransfer && isDebtOutflow) ? amountDefault : undefined;
 
                     logger.info(`[SafeToSpend] Simulating PP ${pp.name}: impact ${impact} on day ${dayOffset} (type: ${flowType})`);
@@ -513,11 +529,14 @@ export class CashFlowSimulationService {
                         (liabilityAccountSubtypes.get(otherSideAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
                         : 'PLAN_JOURNAL';
 
-                    const impact = (isInternalTransfer && isDebtOutflow)
-                        ? (tx.transactionType === TransactionType.CREDIT ? -amountDefault : 0)
-                        : (isInternalTransfer ? 0 : (tx.transactionType === TransactionType.DEBIT ? amountDefault : -amountDefault));
+                    // For journals, we iterate through EACH transaction (debit/credit).
+                    // If it's an internal transfer, we skip individual impact because the net will be 0.
+                    // If NOT internal, we count the impact on liquid cash.
+                    const impact = isInternalTransfer
+                        ? 0
+                        : (tx.transactionType === TransactionType.DEBIT ? amountDefault : -amountDefault);
 
-                    // Similarly to PP, internal transfers to debt should be tracked for commitment display.
+                    // If it's an internal transfer to debt (Credit to Asset, Debit to Liability), track commitment.
                     const commitAmount = (isInternalTransfer && isDebtOutflow && tx.transactionType === TransactionType.CREDIT) ? amountDefault : undefined;
 
                     addFlow(dayOffset, impact, flowType, `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`, commitAmount);

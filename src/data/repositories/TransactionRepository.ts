@@ -144,7 +144,7 @@ export class TransactionRepository {
     if (journalIds.length === 0) return []
     return this.transactions
       .query(
-        Q.where('id', Q.oneOf(journalIds)),
+        Q.where('journal_id', Q.oneOf(journalIds)),
         Q.where('deleted_at', Q.eq(null))
       )
       .fetch()

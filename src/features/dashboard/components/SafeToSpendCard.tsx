@@ -402,9 +402,25 @@ export const SafeToSpendCard = ({
                         <View style={[styles.exampleBox, { backgroundColor: theme.surfaceSecondary }]}>
                             <AppText variant="body" weight="bold">{labels.calculationTitle}</AppText>
                             <AppText variant="caption">{labels.calculationFormula}</AppText>
-                            <AppText variant="caption">{format(totalLiquidAssets)} - {format(committedTotal)} - {format(committedLiabilities)}</AppText>
+                            <View style={[styles.breakdownRow, { marginTop: Spacing.xs }]}>
+                                <AppText variant="caption">Liquid Assets (Today):</AppText>
+                                <AppText variant="caption">{format(totalLiquidAssets)}</AppText>
+                            </View>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="caption">Net Obligations (30d):</AppText>
+                                <AppText variant="caption" color="warning">-{format(Math.max(0, totalLiquidAssets - safeToSpend))}</AppText>
+                            </View>
                             <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
-                            <AppText variant="body" weight="bold" color="primary">Total: {format(safeToSpend)}</AppText>
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="body" weight="bold" color="primary">Safe to Spend:</AppText>
+                                <AppText variant="body" weight="bold" color="primary">{format(safeToSpend)}</AppText>
+                            </View>
+                            
+                            <View style={{ marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: theme.border, borderStyle: 'dashed' }}>
+                                <AppText variant="caption" italic color="secondary">
+                                    Logic: Future income ({format(totalFutureInflow)}) is used to "buffer" your bills. Money is only reserved from today's cash if future income won't cover it.
+                                </AppText>
+                            </View>
                         </View>
                     </View>
                 )}

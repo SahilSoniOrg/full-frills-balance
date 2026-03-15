@@ -101,6 +101,136 @@ describe('CashFlowSimulationService', () => {
         expect(result.totalLiabilities).toBe(400);
         expect(result.committedLiabilities).toBe(300);
         expect(result.committedLiabilitiesCC).toBe(300);
-        expect(result.safeToSpend).toBe(700);
+        expect(result.safeToSpend).toBe(1000); // 1000 - 0 (internal transfer)
+    });
+    it('treats planned income to a liability account as an inflow', async () => {
+        const creditCard = {
+            id: 'cc-1',
+            name: 'Primary Card',
+            accountType: AccountType.LIABILITY,
+            accountSubtype: AccountSubtype.CREDIT_CARD,
+            metadataRecords: {
+                fetch: jest.fn().mockResolvedValue([{ statementDay: 5, dueDay: 20 }]),
+            },
+        } as unknown as Account;
+
+        const plannedIncome = {
+            id: 'pp-income',
+            name: 'Side Project Income',
+            fromAccountId: 'external-source',
+            toAccountId: creditCard.id,
+            amount: 500,
+            nextOccurrence: dayjs().add(5, 'day').valueOf(),
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            currencyCode: 'USD',
+        };
+
+        (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+            new Map([[creditCard.id, -250]])
+        );
+
+        const result = await cashFlowSimulationService.simulateSafeToSpend(
+            Money.from(1000, 'USD'),
+            [plannedIncome as any],
+            [],
+            ['cash-1'],
+            [{ account: creditCard, balance: Money.from(400, 'USD') }],
+            [],
+            [],
+            [],
+            [],
+            'USD',
+        );
+
+        expect(result.totalFutureInflow).toBe(500);
+        expect(result.safeToSpend).toBe(1000); // 1000 (starting balance) is the floor, income only raises it above
+    });
+
+    it('does not include future income in safe-to-spend (conservative logic)', async () => {
+        const plannedIncome = {
+            id: 'pp-income',
+            name: 'Salary',
+            fromAccountId: 'employer',
+            toAccountId: 'cash-1', // Directly to liquid asset
+            amount: 1000,
+            nextOccurrence: dayjs().add(5, 'day').valueOf(),
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            currencyCode: 'USD',
+        };
+
+        const plannedExpense = {
+            id: 'pp-expense',
+            name: 'Rent',
+            fromAccountId: 'cash-1',
+            toAccountId: 'landlord',
+            amount: 800,
+            nextOccurrence: dayjs().add(10, 'day').valueOf(),
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            currencyCode: 'USD',
+        };
+
+        const result = await cashFlowSimulationService.simulateSafeToSpend(
+            Money.from(1000, 'USD'),
+            [plannedIncome as any, plannedExpense as any],
+            [],
+            ['cash-1'],
+            [],
+            [],
+            [],
+            [],
+            [],
+            'USD',
+        );
+
+        // Trajectory would be: 1000 -> (D5) 2000 -> (D10) 1200. Min = 1000.
+        // Dynamic Buffer: min(1000, 1000) = 1000.
+        expect(result.safeToSpend).toBe(1000); 
+        expect(result.trajectoryMinBalance).toBe(1000);
+    });
+
+    it('buffers future outflows with income only if income arrives first', async () => {
+        const plannedExpense = {
+            id: 'pp-expense',
+            name: 'Rent',
+            fromAccountId: 'cash-1',
+            toAccountId: 'landlord',
+            amount: 800,
+            nextOccurrence: dayjs().add(5, 'day').valueOf(), // Bill FIRST
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            currencyCode: 'USD',
+        };
+
+        const plannedIncome = {
+            id: 'pp-income',
+            name: 'Salary',
+            fromAccountId: 'employer',
+            toAccountId: 'cash-1',
+            amount: 1000,
+            nextOccurrence: dayjs().add(10, 'day').valueOf(), // Income LATER
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            currencyCode: 'USD',
+        };
+
+        const result = await cashFlowSimulationService.simulateSafeToSpend(
+            Money.from(1000, 'USD'),
+            [plannedIncome as any, plannedExpense as any],
+            [],
+            ['cash-1'],
+            [],
+            [],
+            [],
+            [],
+            [],
+            'USD',
+        );
+
+        // Trajectory: 1000 -> (D5) 200 -> (D10) 1200. Min = 200.
+        // Safe to Spend = min(1000, 200) = 200.
+        expect(result.safeToSpend).toBe(200);
     });
 });
