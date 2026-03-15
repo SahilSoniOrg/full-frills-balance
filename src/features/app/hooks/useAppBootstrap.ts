@@ -1,6 +1,7 @@
 import { analytics } from '@/src/services/analytics-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { integrityService } from '@/src/services/integrity-service';
+import { notificationService } from '@/src/services/NotificationService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -52,6 +53,18 @@ export function useAppBootstrap() {
       } catch (error) {
         if (isActive) {
           logger.error('[Bootstrap] Planned payments processing failed', error);
+        }
+      }
+
+      // 6. Initialize Notifications
+      try {
+        const cadence = preferences.notificationCadence;
+        const hour = preferences.notificationHour;
+        const minute = preferences.notificationMinute;
+        await notificationService.scheduleReminder(cadence, hour, minute);
+      } catch (error) {
+        if (isActive) {
+          logger.warn('[Bootstrap] Notification scheduling failed', { error });
         }
       }
     };

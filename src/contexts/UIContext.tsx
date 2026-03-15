@@ -52,6 +52,9 @@ interface UIState {
   restartType: 'IMPORT' | 'RESET' | null
   importStats: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } | null
   archetype: string
+  notificationCadence: 'none' | 'daily' | 'weekly'
+  notificationHour: number
+  notificationMinute: number
 }
 
 interface UIContextType extends UIState {
@@ -69,6 +72,8 @@ interface UIContextType extends UIState {
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>
   setArchetype: (archetype: string) => Promise<void>
   setAdvancedMode: (advancedMode: boolean) => Promise<void>
+  setNotificationCadence: (cadence: 'none' | 'daily' | 'weekly') => Promise<void>
+  setNotificationTime: (hour: number, minute: number) => Promise<void>
   requireRestart: (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => void
 }
 
@@ -95,6 +100,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     restartType: null,
     importStats: null,
     archetype: 'balance-glancer',
+    notificationCadence: 'none',
+    notificationHour: 10,
+    notificationMinute: 0,
   })
 
   // ... (themeMode calculation remains same)
@@ -128,6 +136,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           isLoading: false,
           isInitialized: true,
           archetype: loadedPreferences.archetype || 'balance-glancer',
+          notificationCadence: loadedPreferences.notificationCadence || 'none',
+          notificationHour: loadedPreferences.notificationHour ?? 10,
+          notificationMinute: loadedPreferences.notificationMinute ?? 0,
         })
 
       } catch (error) {
@@ -266,6 +277,27 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const setNotificationCadence = useCallback(async (cadence: 'none' | 'daily' | 'weekly') => {
+    try {
+      await preferences.setNotificationCadence(cadence)
+      setUIState(prev => ({ ...prev, notificationCadence: cadence }))
+    } catch (error) {
+      logger.warn('Failed to save notification cadence', { error })
+      setUIState(prev => ({ ...prev, notificationCadence: cadence }))
+    }
+  }, [])
+
+  const setNotificationTime = useCallback(async (hour: number, minute: number) => {
+    try {
+      await preferences.setNotificationHour(hour)
+      await preferences.setNotificationMinute(minute)
+      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }))
+    } catch (error) {
+      logger.warn('Failed to save notification time', { error })
+      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }))
+    }
+  }, [])
+
   const requireRestart = (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => {
     setUIState(prev => ({ ...prev, isRestartRequired: true, restartType: options.type, importStats: options.stats || null }))
   }
@@ -288,6 +320,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setShowAccountMonthlyStats,
     setArchetype,
     setAdvancedMode,
+    setNotificationCadence,
+    setNotificationTime,
     requireRestart,
   }
 

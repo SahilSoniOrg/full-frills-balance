@@ -9,14 +9,15 @@ interface CustomDateTimePickerProps {
     date: dayjs.Dayjs;
     onChange: (date: dayjs.Dayjs) => void;
     timePicker?: boolean;
+    datePicker?: boolean;
 }
 
-export function CustomDateTimePicker({ date, onChange, timePicker }: CustomDateTimePickerProps) {
+export function CustomDateTimePicker({ date, onChange, timePicker, datePicker = true }: CustomDateTimePickerProps) {
     return (
         <View style={styles.container}>
-            <DateView date={date} onChange={onChange} />
+            {datePicker && <DateView date={date} onChange={onChange} />}
             {timePicker && (
-                <View style={styles.timePickerContainer}>
+                <View style={[styles.timePickerContainer, !datePicker && { marginTop: 0 }]}>
                     <TimeView date={date} onChange={onChange} />
                 </View>
             )}

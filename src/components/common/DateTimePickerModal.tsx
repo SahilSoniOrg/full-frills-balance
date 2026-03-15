@@ -13,6 +13,7 @@ interface DateTimePickerModalProps {
     time: string; // HH:mm
     onClose: () => void;
     onSelect: (date: string, time: string) => void;
+    hideDate?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function DateTimePickerModal({
     time,
     onClose,
     onSelect,
+    hideDate = false,
 }: DateTimePickerModalProps) {
     const { theme } = useTheme();
     const insets = useSafeAreaInsets();
@@ -67,7 +69,7 @@ export function DateTimePickerModal({
                 >
                     <View style={styles.header}>
                         <IconButton name="close" onPress={onClose} />
-                        <AppText variant="subheading">Select Date & Time</AppText>
+                        <AppText variant="subheading">{hideDate ? 'Select Time' : 'Select Date & Time'}</AppText>
                         <View style={{ width: Size.md }} />
                     </View>
 
@@ -76,6 +78,7 @@ export function DateTimePickerModal({
                             date={selectedValue}
                             onChange={handleDateChange}
                             timePicker={true}
+                            datePicker={!hideDate}
                         />
                     </View>
 
@@ -83,7 +86,7 @@ export function DateTimePickerModal({
 
                     <View style={{ paddingHorizontal: Spacing.lg }}>
                         <AppButton variant="primary" onPress={handleApply}>
-                            Set Date & Time
+                            {hideDate ? 'Set Time' : 'Set Date & Time'}
                         </AppButton>
                     </View>
                 </Pressable>

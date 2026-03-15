@@ -106,6 +106,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "expo-localization",
         "./plugins/withTelephony",
         "./plugins/withJournalLauncherWidget",
+        [
+            "expo-notifications",
+            {
+                "icon": "./assets/images/icon.png",
+                "color": "#ffffff",
+                "sounds": []
+            }
+        ]
     ],
     experiments: {
         typedRoutes: true,

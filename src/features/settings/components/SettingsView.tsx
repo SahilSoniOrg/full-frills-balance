@@ -1,6 +1,7 @@
 import { AppButton, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Spacing } from '@/src/constants';
+import { NotificationPreference } from '@/src/features/settings/components/NotificationPreference';
 import { SettingsActionRow } from '@/src/features/settings/components/SettingsActionRow';
 import { SettingsSection } from '@/src/features/settings/components/SettingsSection';
 import { SettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
@@ -34,8 +35,14 @@ export function SettingsView(vm: SettingsViewModel) {
                         description="Name, Default Currency, and Archetype"
                         actionLabel="Manage"
                         onPress={vm.onPersonalizationSettings}
-                        withDivider
                     />
+                </SettingsSection>
+
+                <SettingsSection title={AppConfig.strings.settings.notifications.title}>
+                    <NotificationPreference />
+                </SettingsSection>
+
+                <SettingsSection title="Appearance">
                     <SettingsActionRow
                         icon="sparkles"
                         title="Appearance"

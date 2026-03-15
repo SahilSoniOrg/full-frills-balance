@@ -9,6 +9,7 @@ import {
     ArrowUp,
     ArrowUpDown,
     BarChart3,
+    Bell,
     Briefcase,
     Bus,
     Calendar,
@@ -121,6 +122,7 @@ export const IconMap = {
     playSquare: PlaySquare,
     github: Github,
     user: User,
+    notifications: Bell,
 } as const;
 
 export type IconName = keyof typeof IconMap;

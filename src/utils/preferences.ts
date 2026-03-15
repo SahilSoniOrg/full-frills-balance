@@ -27,6 +27,9 @@ export interface UIPreferences {
   archetype?: string;
   dismissedPatternIds: string[];
   anonymizedId?: string;
+  notificationCadence: 'none' | 'daily' | 'weekly';
+  notificationHour: number;
+  notificationMinute: number;
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -43,6 +46,9 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   archetype: undefined,
   dismissedPatternIds: [],
   anonymizedId: undefined,
+  notificationCadence: 'none',
+  notificationHour: 10,
+  notificationMinute: 0,
 };
 
 class PreferencesHelper {
@@ -233,6 +239,30 @@ class PreferencesHelper {
 
   async setArchetype(archetype: string): Promise<void> {
     await this.updatePreferences({ archetype });
+  }
+
+  get notificationCadence(): 'none' | 'daily' | 'weekly' {
+    return this.preferences.notificationCadence || 'none';
+  }
+
+  async setNotificationCadence(cadence: 'none' | 'daily' | 'weekly'): Promise<void> {
+    await this.updatePreferences({ notificationCadence: cadence });
+  }
+
+  get notificationHour(): number {
+    return this.preferences.notificationHour ?? 10;
+  }
+
+  async setNotificationHour(hour: number): Promise<void> {
+    await this.updatePreferences({ notificationHour: hour });
+  }
+
+  get notificationMinute(): number {
+    return this.preferences.notificationMinute ?? 0;
+  }
+
+  async setNotificationMinute(minute: number): Promise<void> {
+    await this.updatePreferences({ notificationMinute: minute });
   }
 
   get dismissedPatternIds(): string[] {

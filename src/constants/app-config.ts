@@ -300,7 +300,6 @@ export const AppConfig = {
       data: {
         exportDesc: 'Export your data as a JSON file for backup or external use.',
         exportBtn: 'Export to JSON',
-        importBtn: 'Import from JSON',
         auditDesc: 'View all changes made to your data for auditing and debugging.',
         auditBtn: 'View Audit Log',
       },
@@ -342,6 +341,14 @@ export const AppConfig = {
         title: 'Default Currency',
         description: 'Used for new accounts and total balance',
         selectTitle: 'Select Default Currency',
+      },
+      notifications: {
+        title: 'Reminders',
+        description: 'Get notified to add your transactions',
+        cadenceLabel: 'Reminder Cadence',
+        none: 'None',
+        daily: 'Daily',
+        weekly: 'Weekly',
       },
     },
     transactionFlow: {
