@@ -1,7 +1,7 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
-import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppCard, AppIcon, AppText, Badge, Divider } from '@/src/components/core';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -29,20 +29,30 @@ interface SafeToSpendCardProps {
     shortfall: number;
     currencyCode: string;
     liquidAssetSubtypes: AccountSubtype[];
-    liquidLiabilitySubtypes: AccountSubtype[];
-    budgetSubtypes: AccountSubtype[];
-    liquidAssetAccountNames: string[];
-    liquidLiabilityAccountNames: string[];
-    budgetAccountNames: string[];
+    liquidAssetAccounts: { name: string, amount: number }[];
     dailyBudgetBurn: number;
     currentMonthBudgetRemaining: number;
     nextMonthBudgetProjected: number;
     nextMonthProjectionDays: number;
-    committedAmountByAccount: {
+    committedBreakdown: {
         accountId: string,
         accountName: string,
         amount: number,
-        budgets: { budgetId: string, name: string, amount: number }[]
+        details: { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL', dayOffset?: number }[]
+    }[];
+    incomeBreakdown: {
+        id: string,
+        name: string,
+        amount: number,
+        dayOffset: number,
+        type: 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+    }[];
+    firstMajorInflowDay: number | null;
+    debtBreakdown: {
+        accountId: string,
+        accountName: string,
+        amount: number,
+        type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
     }[];
     isLoading?: boolean;
 }
@@ -63,23 +73,30 @@ export const SafeToSpendCard = ({
     totalLiabilities,
     currencyCode,
     liquidAssetSubtypes,
-    liquidLiabilitySubtypes,
-    budgetSubtypes,
-    liquidAssetAccountNames,
-    liquidLiabilityAccountNames,
-    budgetAccountNames,
+    liquidAssetAccounts,
     currentMonthBudgetRemaining,
     nextMonthBudgetProjected,
     nextMonthProjectionDays,
-    committedAmountByAccount,
+    committedBreakdown,
+    debtBreakdown,
+    incomeBreakdown,
+    firstMajorInflowDay,
     isLoading = false
 }: SafeToSpendCardProps) => {
     const { theme, fonts } = useTheme();
     const { isPrivacyMode } = useUI();
     const [isInfoVisible, setInfoVisible] = React.useState(false);
+    const [expandedSection, setExpandedSection] = React.useState<'assets' | 'income' | 'committed' | 'debts' | null>(null);
     const [selectedLegendItem, setSelectedLegendItem] = React.useState<'safe' | 'committed' | 'debts' | null>(null);
     const info = AppConfig.strings.dashboard.safeToSpendExplanation;
     const labels = AppConfig.strings.dashboard.safeToSpendUi;
+    const formulaItems = [
+        'Liquid Balance: Current cash available in your liquid accounts.',
+        'Future Income: Predicted inflows (paychecks, transfers) in next 30 days.',
+        'Committed: Reserved for bills, debt payments, and active budgets.',
+        'Unsettled Debts: Obligations not yet covered by a plan.',
+        'Safe to Spend is the lowest point your balance hits in the next 30 days.'
+    ];
     const projectionWindowDays = AppConfig.defaults.safeToSpendDays * 2;
 
     const format = (val: number) => {
@@ -95,36 +112,102 @@ export const SafeToSpendCard = ({
         title: string,
         subtitle: string,
         subtypes: AccountSubtype[],
-        accountNames: string[]
+        accounts: { name: string, amount?: number }[] | string[]
     ) => (
-        <View style={styles.modalSection}>
-            <AppText variant="body" weight="bold">{title}</AppText>
-            <AppText variant="caption" color="secondary" style={styles.modalSectionHint}>
-                {subtitle}
-            </AppText>
-            <View style={styles.modalMetaGroup}>
-                <AppText variant="caption" weight="bold">{labels.categoriesUsed}</AppText>
-                {subtypes.length > 0 ? (
-                    <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
-                        {subtypes.map(formatAccountSubtypeLabel).join(', ')}
-                    </AppText>
-                ) : (
-                    <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
-                        {labels.noneDetectedYet}
-                    </AppText>
-                )}
+        <View style={{ gap: Spacing.md }}>
+            {!!title && (
+                <AppText
+                    variant="heading"
+                    style={{
+                        fontSize: Typography.sizes.lg + 2,
+                        marginBottom: Spacing.xs
+                    }}
+                >
+                    {title}
+                </AppText>
+            )}
+            {!!subtitle && (
+                <AppText variant="body" color="secondary" style={[{ marginBottom: Spacing.sm, opacity: 0.9 }]}>
+                    {subtitle}
+                </AppText>
+            )}
+
+            <View style={{ gap: Spacing.sm }}>
+                <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}>
+                    {labels.categoriesUsed}
+                </AppText>
+                <View style={styles.badgeWrap}>
+                    {subtypes.length > 0 ? (
+                        subtypes.map((st, i) => (
+                            <Badge key={i} size="sm" variant="secondary" style={{ backgroundColor: withOpacity(theme.surfaceSecondary, 0.8) }}>
+                                {formatAccountSubtypeLabel(st)}
+                            </Badge>
+                        ))
+                    ) : (
+                        <AppText variant="caption" color="secondary" italic>{labels.noneDetectedYet}</AppText>
+                    )}
+                </View>
             </View>
-            <View style={styles.modalMetaGroup}>
-                <AppText variant="caption" weight="bold">{labels.accountsUsed}</AppText>
-                {accountNames.length > 0 ? (
-                    <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
-                        {accountNames.join(', ')}
-                    </AppText>
-                ) : (
-                    <AppText variant="caption" color="secondary" style={styles.modalSectionValue}>
-                        {labels.noneDetectedYet}
-                    </AppText>
-                )}
+
+            <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
+                <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}>
+                    {labels.accountsUsed}
+                </AppText>
+                <View style={{ gap: Spacing.xs }}>
+                    {(() => {
+                        const positiveAccounts: any[] = [];
+                        const zeroAccounts: any[] = [];
+
+                        accounts.forEach(acc => {
+                            const isObject = typeof acc !== 'string';
+                            const amount = isObject ? acc.amount : undefined;
+                            if (amount === 0) {
+                                zeroAccounts.push(acc);
+                            } else {
+                                positiveAccounts.push(acc);
+                            }
+                        });
+
+                        const renderAccount = (acc: any, index: number, isZero: boolean) => {
+                            const isObject = typeof acc !== 'string';
+                            const name = isObject ? acc.name : acc;
+                            const amount = isObject ? acc.amount : undefined;
+
+                            return (
+                                <View key={index} style={[styles.breakdownRow, {
+                                    backgroundColor: withOpacity(theme.surfaceSecondary, isZero ? 0.2 : 0.4),
+                                    paddingHorizontal: Spacing.sm,
+                                    paddingVertical: Spacing.xs,
+                                    borderRadius: Shape.radius.sm,
+                                    opacity: isZero ? 0.5 : 1
+                                }]}>
+                                    <AppText variant="caption" weight={isZero ? "regular" : "medium"} style={{ flex: 1 }}>{name}</AppText>
+                                    {amount !== undefined && (
+                                        <AppText variant="caption" weight="bold" color="secondary">{format(amount)}</AppText>
+                                    )}
+                                </View>
+                            );
+                        };
+
+                        if (accounts.length === 0) {
+                            return <AppText variant="caption" color="secondary" italic>{labels.noneDetectedYet}</AppText>;
+                        }
+
+                        return (
+                            <>
+                                {positiveAccounts.map((acc, i) => renderAccount(acc, i, false))}
+                                {zeroAccounts.length > 0 && (
+                                    <View style={{ marginTop: Spacing.xs, gap: Spacing.xs }}>
+                                        {positiveAccounts.length > 0 && (
+                                            <AppText variant="caption" color="secondary" style={{ fontSize: 9, opacity: 0.6, marginLeft: Spacing.xs }}>EMPTY ACCOUNTS</AppText>
+                                        )}
+                                        {zeroAccounts.map((acc, i) => renderAccount(acc, positiveAccounts.length + i, true))}
+                                    </View>
+                                )}
+                            </>
+                        );
+                    })()}
+                </View>
             </View>
         </View>
     );
@@ -159,7 +242,10 @@ export const SafeToSpendCard = ({
                         <TouchableOpacity
                             accessibilityRole="button"
                             accessibilityLabel="Open safe-to-spend calculation info"
-                            onPress={() => setInfoVisible(true)}
+                            onPress={() => {
+                                setExpandedSection(null);
+                                setInfoVisible(true);
+                            }}
                             style={styles.infoButton}
                         >
                             <AppIcon
@@ -258,11 +344,11 @@ export const SafeToSpendCard = ({
 
                     const extraHorizontalLines = [
                         { value: 0, label: '0', color: theme.error, strokeDasharray: "2,2" },
-                        { 
-                            value: safeToSpend, 
-                            label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${format(safeToSpend)}`, 
-                            color: theme.primary, 
-                            strokeDasharray: "4,4" 
+                        {
+                            value: safeToSpend,
+                            label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${format(safeToSpend)}`,
+                            color: theme.primary,
+                            strokeDasharray: "4,4"
                         }
                     ];
 
@@ -315,65 +401,300 @@ export const SafeToSpendCard = ({
                     }
                 ]}
             >
-                <View style={styles.modalSection}>
-                    <AppText variant="body">{info.intro}</AppText>
-                </View>
+                {/* 1. Hero Summary */}
+                <AppText
+                    variant="heading"
+                    style={{
+                        marginBottom: Spacing.sm,
+                        fontFamily: Typography.fonts.heading,
+                        fontSize: Typography.sizes.xxxl,
+                        color: theme.primary,
+                    }}
+                >
+                    Spend with confidence.
+                </AppText>
+                <AppText
+                    variant="body"
+                    color="secondary"
+                    style={{
+                        marginBottom: Spacing.xl,
+                        lineHeight: Typography.sizes.base * 1.5,
+                        opacity: 0.9
+                    }}
+                >
+                    {info.intro}
+                </AppText>
 
-                <View style={[styles.modalHighlight, { backgroundColor: theme.surfaceSecondary }]}>
-                    <AppText variant="body" weight="medium" color="primary">
-                        {info.unlocks}
-                    </AppText>
-                </View>
+                {/* 2. Vertical Waterfall Ledger */}
+                <AppCard
+                    padding="none"
+                    elevation="lg"
+                    style={{
+                        marginBottom: Spacing.xl,
+                        // backgroundColor: withOpacity(theme.surface, 0.4),
+                        borderRadius: Shape.radius.r3,
+                        borderWidth: 1,
+                        borderColor: withOpacity(theme.border, 0.4),
+                        overflow: 'hidden'
+                    }}
+                >
+                    {/* Header */}
+                    <View style={{
+                        padding: Spacing.lg,
+                        borderBottomWidth: 1,
+                        borderBottomColor: withOpacity(theme.border, 0.2),
+                        backgroundColor: withOpacity(theme.surfaceSecondary, 0.5)
+                    }}>
+                        <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 2 }}>CALCULATION LEDGER</AppText>
+                    </View>
 
-                <View style={styles.modalSection}>
-                    <AppText variant="heading" style={styles.modalSectionTitle}>{info.formulaTitle}</AppText>
-                    {info.formulaItems.map((item, index) => {
-                        const [title, content] = item.split(': ');
-                        return (
-                            <View key={index} style={styles.bulletRow}>
-                                <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
-                                <View style={styles.bulletContent}>
-                                    <AppText variant="caption" weight="bold">{title}:</AppText>
-                                    <AppText variant="caption" color="secondary">{content}</AppText>
+                    {/* Step 1: Assets */}
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row' }}
+                        onPress={() => setExpandedSection(expandedSection === 'assets' ? null : 'assets')}
+                    >
+                        <View style={{ width: 4, backgroundColor: theme.success }} />
+                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                            <View style={styles.breakdownRow}>
+                                <View style={{ flex: 1 }}>
+                                    <AppText variant="caption" weight="bold" color="success" style={{ letterSpacing: 1, marginBottom: 2 }}>{info.formulaItems[0].split(': ')[0].toUpperCase()}</AppText>
+                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{info.formulaItems[0].split(': ')[1]}</AppText>
                                 </View>
+                                <AppText variant="heading" color="success" style={{ fontSize: Typography.sizes.xl }}>+{format(totalLiquidAssets)}</AppText>
                             </View>
-                        );
-                    })}
-                </View>
+                        </View>
+                    </TouchableOpacity>
+                    {expandedSection === 'assets' && (
+                        <View style={styles.expandedContentRow}>
+                            {renderSubtypeGroup("", "", liquidAssetSubtypes, liquidAssetAccounts)}
+                        </View>
+                    )}
 
-                <View style={styles.modalSection}>
-                    <AppText variant="heading" style={styles.modalSectionTitle}>{info.bucketTitle}</AppText>
-                    {renderSubtypeGroup(labels.assetsBucket, info.formulaItems[0], liquidAssetSubtypes, liquidAssetAccountNames)}
-                    {renderSubtypeGroup(labels.debtsBucket, info.formulaItems[1], liquidLiabilitySubtypes, liquidLiabilityAccountNames)}
-                    {renderSubtypeGroup(labels.budgetsBucket, info.formulaItems[2], budgetSubtypes, budgetAccountNames)}
-                </View>
+                    <Divider style={{ marginVertical: 0, opacity: 0.1 }} />
 
-                <View style={styles.modalSection}>
-                    <AppText variant="heading" style={styles.modalSectionTitle}>{info.exampleTitle}</AppText>
-                    <View style={[styles.exampleBox, { borderColor: theme.border }]}>
-                        <AppText variant="caption" color="secondary">{labels.projectedLiquidity} {format(totalLiquidAssets + totalFutureInflow)}</AppText>
-                        <AppText variant="caption" color="secondary">{labels.committedLine} -{format(committedTotal)}</AppText>
-                        <AppText variant="caption" color="secondary">{labels.debtsLine} -{format(committedLiabilities)}</AppText>
-                        <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
-                        <AppText variant="body" weight="bold">{labels.safeToSpendLine} {format(safeToSpend)}</AppText>
+                    {/* Step 2: Future Income */}
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row' }}
+                        onPress={() => setExpandedSection(expandedSection === 'income' ? null : 'income')}
+                    >
+                        <View style={{ width: 4, backgroundColor: theme.success }} />
+                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                            <View style={styles.breakdownRow}>
+                                <View style={{ flex: 1 }}>
+                                    <AppText variant="caption" weight="bold" color="success" style={{ letterSpacing: 1, marginBottom: 2 }}>{labels.upcomingIncome.toUpperCase()}</AppText>
+                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[1].split(': ')[1]}</AppText>
+                                </View>
+                                <AppText variant="heading" color="success" style={{ fontSize: Typography.sizes.xl }}>+{format(totalFutureInflow)}</AppText>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                    {expandedSection === 'income' && (
+                        <View style={styles.expandedContentRow}>
+                            <View style={{ gap: Spacing.sm }}>
+                                {incomeBreakdown.length > 0 ? (
+                                    incomeBreakdown.map((inc, i) => (
+                                        <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <View style={{ flex: 1 }}>
+                                                <AppText variant="caption" weight="bold">{inc.name}</AppText>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                                                    <AppIcon
+                                                        name={inc.type === 'PLANNED_PAYMENT' ? 'calendar' : 'refresh'}
+                                                        size={10}
+                                                        color={withOpacity(theme.success, 0.7)}
+                                                    />
+                                                    <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
+                                                        Day {inc.dayOffset} • {inc.type === 'PLANNED_PAYMENT' ? 'Planned Payment' : 'Transfer'}
+                                                    </AppText>
+                                                </View>
+                                            </View>
+                                            <AppText variant="caption" weight="bold" color="success">+{format(inc.amount)}</AppText>
+                                        </View>
+                                    ))
+                                ) : (
+                                    <AppText variant="caption" color="secondary" italic>No future income tracked</AppText>
+                                )}
+                            </View>
+                        </View>
+                    )}
+
+                    <Divider style={{ marginVertical: 0, opacity: 0.1 }} />
+
+                    {/* Step 3: Committed */}
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row' }}
+                        onPress={() => setExpandedSection(expandedSection === 'committed' ? null : 'committed')}
+                    >
+                        <View style={{ width: 4, backgroundColor: theme.warning }} />
+                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                            <View style={styles.breakdownRow}>
+                                <View style={{ flex: 1 }}>
+                                    <AppText variant="caption" weight="bold" color="warning" style={{ letterSpacing: 1, marginBottom: 2 }}>{labels.committedLine.split(' (')[0].toUpperCase()}</AppText>
+                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[2] ? formulaItems[2].split(': ')[1] : 'Bills and Budgets'}</AppText>
+                                </View>
+                                <AppText variant="heading" color="warning" style={{ fontSize: Typography.sizes.xl }}>–{format(committedBudget + committedPlanned)}</AppText>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                    {expandedSection === 'committed' && (
+                        <View style={styles.expandedContentRow}>
+                            <View style={{ gap: Spacing.md }}>
+                                {committedBreakdown.sort((a, b) => b.amount - a.amount).map((acc, i) => (
+                                    <View key={i} style={{ gap: Spacing.xs }}>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <AppText variant="caption" weight="bold">{acc.accountName}</AppText>
+                                            <AppText variant="caption" weight="bold" color="warning">–{format(acc.amount)}</AppText>
+                                        </View>
+                                        <View style={{ gap: Spacing.sm, paddingLeft: Spacing.sm }}>
+                                            {acc.details.map((det, di) => {
+                                                const isPostIncome = firstMajorInflowDay !== null && det.dayOffset !== undefined && det.dayOffset >= firstMajorInflowDay;
+                                                return (
+                                                    <View key={di} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 18 }}>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1, paddingRight: Spacing.xs }}>
+                                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, flex: 1 }}>
+                                                                <AppIcon
+                                                                    name={det.type === 'BUDGET' ? 'pieChart' : det.type === 'PLANNED_PAYMENT' ? 'calendar' : 'refresh'}
+                                                                    size={10}
+                                                                    color={theme.textSecondary}
+                                                                />
+                                                                <AppText variant="caption" color="secondary" style={{ fontSize: 10, lineHeight: 14 }}>{det.name}</AppText>
+                                                                <AppText style={{ fontSize: 8, opacity: 0.5, color: theme.textSecondary }}>
+                                                                    {det.type === 'BUDGET' ? 'Budget' : det.type === 'PLANNED_PAYMENT' ? 'Bill' : 'Plan'}
+                                                                </AppText>
+                                                                {isPostIncome && (
+                                                                    <Badge size="sm" variant="success" style={{ paddingHorizontal: 6, paddingVertical: 1, height: 'auto', marginLeft: Spacing.xs }}>
+                                                                        <AppText style={{ fontSize: 7, color: theme.success, fontWeight: 'bold', lineHeight: 10 }}>POST-INCOME</AppText>
+                                                                    </Badge>
+                                                                )}
+                                                            </View>
+                                                        </View>
+                                                        <AppText variant="caption" color="secondary" style={{ fontSize: 10, lineHeight: 14 }}>{format(det.amount)}</AppText>
+                                                    </View>
+                                                );
+                                            })}
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
+                    <Divider style={{ marginVertical: 0, opacity: 0.1 }} />
+
+                    {/* Step 4: Debts */}
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row' }}
+                        onPress={() => setExpandedSection(expandedSection === 'debts' ? null : 'debts')}
+                    >
+                        <View style={{ width: 4, backgroundColor: theme.error }} />
+                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                            <View style={styles.breakdownRow}>
+                                <View style={{ flex: 1 }}>
+                                    <AppText variant="caption" weight="bold" color="error" style={{ letterSpacing: 1, marginBottom: 2 }}>{labels.debtsBucket.toUpperCase()}</AppText>
+                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[3] ? formulaItems[3].split(': ')[1] : 'Short-term liabilities'}</AppText>
+                                </View>
+                                <AppText variant="heading" color="error" style={{ fontSize: Typography.sizes.xl }}>–{format(committedLiabilities)}</AppText>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                    {expandedSection === 'debts' && (
+                        <View style={styles.expandedContentRow}>
+                            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.md, opacity: 0.8, fontStyle: 'italic' }}>
+                                {labels.debtsHint}
+                            </AppText>
+
+                            <View style={{ gap: Spacing.md }}>
+                                {debtBreakdown.map((acc, i) => (
+                                    <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <View style={{ flex: 1 }}>
+                                            <AppText variant="caption" weight="bold">{acc.accountName}</AppText>
+                                            <AppText variant="caption" color="secondary">
+                                                {acc.type === 'FALLBACK' ? 'Unplanned Balance' : 'Scheduled Commitment'}
+                                            </AppText>
+                                        </View>
+                                        <AppText variant="caption" weight="bold" color="error">–{format(acc.amount)}</AppText>
+                                    </View>
+                                ))}
+                            </View>
+
+                            {totalLiabilities > committedLiabilities && (
+                                <View style={{
+                                    marginTop: Spacing.md,
+                                    paddingHorizontal: Spacing.md,
+                                    paddingVertical: Spacing.sm,
+                                    backgroundColor: withOpacity(theme.asset, 0.1),
+                                    borderRadius: Shape.radius.sm,
+                                    borderLeftWidth: 3,
+                                    borderLeftColor: theme.asset
+                                }}>
+                                    <AppText variant="caption" color="secondary" style={{ lineHeight: 16 }}>
+                                        <AppText variant="caption" weight="bold">{format(totalLiabilities - committedLiabilities)} </AppText>
+                                        {labels.debtsCallout}
+                                    </AppText>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {/* Result Line */}
+                    <View style={{ flexDirection: 'row' }}>
+                        <View style={{ width: 4, backgroundColor: theme.primary }} />
+                        <View style={{
+                            flex: 1,
+                            padding: Spacing.lg,
+                            backgroundColor: withOpacity(theme.primary, 0.12),
+                            borderTopWidth: 1,
+                            borderTopColor: withOpacity(theme.primary, 0.4),
+                            borderStyle: 'solid'
+                        }}>
+                            <View style={{ marginBottom: Spacing.md }}>
+                                <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1, marginBottom: 2 }}>{formulaItems[4].toUpperCase()}</AppText>
+                                <AppText
+                                    variant="heading"
+                                    style={{
+                                        fontFamily: Typography.fonts.heading,
+                                        fontSize: Typography.sizes.xxl,
+                                        color: theme.primary
+                                    }}
+                                >
+                                    Safe to Spend
+                                </AppText>
+                            </View>
+                            <AppText
+                                variant="hero"
+                                color="primary"
+                                style={{
+                                    fontFamily: Typography.fonts.heading,
+                                    fontSize: Typography.sizes.xxxl,
+                                }}
+                            >
+                                {format(safeToSpend)}
+                            </AppText>
+                        </View>
+                    </View>
+                </AppCard>
+
+                {/* 3. Why this matters */}
+                <View style={{ paddingHorizontal: Spacing.sm }}>
+                    <AppText variant="body" weight="bold" style={{ marginBottom: Spacing.lg, color: theme.primary, letterSpacing: 1 }}>{info.benefitsTitle.toUpperCase()}</AppText>
+                    <View style={{ gap: Spacing.lg }}>
+                        {info.benefits.map((item, index) => {
+                            const [title, content] = item.split(': ');
+                            return (
+                                <View key={index} style={{ flexDirection: 'row', gap: Spacing.md }}>
+                                    <View style={[styles.benefitDot, { backgroundColor: theme.primary, marginTop: 8 }]} />
+                                    <View style={{ flex: 1 }}>
+                                        <AppText variant="body" weight="bold">{title}</AppText>
+                                        <AppText variant="caption" color="secondary" style={{ marginTop: 2, lineHeight: 18 }}>{content}</AppText>
+                                    </View>
+                                </View>
+                            );
+                        })}
                     </View>
                 </View>
 
-                <View style={styles.modalSection}>
-                    <AppText variant="heading" style={styles.modalSectionTitle}>{info.benefitsTitle}</AppText>
-                    {info.benefits.map((item, index) => {
-                        const [title, content] = item.split(': ');
-                        return (
-                            <View key={index} style={styles.benefitRow}>
-                                <AppText variant="body" weight="bold">{title}:</AppText>
-                                <AppText variant="body" color="secondary">{content}</AppText>
-                            </View>
-                        );
-                    })}
-                </View>
-
-                <View style={styles.modalFooter}>
-                    <AppText variant="caption" italic color="secondary">
+                <View style={{ paddingVertical: Spacing.xxxxl, alignItems: 'center' }}>
+                    <Divider style={{ width: 40, marginBottom: Spacing.lg, opacity: 0.3 }} />
+                    <AppText variant="caption" italic color="secondary" style={{ textAlign: 'center', opacity: 0.8, paddingHorizontal: Spacing.xl, lineHeight: 18 }}>
                         {info.footer}
                     </AppText>
                 </View>
@@ -396,98 +717,138 @@ export const SafeToSpendCard = ({
             >
                 {selectedLegendItem === 'safe' && (
                     <View style={styles.modalSection}>
-                        <AppText variant="body">
+                        <AppText variant="body" style={{ marginBottom: Spacing.md, lineHeight: 22 }}>
                             {AppConfig.strings.dashboard.legendDetails.safeDesc}
                         </AppText>
-                        <View style={[styles.exampleBox, { backgroundColor: theme.surfaceSecondary }]}>
-                            <AppText variant="body" weight="bold">{labels.calculationTitle}</AppText>
-                            <AppText variant="caption">{labels.calculationFormula}</AppText>
-                            <View style={[styles.breakdownRow, { marginTop: Spacing.xs }]}>
-                                <AppText variant="caption">Liquid Assets (Today):</AppText>
-                                <AppText variant="caption">{format(totalLiquidAssets)}</AppText>
+                        <AppCard
+                            elevation="none"
+                            style={{
+                                backgroundColor: withOpacity(theme.surfaceSecondary, 0.3),
+                                borderColor: theme.primary,
+                                borderWidth: 1,
+                                borderStyle: 'dashed'
+                            }}
+                        >
+                            <AppText variant="heading" style={{ color: theme.primary, marginBottom: Spacing.sm, fontSize: Typography.sizes.lg + 2 }}>{labels.calculationTitle}</AppText>
+                            <AppText variant="caption" color="secondary" weight="bold" style={{ marginBottom: Spacing.md, letterSpacing: 1 }}>{labels.calculationFormula.toUpperCase()}</AppText>
+
+                            <View style={{ gap: Spacing.md }}>
+                                <View style={styles.breakdownRow}>
+                                    <AppText variant="body" color="secondary">Liquid Assets</AppText>
+                                    <AppText variant="body" weight="bold" color="success">+{format(totalLiquidAssets)}</AppText>
+                                </View>
+                                <View style={styles.breakdownRow}>
+                                    <AppText variant="body" color="secondary">Upcoming Income</AppText>
+                                    <AppText variant="body" weight="bold" color="success">+{format(totalFutureInflow)}</AppText>
+                                </View>
+                                <View style={styles.breakdownRow}>
+                                    <AppText variant="body" color="secondary">Committed Items</AppText>
+                                    <AppText variant="body" weight="bold" color="warning">-{format(committedBudget + committedPlanned)}</AppText>
+                                </View>
+                                <View style={styles.breakdownRow}>
+                                    <AppText variant="body" color="secondary">Unsettled Debts</AppText>
+                                    <AppText variant="body" weight="bold" color="error">-{format(committedLiabilities)}</AppText>
+                                </View>
+                                <View style={{ height: 1, backgroundColor: withOpacity(theme.border, 0.3), marginVertical: Spacing.xs }} />
+                                <View style={styles.breakdownRow}>
+                                    <AppText variant="heading" style={{ fontSize: Typography.sizes.xl }}>Safe to Spend</AppText>
+                                    <AppText variant="heading" style={{ color: theme.primary, fontSize: Typography.sizes.xl }}>{format(safeToSpend)}</AppText>
+                                </View>
                             </View>
-                            <View style={styles.breakdownRow}>
-                                <AppText variant="caption">Net Obligations (30d):</AppText>
-                                <AppText variant="caption" color="warning">-{format(Math.max(0, totalLiquidAssets - safeToSpend))}</AppText>
-                            </View>
-                            <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
-                            <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="bold" color="primary">Safe to Spend:</AppText>
-                                <AppText variant="body" weight="bold" color="primary">{format(safeToSpend)}</AppText>
-                            </View>
-                            
-                            <View style={{ marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: theme.border, borderStyle: 'dashed' }}>
-                                <AppText variant="caption" italic color="secondary">
-                                    Logic: Future income ({format(totalFutureInflow)}) is used to "buffer" your bills. Money is only reserved from today's cash if future income won't cover it.
+
+                            <View style={{ marginTop: Spacing.lg, paddingTop: Spacing.lg, borderTopWidth: 1, borderTopColor: withOpacity(theme.border, 0.2), borderStyle: 'dashed' }}>
+                                <AppText variant="caption" italic color="secondary" style={{ lineHeight: 18 }}>
+                                    Logic: Future income is used to &quot;buffer&quot; your bills. Today&apos;s cash is only reserved if future income won&apos;t cover an obligation before its due date.
                                 </AppText>
                             </View>
-                        </View>
+                        </AppCard>
                     </View>
                 )}
 
                 {selectedLegendItem === 'committed' && (
                     <View style={styles.modalSection}>
-                        <AppText variant="body">
+                        <AppText variant="body" style={{ marginBottom: Spacing.md }}>
                             {AppConfig.strings.dashboard.legendDetails.committedDesc}
                         </AppText>
-                        <View style={styles.breakdownList}>
+
+                        <View style={{ gap: Spacing.md }}>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">{labels.plannedPayments}</AppText>
-                                <AppText variant="caption" weight="bold">{format(committedPlannedPayments)}</AppText>
+                                <AppText variant="body" weight="medium">{labels.plannedPayments}</AppText>
+                                <AppText variant="body" weight="bold">{format(committedPlannedPayments)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">{labels.plannedJournals}</AppText>
-                                <AppText variant="caption" weight="bold">{format(committedPlannedJournals)}</AppText>
+                                <AppText variant="body" weight="medium">{labels.plannedJournals}</AppText>
+                                <AppText variant="body" weight="bold">{format(committedPlannedJournals)}</AppText>
                             </View>
+                            <Divider />
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, paddingRight: Spacing.sm }}>
-                                    <AppText variant="caption">{labels.activeBudgets}</AppText>
-                                    <View style={{ marginTop: 2 }}>
-                                        <AppText variant="caption" color="secondary" style={styles.modalSectionHint}>
+                                    <AppText variant="body" weight="medium">{labels.activeBudgets}</AppText>
+                                    <View style={{ marginTop: 4, gap: 4 }}>
+                                        <AppText variant="caption" color="secondary">
                                             {`• This month remaining: ${format(currentMonthBudgetRemaining)}`}
                                         </AppText>
-                                        <AppText variant="caption" color="secondary" style={styles.modalSectionHint}>
+                                        <AppText variant="caption" color="secondary">
                                             {`• Next month ${nextMonthProjectionDays} days projected: ${format(nextMonthBudgetProjected)}`}
                                         </AppText>
                                     </View>
                                 </View>
-                                <AppText variant="caption" weight="bold">{format(committedBudget)}</AppText>
+                                <AppText variant="body" weight="bold">{format(committedBudget)}</AppText>
                             </View>
 
-                            {committedAmountByAccount.length > 0 && (
+                            {committedBreakdown.length > 0 && (
                                 <View style={styles.accountBreakdownContainer}>
-                                    <View style={[styles.snapshotDivider, { backgroundColor: theme.border, opacity: 0.5 }]} />
-                                    <AppText variant="caption" weight="bold" style={styles.accountBreakdownTitle}>
+                                    <View style={{ height: 1, backgroundColor: withOpacity(theme.border, 0.2), marginBottom: Spacing.md }} />
+                                    <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.md }}>
                                         {labels.breakdownByAccount}
                                     </AppText>
-                                    {committedAmountByAccount.map((item) => (
-                                        <View key={item.accountId} style={{ marginBottom: Spacing.xs }}>
-                                            <View style={styles.breakdownRow}>
-                                                <AppText variant="caption" color="secondary" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
-                                                    • {item.accountName}
-                                                </AppText>
-                                                <AppText variant="caption" color="secondary" weight="bold">
-                                                    {format(item.amount)}
-                                                </AppText>
-                                            </View>
-                                            {item.budgets.map((b) => (
-                                                <View key={b.budgetId} style={[styles.breakdownRow, { paddingLeft: Spacing.md, marginTop: 2 }]}>
-                                                    <AppText variant="caption" color="secondary" numberOfLines={1} style={{ flex: 1, fontSize: 11 }}>
-                                                        {b.name}
+                                    <View style={{ gap: Spacing.md }}>
+                                        {committedBreakdown.map((item) => (
+                                            <View key={item.accountId}>
+                                                <View style={styles.breakdownRow}>
+                                                    <AppText variant="body" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
+                                                        {item.accountName}
                                                     </AppText>
-                                                    <AppText variant="caption" color="secondary" style={{ fontSize: 11 }}>
-                                                        {format(b.amount)}
+                                                    <AppText variant="body" weight="bold" color="secondary">
+                                                        {format(item.amount)}
                                                     </AppText>
                                                 </View>
-                                            ))}
-                                        </View>
-                                    ))}
+                                                <View style={{ marginTop: Spacing.xs, gap: 4 }}>
+                                                    {item.details.map((d) => {
+                                                        const isPostIncome = firstMajorInflowDay !== null && d.dayOffset !== undefined && d.dayOffset >= firstMajorInflowDay;
+                                                        return <View key={d.id} style={[styles.breakdownRow, { paddingLeft: Spacing.md }]}>
+                                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, flex: 1 }}>
+                                                                <AppIcon
+                                                                    name={d.type === 'BUDGET' ? 'pieChart' : d.type === 'PLANNED_PAYMENT' ? 'calendar' : 'refresh'}
+                                                                    size={12}
+                                                                    color={withOpacity(theme.textSecondary, 0.5)}
+                                                                />
+                                                                <AppText variant="caption" color="secondary" numberOfLines={1}>
+
+                                                                    {isPostIncome && (
+                                                                        <Badge size="sm" variant="success" style={{ paddingHorizontal: 6, paddingVertical: 2, height: 'auto', marginLeft: Spacing.xs }}>
+                                                                            <AppText style={{ fontSize: 7, color: theme.success, fontWeight: 'bold', lineHeight: 10 }}>PI</AppText>
+                                                                        </Badge>
+                                                                    )}
+                                                                    {d.name}
+                                                                </AppText>
+                                                            </View>
+                                                            <AppText variant="caption" color="secondary">
+                                                                {format(d.amount)}
+                                                            </AppText>
+                                                        </View>
+
+                                                    })}
+                                                </View>
+                                            </View>
+                                        ))}
+                                    </View>
                                 </View>
                             )}
-                            <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
+                            <Divider />
                             <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="bold">{labels.totalCommitted}</AppText>
-                                <AppText variant="body" weight="bold" color="warning">{format(committedTotal)}</AppText>
+                                <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>{labels.totalCommitted}</AppText>
+                                <AppText variant="body" weight="bold" color="warning" style={{ fontSize: Typography.sizes.lg }}>{format(committedTotal)}</AppText>
                             </View>
                         </View>
                     </View>
@@ -495,28 +856,31 @@ export const SafeToSpendCard = ({
 
                 {selectedLegendItem === 'debts' && (
                     <View style={styles.modalSection}>
-                        <AppText variant="body">
+                        <AppText variant="body" style={{ marginBottom: Spacing.md }}>
                             {AppConfig.strings.dashboard.legendDetails.debtsDesc}
                         </AppText>
-                        <View style={styles.breakdownList}>
+
+                        <View style={{ gap: Spacing.md }}>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">{labels.creditCardStatements}</AppText>
-                                <AppText variant="caption" weight="bold">{format(committedLiabilitiesCC)}</AppText>
+                                <AppText variant="body" weight="medium">{labels.creditCardStatements}</AppText>
+                                <AppText variant="body" weight="bold">{format(committedLiabilitiesCC)}</AppText>
                             </View>
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">{labels.otherLiquidLiabilities}</AppText>
-                                <AppText variant="caption" weight="bold">{format(committedLiabilitiesOther)}</AppText>
+                                <AppText variant="body" weight="medium">{labels.otherLiquidLiabilities}</AppText>
+                                <AppText variant="body" weight="bold">{format(committedLiabilitiesOther)}</AppText>
                             </View>
+                            <Divider />
                             <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="bold">{`Total Due (${AppConfig.defaults.safeToSpendDays}d)`}</AppText>
-                                <AppText variant="body" weight="bold" color="error">{format(committedLiabilities)}</AppText>
+                                <AppText variant="heading" style={{ fontSize: Typography.sizes.lg }}>Total Due</AppText>
+                                <AppText variant="heading" style={{ color: theme.error, fontSize: Typography.sizes.xl }}>{format(committedLiabilities)}</AppText>
                             </View>
-                            <View style={[styles.snapshotDivider, { backgroundColor: theme.border }]} />
+                            <View style={{ height: 1, backgroundColor: withOpacity(theme.border, 0.3), marginVertical: Spacing.xs }} />
                             <View style={styles.breakdownRow}>
-                                <AppText variant="caption">{labels.totalBalanceInfo}</AppText>
-                                <AppText variant="caption">{format(totalLiabilities)}</AppText>
+                                <AppText variant="caption" color="secondary" weight="bold">{labels.totalBalanceInfo.toUpperCase()}</AppText>
+                                <AppText variant="body" color="secondary" weight="bold">{format(totalLiabilities)}</AppText>
                             </View>
                         </View>
+
                     </View>
                 )}
             </PopupModal>
@@ -614,30 +978,21 @@ const styles = StyleSheet.create({
         padding: Spacing.md,
         borderRadius: Shape.radius.md,
     },
+    helpHero: {
+        padding: Spacing.md,
+        borderRadius: Shape.radius.md,
+        marginBottom: Spacing.sm,
+    },
     modalSection: {
         gap: Spacing.xs,
+        marginBottom: Spacing.md,
     },
     modalSectionTitle: {
         fontSize: Typography.sizes.base,
+        marginBottom: Spacing.xs,
     },
     modalSectionHint: {
         opacity: Opacity.heavy,
-    },
-    modalSectionValue: {
-        marginTop: Spacing.xs,
-    },
-    modalMetaGroup: {
-        marginTop: Spacing.xs,
-    },
-    bulletRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: Spacing.xs,
-        marginTop: Spacing.xs,
-    },
-    bulletContent: {
-        flex: 1,
-        gap: Spacing.xs,
     },
     exampleBox: {
         borderWidth: 1,
@@ -651,17 +1006,72 @@ const styles = StyleSheet.create({
         width: '100%',
         marginVertical: Spacing.xs,
     },
-    benefitRow: {
-        marginTop: Spacing.xs,
+    benefitDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginTop: 8,
     },
-    breakdownList: {
+    visualFormulaContainer: {
+        paddingTop: Spacing.xl,
+        paddingBottom: Spacing.lg,
+        paddingHorizontal: Spacing.lg,
+    },
+    visualFormula: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 0,
+    },
+    formulaPill: {
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderRadius: Shape.radius.full,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    formulaResultPill: {
+        paddingHorizontal: Spacing.xl,
+        paddingVertical: Spacing.lg,
+        borderRadius: Shape.radius.lg,
+        borderWidth: 1.5,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    formulaEqualRow: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    badgeWrap: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing.sm,
         marginTop: Spacing.sm,
-        gap: Spacing.xs,
+    },
+    cardHeader: {
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
+    },
+    expandedContentRow: {
+        paddingHorizontal: Spacing.lg,
+        paddingBottom: Spacing.md,
+    },
+    snapshotCard: {
+        marginBottom: Spacing.lg,
+        borderStyle: 'dashed',
+        borderWidth: 1,
+        borderColor: '#CBD5E1', // Default border color fallback
     },
     breakdownRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    breakdownList: {
+        marginTop: Spacing.sm,
+        gap: Spacing.xs,
     },
     modalFooter: {
         marginTop: Spacing.sm,

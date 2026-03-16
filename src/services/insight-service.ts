@@ -15,8 +15,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import {
     isLiquidAssetSubtype,
     isLiquidLiabilitySubtype,
-    LIQUID_ASSET_SUBTYPES,
-    LIQUID_LIABILITY_SUBTYPES
+    LIQUID_ASSET_SUBTYPES
 } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
@@ -60,11 +59,10 @@ export interface SafeToSpendResult {
     shortfall: number;
     currencyCode: string;
     liquidAssetSubtypes: AccountSubtype[];
-    liquidLiabilitySubtypes: AccountSubtype[];
-    budgetSubtypes: AccountSubtype[];
-    liquidAssetAccountNames: string[];
-    liquidLiabilityAccountNames: string[];
-    budgetAccountNames: string[];
+    committedSubtypes: AccountSubtype[];
+    debtSubtypes: AccountSubtype[];
+    liquidAssetAccounts: { name: string, amount: number }[];
+    liquidLiabilityAccounts: { name: string, amount: number }[];
     liquidAssetAccountIds: string[];
     liquidLiabilityAccountIds: string[];
     dailyBudgetBurn: number;
@@ -72,12 +70,26 @@ export interface SafeToSpendResult {
     currentMonthBudgetRemaining: number;
     nextMonthBudgetProjected: number;
     nextMonthProjectionDays: number;
-    committedAmountByAccount: {
+    committedBreakdown: {
         accountId: string,
         accountName: string,
         amount: number,
-        budgets: { budgetId: string, name: string, amount: number }[]
+        details: { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL', dayOffset?: number }[]
     }[];
+    debtBreakdown: {
+        accountId: string,
+        accountName: string,
+        amount: number,
+        type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+    }[];
+    incomeBreakdown: {
+        id: string,
+        name: string,
+        amount: number,
+        dayOffset: number,
+        type: 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+    }[];
+    firstMajorInflowDay: number | null;
     projection: SafeToSpendProjection;
 }
 
@@ -151,11 +163,10 @@ export class InsightService {
                         shortfall: 0,
                         currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
                         liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-                        liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],
-                        budgetSubtypes: [],
-                        liquidAssetAccountNames: [],
-                        liquidLiabilityAccountNames: [],
-                        budgetAccountNames: [],
+                        committedSubtypes: [],
+                        debtSubtypes: [],
+                        liquidAssetAccounts: [],
+                        liquidLiabilityAccounts: [],
                         liquidAssetAccountIds: [],
                         liquidLiabilityAccountIds: [],
                         dailyBudgetBurn: 0,
@@ -164,7 +175,10 @@ export class InsightService {
                         nextMonthBudgetProjected: 0,
                         nextMonthProjectionDays: 0,
                         totalFutureInflow: 0,
-                        committedAmountByAccount: [],
+                        incomeBreakdown: [],
+                        firstMajorInflowDay: null,
+                        committedBreakdown: [],
+                        debtBreakdown: [],
                         projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
                     });
                 }
@@ -183,7 +197,7 @@ export class InsightService {
 
                         const targetMoney = Money.from(0, resultCurrency);
                         let totalLiquidMoney = targetMoney;
-                        
+                        const liquidAssetAccounts: { name: string, amount: number }[] = [];
                         for (const a of liquidAssets) {
                             const b = accountBalances.find(bal => bal.accountId === a.id);
                             if (b) {
@@ -193,9 +207,11 @@ export class InsightService {
                                     amount = convertedAmount;
                                 }
                                 totalLiquidMoney = totalLiquidMoney.add(Money.from(amount, resultCurrency));
+                                liquidAssetAccounts.push({ name: a.name, amount });
                             }
                         }
 
+                        const liquidLiabilityAccounts: { name: string, amount: number }[] = [];
                         const liabilityAccountBalances = await Promise.all(liquidLiabilities.map(async l => {
                             const b = accountBalances.find(bal => bal.accountId === l.id);
                             let balance = Math.abs(b?.balance || 0);
@@ -203,6 +219,7 @@ export class InsightService {
                                 const { convertedAmount } = await exchangeRateService.convert(balance, b.currencyCode, resultCurrency);
                                 balance = convertedAmount;
                             }
+                            liquidLiabilityAccounts.push({ name: l.name, amount: balance });
                             return {
                                 account: l,
                                 balance: Money.from(balance, resultCurrency)
@@ -258,37 +275,13 @@ export class InsightService {
                             safeToSpend: simulationResults.safeToSpend
                         };
 
-                        const scopes = budgetScopeGroups || [];
-                        const budgetSubtypes = Array.from(
-                            new Set(
-                                scopes
-                                    .flatMap(s => s)
-                                    .map((scope: any) => allAccounts.find(a => a.id === scope.account.id)?.accountSubtype)
-                                    .filter((subtype): subtype is AccountSubtype => Boolean(subtype))
-                            )
-                        );
-
-                        const liquidAssetAccountNames = Array.from(new Set(liquidAssets.map(a => a.name)));
-                        const liquidLiabilityAccountNames = Array.from(new Set(liquidLiabilities.map(l => l.name)));
-                        const budgetAccountNames = Array.from(
-                            new Set(
-                                scopes
-                                    .flatMap(s => s)
-                                    .map((scope: any) => allAccounts.find(a => a.id === scope.account.id)?.name)
-                                    .filter((name): name is string => Boolean(name))
-                            )
-                        );
-
                         return {
                             ...simulationResults,
                             totalLiquidAssets: totalLiquidMoney.amount,
                             currencyCode: resultCurrency,
                             liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-                            liquidLiabilitySubtypes: [...LIQUID_LIABILITY_SUBTYPES],
-                            budgetSubtypes,
-                            liquidAssetAccountNames,
-                            liquidLiabilityAccountNames,
-                            budgetAccountNames,
+                            liquidAssetAccounts,
+                            liquidLiabilityAccounts,
                             liquidAssetAccountIds: liquidAssetIds,
                             liquidLiabilityAccountIds: liquidLiabilityIds,
                             dailyBudgetBurn: simulationResults.committedBudget / Math.max(1, AppConfig.defaults.safeToSpendDays),

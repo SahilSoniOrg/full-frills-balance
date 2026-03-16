@@ -47,12 +47,28 @@ export class CashFlowSimulationService {
         nextMonthProjectionDays: number;
         dailyBudgetBurns: number[];
         flowByDayOffset: Map<number, number>;
-        committedAmountByAccount: {
+        committedBreakdown: {
             accountId: string,
             accountName: string,
             amount: number,
-            budgets: { budgetId: string, name: string, amount: number }[]
+            details: { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL', dayOffset?: number }[]
         }[];
+        debtBreakdown: {
+            accountId: string,
+            accountName: string,
+            amount: number,
+            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+        }[];
+        incomeBreakdown: {
+            id: string,
+            name: string,
+            amount: number,
+            dayOffset: number,
+            type: 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+        }[];
+        firstMajorInflowDay: number | null;
+        committedSubtypes: AccountSubtype[];
+        debtSubtypes: AccountSubtype[];
         projectionPoints: { timestamp: number, value: number, isProjected: boolean }[];
         safeDaysCount: number | null;
     }> {
@@ -126,7 +142,12 @@ export class CashFlowSimulationService {
             nextMonthProjectionDays: flows.nextMonthProjectionDays,
             dailyBudgetBurns: flows.dailyBudgetBurns,
             flowByDayOffset: flows.flowByDayOffset,
-            committedAmountByAccount: flows.committedAmountByAccount,
+            committedBreakdown: flows.committedBreakdown,
+            debtBreakdown: flows.debtBreakdown,
+            incomeBreakdown: flows.incomeBreakdown,
+            firstMajorInflowDay: flows.firstMajorInflowDay,
+            committedSubtypes: flows.committedSubtypes,
+            debtSubtypes: flows.debtSubtypes,
             projectionPoints,
             safeDaysCount
         };
@@ -163,12 +184,28 @@ export class CashFlowSimulationService {
         nextMonthBudgetProjected: number,
         nextMonthProjectionDays: number,
         dailyBudgetBurns: number[],
-        committedAmountByAccount: {
+        committedBreakdown: {
             accountId: string,
             accountName: string,
             amount: number,
-            budgets: { budgetId: string, name: string, amount: number }[]
-        }[]
+            details: { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL', dayOffset?: number }[]
+        }[],
+        debtBreakdown: {
+            accountId: string,
+            accountName: string,
+            amount: number,
+            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+        }[],
+        incomeBreakdown: {
+            id: string,
+            name: string,
+            amount: number,
+            dayOffset: number,
+            type: 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+        }[],
+        firstMajorInflowDay: number | null,
+        committedSubtypes: AccountSubtype[],
+        debtSubtypes: AccountSubtype[]
     }> {
         const flowByDayOffset = new Map<number, number>();
         let futureInflow = Money.from(0, resultCurrency);
@@ -182,8 +219,25 @@ export class CashFlowSimulationService {
         let totalLiabsCC = Money.from(0, resultCurrency);
         let totalLiabsOther = Money.from(0, resultCurrency);
 
+        const committedBreakdownMap = new Map<string, { 
+            accountId: string, 
+            accountName: string, 
+            amount: number, 
+            details: { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL', dayOffset?: number }[] 
+        }>();
+        const debtBreakdownMap = new Map<string, { 
+            accountId: string, 
+            accountName: string, 
+            amount: number, 
+            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL' 
+        }>();
+        const committedSubtypesSet = new Set<AccountSubtype>();
+        const debtSubtypesSet = new Set<AccountSubtype>();
+        const incomeBreakdownList: { id: string, name: string, amount: number, dayOffset: number, type: 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL' }[] = [];
+        let firstMajorInflowDay: number | null = null;
+        const MAJOR_INFLOW_THRESHOLD = 1000; // Configurable threshold for "Major Paycheck"
+
         const liabilityAccountIds = new Set(liabilityAccountBalances.map(lb => lb.account.id));
-        const liabilityAccountSubtypes = new Map(liabilityAccountBalances.map(lb => [lb.account.id, lb.account.accountSubtype]));
 
         const addFlow = (dayOffset: number, amount: number, type: 'PLAN_PAYMENT' | 'PLAN_JOURNAL' | 'LIABILITY_CC' | 'LIABILITY_OTHER' | 'DAILY_BUDGET' | 'OTHER' = 'OTHER', context?: string, commitAmount?: number) => {
             if (dayOffset < 0 || dayOffset > simulationDays) return;
@@ -313,30 +367,83 @@ export class CashFlowSimulationService {
         const effectiveDailyDrain = dailyBudgetBurns;
         const nextMonthProjectionDays = Math.max(0, simulationDays - daysLeftInMonth);
 
-        const committedAmountByAccount = Array.from(accountMaxDailyBurns.entries())
-            .map(([accountId, burns]) => {
-                const budgetsMap = accountBudgetBuckets.get(accountId);
-                const budgetsList = budgetsMap ? Array.from(budgetsMap.entries()).map(([budgetId, b]) => ({
-                    budgetId,
-                    name: b.name,
-                    amount: b.amount
-                })) : [];
+        // Populate committedBreakdown from budgets
+        for (const [accountId, burns] of accountMaxDailyBurns) {
+            const acc = accountById.get(accountId);
+            const totalAmount = burns.reduce((sum, b) => sum + b, 0);
+            if (totalAmount <= 0) continue;
 
-                return {
-                    accountId,
-                    accountName: accountById.get(accountId)?.name || 'Unknown',
-                    amount: burns.reduce((sum, b) => sum + b, 0),
-                    budgets: budgetsList.sort((a, b) => b.amount - a.amount)
-                };
-            })
-            .filter(a => a.amount > 0)
-            .sort((a, b) => b.amount - a.amount);
+            const budgetsMap = accountBudgetBuckets.get(accountId);
+            const details = budgetsMap ? Array.from(budgetsMap.entries()).map(([budgetId, b]) => ({
+                id: budgetId,
+                name: b.name,
+                amount: b.amount,
+                type: 'BUDGET' as const
+            })) : [] as { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL' }[];
 
-        const manualPaymentAccountIds = new Set<string>();
-        for (const pp of plannedPayments) manualPaymentAccountIds.add(pp.toAccountId);
+            committedBreakdownMap.set(accountId, {
+                accountId,
+                accountName: acc?.name || 'Unknown',
+                amount: totalAmount,
+                details: details.sort((a, b) => b.amount - a.amount)
+            });
+
+            if (acc?.accountSubtype) committedSubtypesSet.add(acc.accountSubtype);
+        }
+
+        // Pre-calculate planned liability coverage
+        const plannedLiabilityCoverageMap = new Map<string, number>();
+        const endMs = now.add(simulationDays, 'day').valueOf();
+
+        for (const pp of plannedPayments) {
+            if (!liabilityAccountIds.has(pp.toAccountId)) continue;
+            
+            const ppMoney = Money.from(pp.amount, pp.currencyCode || resultCurrency);
+            let amountDefault = ppMoney.amount;
+            if (ppMoney.currencyCode !== resultCurrency) {
+                try {
+                    const { convertedAmount } = await exchangeRateService.convert(ppMoney.amount, ppMoney.currencyCode, resultCurrency);
+                    amountDefault = convertedAmount;
+                } catch { }
+            }
+
+            let curr = pp.nextOccurrence;
+            while (curr <= endMs) {
+                if (dayjs(curr).isAfter(now.subtract(1, 'minute'))) {
+                    plannedLiabilityCoverageMap.set(pp.toAccountId, (plannedLiabilityCoverageMap.get(pp.toAccountId) || 0) + amountDefault);
+                }
+                if (pp.intervalType === 'DAILY') curr = dayjs(curr).add(pp.intervalN || 1, 'day').valueOf();
+                else if (pp.intervalType === 'WEEKLY') curr = dayjs(curr).add(pp.intervalN || 1, 'week').valueOf();
+                else if (pp.intervalType === 'MONTHLY') curr = dayjs(curr).add(pp.intervalN || 1, 'month').valueOf();
+                else if (pp.intervalType === 'YEARLY') curr = dayjs(curr).add(pp.intervalN || 1, 'year').valueOf();
+                else break;
+            }
+        }
+
         if (plannedJournals.length > 0) {
-            const plannedTxs = await transactionRepository.findByJournals(plannedJournals.map(j => j.id));
-            for (const tx of plannedTxs) manualPaymentAccountIds.add(tx.accountId);
+            const journalCoveredTxs = await transactionRepository.findByJournals(plannedJournals.map(j => j.id));
+            const journalById = new Map(plannedJournals.map(j => [j.id, j]));
+            
+            for (const tx of journalCoveredTxs) {
+                if (!liabilityAccountIds.has(tx.accountId)) continue;
+                if (tx.transactionType !== TransactionType.DEBIT) continue; // Only debits to liabilities are payments
+
+                const journal = journalById.get(tx.journalId);
+                if (!journal) continue;
+                
+                const occurrenceMs = journal.journalDate;
+                if (occurrenceMs <= now.subtract(1, 'minute').valueOf() || occurrenceMs > endMs) continue;
+
+                const txMoney = Money.from(tx.amount, tx.currencyCode || resultCurrency);
+                let amountDefault = txMoney.amount;
+                if (txMoney.currencyCode !== resultCurrency) {
+                    try {
+                        const { convertedAmount } = await exchangeRateService.convert(txMoney.amount, txMoney.currencyCode, resultCurrency);
+                        amountDefault = convertedAmount;
+                    } catch { }
+                }
+                plannedLiabilityCoverageMap.set(tx.accountId, (plannedLiabilityCoverageMap.get(tx.accountId) || 0) + amountDefault);
+            }
         }
 
         for (const lb of liabilityAccountBalances) {
@@ -352,10 +459,6 @@ export class CashFlowSimulationService {
                 totalLiabsOther = totalLiabsOther.add(convMoney);
             }
 
-            if (manualPaymentAccountIds.has(lb.account.id)) {
-                continue;
-            }
-
             try {
                 const metadataRecords = lb.account.metadataRecords
                     ? await lb.account.metadataRecords.fetch()
@@ -365,9 +468,10 @@ export class CashFlowSimulationService {
                 const today = now.date();
                 const statementDay = metadata?.statementDay;
                 const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
+                const coverageAmount = plannedLiabilityCoverageMap.get(lb.account.id) || 0;
 
                 if (lb.account.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
-                    let deductionMoney = convMoney;
+                    let deductionAmount = convMoney.amount;
                     let targetDueDate: dayjs.Dayjs;
 
                     if (today > statementDay) {
@@ -377,35 +481,59 @@ export class CashFlowSimulationService {
                         const statementBalance = Math.abs(statementBalanceRaw);
                         
                         const convStatement = (await exchangeRateService.convert(statementBalance, lb.account.currencyCode || resultCurrency, resultCurrency)).convertedAmount;
-                        deductionMoney = Money.from(convStatement, resultCurrency);
+                        deductionAmount = convStatement;
                         
                         targetDueDate = now.date(dueDay);
                         if (dueDay <= today) {
                             targetDueDate = targetDueDate.add(1, 'month');
                         }
                     } else {
-                        deductionMoney = convMoney;
+                        deductionAmount = convMoney.amount;
                         targetDueDate = now.date(dueDay).add(1, 'month');
                     }
 
-                    const dayOffset = targetDueDate.startOf('day').diff(now, 'day');
-                    addFlow(dayOffset, -deductionMoney.amount, 'LIABILITY_CC', `Liability: ${lb.account.name} (Credit Card Statement)`);
-                } else {
-                    let deductionDay = metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
-                    let targetDate = now.date(deductionDay);
-                    if (deductionDay <= today) {
-                        targetDate = targetDate.add(1, 'month');
+                    const unsettledAmount = Math.max(0, deductionAmount - coverageAmount);
+                    if (unsettledAmount > 0) {
+                        const dayOffset = targetDueDate.startOf('day').diff(now.startOf('day'), 'day');
+                        addFlow(dayOffset, -unsettledAmount, 'LIABILITY_CC', `Liability (Unsettled): ${lb.account.name} (Credit Card Statement)`);
+                        
+                        debtBreakdownMap.set(lb.account.id, {
+                            accountId: lb.account.id,
+                            accountName: lb.account.name,
+                            amount: unsettledAmount,
+                            type: 'FALLBACK'
+                        });
+                        if (lb.account.accountSubtype) debtSubtypesSet.add(lb.account.accountSubtype);
                     }
-                    const dayOffset = targetDate.startOf('day').diff(now, 'day');
-                    addFlow(dayOffset, -convMoney.amount, 'LIABILITY_OTHER', `Liability: ${lb.account.name} (Other)`);
+                } else {
+                    const unsettledAmount = Math.max(0, convMoney.amount - coverageAmount);
+                    if (unsettledAmount > 0) {
+                        let deductionDay = metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
+                        let targetDate = now.date(deductionDay);
+                        if (deductionDay <= today) {
+                            targetDate = targetDate.add(1, 'month');
+                        }
+                        const dayOffset = targetDate.startOf('day').diff(now.startOf('day'), 'day');
+                        addFlow(dayOffset, -unsettledAmount, 'LIABILITY_OTHER', `Liability (Unsettled): ${lb.account.name} (Other)`);
+
+                        debtBreakdownMap.set(lb.account.id, {
+                            accountId: lb.account.id,
+                            accountName: lb.account.name,
+                            amount: unsettledAmount,
+                            type: 'FALLBACK'
+                        });
+                        if (lb.account.accountSubtype) debtSubtypesSet.add(lb.account.accountSubtype);
+                    }
                 }
             } catch (e) {
                 logger.error('getSimulationFlows: liability metadata failed', e);
-                addFlow(AppConfig.insights.liabilityErrorFallbackOffsetDays, -convMoney.amount, 'LIABILITY_OTHER');
+                const coverageAmount = plannedLiabilityCoverageMap.get(lb.account.id) || 0;
+                const unsettledAmount = Math.max(0, convMoney.amount - coverageAmount);
+                if (unsettledAmount > 0) {
+                    addFlow(AppConfig.insights.liabilityErrorFallbackOffsetDays, -unsettledAmount, 'LIABILITY_OTHER');
+                }
             }
         }
-
-        const endMs = now.add(simulationDays, 'day').valueOf();
         const journalCoveredPPIds = new Set<string>(plannedJournals.map(pj => pj.plannedPaymentId).filter((id): id is string => Boolean(id)));
 
         for (const pp of plannedPayments) {
@@ -450,7 +578,6 @@ export class CashFlowSimulationService {
                         } catch { }
                     }
                     
-                    const isDebtOutflow = liabilityAccountIds.has(pp.toAccountId);
                     
                     // Impact: 
                     // 1. If it's an internal transfer, net impact is 0 (money stayed within our tracked liquid/liability sphere).
@@ -460,17 +587,57 @@ export class CashFlowSimulationService {
                         ? 0
                         : (isLiquidTo ? amountDefault : -amountDefault);
 
-                    const flowType = isDebtOutflow ?
-                        (liabilityAccountSubtypes.get(pp.toAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
-                        : 'PLAN_PAYMENT';
+                    const flowType = 'PLAN_PAYMENT';
 
                     // Commit logic:
-                    // If it's an internal transfer from Liquid Asset to Liability, it's a "commitment" to pay debt.
-                    // Even if net impact is 0, we track it so the user sees it in "Committed Planned".
-                    const commitAmount = (isInternalTransfer && isDebtOutflow) ? amountDefault : undefined;
+                    // Only commit if:
+                    // 1. It's an outflow from liquid to external account (impact < 0)
+                    // 2. OR it's an internal transfer from Liquid Asset to Liability (debt payment commitment)
+                    const isOutflowToExternal = !isInternalTransfer && impact < 0;
+                    const isDebtPaymentCommitment = isInternalTransfer && liabilityAccountIds.has(pp.toAccountId);
+                    const commitAmount = (isOutflowToExternal || isDebtPaymentCommitment) ? amountDefault : undefined;
 
                     logger.info(`[SafeToSpend] Simulating PP ${pp.name}: impact ${impact} on day ${dayOffset} (type: ${flowType})`);
                     addFlow(dayOffset, impact, flowType, `Planned Payment: ${pp.name || 'unnamed'} (${isLiquidTo ? 'Inflow' : 'Outflow'})`, commitAmount);
+
+                    // Income tracking
+                    if (impact > 0 && !isInternalTransfer) {
+                        incomeBreakdownList.push({
+                            id: pp.id,
+                            name: pp.name || 'Income',
+                            amount: amountDefault,
+                            dayOffset,
+                            type: 'PLANNED_PAYMENT'
+                        });
+                        if (amountDefault >= MAJOR_INFLOW_THRESHOLD && (firstMajorInflowDay === null || dayOffset < firstMajorInflowDay)) {
+                            firstMajorInflowDay = dayOffset;
+                        }
+                    }
+
+                    // Breakdown attribution: Only for actual commitments (outflows/debt payments)
+                    if (commitAmount) {
+                        const accId = pp.toAccountId;
+                        const acc = accountById.get(accId);
+                        const existing = committedBreakdownMap.get(accId) || {
+                            accountId: accId,
+                            accountName: acc?.name || pp.name || 'Expense',
+                            amount: 0,
+                            details: [] as { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL', dayOffset?: number }[]
+                        };
+                        
+                        existing.amount += amountDefault;
+                        existing.details.push({
+                            id: pp.id,
+                            name: pp.name || 'unnamed',
+                            amount: amountDefault,
+                            type: 'PLANNED_PAYMENT',
+                            dayOffset
+                        });
+                        committedBreakdownMap.set(accId, existing);
+                        if (acc?.accountSubtype) committedSubtypesSet.add(acc.accountSubtype);
+                    }
+
+                    // Note: No longer adding to debtBreakdown here as it's now in Committed
                 }
                 if (pp.intervalType === 'DAILY') curr = dayjs(curr).add(pp.intervalN || 1, 'day').valueOf();
                 else if (pp.intervalType === 'WEEKLY') curr = dayjs(curr).add(pp.intervalN || 1, 'week').valueOf();
@@ -522,12 +689,8 @@ export class CashFlowSimulationService {
                         } catch { }
                     }
 
-                    const otherSideAccountId = journalTxs.find(otx => otx.accountId !== tx.accountId)?.accountId;
-                    const isDebtOutflow = otherSideAccountId && liabilityAccountIds.has(otherSideAccountId);
 
-                    const flowType = isDebtOutflow ?
-                        (liabilityAccountSubtypes.get(otherSideAccountId) === AccountSubtype.CREDIT_CARD ? 'LIABILITY_CC' : 'LIABILITY_OTHER')
-                        : 'PLAN_JOURNAL';
+                    const flowType = 'PLAN_JOURNAL';
 
                     // For journals, we iterate through EACH transaction (debit/credit).
                     // If it's an internal transfer, we skip individual impact because the net will be 0.
@@ -536,11 +699,51 @@ export class CashFlowSimulationService {
                         ? 0
                         : (tx.transactionType === TransactionType.DEBIT ? amountDefault : -amountDefault);
 
-                    // If it's an internal transfer to debt (Credit to Asset, Debit to Liability), track commitment.
-                    const commitAmount = (isInternalTransfer && isDebtOutflow && tx.transactionType === TransactionType.CREDIT) ? amountDefault : undefined;
+                    // Actually, for consistency with addFlow, we check if this specific tx is part of an outflowing/committing journal.
+                    const isOutflowFromLiquid = !isInternalTransfer && tx.transactionType === TransactionType.CREDIT;
+                    const isInternalCommitToDebt = isInternalTransfer && liabilityAccountIds.has(tx.accountId) && tx.transactionType === TransactionType.DEBIT;
+
+                    const commitAmount = (isOutflowFromLiquid || isInternalCommitToDebt) ? amountDefault : undefined;
 
                     addFlow(dayOffset, impact, flowType, `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`, commitAmount);
+
+                    // Income tracking for journals
+                    if (impact > 0 && !isInternalTransfer) {
+                        incomeBreakdownList.push({
+                            id: journal.id,
+                            name: journal.description || 'journal',
+                            amount: amountDefault,
+                            dayOffset,
+                            type: 'PLANNED_JOURNAL'
+                        });
+                        if (amountDefault >= MAJOR_INFLOW_THRESHOLD && (firstMajorInflowDay === null || dayOffset < firstMajorInflowDay)) {
+                            firstMajorInflowDay = dayOffset;
+                        }
+                    }
+
+                    // Breakdown attribution for journals: Only for commitments
+                    if (commitAmount) {
+                        const accId = tx.accountId;
+                        const acc = accountById.get(accId);
+                        const existing = committedBreakdownMap.get(accId) || {
+                            accountId: accId,
+                            accountName: acc?.name || journal.description || 'Expense',
+                            amount: 0,
+                            details: [] as { id: string, name: string, amount: number, type: 'BUDGET' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL', dayOffset?: number }[]
+                        };
+                        existing.amount += amountDefault;
+                        existing.details.push({
+                            id: journal.id,
+                            name: journal.description || 'journal',
+                            amount: amountDefault,
+                            type: 'PLANNED_JOURNAL',
+                            dayOffset
+                        });
+                        committedBreakdownMap.set(accId, existing);
+                        if (acc?.accountSubtype) committedSubtypesSet.add(acc.accountSubtype);
+                    }
                 }
+                
             }
         }
 
@@ -563,7 +766,12 @@ export class CashFlowSimulationService {
             nextMonthBudgetProjected: nextMonthBudgProj.amount,
             nextMonthProjectionDays,
             dailyBudgetBurns,
-            committedAmountByAccount
+            committedBreakdown: Array.from(committedBreakdownMap.values()).sort((a, b) => b.amount - a.amount),
+            debtBreakdown: Array.from(debtBreakdownMap.values()).sort((a, b) => b.amount - a.amount),
+            incomeBreakdown: incomeBreakdownList.sort((a, b) => a.dayOffset - b.dayOffset),
+            firstMajorInflowDay,
+            committedSubtypes: Array.from(committedSubtypesSet),
+            debtSubtypes: Array.from(debtSubtypesSet)
         };
     }
 }
