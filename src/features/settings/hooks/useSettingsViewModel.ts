@@ -5,6 +5,7 @@ import { useImport } from '@/src/hooks/use-import';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { AppNavigation } from '@/src/utils/navigation';
+import { logger } from '@/src/utils/logger';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
@@ -105,16 +106,43 @@ export function useSettingsViewModel(): SettingsViewModel {
             const fileUri = `${FileSystem.documentDirectory}${filename}`;
             await FileSystem.writeAsStringAsync(fileUri, jsonData);
 
-            const canShare = await Sharing.isAvailableAsync();
-            if (canShare) {
-                await Sharing.shareAsync(fileUri, {
-                    mimeType: 'application/json',
-                    dialogTitle: 'Export Your Balance Data',
-                });
-            } else {
-                alert.show({ title: 'Export Ready', message: `File saved to ${fileUri}` });
+            // On Android, provide an option to save to a user-selected location
+            if (Platform.OS === 'android') {
+                const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+                if (permissions.granted) {
+                    try {
+                        const fileLocation = await FileSystem.StorageAccessFramework.createFileAsync(
+                            permissions.directoryUri,
+                            filename,
+                            'application/json'
+                        );
+                        await FileSystem.writeAsStringAsync(fileLocation, jsonData);
+                        toast.success('Backup saved successfully');
+                    } catch (err) {
+                        logger.error('[onExport] SAF save failed', err);
+                    }
+                }
             }
-        } catch {
+
+            confirm.show({
+                title: 'Backup Generated',
+                message: 'Your backup has been created. Would you like to share or upload the file now?',
+                confirmText: 'Share File',
+                cancelText: 'Just Save',
+                onConfirm: async () => {
+                    const canShare = await Sharing.isAvailableAsync();
+                    if (canShare) {
+                        await Sharing.shareAsync(fileUri, {
+                            mimeType: 'application/json',
+                            dialogTitle: 'Export Your Balance Data',
+                        });
+                    } else {
+                        alert.show({ title: 'Export Ready', message: `File saved to ${fileUri}` });
+                    }
+                }
+            });
+        } catch (error) {
+            logger.error('[onExport] Export failed', error);
             toast.error('Could not export data');
         } finally {
             setIsExporting(false);

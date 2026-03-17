@@ -302,8 +302,9 @@ export const AppConfig = {
         description: 'Show monthly income/expense on cards',
       },
       data: {
-        exportDesc: 'Export your data as a JSON file for backup or external use.',
-        exportBtn: 'Export to JSON',
+        exportDesc: 'Create a backup of your data as a JSON file for backup or external use.',
+        exportBtn: 'Create Backup',
+        importBtn: 'Restore from Backup',
         auditDesc: 'View all changes made to your data for auditing and debugging.',
         auditBtn: 'View Audit Log',
       },
