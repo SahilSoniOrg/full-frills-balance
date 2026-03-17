@@ -1,4 +1,4 @@
-import { AppButton, AppText } from '@/src/components/core';
+import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Spacing } from '@/src/constants';
 import { SettingsSection } from '@/src/features/settings/components/SettingsSection';
@@ -20,11 +20,16 @@ export default function DataManagementSettingsScreen() {
         isCleaning,
         isResetting,
         onExport,
+        onConfirmExport,
         onImport,
         onAuditLog,
         onFixIntegrity,
         onCleanup,
         onFactoryReset,
+        isNamingExport,
+        setIsNamingExport,
+        exportFilename,
+        setExportFilename,
     } = vm;
 
     return (
@@ -39,6 +44,7 @@ export default function DataManagementSettingsScreen() {
                     <AppText variant="body" style={styles.cardDesc}>
                         {AppConfig.strings.settings.data.exportDesc}
                     </AppText>
+
                     <AppButton
                         variant="outline"
                         onPress={onExport}
@@ -153,6 +159,54 @@ export default function DataManagementSettingsScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Export Naming Modal */}
+            <Modal
+                visible={isNamingExport}
+                transparent
+                animationType="slide"
+                statusBarTranslucent
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
+                        <View style={styles.modalIconRow}>
+                            <AppText variant="heading" style={{ fontSize: 40 }}>📄</AppText>
+                        </View>
+
+                        <AppText variant="subheading" style={styles.modalTitle}>
+                            {AppConfig.strings.settings.data.exportFilenameLabel}
+                        </AppText>
+
+                        <AppInput
+                            label={AppConfig.strings.settings.data.exportFilenameLabel}
+                            placeholder={AppConfig.strings.settings.data.exportFilenamePlaceholder}
+                            value={exportFilename}
+                            onChangeText={setExportFilename}
+                            containerStyle={{ width: '100%', marginBottom: Spacing.xl }}
+                            leftIcon="document"
+                            autoFocus
+                        />
+
+                        <View style={styles.modalActionRow}>
+                            <AppButton
+                                variant="outline"
+                                onPress={() => setIsNamingExport(false)}
+                                style={{ flex: 1, marginRight: Spacing.sm }}
+                            >
+                                {AppConfig.strings.common.cancel}
+                            </AppButton>
+                            <AppButton
+                                variant="primary"
+                                onPress={onConfirmExport}
+                                loading={isExporting}
+                                style={{ flex: 2 }}
+                            >
+                                {AppConfig.strings.settings.data.exportBtn}
+                            </AppButton>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </Screen>
     );
 }
@@ -211,5 +265,10 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         opacity: 0.6,
         marginTop: Spacing.md,
+    },
+    modalActionRow: {
+        flexDirection: 'row',
+        width: '100%',
+        alignItems: 'center',
     },
 });

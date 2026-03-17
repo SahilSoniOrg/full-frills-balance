@@ -35,7 +35,12 @@ export interface SettingsViewModel {
     isMaintenanceMode: boolean;
     isCleaning: boolean;
     isResetting: boolean;
+    isNamingExport: boolean;
+    setIsNamingExport: (value: boolean) => void;
+    exportFilename: string;
+    setExportFilename: (value: string) => void;
     onExport: () => void;
+    onConfirmExport: () => void;
     onImport: () => void;
     onAuditLog: () => void;
     onSmsInbox: () => void;
@@ -76,6 +81,8 @@ export function useSettingsViewModel(): SettingsViewModel {
     const [integrityProgressMessage, setIntegrityProgressMessage] = useState('');
     const [isCleaning, setIsCleaning] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [isNamingExport, setIsNamingExport] = useState(false);
+    const [exportFilename, setExportFilename] = useState('');
 
     const setUserName = useCallback((newName: string) => {
         if (newName.trim() && newName !== userName) {
@@ -83,12 +90,22 @@ export function useSettingsViewModel(): SettingsViewModel {
         }
     }, [ui.defaultCurrency, archetype, updateUserDetails, userName]);
 
-    const onExport = useCallback(async () => {
+    const onExport = useCallback(() => {
+        setIsNamingExport(true);
+    }, []);
+
+    const onConfirmExport = useCallback(async () => {
+        setIsNamingExport(false);
         setIsExporting(true);
         try {
             const jsonData = await exportToJSON();
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            const filename = `balance-export-${timestamp}.json`;
+            
+            // Sanitize filename and use default if empty
+            const sanitizedName = exportFilename.trim().replace(/[^a-z0-9-_]/gi, '-').substring(0, 50);
+            const filename = sanitizedName 
+                ? `${sanitizedName}-${timestamp}.json`
+                : `balance-export-${timestamp}.json`;
 
             if (Platform.OS === 'web') {
                 const blob = new Blob([jsonData], { type: 'application/json' });
@@ -119,7 +136,7 @@ export function useSettingsViewModel(): SettingsViewModel {
                         await FileSystem.writeAsStringAsync(fileLocation, jsonData);
                         toast.success('Backup saved successfully');
                     } catch (err) {
-                        logger.error('[onExport] SAF save failed', err);
+                        logger.error('[onConfirmExport] SAF save failed', err);
                     }
                 }
             }
@@ -142,12 +159,12 @@ export function useSettingsViewModel(): SettingsViewModel {
                 }
             });
         } catch (error) {
-            logger.error('[onExport] Export failed', error);
+            logger.error('[onConfirmExport] Export failed', error);
             toast.error('Could not export data');
         } finally {
             setIsExporting(false);
         }
-    }, [exportToJSON]);
+    }, [exportToJSON, exportFilename]);
 
     const onFixIntegrity = useCallback(async () => {
         setIntegrityProgress(0);
@@ -285,7 +302,12 @@ export function useSettingsViewModel(): SettingsViewModel {
         integrityProgressMessage,
         isCleaning,
         isResetting,
+        isNamingExport,
+        setIsNamingExport,
+        exportFilename,
+        setExportFilename,
         onExport,
+        onConfirmExport,
         onImport: AppNavigation.toImportSelection,
         onAuditLog: AppNavigation.toAuditLog,
         onSmsInbox: AppNavigation.toSmsInbox,

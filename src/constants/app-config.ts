@@ -304,6 +304,8 @@ export const AppConfig = {
       data: {
         exportDesc: 'Create a backup of your data as a JSON file for backup or external use.',
         exportBtn: 'Create Backup',
+        exportFilenameLabel: 'Backup Filename',
+        exportFilenamePlaceholder: 'e.g., my-balance-backup',
         importBtn: 'Restore from Backup',
         auditDesc: 'View all changes made to your data for auditing and debugging.',
         auditBtn: 'View Audit Log',
