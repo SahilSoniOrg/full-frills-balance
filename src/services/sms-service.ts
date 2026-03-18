@@ -15,7 +15,7 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository'
 import { ledgerWriteService } from '@/src/services/ledger'
 import { logger } from '@/src/utils/logger'
 import { preferences } from '@/src/utils/preferences'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { storage } from '@/src/utils/storage'
 import { Q } from '@nozbe/watermelondb'
 import { PermissionsAndroid, Platform } from 'react-native'
 
@@ -229,8 +229,8 @@ class SmsService {
     await this.linkSmsToJournal(recordId, journalId, SmsProcessingStatus.IMPORTED)
   }
 
-  async clearProcessedMessages(): Promise<void> {
-    await AsyncStorage.removeItem(this.PROCESSED_SMS_KEY)
+  clearProcessedMessages(): void {
+    storage.remove(this.PROCESSED_SMS_KEY)
   }
 
   async previewRuleMatches(inputOrSender: SmsRulePreviewInput | string, bodyMatch?: string): Promise<SmsInboxRecord[]> {
@@ -424,7 +424,7 @@ class SmsService {
     }
     const activeRules = (await this.rules.query(Q.where('is_active', true)).fetch())
       .sort((a, b) => this.getRulePriority(b) - this.getRulePriority(a))
-    const processedIds = new Set(await this.getProcessedSmsIds())
+    const processedIds = new Set(this.getProcessedSmsIds())
     const existing = await this.inbox.query(Q.where('device_sms_id', Q.oneOf(messages.map((message) => message.id)))).fetch()
     const existingMap = new Map(existing.map((record) => [record.deviceSmsId, record]))
 
@@ -479,7 +479,7 @@ class SmsService {
 
       if (definition.actions.disposition === 'ignore') {
         await this.markInboxRecordStatus(record.id, SmsProcessingStatus.DISMISSED)
-        await this.markSmsAsProcessed(record.deviceSmsId)
+        this.markSmsAsProcessed(record.deviceSmsId)
         return 'ignored'
       }
 
@@ -979,29 +979,29 @@ class SmsService {
     return !!condition.value?.trim()
   }
 
-  private async getProcessedSmsIds(): Promise<string[]> {
+  private getProcessedSmsIds(): string[] {
     try {
-      const data = await AsyncStorage.getItem(this.PROCESSED_SMS_KEY)
+      const data = storage.getString(this.PROCESSED_SMS_KEY)
       return data ? JSON.parse(data) : []
     } catch (error) {
-      logger.error('Failed to get processed SMS IDs', error)
+      logger.error('Failed to get processed SMS IDs from MMKV', error)
       return []
     }
   }
 
-  async markSmsAsProcessed(smsId: string): Promise<void> {
+  markSmsAsProcessed(smsId: string): void {
     try {
-      const processedIds = await this.getProcessedSmsIds()
+      const processedIds = this.getProcessedSmsIds()
       if (!processedIds.includes(smsId)) {
         processedIds.push(smsId)
         const maxStored = AppConfig.input.sms.maxStoredProcessedIds
         if (processedIds.length > maxStored) {
           processedIds.splice(0, processedIds.length - maxStored)
         }
-        await AsyncStorage.setItem(this.PROCESSED_SMS_KEY, JSON.stringify(processedIds))
+        storage.set(this.PROCESSED_SMS_KEY, JSON.stringify(processedIds))
       }
     } catch (error) {
-      logger.error('Failed to mark SMS as processed', error)
+      logger.error('Failed to mark SMS as processed in MMKV', error)
     }
   }
 

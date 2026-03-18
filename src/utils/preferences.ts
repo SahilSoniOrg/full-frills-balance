@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
 import { logger } from '@/src/utils/logger';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { storage, migrateFromAsyncStorage } from './storage';
 
 const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 
@@ -54,6 +54,28 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
 class PreferencesHelper {
   private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
 
+  constructor() {
+    this.reloadFromStorage();
+  }
+
+  private reloadFromStorage(): void {
+    try {
+      const stored = storage.getString(PREFERENCES_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (typeof parsed === 'object' && parsed !== null) {
+            this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
+          }
+        } catch (parseError) {
+          logger.error('Failed to parse preferences, using defaults', { error: parseError });
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to reload preferences from MMKV', { error });
+    }
+  }
+
   private sanitizePreferences(input: Partial<UIPreferences>): Partial<UIPreferences> {
     const sanitized: Partial<UIPreferences> = { ...input };
 
@@ -69,47 +91,53 @@ class PreferencesHelper {
     if (sanitized.dismissedPatternIds && !Array.isArray(sanitized.dismissedPatternIds)) {
       sanitized.dismissedPatternIds = [];
     }
+    if (sanitized.notificationCadence && !['none', 'daily', 'weekly'].includes(sanitized.notificationCadence)) {
+      delete sanitized.notificationCadence;
+    }
+    if (sanitized.notificationHour !== undefined && (typeof sanitized.notificationHour !== 'number' || sanitized.notificationHour < 0 || sanitized.notificationHour > 23)) {
+      delete sanitized.notificationHour;
+    }
+    if (sanitized.notificationMinute !== undefined && (typeof sanitized.notificationMinute !== 'number' || sanitized.notificationMinute < 0 || sanitized.notificationMinute > 59)) {
+      delete sanitized.notificationMinute;
+    }
 
     return sanitized;
   }
 
+  /**
+   * Initializes preferences. Performs one-time migration if needed.
+   * This remains async primarily for the migration bridge.
+   */
   async loadPreferences(): Promise<UIPreferences> {
     try {
-      const stored = await AsyncStorage.getItem(PREFERENCES_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (typeof parsed === 'object' && parsed !== null) {
-            this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
-          }
-        } catch (parseError) {
-          logger.error('Failed to parse preferences, using defaults', { error: parseError });
-        }
+      const migrated = await migrateFromAsyncStorage();
+      if (migrated) {
+        this.reloadFromStorage();
       }
     } catch (error) {
-      logger.error('Failed to load preferences', { error });
+      logger.error('Failed to initialize preferences migration', { error });
     }
     return this.preferences;
   }
 
-  private async updatePreferences(updates: Partial<UIPreferences>): Promise<void> {
+  private updatePreferences(updates: Partial<UIPreferences>): void {
     this.preferences = { ...this.preferences, ...this.sanitizePreferences(updates) };
-    await this.savePreferences();
+    this.savePreferences();
   }
 
-  async restorePreferences(data?: Partial<UIPreferences>): Promise<void> {
+  restorePreferences(data?: Partial<UIPreferences>): void {
     this.preferences = {
       ...DEFAULT_UI_PREFERENCES,
       ...(data ? this.sanitizePreferences(data) : {}),
     };
-    await this.savePreferences();
+    this.savePreferences();
   }
 
-  async savePreferences(): Promise<void> {
+  savePreferences(): void {
     try {
-      await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(this.preferences));
+      storage.set(PREFERENCES_KEY, JSON.stringify(this.preferences));
     } catch (error) {
-      logger.error('Failed to save preferences', { error });
+      logger.error('Failed to save preferences to MMKV', { error });
     }
   }
 
@@ -117,152 +145,152 @@ class PreferencesHelper {
     return this.preferences.onboardingCompleted;
   }
 
-  async setOnboardingCompleted(completed: boolean): Promise<void> {
-    await this.updatePreferences({ onboardingCompleted: completed });
+  setOnboardingCompleted(completed: boolean): void {
+    this.updatePreferences({ onboardingCompleted: completed });
   }
 
   get userName(): string | undefined {
     return this.preferences.userName;
   }
 
-  async setUserName(name: string): Promise<void> {
-    await this.updatePreferences({ userName: name });
+  setUserName(name: string): void {
+    this.updatePreferences({ userName: name });
   }
 
   get lastSelectedAccountId(): string | undefined {
     return this.preferences.lastSelectedAccountId;
   }
 
-  async setLastSelectedAccountId(accountId: string | undefined): Promise<void> {
-    await this.updatePreferences({ lastSelectedAccountId: accountId });
+  setLastSelectedAccountId(accountId: string | undefined): void {
+    this.updatePreferences({ lastSelectedAccountId: accountId });
   }
 
   get lastDateRange(): { startDate: number; endDate: number } | undefined {
     return this.preferences.lastDateRange;
   }
 
-  async setLastDateRange(range: { startDate: number; endDate: number } | undefined): Promise<void> {
-    await this.updatePreferences({ lastDateRange: range });
+  setLastDateRange(range: { startDate: number; endDate: number } | undefined): void {
+    this.updatePreferences({ lastDateRange: range });
   }
 
   get theme(): 'light' | 'dark' | 'system' | undefined {
     return this.preferences.theme;
   }
 
-  async setTheme(theme: 'light' | 'dark' | 'system'): Promise<void> {
-    await this.updatePreferences({ theme });
+  setTheme(theme: 'light' | 'dark' | 'system'): void {
+    this.updatePreferences({ theme });
   }
 
   get themeId(): ThemeId | undefined {
     return this.preferences.themeId;
   }
 
-  async setThemeId(themeId: ThemeId): Promise<void> {
-    await this.updatePreferences({ themeId });
+  setThemeId(themeId: ThemeId): void {
+    this.updatePreferences({ themeId });
   }
 
   get fontId(): FontId | undefined {
     return this.preferences.fontId;
   }
 
-  async setFontId(fontId: FontId): Promise<void> {
-    await this.updatePreferences({ fontId });
+  setFontId(fontId: FontId): void {
+    this.updatePreferences({ fontId });
   }
 
   get defaultCurrencyCode(): string | undefined {
     return this.preferences.defaultCurrencyCode;
   }
 
-  async setDefaultCurrencyCode(currencyCode: string): Promise<void> {
-    await this.updatePreferences({ defaultCurrencyCode: currencyCode });
+  setDefaultCurrencyCode(currencyCode: string): void {
+    this.updatePreferences({ defaultCurrencyCode: currencyCode });
   }
 
   get lastUsedSourceAccountId(): string | undefined {
     return this.preferences.lastUsedSourceAccountId;
   }
 
-  async setLastUsedSourceAccountId(accountId: string | undefined): Promise<void> {
-    await this.updatePreferences({ lastUsedSourceAccountId: accountId });
+  setLastUsedSourceAccountId(accountId: string | undefined): void {
+    this.updatePreferences({ lastUsedSourceAccountId: accountId });
   }
 
   get lastUsedDestinationAccountId(): string | undefined {
     return this.preferences.lastUsedDestinationAccountId;
   }
 
-  async setLastUsedDestinationAccountId(accountId: string | undefined): Promise<void> {
-    await this.updatePreferences({ lastUsedDestinationAccountId: accountId });
+  setLastUsedDestinationAccountId(accountId: string | undefined): void {
+    this.updatePreferences({ lastUsedDestinationAccountId: accountId });
   }
 
   get isPrivacyMode(): boolean {
     return this.preferences.isPrivacyMode;
   }
 
-  async setIsPrivacyMode(isPrivacyMode: boolean): Promise<void> {
-    await this.updatePreferences({ isPrivacyMode });
+  setIsPrivacyMode(isPrivacyMode: boolean): void {
+    this.updatePreferences({ isPrivacyMode });
   }
 
   get isWidgetPrivacyEnabled(): boolean {
     return this.preferences.isWidgetPrivacyEnabled;
   }
 
-  async setIsWidgetPrivacyEnabled(isEnabled: boolean): Promise<void> {
-    await this.updatePreferences({ isWidgetPrivacyEnabled: isEnabled });
+  setIsWidgetPrivacyEnabled(isEnabled: boolean): void {
+    this.updatePreferences({ isWidgetPrivacyEnabled: isEnabled });
   }
 
   get isAppLockEnabled(): boolean {
     return this.preferences.isAppLockEnabled;
   }
 
-  async setAppLockEnabled(isAppLockEnabled: boolean): Promise<void> {
-    await this.updatePreferences({ isAppLockEnabled });
+  setAppLockEnabled(isAppLockEnabled: boolean): void {
+    this.updatePreferences({ isAppLockEnabled });
   }
 
   get showAccountMonthlyStats(): boolean {
     return this.preferences.showAccountMonthlyStats;
   }
 
-  async setShowAccountMonthlyStats(show: boolean): Promise<void> {
-    await this.updatePreferences({ showAccountMonthlyStats: show });
+  setShowAccountMonthlyStats(show: boolean): void {
+    this.updatePreferences({ showAccountMonthlyStats: show });
   }
 
   get advancedMode(): boolean {
     return this.preferences.advancedMode;
   }
 
-  async setAdvancedMode(advancedMode: boolean): Promise<void> {
-    await this.updatePreferences({ advancedMode });
+  setAdvancedMode(advancedMode: boolean): void {
+    this.updatePreferences({ advancedMode });
   }
 
   get archetype(): string | undefined {
     return this.preferences.archetype;
   }
 
-  async setArchetype(archetype: string): Promise<void> {
-    await this.updatePreferences({ archetype });
+  setArchetype(archetype: string): void {
+    this.updatePreferences({ archetype });
   }
 
   get notificationCadence(): 'none' | 'daily' | 'weekly' {
     return this.preferences.notificationCadence || 'none';
   }
 
-  async setNotificationCadence(cadence: 'none' | 'daily' | 'weekly'): Promise<void> {
-    await this.updatePreferences({ notificationCadence: cadence });
+  setNotificationCadence(cadence: 'none' | 'daily' | 'weekly'): void {
+    this.updatePreferences({ notificationCadence: cadence });
   }
 
   get notificationHour(): number {
     return this.preferences.notificationHour ?? 10;
   }
 
-  async setNotificationHour(hour: number): Promise<void> {
-    await this.updatePreferences({ notificationHour: hour });
+  setNotificationHour(hour: number): void {
+    this.updatePreferences({ notificationHour: hour });
   }
 
   get notificationMinute(): number {
     return this.preferences.notificationMinute ?? 0;
   }
 
-  async setNotificationMinute(minute: number): Promise<void> {
-    await this.updatePreferences({ notificationMinute: minute });
+  setNotificationMinute(minute: number): void {
+    this.updatePreferences({ notificationMinute: minute });
   }
 
   get dismissedPatternIds(): string[] {
@@ -273,35 +301,35 @@ class PreferencesHelper {
     return this.preferences.anonymizedId;
   }
 
-  async setAnonymizedId(id: string): Promise<void> {
-    await this.updatePreferences({ anonymizedId: id });
+  setAnonymizedId(id: string): void {
+    this.updatePreferences({ anonymizedId: id });
   }
 
-  async dismissPattern(id: string): Promise<void> {
+  dismissPattern(id: string): void {
     const current = this.preferences.dismissedPatternIds;
     if (!current.includes(id)) {
-      await this.updatePreferences({
+      this.updatePreferences({
         dismissedPatternIds: [...current, id],
       });
     }
   }
 
-  async undismissPattern(id: string): Promise<void> {
+  undismissPattern(id: string): void {
     const current = this.preferences.dismissedPatternIds;
     if (current.includes(id)) {
-      await this.updatePreferences({
+      this.updatePreferences({
         dismissedPatternIds: current.filter(pId => pId !== id),
       });
     }
   }
 
   // Clear all preferences (useful for testing or reset)
-  async clearPreferences(): Promise<void> {
+  clearPreferences(): void {
     this.preferences = { ...DEFAULT_UI_PREFERENCES };
     try {
-      await AsyncStorage.removeItem(PREFERENCES_KEY);
+      storage.remove(PREFERENCES_KEY);
     } catch (error) {
-      logger.warn('Failed to clear preferences', { error });
+      logger.warn('Failed to clear preferences from MMKV', { error });
     }
   }
 }

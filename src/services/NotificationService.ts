@@ -75,13 +75,18 @@ class NotificationService {
         let trigger: Notifications.NotificationTriggerInput = null;
 
         if (Platform.OS === 'ios') {
-            trigger = {
-                type: 'calendar' as any,
+            const calendarTrigger: any = {
+                type: 'calendar',
                 hour,
                 minute,
-                weekday: cadence === 'weekly' ? 1 : undefined,
                 repeats: true,
-            } as any;
+            };
+            
+            if (cadence === 'weekly') {
+                calendarTrigger.weekday = 1; // Sunday
+            }
+            
+            trigger = calendarTrigger;
         } else {
             // Android uses explicit 'daily' and 'weekly' types
             if (cadence === 'daily') {

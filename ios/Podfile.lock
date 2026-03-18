@@ -1,7 +1,7 @@
 PODS:
   - EASClient (55.0.2):
     - ExpoModulesCore
-  - EXApplication (55.0.8):
+  - EXApplication (55.0.9):
     - ExpoModulesCore
   - EXConstants (55.0.7):
     - ExpoModulesCore
@@ -268,6 +268,8 @@ PODS:
     - React-Core
     - React-runtimescheduler
     - ReactCommon
+  - ExpoNotifications (55.0.12):
+    - ExpoModulesCore
   - ExpoRouter (55.0.4):
     - ExpoModulesCore
     - RNScreens
@@ -339,7 +341,33 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
-  - NitroModules (0.33.2):
+  - MMKVCore (2.3.0)
+  - NitroMmkv (4.2.0):
+    - hermes-engine
+    - MMKVCore (= 2.3.0)
+    - NitroModules
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - NitroModules (0.35.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2585,6 +2613,7 @@ DEPENDENCIES:
   - "ExpoLogBox (from `../node_modules/@expo/log-box`)"
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../node_modules/expo-modules-core`)
+  - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
   - ExpoSmsInbox (from `../modules/expo-sms-inbox/ios`)
@@ -2599,6 +2628,7 @@ DEPENDENCIES:
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - NitroMmkv (from `../node_modules/react-native-mmkv`)
   - NitroModules (from `../node_modules/react-native-nitro-modules`)
   - QuickCrypto (from `../node_modules/react-native-quick-crypto`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -2690,6 +2720,7 @@ SPEC REPOS:
     - libavif
     - libdav1d
     - libwebp
+    - MMKVCore
     - ReachabilitySwift
     - SDWebImage
     - SDWebImageAVIFCoder
@@ -2751,6 +2782,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-core"
   ExpoModulesJSI:
     :path: "../node_modules/expo-modules-core"
+  ExpoNotifications:
+    :path: "../node_modules/expo-notifications/ios"
   ExpoRouter:
     :path: "../node_modules/expo-router/ios"
   ExpoSharing:
@@ -2780,6 +2813,8 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-v0.14.1
+  NitroMmkv:
+    :path: "../node_modules/react-native-mmkv"
   NitroModules:
     :path: "../node_modules/react-native-nitro-modules"
   QuickCrypto:
@@ -2951,7 +2986,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   EASClient: 7eead1417d9970757ad2654d1eddee4de796d1ee
-  EXApplication: b86f81225a9cd817cfe86a79655b9829f12629db
+  EXApplication: 44f202420678bba77f603c373bd3fd033e6c21e9
   EXConstants: b3c63be5f8648e4ab8e6ff5099b62f629247f969
   EXJSONUtils: 0080c14b673cfa9a6be5e3fe429768ffe3d42dfb
   EXManifests: 2b53302deb6d7275ae26005b8014f5a1aee42a0e
@@ -2977,6 +3012,7 @@ SPEC CHECKSUMS:
   ExpoLogBox: 89b634d5a8a64c4a6a7caad8f9985a28463c7002
   ExpoModulesCore: a57a0a1e39caa9ad5f76c8477b831ee32fbeddfc
   ExpoModulesJSI: a554588f3260ee3c44a3e7f4a8151c2b9ffdb024
+  ExpoNotifications: 35c1549deb8fb2cba86e6fda778d46d08c11ea25
   ExpoRouter: 6b8875b84c8eef1359039c5b703c8ed18f536825
   ExpoSharing: 5f1435af23bcf740c63b1d322400d1e26bf77393
   ExpoSmsInbox: f1a0632313b77b4eb7f64bbd462c1d55d3892e41
@@ -2994,7 +3030,9 @@ SPEC CHECKSUMS:
   libavif: 5f8e715bea24debec477006f21ef9e95432e254d
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  NitroModules: 114b4f79e10be9b202723e721d6a54382fa4b599
+  MMKVCore: d078dce7d6586a888b2c2ef5343b6242678e3ee8
+  NitroMmkv: 38dfb2983c83e9bbbb64423ff48fbeaaa097cc38
+  NitroModules: 76063cb7bc1a21cf46d11b25abfcf1759bf0be47
   QuickCrypto: c1f07b3fd5af49091f4887ea101f826fdb9c1029
   RCTDeprecation: a522c536d2c7be8f518dd834883cf6dce1d4f545
   RCTRequired: 44337def23abb244c025e9e7ab58f9cd3d63ec7d

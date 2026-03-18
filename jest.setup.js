@@ -26,6 +26,26 @@ jest.mock('@react-native-async-storage/async-storage', () =>
     require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+// Mock MMKV
+jest.mock('react-native-mmkv', () => {
+    const mmkvMock = {
+        set: jest.fn(),
+        getString: jest.fn(),
+        getNumber: jest.fn(),
+        getBoolean: jest.fn(),
+        getBuffer: jest.fn(),
+        contains: jest.fn(),
+        delete: jest.fn(),
+        getAllKeys: jest.fn().mockReturnValue([]),
+        clearAll: jest.fn(),
+        recrypt: jest.fn(),
+        onValueChanged: jest.fn(),
+    };
+    return {
+        createMMKV: jest.fn().mockImplementation(() => mmkvMock),
+    };
+});
+
 // Mock Native Modules and Device Info
 jest.mock('react-native/Libraries/Utilities/NativeDeviceInfo', () => ({
     default: {
@@ -151,6 +171,7 @@ jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
 
 jest.mock('react-native-nitro-modules', () => ({
     NitroModules: {},
+    createNitroModule: jest.fn(),
 }));
 
 // Mock PostHog

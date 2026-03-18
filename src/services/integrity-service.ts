@@ -26,7 +26,7 @@ import { accountingService } from '@/src/utils/accountingService'
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
 import { logger } from '@/src/utils/logger'
 import { amountsAreEqual } from '@/src/utils/money'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { storage } from '@/src/utils/storage'
 import { getRawAdapter } from '../data/database/DatabaseUtils'
 
 export interface BalanceVerificationResult {
@@ -317,13 +317,13 @@ export class IntegrityService {
      * Returns true if the full balance-verification scan should run.
      * Runs when the stored schema version differs from the current one (i.e. after a migration).
      */
-    private async shouldRunIntegrityCheck(): Promise<boolean> {
-        const storedVersion = await AsyncStorage.getItem(IntegrityService.SCHEMA_VERSION_KEY);
+    private shouldRunIntegrityCheck(): boolean {
+        const storedVersion = storage.getString(IntegrityService.SCHEMA_VERSION_KEY);
         const currentVersion = String(schema.version);
 
         if (storedVersion !== currentVersion) {
             logger.info(`[IntegrityService] Schema changed (${storedVersion} → ${currentVersion}) — running full integrity check.`);
-            await AsyncStorage.setItem(IntegrityService.SCHEMA_VERSION_KEY, currentVersion);
+            storage.set(IntegrityService.SCHEMA_VERSION_KEY, currentVersion);
             return true;
         }
         return false;
@@ -404,7 +404,7 @@ export class IntegrityService {
             logger.info('[IntegrityService] No accounts found. Skipping default seeding (onboarding handles data creation).')
         }
 
-        const shouldRun = await this.shouldRunIntegrityCheck()
+        const shouldRun = this.shouldRunIntegrityCheck()
         if (!shouldRun) {
             logger.info('[IntegrityService] Skipping balance verification (no crash flag, schema unchanged).')
             return {

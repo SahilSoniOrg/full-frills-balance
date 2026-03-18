@@ -10,6 +10,7 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1AD94947AD1990577D0D19AB /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C21E530E1BEC97E8FFF83315 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		488D3F664B2C45D7B443D3CD /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3976C870B894829938F7CA6 /* FullFrillsBalanceWidget.swift */; };
 		684802FDAF4446A4A7CD2AD1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9F8AA9528A34881BD9C8834 /* SwiftUI.framework */; };
 		85DDF97D332663B5A70C3D6C /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ABDC7A3715AF2131CD1ED66D /* libPods-FullFrillsBalance.a */; };
 		960DBCC481ED486EA090EF87 /* FullFrillsBalanceWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 68181A1D75144D2F817FC230 /* FullFrillsBalanceWidget.appex */; };
@@ -17,7 +18,6 @@
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		D9E8E766309448F58FDE9FB2 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CFF81F501E7E4D8BB36186CB /* WidgetKit.framework */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		488D3F664B2C45D7B443D3CD /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3976C870B894829938F7CA6 /* FullFrillsBalanceWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -313,6 +313,7 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoDevice/ExpoDevice_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoLocalization/ExpoLocalization_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoNotifications/ExpoNotifications_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoSystemUI/ExpoSystemUI_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle",
@@ -332,6 +333,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoDevice_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoLocalization_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoNotifications_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoSystemUI_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNSVGFilters.bundle",
