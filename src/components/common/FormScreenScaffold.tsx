@@ -1,4 +1,3 @@
-import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper';
 import { Screen } from '@/src/components/layout';
 import React from 'react';
 import { ScrollViewProps, StyleProp, ViewStyle } from 'react-native';
@@ -31,14 +30,15 @@ export function FormScreenScaffold({
             showBack={showBack}
             edges={edges}
             headerActions={headerActions}
+            scrollable
+            keyboardAvoiding
+            footer={footerSlot}
+            scrollViewProps={{
+                contentContainerStyle,
+                ...scrollProps
+            }}
         >
-            <FormScreenWrapper
-                footerSlot={footerSlot}
-                contentContainerStyle={contentContainerStyle}
-                scrollProps={scrollProps}
-            >
-                {children}
-            </FormScreenWrapper>
+            {children}
         </Screen>
     );
 }

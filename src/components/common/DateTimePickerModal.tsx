@@ -1,11 +1,12 @@
 import { CustomDateTimePicker } from '@/src/components/common/CustomDateTimePicker';
-import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
+import { AppButton, AppText, IconButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Separator } from '@/src/design-system';
 
 interface DateTimePickerModalProps {
     visible: boolean;
@@ -82,7 +83,7 @@ export function DateTimePickerModal({
                         />
                     </View>
 
-                    <Divider style={styles.divider} />
+                    <Separator style={styles.divider} />
 
                     <View style={{ paddingHorizontal: Spacing.lg }}>
                         <AppButton variant="primary" onPress={handleApply}>

@@ -1,12 +1,12 @@
 import { CategoryCreationBar } from '@/src/components/common/CategoryCreationBar';
 import { SelectableGrid, SelectableItem } from '@/src/components/common/SelectableGrid';
 import { AppIcon, AppInput, AppText, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Size, withOpacity } from '@/src/constants';
 import { ARCHETYPES } from '@/src/constants/archetypes';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Box } from '@/src/design-system';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
 
 type BaseProps = {
@@ -122,14 +122,14 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
                 onBack={props.onBack}
                 isCompleting={props.isCompleting}
                 bottomContent={
-                    <View style={styles.searchContainer}>
+                    <Box>
                         <AppInput
                             placeholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
                             value={currencySearchQuery}
                             onChangeText={setCurrencySearchQuery}
                             accessibilityLabel="Search currency"
                         />
-                    </View>
+                    </Box>
                 }
                 renderSubtitle={(item, isSelected) => (
                     <AppText
@@ -242,8 +242,3 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     );
 }
 
-const styles = StyleSheet.create({
-    searchContainer: {
-        marginBottom: Spacing.md,
-    }
-});

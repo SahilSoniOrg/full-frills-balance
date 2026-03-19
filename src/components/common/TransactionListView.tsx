@@ -1,10 +1,10 @@
-import { AppText, EmptyStateView, LoadingView } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { AppText, EmptyStateView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
+import { Inline, Skeleton, Stack } from '@/src/design-system';
 import { EnrichedJournal } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { DaySeparator } from './DaySeparator';
 import { TransactionCard } from './TransactionCard';
 import { TypedFlashList } from './TypedFlashList';
@@ -30,7 +30,6 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
         items,
         isLoading,
         isLoadingMore,
-        loadingText,
         loadingMoreText,
         emptyTitle = AppConfig.strings.common.noTransactions,
         emptySubtitle = AppConfig.strings.common.tryChangingFilters,
@@ -40,18 +39,25 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
         estimatedItemSize = AppConfig.layout.listEstimatedItemSize,
     } = props;
     const listEmpty = (isLoading && items.length === 0) ? (
-        <LoadingView loading={isLoading} text={loadingText || AppConfig.strings.common.loading} size="small" />
+        <Stack gap="md">
+            {[1, 2, 3, 4, 5].map(i => (
+                <Stack key={i} gap="sm">
+                    <Skeleton width={120} height={16} />
+                    <Skeleton width="100%" height={80} radius="lg" />
+                </Stack>
+            ))}
+        </Stack>
     ) : (
         <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
     );
 
     const listFooter = isLoadingMore ? (
-        <View style={styles.loadingMore}>
+        <Inline align="center" justify="center" space="sm" paddingVertical="lg">
             <ActivityIndicator size="small" />
             <AppText variant="caption" color="secondary">
                 {loadingMoreText || AppConfig.strings.common.loadingMore}
             </AppText>
-        </View>
+        </Inline>
     ) : null;
 
     return (
@@ -90,12 +96,3 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
 
 TransactionListView.displayName = 'TransactionListView';
 
-const styles = StyleSheet.create({
-    loadingMore: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: Spacing.lg,
-        gap: Spacing.sm,
-    },
-});

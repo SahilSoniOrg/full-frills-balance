@@ -1,15 +1,10 @@
-/**
- * Screen - App-specific layout primitive
- * Provides consistent screen layout with safe area, background, and navigation
- */
-
 import { NavigationBar, type NavigationBarProps } from '@/src/components/layout/NavigationBar'
 import { Spacing } from '@/src/constants'
 import { useTheme } from '@/src/hooks/use-theme'
-import { StatusBar } from 'expo-status-bar'
+import { Page } from '@/src/design-system'
 import React from 'react'
-import { ScrollView, StyleSheet, View, type ViewProps } from 'react-native'
-import { SafeAreaView, type Edge } from 'react-native-safe-area-context'
+import { ScrollViewProps, StyleSheet, View, type ViewProps } from 'react-native'
+import { type Edge } from 'react-native-safe-area-context'
 
 export type ScreenProps = ViewProps & {
   children: React.ReactNode
@@ -26,6 +21,9 @@ export type ScreenProps = ViewProps & {
   scrollable?: boolean
   withPadding?: boolean
   edges?: Edge[]
+  keyboardAvoiding?: boolean
+  footer?: React.ReactNode
+  scrollViewProps?: ScrollViewProps
 }
 
 export function Screen({
@@ -41,10 +39,13 @@ export function Screen({
   scrollable = false,
   withPadding = false,
   edges = ['top'],
+  keyboardAvoiding = false,
+  footer,
+  scrollViewProps,
   style,
   ...rest
 }: ScreenProps) {
-  const { theme, themeMode } = useTheme()
+  const { themeMode } = useTheme()
 
   // Clean props for SafeAreaView to avoid Web DOM warnings
   // @ts-ignore
@@ -61,13 +62,16 @@ export function Screen({
   )
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
+    <Page
+      background="background"
       edges={edges}
-      {...safeAreaProps}
+      scrollable={scrollable}
+      statusBar={themeMode === 'dark' ? 'light' : 'dark'}
+      keyboardAvoiding={keyboardAvoiding}
+      footer={footer}
+      scrollViewProps={scrollViewProps}
+      {...rest}
     >
-      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
-
       {(title || headerActions) && (
         <NavigationBar
           title={title || ''}
@@ -80,19 +84,8 @@ export function Screen({
           alignTitle={alignTitle}
         />
       )}
-
-      {scrollable ? (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {content}
-        </ScrollView>
-      ) : (
-        content
-      )}
-    </SafeAreaView>
+      {content}
+    </Page>
   )
 }
 

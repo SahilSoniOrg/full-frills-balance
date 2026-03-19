@@ -1,9 +1,10 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
-import { AppCard, AppIcon, AppText, Badge, Divider } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppCard, AppText, AppIcon, Badge } from '@/src/components/core';
+import { AppConfig, Shape, Size, Spacing, Typography, withOpacity, Opacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
+import { Bleed, Box, FadeIn, Inline, Separator, Skeleton, Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SafeToSpendProjection } from '@/src/services/insight-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -83,7 +84,7 @@ export const SafeToSpendCard = ({
     firstMajorInflowDay,
     isLoading = false
 }: SafeToSpendCardProps) => {
-    const { theme, fonts } = useTheme();
+    const { theme } = useTheme();
     const { isPrivacyMode } = useUI();
     const [isInfoVisible, setInfoVisible] = React.useState(false);
     const [expandedSection, setExpandedSection] = React.useState<'assets' | 'income' | 'committed' | 'debts' | null>(null);
@@ -100,7 +101,7 @@ export const SafeToSpendCard = ({
     const projectionWindowDays = AppConfig.defaults.safeToSpendDays * 2;
 
     const format = (val: number) => {
-        if (isLoading) return '...';
+        if (isLoading) return <Skeleton width={60} height={24} />;
         if (isPrivacyMode) return '••••';
         return CurrencyFormatter.format(val, currencyCode, {
             minimumFractionDigits: 0,
@@ -114,29 +115,27 @@ export const SafeToSpendCard = ({
         subtypes: AccountSubtype[],
         accounts: { name: string, amount?: number }[] | string[]
     ) => (
-        <View style={{ gap: Spacing.md }}>
+        <Stack gap="md">
             {!!title && (
-                <AppText
+                <Text
                     variant="heading"
-                    style={{
-                        fontSize: Typography.sizes.lg + 2,
-                        marginBottom: Spacing.xs
-                    }}
+                    style={{ fontSize: Typography.sizes.lg + 2 }}
+                    marginBottom="xs"
                 >
                     {title}
-                </AppText>
+                </Text>
             )}
             {!!subtitle && (
-                <AppText variant="body" color="secondary" style={[{ marginBottom: Spacing.sm, opacity: 0.9 }]}>
+                <Text variant="base" color="secondary" marginBottom="sm" style={{ opacity: 0.9 }}>
                     {subtitle}
-                </AppText>
+                </Text>
             )}
 
-            <View style={{ gap: Spacing.sm }}>
-                <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}>
+            <Stack gap="sm">
+                <Text variant="xs" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}>
                     {labels.categoriesUsed}
-                </AppText>
-                <View style={styles.badgeWrap}>
+                </Text>
+                <Inline gap="xs">
                     {subtypes.length > 0 ? (
                         subtypes.map((st, i) => (
                             <Badge key={i} size="sm" variant="secondary" style={{ backgroundColor: withOpacity(theme.surfaceSecondary, 0.8) }}>
@@ -144,10 +143,10 @@ export const SafeToSpendCard = ({
                             </Badge>
                         ))
                     ) : (
-                        <AppText variant="caption" color="secondary" italic>{labels.noneDetectedYet}</AppText>
+                        <Text variant="xs" color="secondary" italic>{labels.noneDetectedYet}</Text>
                     )}
-                </View>
-            </View>
+                </Inline>
+            </Stack>
 
             <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
                 <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}>
@@ -209,7 +208,7 @@ export const SafeToSpendCard = ({
                     })()}
                 </View>
             </View>
-        </View>
+        </Stack>
     );
 
     // committedTotal represents planned outflows and remaining budgets.
@@ -227,18 +226,18 @@ export const SafeToSpendCard = ({
     const isPositiveSafeToSpend = safeToSpend > 0;
 
     return (
-        <>
-            <View style={styles.container}>
-                <View style={styles.heroWrap}>
-                    <View style={styles.kickerRow}>
-                        <AppText
-                            variant="caption"
+        <FadeIn>
+            <Stack gap="xl">
+                <Stack gap="sm">
+                    <Inline gap="xs" alignItems="center" justifyContent="space-between">
+                        <Text
+                            variant="xs"
                             weight="bold"
                             color={isOverCommitted ? "error" : (isPositiveSafeToSpend ? "success" : "secondary")}
-                            style={styles.kickerText}
+                            style={{ letterSpacing: 1.5, textTransform: 'uppercase' }}
                         >
                             {isOverCommitted ? AppConfig.strings.dashboard.shortfall : AppConfig.strings.dashboard.safeToSpendTitle}
-                        </AppText>
+                        </Text>
                         <TouchableOpacity
                             accessibilityRole="button"
                             accessibilityLabel="Open safe-to-spend calculation info"
@@ -246,7 +245,6 @@ export const SafeToSpendCard = ({
                                 setExpandedSection(null);
                                 setInfoVisible(true);
                             }}
-                            style={styles.infoButton}
                         >
                             <AppIcon
                                 name="helpCircle"
@@ -255,32 +253,40 @@ export const SafeToSpendCard = ({
                                 color={isOverCommitted ? theme.error : theme.textSecondary}
                             />
                         </TouchableOpacity>
-                    </View>
+                    </Inline>
 
-                    <AppText
+                    <Text
                         variant="hero"
                         color={isOverCommitted ? "error" : (isPositiveSafeToSpend ? "success" : undefined)}
-                        style={[styles.amount, { fontFamily: fonts.bold }]}
+                        weight="bold"
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.55}
                         ellipsizeMode="tail"
+                        style={{ width: '100%' }}
                     >
                         {format(isOverCommitted ? shortfall : safeToSpend)}
-                    </AppText>
-                    <AppText
-                        variant="caption"
+                    </Text>
+                    <Text
+                        variant="xs"
                         color={isOverCommitted ? "error" : (isPositiveSafeToSpend ? "success" : "secondary")}
                     >
                         {isOverCommitted ? AppConfig.strings.dashboard.neededForObligations : AppConfig.strings.dashboard.afterObligations}
-                    </AppText>
-                </View>
+                    </Text>
+                </Stack>
 
-                <View style={styles.breakdownContainer}>
+                <Stack gap="md">
                     {effectiveTotal > 0 ? (
                         <>
                             {/* Segmented Bar */}
-                            <View style={[styles.progressBarContainer, { backgroundColor: theme.surfaceSecondary }]}>
+                            <Box 
+                                background="surfaceSecondary" 
+                                height={12} 
+                                borderRadius="full" 
+                                flexDirection="row" 
+                                overflow="hidden"
+                                marginBottom="md"
+                            >
 
                                 {committedTotal > 0 && (
                                     <View style={[styles.progressSegment, { flex: committedTotal, backgroundColor: theme.warning }]} />
@@ -291,7 +297,7 @@ export const SafeToSpendCard = ({
                                 {safeToSpend > 0 && (
                                     <View style={[styles.progressSegment, { flex: safeToSpend, backgroundColor: theme.primary }]} />
                                 )}
-                            </View>
+                            </Box>
 
                             {/* Legend */}
                             <View style={styles.legendContainer}>
@@ -325,7 +331,7 @@ export const SafeToSpendCard = ({
                             </AppText>
                         </View>
                     )}
-                </View>
+                </Stack>
 
                 {projection && projection.history.length > 0 && (() => {
                     const chartData = [
@@ -386,7 +392,7 @@ export const SafeToSpendCard = ({
                         </View>
                     );
                 })()}
-            </View>
+            </Stack>
 
             <PopupModal
                 visible={isInfoVisible}
@@ -439,14 +445,16 @@ export const SafeToSpendCard = ({
                     }}
                 >
                     {/* Header */}
-                    <View style={{
-                        padding: Spacing.lg,
-                        borderBottomWidth: 1,
-                        borderBottomColor: withOpacity(theme.border, 0.2),
-                        backgroundColor: withOpacity(theme.surfaceSecondary, 0.5)
-                    }}>
-                        <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 2 }}>CALCULATION LEDGER</AppText>
-                    </View>
+                    <Bleed horizontal="lg">
+                        <View style={{
+                            padding: Spacing.lg,
+                            borderBottomWidth: 1,
+                            borderBottomColor: withOpacity(theme.border, 0.2),
+                            backgroundColor: withOpacity(theme.surfaceSecondary, 0.5)
+                        }}>
+                            <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 2 }}>CALCULATION LEDGER</AppText>
+                        </View>
+                    </Bleed>
 
                     {/* Step 1: Assets */}
                     <TouchableOpacity
@@ -469,8 +477,7 @@ export const SafeToSpendCard = ({
                             {renderSubtypeGroup("", "", liquidAssetSubtypes, liquidAssetAccounts)}
                         </View>
                     )}
-
-                    <Divider style={{ marginVertical: 0, opacity: 0.1 }} />
+                    <Separator />
 
                     {/* Step 2: Future Income */}
                     <TouchableOpacity
@@ -517,7 +524,7 @@ export const SafeToSpendCard = ({
                         </View>
                     )}
 
-                    <Divider style={{ marginVertical: 0, opacity: 0.1 }} />
+                    <Separator />
 
                     {/* Step 3: Committed */}
                     <TouchableOpacity
@@ -578,7 +585,7 @@ export const SafeToSpendCard = ({
                         </View>
                     )}
 
-                    <Divider style={{ marginVertical: 0, opacity: 0.1 }} />
+                    <Separator style={{ marginVertical: 0, opacity: 0.1 }} />
 
                     {/* Step 4: Debts */}
                     <TouchableOpacity
@@ -693,7 +700,7 @@ export const SafeToSpendCard = ({
                 </View>
 
                 <View style={{ paddingVertical: Spacing.xxxxl, alignItems: 'center' }}>
-                    <Divider style={{ width: 40, marginBottom: Spacing.lg, opacity: 0.3 }} />
+                    <Separator background="border" space={1} opacity={0.3} style={{ width: 40, marginBottom: Spacing.lg }} />
                     <AppText variant="caption" italic color="secondary" style={{ textAlign: 'center', opacity: 0.8, paddingHorizontal: Spacing.xl, lineHeight: 18 }}>
                         {info.footer}
                     </AppText>
@@ -780,7 +787,7 @@ export const SafeToSpendCard = ({
                                 <AppText variant="body" weight="medium">{labels.plannedJournals}</AppText>
                                 <AppText variant="body" weight="bold">{format(committedPlannedJournals)}</AppText>
                             </View>
-                            <Divider />
+                            <Separator />
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, paddingRight: Spacing.sm }}>
                                     <AppText variant="body" weight="medium">{labels.activeBudgets}</AppText>
@@ -798,7 +805,7 @@ export const SafeToSpendCard = ({
 
                             {committedBreakdown.length > 0 && (
                                 <View style={styles.accountBreakdownContainer}>
-                                    <View style={{ height: 1, backgroundColor: withOpacity(theme.border, 0.2), marginBottom: Spacing.md }} />
+                                <Separator marginVertical="md" opacity={0.3} />
                                     <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.md }}>
                                         {labels.breakdownByAccount}
                                     </AppText>
@@ -845,7 +852,7 @@ export const SafeToSpendCard = ({
                                     </View>
                                 </View>
                             )}
-                            <Divider />
+                            <Separator />
                             <View style={styles.breakdownRow}>
                                 <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>{labels.totalCommitted}</AppText>
                                 <AppText variant="body" weight="bold" color="warning" style={{ fontSize: Typography.sizes.lg }}>{format(committedTotal)}</AppText>
@@ -869,12 +876,7 @@ export const SafeToSpendCard = ({
                                 <AppText variant="body" weight="medium">{labels.otherLiquidLiabilities}</AppText>
                                 <AppText variant="body" weight="bold">{format(committedLiabilitiesOther)}</AppText>
                             </View>
-                            <Divider />
-                            <View style={styles.breakdownRow}>
-                                <AppText variant="heading" style={{ fontSize: Typography.sizes.lg }}>Total Due</AppText>
-                                <AppText variant="heading" style={{ color: theme.error, fontSize: Typography.sizes.xl }}>{format(committedLiabilities)}</AppText>
-                            </View>
-                            <View style={{ height: 1, backgroundColor: withOpacity(theme.border, 0.3), marginVertical: Spacing.xs }} />
+                            <Separator marginVertical="xs" opacity={0.3} />
                             <View style={styles.breakdownRow}>
                                 <AppText variant="caption" color="secondary" weight="bold">{labels.totalBalanceInfo.toUpperCase()}</AppText>
                                 <AppText variant="body" color="secondary" weight="bold">{format(totalLiabilities)}</AppText>
@@ -884,7 +886,7 @@ export const SafeToSpendCard = ({
                     </View>
                 )}
             </PopupModal>
-        </>
+        </FadeIn>
     );
 };
 
@@ -1001,7 +1003,7 @@ const styles = StyleSheet.create({
         gap: Spacing.xs,
         marginTop: Spacing.xs,
     },
-    snapshotDivider: {
+    snapshotSeparator: {
         height: 1,
         width: '100%',
         marginVertical: Spacing.xs,

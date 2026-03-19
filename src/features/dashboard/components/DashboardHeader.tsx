@@ -1,9 +1,10 @@
 import { AppText, IconButton } from '@/src/components/core';
-import { Size, Spacing } from '@/src/constants';
+import { Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Pattern } from '@/src/services/insight-service';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Box, Inline } from '@/src/design-system';
 
 interface DashboardHeaderProps {
     greeting: string;
@@ -24,15 +25,15 @@ export function DashboardHeader({
     const insightsCount = patterns.length;
 
     return (
-        <View style={styles.container}>
-            <View style={styles.headerRow}>
-                <View style={styles.greetingContainer}>
+        <Box marginBottom="sm">
+            <Inline align="center" justify="space-between" space="md" marginBottom="lg">
+                <Box flex={1} style={{ minWidth: 0 }}>
                     <AppText variant="title" numberOfLines={1}>
                         {greeting}
                     </AppText>
-                </View>
+                </Box>
 
-                <View style={styles.actionButtons}>
+                <Inline align="center" space="xs">
                     <IconButton
                         name={isPrivacyMode ? "eyeOff" : "eye"}
                         size={Size.iconSm}
@@ -57,33 +58,13 @@ export function DashboardHeader({
                             )}
                         </View>
                     )}
-                </View>
-            </View>
-        </View>
+                </Inline>
+            </Inline>
+        </Box>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        marginBottom: Spacing.sm,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: Spacing.lg,
-        gap: Spacing.md,
-    },
-    greetingContainer: {
-        flex: 1,
-        minWidth: 0,
-        marginRight: Spacing.sm,
-    },
-    actionButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.xs,
-    },
     bellContainer: {
         position: 'relative',
     },

@@ -1,10 +1,10 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
-import { FormScreenWrapper } from '@/src/components/common/FormScreenWrapper';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
 import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
+import { Box, Inset, Separator } from '@/src/design-system';
 import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
@@ -74,17 +74,17 @@ export function AccountFormView(vm: AccountFormViewModel) {
         <Screen
             title={heroTitle}
             onBack={onBack}
+            scrollable
+            keyboardAvoiding
+            footer={
+                <SubmitFooter
+                    onPress={onSave}
+                    label={saveLabel}
+                    disabled={isSaveDisabled}
+                />
+            }
         >
-            <FormScreenWrapper
-                contentContainerStyle={styles.content}
-                footerSlot={
-                    <SubmitFooter
-                        onPress={onSave}
-                        label={saveLabel}
-                        disabled={isSaveDisabled}
-                    />
-                }
-            >
+            <Inset space="lg">
                 <AppText variant="body" color="secondary" style={[styles.subtitle, { color: theme.textSecondary }]}>
                     {heroSubtitle}
                 </AppText>
@@ -165,8 +165,10 @@ export function AccountFormView(vm: AccountFormViewModel) {
                         onChange={setAccountType}
                         disabled={isParent}
                     />
-                    <View style={[styles.divider, { backgroundColor: theme.border }]} />
-                    <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text, marginTop: Spacing.md }]}>
+                    <Box marginVertical="md">
+                        <Separator />
+                    </Box>
+                    <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text }]}>
                         {AppConfig.strings.accounts.form.accountSubtype}
                     </AppText>
                     <AccountSubtypeSelector
@@ -223,8 +225,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     notes={notes}
                     setNotes={setNotes}
                 />
-
-            </FormScreenWrapper>
+            </Inset>
 
             <IconPickerModal
                 visible={isIconPickerVisible}
@@ -250,9 +251,6 @@ export function AccountFormView(vm: AccountFormViewModel) {
 }
 
 const styles = StyleSheet.create({
-    content: {
-        padding: Spacing.lg,
-    },
     container: {
         flex: 1,
     },

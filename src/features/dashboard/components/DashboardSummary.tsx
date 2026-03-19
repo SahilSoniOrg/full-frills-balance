@@ -1,10 +1,11 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Size, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Box, Inline, Inset, Stack } from '@/src/design-system';
 
 interface DashboardSummaryProps {
     income: number;
@@ -27,60 +28,60 @@ export const DashboardSummary = ({ income, expense, isHidden: controlledHidden }
     };
 
     return (
-        <View style={styles.container}>
+        <Inline space="md" marginBottom="lg">
             {/* Income Column */}
-            <AppCard elevation="sm" padding="md" style={styles.column}>
-                <View style={styles.row}>
-                    <View style={[styles.iconBox, { backgroundColor: withOpacity(theme.income, Opacity.soft) }]}>
-                        <AppIcon name="arrowDown" size={Size.xs} color={theme.income} />
-                    </View>
-                    <AppText variant="caption" color="secondary">INCOME</AppText>
-                </View>
-                <AppText variant="subheading" style={[styles.value, { color: theme.income, fontFamily: fonts.bold }]}>
-                    {formatValue(income)}
-                </AppText>
+            <AppCard elevation="sm" padding="none" style={styles.column}>
+                <Inset space="md">
+                    <Stack gap="sm">
+                        <Inline align="center" space="xs">
+                            <Box
+                                width={Size.md}
+                                height={Size.md}
+                                borderRadius="full"
+                                alignItems="center"
+                                justifyContent="center"
+                                background={withOpacity(theme.income, Opacity.soft) as any}
+                            >
+                                <AppIcon name="arrowDown" size={Size.xs} color={theme.income} />
+                            </Box>
+                            <AppText variant="caption" color="secondary">INCOME</AppText>
+                        </Inline>
+                        <AppText variant="subheading" style={{ color: theme.income, fontFamily: fonts.bold }}>
+                            {formatValue(income)}
+                        </AppText>
+                    </Stack>
+                </Inset>
             </AppCard>
 
             {/* Expense Column */}
-            <AppCard elevation="sm" padding="md" style={styles.column}>
-                <View style={styles.row}>
-                    <View style={[styles.iconBox, { backgroundColor: withOpacity(theme.expense, Opacity.soft) }]}>
-                        <AppIcon name="arrowUp" size={Size.xs} color={theme.expense} />
-                    </View>
-                    <AppText variant="caption" color="secondary">EXPENSE</AppText>
-                </View>
-                <AppText variant="subheading" style={[styles.value, { color: theme.expense, fontFamily: fonts.bold }]}>
-                    {formatValue(expense)}
-                </AppText>
+            <AppCard elevation="sm" padding="none" style={styles.column}>
+                <Inset space="md">
+                    <Stack gap="sm">
+                        <Inline align="center" space="xs">
+                            <Box
+                                width={Size.md}
+                                height={Size.md}
+                                borderRadius="full"
+                                alignItems="center"
+                                justifyContent="center"
+                                background={withOpacity(theme.expense, Opacity.soft) as any}
+                            >
+                                <AppIcon name="arrowUp" size={Size.xs} color={theme.expense} />
+                            </Box>
+                            <AppText variant="caption" color="secondary">EXPENSE</AppText>
+                        </Inline>
+                        <AppText variant="subheading" style={{ color: theme.expense, fontFamily: fonts.bold }}>
+                            {formatValue(expense)}
+                        </AppText>
+                    </Stack>
+                </Inset>
             </AppCard>
-        </View>
+        </Inline>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        gap: Spacing.md,
-        marginBottom: Spacing.lg,
-    },
     column: {
         flex: 1,
-        // padding handled by AppCard
-    },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.xs,
-        marginBottom: Spacing.sm,
-    },
-    iconBox: {
-        width: Size.md,
-        height: Size.md,
-        borderRadius: Shape.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    value: {
-        // dynamic font
     },
 });

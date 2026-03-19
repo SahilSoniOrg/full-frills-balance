@@ -1,12 +1,13 @@
 import { AppText } from '@/src/components/core';
-import { AppConfig, Spacing } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
 import { AppNavigation } from '@/src/utils/navigation';
 
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Inset, Page, Skeleton, Stack } from '@/src/design-system';
 import { SafeToSpendCard } from './SafeToSpendCard';
 
 export function DashboardScreenView({
@@ -19,16 +20,25 @@ export function DashboardScreenView({
     transactionSectionTitle,
     listRef,
 }: DashboardViewModel & { listRef?: React.RefObject<any> }) {
-    const { strings } = AppConfig;
 
     if (!isInitialized) {
         return (
-            <View style={styles.loading}>
-                <ActivityIndicator size="large" />
-                <AppText variant="body" color="secondary" style={{ marginTop: Spacing.md }}>
-                    {strings.common.loading}
-                </AppText>
-            </View>
+            <Page edges={['top']}>
+                <Inset space="lg">
+                    <Stack gap="xl">
+                        <Skeleton height={60} radius="lg" />
+                        <Skeleton height={180} radius="xl" />
+                        <Stack gap="md">
+                            <Skeleton width={150} height={20} />
+                            <Stack gap="sm">
+                                {[1, 2, 3].map(i => (
+                                    <Skeleton key={i} height={50} radius="lg" />
+                                ))}
+                            </Stack>
+                        </Stack>
+                    </Stack>
+                </Inset>
+            </Page>
         );
     }
 

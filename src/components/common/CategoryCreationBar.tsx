@@ -1,10 +1,11 @@
 import { IconPickerModal } from '@/src/components/common/IconPickerModal';
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { IconName } from '@/src/components/core/AppIcon';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Size, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+import { Box, Inline, Stack } from '@/src/design-system';
 
 export interface CategoryCreationBarProps {
     placeholder: string;
@@ -43,63 +44,89 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
     }, [showTypeToggle, defaultIcon]);
 
     return (
-        <View style={styles.customInputContainer}>
-            <View style={styles.inputRow}>
+        <Stack space="sm">
+            <Inline align="center" space="sm">
                 <TouchableOpacity
-                    style={[styles.iconButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
                     onPress={() => setIsIconPickerVisible(true)}
                     accessibilityLabel="Select icon"
                     accessibilityRole="button"
                 >
-                    <AppIcon name={selectedIcon} size={Size.sm} color={theme.primary} />
+                    <Box
+                        width={Size.inputMd}
+                        height={Size.inputMd}
+                        borderRadius="r2"
+                        style={{ borderWidth: 1, borderColor: theme.border }}
+                        background="surface"
+                        justifyContent="center"
+                        alignItems="center"
+                    >
+                        <AppIcon name={selectedIcon} size={Size.sm} color={theme.primary} />
+                    </Box>
                 </TouchableOpacity>
 
                 <AppInput
                     placeholder={placeholder}
                     value={customName}
                     onChangeText={setCustomName}
-                    containerStyle={styles.customInput}
+                    containerStyle={{ flex: 1, marginBottom: 0 }}
                     accessibilityLabel="Custom item name"
                     onSubmitEditing={handleAddCustom}
                 />
 
                 <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: customName.trim() ? theme.primary : theme.border }]}
                     onPress={handleAddCustom}
                     disabled={!customName.trim()}
                     accessibilityLabel="Add item"
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: !customName.trim() }}
                 >
-                    <AppIcon name="add" size={Size.sm} color={theme.surface} />
+                    <Box
+                        width={Size.inputMd}
+                        height={Size.inputMd}
+                        borderRadius="full"
+                        background={(customName.trim() ? theme.primary : theme.border) as any}
+                        justifyContent="center"
+                        alignItems="center"
+                    >
+                        <AppIcon name="add" size={Size.sm} color={theme.surface} />
+                    </Box>
                 </TouchableOpacity>
-            </View>
+            </Inline>
 
             {showTypeToggle && (
-                <View style={styles.typeToggle}>
-                    <TouchableOpacity
-                        onPress={() => handleTypeChange('EXPENSE')}
-                        style={[
-                            styles.typeButton,
-                            customType === 'EXPENSE' && { backgroundColor: withOpacity(theme.error, Opacity.soft), borderColor: theme.error }
-                        ]}
-                    >
-                        <AppText variant="caption" style={{ color: customType === 'EXPENSE' ? theme.error : theme.textSecondary }}>
-                            {typeLabels?.expense || 'Expense'}
-                        </AppText>
+                <Inline space="sm" style={{ paddingLeft: Size.inputMd + 8 }}>
+                    <TouchableOpacity onPress={() => handleTypeChange('EXPENSE')}>
+                        <Box
+                            paddingVertical={4}
+                            paddingHorizontal="md"
+                            borderRadius="r3"
+                            style={{
+                                borderWidth: 1,
+                                backgroundColor: customType === 'EXPENSE' ? withOpacity(theme.error, Opacity.soft) : 'transparent',
+                                borderColor: customType === 'EXPENSE' ? theme.error : 'transparent'
+                            }}
+                        >
+                            <AppText variant="caption" style={{ color: customType === 'EXPENSE' ? theme.error : theme.textSecondary }}>
+                                {typeLabels?.expense || 'Expense'}
+                            </AppText>
+                        </Box>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => handleTypeChange('INCOME')}
-                        style={[
-                            styles.typeButton,
-                            customType === 'INCOME' && { backgroundColor: withOpacity(theme.success, Opacity.soft), borderColor: theme.success }
-                        ]}
-                    >
-                        <AppText variant="caption" style={{ color: customType === 'INCOME' ? theme.success : theme.textSecondary }}>
-                            {typeLabels?.income || 'Income'}
-                        </AppText>
+                    <TouchableOpacity onPress={() => handleTypeChange('INCOME')}>
+                        <Box
+                            paddingVertical={4}
+                            paddingHorizontal="md"
+                            borderRadius="r3"
+                            style={{
+                                borderWidth: 1,
+                                backgroundColor: customType === 'INCOME' ? withOpacity(theme.success, Opacity.soft) : 'transparent',
+                                borderColor: customType === 'INCOME' ? theme.success : 'transparent'
+                            }}
+                        >
+                            <AppText variant="caption" style={{ color: customType === 'INCOME' ? theme.success : theme.textSecondary }}>
+                                {typeLabels?.income || 'Income'}
+                            </AppText>
+                        </Box>
                     </TouchableOpacity>
-                </View>
+                </Inline>
             )}
 
             {isIconPickerVisible && (
@@ -110,48 +137,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
                     selectedIcon={selectedIcon}
                 />
             )}
-        </View>
+        </Stack>
     );
 };
 
-const styles = StyleSheet.create({
-    customInputContainer: {
-        marginBottom: Spacing.md,
-        gap: Spacing.sm,
-    },
-    inputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-    },
-    customInput: {
-        flex: 1,
-        marginBottom: 0,
-    },
-    iconButton: {
-        width: Size.inputMd,
-        height: Size.inputMd,
-        borderRadius: Shape.radius.r2,
-        borderWidth: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    addButton: {
-        width: Size.inputMd,
-        height: Size.inputMd,
-        borderRadius: Size.inputMd / 2,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    typeToggle: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-        paddingLeft: Size.inputMd + Spacing.sm,
-    },
-    typeButton: {
-        paddingVertical: 4,
-        paddingHorizontal: Spacing.md,
-        borderRadius: Shape.radius.r3,
-        borderWidth: 1,
-    },
-});

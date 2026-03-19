@@ -1,11 +1,12 @@
 import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 export interface TransactionBadge {
     text: string;
@@ -48,8 +49,8 @@ export const TransactionCard = ({
     const formattedAmount = CurrencyFormatter.format(amount, currencyCode);
 
     const content = (
-        <View style={styles.cardContent}>
-            <View style={styles.badgeRow}>
+        <Stack gap="lg">
+            <Inline gap="sm" wrap>
                 <Badge
                     variant="default"
                     size="sm"
@@ -60,7 +61,6 @@ export const TransactionCard = ({
                 >
                     {presentation.label}
                 </Badge>
-
                 {badges.map((badge, idx) => (
                     <Badge
                         key={`${badge.text}-${idx}`}
@@ -72,24 +72,31 @@ export const TransactionCard = ({
                         {badge.text}
                     </Badge>
                 ))}
-            </View>
+            </Inline>
 
-            <View style={styles.textSection}>
-                <AppText variant="body" weight="bold" style={styles.title} numberOfLines={1}>
+            <Stack gap="xs">
+                <AppText variant="body" weight="bold" numberOfLines={1}>
                     {title}
                 </AppText>
                 {notes && (
-                    <AppText variant="caption" color="secondary" style={styles.notes} numberOfLines={2}>
+                    <AppText variant="caption" color="secondary" numberOfLines={2} style={{ opacity: Opacity.heavy }}>
                         {notes}
                     </AppText>
                 )}
-            </View>
+            </Stack>
 
-            <View style={styles.footerRow}>
-                <View style={styles.amountContainer}>
-                    <View style={[styles.iconCircle, { backgroundColor: withOpacity(theme[presentation.typeColor as keyof typeof theme] as string, Opacity.soft) }]}>
+            <Inline align="center" justify="space-between">
+                <Inline align="center" space="sm">
+                    <Box
+                        width={Size.iconLg}
+                        height={Size.iconLg}
+                        borderRadius="full"
+                        alignItems="center"
+                        justifyContent="center"
+                        background={withOpacity(theme[presentation.typeColor as keyof typeof theme] as string, Opacity.soft) as any}
+                    >
                         <AppIcon name={presentation.typeIcon} size={Size.iconXs} color={theme[presentation.typeColor as keyof typeof theme] as string} />
-                    </View>
+                    </Box>
                     <AppText
                         variant="subheading"
                         weight="bold"
@@ -98,13 +105,13 @@ export const TransactionCard = ({
                         {presentation.amountPrefix || ''}
                         {formattedAmount}
                     </AppText>
-                </View>
+                </Inline>
 
-                <AppText variant="caption" color="tertiary" style={styles.date}>
+                <AppText variant="caption" color="tertiary" style={{ fontSize: Typography.sizes.xs }}>
                     {formattedDate}
                 </AppText>
-            </View>
-        </View>
+            </Inline>
+        </Stack>
     );
 
     return (
@@ -114,13 +121,15 @@ export const TransactionCard = ({
             radius="r3"
             style={[styles.container, { backgroundColor: theme.surface }]}
         >
-            {onPress ? (
-                <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
-                    {content}
-                </TouchableOpacity>
-            ) : (
-                content
-            )}
+            <Inset space="lg">
+                {onPress ? (
+                    <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
+                        {content}
+                    </TouchableOpacity>
+                ) : (
+                    content
+                )}
+            </Inset>
         </AppCard>
     );
 };

@@ -16,36 +16,35 @@
  * - If it looks wrong here, it is wrong everywhere
  * ========================================
  */
-import { DateRangeFilter } from '@/src/components/common/DateRangeFilter'
 import { DateRangePicker } from '@/src/components/common/DateRangePicker'
 import {
     AppButton,
     AppCard,
     AppText,
     Badge,
-    Divider,
-    ListRow
+    AppIcon,
 } from '@/src/components/core'
-import { Shape, Spacing, ThemeMode, useThemeColors } from '@/src/constants'
+import { ListRow } from '@/src/components/core/ListRow'
+import { Shape, Spacing, ThemeMode } from '@/src/constants'
 import { ThemeOverride } from '@/src/contexts/UIContext'
 import { useColorScheme } from '@/src/hooks/use-color-scheme'
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils'
+import { useTheme } from '@/src/hooks/use-theme'
+import { PeriodFilter } from '@/src/utils/dateUtils'
 import { Redirect } from 'expo-router'
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Switch, View } from 'react-native'
+import { Switch, StyleSheet } from 'react-native'
+import { Box, Inline, Inset, Page, Stack, Separator } from '@/src/design-system'
 
 // Preview-only helper - demonstrates patterns, does not create new components
 // This is the ONLY preview-only component allowed in this file
 const TokenBox = ({ size, radius }: { size: number; radius: number }) => {
-    const theme = useThemeColors()
+    const { theme } = useTheme()
     return (
-        <View
-            style={{
-                width: size,
-                height: size,
-                borderRadius: radius,
-                backgroundColor: theme.primary,
-            }}
+        <Box
+            width={size}
+            height={size}
+            borderRadius={radius}
+            background={theme.primary}
         />
     )
 }
@@ -53,16 +52,9 @@ const TokenBox = ({ size, radius }: { size: number; radius: number }) => {
 export default function DesignPreviewScreen() {
     const systemColorScheme = useColorScheme()
     const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark')
-    const THIRTY_DAYS_MS = 86400000 * 30
-    const [dateRange, setDateRange] = useState<DateRange | null>({
-        label: 'Recent Transactions',
-        startDate: Date.now() - THIRTY_DAYS_MS,
-        endDate: Date.now()
-    })
     const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({ type: 'ALL_TIME' })
     const [isDatePickerVisible, setIsDatePickerVisible] = useState(false)
     const themeMode: ThemeMode = isDarkMode ? 'dark' : 'light'
-    const theme = useThemeColors(themeMode)
 
     // Gate this screen to development only
     if (!__DEV__) {
@@ -71,289 +63,228 @@ export default function DesignPreviewScreen() {
 
     return (
         <ThemeOverride mode={themeMode}>
-            <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
-                <View style={styles.header}>
-                    <AppText variant="title">Design System Preview</AppText>
-                    <View style={styles.themeToggle}>
-                        <AppText variant="body">Dark Mode:</AppText>
-                        <Switch
-                            value={isDarkMode}
-                            onValueChange={setIsDarkMode}
-                        />
-                    </View>
-                </View>
+            <Page
+                scrollable
+                background="background"
+                header={
+                   <Inset horizontal="lg" vertical="md">
+                        <Inline justifyContent="space-between" alignItems="center">
+                            <AppText variant="title">Design System Preview</AppText>
+                            <Inline space="sm" alignItems="center">
+                                <AppText variant="body">Dark Mode:</AppText>
+                                <Switch
+                                    value={isDarkMode}
+                                    onValueChange={setIsDarkMode}
+                                />
+                            </Inline>
+                        </Inline>
+                   </Inset>
+                }
+            >
+                <Inset horizontal="lg" vertical="xl">
+                    <Stack space="xl">
+                        {/* Typography Section */}
+                        <AppCard elevation="sm" padding="lg">
+                            <Stack space="md">
+                                <AppText variant="heading">Typography</AppText>
+                                <Separator />
 
-                {/* Typography Section */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">Typography</AppText>
-                    <Divider />
+                                <AppText variant="hero">$12,345</AppText>
+                                <AppText variant="title">Title</AppText>
+                                <AppText variant="heading">Heading</AppText>
+                                <AppText variant="subheading">Subheading</AppText>
+                                <AppText variant="body">Body</AppText>
+                                <AppText variant="caption">Caption</AppText>
 
-                    <AppText variant="hero">$12,345</AppText>
-                    <AppText variant="title">Title</AppText>
-                    <AppText variant="heading">Heading</AppText>
-                    <AppText variant="subheading">Subheading</AppText>
-                    <AppText variant="body">Body</AppText>
-                    <AppText variant="caption">Caption</AppText>
+                                <Separator />
 
-                    <Divider />
+                                <AppText variant="body" color="primary">Primary Text</AppText>
+                                <AppText variant="body" color="secondary">Secondary Text</AppText>
+                                <AppText variant="body" color="tertiary">Tertiary Text</AppText>
 
-                    <AppText variant="body" color="primary">Primary Text</AppText>
-                    <AppText variant="body" color="secondary">Secondary Text</AppText>
-                    <AppText variant="body" color="tertiary">Tertiary Text</AppText>
+                                <AppText variant="body" color="success">Success</AppText>
+                                <AppText variant="body" color="warning">Warning</AppText>
+                                <AppText variant="body" color="error">Error</AppText>
 
-                    <AppText variant="body" color="success">Success</AppText>
-                    <AppText variant="body" color="warning">Warning</AppText>
-                    <AppText variant="body" color="error">Error</AppText>
+                                <AppText variant="body" color="asset">Asset</AppText>
+                                <AppText variant="body" color="liability">Liability</AppText>
+                                <AppText variant="body" color="equity">Equity</AppText>
+                                <AppText variant="body" color="income">Income</AppText>
+                                <AppText variant="body" color="expense">Expense</AppText>
+                            </Stack>
+                        </AppCard>
 
-                    <AppText variant="body" color="asset">Asset</AppText>
-                    <AppText variant="body" color="liability">Liability</AppText>
-                    <AppText variant="body" color="equity">Equity</AppText>
-                    <AppText variant="body" color="income">Income</AppText>
-                    <AppText variant="body" color="expense">Expense</AppText>
-                </AppCard>
+                        {/* Layout Primitives Section */}
+                        <AppCard elevation="sm" padding="lg">
+                            <Stack space="md">
+                                <AppText variant="heading">Layout Primitives</AppText>
+                                <Separator />
 
-                {/* Layout Primitives Section */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">Layout Primitives</AppText>
-                    <Divider />
+                                <AppText variant="subheading">Stack (Vertical, gap: md)</AppText>
+                                <Box background="surfaceSecondary" padding="md" borderRadius="md">
+                                    <Stack space="md">
+                                        <AppCard elevation="none" padding="sm"><AppText variant="caption">Item 1</AppText></AppCard>
+                                        <AppCard elevation="none" padding="sm"><AppText variant="caption">Item 2</AppText></AppCard>
+                                        <AppCard elevation="none" padding="sm"><AppText variant="caption">Item 3</AppText></AppCard>
+                                    </Stack>
+                                </Box>
 
-                    <AppText variant="subheading">Stack (Vertical, gap: md)</AppText>
-                    <View style={{ backgroundColor: theme.surfaceSecondary, padding: Spacing.md, borderRadius: Shape.radius.md }}>
-                        <View style={{ gap: Spacing.md }}>
-                            <AppCard elevation="none" padding="sm"><AppText variant="caption">Item 1</AppText></AppCard>
-                            <AppCard elevation="none" padding="sm"><AppText variant="caption">Item 2</AppText></AppCard>
-                            <AppCard elevation="none" padding="sm"><AppText variant="caption">Item 3</AppText></AppCard>
-                        </View>
-                    </View>
+                                <AppText variant="subheading">Inline (Horizontal, gap: lg)</AppText>
+                                <Box background="surfaceSecondary" padding="md" borderRadius="md">
+                                    <Inline space="lg">
+                                        <TokenBox size={40} radius={Shape.radius.sm} />
+                                        <TokenBox size={40} radius={Shape.radius.sm} />
+                                        <TokenBox size={40} radius={Shape.radius.sm} />
+                                    </Inline>
+                                </Box>
+                            </Stack>
+                        </AppCard>
 
-                    <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Stack (Horizontal, gap: lg)</AppText>
-                    <View style={{ backgroundColor: theme.surfaceSecondary, padding: Spacing.md, borderRadius: Shape.radius.md }}>
-                        <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
-                            <TokenBox size={40} radius={Shape.radius.sm} />
-                            <TokenBox size={40} radius={Shape.radius.sm} />
-                            <TokenBox size={40} radius={Shape.radius.sm} />
-                        </View>
-                    </View>
-                </AppCard>
+                        {/* Buttons Section */}
+                        <AppCard elevation="sm" padding="lg">
+                            <Stack space="md">
+                                <AppText variant="heading">Buttons</AppText>
+                                <Separator />
 
-                {/* Buttons Section */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">Buttons</AppText>
-                    <Divider />
+                                <Inline space="md" flexWrap="wrap">
+                                    <AppButton variant="primary">Primary</AppButton>
+                                    <AppButton variant="secondary">Secondary</AppButton>
+                                    <AppButton variant="outline">Outline</AppButton>
+                                </Inline>
 
-                    <View style={styles.buttonRow}>
-                        <AppButton variant="primary">
-                            Primary
-                        </AppButton>
-                        <AppButton variant="secondary">
-                            Secondary
-                        </AppButton>
-                        <AppButton variant="outline">
-                            Outline
-                        </AppButton>
-                    </View>
+                                <Inline space="md">
+                                    <AppButton variant="primary" loading>Loading</AppButton>
+                                    <AppButton variant="secondary" disabled>Disabled</AppButton>
+                                </Inline>
+                            </Stack>
+                        </AppCard>
 
-                    <View style={styles.buttonRow}>
-                        <AppButton variant="primary" loading>
-                            Loading
-                        </AppButton>
-                        <AppButton variant="secondary" disabled>
-                            Disabled
-                        </AppButton>
-                    </View>
-                </AppCard>
+                        {/* Badges Section */}
+                        <AppCard elevation="sm" padding="lg">
+                            <Stack space="md">
+                                <AppText variant="heading">Badges</AppText>
+                                <Separator />
 
-                {/* Badges Section */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">Badges</AppText>
-                    <Divider />
+                                <Inline space="sm" flexWrap="wrap">
+                                    <Badge variant="default">Default</Badge>
+                                    <Badge variant="success">Success</Badge>
+                                    <Badge variant="warning">Warning</Badge>
+                                    <Badge variant="error">Error</Badge>
+                                </Inline>
 
-                    <View style={styles.badgeRow}>
-                        <Badge variant="default">Default</Badge>
-                        <Badge variant="success">Success</Badge>
-                        <Badge variant="warning">Warning</Badge>
-                        <Badge variant="error">Error</Badge>
-                    </View>
+                                <Inline space="sm" flexWrap="wrap">
+                                    <Badge variant="asset">ASSET</Badge>
+                                    <Badge variant="liability">LIABILITY</Badge>
+                                    <Badge variant="income">INCOME</Badge>
+                                    <Badge variant="expense">EXPENSE</Badge>
+                                </Inline>
+                            </Stack>
+                        </AppCard>
 
-                    <View style={styles.badgeRow}>
-                        <Badge variant="asset">ASSET</Badge>
-                        <Badge variant="liability">LIABILITY</Badge>
-                        <Badge variant="income">INCOME</Badge>
-                        <Badge variant="expense">EXPENSE</Badge>
-                    </View>
-                </AppCard>
+                        {/* List Rows Section */}
+                        <AppCard elevation="sm" padding="lg">
+                            <Stack space="md">
+                                <AppText variant="heading">List Rows</AppText>
+                                <Separator />
 
-                {/* List Rows Section */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">List Rows</AppText>
-                    <Divider />
+                                <Stack>
+                                    <ListRow
+                                        title="Simple Row"
+                                        subtitle="Just a title and subtitle"
+                                    />
+                                    <Separator />
+                                    <ListRow
+                                        title="Row with Badge"
+                                        subtitle="Account type badge"
+                                        trailing={<Badge variant="asset">ASSET</Badge>}
+                                    />
+                                    <Separator />
+                                    <ListRow
+                                        title="Clickable Row"
+                                        subtitle="Tap this row"
+                                        trailing={<Badge variant="income">+$500</Badge>}
+                                        onPress={() => { }}
+                                    />
+                                    <Separator />
+                                    <ListRow
+                                        title="Row with Leading Icon"
+                                        subtitle="Custom leading content"
+                                        leading={<TokenBox size={Spacing.lg} radius={Shape.radius.lg} />}
+                                        trailing={<AppIcon name="chevronRight" size={14} />}
+                                    />
+                                </Stack>
+                            </Stack>
+                        </AppCard>
 
-                    <ListRow
-                        title="Simple Row"
-                        subtitle="Just a title and subtitle"
-                    />
+                        {/* Separators Section */}
+                        <AppCard elevation="sm" padding="lg">
+                            <Stack space="md">
+                                <AppText variant="heading">Separators</AppText>
+                                <Separator />
 
-                    <ListRow
-                        title="Row with Badge"
-                        subtitle="Account type badge"
-                        trailing={<Badge variant="asset">ASSET</Badge>}
-                        showDivider
-                    />
+                                <AppText variant="body">Horizontal:</AppText>
+                                <Box background="surfaceSecondary" padding="sm" borderRadius="md">
+                                    <Separator space={1} />
+                                </Box>
+                                <Box background="surfaceSecondary" padding="sm" borderRadius="md">
+                                    <Separator space={2} />
+                                </Box>
 
-                    <ListRow
-                        title="Clickable Row"
-                        subtitle="Tap this row"
-                        trailing={<Badge variant="income">+$500</Badge>}
-                        showDivider
-                        onPress={() => { }}
-                    />
+                                <AppText variant="body">Vertical:</AppText>
+                                <Box background="surfaceSecondary" padding="md" borderRadius="md">
+                                    <Inline space="sm" alignItems="center">
+                                        <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
+                                        <Separator vertical space={1} height={Spacing.xl} />
+                                        <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
+                                        <Separator vertical space={2} height={Spacing.xl} />
+                                        <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
+                                    </Inline>
+                                </Box>
+                            </Stack>
+                        </AppCard>
 
-                    <ListRow
-                        title="Row with Leading Icon"
-                        subtitle="Custom leading content"
-                        leading={<TokenBox size={Spacing.lg} radius={Shape.radius.lg} />}
-                        trailing={<AppText variant="body" color="secondary">→</AppText>}
-                        showDivider
-                    />
-                </AppCard>
+                        {/* Spacing Reference */}
+                        <AppCard elevation="sm" padding="lg">
+                            <Stack space="md">
+                                <AppText variant="heading">Spacing Scale</AppText>
+                                <Separator />
 
-                {/* Dividers Section */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">Dividers</AppText>
-                    <Divider />
+                                <AppText variant="body">4px grid system:</AppText>
+                                {Object.entries(Spacing).filter(([key]) => typeof Spacing[key as keyof typeof Spacing] === 'number').map(([key, value]) => (
+                                    <Inline key={key} space="md" alignItems="center">
+                                        <AppText variant="caption" color="secondary" style={styles.spacingLabel}>
+                                            {key}: {value}px
+                                        </AppText>
+                                        <TokenBox size={value as number} radius={Shape.radius.sm} />
+                                    </Inline>
+                                ))}
+                            </Stack>
+                        </AppCard>
 
-                    <AppText variant="body">Horizontal dividers:</AppText>
-                    <View style={{
-                        marginVertical: Spacing.md,
-                        backgroundColor: theme.surfaceSecondary,
-                        padding: Spacing.sm,
-                        borderRadius: Shape.radius.md,
-                    }}>
-                        <Divider orientation="horizontal" thickness="thin" length="full" />
-                    </View>
-                    <View style={{
-                        marginVertical: Spacing.md,
-                        backgroundColor: theme.surfaceSecondary,
-                        padding: Spacing.sm,
-                        borderRadius: Shape.radius.md,
-                    }}>
-                        <Divider orientation="horizontal" thickness="medium" length="full" />
-                    </View>
-
-                    <AppText variant="body">Vertical dividers:</AppText>
-                    <View style={styles.verticalDividerContainer}>
-                        <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
-                        <Divider orientation="vertical" thickness="thin" length={Spacing.xl} />
-                        <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
-                        <Divider orientation="vertical" thickness="medium" length={Spacing.xl} />
-                        <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
-                    </View>
-                </AppCard>
-
-                {/* Date Filters Section */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">Date Filters</AppText>
-                    <Divider />
-
-                    <AppText variant="subheading" style={{ marginBottom: Spacing.md }}>Filter Chip</AppText>
-                    <DateRangeFilter
-                        range={dateRange}
-                        onPress={() => setIsDatePickerVisible(true)}
-                    />
-
-                    <AppText variant="subheading" style={{ marginTop: Spacing.md, marginBottom: Spacing.md }}>Try Picker</AppText>
-                    <AppButton variant="outline" onPress={() => setIsDatePickerVisible(true)}>
-                        Open Date Picker
-                    </AppButton>
-                </AppCard>
-
-                {/* Spacing Reference */}
-                <AppCard elevation="sm" padding="lg" style={styles.section}>
-                    <AppText variant="heading">Spacing Scale</AppText>
-                    <Divider />
-
-                    <AppText variant="body">4px grid system:</AppText>
-                    {Object.entries(Spacing).map(([key, value]) => (
-                        <View key={key} style={styles.spacingRow}>
-                            <AppText variant="caption" color="secondary" style={styles.spacingLabel}>
-                                {key}: {value}px
+                        <Box alignItems="center" paddingVertical="xl">
+                            <AppText variant="caption" color="tertiary" style={{ textAlign: 'center' }}>
+                                This is your visual truth. If it looks wrong here, it&apos;s wrong everywhere.
                             </AppText>
-                            <TokenBox size={value as number} radius={Shape.radius.sm} />
-                        </View>
-                    ))}
-                </AppCard>
-
-                <View style={styles.footer}>
-                    <AppText variant="caption" color="tertiary">
-                        This is your visual truth. If it looks wrong here, it&apos;s wrong everywhere.
-                    </AppText>
-                </View>
+                        </Box>
+                    </Stack>
+                </Inset>
 
                 <DateRangePicker
                     visible={isDatePickerVisible}
                     onClose={() => setIsDatePickerVisible(false)}
                     currentFilter={periodFilter}
-                    onSelect={(range, filter) => {
-                        setDateRange(range)
+                    onSelect={(_range, filter) => {
                         setPeriodFilter(filter)
                         setIsDatePickerVisible(false)
                     }}
                 />
-            </ScrollView>
+            </Page>
         </ThemeOverride>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    header: {
-        padding: Spacing.lg,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    themeToggle: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-    },
-    section: {
-        marginHorizontal: Spacing.lg,
-        marginBottom: Spacing.xl,
-    },
-    cardExample: {
-        marginBottom: Spacing.md,
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        gap: Spacing.md,
-        marginBottom: Spacing.md,
-        flexWrap: 'wrap',
-    },
-    badgeRow: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-        marginBottom: Spacing.md,
-        flexWrap: 'wrap',
-    },
-    verticalDividerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-        marginVertical: Spacing.md,
-    },
-    spacingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.sm,
-    },
     spacingLabel: {
-        width: Spacing.xxxl,
-    },
-    footer: {
-        padding: Spacing.xxxl,
-        alignItems: 'center',
+        width: 80,
     },
 })

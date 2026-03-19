@@ -5,7 +5,7 @@
 
 import { AppText, type AppTextProps } from '@/src/components/core/AppText'
 import { Opacity, Spacing, ThemeMode } from '@/src/constants/design-tokens'
-import { useThemeColors } from '@/src/constants/theme-helpers'
+import { Separator } from '@/src/design-system'
 import {
   StyleSheet,
   TouchableOpacity,
@@ -20,7 +20,7 @@ export type ListRowProps = TouchableOpacityProps & {
   subtitle?: string
   trailing?: React.ReactNode
   // Visual options
-  showDivider?: boolean
+  showSeparator?: boolean
   padding?: 'sm' | 'md' | 'lg'
   // Text customization
   titleVariant?: AppTextProps['variant']
@@ -35,7 +35,7 @@ export function ListRow({
   title,
   subtitle,
   trailing,
-  showDivider = false,
+  showSeparator = false,
   padding = 'md',
   titleVariant = 'body',
   subtitleVariant = 'caption',
@@ -45,7 +45,6 @@ export function ListRow({
   onPress,
   ...props
 }: ListRowProps) {
-  const theme = useThemeColors(themeMode)
 
   // Get padding styles
   const getPaddingStyles = () => {
@@ -102,13 +101,8 @@ export function ListRow({
 
       {trailing && <View style={styles.trailing}>{trailing}</View>}
 
-      {showDivider && (
-        <View
-          style={[
-            styles.divider,
-            { backgroundColor: theme.divider }
-          ]}
-        />
+      {showSeparator && (
+        <Separator marginLeft={padding === 'lg' ? Spacing.xl + Spacing.lg : Spacing.lg + Spacing.md} />
       )}
     </View>
   )
@@ -136,7 +130,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
   },
   leading: {
     marginRight: Spacing.md,
@@ -155,12 +148,5 @@ const styles = StyleSheet.create({
   trailing: {
     marginLeft: Spacing.md,
     alignItems: 'flex-end',
-  },
-  divider: {
-    position: 'absolute',
-    bottom: 0,
-    left: Spacing.xl + Spacing.lg, // account for icon + padding
-    right: 0,
-    height: 1,
   },
 })

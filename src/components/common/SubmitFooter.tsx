@@ -4,6 +4,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboard } from '@/src/design-system/Keyboard';
 
 interface SubmitFooterProps {
     onPress: () => void;
@@ -20,6 +21,10 @@ export const SubmitFooter = ({
 }: SubmitFooterProps) => {
     const { theme } = useTheme();
     const insets = useSafeAreaInsets();
+    const { isKeyboardVisible } = useKeyboard();
+    const bottomPadding = isKeyboardVisible 
+        ? Spacing.md 
+        : Math.max(Spacing.lg, insets.bottom + Spacing.md);
 
     return (
         <View
@@ -28,7 +33,7 @@ export const SubmitFooter = ({
                 {
                     backgroundColor: theme.background,
                     borderTopColor: theme.border,
-                    paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.md),
+                    paddingBottom: bottomPadding,
                 },
             ]}
         >

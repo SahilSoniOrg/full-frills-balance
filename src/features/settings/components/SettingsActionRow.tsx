@@ -1,8 +1,8 @@
 import { AppButton, AppIcon, AppText, type AppButtonProps, type IconName } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle } from 'react-native';
+import { Inline, Stack, Separator } from '@/src/design-system';
 
 type SettingsActionRowProps = {
     title: string;
@@ -13,7 +13,7 @@ type SettingsActionRowProps = {
     actionVariant?: AppButtonProps['variant'];
     actionLoading?: boolean;
     actionStyle?: StyleProp<ViewStyle>;
-    withDivider?: boolean;
+    withSeparator?: boolean;
 };
 
 export function SettingsActionRow({
@@ -25,20 +25,20 @@ export function SettingsActionRow({
     actionVariant = 'secondary',
     actionLoading = false,
     actionStyle,
-    withDivider = false,
+    withSeparator = false,
 }: SettingsActionRowProps) {
     const { theme } = useTheme();
 
     return (
-        <>
-            <View style={styles.rowBetween}>
-                {icon ? (
-                    <AppIcon name={icon} size={24} color={theme.primary} style={{ marginRight: Spacing.md }} />
-                ) : null}
-                <View style={styles.content}>
+        <Stack space="md">
+            <Inline align="center" justify="space-between" space="md">
+                {icon && (
+                    <AppIcon name={icon} size={24} color={theme.primary} />
+                )}
+                <Stack space="xs" flex={1}>
                     <AppText variant="body" weight="semibold">{title}</AppText>
                     <AppText variant="caption" color="secondary">{description}</AppText>
-                </View>
+                </Stack>
                 <AppButton
                     variant={actionVariant}
                     size="sm"
@@ -48,26 +48,9 @@ export function SettingsActionRow({
                 >
                     {actionLabel}
                 </AppButton>
-            </View>
-            {withDivider ? (
-                <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-            ) : null}
-        </>
+            </Inline>
+            {withSeparator && <Separator />}
+        </Stack>
     );
 }
 
-const styles = StyleSheet.create({
-    rowBetween: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    content: {
-        flex: 1,
-        marginRight: Spacing.md,
-    },
-    divider: {
-        height: 1,
-        marginVertical: Spacing.md,
-    },
-});

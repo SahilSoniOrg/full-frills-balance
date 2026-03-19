@@ -6,7 +6,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { notificationService } from '@/src/services/NotificationService';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from 'react-native';
+import { Box, Inline, Stack } from '@/src/design-system';
 
 export const NotificationPreference = () => {
     const { theme } = useTheme();
@@ -45,63 +46,88 @@ export const NotificationPreference = () => {
     const displayTime = dayjs().hour(notificationHour).minute(notificationMinute).format('hh:mm A');
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <View style={{ flex: 1 }}>
+        <Stack space="md" paddingVertical="xs">
+            <Inline align="center" justify="space-between" space="md">
+                <Stack space="xs" flex={1}>
                     <AppText variant="body" weight="semibold">{AppConfig.strings.settings.notifications.title}</AppText>
                     <AppText variant="caption" color="secondary">{AppConfig.strings.settings.notifications.description}</AppText>
-                </View>
+                </Stack>
                 <AppIcon name="notifications" size={20} color={theme.primary} />
-            </View>
+            </Inline>
             
-            <View style={styles.controlsRow}>
-                <View style={[styles.pillContainer, { backgroundColor: withOpacity(theme.primary, Opacity.selection) }]}>
+            <Inline align="center" space="md" style={{ flexWrap: 'wrap' }}>
+                <Box
+                    flexDirection="row"
+                    borderRadius="full"
+                    padding="xs"
+                    background={withOpacity(theme.primary, Opacity.selection) as any}
+                >
                     {options.map((option) => {
                         const isSelected = notificationCadence === option.id;
                         return (
                             <TouchableOpacity
                                 key={option.id}
-                                style={[
-                                    styles.pill,
-                                    isSelected && { backgroundColor: theme.primary }
-                                ]}
                                 onPress={() => handleSelectCadence(option.id)}
                                 activeOpacity={0.7}
                             >
-                                <AppText
-                                    variant="caption"
-                                    weight={isSelected ? "semibold" : "regular"}
-                                    style={{ color: isSelected ? theme.surface : theme.primary }}
+                                <Box
+                                    paddingHorizontal="lg"
+                                    paddingVertical="xs"
+                                    borderRadius="full"
+                                    background={isSelected ? 'primary' : 'transparent'}
+                                    justifyContent="center"
+                                    alignItems="center"
                                 >
-                                    {option.label}
-                                </AppText>
+                                    <AppText
+                                        variant="caption"
+                                        weight={isSelected ? "semibold" : "regular"}
+                                        style={{ color: isSelected ? theme.surface : theme.primary }}
+                                    >
+                                        {option.label}
+                                    </AppText>
+                                </Box>
                             </TouchableOpacity>
                         );
                     })}
-                </View>
+                </Box>
 
                 {notificationCadence !== 'none' && (
                     <TouchableOpacity 
-                        style={[styles.timeSelector, { backgroundColor: withOpacity(theme.primary, Opacity.selection) }]}
                         onPress={() => setShowTimePicker(true)}
                     >
-                        <AppText variant="caption" weight="semibold" style={{ color: theme.primary }}>
-                            {displayTime}
-                        </AppText>
-                        <AppIcon name="time" size={14} color={theme.primary} style={{ marginLeft: Spacing.xs }} />
+                        <Box
+                            flexDirection="row"
+                            alignItems="center"
+                            paddingHorizontal="md"
+                            paddingVertical="sm"
+                            borderRadius="full"
+                            background={withOpacity(theme.primary, Opacity.selection) as any}
+                        >
+                            <AppText variant="caption" weight="semibold" style={{ color: theme.primary }}>
+                                {displayTime}
+                            </AppText>
+                            <AppIcon name="time" size={14} color={theme.primary} style={{ marginLeft: Spacing.xs }} />
+                        </Box>
                     </TouchableOpacity>
                 )}
-            </View>
+            </Inline>
 
             {notificationCadence !== 'none' && (
-                <View style={{ marginTop: Spacing.md }}>
+                <Box marginTop="md">
                     <TouchableOpacity 
                         onPress={() => notificationService.sendImmediateTest()}
-                        style={[styles.testButton, { borderColor: theme.divider }]}
                     >
-                        <AppText variant="caption" color="secondary">Send Test Notification (Now)</AppText>
+                        <Box
+                            paddingVertical="xs"
+                            paddingHorizontal="md"
+                            borderRadius="r2"
+                            style={{ borderWidth: 1, borderColor: theme.border }}
+                            alignSelf="flex-start"
+                        >
+                            <AppText variant="caption" color="secondary">Send Test Notification (Now)</AppText>
+                        </Box>
                     </TouchableOpacity>
-                </View>
+                </Box>
             )}
 
             <DateTimePickerModal
@@ -112,49 +138,7 @@ export const NotificationPreference = () => {
                 onSelect={handleSelectTime}
                 hideDate
             />
-        </View>
+        </Stack>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        paddingVertical: Spacing.xs,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.md,
-    },
-    controlsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.md,
-        flexWrap: 'wrap',
-    },
-    pillContainer: {
-        flexDirection: 'row',
-        borderRadius: 24,
-        padding: 4,
-    },
-    pill: {
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.xs,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    timeSelector: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        borderRadius: 20,
-    },
-    testButton: {
-        paddingVertical: Spacing.xs,
-        paddingHorizontal: Spacing.md,
-        borderRadius: 8,
-        borderWidth: 1,
-        alignSelf: 'flex-start',
-    }
-});

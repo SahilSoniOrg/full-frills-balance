@@ -1,10 +1,10 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Typography } from '@/src/constants';
 import { useImport } from '@/src/hooks/use-import';
-import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
+import { Box, Inline, Inset, Stack } from '@/src/design-system';
 
 interface StepSplashProps {
     name: string;
@@ -19,121 +19,77 @@ export const StepSplash: React.FC<StepSplashProps> = ({
     onContinue,
     isCompleting,
 }) => {
-    const { theme } = useTheme();
     const { isImporting } = useImport();
 
     return (
-        <View style={styles.container}>
+        <Box flex={1}>
             <ScrollView
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={{ flexGrow: 1, paddingVertical: 24 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                <View style={styles.header}>
-                    <AppText variant="hero" style={styles.title}>
-                        {AppConfig.strings.onboarding.splash.title}
-                    </AppText>
-                    <AppText variant="body" color="secondary" style={styles.subtitle}>
-                        {AppConfig.strings.onboarding.splash.subtitle}
-                    </AppText>
-                </View>
-
-                <View style={styles.content}>
-                    <AppInput
-                        label={AppConfig.strings.onboarding.splash.inputLabel}
-                        placeholder={AppConfig.strings.onboarding.splash.inputPlaceholder}
-                        value={name}
-                        onChangeText={setName}
-                        autoFocus
-                        accessibilityLabel={AppConfig.strings.onboarding.splash.inputLabel}
-                        containerStyle={styles.inputContainer}
-                        onSubmitEditing={onContinue}
-                    />
-
-                    <AppButton
-                        variant="primary"
-                        size="lg"
-                        onPress={onContinue}
-                        disabled={!name.trim() || isCompleting}
-                        style={styles.continueButton}
-                        accessibilityLabel={AppConfig.strings.onboarding.splash.btnGetStarted}
-                        accessibilityState={{ disabled: !name.trim() || isCompleting }}
-                    >
-                        {AppConfig.strings.onboarding.splash.btnGetStarted}
-                    </AppButton>
-                </View>
-
-                <View style={styles.footer}>
-                    <View style={styles.divider}>
-                        <View style={[styles.line, { backgroundColor: theme.border }]} />
-                        <AppText variant="caption" color="secondary" style={styles.orText}>
-                            {AppConfig.strings.onboarding.splash.dividerOr}
+                <Stack gap="xl" flex={1} justifyContent="space-between">
+                    <Stack gap="md" align="center" paddingTop="xl">
+                        <AppText variant="hero" style={{ textAlign: 'center' }}>
+                            {AppConfig.strings.onboarding.splash.title}
                         </AppText>
-                        <View style={[styles.line, { backgroundColor: theme.border }]} />
-                    </View>
+                        <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+                            {AppConfig.strings.onboarding.splash.subtitle}
+                        </AppText>
+                    </Stack>
 
-                    <AppButton
-                        variant="ghost"
-                        size="md"
-                        onPress={AppNavigation.toImportSelection}
-                        loading={isImporting}
-                        disabled={isImporting || isCompleting}
-                        accessibilityLabel={AppConfig.strings.onboarding.splash.btnRestore}
-                    >
-                        {AppConfig.strings.onboarding.splash.btnRestore}
-                    </AppButton>
-                </View>
+                    <Inset space="md">
+                        <Stack gap="xl">
+                            <AppInput
+                                label={AppConfig.strings.onboarding.splash.inputLabel}
+                                placeholder={AppConfig.strings.onboarding.splash.inputPlaceholder}
+                                value={name}
+                                onChangeText={setName}
+                                autoFocus
+                                accessibilityLabel={AppConfig.strings.onboarding.splash.inputLabel}
+                                onSubmitEditing={onContinue}
+                            />
+
+                            <AppButton
+                                variant="primary"
+                                size="lg"
+                                onPress={onContinue}
+                                disabled={!name.trim() || isCompleting}
+                                accessibilityLabel={AppConfig.strings.onboarding.splash.btnGetStarted}
+                            >
+                                {AppConfig.strings.onboarding.splash.btnGetStarted}
+                            </AppButton>
+                        </Stack>
+                    </Inset>
+
+                    <Stack gap="lg" paddingBottom="lg">
+                        <Inline align="center" space="md" paddingHorizontal="xl">
+                            <Box flex={1} height={1} background="border" />
+                            <AppText variant="caption" color="secondary" style={styles.orText}>
+                                {AppConfig.strings.onboarding.splash.dividerOr}
+                            </AppText>
+                            <Box flex={1} height={1} background="border" />
+                        </Inline>
+
+                        <AppButton
+                            variant="ghost"
+                            size="md"
+                            onPress={AppNavigation.toImportSelection}
+                            loading={isImporting}
+                            disabled={isImporting || isCompleting}
+                            accessibilityLabel={AppConfig.strings.onboarding.splash.btnRestore}
+                        >
+                            {AppConfig.strings.onboarding.splash.btnRestore}
+                        </AppButton>
+                    </Stack>
+                </Stack>
             </ScrollView>
-        </View>
+        </Box>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        justifyContent: 'space-between',
-        paddingVertical: Spacing.xl,
-    },
-    header: {
-        alignItems: 'center',
-        paddingTop: Spacing.xl,
-    },
-    title: {
-        textAlign: 'center',
-        marginBottom: Spacing.md,
-    },
-    subtitle: {
-        textAlign: 'center',
-    },
-    content: {
-        width: '100%',
-        paddingHorizontal: Spacing.md,
-    },
-    inputContainer: {
-        marginBottom: Spacing.xl,
-    },
-    continueButton: {
-        width: '100%',
-    },
-    footer: {
-        width: '100%',
-        paddingBottom: Spacing.lg,
-    },
-    divider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.lg,
-        paddingHorizontal: Spacing.xl,
-    },
-    line: {
-        flex: 1,
-        height: 1,
-    },
     orText: {
-        marginHorizontal: Spacing.md,
         textTransform: 'uppercase',
         letterSpacing: 1,
         fontSize: Typography.sizes.xs,

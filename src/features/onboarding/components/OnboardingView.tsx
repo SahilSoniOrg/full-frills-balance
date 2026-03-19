@@ -1,4 +1,3 @@
-import { Screen } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants/app-config';
 import { OnboardingSelectableStep } from '@/src/features/onboarding/components/OnboardingSelectableStep';
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
@@ -6,7 +5,8 @@ import { StepIndicator } from '@/src/features/onboarding/components/StepIndicato
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
 import React from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Platform } from 'react-native';
+import { Inset, Page, Box } from '@/src/design-system';
 
 export function OnboardingView(vm: OnboardingFlowViewModel) {
     const {
@@ -119,29 +119,20 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
     };
 
     return (
-        <Screen showBack={false} withPadding edges={['top', 'bottom']}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.container}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
-            >
-                <View style={styles.content}>
-                    <StepIndicator currentStep={step} totalSteps={6} />
-                    {renderStep()}
-                </View>
-            </KeyboardAvoidingView>
-        </Screen>
+        <Page
+            edges={['top', 'bottom']}
+            keyboardAvoiding
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
+        >
+            <Box flex={1}>
+                <Inset horizontal="lg" top="lg" bottom={0} flex={1}>
+                    <Box maxWidth={AppConfig.layout.maxContentWidth} width="100%" style={{ alignSelf: 'center' }} flex={1}>
+                        <StepIndicator currentStep={step} totalSteps={6} />
+                        {renderStep()}
+                    </Box>
+                </Inset>
+            </Box>
+        </Page>
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    content: {
-        maxWidth: AppConfig.layout.maxContentWidth,
-        width: '100%',
-        alignSelf: 'center',
-        flex: 1,
-    },
-});

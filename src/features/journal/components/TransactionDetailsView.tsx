@@ -1,10 +1,11 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
-import { AppButton, AppIcon, AppText, Badge, ListRow } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
-import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppButton, AppIcon, AppText, Badge } from '@/src/components/core';
+import { ListRow } from '@/src/components/core/ListRow';
+import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { TransactionDetailsViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Box, Inline, Inset, Page, Stack, Separator } from '@/src/design-system';
+import { NavigationBar } from '@/src/components/layout/NavigationBar';
 
 export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
     const {
@@ -31,27 +32,36 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
 
     if (isLoading) {
         return (
-            <Screen title="Details">
-                <View style={styles.container}><AppText variant="body">Loading...</AppText></View>
-            </Screen>
+            <Page
+                header={<NavigationBar title="Details" onBack={onBack} />}
+            >
+                <Box flex={1} justifyContent="center" alignItems="center">
+                    <AppText variant="body">Loading...</AppText>
+                </Box>
+            </Page>
         );
     }
 
     if (isMissing) {
         return (
-            <Screen title="Details" backIcon="close">
-                <View style={styles.container}>
+            <Page
+                header={<NavigationBar title="Details" backIcon="close" onBack={onBack} />}
+            >
+                <Box flex={1} justifyContent="center" alignItems="center" padding="md">
                     <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
-                    <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Transaction not found</AppText>
-                    <AppButton
-                        variant="ghost"
-                        onPress={onBack}
-                        style={{ marginTop: Spacing.lg }}
-                    >
-                        Go Back
-                    </AppButton>
-                </View>
-            </Screen>
+                    <Box marginTop="md">
+                        <AppText variant="subheading">Transaction not found</AppText>
+                    </Box>
+                    <Box marginTop="lg">
+                        <AppButton
+                            variant="ghost"
+                            onPress={onBack}
+                        >
+                            Go Back
+                        </AppButton>
+                    </Box>
+                </Box>
+            </Page>
         );
     }
 
@@ -84,174 +94,200 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
     );
 
     return (
-        <Screen
-            title={title}
-            backIcon={backIcon}
-            headerActions={headerActionsNode}
-            onBack={onBack}
+        <Page
             scrollable
-            withPadding
+            header={
+                <NavigationBar
+                    title={title}
+                    backIcon={backIcon}
+                    rightActions={headerActionsNode}
+                    onBack={onBack}
+                />
+            }
         >
-            <View style={styles.content}>
-                {/* <AppCard elevation="md" radius="r2" padding="lg" style={styles.receiptCard}> */}
-                <View style={styles.iconContainer}>
-                    <View style={[styles.mainIcon, { backgroundColor: withOpacity(amountColor, Opacity.soft) }]}>
-                        <AppIcon name={vm.displayIcon} size={Size.xxl} color={amountColor} />
-                    </View>
-                </View>
+            <Inset space="md" vertical="md">
+                <Stack space="xl">
+                    <Box alignItems="center" marginTop="md">
+                        <Box
+                           background={withOpacity(amountColor, Opacity.soft) as any}
+                           width={Size.avatarLg}
+                           height={Size.avatarLg}
+                           borderRadius="full"
+                           alignItems="center"
+                           justifyContent="center"
+                        >
+                            <AppIcon name={vm.displayIcon} size={Size.xxl} color={amountColor} />
+                        </Box>
+                    </Box>
 
-                <View style={styles.headerSection}>
-                    <AppText variant="title" style={{ fontSize: Typography.sizes.xxxl, marginBottom: Spacing.sm, color: vm.amountColor }}>
-                        {amountText}
-                    </AppText>
-                    <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                        {descriptionText}
-                    </AppText>
-                    <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md }}>
-                        <Badge variant={statusVariant} size="sm">
-                            {statusLabel}
-                        </Badge>
-                        {displayTypeLabel && (
-                            <Badge variant="default" size="sm">
-                                {displayTypeLabel}
+                    <Stack space="sm" alignItems="center">
+                        <AppText variant="title" style={{ fontSize: Typography.sizes.xxxl, color: vm.amountColor }}>
+                            {amountText}
+                        </AppText>
+                        <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+                            {descriptionText}
+                        </AppText>
+                        <Inline space="sm" marginTop="md">
+                            <Badge variant={statusVariant} size="sm">
+                                {statusLabel}
                             </Badge>
-                        )}
-                    </View>
-                </View>
-                {/* <View style={[styles.divider, { backgroundColor: theme.divider }]} /> */}
+                            {displayTypeLabel && (
+                                <Badge variant="default" size="sm">
+                                    {displayTypeLabel}
+                                </Badge>
+                            )}
+                        </Inline>
+                    </Stack>
 
-                <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.md, paddingHorizontal: Spacing.md }}>
-                    BREAKDOWN
-                </AppText>
+                    <Stack space="md">
+                        <AppText variant="caption" color="secondary" style={{ paddingHorizontal: Spacing.md }}>
+                            BREAKDOWN
+                        </AppText>
 
-                {splitItems.map((item, index) => (
-                    <ListRow
-                        key={item.id}
-                        title={item.accountName}
-                        subtitle={item.transactionType}
-                        leading={
-                            <View style={[styles.directionIcon, { backgroundColor: item.iconBackground }]}>
-                                <AppIcon
-                                    name={item.iconName as any}
-                                    size={16}
-                                    color={item.iconColor}
-                                />
-                            </View>
-                        }
-                        trailing={
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                                <AppText variant="subheading" style={{ color: item.amountColor }}>
-                                    {item.amountText}
-                                </AppText>
-                                <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.textSecondary} />
-                            </View>
-                        }
-                        onPress={item.onPress}
-                        padding="md"
-                        showDivider={index < splitItems.length - 1}
-                    />
-                ))}
+                        <Stack space="xs">
+                            {splitItems.map((item, index) => (
+                                <React.Fragment key={item.id}>
+                                    <ListRow
+                                        title={item.accountName}
+                                        subtitle={item.transactionType}
+                                        leading={
+                                            <Box
+                                                background={item.iconBackground as any}
+                                                width={Size.lg}
+                                                height={Size.lg}
+                                                borderRadius="full"
+                                                alignItems="center"
+                                                justifyContent="center"
+                                            >
+                                                <AppIcon
+                                                    name={item.iconName as any}
+                                                    size={16}
+                                                    color={item.iconColor}
+                                                />
+                                            </Box>
+                                        }
+                                        trailing={
+                                            <Inline space="xs" alignItems="center">
+                                                <AppText variant="subheading" style={{ color: item.amountColor }}>
+                                                    {item.amountText}
+                                                </AppText>
+                                                <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.textSecondary} />
+                                            </Inline>
+                                        }
+                                        onPress={item.onPress}
+                                        padding="md"
+                                    />
+                                    {index < splitItems.length - 1 && <Separator />}
+                                </React.Fragment>
+                            ))}
+                        </Stack>
+                    </Stack>
 
-                <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+                    <Separator />
 
-                <View style={styles.infoSection}>
-                    <ListRow
-                        title="Date"
-                        trailing={<AppText variant="body">{formattedDate}</AppText>}
-                        padding="sm"
-                    />
-                    <ListRow
-                        title="Journal ID"
-                        trailing={<AppText variant="body">{journalIdShort}</AppText>}
-                        padding="sm"
-                    />
-                    <ListRow
-                        title="History"
-                        trailing={
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                                <AppText variant="body" color="primary">View Edit History</AppText>
-                                <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.primary} />
-                            </View>
-                        }
-                        onPress={onHistoryPress}
-                        padding="sm"
-                    />
+                    <Stack space="xs">
+                        <ListRow
+                            title="Date"
+                            trailing={<AppText variant="body">{formattedDate}</AppText>}
+                            padding="sm"
+                        />
+                        <ListRow
+                            title="Journal ID"
+                            trailing={<AppText variant="body">{journalIdShort}</AppText>}
+                            padding="sm"
+                        />
+                        <ListRow
+                            title="History"
+                            trailing={
+                                <Inline space="xs" alignItems="center">
+                                    <AppText variant="body" color="primary">View Edit History</AppText>
+                                    <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.primary} />
+                                </Inline>
+                            }
+                            onPress={onHistoryPress}
+                            padding="sm"
+                        />
+                    </Stack>
 
                     {smsInfo && (
-                        <>
-                            <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-                            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.sm, paddingHorizontal: Spacing.md }}>
+                        <Stack space="md">
+                            <Separator />
+                            <AppText variant="caption" color="secondary" style={{ paddingHorizontal: Spacing.md }}>
                                 IMPORTED FROM SMS
                             </AppText>
-                            <ListRow
-                                title="Sender"
-                                trailing={<AppText variant="body">{smsInfo.sender || '-'}</AppText>}
-                                padding="sm"
-                            />
-                            {smsInfo.smsDate && (
+                            <Stack space="xs">
                                 <ListRow
-                                    title="SMS Date"
-                                    trailing={<AppText variant="body">{smsInfo.smsDate}</AppText>}
+                                    title="Sender"
+                                    trailing={<AppText variant="body">{smsInfo.sender || '-'}</AppText>}
                                     padding="sm"
                                 />
-                            )}
-                            {smsInfo.amountText && (
-                                <ListRow
-                                    title="Parsed Amount"
-                                    trailing={<AppText variant="body">{smsInfo.amountText}</AppText>}
-                                    padding="sm"
-                                />
-                            )}
-                            {smsInfo.referenceNumber && (
-                                <ListRow
-                                    title="Reference"
-                                    trailing={<AppText variant="body">{smsInfo.referenceNumber}</AppText>}
-                                    padding="sm"
-                                />
-                            )}
-                            {smsInfo.accountSource && (
-                                <ListRow
-                                    title="Account Source"
-                                    trailing={<AppText variant="body">{smsInfo.accountSource}</AppText>}
-                                    padding="sm"
-                                />
-                            )}
-                            {smsInfo.parseReason && (
-                                <ListRow
-                                    title="Parse Note"
-                                    trailing={<AppText variant="body">{smsInfo.parseReason}</AppText>}
-                                    padding="sm"
-                                />
-                            )}
-                            {smsInfo.rawBody && (
-                                <View style={{ paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}>
-                                    <AppText variant="caption" color="secondary">RAW SMS</AppText>
-                                    <AppText variant="body" style={{ marginTop: Spacing.xs }}>{smsInfo.rawBody}</AppText>
-                                </View>
-                            )}
-                            {onOpenSmsInbox && (
-                                <View style={{ paddingHorizontal: Spacing.md, paddingTop: Spacing.sm }}>
-                                    <AppButton variant="ghost" onPress={onOpenSmsInbox}>
-                                        Open SMS Inbox
-                                    </AppButton>
-                                </View>
-                            )}
-                        </>
+                                {smsInfo.smsDate && (
+                                    <ListRow
+                                        title="SMS Date"
+                                        trailing={<AppText variant="body">{smsInfo.smsDate}</AppText>}
+                                        padding="sm"
+                                    />
+                                )}
+                                {smsInfo.amountText && (
+                                    <ListRow
+                                        title="Parsed Amount"
+                                        trailing={<AppText variant="body">{smsInfo.amountText}</AppText>}
+                                        padding="sm"
+                                    />
+                                )}
+                                {smsInfo.referenceNumber && (
+                                    <ListRow
+                                        title="Reference"
+                                        trailing={<AppText variant="body">{smsInfo.referenceNumber}</AppText>}
+                                        padding="sm"
+                                    />
+                                )}
+                                {smsInfo.accountSource && (
+                                    <ListRow
+                                        title="Account Source"
+                                        trailing={<AppText variant="body">{smsInfo.accountSource}</AppText>}
+                                        padding="sm"
+                                    />
+                                )}
+                                {smsInfo.parseReason && (
+                                    <ListRow
+                                        title="Parse Note"
+                                        trailing={<AppText variant="body">{smsInfo.parseReason}</AppText>}
+                                        padding="sm"
+                                    />
+                                )}
+                                {smsInfo.rawBody && (
+                                    <Inset horizontal="md" vertical="sm">
+                                        <AppText variant="caption" color="secondary">RAW SMS</AppText>
+                                        <Box marginTop="xs">
+                                            <AppText variant="body">{smsInfo.rawBody}</AppText>
+                                        </Box>
+                                    </Inset>
+                                )}
+                                {onOpenSmsInbox && (
+                                    <Inset horizontal="md" top="sm">
+                                        <AppButton variant="ghost" onPress={onOpenSmsInbox}>
+                                            Open SMS Inbox
+                                        </AppButton>
+                                    </Inset>
+                                )}
+                            </Stack>
+                        </Stack>
                     )}
 
                     {vm.onPost && (
-                        <View style={{ padding: Spacing.md, gap: Spacing.sm }}>
+                        <Stack space="sm" padding="md">
                             <AppButton
                                 variant="primary"
                                 onPress={vm.onPost}
                                 style={{ width: '100%' }}
                             >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                                <Inline space="sm" alignItems="center">
                                     <AppIcon name="checkmark" size={18} color={theme.onPrimary} />
                                     <AppText variant="body" weight="bold" style={{ color: theme.onPrimary }}>
                                         Post Transaction Now
                                     </AppText>
-                                </View>
+                                </Inline>
                             </AppButton>
 
                             {vm.onSkip && (
@@ -260,68 +296,20 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                                     onPress={vm.onSkip}
                                     style={{ width: '100%' }}
                                 >
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                                    <Inline space="sm" alignItems="center">
                                         <AppIcon name="close" size={18} color={theme.text} />
                                         <AppText variant="body" weight="bold">
                                             Skip This Occurrence
                                         </AppText>
-                                    </View>
+                                    </Inline>
                                 </AppButton>
                             )}
-                        </View>
+                        </Stack>
                     )}
-                </View>
-
-                {/* </AppCard> */}
-            </View>
-        </Screen>
+                </Stack>
+            </Inset>
+        </Page>
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    content: {
-        paddingVertical: Spacing.md,
-    },
-    receiptCard: {
-        width: '100%',
-        padding: 0, // ListRows handle their own horizontal padding
-    },
-    iconContainer: {
-        alignItems: 'center',
-        marginBottom: Spacing.lg,
-        marginTop: Spacing.md,
-    },
-    mainIcon: {
-        width: Size.avatarLg,
-        height: Size.avatarLg,
-        borderRadius: Shape.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    headerSection: {
-        alignItems: 'center',
-        marginBottom: Spacing.lg,
-    },
-    divider: {
-        height: 1,
-        marginVertical: Spacing.lg,
-    },
-    infoSection: {
-        gap: Spacing.xs,
-    },
-    directionIcon: {
-        width: Size.lg,
-        height: Size.lg,
-        borderRadius: Shape.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    footer: {
-        backgroundColor: 'transparent',
-    }
-});
+// No styles needed as we use design system primitives

@@ -1,5 +1,5 @@
 import { CustomDateTimePicker } from '@/src/components/common/CustomDateTimePicker';
-import { AppButton, AppText, Divider, IconButton } from '@/src/components/core';
+import { AppButton, AppText, IconButton } from '@/src/components/core';
 import { Section } from '@/src/components/layout';
 import { Layout, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import React from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
+import { Separator } from '@/src/design-system';
 
 export type PickerView = 'MENU' | 'START_DATE' | 'END_DATE';
 
@@ -100,7 +101,7 @@ export function DateRangePickerView({
                 />
             </Section>
 
-            <Divider style={styles.divider} />
+            <Separator style={styles.divider} />
 
             {/* 2. CUSTOM RANGE */}
             <Section title="or custom range">

@@ -1,9 +1,10 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { IconName } from '@/src/components/core/AppIcon';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Bleed, Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 export interface SelectionTileProps {
     id: string;
@@ -53,13 +54,13 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
     }, [selectedId, scrollToSelected]);
 
     return (
-        <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-            style={styles.scrollView}
-        >
+        <Bleed horizontal="lg">
+            <ScrollView
+                ref={scrollViewRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
             {items.map((item) => {
                 const isSelected = selectedId === item.id;
 
@@ -88,33 +89,39 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
                         onPress={() => onSelect(isSelected ? '' : item.id)}
                         disabled={disabled}
                     >
-                        <View style={[styles.indicator, { backgroundColor: item.color, opacity: isSelected ? 1 : Opacity.soft }]} />
-                        {item.icon && (
-                            <AppIcon name={item.icon} size={Size.iconXs} color={item.color} fallbackIcon="wallet" />
-                        )}
-                        <AppText
-                            variant="body"
-                            weight={isSelected ? "semibold" : "regular"}
-                            style={{ color: theme.text, flexShrink: 1 }}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                        >
-                            {item.label}
-                        </AppText>
-                        {isSelected && (
-                            <AppIcon name="checkCircle" size={Size.iconSm} color={item.color} />
-                        )}
+                        <Inline align="center" space="sm">
+                            <Box
+                                width={4}
+                                height={Spacing.md}
+                                borderRadius="full"
+                                background={item.color as any}
+                                style={{ opacity: isSelected ? 1 : Opacity.soft }}
+                            />
+                            {item.icon && (
+                                <AppIcon name={item.icon} size={Size.iconXs} color={item.color} fallbackIcon="wallet" />
+                            )}
+                            <AppText
+                                variant="body"
+                                weight={isSelected ? "semibold" : "regular"}
+                                style={{ color: theme.text, flexShrink: 1 }}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                            >
+                                {item.label}
+                            </AppText>
+                            {isSelected && (
+                                <AppIcon name="checkCircle" size={Size.iconSm} color={item.color} />
+                            )}
+                        </Inline>
                     </TouchableOpacity>
                 );
             })}
         </ScrollView>
-    );
+    </Bleed>
+);
 };
 
 const styles = StyleSheet.create({
-    scrollView: {
-        marginHorizontal: -Spacing.lg, // Bleed to edges
-    },
     scrollContent: {
         paddingHorizontal: Spacing.lg,
         gap: Spacing.sm,
@@ -125,15 +132,7 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.sm,
         borderRadius: Shape.radius.r4,
         borderWidth: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
         minWidth: 100,
         maxWidth: 240,
-    },
-    indicator: {
-        width: 4,
-        height: Spacing.md,
-        borderRadius: Shape.radius.full,
     },
 });
