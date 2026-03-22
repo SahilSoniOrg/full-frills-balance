@@ -25,8 +25,6 @@ export interface OnboardingFlowViewModel {
     onContinue: () => void;
     onBack: () => void;
     onFinish: () => void;
-    archetype: string;
-    setArchetype: (value: string) => void;
 }
 
 export function useOnboardingFlow(): OnboardingFlowViewModel {
@@ -38,7 +36,6 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     const [customAccounts, setCustomAccounts] = useState<{ name: string; icon: IconName }[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>(['Salary', 'Food & Drink', 'Groceries', 'Bills']);
     const [customCategories, setCustomCategories] = useState<{ name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[]>([]);
-    const [archetype, setArchetype] = useState('balance-glancer');
     const [isCompleting, setIsCompleting] = useState(false);
 
     const onContinue = useCallback(() => {
@@ -106,7 +103,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
             });
 
             // Then update UI state & preferences via Context
-            await ui.completeOnboarding(name, selectedCurrency, archetype);
+            await ui.completeOnboarding(name, selectedCurrency, 'balance-glancer');
 
             logger.info('Onboarding complete, redirecting to dashboard');
             void triggerHaptic('success');
@@ -125,7 +122,6 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
         selectedAccounts,
         selectedCategories,
         selectedCurrency,
-        archetype,
         ui
     ]);
 
@@ -147,7 +143,5 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
         onContinue,
         onBack,
         onFinish,
-        archetype,
-        setArchetype,
     };
 }

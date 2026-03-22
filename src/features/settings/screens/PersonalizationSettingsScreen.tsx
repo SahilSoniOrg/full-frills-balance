@@ -1,7 +1,6 @@
 import { AppInput } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
-import { ArchetypePreference } from '@/src/features/settings/components/ArchetypePreference';
 import { CurrencyPreference } from '@/src/features/settings/components/CurrencyPreference';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
@@ -47,7 +46,6 @@ export default function PersonalizationSettingsScreen() {
                         }
                     />
                     <CurrencyPreference />
-                    <ArchetypePreference />
                 </SettingsMenu>
             </Inset>
         </Screen>

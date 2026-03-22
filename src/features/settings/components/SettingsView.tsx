@@ -31,7 +31,7 @@ export function SettingsView(vm: SettingsViewModel) {
                         <SettingsMenuItem
                             leftIcon="user"
                             title={AppConfig.strings.settings.sections.personalization}
-                            description="Name, Default Currency, and Archetype"
+                            description="Name and Default Currency"
                             onPress={vm.onPersonalizationSettings}
                         />
                         <SettingsMenuItem

@@ -28,8 +28,6 @@ export interface SettingsViewModel {
     onToggleAppLock: () => void;
     showAccountMonthlyStats: boolean;
     onToggleAccountMonthlyStats: () => void;
-    archetype: string;
-    setArchetype: (value: string) => void;
     isExporting: boolean;
     isImporting: boolean;
     isMaintenanceMode: boolean;
@@ -68,8 +66,6 @@ export function useSettingsViewModel(): SettingsViewModel {
         setAppLockEnabled,
         showAccountMonthlyStats,
         setShowAccountMonthlyStats,
-        archetype,
-        setArchetype,
         isWidgetPrivacyEnabled,
         setWidgetPrivacyEnabled,
     } = ui;
@@ -86,9 +82,9 @@ export function useSettingsViewModel(): SettingsViewModel {
 
     const setUserName = useCallback((newName: string) => {
         if (newName.trim() && newName !== userName) {
-            updateUserDetails(newName.trim(), ui.defaultCurrency, archetype);
+            updateUserDetails(newName.trim(), ui.defaultCurrency, ui.archetype);
         }
-    }, [ui.defaultCurrency, archetype, updateUserDetails, userName]);
+    }, [ui.defaultCurrency, ui.archetype, updateUserDetails, userName]);
 
     const onExport = useCallback(() => {
         setIsNamingExport(true);
@@ -291,8 +287,6 @@ export function useSettingsViewModel(): SettingsViewModel {
         onToggleAppLock,
         showAccountMonthlyStats,
         onToggleAccountMonthlyStats: () => setShowAccountMonthlyStats(!showAccountMonthlyStats),
-        archetype,
-        setArchetype,
         isWidgetPrivacyEnabled,
         onToggleWidgetPrivacy: () => setWidgetPrivacyEnabled(!isWidgetPrivacyEnabled),
         isExporting,

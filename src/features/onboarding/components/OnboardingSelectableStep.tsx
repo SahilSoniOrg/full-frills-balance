@@ -2,7 +2,6 @@ import { CategoryCreationBar } from '@/src/components/common/CategoryCreationBar
 import { SelectableGrid, SelectableItem } from '@/src/components/common/SelectableGrid';
 import { AppIcon, AppInput, AppText, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Size, withOpacity } from '@/src/constants';
-import { ARCHETYPES } from '@/src/constants/archetypes';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
@@ -37,13 +36,8 @@ type CategoryStepProps = BaseProps & {
     onAddCustomCategory: (name: string, type: 'INCOME' | 'EXPENSE', icon: IconName) => void;
 };
 
-type ArchetypeStepProps = BaseProps & {
-    kind: 'archetype';
-    selectedArchetype: string;
-    onSelectArchetype: (id: string) => void;
-};
 
-type OnboardingSelectableStepProps = CurrencyStepProps | AccountStepProps | CategoryStepProps | ArchetypeStepProps;
+type OnboardingSelectableStepProps = CurrencyStepProps | AccountStepProps | CategoryStepProps;
 
 export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
     const { theme } = useTheme();
@@ -181,27 +175,6 @@ export function OnboardingSelectableStep(props: OnboardingSelectableStepProps) {
         );
     }
 
-    if (props.kind === 'archetype') {
-        const items: SelectableItem[] = ARCHETYPES.map(a => ({
-            id: a.id,
-            name: a.name,
-            subtitle: a.description,
-            icon: a.icon
-        }));
-
-        return (
-            <SelectableGrid
-                title="Your Financial Style"
-                subtitle="This helps us personalize your insights."
-                items={items}
-                selectedIds={[props.selectedArchetype]}
-                onToggle={props.onSelectArchetype}
-                onContinue={props.onContinue}
-                onBack={props.onBack}
-                isCompleting={props.isCompleting}
-            />
-        );
-    }
 
     const categoryItems: SelectableItem[] = [
         ...DEFAULT_CATEGORIES.map((category) => ({
