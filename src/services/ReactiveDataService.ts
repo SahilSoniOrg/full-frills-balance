@@ -73,7 +73,7 @@ class ReactiveDataService {
             debounceTime(Animation.dataRefreshDebounce),
             switchMap(async ([accounts, transactions]) => {
                 try {
-                    const balances = await balanceService.getAccountBalances(Date.now(), targetCurrency);
+                    const balances = await balanceService.getAccountBalances(undefined, targetCurrency);
                     const parentIds = new Set(accounts.map(a => a.parentAccountId).filter(Boolean) as string[]);
                     const leafBalances = balances.filter(b => !parentIds.has(b.accountId));
                     const wealthSummary = await wealthService.calculateSummary(leafBalances, targetCurrency);
@@ -167,7 +167,7 @@ class ReactiveDataService {
                     if (rawItemsResponse === null) {
                         // --- FALLBACK PATH (Web/LokiJS) ---
                         // If raw SQL is not supported, use the slower but functional ORM-based fetch
-                        finalBalances = await balanceService.getAccountBalances(now.getTime(), targetCurrency);
+                        finalBalances = await balanceService.getAccountBalances(undefined, targetCurrency);
                     } else {
                         // --- OPTIMIZED PATH (Native SQLite) ---
                         // Normalize result format: some adapters return array, others return { rows: [] }
@@ -263,7 +263,7 @@ class ReactiveDataService {
                     let finalBalances: AccountBalance[] = [];
 
                     if (rawItemsResponse === null) {
-                        finalBalances = await balanceService.getAccountBalances(now.getTime(), targetCurrency);
+                        finalBalances = await balanceService.getAccountBalances(undefined, targetCurrency);
                     } else {
                         const rawItems: any[] = Array.isArray(rawItemsResponse) ? rawItemsResponse : ((rawItemsResponse as any)?.rows || []);
                         const balances: AccountBalance[] = rawItems.map((item: any) => this.mapRawToBalance(item, now.getTime()));

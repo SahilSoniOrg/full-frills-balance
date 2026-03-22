@@ -88,7 +88,7 @@ class TransactionRawRepository {
    * Fetches the latest running balance for multiple accounts in a single pass.
    * Returns a Map of accountId -> latest runningBalance.
    */
-  async getLatestBalancesRaw(accountIds: string[], cutoffDate: number = Date.now()): Promise<Map<string, number>> {
+  async getLatestBalancesRaw(accountIds: string[], cutoffDate: number = Number.MAX_SAFE_INTEGER): Promise<Map<string, number>> {
     if (accountIds.length === 0) return new Map();
 
     const placeholders = accountIds.map(() => '?').join(',');

@@ -87,7 +87,7 @@ export function useAccountBalance(accountId: string | null) {
                     // If it's a leaf account (no children), we can just get its direct balance
                     // But for consistency with parent accounts, we use the optimized getAccountBalances
                     // which is now near-instant thanks to non-blocking exchange rates.
-                    const balances = await balanceService.getAccountBalances(Date.now(), targetCurrency)
+                    const balances = await balanceService.getAccountBalances(undefined, targetCurrency)
                     return balances.find(b => b.accountId === account.id) || null
                 })
             )
@@ -152,7 +152,7 @@ export function useAccountBalances(accounts: Account[]) {
                 debounceTime(Animation.dataRefreshDebounce),
                 switchMap(async () => {
                     const targetCurrency = defaultCurrency || AppConfig.defaultCurrency
-                    const balances = await balanceService.getAccountBalances(Date.now(), targetCurrency)
+                    const balances = await balanceService.getAccountBalances(undefined, targetCurrency)
                     return new Map(balances.map(b => [b.accountId, b]))
                 })
             )

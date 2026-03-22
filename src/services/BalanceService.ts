@@ -178,7 +178,7 @@ export class BalanceService {
      */
     async getAccountBalance(
         accountId: string,
-        cutoffDate: number = Date.now()
+        cutoffDate: number = Number.MAX_SAFE_INTEGER
     ): Promise<AccountBalance> {
         const account = await accountRepository.find(accountId);
         if (!account) throw new Error(`Account ${accountId} not found`);
@@ -238,7 +238,7 @@ export class BalanceService {
         const accounts = await accountRepository.findAll();
         if (accounts.length === 0) return [];
 
-        const cutoffDate = asOfDate ?? Date.now();
+        const cutoffDate = asOfDate ?? Number.MAX_SAFE_INTEGER;
         const accountIds = accounts.map(a => a.id);
 
         // 1. Batch fetch latest balances from transactions
