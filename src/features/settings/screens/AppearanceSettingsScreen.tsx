@@ -1,4 +1,4 @@
-import { AppCard, AppText, AppToggle } from '@/src/components/core';
+import { AppCard, AppText } from '@/src/components/core';
 import { AppButton } from '@/src/components/core/AppButton';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, FontIds, FontSchemes, Spacing, ThemeIds } from '@/src/constants';
@@ -152,26 +152,6 @@ export function AppearanceSettingsScreen() {
                         </AppButton>
                     ))}
                 </View>
-
-                {/* WIDGET PRIVACY SECTION */}
-                <View style={styles.divider} />
-
-                <View style={styles.preferenceRow}>
-                    <View style={{ flex: 1 }}>
-                        <AppText weight="bold">
-                            {AppConfig.strings.settings.appearance.widgetPrivacyTitle}
-                        </AppText>
-                        <AppText variant="caption" color="secondary">
-                            {AppConfig.strings.settings.appearance.widgetPrivacyDesc}
-                        </AppText>
-                    </View>
-                    <AppToggle
-                        value={vm.isWidgetPrivacyEnabled}
-                        onValueChange={vm.onToggleWidgetPrivacy}
-                    // trackColor={{ true: theme.primary }}
-                    />
-                </View>
-
             </View>
         </Screen>
     );

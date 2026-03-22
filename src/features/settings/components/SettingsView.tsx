@@ -109,6 +109,18 @@ export function SettingsView(vm: SettingsViewModel) {
                                 />
                             }
                         />
+                        <SettingsMenuItem
+                            leftIcon="eyeOff"
+                            title={AppConfig.strings.settings.privacy.widgetPrivacyTitle}
+                            description={AppConfig.strings.settings.privacy.widgetPrivacyDesc}
+                            hasArrow={false}
+                            rightContent={
+                                <AppToggle
+                                    value={vm.isWidgetPrivacyEnabled}
+                                    onValueChange={vm.onToggleWidgetPrivacy}
+                                />
+                            }
+                        />
                     </SettingsMenu>
 
                     {/* Community & Support */}
