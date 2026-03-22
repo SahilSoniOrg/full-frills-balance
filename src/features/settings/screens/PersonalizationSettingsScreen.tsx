@@ -1,12 +1,14 @@
 import { AppInput } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { ArchetypePreference } from '@/src/features/settings/components/ArchetypePreference';
 import { CurrencyPreference } from '@/src/features/settings/components/CurrencyPreference';
-import { SettingsSection } from '@/src/features/settings/components/SettingsSection';
+import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
+import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
+import { Inset } from '@/src/design-system';
 
 export default function PersonalizationSettingsScreen() {
     const vm = useSettingsViewModel();
@@ -23,35 +25,31 @@ export default function PersonalizationSettingsScreen() {
             title={AppConfig.strings.settings.sections.personalization}
             showBack={true}
             scrollable
-            withPadding
         >
-            <View style={styles.container}>
-                <SettingsSection title={AppConfig.strings.settings.personalization.yourName}>
-                    <AppInput
-                        label={AppConfig.strings.settings.personalization.yourName}
-                        value={localName}
-                        onChangeText={setLocalName}
-                        onBlur={handleNameSave}
-                        onSubmitEditing={handleNameSave}
-                        placeholder={AppConfig.strings.settings.personalization.yourNamePlaceholder}
-                        leftIcon="user"
+            <Inset space="md" vertical="md">
+                <SettingsMenu header={AppConfig.strings.settings.sections.personalization}>
+                    <SettingsMenuItem
+                        title={AppConfig.strings.settings.personalization.yourName}
+                        description="Used for personalized greetings"
+                        hasArrow={false}
+                        rightContent={
+                            <View style={{ width: 140 }}>
+                                <AppInput
+                                    value={localName}
+                                    onChangeText={setLocalName}
+                                    onBlur={handleNameSave}
+                                    onSubmitEditing={handleNameSave}
+                                    placeholder="Your Name"
+                                    variant="minimal"
+                                    textAlign="right"
+                                />
+                            </View>
+                        }
                     />
-                </SettingsSection>
-
-                <SettingsSection title={AppConfig.strings.settings.currency.title}>
                     <CurrencyPreference />
-                </SettingsSection>
-
-                <SettingsSection title="Style & Strategy">
                     <ArchetypePreference />
-                </SettingsSection>
-            </View>
+                </SettingsMenu>
+            </Inset>
         </Screen>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        paddingBottom: Spacing.xl,
-    },
-});

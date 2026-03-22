@@ -30,6 +30,7 @@ export interface UIPreferences {
   notificationCadence: 'none' | 'daily' | 'weekly';
   notificationHour: number;
   notificationMinute: number;
+  notificationWeekday: number; // 1-7 (Mon-Sun)
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -49,6 +50,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationCadence: 'none',
   notificationHour: 10,
   notificationMinute: 0,
+  notificationWeekday: 1, // Monday
 };
 
 class PreferencesHelper {
@@ -99,6 +101,9 @@ class PreferencesHelper {
     }
     if (sanitized.notificationMinute !== undefined && (typeof sanitized.notificationMinute !== 'number' || sanitized.notificationMinute < 0 || sanitized.notificationMinute > 59)) {
       delete sanitized.notificationMinute;
+    }
+    if (sanitized.notificationWeekday !== undefined && (typeof sanitized.notificationWeekday !== 'number' || sanitized.notificationWeekday < 1 || sanitized.notificationWeekday > 7)) {
+      delete sanitized.notificationWeekday;
     }
 
     return sanitized;
@@ -291,6 +296,14 @@ class PreferencesHelper {
 
   setNotificationMinute(minute: number): void {
     this.updatePreferences({ notificationMinute: minute });
+  }
+
+  get notificationWeekday(): number {
+    return this.preferences.notificationWeekday ?? 1;
+  }
+
+  setNotificationWeekday(weekday: number): void {
+    this.updatePreferences({ notificationWeekday: weekday });
   }
 
   get dismissedPatternIds(): string[] {

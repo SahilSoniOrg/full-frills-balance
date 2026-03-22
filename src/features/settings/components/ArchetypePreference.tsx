@@ -5,6 +5,7 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 
 export const ArchetypePreference = () => {
     const { theme } = useTheme();
@@ -20,24 +21,23 @@ export const ArchetypePreference = () => {
 
     return (
         <>
-            <View style={styles.rowBetween}>
-                <View style={styles.textContainer}>
-                    <AppText variant="body" weight="semibold">Financial Archetype</AppText>
-                    <AppText variant="caption" color="secondary" numberOfLines={1} ellipsizeMode="tail">
-                        Personalize your insights
-                    </AppText>
-                </View>
-                <TouchableOpacity
-                    onPress={() => setShowModal(true)}
-                    style={[styles.selector, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
-                >
-                    <AppIcon name={currentArchetype.icon} size={Size.xs} color={theme.primary} style={{ marginRight: Spacing.xs }} />
-                    <AppText variant="caption" weight="semibold" style={{ marginRight: Spacing.xs }}>
-                        {currentArchetype.name.replace(/^The /, '')}
-                    </AppText>
-                    <AppIcon name="chevronRight" size={Size.xxs} color={theme.textSecondary} />
-                </TouchableOpacity>
-            </View>
+            <SettingsMenuItem
+                title="Financial Archetype"
+                description="Personalize your insights"
+                onPress={() => setShowModal(true)}
+                hasArrow={false}
+                rightContent={
+                    <View
+                        style={[styles.selector, { borderColor: theme.border, backgroundColor: theme.surfaceSecondary }]}
+                    >
+                        <AppIcon name={currentArchetype.icon} size={16} color={theme.textSecondary} style={{ marginRight: Spacing.xs }} />
+                        <AppText variant="caption" weight="medium" style={{ marginRight: Spacing.xs }}>
+                            {currentArchetype.name.replace(/^The /, '')}
+                        </AppText>
+                        <AppIcon name="chevronRight" size={12} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+                    </View>
+                }
+            />
 
             <Modal
                 visible={showModal}

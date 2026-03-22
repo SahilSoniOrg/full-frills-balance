@@ -55,6 +55,7 @@ interface UIState {
   notificationCadence: 'none' | 'daily' | 'weekly'
   notificationHour: number
   notificationMinute: number
+  notificationWeekday: number
 }
 
 interface UIContextType extends UIState {
@@ -74,6 +75,7 @@ interface UIContextType extends UIState {
   setAdvancedMode: (advancedMode: boolean) => Promise<void>
   setNotificationCadence: (cadence: 'none' | 'daily' | 'weekly') => Promise<void>
   setNotificationTime: (hour: number, minute: number) => Promise<void>
+  setNotificationWeekday: (weekday: number) => Promise<void>
   requireRestart: (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => void
 }
 
@@ -103,6 +105,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     notificationCadence: 'none',
     notificationHour: 10,
     notificationMinute: 0,
+    notificationWeekday: 1,
   })
 
   // ... (themeMode calculation remains same)
@@ -139,6 +142,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           notificationCadence: loadedPreferences.notificationCadence || 'none',
           notificationHour: loadedPreferences.notificationHour ?? 10,
           notificationMinute: loadedPreferences.notificationMinute ?? 0,
+          notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
         })
 
       } catch (error) {
@@ -298,6 +302,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const setNotificationWeekday = useCallback(async (weekday: number) => {
+    try {
+      await preferences.setNotificationWeekday(weekday)
+      setUIState(prev => ({ ...prev, notificationWeekday: weekday }))
+    } catch (error) {
+      logger.warn('Failed to save notification weekday', { error })
+      setUIState(prev => ({ ...prev, notificationWeekday: weekday }))
+    }
+  }, [])
+
   const requireRestart = (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => {
     setUIState(prev => ({ ...prev, isRestartRequired: true, restartType: options.type, importStats: options.stats || null }))
   }
@@ -322,6 +336,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setAdvancedMode,
     setNotificationCadence,
     setNotificationTime,
+    setNotificationWeekday,
     requireRestart,
   }
 

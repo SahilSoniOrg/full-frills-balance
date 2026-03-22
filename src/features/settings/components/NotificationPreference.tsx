@@ -1,22 +1,24 @@
 import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal';
-import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
+import { AppConfig, Spacing } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { notificationService } from '@/src/services/NotificationService';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
-import { Box, Inline, Stack } from '@/src/design-system';
 
 export const NotificationPreference = () => {
     const { theme } = useTheme();
-    const { 
-        notificationCadence, 
-        setNotificationCadence, 
-        notificationHour, 
-        notificationMinute, 
-        setNotificationTime 
+    const {
+        notificationCadence,
+        setNotificationCadence,
+        notificationHour,
+        notificationMinute,
+        notificationWeekday,
+        setNotificationTime,
+        setNotificationWeekday,
     } = useUI();
     const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -32,13 +34,16 @@ export const NotificationPreference = () => {
             if (!granted) return;
         }
         await setNotificationCadence(cadence);
-        await notificationService.scheduleReminder(cadence, notificationHour, notificationMinute);
+        await notificationService.scheduleReminder(cadence, notificationHour, notificationMinute, notificationWeekday);
     };
 
-    const handleSelectTime = async (_dateStr: string, timeStr: string) => {
+    const handleSelectTime = async (_dateStr: string, timeStr: string, weekday?: number) => {
         const [hour, minute] = timeStr.split(':').map(Number);
         await setNotificationTime(hour, minute);
-        await notificationService.scheduleReminder(notificationCadence, hour, minute);
+        if (weekday !== undefined) {
+            await setNotificationWeekday(weekday);
+        }
+        await notificationService.scheduleReminder(notificationCadence, hour, minute, weekday ?? notificationWeekday);
         setShowTimePicker(false);
     };
 
@@ -46,94 +51,65 @@ export const NotificationPreference = () => {
     const displayTime = dayjs().hour(notificationHour).minute(notificationMinute).format('hh:mm A');
 
     return (
-        <Stack space="md" paddingVertical="xs">
-            <Inline align="center" justify="space-between" space="md">
-                <Stack space="xs" flex={1}>
-                    <AppText variant="body" weight="semibold">{AppConfig.strings.settings.notifications.title}</AppText>
-                    <AppText variant="caption" color="secondary">{AppConfig.strings.settings.notifications.description}</AppText>
-                </Stack>
-                <AppIcon name="notifications" size={20} color={theme.primary} />
-            </Inline>
-            
-            <Inline align="center" space="md" style={{ flexWrap: 'wrap' }}>
-                <Box
-                    flexDirection="row"
-                    borderRadius="full"
-                    padding="xs"
-                    background={withOpacity(theme.primary, Opacity.selection) as any}
-                >
-                    {options.map((option) => {
-                        const isSelected = notificationCadence === option.id;
-                        return (
-                            <TouchableOpacity
-                                key={option.id}
-                                onPress={() => handleSelectCadence(option.id)}
-                                activeOpacity={0.7}
-                            >
-                                <Box
-                                    paddingHorizontal="lg"
-                                    paddingVertical="xs"
-                                    borderRadius="full"
-                                    background={isSelected ? 'primary' : 'transparent'}
-                                    justifyContent="center"
-                                    alignItems="center"
-                                >
-                                    <AppText
-                                        variant="caption"
-                                        weight={isSelected ? "semibold" : "regular"}
-                                        style={{ color: isSelected ? theme.surface : theme.primary }}
-                                    >
-                                        {option.label}
-                                    </AppText>
-                                </Box>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </Box>
+        <Stack space="sm" paddingHorizontal="md" paddingBottom="md">
+            <Box flexDirection="row" alignItems="center" justifyContent="space-between">
+                <AppSegmentedControl
+                    options={options}
+                    value={notificationCadence}
+                    onChange={handleSelectCadence}
+                    minWidth={60}
+                    flex={false}
+                />
 
-                {notificationCadence !== 'none' && (
-                    <TouchableOpacity 
-                        onPress={() => setShowTimePicker(true)}
+                <TouchableOpacity
+                    onPress={() => notificationCadence !== 'none' && setShowTimePicker(true)}
+                    activeOpacity={notificationCadence === 'none' ? 1 : 0.7}
+                    disabled={notificationCadence === 'none'}
+                >
+                    <Box
+                        flexDirection="row"
+                        alignItems="center"
+                        paddingHorizontal="md"
+                        paddingVertical="sm"
+                        borderRadius="full"
+                        background="surfaceSecondary"
+                        style={{ opacity: notificationCadence === 'none' ? 0.3 : 1 }}
                     >
-                        <Box
-                            flexDirection="row"
-                            alignItems="center"
-                            paddingHorizontal="md"
-                            paddingVertical="sm"
-                            borderRadius="full"
-                            background={withOpacity(theme.primary, Opacity.selection) as any}
-                        >
-                            <AppText variant="caption" weight="semibold" style={{ color: theme.primary }}>
-                                {displayTime}
-                            </AppText>
-                            <AppIcon name="time" size={14} color={theme.primary} style={{ marginLeft: Spacing.xs }} />
-                        </Box>
-                    </TouchableOpacity>
-                )}
-            </Inline>
+                        <AppText variant="caption" weight="semibold" color="text">
+                            {displayTime}
+                        </AppText>
+                        <AppIcon
+                            name="clock"
+                            size={14}
+                            color={theme.textSecondary}
+                            style={{ marginLeft: Spacing.xs, opacity: 0.7 }}
+                        />
+                    </Box>
+                </TouchableOpacity>
+            </Box>
 
             {notificationCadence !== 'none' && (
-                <Box marginTop="md">
-                    <TouchableOpacity 
-                        onPress={() => notificationService.sendImmediateTest()}
+                <TouchableOpacity
+                    onPress={() => notificationService.sendImmediateTest()}
+                >
+                    <Box
+                        paddingVertical="xs"
+                        paddingHorizontal="md"
+                        borderRadius="sm"
+                        style={{ borderWidth: 1, borderColor: theme.border }}
+                        alignSelf="flex-start"
                     >
-                        <Box
-                            paddingVertical="xs"
-                            paddingHorizontal="md"
-                            borderRadius="r2"
-                            style={{ borderWidth: 1, borderColor: theme.border }}
-                            alignSelf="flex-start"
-                        >
-                            <AppText variant="caption" color="secondary">Send Test Notification (Now)</AppText>
-                        </Box>
-                    </TouchableOpacity>
-                </Box>
+                        <AppText variant="caption" color="secondary">Send Test Notification (Now)</AppText>
+                    </Box>
+                </TouchableOpacity>
             )}
 
             <DateTimePickerModal
                 visible={showTimePicker}
                 date={dayjs().format('YYYY-MM-DD')}
                 time={formattedTime}
+                weekday={notificationWeekday}
+                showWeekdayPicker={notificationCadence === 'weekly'}
                 onClose={() => setShowTimePicker(false)}
                 onSelect={handleSelectTime}
                 hideDate
@@ -141,4 +117,3 @@ export const NotificationPreference = () => {
         </Stack>
     );
 };
-

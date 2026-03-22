@@ -1,11 +1,11 @@
-import { AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppText, AppToggle } from '@/src/components/core';
 import { AppButton } from '@/src/components/core/AppButton';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, FontIds, FontSchemes, Spacing, ThemeIds } from '@/src/constants';
 import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 export function AppearanceSettingsScreen() {
     const { theme } = useTheme();
@@ -152,7 +152,7 @@ export function AppearanceSettingsScreen() {
                         </AppButton>
                     ))}
                 </View>
-                
+
                 {/* WIDGET PRIVACY SECTION */}
                 <View style={styles.divider} />
 
@@ -165,10 +165,10 @@ export function AppearanceSettingsScreen() {
                             {AppConfig.strings.settings.appearance.widgetPrivacyDesc}
                         </AppText>
                     </View>
-                    <Switch
+                    <AppToggle
                         value={vm.isWidgetPrivacyEnabled}
                         onValueChange={vm.onToggleWidgetPrivacy}
-                        trackColor={{ true: theme.primary }}
+                    // trackColor={{ true: theme.primary }}
                     />
                 </View>
 

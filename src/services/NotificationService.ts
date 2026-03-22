@@ -52,7 +52,7 @@ class NotificationService {
         logger.info('Cancelled all scheduled notifications');
     }
 
-    async scheduleReminder(cadence: NotificationCadence, hour: number, minute: number): Promise<void> {
+    async scheduleReminder(cadence: NotificationCadence, hour: number, minute: number, weekday: number = 1): Promise<void> {
         if (Platform.OS === 'web') return;
 
         await this.cancelAll();
@@ -83,7 +83,7 @@ class NotificationService {
             };
             
             if (cadence === 'weekly') {
-                calendarTrigger.weekday = 1; // Sunday
+                calendarTrigger.weekday = weekday;
             }
             
             trigger = calendarTrigger;
@@ -98,7 +98,7 @@ class NotificationService {
             } else {
                 trigger = {
                     type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-                    weekday: 1, // Sunday
+                    weekday,
                     hour,
                     minute,
                 } as Notifications.WeeklyTriggerInput;
@@ -117,7 +117,7 @@ class NotificationService {
             trigger,
         });
 
-        logger.info(`Scheduled ${cadence} reminder at ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        logger.info(`Scheduled ${cadence} reminder at ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} (weekday: ${weekday})`);
 
         const scheduled = await Notifications.getAllScheduledNotificationsAsync();
         logger.info(`Total scheduled notifications now: ${scheduled.length}`);

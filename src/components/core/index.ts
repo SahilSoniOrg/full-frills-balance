@@ -30,7 +30,7 @@ export { Badge } from './Badge'
 export type { BadgeProps } from './Badge'
 
 
-export { AppIcon } from './AppIcon'
+export { AppIcon, isValidIconName } from './AppIcon'
 export type { IconName } from './AppIcon'
 export { ErrorBoundary } from './ErrorBoundary'
 export { ExpandableSearchButton } from './ExpandableSearchButton'
@@ -44,3 +44,8 @@ export type { LoadingViewProps } from '../common/LoadingView'
 export { EmptyStateView } from '../common/EmptyStateView'
 export type { EmptyStateViewProps } from '../common/EmptyStateView'
 
+export { AppToggle } from './AppToggle'
+export type { AppToggleProps } from './AppToggle'
+
+export { AppSegmentedControl } from './AppSegmentedControl'
+export type { SegmentedOption } from './AppSegmentedControl'

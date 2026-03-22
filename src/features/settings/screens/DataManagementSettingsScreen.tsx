@@ -1,11 +1,13 @@
-import { AppButton, AppInput, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Spacing } from '@/src/constants';
-import { SettingsSection } from '@/src/features/settings/components/SettingsSection';
+import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
+import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
+import { Inset, Stack } from '@/src/design-system';
 
 export default function DataManagementSettingsScreen() {
     const vm = useSettingsViewModel();
@@ -37,88 +39,61 @@ export default function DataManagementSettingsScreen() {
             title={AppConfig.strings.settings.sections.dataManagement}
             showBack={true}
             scrollable
-            withPadding
         >
-            <View style={styles.container}>
-                <SettingsSection title={AppConfig.strings.settings.sections.dataManagement}>
-                    <AppText variant="body" style={styles.cardDesc}>
-                        {AppConfig.strings.settings.data.exportDesc}
-                    </AppText>
+            <Inset space="md" vertical="md">
+                <Stack space="xl">
+                    <SettingsMenu header={AppConfig.strings.settings.sections.dataManagement}>
+                        <SettingsMenuItem
+                            leftIcon="document"
+                            title={AppConfig.strings.settings.data.exportBtn}
+                            description={AppConfig.strings.settings.data.exportDesc}
+                            onPress={onExport}
+                            loading={isExporting}
+                        />
+                        <SettingsMenuItem
+                            leftIcon="refresh"
+                            title={AppConfig.strings.settings.data.importBtn}
+                            description="Restore your data from a backup file"
+                            onPress={onImport}
+                            loading={isImporting}
+                        />
+                        <SettingsMenuItem
+                            leftIcon="history"
+                            title={AppConfig.strings.settings.data.auditBtn}
+                            description={AppConfig.strings.settings.data.auditDesc}
+                            onPress={onAuditLog}
+                        />
+                    </SettingsMenu>
 
-                    <AppButton
-                        variant="outline"
-                        onPress={onExport}
-                        loading={isExporting}
-                    >
-                        {AppConfig.strings.settings.data.exportBtn}
-                    </AppButton>
+                    <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
+                        <SettingsMenuItem
+                            leftIcon="search"
+                            title={AppConfig.strings.settings.maintenance.integrityBtn}
+                            description={AppConfig.strings.settings.maintenance.integrityDesc}
+                            onPress={onFixIntegrity}
+                            loading={isMaintenanceMode}
+                        />
+                        <SettingsMenuItem
+                            leftIcon="delete"
+                            title={AppConfig.strings.settings.danger.cleanupBtn}
+                            description={AppConfig.strings.settings.danger.cleanupDesc}
+                            onPress={onCleanup}
+                            loading={isCleaning}
+                        />
+                    </SettingsMenu>
 
-                    <AppButton
-                        variant="outline"
-                        onPress={onImport}
-                        loading={isImporting}
-                        style={{ marginTop: Spacing.sm }}
-                    >
-                        {AppConfig.strings.settings.data.importBtn}
-                    </AppButton>
-
-                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-
-                    <AppText variant="body" style={styles.cardDesc}>
-                        {AppConfig.strings.settings.data.auditDesc}
-                    </AppText>
-                    <AppButton
-                        variant="outline"
-                        onPress={onAuditLog}
-                    >
-                        {AppConfig.strings.settings.data.auditBtn}
-                    </AppButton>
-                </SettingsSection>
-
-                <SettingsSection title={AppConfig.strings.settings.sections.maintenance}>
-                    <AppText variant="body" style={styles.cardDesc}>
-                        {AppConfig.strings.settings.maintenance.integrityDesc}
-                    </AppText>
-                    <AppButton
-                        variant="secondary"
-                        onPress={onFixIntegrity}
-                        loading={isMaintenanceMode}
-                    >
-                        {AppConfig.strings.settings.maintenance.integrityBtn}
-                    </AppButton>
-                </SettingsSection>
-
-                <SettingsSection
-                    title={AppConfig.strings.settings.sections.dangerZone}
-                    danger
-                >
-                    <AppText variant="body" style={styles.cardDesc}>
-                        {AppConfig.strings.settings.danger.cleanupDesc}
-                    </AppText>
-                    <AppButton
-                        variant="outline"
-                        onPress={onCleanup}
-                        style={{ borderColor: theme.error }}
-                        loading={isCleaning}
-                    >
-                        {AppConfig.strings.settings.danger.cleanupBtn}
-                    </AppButton>
-
-                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-
-                    <AppText variant="body" style={styles.cardDesc}>
-                        {AppConfig.strings.settings.danger.resetDesc}
-                    </AppText>
-                    <AppButton
-                        variant="primary"
-                        onPress={onFactoryReset}
-                        style={{ backgroundColor: theme.error }}
-                        loading={isResetting}
-                    >
-                        {AppConfig.strings.settings.danger.resetBtn}
-                    </AppButton>
-                </SettingsSection>
-            </View>
+                    <SettingsMenu header={AppConfig.strings.settings.sections.dangerZone}>
+                        <SettingsMenuItem
+                            leftIcon="alert"
+                            title={AppConfig.strings.settings.danger.resetBtn}
+                            description={AppConfig.strings.settings.danger.resetDesc}
+                            onPress={onFactoryReset}
+                            loading={isResetting}
+                            danger
+                        />
+                    </SettingsMenu>
+                </Stack>
+            </Inset>
 
             {/* Blocking integrity check progress modal */}
             <Modal
@@ -130,7 +105,7 @@ export default function DataManagementSettingsScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
                         <View style={styles.modalIconRow}>
-                            <AppText variant="heading" style={{ fontSize: 40 }}>🔍</AppText>
+                            <AppIcon name="search" size={40} color={theme.primary} />
                         </View>
 
                         <AppText variant="subheading" style={styles.modalTitle}>
@@ -170,7 +145,7 @@ export default function DataManagementSettingsScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
                         <View style={styles.modalIconRow}>
-                            <AppText variant="heading" style={{ fontSize: 40 }}>📄</AppText>
+                            <AppIcon name="document" size={40} color={theme.primary} />
                         </View>
 
                         <AppText variant="subheading" style={styles.modalTitle}>
@@ -212,16 +187,6 @@ export default function DataManagementSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        paddingBottom: Spacing.xl,
-    },
-    cardDesc: {
-        marginBottom: Spacing.md,
-    },
-    divider: {
-        height: 1,
-        marginVertical: Spacing.lg,
-    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.6)',

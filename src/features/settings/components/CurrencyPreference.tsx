@@ -1,11 +1,10 @@
-import { AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { CurrencySelector } from '@/src/features/accounts';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
+import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 
 export const CurrencyPreference = () => {
     const { theme } = useTheme();
@@ -17,28 +16,20 @@ export const CurrencyPreference = () => {
     };
 
     return (
-        <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-                <AppText variant="body" weight="semibold">{AppConfig.strings.settings.currency.title}</AppText>
-                <AppText variant="caption" color="secondary">{AppConfig.strings.settings.currency.description}</AppText>
-            </View>
-            <CurrencySelector
-                selectedCurrency={defaultCurrency}
-                currencies={currencies}
-                onSelect={handleSelect}
-                variant="pill"
-                title={AppConfig.strings.settings.currency.selectTitle}
-                selectedBackgroundColor={withOpacity(theme.primary, Opacity.soft / 2)}
-            />
-        </View>
+        <SettingsMenuItem
+            title={AppConfig.strings.settings.currency.title}
+            description={AppConfig.strings.settings.currency.description}
+            hasArrow={false}
+            rightContent={
+                <CurrencySelector
+                    selectedCurrency={defaultCurrency}
+                    currencies={currencies}
+                    onSelect={handleSelect}
+                    variant="pill"
+                    title={AppConfig.strings.settings.currency.selectTitle}
+                    selectedBackgroundColor={withOpacity(theme.primary, Opacity.soft / 2)}
+                />
+            }
+        />
     );
 };
-
-const styles = StyleSheet.create({
-    rowBetween: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: Spacing.xs,
-    },
-});
