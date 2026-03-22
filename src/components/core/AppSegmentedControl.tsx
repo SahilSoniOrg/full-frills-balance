@@ -31,20 +31,29 @@ export const AppSegmentedControl = ({
 }: AppSegmentedControlProps) => {
   const { theme } = useTheme();
   const [containerWidth, setContainerWidth] = useState(0);
-  const scrollValue = useRef(new Animated.Value(0)).current;
-
+  
   // Find index of current value
   const selectedIndex = options.findIndex((opt: SegmentedOption) => opt.id === value);
   const safeIndex = selectedIndex === -1 ? 0 : selectedIndex;
 
+  // Initialize with safeIndex to avoid animation on first mount
+  const scrollValue = useRef(new Animated.Value(safeIndex)).current;
+
   useEffect(() => {
+    // If the component hasn't been laid out yet, snap to the current value without animation.
+    // This allows the initial position to be correct when the pill finally renders.
+    if (containerWidth === 0) {
+      scrollValue.setValue(safeIndex);
+      return;
+    }
+
     Animated.spring(scrollValue, {
       toValue: safeIndex,
       useNativeDriver: true,
       friction: 10,
       tension: 60,
     }).start();
-  }, [safeIndex, scrollValue]);
+  }, [safeIndex, containerWidth, scrollValue]);
 
   const onContainerLayout = (event: LayoutChangeEvent) => {
     setContainerWidth(event.nativeEvent.layout.width);
