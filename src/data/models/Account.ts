@@ -179,6 +179,7 @@ export default class Account extends Model {
   @field('description') description?: string
   @field('icon') icon?: string
   @field('order_num') orderNum?: number
+  @date('reconciled_at') reconciledAt?: Date
 
   @date('created_at') createdAt!: Date
   @date('updated_at') updatedAt!: Date

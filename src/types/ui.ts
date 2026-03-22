@@ -13,4 +13,6 @@ export interface TransactionListItem {
     count?: number;
     netAmount?: number;
     currencyCode?: string;
+    isReconciledMarker?: boolean;
+    reconciledAt?: number | null;
 }

@@ -19,6 +19,7 @@ export interface AccountCardViewModel {
     depth: number
     hasChildren: boolean
     isExpanded: boolean
+    reconciledAt?: Date
 }
 
 export interface AccountSectionViewModel {
@@ -153,6 +154,7 @@ export function transformAccountsToSections(
                 depth,
                 hasChildren: children.length > 0,
                 isExpanded,
+                reconciledAt: account.reconciledAt,
             })
 
             if (isExpanded) {

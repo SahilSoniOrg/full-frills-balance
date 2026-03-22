@@ -15,7 +15,7 @@ import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { AccountBalance, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { showConfirmationAlert, showErrorAlert, showSuccessAlert } from '@/src/utils/alerts';
+import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -64,7 +64,12 @@ export interface AccountDetailsViewModel {
         onRecover: () => void;
         onEdit: () => void;
         onDelete: () => void;
+        onReconcile: () => void;
     };
+    isReconcileModalVisible: boolean;
+    setIsReconcileModalVisible: (visible: boolean) => void;
+    onConfirmReconcile: () => void;
+    reconciledAt: Date | null;
     onBack: () => void;
     onAuditPress: () => void;
     onAddPress: () => void;
@@ -182,7 +187,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         AppConfig.defaults.journalPageSize,
         dateRange || undefined
     );
-    const { deleteAccount, recoverAccount: recoverAction } = useAccountActions();
+    const { deleteAccount, recoverAccount: recoverAction, reconcileAccount } = useAccountActions();
 
     // Chart-specific unpaginated transactions
     const { data: chartTransactions } = useObservable<Transaction[]>(
@@ -203,6 +208,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         }, [accountId, dateRange], []);
 
     const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
+    const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
 
     // Build recursive sub-tree from all accounts
     const descendants = useMemo(() => {
@@ -297,7 +303,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             async () => {
                 try {
                     await deleteAccount(account);
-                    showSuccessAlert('Deleted', 'Account has been deleted.');
+                    toast.success('Account has been deleted.');
                     AppNavigation.toAccounts();
                 } catch (error) {
                     logger.error('Failed to delete account:', error);
@@ -315,7 +321,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             async () => {
                 try {
                     await recoverAction(accountId);
-                    showSuccessAlert('Recovered', 'Account has been restored.');
+                    toast.success('Account has been restored.');
                     AppNavigation.replaceToAccountDetails(accountId);
                 } catch (error) {
                     logger.error('Failed to recover account:', error);
@@ -325,6 +331,22 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             }
         );
     }, [accountId, recoverAction]);
+
+    const onReconcile = useCallback(() => {
+        setIsReconcileModalVisible(true);
+    }, []);
+
+    const onConfirmReconcile = useCallback(async () => {
+        setIsReconcileModalVisible(false);
+        try {
+            await reconcileAccount(accountId, new Date());
+            toast.success(AppConfig.strings.accounts.reconciliation.alert.successMessage);
+        } catch (error) {
+            logger.error('Failed to reconcile account:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            showErrorAlert(`Could not reconcile account: ${errorMessage}`);
+        }
+    }, [accountId, reconcileAccount]);
 
     const onEdit = useCallback(() => {
         AppNavigation.toAccountForm(accountId, account ? {
@@ -528,12 +550,70 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         }
     }), [transactions, balanceCurrency, onTransactionPress, precision]);
 
-    const { groupedItems: transactionItems } = useTransactionGrouping(transactionGroupingOptions);
+    const reconciledAt = account?.reconciledAt || null;
+
+    const { groupedItems: rawGroupedItems } = useTransactionGrouping(transactionGroupingOptions);
+
+    const transactionItems = useMemo(() => {
+        if (!reconciledAt || !rawGroupedItems.length) return rawGroupedItems;
+
+        const result: TransactionListItem[] = [];
+        let markerAdded = false;
+        const reconTime = reconciledAt.getTime();
+
+        for (let i = 0; i < rawGroupedItems.length; i++) {
+            const item = rawGroupedItems[i];
+            let itemToPush = item;
+
+            if (!markerAdded) {
+                if (item.type === 'transaction') {
+                    if (item.date && item.date <= reconTime) {
+                        result.push({
+                            id: 'reconciled-separator',
+                            type: 'separator' as any,
+                            date: reconTime,
+                            isReconciledMarker: true,
+                        } as any);
+                        markerAdded = true;
+                    }
+                } else if (item.type === 'separator') {
+                    // If the day separator itself is collapsed, and the reconTime falls within this day,
+                    // we mark it as 'added' so it doesn't appear later (which would look disjointed).
+                    // We also attach the reconTime to the separator so it can show the status in collapsed mode.
+                    const startOfDay = item.date;
+                    const endOfDay = startOfDay + (24 * 60 * 60 * 1000) - 1;
+                    
+                    if (reconTime >= startOfDay && reconTime <= endOfDay) {
+                        itemToPush = { ...item, reconciledAt: reconTime } as any;
+                        if (item.isCollapsed) {
+                            markerAdded = true; 
+                        }
+                    }
+                }
+            }
+            result.push(itemToPush);
+        }
+
+        if (!markerAdded) {
+            const lastItem = rawGroupedItems[rawGroupedItems.length - 1];
+            if (lastItem && lastItem.date && lastItem.date <= reconTime) {
+                result.push({
+                    id: 'reconciled-separator',
+                    type: 'separator' as any,
+                    date: reconTime,
+                    isReconciledMarker: true,
+                } as any);
+            }
+        }
+
+        return result;
+    }, [rawGroupedItems, reconciledAt]);
 
     const { chartData, rollingAverageData, xTicks } = useMemo(() => {
         if (!chartTransactions || !chartTransactions.length) return { chartData: [], rollingAverageData: [], xTicks: [] };
 
-        let lastValidBalance = chartTransactions[0].runningBalance || 0;
+        const firstWithBalance = chartTransactions.find(t => t.runningBalance !== undefined && t.runningBalance !== null);
+        let lastValidBalance = firstWithBalance?.runningBalance || 0;
         const pts = chartTransactions.map((t: Transaction) => {
             if (t.runningBalance !== undefined && t.runningBalance !== null) {
                 lastValidBalance = t.runningBalance;
@@ -640,7 +720,12 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             onRecover,
             onEdit,
             onDelete,
+            onReconcile,
         },
+        isReconcileModalVisible,
+        setIsReconcileModalVisible,
+        onConfirmReconcile,
+        reconciledAt,
         onBack,
         onAuditPress,
         onAddPress,

@@ -215,6 +215,10 @@ export function useAccountActions() {
         return accountService.adjustBalance(account, targetBalance)
     }, [])
 
+    const reconcileAccount = useCallback(async (accountId: string, date: Date) => {
+        return accountService.reconcileAccount(accountId, date)
+    }, [])
+
     return {
         createAccount,
         updateAccount,
@@ -222,7 +226,8 @@ export function useAccountActions() {
         recoverAccount,
         updateAccountOrder,
         findAccountByName,
-        adjustBalance
+        adjustBalance,
+        reconcileAccount
     }
 }
 

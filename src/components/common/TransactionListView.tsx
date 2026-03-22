@@ -73,6 +73,8 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
                         count={item.count}
                         netAmount={item.netAmount}
                         currencyCode={item.currencyCode}
+                        isReconciledMarker={item.isReconciledMarker}
+                        reconciledAt={item.reconciledAt}
                     />
                 ) : (
                     <TransactionCard

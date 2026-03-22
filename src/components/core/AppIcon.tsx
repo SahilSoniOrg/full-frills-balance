@@ -65,7 +65,8 @@ import {
     Vault,
     Wallet,
     X,
-    XCircle
+    XCircle,
+    ShieldCheck
 } from 'lucide-react-native';
 import React from 'react';
 import { ViewStyle } from 'react-native';
@@ -140,6 +141,7 @@ export const IconMap = {
     star: Star,
     database: Database,
     heart: Heart,
+    shieldCheck: ShieldCheck,
 } as const;
 
 export type IconName = keyof typeof IconMap;

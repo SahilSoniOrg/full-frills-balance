@@ -1,5 +1,9 @@
 import { AppConfig } from '@/src/constants';
+import dayjs from 'dayjs';
+import calendar from 'dayjs/plugin/calendar';
 import * as Localization from 'expo-localization';
+
+dayjs.extend(calendar);
 
 export interface DateRange {
   startDate: number;
@@ -354,4 +358,27 @@ export const formatDaySeparator = (timestamp: number, locale: string = Localizat
     month: 'short',
     day: 'numeric',
   });
+};
+
+/**
+ * Formats a timestamp as a relative date for reconciliation (e.g., "Today at 1:48 AM")
+ */
+export const formatRelativeReconciledDate = (value: number | Date): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
+  return dayjs(timestamp).calendar(null, {
+    sameDay: '[Today at] h:mm A',
+    nextDay: '[Tomorrow at] h:mm A',
+    nextWeek: 'dddd [at] h:mm A',
+    lastDay: '[Yesterday at] h:mm A',
+    lastWeek: '[Last] dddd [at] h:mm A',
+    sameElse: 'MMM D, YYYY [at] h:mm A',
+  });
+};
+
+/**
+ * Formats a timestamp as just time for reconciliation (e.g., "1:48 AM")
+ */
+export const formatReconciledTime = (value: number | Date): string => {
+  const timestamp = typeof value === 'number' ? value : value.getTime();
+  return dayjs(timestamp).format('h:mm A');
 };

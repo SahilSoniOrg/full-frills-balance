@@ -22,6 +22,7 @@ export interface AccountPersistenceInput {
   description?: string
   icon?: string
   orderNum?: number
+  reconciledAt?: Date
   parentAccountId?: string
   metadata?: Partial<{
     statementDay: number

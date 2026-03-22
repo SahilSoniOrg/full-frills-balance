@@ -232,6 +232,8 @@ export const AppConfig = {
       transaction: 'Transaction',
       transfer: 'Transfer',
       transactionCount: (count: number) => count === 1 ? '1 transaction' : `${count} transactions`,
+      reconciledUntilHere: 'Reconciled until here',
+      reconciledUntilHereWithTime: (time: string) => `Reconciled until ${time}`,
       errors: {
         missingExchangeRate: (from: string, to: string) => `Missing exchange rate for ${from} to ${to}. Skipping amount from daily net total.`,
       },
@@ -426,6 +428,15 @@ export const AppConfig = {
         addChildrenLabel: 'ADD AVAILABLE ACCOUNTS AS CHILDREN:',
         moveParentLabel: 'MOVE UNDER ANOTHER PARENT:',
         hasTransactions: 'Has Transactions',
+      },
+      reconciliation: {
+        reconciledLabel: (date: string) => `RECONCILED: ${date}`,
+        alert: {
+          title: 'Reconcile Account',
+          message: 'Mark this account as reconciled until now?',
+          successTitle: 'Reconciled',
+          successMessage: 'Account has been marked as reconciled.',
+        },
       },
     },
     advancedEntry: {

@@ -208,6 +208,22 @@ export class AccountService {
 
         return updatedAccount;
     }
+    
+    async reconcileAccount(accountId: string, date: Date): Promise<Account> {
+        const account = await accountRepository.find(accountId);
+        if (!account) throw new Error('Account not found');
+
+        const updatedAccount = await accountRepository.update(account, { reconciledAt: date });
+
+        await auditService.log({
+            entityType: 'account',
+            entityId: accountId,
+            action: AuditAction.UPDATE,
+            changes: { reconciledAt: date }
+        });
+
+        return updatedAccount;
+    }
 
     async recoverAccount(accountId: string): Promise<void> {
         const account = await accountRepository.find(accountId);

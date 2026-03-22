@@ -280,5 +280,16 @@ export const migrations = schemaMigrations({
                 }),
             ],
         },
+        {
+            toVersion: 14,
+            steps: [
+                addColumns({
+                    table: 'accounts',
+                    columns: [
+                        { name: 'reconciled_at', type: 'number', isOptional: true },
+                    ],
+                }),
+            ],
+        },
     ],
 })

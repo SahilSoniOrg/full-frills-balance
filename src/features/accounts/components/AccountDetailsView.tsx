@@ -1,6 +1,7 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
+import { PopupModal } from '@/src/components/common/PopupModal';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IvyIcon } from '@/src/components/core';
@@ -9,7 +10,7 @@ import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatShortDate } from '@/src/utils/dateUtils';
+import { formatRelativeReconciledDate, formatShortDate } from '@/src/utils/dateUtils';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -116,6 +117,13 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                             testID: 'edit-button',
                         },
                         {
+                            name: 'checkCircle',
+                            onPress: headerActions.onReconcile,
+                            variant: 'surface',
+                            iconColor: theme.income,
+                            testID: 'reconcile-button',
+                        },
+                        {
                             name: 'delete',
                             onPress: headerActions.onDelete,
                             variant: 'surface',
@@ -154,7 +162,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                     <AppText variant="title">
                                         {accountName}
                                     </AppText>
-                                    <View style={{ flexDirection: 'row', gap: Spacing.xs, alignItems: 'center' }}>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, rowGap: Spacing.xs, alignItems: 'center' }}>
                                         <Badge variant={accountTypeVariant as any}>
                                             {accountType}
                                         </Badge>
@@ -178,6 +186,14 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                                 DELETED
                                             </Badge>
                                         )}
+                                        {vm.reconciledAt && (
+                                            <Badge
+                                                variant="success"
+                                                icon="shieldCheck"
+                                            >
+                                                {formatRelativeReconciledDate(vm.reconciledAt)}
+                                            </Badge>
+                                        )}
                                     </View>
                                 </View>
                             </View>
@@ -192,7 +208,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                                     </AppText>
                                     {secondaryBalances.length > 0 && (
                                         <View style={styles.secondaryBalances}>
-                                            {secondaryBalances.map((sb, idx) => (
+                                            {secondaryBalances.map((sb: any, idx: number) => (
                                                 <AppText key={idx} variant="caption" color="secondary">
                                                     + {sb.amountText}
                                                 </AppText>
@@ -287,6 +303,29 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                 subAccounts={subAccounts}
                 isLoading={subAccountsLoading}
             />
+
+            <PopupModal
+                visible={vm.isReconcileModalVisible}
+                onClose={() => vm.setIsReconcileModalVisible(false)}
+                title={AppConfig.strings.accounts.reconciliation.alert.title}
+                actions={[
+                    {
+                        label: AppConfig.strings.common.cancel,
+                        onPress: () => vm.setIsReconcileModalVisible(false),
+                        variant: 'ghost',
+                    },
+                    {
+                        label: AppConfig.strings.common.confirm,
+                        onPress: vm.onConfirmReconcile,
+                        variant: 'primary',
+                    },
+                ]}
+                fixedHeight={false}
+            >
+                <AppText variant="body">
+                    {AppConfig.strings.accounts.reconciliation.alert.message}
+                </AppText>
+            </PopupModal>
         </Screen>
     );
 }

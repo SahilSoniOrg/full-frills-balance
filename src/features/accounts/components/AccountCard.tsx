@@ -1,7 +1,8 @@
 import { AppCard, AppIcon, AppText, IvyIcon } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -20,7 +21,7 @@ export function AccountCard({
     dividerColor,
     surfaceColor,
 }: AccountCardProps) {
-    const { fonts } = useTheme();
+    const { theme, fonts } = useTheme();
     return (
         <AppCard
             elevation="sm"
@@ -51,6 +52,14 @@ export function AccountCard({
                         >
                             {account.name}
                         </AppText>
+                        {account.reconciledAt && (
+                            <View style={[styles.reconciledBadge, { backgroundColor: withOpacity(theme.pureInverse, Opacity.soft) }]}>
+                                <AppIcon name="shieldCheck" color={account.textColor} size={Size.iconXs} />
+                                <AppText variant="caption" style={{ color: account.textColor, fontSize: Typography.sizes.xs, lineHeight: 12, opacity: Opacity.heavy }}>
+                                    {formatRelativeReconciledDate(account.reconciledAt)}
+                                </AppText>
+                            </View>
+                        )}
                         {account.hasChildren && (
                             <View style={styles.headerRight}>
                                 {account.isExpanded ? (
@@ -178,5 +187,13 @@ const styles = StyleSheet.create({
     divider: {
         width: 1,
         height: Spacing.xl, // Adjusted height for better visual
+    },
+    reconciledBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.xs,
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: 2,
+        borderRadius: Shape.radius.sm,
     },
 });
