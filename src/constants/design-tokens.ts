@@ -187,6 +187,7 @@ export const Size = {
 export const ThemeIds = {
   DEEP_SPACE: 'deep-space',
   IVY: 'ivy',
+  EDITORIAL: 'editorial',
 } as const;
 
 export type ThemeId = typeof ThemeIds[keyof typeof ThemeIds];
@@ -195,6 +196,7 @@ export type ThemeId = typeof ThemeIds[keyof typeof ThemeIds];
 export const FontIds = {
   DEEP_SPACE: 'deep-space',
   IVY: 'ivy',
+  EDITORIAL: 'editorial',
 } as const;
 
 export type FontId = typeof FontIds[keyof typeof FontIds];
@@ -269,9 +271,19 @@ const IvyFonts: FontTheme = {
   subheading: 'Raleway-SemiBold',
 };
 
+const EditorialFonts: FontTheme = {
+  regular: 'Inter-Regular',
+  medium: 'Inter-Medium',
+  semibold: 'Inter-SemiBold',
+  bold: 'Inter-Bold',
+  heading: 'CrimsonText-Regular',
+  subheading: 'CrimsonText-Bold',
+};
+
 export const FontSchemes: Record<FontId, FontTheme> = {
   [FontIds.DEEP_SPACE]: DeepSpaceFonts,
   [FontIds.IVY]: IvyFonts,
+  [FontIds.EDITORIAL]: EditorialFonts,
 };
 
 export const getFontTheme = (fontId: FontId): FontTheme => {
@@ -395,6 +407,39 @@ export const IvyPalette = {
 // Backwards compatibility for now (though we should migrate away from direct Palette usage)
 // We alias Palette to DeepSpacePalette as it is the current default
 export const Palette = DeepSpacePalette;
+
+// === EDITORIAL PALETTE (Brand Guidelines) ===
+// Slate & Off-White Theme — calm, professional, warm
+export const EditorialPalette = {
+  // Neutrals
+  background: '#F8F9FA',        // Off-White (guidelines)
+  surface: '#FFFFFF',           // Pure white cards
+  surfaceHighlight: '#ECF0F1',  // Light Gray (guidelines)
+
+  // Text
+  textPrimary: '#2C3E50',       // Deep Slate (guidelines)
+  textSecondary: '#95A5A6',     // Medium Gray (guidelines)
+
+  // Brand / Accents
+  slateBlue: '#4A6FA5',         // Primary Accent (guidelines)
+  slateBlueDim: '#D6E4F0',      // Muted Slate Blue
+
+  // Semantic
+  green: '#27AE60',             // Confirmation/Safe (guidelines)
+  greenDim: '#D4EFDF',          // Muted green
+  amber: '#E67E22',             // Alert/Needs Attention (guidelines)
+  amberDim: '#FDEBD0',          // Muted amber
+  red: '#C0392B',               // Error/Critical (guidelines)
+  redDim: '#F5B7B1',            // Muted red
+  blue: '#2980B9',              // Asset
+  blueDim: '#D6EAF8',           // Muted blue
+  purple: '#8E44AD',            // Transfer
+
+  // Standard
+  white: '#FFFFFF',
+  black: '#000000',
+  transparent: 'transparent',
+} as const
 
 
 // === THEME TYPES ===
@@ -557,10 +602,74 @@ const IvyTheme: { light: Theme; dark: Theme } = {
   },
 };
 
+const EditorialTheme: { light: Theme; dark: Theme } = {
+  light: {
+    primary: EditorialPalette.slateBlue,
+    primaryLight: EditorialPalette.slateBlueDim,
+    success: EditorialPalette.green,
+    successLight: EditorialPalette.greenDim,
+    warning: EditorialPalette.amber,
+    warningLight: EditorialPalette.amberDim,
+    error: EditorialPalette.red,
+    errorLight: EditorialPalette.redDim,
+    asset: EditorialPalette.blue,
+    assetLight: EditorialPalette.blueDim,
+    liability: EditorialPalette.amber,
+    equity: EditorialPalette.green,
+    income: EditorialPalette.green,
+    expense: EditorialPalette.red,
+    transfer: EditorialPalette.purple,
+    background: EditorialPalette.background,
+    surface: EditorialPalette.surface,
+    surfaceSecondary: EditorialPalette.surfaceHighlight,
+    border: '#D5D8DC',
+    text: EditorialPalette.textPrimary,
+    textSecondary: '#5D6D7E',
+    textTertiary: EditorialPalette.textSecondary,
+    icon: '#5D6D7E',
+    overlay: 'rgba(44, 62, 80, 0.5)',
+    divider: '#D5D8DC',
+    pure: '#FFFFFF',
+    pureInverse: '#000000',
+    onPrimary: '#FFFFFF',
+  },
+  dark: {
+    primary: '#6B8FBF',         // Lighter slate blue for dark bg
+    primaryLight: '#1F3044',
+    success: '#2ECC71',
+    successLight: '#1A3D2B',
+    warning: EditorialPalette.amber,
+    warningLight: '#3D2A1A',
+    error: '#E74C3C',
+    errorLight: '#3D1A1A',
+    asset: '#5DADE2',
+    assetLight: '#1A2D3D',
+    liability: EditorialPalette.amber,
+    equity: '#2ECC71',
+    income: '#2ECC71',
+    expense: '#E74C3C',
+    transfer: '#A569BD',
+    background: '#1C2833',       // Deep Slate inverted for dark
+    surface: '#253545',
+    surfaceSecondary: '#2E4053',
+    border: '#34495E',
+    text: '#ECF0F1',
+    textSecondary: '#AAB7B8',
+    textTertiary: '#7F8C8D',
+    icon: '#AAB7B8',
+    overlay: 'rgba(0, 0, 0, 0.7)',
+    divider: '#34495E',
+    pure: '#000000',
+    pureInverse: '#FFFFFF',
+    onPrimary: '#FFFFFF',
+  },
+};
+
 // === THEME REGISTRY ===
 export const ThemeSchemes: Record<ThemeId, { light: Theme; dark: Theme }> = {
   [ThemeIds.DEEP_SPACE]: DeepSpaceTheme,
   [ThemeIds.IVY]: IvyTheme,
+  [ThemeIds.EDITORIAL]: EditorialTheme,
 };
 
 // Default export for backwards compatibility

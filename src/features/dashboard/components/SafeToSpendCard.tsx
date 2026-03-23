@@ -198,7 +198,7 @@ export const SafeToSpendCard = ({
                                 {zeroAccounts.length > 0 && (
                                     <View style={{ marginTop: Spacing.xs, gap: Spacing.xs }}>
                                         {positiveAccounts.length > 0 && (
-                                            <AppText variant="caption" color="secondary" style={{ fontSize: 9, opacity: 0.6, marginLeft: Spacing.xs }}>EMPTY ACCOUNTS</AppText>
+                                            <AppText variant="caption" color="secondary" style={{ fontSize: 9, opacity: Opacity.medium, marginLeft: Spacing.xs }}>{labels.emptyAccounts}</AppText>
                                         )}
                                         {zeroAccounts.map((acc, i) => renderAccount(acc, positiveAccounts.length + i, true))}
                                     </View>
@@ -456,7 +456,7 @@ export const SafeToSpendCard = ({
                             gap: Spacing.sm
                         }}>
                             <AppIcon name="calculator" size={Size.xs} color={theme.textTertiary} />
-                            <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1.5 }}>CALCULATION LEDGER</AppText>
+                            <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1.5 }}>{labels.calculationLedger}</AppText>
                         </View>
                     </Bleed>
 
@@ -532,7 +532,7 @@ export const SafeToSpendCard = ({
                                         </View>
                                     ))
                                 ) : (
-                                    <AppText variant="caption" color="secondary" italic>No future income tracked</AppText>
+                                    <AppText variant="caption" color="secondary" italic>{labels.noFutureIncome}</AppText>
                                 )}
                             </View>
                         </View>
@@ -583,12 +583,12 @@ export const SafeToSpendCard = ({
                                                                     color={theme.textSecondary}
                                                                 />
                                                                 <AppText variant="caption" color="secondary" style={{ fontSize: 10, lineHeight: 14 }}>{det.name}</AppText>
-                                                                <AppText style={{ fontSize: 8, opacity: 0.5, color: theme.textSecondary }}>
+                                                                <AppText style={{ fontSize: 8, opacity: Opacity.medium, color: theme.textSecondary }}>
                                                                     {det.type === 'BUDGET' ? 'Budget' : det.type === 'PLANNED_PAYMENT' ? 'Bill' : 'Plan'}
                                                                 </AppText>
                                                                 {isPostIncome && (
                                                                     <View style={{ backgroundColor: withOpacity(theme.success, 0.1), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: Spacing.xs }}>
-                                                                        <AppText style={{ fontSize: 8, color: theme.success, fontWeight: 'bold' }}>WAITING FOR INCOME</AppText>
+                                                                        <AppText style={{ fontSize: 8, color: theme.success, fontWeight: 'bold' }}>{labels.waitingForIncome}</AppText>
                                                                     </View>
                                                                 )}
                                                             </View>
@@ -629,7 +629,7 @@ export const SafeToSpendCard = ({
                     </TouchableOpacity>
                     {expandedSection === 'debts' && (
                         <View style={styles.expandedContentRow}>
-                            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.md, opacity: 0.8, fontStyle: 'italic' }}>
+                            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.md, opacity: Opacity.heavy, fontStyle: 'italic' }}>
                                 {labels.debtsHint}
                             </AppText>
 
@@ -639,7 +639,7 @@ export const SafeToSpendCard = ({
                                         <View style={{ flex: 1 }}>
                                             <AppText variant="caption" weight="bold">{acc.accountName}</AppText>
                                             <AppText variant="caption" color="secondary">
-                                                {acc.type === 'FALLBACK' ? 'Unplanned Balance' : 'Scheduled Commitment'}
+                                                {acc.type === 'FALLBACK' ? labels.unplannedBalance : labels.scheduledCommitment}
                                             </AppText>
                                         </View>
                                         <AppText variant="caption" weight="bold" color="error">–{format(acc.amount)}</AppText>
@@ -682,7 +682,7 @@ export const SafeToSpendCard = ({
                         }}>
                             <View style={{ flex: 1 }}>
                                 <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 1.5, marginBottom: 4 }}>SAFE TO SPEND</AppText>
-                                <AppText variant="caption" color="secondary" style={{ fontStyle: 'italic', opacity: 0.8 }}>Remaining cash buffer</AppText>
+                                <AppText variant="caption" color="secondary" style={{ fontStyle: 'italic', opacity: Opacity.heavy }}>{labels.remainingCashBuffer}</AppText>
                             </View>
                             <AppText
                                 variant="hero"

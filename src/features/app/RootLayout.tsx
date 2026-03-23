@@ -9,6 +9,10 @@ import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { analytics, posthogClient } from '@/src/services/analytics-service';
 import {
+  CrimsonText_400Regular,
+  CrimsonText_700Bold,
+} from '@expo-google-fonts/crimson-text';
+import {
   DMSerifDisplay_400Regular,
 } from '@expo-google-fonts/dm-serif-display';
 import {
@@ -18,6 +22,12 @@ import {
   InstrumentSans_700Bold,
   useFonts,
 } from '@expo-google-fonts/instrument-sans';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import {
   Raleway_400Regular,
   Raleway_500Medium,
@@ -63,6 +73,12 @@ export default function RootLayout() {
     'Raleway-Medium': Raleway_500Medium,
     'Raleway-SemiBold': Raleway_600SemiBold,
     'Raleway-Bold': Raleway_700Bold,
+    'CrimsonText-Regular': CrimsonText_400Regular,
+    'CrimsonText-Bold': CrimsonText_700Bold,
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
   });
 
 

@@ -71,6 +71,27 @@ export function AppearanceSettingsScreen() {
                             </View>
                         </AppCard>
                     </Pressable>
+
+                    <Pressable onPress={() => vm.setThemeId(ThemeIds.EDITORIAL)}>
+                        <AppCard
+                            elevation={vm.themeId === ThemeIds.EDITORIAL ? 'sm' : 'none'}
+                            style={[
+                                styles.optionCard,
+                                { borderWidth: vm.themeId === ThemeIds.EDITORIAL ? 2 : 1 },
+                                { borderColor: vm.themeId === ThemeIds.EDITORIAL ? theme.primary : theme.border }
+                            ]}
+                        >
+                            <View style={styles.optionContent}>
+                                <View style={[styles.colorPreview, { backgroundColor: '#2C3E50' }]} />
+                                <View style={{ flex: 1 }}>
+                                    <AppText weight="bold">{AppConfig.strings.settings.appearance.editorial.label}</AppText>
+                                    <AppText variant="caption" color="secondary">{AppConfig.strings.settings.appearance.editorial.desc}</AppText>
+                                </View>
+                                {vm.themeId === ThemeIds.EDITORIAL && <View style={[styles.radio, { borderColor: theme.primary, backgroundColor: theme.primary }]} />}
+                                {vm.themeId !== ThemeIds.EDITORIAL && <View style={[styles.radio, { borderColor: theme.border }]} />}
+                            </View>
+                        </AppCard>
+                    </Pressable>
                 </View>
 
 
@@ -127,6 +148,29 @@ export function AppearanceSettingsScreen() {
                                 </View>
                                 {vm.fontId === FontIds.IVY && <View style={[styles.radio, { borderColor: theme.primary, backgroundColor: theme.primary }]} />}
                                 {vm.fontId !== FontIds.IVY && <View style={[styles.radio, { borderColor: theme.border }]} />}
+                            </View>
+                        </AppCard>
+                    </Pressable>
+
+                    <Pressable onPress={() => vm.setFontId(FontIds.EDITORIAL)}>
+                        <AppCard
+                            elevation={vm.fontId === FontIds.EDITORIAL ? 'sm' : 'none'}
+                            style={[
+                                styles.optionCard,
+                                { borderWidth: vm.fontId === FontIds.EDITORIAL ? 2 : 1 },
+                                { borderColor: vm.fontId === FontIds.EDITORIAL ? theme.primary : theme.border }
+                            ]}
+                        >
+                            <View style={styles.optionContent}>
+                                <View style={{ flex: 1 }}>
+                                    <AppText variant="heading" style={{ fontFamily: FontSchemes[FontIds.EDITORIAL].heading, marginBottom: 4 }}>
+                                        {AppConfig.strings.settings.appearance.preview}
+                                    </AppText>
+                                    <AppText weight="bold">{AppConfig.strings.settings.appearance.classicSerif.label}</AppText>
+                                    <AppText variant="caption" color="secondary">{AppConfig.strings.settings.appearance.classicSerif.desc}</AppText>
+                                </View>
+                                {vm.fontId === FontIds.EDITORIAL && <View style={[styles.radio, { borderColor: theme.primary, backgroundColor: theme.primary }]} />}
+                                {vm.fontId !== FontIds.EDITORIAL && <View style={[styles.radio, { borderColor: theme.border }]} />}
                             </View>
                         </AppCard>
                     </Pressable>

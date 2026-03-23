@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { OnboardingSelectableStep } from '@/src/features/onboarding/components/OnboardingSelectableStep';
+import { OnboardingThemeStep } from '@/src/features/onboarding/components/OnboardingThemeStep';
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
 import { StepIndicator } from '@/src/features/onboarding/components/StepIndicator';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
@@ -83,6 +84,15 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
                 );
             case 5:
                 return (
+                    <OnboardingThemeStep
+                        key={step}
+                        onContinue={onContinue}
+                        onBack={onBack}
+                        isCompleting={false}
+                    />
+                );
+            case 6:
+                return (
                     <StepFinalize
                         key={step}
                         onFinish={onFinish}
@@ -103,7 +113,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
             <Box flex={1}>
                 <Inset horizontal="lg" top="lg" bottom={0} flex={1}>
                     <Box maxWidth={AppConfig.layout.maxContentWidth} width="100%" style={{ alignSelf: 'center' }} flex={1}>
-                        <StepIndicator currentStep={step} totalSteps={5} />
+                        <StepIndicator currentStep={step} totalSteps={6} />
                         {renderStep()}
                     </Box>
                 </Inset>
