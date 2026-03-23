@@ -12,7 +12,7 @@ import {
   RecurringPattern
 } from './TransactionTypes';
 import { transactionRepository } from './TransactionRepository';
-import { from, Observable } from 'rxjs';
+import { from, map, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 /**
@@ -679,6 +679,40 @@ class TransactionRawRepository {
   ): Observable<AccountDelta[]> {
     return transactionRepository.observeActive().pipe(
       switchMap(() => from(this.getAccountDeltasGroupedRaw(accountIds, startDate, endDate)))
+    );
+  }
+
+  /**
+   * Reactive version of unreconciled metrics.
+   */
+  observeUnreconciledMetricsRaw(
+    accountId: string,
+    reconciledAt: number | null,
+    isAssetOrExpense: boolean = true
+  ): Observable<{ count: number; total: number }> {
+    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const multiplierSql = isAssetOrExpense
+      ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
+      : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
+
+    return transactionRepository.observeActive().pipe(
+      switchMap(() => {
+        const sql = `
+          SELECT COUNT(*) as count, SUM(${multiplierSql}) as total
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.account_id = ?
+            AND (t.transaction_date > ? OR ? IS NULL)
+            AND t.deleted_at IS NULL
+            AND j.deleted_at IS NULL
+            AND j.status IN (${activeStatusesStr})
+        `;
+        return from(this.queryRaw<{ count: number; total: number | null }>(sql, [accountId, reconciledAt || 0, reconciledAt ?? 0]));
+      }),
+      map((raws: { count: number; total: number | null }[]) => ({
+        count: raws[0]?.count || 0,
+        total: raws[0]?.total || 0
+      }))
     );
   }
 }

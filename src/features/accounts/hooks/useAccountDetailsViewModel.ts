@@ -105,6 +105,8 @@ export interface AccountDetailsViewModel {
     isSubAccountsModalVisible: boolean;
     onShowSubAccounts: () => void;
     onHideSubAccounts: () => void;
+    unreconciledCount: number;
+    unreconciledAmountText: string;
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
@@ -554,6 +556,19 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
     const { groupedItems: rawGroupedItems } = useTransactionGrouping(transactionGroupingOptions);
 
+    const { data: unreconciledMetrics } = useObservable<{ count: number; total: number }>(
+        () => {
+            if (!accountId) return of({ count: 0, total: 0 });
+            return transactionRawRepository.observeUnreconciledMetricsRaw(
+                accountId,
+                reconciledAt?.getTime() || null,
+                isAssetOrExpense
+            );
+        },
+        [accountId, reconciledAt, isAssetOrExpense],
+        { count: 0, total: 0 }
+    );
+
     const transactionItems = useMemo(() => {
         if (!reconciledAt || !rawGroupedItems.length) return rawGroupedItems;
 
@@ -577,16 +592,34 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                         markerAdded = true;
                     }
                 } else if (item.type === 'separator') {
-                    // If the day separator itself is collapsed, and the reconTime falls within this day,
-                    // we mark it as 'added' so it doesn't appear later (which would look disjointed).
-                    // We also attach the reconTime to the separator so it can show the status in collapsed mode.
                     const startOfDay = item.date;
                     const endOfDay = startOfDay + (24 * 60 * 60 * 1000) - 1;
                     
-                    if (reconTime >= startOfDay && reconTime <= endOfDay) {
-                        itemToPush = { ...item, reconciledAt: reconTime } as any;
-                        if (item.isCollapsed) {
-                            markerAdded = true; 
+                    if (reconTime >= startOfDay) {
+                        if (reconTime <= endOfDay) {
+                            // Inside or exactly at day start; attach indicator and swallow if collapsed
+                            itemToPush = { ...item, reconciledAt: reconTime } as any;
+                            if (item.isCollapsed) {
+                                markerAdded = true; 
+                            }
+                        } else {
+                            // Recon time is in the future relative to this entire day.
+                            // Since we are going DESC, the marker belongs ABOVE this day.
+                            if (item.isCollapsed) {
+                                // For a better UX in collapsed view, if the day is fully reconciled, 
+                                // show the status on the header and swallow the marker line.
+                                itemToPush = { ...item, reconciledAt: reconTime } as any;
+                                markerAdded = true;
+                            } else {
+                                // If expanded, showing a separate divider before the day makes the boundary clear.
+                                result.push({
+                                    id: 'reconciled-separator',
+                                    type: 'separator' as any,
+                                    date: reconTime,
+                                    isReconciledMarker: true,
+                                } as any);
+                                markerAdded = true;
+                            }
                         }
                     }
                 }
@@ -756,5 +789,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         accountId,
         periodMetrics,
         periodMetricsFormatted,
+        unreconciledCount: unreconciledMetrics.count,
+        unreconciledAmountText: CurrencyFormatter.format(unreconciledMetrics.total, balanceCurrency),
     };
 }

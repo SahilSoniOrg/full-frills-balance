@@ -449,10 +449,14 @@ export const SafeToSpendCard = ({
                         <View style={{
                             padding: Spacing.lg,
                             borderBottomWidth: 1,
-                            borderBottomColor: withOpacity(theme.border, 0.2),
-                            backgroundColor: withOpacity(theme.surfaceSecondary, 0.5)
+                            borderBottomColor: withOpacity(theme.border, 0.4),
+                            backgroundColor: withOpacity(theme.surfaceSecondary, 0.5),
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: Spacing.sm
                         }}>
-                            <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 2 }}>CALCULATION LEDGER</AppText>
+                            <AppIcon name="calculator" size={Size.xs} color={theme.textTertiary} />
+                            <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1.5 }}>CALCULATION LEDGER</AppText>
                         </View>
                     </Bleed>
 
@@ -461,14 +465,19 @@ export const SafeToSpendCard = ({
                         style={{ flexDirection: 'row' }}
                         onPress={() => setExpandedSection(expandedSection === 'assets' ? null : 'assets')}
                     >
-                        <View style={{ width: 4, backgroundColor: theme.success }} />
+                        <View style={{ width: 4, backgroundColor: theme.primary }} />
                         <View style={{ flex: 1, padding: Spacing.lg }}>
                             <View style={styles.breakdownRow}>
-                                <View style={{ flex: 1 }}>
-                                    <AppText variant="caption" weight="bold" color="success" style={{ letterSpacing: 1, marginBottom: 2 }}>{info.formulaItems[0].split(': ')[0].toUpperCase()}</AppText>
-                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{info.formulaItems[0].split(': ')[1]}</AppText>
+                                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+                                    <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.primary, 0.1) }]}>
+                                        <AppIcon name="wallet" size={Size.sm} color={theme.primary} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{info.formulaItems[0].split(': ')[0].toUpperCase()}</AppText>
+                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{info.formulaItems[0].split(': ')[1]}</AppText>
+                                    </View>
                                 </View>
-                                <AppText variant="heading" color="success" style={{ fontSize: Typography.sizes.xl }}>+{format(totalLiquidAssets)}</AppText>
+                                <AppText variant="heading" color="primary" style={{ fontSize: Typography.sizes.xl }}>+{format(totalLiquidAssets)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -484,14 +493,19 @@ export const SafeToSpendCard = ({
                         style={{ flexDirection: 'row' }}
                         onPress={() => setExpandedSection(expandedSection === 'income' ? null : 'income')}
                     >
-                        <View style={{ width: 4, backgroundColor: theme.success }} />
+                        <View style={{ width: 4, backgroundColor: theme.primary }} />
                         <View style={{ flex: 1, padding: Spacing.lg }}>
                             <View style={styles.breakdownRow}>
-                                <View style={{ flex: 1 }}>
-                                    <AppText variant="caption" weight="bold" color="success" style={{ letterSpacing: 1, marginBottom: 2 }}>{labels.upcomingIncome.toUpperCase()}</AppText>
-                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[1].split(': ')[1]}</AppText>
+                                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+                                    <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.primary, 0.1) }]}>
+                                        <AppIcon name="arrowUpRight" size={Size.sm} color={theme.primary} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{labels.upcomingIncome.toUpperCase()}</AppText>
+                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[1].split(': ')[1]}</AppText>
+                                    </View>
                                 </View>
-                                <AppText variant="heading" color="success" style={{ fontSize: Typography.sizes.xl }}>+{format(totalFutureInflow)}</AppText>
+                                <AppText variant="heading" color="primary" style={{ fontSize: Typography.sizes.xl }}>+{format(totalFutureInflow)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -534,9 +548,14 @@ export const SafeToSpendCard = ({
                         <View style={{ width: 4, backgroundColor: theme.warning }} />
                         <View style={{ flex: 1, padding: Spacing.lg }}>
                             <View style={styles.breakdownRow}>
-                                <View style={{ flex: 1 }}>
-                                    <AppText variant="caption" weight="bold" color="warning" style={{ letterSpacing: 1, marginBottom: 2 }}>{labels.committedLine.split(' (')[0].toUpperCase()}</AppText>
-                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[2] ? formulaItems[2].split(': ')[1] : 'Bills and Budgets'}</AppText>
+                                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+                                    <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.warning, 0.1) }]}>
+                                        <AppIcon name="lock" size={Size.sm} color={theme.warning} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <AppText variant="caption" weight="bold" color="warning" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{labels.committedLine.split(' (')[0].toUpperCase()}</AppText>
+                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[2] ? formulaItems[2].split(': ')[1] : 'Bills and Budgets'}</AppText>
+                                    </View>
                                 </View>
                                 <AppText variant="heading" color="warning" style={{ fontSize: Typography.sizes.xl }}>–{format(committedBudget + committedPlanned)}</AppText>
                             </View>
@@ -568,9 +587,9 @@ export const SafeToSpendCard = ({
                                                                     {det.type === 'BUDGET' ? 'Budget' : det.type === 'PLANNED_PAYMENT' ? 'Bill' : 'Plan'}
                                                                 </AppText>
                                                                 {isPostIncome && (
-                                                                    <Badge size="sm" variant="success" style={{ paddingHorizontal: 6, paddingVertical: 1, height: 'auto', marginLeft: Spacing.xs }}>
-                                                                        <AppText style={{ fontSize: 7, color: theme.success, fontWeight: 'bold', lineHeight: 10 }}>POST-INCOME</AppText>
-                                                                    </Badge>
+                                                                    <View style={{ backgroundColor: withOpacity(theme.success, 0.1), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: Spacing.xs }}>
+                                                                        <AppText style={{ fontSize: 8, color: theme.success, fontWeight: 'bold' }}>WAITING FOR INCOME</AppText>
+                                                                    </View>
                                                                 )}
                                                             </View>
                                                         </View>
@@ -595,9 +614,14 @@ export const SafeToSpendCard = ({
                         <View style={{ width: 4, backgroundColor: theme.error }} />
                         <View style={{ flex: 1, padding: Spacing.lg }}>
                             <View style={styles.breakdownRow}>
-                                <View style={{ flex: 1 }}>
-                                    <AppText variant="caption" weight="bold" color="error" style={{ letterSpacing: 1, marginBottom: 2 }}>{labels.debtsBucket.toUpperCase()}</AppText>
-                                    <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[3] ? formulaItems[3].split(': ')[1] : 'Short-term liabilities'}</AppText>
+                                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+                                    <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.error, 0.1) }]}>
+                                        <AppIcon name="alertCircle" size={Size.sm} color={theme.error} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <AppText variant="caption" weight="bold" color="error" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{labels.debtsBucket.toUpperCase()}</AppText>
+                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[3] ? formulaItems[3].split(': ')[1] : 'Short-term liabilities'}</AppText>
+                                    </View>
                                 </View>
                                 <AppText variant="heading" color="error" style={{ fontSize: Typography.sizes.xl }}>–{format(committedLiabilities)}</AppText>
                             </View>
@@ -648,23 +672,17 @@ export const SafeToSpendCard = ({
                         <View style={{
                             flex: 1,
                             padding: Spacing.lg,
-                            backgroundColor: withOpacity(theme.primary, 0.12),
+                            backgroundColor: withOpacity(theme.primary, 0.08),
                             borderTopWidth: 1,
-                            borderTopColor: withOpacity(theme.primary, 0.4),
-                            borderStyle: 'solid'
+                            borderTopColor: withOpacity(theme.primary, 0.3),
+                            borderStyle: 'solid',
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
                         }}>
-                            <View style={{ marginBottom: Spacing.md }}>
-                                <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1, marginBottom: 2 }}>{formulaItems[4].toUpperCase()}</AppText>
-                                <AppText
-                                    variant="heading"
-                                    style={{
-                                        fontFamily: Typography.fonts.heading,
-                                        fontSize: Typography.sizes.xxl,
-                                        color: theme.primary
-                                    }}
-                                >
-                                    Safe to Spend
-                                </AppText>
+                            <View style={{ flex: 1 }}>
+                                <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 1.5, marginBottom: 4 }}>SAFE TO SPEND</AppText>
+                                <AppText variant="caption" color="secondary" style={{ fontStyle: 'italic', opacity: 0.8 }}>Remaining cash buffer</AppText>
                             </View>
                             <AppText
                                 variant="hero"
@@ -672,6 +690,7 @@ export const SafeToSpendCard = ({
                                 style={{
                                     fontFamily: Typography.fonts.heading,
                                     fontSize: Typography.sizes.xxxl,
+                                    textAlign: 'right'
                                 }}
                             >
                                 {format(safeToSpend)}
@@ -833,9 +852,9 @@ export const SafeToSpendCard = ({
                                                                 <AppText variant="caption" color="secondary" numberOfLines={1}>
 
                                                                     {isPostIncome && (
-                                                                        <Badge size="sm" variant="success" style={{ paddingHorizontal: 6, paddingVertical: 2, height: 'auto', marginLeft: Spacing.xs }}>
-                                                                            <AppText style={{ fontSize: 7, color: theme.success, fontWeight: 'bold', lineHeight: 10 }}>PI</AppText>
-                                                                        </Badge>
+                                                                        <View style={{ backgroundColor: withOpacity(theme.success, 0.1), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: Spacing.xs }}>
+                                                                            <AppText style={{ fontSize: 8, color: theme.success, fontWeight: 'bold' }}>WAITING FOR INCOME</AppText>
+                                                                        </View>
                                                                     )}
                                                                     {d.name}
                                                                 </AppText>
@@ -1087,5 +1106,12 @@ const styles = StyleSheet.create({
     accountBreakdownTitle: {
         marginBottom: Spacing.xs,
         opacity: Opacity.heavy,
+    },
+    stepIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

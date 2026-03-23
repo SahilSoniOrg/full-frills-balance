@@ -120,7 +120,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                             name: 'checkCircle',
                             onPress: headerActions.onReconcile,
                             variant: 'surface',
-                            iconColor: theme.income,
+                            iconColor: vm.unreconciledCount > 0 ? theme.warning : (vm.reconciledAt ? theme.success : theme.textSecondary),
                             testID: 'reconcile-button',
                         },
                         {
@@ -315,15 +315,30 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                         variant: 'ghost',
                     },
                     {
-                        label: AppConfig.strings.common.confirm,
+                        label: 'Reconcile',
                         onPress: vm.onConfirmReconcile,
                         variant: 'primary',
                     },
                 ]}
                 fixedHeight={false}
             >
-                <AppText variant="body">
+                <AppText style={{ color: theme.textSecondary, marginBottom: 12 }}>
                     {AppConfig.strings.accounts.reconciliation.alert.message}
+                </AppText>
+
+                {vm.unreconciledCount > 0 && (
+                    <View style={{ backgroundColor: theme.surfaceSecondary, padding: 12, borderRadius: 8, marginBottom: 16 }}>
+                        <AppText style={{ color: theme.text, fontWeight: '600', marginBottom: 4 }}>
+                            {AppConfig.strings.accounts.reconciliation.alert.matchingBalance(vm.balanceText)}
+                        </AppText>
+                        <AppText style={{ color: theme.textSecondary, fontSize: 13 }}>
+                            {AppConfig.strings.accounts.reconciliation.alert.pendingTransactions(vm.unreconciledCount)}
+                        </AppText>
+                    </View>
+                )}
+
+                <AppText style={{ color: theme.textSecondary, fontSize: 13, fontStyle: 'italic', marginBottom: 16 }}>
+                    {AppConfig.strings.accounts.reconciliation.alert.guide}
                 </AppText>
             </PopupModal>
         </Screen>

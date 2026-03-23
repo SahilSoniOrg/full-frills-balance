@@ -1,7 +1,7 @@
 import { AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateUtils';
+import { formatDaySeparator, formatReconciledTime, formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { formatCurrency } from '@/src/utils/money';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -20,7 +20,7 @@ interface DaySeparatorProps {
 export function DaySeparator({ date, isCollapsed, onToggle, count, netAmount, currencyCode, isReconciledMarker, reconciledAt }: DaySeparatorProps) {
     const { theme } = useTheme();
     const label = isReconciledMarker 
-        ? AppConfig.strings.journal.reconciledUntilHereWithTime(formatReconciledTime(date)) 
+        ? AppConfig.strings.journal.reconciledUntilHere(formatRelativeReconciledDate(date)) 
         : formatDaySeparator(date);
 
     const hasStats = count !== undefined && netAmount !== undefined;
