@@ -373,18 +373,18 @@ export const SafeToSpendCard = ({
                                 hideLabels={isPrivacyMode}
                                 extraHorizontalLines={extraHorizontalLines}
                             />
-                            {projection.safeDaysCount !== null && (
-                                <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
-                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={Size.sm} color={theme.success} />
-                                    <AppText variant="caption" weight="medium" color="success">
-                                        Safe for the next {projection.safeDaysCount > AppConfig.defaults.safeToSpendDaysCap ? `${AppConfig.defaults.safeToSpendDaysCap}+` : projection.safeDaysCount} days
+                            {projection.safeDaysCount !== null && !isOverCommitted && (
+                                <View style={[styles.safetyMetricContainer, { backgroundColor: withOpacity(theme.success, 0.1), borderColor: withOpacity(theme.success, 0.2), borderWidth: 1 }]}>
+                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={14} color={theme.success} />
+                                    <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 11 }}>
+                                        Safe for the next {projection.safeDaysCount > AppConfig.defaults.safeToSpendDaysCap ? `${AppConfig.defaults.safeToSpendDaysCap}+` : projection.safeDaysCount} {projection.safeDaysCount === 1 ? 'day' : 'days'}
                                     </AppText>
                                 </View>
                             )}
-                            {projection.safeDaysCount === null && (
-                                <View style={[styles.safetyMetricContainer, { backgroundColor: theme.surfaceSecondary }]}>
-                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={Size.sm} color={theme.success} />
-                                    <AppText variant="caption" weight="medium" color="success">
+                            {projection.safeDaysCount === null && !isOverCommitted && (
+                                <View style={[styles.safetyMetricContainer, { backgroundColor: withOpacity(theme.success, 0.1), borderColor: withOpacity(theme.success, 0.2), borderWidth: 1 }]}>
+                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={14} color={theme.success} />
+                                    <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 11 }}>
                                         {labels.financiallySecure}
                                     </AppText>
                                 </View>
@@ -971,10 +971,12 @@ const styles = StyleSheet.create({
     safetyMetricContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: Spacing.sm,
+        alignSelf: 'flex-start',
+        gap: Spacing.xs,
         marginTop: Spacing.md,
-        padding: Spacing.sm,
-        borderRadius: Shape.radius.md,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.xs,
+        borderRadius: Shape.radius.full,
     },
     modalHighlight: {
         padding: Spacing.md,

@@ -92,7 +92,7 @@ export class CashFlowSimulationService {
         let currentBalance = startingBalance;
         let minBalance = currentBalance;
         const projectionPoints: { timestamp: number, value: number, isProjected: boolean }[] = [];
-        let safeDaysCount: number | null = null;
+        let safeDaysCount: number | null = (startingBalance.amount < 0) ? 0 : null;
 
         projectionPoints.push({ timestamp: now.valueOf(), value: currentBalance.amount, isProjected: true });
 
