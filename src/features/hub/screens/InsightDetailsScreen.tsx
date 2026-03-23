@@ -11,22 +11,12 @@ import { useInsightDetailsViewModel } from '../hooks/useInsightDetailsViewModel'
 
 export default function InsightDetailsScreen() {
     const { theme, fonts } = useTheme();
-    const params = useLocalSearchParams<{
-        id: string;
-        message: string;
-        description: string;
-        suggestion: string;
-        journalIds: string;
-        severity: string;
-        amount?: string;
-        currencyCode?: string;
-    }>();
+    const params = useLocalSearchParams<any>();
+    const { insightDetails: strings } = AppConfig.strings.dashboard;
 
-    const journalIds = useMemo(() =>
-        params.journalIds ? params.journalIds.split(',') : []
-        , [params.journalIds]);
-
-    const { items, isLoading } = useInsightDetailsViewModel({ journalIds });
+    const { items, isLoading } = useInsightDetailsViewModel({
+        journalIds: params.journalIds ? params.journalIds.split(',') : []
+    });
     const amount = useMemo(() => {
         if (!params.amount) return null;
         const parsed = Number(params.amount);
@@ -35,13 +25,13 @@ export default function InsightDetailsScreen() {
 
     const severityMeta = useMemo(() => {
         if (params.severity === 'high') {
-            return { color: theme.error, label: 'Action needed' };
+            return { color: theme.error, label: strings.severityLabel.high };
         }
         if (params.severity === 'medium') {
-            return { color: theme.warning, label: 'Watch' };
+            return { color: theme.warning, label: strings.severityLabel.medium };
         }
-        return { color: theme.primary, label: 'Info' };
-    }, [params.severity, theme.error, theme.primary, theme.warning]);
+        return { color: theme.primary, label: strings.severityLabel.low };
+    }, [params.severity, theme.error, theme.primary, theme.warning, strings.severityLabel]);
 
     const listHeader = (
         <View style={styles.headerContainer}>
@@ -60,7 +50,7 @@ export default function InsightDetailsScreen() {
                 </View>
                 <View style={[styles.iconCircle, { backgroundColor: withOpacity(severityMeta.color, Opacity.hover) }]}>
                     <AppIcon
-                        name={params.id?.startsWith('sub_') ? 'repeat' : 'trendingUp'}
+                        name={params.id?.startsWith('sub_') ? 'refresh' : 'trendingUp'}
                         size={Size.md}
                         color={severityMeta.color}
                     />
@@ -71,7 +61,7 @@ export default function InsightDetailsScreen() {
                 {amount !== null ? (
                     <View style={[styles.amountCard, { backgroundColor: withOpacity(severityMeta.color, Opacity.hover) }]}>
                         <AppText variant="caption" weight="medium" style={{ color: severityMeta.color }}>
-                            Impact
+                            {strings.impact}
                         </AppText>
                         <AppText variant="title" style={{ color: severityMeta.color, fontFamily: fonts.bold }}>
                             {CurrencyFormatter.format(amount, params.currencyCode)}
@@ -80,14 +70,14 @@ export default function InsightDetailsScreen() {
                 ) : null}
                 {params.description ? (
                     <AppText variant="body" color="secondary" style={styles.description}>
-                        Why this appeared: {params.description}
+                        {strings.whyThisAppeared}{params.description}
                     </AppText>
                 ) : null}
                 <View style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                     <View style={styles.actionHeader}>
                         <AppIcon name="checkCircle" size={16} color={theme.textSecondary} />
                         <AppText variant="caption" color="secondary" weight="semibold">
-                            Recommended action
+                            {strings.recommendedAction}
                         </AppText>
                     </View>
                     <AppText variant="body" color="secondary" style={styles.suggestion}>
@@ -95,7 +85,7 @@ export default function InsightDetailsScreen() {
                     </AppText>
                 </View>
                 <AppText variant="caption" color="secondary" style={styles.basisText}>
-                    Based on last {AppConfig.insights.lookbackDays} days of activity
+                    {strings.basisText(AppConfig.insights.lookbackDays)}
                 </AppText>
             </View>
             <AppText variant="subheading" color="secondary" style={styles.listTitle}>
@@ -105,14 +95,14 @@ export default function InsightDetailsScreen() {
     );
 
     return (
-        <Screen title="Insight Details" withPadding={false}>
+        <Screen title={strings.title} withPadding={false}>
             <TransactionListView
                 items={items}
                 isLoading={isLoading}
                 ListHeaderComponent={listHeader}
                 contentContainerStyle={styles.listContent}
-                emptyTitle="No transactions found"
-                emptySubtitle="The transactions for this insight might have been deleted."
+                emptyTitle={strings.emptyTitle}
+                emptySubtitle={strings.emptySubtitle}
             />
         </Screen>
     );

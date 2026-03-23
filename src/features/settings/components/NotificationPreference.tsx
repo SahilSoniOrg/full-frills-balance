@@ -4,7 +4,7 @@ import { AppConfig, Spacing } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { notificationService } from '@/src/services/NotificationService';
+import { notificationService } from '@/src/services/notification/NotificationService';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';

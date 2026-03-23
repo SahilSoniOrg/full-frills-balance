@@ -1,6 +1,6 @@
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppIcon, AppText } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -17,51 +17,52 @@ export function EmergencyFundPopupModal({
     onCreateAccount,
 }: EmergencyFundPopupModalProps) {
     const { theme } = useTheme();
+    const { emergencyFund: strings } = AppConfig.strings.dashboard.hub;
 
     return (
         <PopupModal
             visible={visible}
-            title="Build an Emergency Fund"
+            title={strings.title}
             onClose={onClose}
             maxHeightPercent={72}
             fixedHeight={false}
             scrollable={false}
-            accessibilityCloseLabel="Close emergency fund guidance"
+            accessibilityCloseLabel={strings.title}
             actions={[
-                { label: 'Got it', variant: 'secondary', onPress: onClose },
-                { label: 'Create account', variant: 'primary', onPress: onCreateAccount },
+                { label: strings.actionClose, variant: 'secondary', onPress: onClose },
+                { label: strings.actionCreate, variant: 'primary', onPress: onCreateAccount },
             ]}
         >
             <View style={styles.modalSection}>
                 <AppText variant="body">
-                    This insight appears because we did not detect a dedicated emergency-fund account in your assets.
+                    {strings.description}
                 </AppText>
             </View>
 
             <View style={[styles.modalHighlight, { backgroundColor: theme.surfaceSecondary }]}>
                 <AppText variant="body" weight="medium" color="primary">
-                    A separate emergency fund makes your cash buffer visible and protects routine spending from surprise expenses.
+                    {strings.highlight}
                 </AppText>
             </View>
 
             <View style={styles.modalSection}>
-                <AppText variant="heading">How to fix it</AppText>
+                <AppText variant="heading">{strings.fixTitle}</AppText>
                 <View style={styles.modalStepRow}>
                     <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
                     <AppText variant="caption" color="secondary" style={styles.modalStepText}>
-                        Create a new Asset account.
+                        {strings.step1}
                     </AppText>
                 </View>
                 <View style={styles.modalStepRow}>
                     <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
                     <AppText variant="caption" color="secondary" style={styles.modalStepText}>
-                        Select the Emergency Fund subtype.
+                        {strings.step2}
                     </AppText>
                 </View>
                 <View style={styles.modalStepRow}>
                     <AppIcon name="chevronRight" size={Size.iconXs} color={theme.primary} />
                     <AppText variant="caption" color="secondary" style={styles.modalStepText}>
-                        Start with a small recurring transfer to build momentum.
+                        {strings.step3}
                     </AppText>
                 </View>
             </View>

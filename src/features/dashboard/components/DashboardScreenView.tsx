@@ -3,11 +3,10 @@ import { Spacing } from '@/src/constants';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
-import { AppNavigation } from '@/src/utils/navigation';
 
+import { Inset, Page, Skeleton, Stack } from '@/src/design-system';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Inset, Page, Skeleton, Stack } from '@/src/design-system';
 import { SafeToSpendCard } from './SafeToSpendCard';
 
 export function DashboardScreenView({
@@ -56,7 +55,6 @@ export function DashboardScreenView({
                     <View>
                         <DashboardHeader
                             {...headerProps}
-                            onInsightsPress={AppNavigation.toInsights}
                         />
                         {safeToSpendData && (
                             <SafeToSpendCard

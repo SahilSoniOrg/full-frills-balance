@@ -1,28 +1,26 @@
 import { AppText, IconButton } from '@/src/components/core';
 import { Size } from '@/src/constants';
+import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Pattern } from '@/src/services/insight-service';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Box, Inline } from '@/src/design-system';
 
 interface DashboardHeaderProps {
     greeting: string;
-    patterns?: Pattern[];
-    onInsightsPress?: () => void;
+    notificationCount?: number;
+    onNotificationsPress?: () => void;
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
 }
 
 export function DashboardHeader({
     greeting,
-    patterns = [],
-    onInsightsPress,
+    notificationCount = 0,
+    onNotificationsPress,
     isPrivacyMode,
     onTogglePrivacy
 }: DashboardHeaderProps) {
     const { theme } = useTheme();
-    const insightsCount = patterns.length;
 
     return (
         <Box marginBottom="sm">
@@ -42,18 +40,18 @@ export function DashboardHeader({
                         accessibilityLabel={isPrivacyMode ? "Show balances" : "Hide balances"}
                         iconColor={theme.text}
                     />
-                    {onInsightsPress && (
+                    {onNotificationsPress && (
                         <View style={styles.bellContainer}>
                             <IconButton
                                 name="sparkles"
                                 size={Size.iconSm}
                                 variant="clear"
-                                onPress={onInsightsPress}
+                                onPress={onNotificationsPress}
                                 accessibilityRole="button"
-                                accessibilityLabel="View Insights"
+                                accessibilityLabel="View Notifications"
                                 iconColor={theme.text}
                             />
-                            {insightsCount > 0 && (
+                            {notificationCount > 0 && (
                                 <View style={[styles.badge, { backgroundColor: theme.error }]} />
                             )}
                         </View>

@@ -11,7 +11,7 @@ import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 
-export interface Pattern {
+export interface Insight {
     id: string;
     type: 'slow-leak' | 'phantom-surplus' | 'subscription-amnesiac' | 'lifestyle-drift';
     severity: 'low' | 'medium' | 'high';
@@ -25,18 +25,18 @@ export interface Pattern {
     accountName?: string;
 }
 
-export class PatternService {
+export class InsightService {
     private refreshTrigger = new BehaviorSubject<void>(undefined);
 
-    observeDismissedPatterns(): Observable<Pattern[]> {
+    observeDismissedPatterns(): Observable<Insight[]> {
         return this.observePatternsInternal(true);
     }
 
-    observePatterns(): Observable<Pattern[]> {
+    observePatterns(): Observable<Insight[]> {
         return this.observePatternsInternal(false);
     }
 
-    private observePatternsInternal(onlyDismissed: boolean): Observable<Pattern[]> {
+    private observePatternsInternal(onlyDismissed: boolean): Observable<Insight[]> {
         const insightsConfig = AppConfig.insights;
         const lookbackDays = insightsConfig.lookbackDays;
 
@@ -63,7 +63,7 @@ export class PatternService {
                     ninetyDaysAgo as number,
                     minCount
                 );
-                const patterns: Pattern[] = [];
+                const patterns: Insight[] = [];
 
                 for (const candidate of recurringCandidates) {
                     const acc = accountMap.get(candidate.accountId);
@@ -108,9 +108,9 @@ export class PatternService {
                                 id: `sub_${amount}_${candidate.accountId}_${description.replace(/\s+/g, '_')}`,
                                 type: 'subscription-amnesiac',
                                 severity: amount > insightsConfig.spendingSpikeSeverityThreshold ? 'high' : 'medium',
-                                message: 'Subscription Amnesia',
-                                description: `You have a recurring payment of ${formattedAmount} for "${description}" in "${accountName}".`,
-                                suggestion: 'Review this regular expense to see if it still provides value.',
+                                message: AppConfig.strings.dashboard.hub.subscriptionAmnesia.message,
+                                description: AppConfig.strings.dashboard.hub.subscriptionAmnesia.description(formattedAmount, description, accountName),
+                                suggestion: AppConfig.strings.dashboard.hub.subscriptionAmnesia.suggestion,
                                 journalIds: group.map(t => t.journalId),
                                 amount,
                                 currencyCode: candidate.currencyCode,
@@ -130,7 +130,7 @@ export class PatternService {
                     Date.now()
                 );
 
-                const finalPatterns = patterns.filter((p: Pattern) => {
+                const finalPatterns = patterns.filter((p: Insight) => {
                     if (p.type !== 'subscription-amnesiac') return true;
                     const account = accounts.find((a: Account) => a.name === p.accountName);
                     if (!account) return true;
@@ -186,9 +186,9 @@ export class PatternService {
                             id: `leak_${subtype}`,
                             type: 'slow-leak',
                             severity: 'low',
-                            message: 'Spending Spike',
-                            description: `Spending on "${formattedSubtype}" is ${percentIncrease}% higher than your weekly average.`,
-                            suggestion: 'Check your recent activity in this category for any unusual spends.',
+                            message: AppConfig.strings.dashboard.hub.spendingSpike.message,
+                            description: AppConfig.strings.dashboard.hub.spendingSpike.description(formattedSubtype, percentIncrease),
+                            suggestion: AppConfig.strings.dashboard.hub.spendingSpike.suggestion,
                             journalIds: Array.from(new Set(currentWeekTransactions.filter(t => accountMap.get(t.accountId)?.accountSubtype === subtype).map(t => t.journalId)))
                         });
                     }
@@ -197,16 +197,17 @@ export class PatternService {
                 const assets = accounts.filter(a => a.accountType === AccountType.ASSET);
                 if (assets.length > 0) {
                     const hasEmergencyFund = assets.some(a => a.accountSubtype === 'EMERGENCY_FUND');
-                    const hasSignificantAssets = assets.length > 3;
+                    const hasSignificantAssets = assets.length >= 3;
 
                     if (!hasEmergencyFund && hasSignificantAssets) {
+                        const { insight: strings } = AppConfig.strings.dashboard.hub.emergencyFund;
                         finalPatterns.push({
                             id: `no_emergency_fund`,
                             type: 'lifestyle-drift',
                             severity: 'medium',
-                            message: 'No Emergency Fund',
-                            description: `You don't have a dedicated account for emergencies.`,
-                            suggestion: 'Consider creating an "Emergency Fund" asset account to track savings meant for unexpected expenses.',
+                            message: strings.message,
+                            description: strings.description,
+                            suggestion: strings.suggestion,
                             journalIds: []
                         });
                     }
@@ -232,4 +233,4 @@ export class PatternService {
     }
 }
 
-export const patternService = new PatternService();
+export const insightService = new InsightService();

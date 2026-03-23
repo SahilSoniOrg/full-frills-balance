@@ -31,6 +31,7 @@ export interface UIPreferences {
   notificationHour: number;
   notificationMinute: number;
   notificationWeekday: number; // 1-7 (Mon-Sun)
+  isSmsImportEnabled: boolean;
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -51,6 +52,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationHour: 10,
   notificationMinute: 0,
   notificationWeekday: 1, // Monday
+  isSmsImportEnabled: false,
 };
 
 class PreferencesHelper {
@@ -304,6 +306,14 @@ class PreferencesHelper {
 
   setNotificationWeekday(weekday: number): void {
     this.updatePreferences({ notificationWeekday: weekday });
+  }
+
+  get isSmsImportEnabled(): boolean {
+    return this.preferences.isSmsImportEnabled ?? false;
+  }
+
+  setIsSmsImportEnabled(enabled: boolean): void {
+    this.updatePreferences({ isSmsImportEnabled: enabled });
   }
 
   get dismissedPatternIds(): string[] {

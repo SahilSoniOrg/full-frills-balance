@@ -2,10 +2,13 @@ import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
-import { insightService, Pattern, patternService, SafeToSpendResult } from '@/src/services/insight-service';
+import { notificationService, SafeToSpendResult } from '@/src/services/notification/NotificationService';
+import { insightService } from '@/src/services/insight/InsightService';
+import { smsService } from '@/src/services/sms-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo } from 'react';
 import { Platform, UIManager } from 'react-native';
+import { of } from 'rxjs';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -17,9 +20,10 @@ export interface DashboardViewModel {
     listViewProps: Omit<JournalListViewProps, 'screenTitle' | 'showBack' | 'listHeader' | 'fab'>;
     headerProps: {
         greeting: string;
-        patterns: Pattern[];
+        notificationCount: number;
         isPrivacyMode: boolean;
         onTogglePrivacy: () => void;
+        onNotificationsPress: () => void;
     };
     transactionSectionTitle: string;
     fab: {
@@ -36,16 +40,24 @@ export function useDashboardViewModel(): DashboardViewModel {
     }, [isPrivacyMode, setPrivacyMode]);
 
     const { data: safeToSpendData } = useObservable(
-        () => insightService.observeSafeToSpend(),
+        () => notificationService.observeSafeToSpend(),
         [],
         null
     );
 
-    const { data: patterns } = useObservable(
-        () => patternService.observePatterns(),
+    const { data: insights } = useObservable(
+        () => insightService.observePatterns(),
         [],
         []
     );
+
+    const { data: unreadSmsCount } = useObservable(
+        () => Platform.OS === 'android' ? smsService.observeUnprocessedCount() : of(0),
+        [],
+        0
+    );
+
+    const totalNotifications = (insights?.length || 0) + (unreadSmsCount || 0);
 
     const { strings } = AppConfig;
 
@@ -68,10 +80,11 @@ export function useDashboardViewModel(): DashboardViewModel {
     // Memoize headerProps to prevent re-renders when observables fire
     const headerProps = useMemo(() => ({
         greeting,
-        patterns,
+        notificationCount: totalNotifications,
         isPrivacyMode,
         onTogglePrivacy,
-    }), [greeting, patterns, isPrivacyMode, onTogglePrivacy]);
+        onNotificationsPress: AppNavigation.toHub,
+    }), [greeting, totalNotifications, isPrivacyMode, onTogglePrivacy]);
 
     // Memoize fab object to prevent re-renders
     const fab = useMemo(() => ({

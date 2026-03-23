@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
-import { insightService } from '@/src/services/insight-service';
+import { notificationService } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { Platform } from 'react-native';
@@ -94,7 +94,7 @@ export function useWidgetSync() {
   const { themeId, isWidgetPrivacyEnabled } = useUI();
   const { theme, themeMode } = useTheme();
   const { data: safeToSpendData } = useObservable(
-    () => insightService.observeSafeToSpend(),
+    () => notificationService.observeSafeToSpend(),
     [],
     null
   );

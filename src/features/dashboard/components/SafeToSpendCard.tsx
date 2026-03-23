@@ -6,7 +6,7 @@ import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Bleed, Box, FadeIn, Inline, Separator, Skeleton, Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { SafeToSpendProjection } from '@/src/services/insight-service';
+import { SafeToSpendProjection } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import React from 'react';

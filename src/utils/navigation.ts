@@ -106,18 +106,18 @@ export const AppNavigation = {
      * Navigate to the Transaction Details screen.
      * Supports optional preview data for immediate rendering while the full record loads.
      */
-    toTransactionDetails: (journalId: string, preview?: { 
-        title?: string; 
-        amount?: number; 
-        currencyCode?: string; 
-        date?: number; 
-        typeColor?: string; 
+    toTransactionDetails: (journalId: string, preview?: {
+        title?: string;
+        amount?: number;
+        currencyCode?: string;
+        date?: number;
+        typeColor?: string;
         typeIcon?: string;
         displayType?: string;
     }) => {
         const queryParams = new URLSearchParams();
         queryParams.append('journalId', journalId);
-        
+
         if (preview) {
             if (preview.title) queryParams.append('title', preview.title);
             if (preview.amount !== undefined) queryParams.append('amount', String(preview.amount));
@@ -134,8 +134,8 @@ export const AppNavigation = {
     /**
      * Navigate to the Account Details screen.
      */
-    toAccountDetails: (accountId: string, options?: { 
-        startDate?: number; 
+    toAccountDetails: (accountId: string, options?: {
+        startDate?: number;
         endDate?: number;
         preview?: {
             name?: string;
@@ -387,10 +387,18 @@ export const AppNavigation = {
     },
 
     /**
-     * Navigate to insights list.
+     * Navigate to the Hub (Notifications & Insights).
      */
-    toInsights: () => {
-        router.push('/insights' as any);
+    toHub: () => {
+        router.push('/hub' as any);
+    },
+
+    /**
+     * Navigate to notifications list.
+     * @deprecated Use toHub instead
+     */
+    toNotifications: () => {
+        router.push('/hub' as any);
     },
 
     /**
@@ -448,6 +456,14 @@ export const AppNavigation = {
                 currencyCode: params.currencyCode,
             },
         } as any);
+    },
+
+    /**
+     * Navigate to notification details with route params.
+     * @deprecated Use toInsightDetails instead
+     */
+    toNotificationDetails: (params: any) => {
+        AppNavigation.toInsightDetails(params);
     },
 
     /**

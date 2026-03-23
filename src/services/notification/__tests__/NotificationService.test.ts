@@ -6,7 +6,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
-import { insightService } from '@/src/services/insight-service';
+import { notificationService } from '@/src/services/notification/NotificationService';
 import { of } from 'rxjs';
 
 // Mock dependencies
@@ -27,7 +27,7 @@ jest.mock('@/src/utils/preferences', () => ({
     }
 }));
 
-describe('InsightService', () => {
+describe('NotificationService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
@@ -45,6 +45,7 @@ describe('InsightService', () => {
         (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
         (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
         (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
+        (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
         (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
     });
 
@@ -74,7 +75,7 @@ describe('InsightService', () => {
             });
             (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
 
-            insightService.observeSafeToSpend().subscribe(result => {
+            notificationService.observeSafeToSpend().subscribe(result => {
                 // Expected: 
                 // Liquid Assets = a1 (5000)
                 // Liquid Liabilities = l1 (1000) 

@@ -447,7 +447,7 @@ export class CashFlowSimulationService {
         }
 
         for (const lb of liabilityAccountBalances) {
-            const balanceMoney = lb.balance; // Already in resultCurrency from InsightService
+            const balanceMoney = lb.balance; // Already in resultCurrency from NotificationService
             if (balanceMoney.amount <= 0) continue;
 
             const convMoney = balanceMoney;

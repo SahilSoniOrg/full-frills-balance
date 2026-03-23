@@ -1,90 +1,90 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Pattern, patternService } from '@/src/services/insight-service';
+import { Insight, insightService } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';
 
-interface InsightWidgetProps {
-    patterns: Pattern[];
+interface HubWidgetProps {
+    insights: Insight[];
     hideManageDismissed?: boolean;
 }
 
-export const InsightWidget = ({ patterns, hideManageDismissed = false }: InsightWidgetProps) => {
+export const HubWidget = ({ insights, hideManageDismissed = false }: HubWidgetProps) => {
     const { theme, fonts } = useTheme();
     const [isEmergencyFundInfoVisible, setEmergencyFundInfoVisible] = React.useState(false);
 
     const handleDismiss = async (id: string) => {
-        await patternService.dismissPattern(id);
+        await insightService.dismissPattern(id);
     };
 
-    const isEmergencyFundPattern = (pattern: Pattern) => pattern.id === 'no_emergency_fund';
+    const isEmergencyFundInsight = (insight: Insight) => insight.id === 'no_emergency_fund';
 
-    const handleOpenInsightDetails = (pattern: Pattern) => {
+    const handleOpenInsightDetails = (insight: Insight) => {
         AppNavigation.toInsightDetails({
-            id: pattern.id,
-            message: pattern.message,
-            description: pattern.description,
-            suggestion: pattern.suggestion,
-            journalIds: pattern.journalIds,
-            severity: pattern.severity,
-            amount: pattern.amount,
-            currencyCode: pattern.currencyCode,
+            id: insight.id,
+            message: insight.message,
+            description: insight.description,
+            suggestion: insight.suggestion,
+            journalIds: insight.journalIds,
+            severity: insight.severity,
+            amount: insight.amount,
+            currencyCode: insight.currencyCode,
         });
     };
 
     const handleEmergencyFundPress = () => setEmergencyFundInfoVisible(true);
 
-    const handlePress = (pattern: Pattern) => {
-        if (isEmergencyFundPattern(pattern)) {
+    const handlePress = (insight: Insight) => {
+        if (isEmergencyFundInsight(insight)) {
             handleEmergencyFundPress();
             return;
         }
-        handleOpenInsightDetails(pattern);
+        handleOpenInsightDetails(insight);
     };
 
-    if (patterns.length === 0) return null;
+    if (insights.length === 0) return null;
 
     const handleManageDismissed = () => {
-        AppNavigation.toInsights();
+        AppNavigation.toHub();
     };
 
-    const getSeverityMeta = (severity: Pattern['severity']) => {
+    const getSeverityMeta = (severity: Insight['severity']) => {
         if (severity === 'high') {
             return {
                 color: theme.error,
-                label: 'Action needed',
+                label: AppConfig.strings.alerts.validationError,
                 chipBg: withOpacity(theme.error, Opacity.hover),
             };
         }
         if (severity === 'medium') {
             return {
                 color: theme.warning,
-                label: 'Watch',
+                label: AppConfig.strings.alerts.warning,
                 chipBg: withOpacity(theme.warning, Opacity.hover),
             };
         }
         return {
             color: theme.primary,
-            label: 'Info',
+            label: AppConfig.strings.alerts.info,
             chipBg: withOpacity(theme.primary, Opacity.hover),
         };
     };
 
-    const getPrimaryActionLabel = (patternType: Pattern['type']) => {
+    const getPrimaryActionLabel = (patternType: Insight['type']) => {
         if (patternType === 'subscription-amnesiac') {
-            return 'Review subscription';
+            return AppConfig.strings.journal.plannedPayments;
         }
         if (patternType === 'slow-leak') {
-            return 'Check category spend';
+            return AppConfig.strings.reports.spendingBreakdown;
         }
         if (patternType === 'lifestyle-drift') {
-            return 'Plan emergency fund';
+            return AppConfig.strings.dashboard.notifications.planEmergencyFund;
         }
-        return 'Open insight';
+        return AppConfig.strings.dashboard.hub.title;
     };
 
     return (
@@ -93,11 +93,11 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
                 <View style={styles.titleRow}>
                     <View style={styles.titleGroup}>
                         <AppText variant="subheading" color="secondary" style={styles.title}>
-                            {AppConfig.strings.dashboard.insightsTitle}
+                            {AppConfig.strings.dashboard.notificationsTitle}
                         </AppText>
                         <View style={[styles.countChip, { backgroundColor: withOpacity(theme.primary, Opacity.soft) }]}>
                             <AppText variant="caption" style={{ color: theme.textSecondary, fontFamily: fonts.medium }}>
-                                {patterns.length}
+                                {insights.length}
                             </AppText>
                         </View>
                     </View>
@@ -106,7 +106,7 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
                             onPress={handleManageDismissed}
                             style={[styles.managePill, { backgroundColor: theme.surfaceSecondary }]}
                             accessibilityRole="button"
-                            accessibilityLabel="Manage dismissed insights"
+                            accessibilityLabel="Manage dismissed notifications"
                         >
                             <AppIcon name="history" size={14} color={theme.textSecondary} />
                             <AppText variant="caption" color="secondary">
@@ -116,11 +116,11 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
                     )}
                 </View>
                 <View style={styles.listContent}>
-                    {patterns.map(pattern => {
-                        const severity = getSeverityMeta(pattern.severity);
+                    {insights.map(insight => {
+                        const severity = getSeverityMeta(insight.severity);
                         return (
                             <AppCard
-                                key={pattern.id}
+                                key={insight.id}
                                 elevation="sm"
                                 padding="none"
                                 style={[
@@ -132,7 +132,7 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
                                 ]}
                             >
                                 <Pressable
-                                    onPress={() => handlePress(pattern)}
+                                    onPress={() => handlePress(insight)}
                                     style={styles.cardPressable}
                                     android_ripple={{ color: withOpacity(theme.primary, Opacity.soft) }}
                                 >
@@ -149,52 +149,52 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
                                         <View style={styles.iconTitle}>
                                             <View style={[styles.iconBadge, { backgroundColor: withOpacity(severity.color, Opacity.hover) }]}>
                                                 <AppIcon
-                                                    name={pattern.type === 'subscription-amnesiac' ? 'history' : 'trendingUp'}
+                                                    name={insight.type === 'subscription-amnesiac' ? 'history' : 'trendingUp'}
                                                     size={Size.xs}
                                                     color={severity.color}
                                                 />
                                             </View>
                                             <AppText variant="body" weight="semibold" numberOfLines={2} style={styles.headline}>
-                                                {pattern.message}
+                                                {insight.message}
                                             </AppText>
                                         </View>
                                     </View>
 
-                                    {typeof pattern.amount === 'number' ? (
+                                    {typeof insight.amount === 'number' ? (
                                         <View style={[styles.amountCard, { backgroundColor: withOpacity(severity.color, Opacity.hover) }]}>
                                             <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
-                                                Impact
+                                                {AppConfig.strings.dashboard.notifications.impact}
                                             </AppText>
                                             <AppText variant="subheading" style={[styles.amountValue, { color: severity.color, fontFamily: fonts.bold }]}>
-                                                {CurrencyFormatter.format(pattern.amount, pattern.currencyCode)}
+                                                {CurrencyFormatter.format(insight.amount, insight.currencyCode)}
                                             </AppText>
                                         </View>
                                     ) : null}
 
                                     <AppText variant="caption" color="secondary" style={styles.reason} numberOfLines={2}>
-                                        Why this appeared: {pattern.description}
+                                        {AppConfig.strings.dashboard.notifications.whyThisAppeared}{insight.description}
                                     </AppText>
 
                                     <View style={styles.contextRow}>
                                         <AppText variant="caption" color="secondary" numberOfLines={1} style={styles.contextText}>
-                                            Based on last {AppConfig.insights.lookbackDays} days
+                                            {AppConfig.strings.dashboard.notifications.basedOnLastDays(AppConfig.insights.lookbackDays)}
                                         </AppText>
-                                        {pattern.journalIds.length > 0 ? (
+                                        {insight.journalIds.length > 0 ? (
                                             <AppText variant="caption" color="secondary" style={styles.contextText}>
-                                                {pattern.journalIds.length} triggers
+                                                {AppConfig.strings.dashboard.notifications.triggersCount(insight.journalIds.length)}
                                             </AppText>
                                         ) : null}
                                     </View>
 
                                     <View style={[styles.footer, { borderTopColor: theme.border }]}>
                                         <TouchableOpacity
-                                            onPress={() => handlePress(pattern)}
+                                            onPress={() => handlePress(insight)}
                                             style={[styles.primaryCta, { backgroundColor: withOpacity(severity.color, Opacity.hover) }]}
                                             accessibilityRole="button"
-                                            accessibilityLabel={getPrimaryActionLabel(pattern.type)}
+                                            accessibilityLabel={getPrimaryActionLabel(insight.type)}
                                         >
                                             <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
-                                                {getPrimaryActionLabel(pattern.type)}
+                                                {getPrimaryActionLabel(insight.type)}
                                             </AppText>
                                             <AppIcon name="chevronRight" size={14} color={severity.color} />
                                         </TouchableOpacity>
@@ -202,19 +202,19 @@ export const InsightWidget = ({ patterns, hideManageDismissed = false }: Insight
                                         <TouchableOpacity
                                             onPress={(e) => {
                                                 e.stopPropagation();
-                                                handleDismiss(pattern.id);
+                                                handleDismiss(insight.id);
                                             }}
                                             style={[styles.dismissPill, { backgroundColor: theme.surfaceSecondary }]}
                                             accessibilityRole="button"
                                             accessibilityLabel="Dismiss insight"
                                         >
                                             <AppIcon name="close" size={14} color={theme.textSecondary} />
-                                            <AppText variant="caption" color="secondary">Dismiss</AppText>
+                                            <AppText variant="caption" color="secondary">{AppConfig.strings.dashboard.hub.dismiss}</AppText>
                                         </TouchableOpacity>
                                     </View>
 
                                     <AppText variant="caption" color="secondary" numberOfLines={1} style={styles.tipText}>
-                                        Next step: {pattern.suggestion}
+                                        {AppConfig.strings.dashboard.notifications.nextStep}{insight.suggestion}
                                     </AppText>
                                 </Pressable>
                             </AppCard>

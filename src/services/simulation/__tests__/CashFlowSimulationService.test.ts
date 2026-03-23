@@ -1,5 +1,5 @@
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { cashFlowSimulationService } from '@/src/services/insight/CashFlowSimulationService';
+import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { Money } from '@/src/utils/money';

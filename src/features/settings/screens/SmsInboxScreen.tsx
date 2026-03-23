@@ -14,7 +14,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { AppNavigation } from '@/src/utils/navigation'
 import dayjs from 'dayjs'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, FlatList, Platform, StyleSheet, View } from 'react-native'
 
 type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed'
 
@@ -24,9 +24,7 @@ function normalizeForMatch(value?: string) {
   return (value || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-export default function SmsInboxScreen() {
-  const { theme } = useTheme()
-  const { accounts } = useAccounts()
+function SmsInboxContent({ accounts, theme }: { accounts: any[], theme: any }) {
   const [filter, setFilter] = useState<InboxFilter>('pending')
   const [scanCursor, setScanCursor] = useState(PAGE_SIZE)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -178,7 +176,7 @@ export default function SmsInboxScreen() {
     const params: Record<string, string> = {
       type,
       amount: String(item.parsedAmount || ''),
-      notes: `Imported from: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\nRef: ${item.referenceNumber}` : ''}\n\n${item.rawBody.substring(0, AppConfig.input.sms.previewBodyChars)}...`,
+      notes: `Imported from: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${item.rawBody.substring(0, AppConfig.input.sms.previewBodyChars)}...`,
     }
 
     if (item.direction === 'debit') {
@@ -293,13 +291,13 @@ export default function SmsInboxScreen() {
                   variant="ghost"
                   size="sm"
                   style={styles.inlineButton}
-                onPress={() => AppNavigation.toTransactionDetails(item.duplicateCandidate!.journalId, {
-                  title: item.duplicateCandidate!.description || item.parsedMerchant || item.senderAddress,
-                  amount: item.parsedAmount || 0,
-                  currencyCode: item.parsedCurrencyCode || undefined,
-                  date: item.duplicateCandidate!.journalDate,
-                  displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE'
-                })}
+                  onPress={() => AppNavigation.toTransactionDetails(item.duplicateCandidate!.journalId, {
+                    title: item.duplicateCandidate!.description || item.parsedMerchant || item.senderAddress,
+                    amount: item.parsedAmount || 0,
+                    currencyCode: item.parsedCurrencyCode || undefined,
+                    date: item.duplicateCandidate!.journalDate,
+                    displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE'
+                  })}
                 >
                   Compare duplicate
                 </AppButton>
@@ -371,6 +369,26 @@ export default function SmsInboxScreen() {
       </View>
     </Screen>
   )
+}
+
+export default function SmsInboxScreen() {
+  const { theme } = useTheme()
+  const { accounts } = useAccounts()
+
+  if (Platform.OS !== 'android') {
+    return (
+      <Screen title="SMS Inbox" showBack scrollable={false}>
+        <View style={styles.center}>
+          <EmptyStateView
+            title="Not Supported"
+            subtitle="SMS transaction import is only available on Android devices."
+          />
+        </View>
+      </Screen>
+    )
+  }
+
+  return <SmsInboxContent accounts={accounts} theme={theme} />
 }
 
 const styles = StyleSheet.create({

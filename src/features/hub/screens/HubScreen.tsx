@@ -1,19 +1,21 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Size, Spacing } from '@/src/constants';
-import { InsightWidget } from '@/src/features/dashboard/components/InsightWidget';
-import { useInsights } from '@/src/features/dashboard/hooks/useInsights';
+import { AppConfig, Size, Spacing } from '@/src/constants';
+import { HubWidget } from '@/src/features/hub/components/HubWidget';
+import { useHub } from '@/src/features/hub/hooks/useHub';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Pattern } from '@/src/services/insight-service';
+import { Insight } from '@/src/services/notification/NotificationService';
+import { AppNavigation } from '@/src/utils/navigation';
 import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 type Tab = 'active' | 'dismissed';
 
-export default function InsightsScreen() {
+export default function HubScreen() {
+    const { strings } = AppConfig;
     const { theme } = useTheme();
     const [activeTab, setActiveTab] = useState<Tab>('active');
-    const { activePatterns, dismissedPatterns, restoreInsight } = useInsights();
+    const { activeInsights, dismissedInsights, unreadSmsCount, restoreInsight } = useHub();
 
     const renderTabs = () => (
         <View style={[styles.tabContainer, { borderBottomColor: theme.border }]}>
@@ -29,7 +31,7 @@ export default function InsightsScreen() {
                     weight={activeTab === 'active' ? 'bold' : 'medium'}
                     style={{ color: activeTab === 'active' ? theme.primary : theme.textSecondary }}
                 >
-                    Active ({activePatterns.length})
+                    {strings.dashboard.hub.activeTab} ({activeInsights.length + (unreadSmsCount > 0 ? 1 : 0)})
                 </AppText>
             </TouchableOpacity>
             <TouchableOpacity
@@ -44,7 +46,7 @@ export default function InsightsScreen() {
                     weight={activeTab === 'dismissed' ? 'bold' : 'medium'}
                     style={{ color: activeTab === 'dismissed' ? theme.primary : theme.textSecondary }}
                 >
-                    Dismissed ({dismissedPatterns.length})
+                    {strings.dashboard.hub.dismissedTab} ({dismissedInsights.length})
                 </AppText>
             </TouchableOpacity>
         </View>
@@ -54,31 +56,59 @@ export default function InsightsScreen() {
         await restoreInsight(id);
     };
 
+    const renderSmsNotification = () => {
+        if (unreadSmsCount === 0 || activeTab !== 'active') return null;
+
+        return (
+            <TouchableOpacity
+                onPress={AppNavigation.toSmsInbox}
+                style={[styles.smsCard, { backgroundColor: theme.surfaceSecondary, borderColor: theme.border }]}
+                activeOpacity={0.7}
+            >
+                <View style={styles.smsIconContainer}>
+                    <AppIcon name="notifications" size={Size.md} color={theme.primary} />
+                </View>
+                <View style={styles.smsContent}>
+                    <AppText variant="body" weight="bold">
+                        {strings.dashboard.hub.unreadSmsTitle(unreadSmsCount)}
+                    </AppText>
+                    <AppText variant="caption" color="secondary">
+                        {strings.dashboard.hub.unreadSmsSubtitle}
+                    </AppText>
+                </View>
+                <AppIcon name="chevronRight" size={Size.sm} color={theme.textTertiary} />
+            </TouchableOpacity>
+        );
+    };
+
     return (
-        <Screen title="Insights" withPadding scrollable={true}>
+        <Screen title={strings.dashboard.hub.title} withPadding={false} scrollable={true}>
+            <View style={styles.headerSpacer} />
             {renderTabs()}
 
             <View style={styles.content}>
+                {renderSmsNotification()}
+
                 {activeTab === 'active' ? (
-                    activePatterns.length > 0 ? (
-                        <InsightWidget patterns={activePatterns} hideManageDismissed />
-                    ) : (
+                    activeInsights.length > 0 ? (
+                        <HubWidget insights={activeInsights} hideManageDismissed />
+                    ) : unreadSmsCount === 0 ? (
                         <View style={styles.empty}>
                             <AppIcon name="info" size={Size.lg} color={theme.textTertiary} />
                             <AppText variant="body" color="secondary" style={styles.emptyText}>
-                                No active insights. You&apos;re all caught up!
+                                {strings.dashboard.hub.emptyState}
                             </AppText>
                         </View>
-                    )
+                    ) : null
                 ) : (
-                    dismissedPatterns.length > 0 ? (
+                    dismissedInsights.length > 0 ? (
                         <View style={styles.dismissedList}>
-                            {dismissedPatterns.map((item: Pattern) => (
+                            {dismissedInsights.map((item: Insight) => (
                                 <View key={item.id} style={[styles.dismissedItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                                     <View style={styles.itemContent}>
                                         <View style={styles.header}>
                                             <AppIcon
-                                                name={item.type === 'subscription-amnesiac' ? 'repeat' : 'trendingUp'}
+                                                name={item.type === 'subscription-amnesiac' ? 'history' : 'trendingUp'}
                                                 size={Size.xs}
                                                 color={theme.text}
                                             />
@@ -95,7 +125,7 @@ export default function InsightsScreen() {
                                         style={[styles.restoreBtn, { backgroundColor: theme.primary }]}
                                     >
                                         <AppText variant="caption" weight="semibold" style={{ color: theme.onPrimary }}>
-                                            Restore
+                                            {strings.dashboard.hub.restore}
                                         </AppText>
                                     </TouchableOpacity>
                                 </View>
@@ -105,7 +135,7 @@ export default function InsightsScreen() {
                         <View style={styles.empty}>
                             <AppIcon name="info" size={Size.lg} color={theme.textTertiary} />
                             <AppText variant="body" color="secondary" style={styles.emptyText}>
-                                No dismissed insights.
+                                {strings.dashboard.hub.noDismissed}
                             </AppText>
                         </View>
                     )
@@ -116,10 +146,14 @@ export default function InsightsScreen() {
 }
 
 const styles = StyleSheet.create({
+    headerSpacer: {
+        height: Spacing.md,
+    },
     tabContainer: {
         flexDirection: 'row',
         borderBottomWidth: 1,
         marginBottom: Spacing.md,
+        marginHorizontal: Spacing.lg,
     },
     tab: {
         paddingVertical: Spacing.sm,
@@ -127,6 +161,21 @@ const styles = StyleSheet.create({
         marginRight: Spacing.sm,
     },
     content: {
+        flex: 1,
+        paddingHorizontal: Spacing.lg,
+    },
+    smsCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: Spacing.md,
+        borderRadius: 16,
+        borderWidth: 1,
+        marginBottom: Spacing.md,
+    },
+    smsIconContainer: {
+        marginRight: Spacing.md,
+    },
+    smsContent: {
         flex: 1,
     },
     dismissedList: {

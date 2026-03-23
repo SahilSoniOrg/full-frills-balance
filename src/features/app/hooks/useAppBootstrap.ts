@@ -1,11 +1,13 @@
 import { analytics } from '@/src/services/analytics-service';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { integrityService } from '@/src/services/integrity-service';
-import { notificationService } from '@/src/services/NotificationService';
+import { notificationService } from '@/src/services/notification/NotificationService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { smsService } from '@/src/services/sms-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 /**
  * Bootstraps app-wide side effects that must not live in UI context.
@@ -65,6 +67,17 @@ export function useAppBootstrap() {
       } catch (error) {
         if (isActive) {
           logger.warn('[Bootstrap] Notification scheduling failed', { error });
+        }
+      }
+
+      // 7. Trigger SMS check on Android
+      try {
+        if (Platform.OS === 'android' && preferences.isSmsImportEnabled) {
+          await smsService.processUnprocessedSms();
+        }
+      } catch (error) {
+        if (isActive) {
+          logger.warn('[Bootstrap] SMS check failed', { error });
         }
       }
     };

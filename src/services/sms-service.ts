@@ -18,6 +18,7 @@ import { preferences } from '@/src/utils/preferences'
 import { storage } from '@/src/utils/storage'
 import { Q } from '@nozbe/watermelondb'
 import { PermissionsAndroid, Platform } from 'react-native'
+import { Observable } from 'rxjs'
 
 export interface ParsedTransaction {
   id: string
@@ -163,6 +164,10 @@ class SmsService {
     return { cursor: pageSize, importedCount }
   }
 
+  async processUnprocessedSms(): Promise<number> {
+    return this.scanInbox(AppConfig.pagination.smsImportScanLimit)
+  }
+
   observeInbox(limit: number, filter?: SmsInboxFilterOptions) {
     const clauses: any[] = [Q.sortBy('sms_date', Q.desc), Q.take(limit)]
     const statuses = this.getProcessingStatusesForFilter(filter?.status)
@@ -185,6 +190,12 @@ class SmsService {
         'processed_at',
         'sms_date',
       ])
+  }
+
+  observeUnprocessedCount(): Observable<number> {
+    return this.inbox
+      .query(Q.where('processing_status', SmsProcessingStatus.PENDING))
+      .observeCount()
   }
 
   async getInboxRecord(id: string): Promise<SmsInboxRecord | null> {
