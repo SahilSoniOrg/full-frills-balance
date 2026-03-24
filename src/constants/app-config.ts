@@ -633,6 +633,7 @@ export const AppConfig = {
         transactions: 'Entries',
         budgets: 'Budgets',
         auditLogs: 'Audit Logs',
+        plannedPayments: 'Planned Payments',
         skippedItems: 'Skipped',
       },
       restartNote: 'Restart the app to finish applying this change.',

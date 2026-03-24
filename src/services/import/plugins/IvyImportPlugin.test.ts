@@ -140,19 +140,52 @@ describe('IvyImportPlugin', () => {
             expect(debitTx.currencyCode).toBe('EUR');
         });
 
-        it('skips deleted or planned transactions', async () => {
-            const dataWithSkipped = {
+        it('handles one-off planned transactions (dueDate) and deleted transactions', async () => {
+            const dataWithPlanned = {
                 ...validIvyData,
                 transactions: [
                     ...validIvyData.transactions,
                     { id: 'ivy-t-deleted', isDeleted: true, type: 'EXPENSE', amount: 10 },
-                    { id: 'ivy-t-planned', dueDate: '2025-01-01', type: 'EXPENSE', amount: 20 }
+                    { id: 'ivy-t-planned', dueDate: '2027-01-01', type: 'EXPENSE', amount: 20, categoryId: 'ivy-c1', accountId: 'ivy-a1' }
                 ]
             };
 
-            const context = { json: dataWithSkipped } as ImportFileContext;
+            const context = { json: dataWithPlanned } as ImportFileContext;
             const stats = await ivyPlugin.import(context);
-            expect(stats.skippedTransactions).toBe(2);
+
+            expect(stats.skippedTransactions).toBe(2); // ivy-t-deleted AND ivy-t-planned
+            expect(stats.plannedPayments).toBe(0);
+
+            const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][0];
+            expect(lastBatch.plannedPayments).toHaveLength(0);
+        });
+
+        it('handles one-time planned payment rules', async () => {
+            const dataWithOneTimeRule = {
+                ...validIvyData,
+                plannedPaymentRules: [
+                    {
+                        id: 'ivy-rule-1',
+                        oneTime: true,
+                        type: 'EXPENSE',
+                        accountId: 'ivy-a1',
+                        amount: 100,
+                        categoryId: 'ivy-c1',
+                        title: 'One Time Gift',
+                        startDate: '2027-02-01'
+                    }
+                ]
+            };
+
+            const context = { json: dataWithOneTimeRule } as ImportFileContext;
+            const stats = await ivyPlugin.import(context);
+
+            expect(stats.plannedPayments).toBe(1);
+            
+            const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][0];
+            const pp = lastBatch.plannedPayments.find((p: any) => p.id === 'ivy-rule-1');
+            expect(pp).toBeDefined();
+            expect(pp.endDate).toBe(pp.nextOccurrence);
         });
 
         it('creates accounts for budgeted categories even without transactions', async () => {

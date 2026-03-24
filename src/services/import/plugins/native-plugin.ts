@@ -313,6 +313,7 @@ export const nativePlugin: ImportPlugin = {
                 transactions: data.transactions.length,
                 budgets: data.budgets?.length || 0,
                 auditLogs: data.auditLogs?.length || 0,
+                plannedPayments: data.plannedPayments?.length || 0,
                 skippedTransactions: 0
             };
         } catch (error) {

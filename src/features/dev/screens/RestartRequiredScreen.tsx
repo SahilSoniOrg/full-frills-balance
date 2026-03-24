@@ -79,6 +79,12 @@ export const RestartRequiredScreen = () => {
                                     <AppText variant="body" color="success" weight="bold">{importStats.auditLogs}</AppText>
                                 </View>
                             )}
+                            {typeof importStats.plannedPayments === 'number' && importStats.plannedPayments > 0 && (
+                                <View style={styles.statRow}>
+                                    <AppText variant="body" weight="medium">{AppConfig.strings.maintenance.stats.plannedPayments}</AppText>
+                                    <AppText variant="body" color="success" weight="bold">{importStats.plannedPayments}</AppText>
+                                </View>
+                            )}
                             {importStats.skippedTransactions > 0 && (
                                 <View style={styles.statRow}>
                                     <AppText variant="body" color="warning">{AppConfig.strings.maintenance.stats.skippedItems}</AppText>

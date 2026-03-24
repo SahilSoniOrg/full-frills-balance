@@ -673,8 +673,9 @@ export const ivyPlugin: ImportPlugin = {
             }
         };
 
-        if (data.plannedPaymentRules) {
-            data.plannedPaymentRules.forEach(rule => {
+        const allRules = data.plannedPaymentRules || [];
+        if (allRules.length > 0) {
+            allRules.forEach(rule => {
                 if (rule.isDeleted) return;
 
                 const fromAccountId = accountMap.get(rule.accountId);
@@ -736,7 +737,8 @@ export const ivyPlugin: ImportPlugin = {
                                 status: PlannedPaymentStatus.ACTIVE,
                                 isAutoPost: false,
                                 recurrenceDay,
-                                recurrenceMonth
+                                recurrenceMonth,
+                                endDate: rule.oneTime ? finalNextOcc : undefined
                             });
                             return;
                         } else if (rule.type === 'EXPENSE') {
@@ -760,7 +762,8 @@ export const ivyPlugin: ImportPlugin = {
                     status: PlannedPaymentStatus.ACTIVE,
                     isAutoPost: false,
                     recurrenceDay,
-                    recurrenceMonth
+                    recurrenceMonth,
+                    endDate: rule.oneTime ? finalNextOcc : undefined
                 });
             });
         }
