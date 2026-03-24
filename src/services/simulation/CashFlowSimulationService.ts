@@ -57,7 +57,8 @@ export class CashFlowSimulationService {
             accountId: string,
             accountName: string,
             amount: number,
-            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL',
+            dayOffset: number
         }[];
         incomeBreakdown: {
             id: string,
@@ -194,7 +195,8 @@ export class CashFlowSimulationService {
             accountId: string,
             accountName: string,
             amount: number,
-            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL',
+            dayOffset: number
         }[],
         incomeBreakdown: {
             id: string,
@@ -229,7 +231,8 @@ export class CashFlowSimulationService {
             accountId: string, 
             accountName: string, 
             amount: number, 
-            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL' 
+            type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL',
+            dayOffset: number
         }>();
         const committedSubtypesSet = new Set<AccountSubtype>();
         const debtSubtypesSet = new Set<AccountSubtype>();
@@ -501,7 +504,8 @@ export class CashFlowSimulationService {
                             accountId: lb.account.id,
                             accountName: lb.account.name,
                             amount: unsettledAmount,
-                            type: 'FALLBACK'
+                            type: 'FALLBACK',
+                            dayOffset
                         });
                         if (lb.account.accountSubtype) debtSubtypesSet.add(lb.account.accountSubtype);
                     }
@@ -520,7 +524,8 @@ export class CashFlowSimulationService {
                             accountId: lb.account.id,
                             accountName: lb.account.name,
                             amount: unsettledAmount,
-                            type: 'FALLBACK'
+                            type: 'FALLBACK',
+                            dayOffset
                         });
                         if (lb.account.accountSubtype) debtSubtypesSet.add(lb.account.accountSubtype);
                     }

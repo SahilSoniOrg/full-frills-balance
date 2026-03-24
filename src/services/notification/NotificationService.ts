@@ -83,7 +83,8 @@ export interface SafeToSpendResult {
         accountId: string,
         accountName: string,
         amount: number,
-        type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+        type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL',
+        dayOffset: number
     }[];
     incomeBreakdown: {
         id: string,

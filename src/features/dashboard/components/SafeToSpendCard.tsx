@@ -22,8 +22,6 @@ interface SafeToSpendCardProps {
     committedLiabilities: number;
     committedLiabilitiesCC: number;
     committedLiabilitiesOther: number;
-    committedPlannedPayments: number;
-    committedPlannedJournals: number;
     totalFutureInflow: number;
     totalLiquidAssets: number;
     totalLiabilities: number;
@@ -34,9 +32,6 @@ interface SafeToSpendCardProps {
     liquidAssetSubtypes: AccountSubtype[];
     liquidAssetAccounts: { name: string, amount: number }[];
     dailyBudgetBurn: number;
-    currentMonthBudgetRemaining: number;
-    nextMonthBudgetProjected: number;
-    nextMonthProjectionDays: number;
     committedBreakdown: {
         accountId: string,
         accountName: string,
@@ -55,7 +50,8 @@ interface SafeToSpendCardProps {
         accountId: string,
         accountName: string,
         amount: number,
-        type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL'
+        type: 'FALLBACK' | 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL',
+        dayOffset: number
     }[];
     isLoading?: boolean;
 }
@@ -69,17 +65,12 @@ export const SafeToSpendCard = ({
     committedLiabilities,
     committedLiabilitiesCC,
     committedLiabilitiesOther,
-    committedPlannedPayments,
-    committedPlannedJournals,
     totalFutureInflow,
     totalLiquidAssets,
     totalLiabilities,
     currencyCode,
     liquidAssetSubtypes,
     liquidAssetAccounts,
-    currentMonthBudgetRemaining,
-    nextMonthBudgetProjected,
-    nextMonthProjectionDays,
     committedBreakdown,
     debtBreakdown,
     incomeBreakdown,
@@ -104,6 +95,16 @@ export const SafeToSpendCard = ({
     const format = (val: number) => {
         if (isLoading) return <Skeleton width={60} height={24} />;
         if (isPrivacyMode) return '••••';
+        
+        const isVerySmall = Math.abs(val) > 0 && Math.abs(val) < 0.5;
+        if (isVerySmall) {
+            const oneFormatted = CurrencyFormatter.format(1, currencyCode, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            });
+            return val > 0 ? `< ${oneFormatted}` : `> -${oneFormatted}`;
+        }
+
         return CurrencyFormatter.format(val, currencyCode, {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
@@ -136,7 +137,7 @@ export const SafeToSpendCard = ({
                 <Text variant="xs" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}>
                     {labels.categoriesUsed}
                 </Text>
-                <Inline gap="xs">
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
                     {subtypes.length > 0 ? (
                         subtypes.map((st, i) => (
                             <Badge key={i} size="sm" variant="secondary" style={{ backgroundColor: withOpacity(theme.surfaceSecondary, 0.8) }}>
@@ -146,7 +147,7 @@ export const SafeToSpendCard = ({
                     ) : (
                         <Text variant="xs" color="secondary" italic>{labels.noneDetectedYet}</Text>
                     )}
-                </Inline>
+                </View>
             </Stack>
 
             <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
@@ -189,21 +190,13 @@ export const SafeToSpendCard = ({
                             );
                         };
 
-                        if (accounts.length === 0) {
+                        if (positiveAccounts.length === 0) {
                             return <AppText variant="caption" color="secondary" italic>{labels.noneDetectedYet}</AppText>;
                         }
 
                         return (
                             <>
                                 {positiveAccounts.map((acc, i) => renderAccount(acc, i, false))}
-                                {zeroAccounts.length > 0 && (
-                                    <View style={{ marginTop: Spacing.xs, gap: Spacing.xs }}>
-                                        {positiveAccounts.length > 0 && (
-                                            <AppText variant="caption" color="secondary" style={{ fontSize: 9, opacity: Opacity.medium, marginLeft: Spacing.xs }}>{labels.emptyAccounts}</AppText>
-                                        )}
-                                        {zeroAccounts.map((acc, i) => renderAccount(acc, positiveAccounts.length + i, true))}
-                                    </View>
-                                )}
                             </>
                         );
                     })()}
@@ -412,6 +405,7 @@ export const SafeToSpendCard = ({
                         </View>
                     );
                 })()}
+                <Separator marginVertical="md" />
             </Stack>
 
             <PopupModal
@@ -431,9 +425,11 @@ export const SafeToSpendCard = ({
                 <AppText
                     variant="heading"
                     style={{
+                        marginTop: Spacing.md,
                         marginBottom: Spacing.sm,
                         fontFamily: Typography.fonts.heading,
                         fontSize: Typography.sizes.xxxl,
+                        lineHeight: Typography.sizes.xxxl * 1.1,
                         color: theme.primary,
                     }}
                 >
@@ -494,10 +490,10 @@ export const SafeToSpendCard = ({
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{info.formulaItems[0].split(': ')[0].toUpperCase()}</AppText>
-                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{info.formulaItems[0].split(': ')[1]}</AppText>
+                                        <AppText variant="caption" color="secondary">{info.formulaItems[0].split(': ')[1]}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="heading" color="primary" style={{ fontSize: Typography.sizes.xl }}>+{format(totalLiquidAssets)}</AppText>
+                                <AppText variant="subheading" color="primary">{format(totalLiquidAssets)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -518,22 +514,22 @@ export const SafeToSpendCard = ({
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
                                     <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.primary, 0.1) }]}>
-                                        <AppIcon name="arrowUpRight" size={Size.sm} color={theme.primary} />
+                                        <AppIcon name="trendingUp" size={Size.sm} color={theme.primary} />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{labels.upcomingIncome.toUpperCase()}</AppText>
-                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[1].split(': ')[1]}</AppText>
+                                        <AppText variant="caption" color="secondary">{formulaItems[1].split(': ')[1]}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="heading" color="primary" style={{ fontSize: Typography.sizes.xl }}>+{format(totalFutureInflow)}</AppText>
+                                <AppText variant="subheading" color="primary">{format(totalFutureInflow)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
                     {expandedSection === 'income' && (
                         <View style={styles.expandedContentRow}>
                             <View style={{ gap: Spacing.sm }}>
-                                {incomeBreakdown.length > 0 ? (
-                                    incomeBreakdown.map((inc, i) => (
+                                {incomeBreakdown.filter(inc => inc.amount !== 0).length > 0 ? (
+                                    incomeBreakdown.filter(inc => inc.amount !== 0).map((inc, i) => (
                                         <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <View style={{ flex: 1 }}>
                                                 <AppText variant="caption" weight="bold">{inc.name}</AppText>
@@ -574,24 +570,24 @@ export const SafeToSpendCard = ({
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <AppText variant="caption" weight="bold" color="warning" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{labels.committedLine.split(' (')[0].toUpperCase()}</AppText>
-                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[2] ? formulaItems[2].split(': ')[1] : 'Bills and Budgets'}</AppText>
+                                        <AppText variant="caption" color="secondary">{formulaItems[2] ? formulaItems[2].split(': ')[1] : 'Bills and Budgets'}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="heading" color="warning" style={{ fontSize: Typography.sizes.xl }}>–{format(committedBudget + committedPlanned)}</AppText>
+                                <AppText variant="subheading" color="warning">–{format(committedBudget + committedPlanned)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
                     {expandedSection === 'committed' && (
                         <View style={styles.expandedContentRow}>
                             <View style={{ gap: Spacing.md }}>
-                                {committedBreakdown.sort((a, b) => b.amount - a.amount).map((acc, i) => (
+                                {committedBreakdown.filter(acc => acc.amount !== 0).sort((a, b) => b.amount - a.amount).map((acc, i) => (
                                     <View key={i} style={{ gap: Spacing.xs }}>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <AppText variant="caption" weight="bold">{acc.accountName}</AppText>
                                             <AppText variant="caption" weight="bold" color="warning">–{format(acc.amount)}</AppText>
                                         </View>
                                         <View style={{ gap: Spacing.sm, paddingLeft: Spacing.sm }}>
-                                            {acc.details.map((det, di) => {
+                                            {acc.details.filter(det => det.amount !== 0).map((det, di) => {
                                                 const isPostIncome = firstMajorInflowDay !== null && det.dayOffset !== undefined && det.dayOffset >= firstMajorInflowDay;
                                                 return (
                                                     <View key={di} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 18 }}>
@@ -608,7 +604,7 @@ export const SafeToSpendCard = ({
                                                                 </AppText>
                                                                 {isPostIncome && (
                                                                     <View style={{ backgroundColor: withOpacity(theme.success, 0.1), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: Spacing.xs }}>
-                                                                        <AppText style={{ fontSize: 8, color: theme.success, fontWeight: 'bold' }}>{labels.waitingForIncome}</AppText>
+                                                                        <AppText weight="bold" style={{ fontSize: 8, color: theme.success }}>{labels.waitingForIncome}</AppText>
                                                                     </View>
                                                                 )}
                                                             </View>
@@ -636,14 +632,14 @@ export const SafeToSpendCard = ({
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
                                     <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.error, 0.1) }]}>
-                                        <AppIcon name="alertCircle" size={Size.sm} color={theme.error} />
+                                        <AppIcon name="error" size={Size.sm} color={theme.error} />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <AppText variant="caption" weight="bold" color="error" style={{ letterSpacing: 0.5, marginBottom: 2 }}>{labels.debtsBucket.toUpperCase()}</AppText>
-                                        <AppText variant="caption" color="secondary" numberOfLines={1}>{formulaItems[3] ? formulaItems[3].split(': ')[1] : 'Short-term liabilities'}</AppText>
+                                        <AppText variant="caption" color="secondary">{formulaItems[3] ? formulaItems[3].split(': ')[1] : 'Short-term liabilities'}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="heading" color="error" style={{ fontSize: Typography.sizes.xl }}>–{format(committedLiabilities)}</AppText>
+                                <AppText variant="subheading" color="error">–{format(committedLiabilities)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -654,7 +650,7 @@ export const SafeToSpendCard = ({
                             </AppText>
 
                             <View style={{ gap: Spacing.md }}>
-                                {debtBreakdown.map((acc, i) => (
+                                {debtBreakdown.filter(acc => acc.amount !== 0).map((acc, i) => (
                                     <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <View style={{ flex: 1 }}>
                                             <AppText variant="caption" weight="bold">{acc.accountName}</AppText>
@@ -701,7 +697,7 @@ export const SafeToSpendCard = ({
                             alignItems: 'center'
                         }}>
                             <View style={{ flex: 1 }}>
-                                <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 1.5, marginBottom: 4 }}>SAFE TO SPEND</AppText>
+                                <AppText variant="caption" weight="bold" color="primary" style={{ letterSpacing: 1.5, marginBottom: Spacing.xs }}>SAFE TO SPEND</AppText>
                                 <AppText variant="caption" color="secondary" style={{ fontStyle: 'italic', opacity: Opacity.heavy }}>{labels.remainingCashBuffer}</AppText>
                             </View>
                             <AppText
@@ -730,7 +726,7 @@ export const SafeToSpendCard = ({
                                     <View style={[styles.benefitDot, { backgroundColor: theme.primary, marginTop: 8 }]} />
                                     <View style={{ flex: 1 }}>
                                         <AppText variant="body" weight="bold">{title}</AppText>
-                                        <AppText variant="caption" color="secondary" style={{ marginTop: 2, lineHeight: 18 }}>{content}</AppText>
+                                        <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.xs / 2, lineHeight: 18 }}>{content}</AppText>
                                     </View>
                                 </View>
                             );
@@ -795,7 +791,7 @@ export const SafeToSpendCard = ({
                                     <AppText variant="body" color="secondary">Unsettled Debts</AppText>
                                     <AppText variant="body" weight="bold" color="error">-{format(committedLiabilities)}</AppText>
                                 </View>
-                                <View style={{ height: 1, backgroundColor: withOpacity(theme.border, 0.3), marginVertical: Spacing.xs }} />
+                                <Separator marginVertical="md" opacity={0.3} />
                                 <View style={styles.breakdownRow}>
                                     <AppText variant="heading" style={{ fontSize: Typography.sizes.xl }}>Safe to Spend</AppText>
                                     <AppText variant="heading" style={{ color: theme.primary, fontSize: Typography.sizes.xl }}>{format(safeToSpend)}</AppText>
@@ -804,10 +800,29 @@ export const SafeToSpendCard = ({
 
                             <View style={{ marginTop: Spacing.lg, paddingTop: Spacing.lg, borderTopWidth: 1, borderTopColor: withOpacity(theme.border, 0.2), borderStyle: 'dashed' }}>
                                 <AppText variant="caption" italic color="secondary" style={{ lineHeight: 18 }}>
-                                    Logic: Future income is used to &quot;buffer&quot; your bills. Today&apos;s cash is only reserved if future income won&apos;t cover an obligation before its due date.
+                                    Logic: Future income is used to "buffer" your bills. Today's cash is only reserved if future income won't cover an obligation before its due date.
                                 </AppText>
                             </View>
                         </AppCard>
+
+                        {incomeBreakdown.length > 0 && (
+                            <View style={{ marginTop: Spacing.xl }}>
+                                <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.md }}>
+                                    {labels.upcomingIncome.toUpperCase()}
+                                </AppText>
+                                <View style={{ gap: Spacing.md }}>
+                                    {incomeBreakdown.filter(inc => inc.amount !== 0).map((inc, i) => (
+                                        <View key={i} style={styles.breakdownRow}>
+                                            <View style={{ flex: 1 }}>
+                                                <AppText variant="caption" weight="bold">{inc.name}</AppText>
+                                                <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>Day {inc.dayOffset} • {inc.type === 'PLANNED_PAYMENT' ? 'Bill' : 'Transfer'}</AppText>
+                                            </View>
+                                            <AppText variant="caption" weight="bold" color="success">+{format(inc.amount)}</AppText>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -818,80 +833,60 @@ export const SafeToSpendCard = ({
                         </AppText>
 
                         <View style={{ gap: Spacing.md }}>
-                            <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="medium">{labels.plannedPayments}</AppText>
-                                <AppText variant="body" weight="bold">{format(committedPlannedPayments)}</AppText>
-                            </View>
-                            <View style={styles.breakdownRow}>
-                                <AppText variant="body" weight="medium">{labels.plannedJournals}</AppText>
-                                <AppText variant="body" weight="bold">{format(committedPlannedJournals)}</AppText>
-                            </View>
-                            <Separator />
-                            <View style={styles.breakdownRow}>
-                                <View style={{ flex: 1, paddingRight: Spacing.sm }}>
-                                    <AppText variant="body" weight="medium">{labels.activeBudgets}</AppText>
-                                    <View style={{ marginTop: 4, gap: 4 }}>
-                                        <AppText variant="caption" color="secondary">
-                                            {`• This month remaining: ${format(currentMonthBudgetRemaining)}`}
-                                        </AppText>
-                                        <AppText variant="caption" color="secondary">
-                                            {`• Next month ${nextMonthProjectionDays} days projected: ${format(nextMonthBudgetProjected)}`}
-                                        </AppText>
-                                    </View>
-                                </View>
-                                <AppText variant="body" weight="bold">{format(committedBudget)}</AppText>
-                            </View>
+                            {(() => {
+                                // Flatten details across all accounts for unified grouping
+                                const flatCommitted = committedBreakdown.flatMap(acc => 
+                                    acc.details
+                                        .filter(d => d.amount !== 0)
+                                        .map(d => ({
+                                            ...d,
+                                            accountName: acc.accountName
+                                        }))
+                                );
 
-                            {committedBreakdown.length > 0 && (
-                                <View style={styles.accountBreakdownContainer}>
-                                    <Separator marginVertical="md" opacity={0.3} />
-                                    <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.md }}>
-                                        {labels.breakdownByAccount}
-                                    </AppText>
-                                    <View style={{ gap: Spacing.md }}>
-                                        {committedBreakdown.map((item) => (
-                                            <View key={item.accountId}>
-                                                <View style={styles.breakdownRow}>
-                                                    <AppText variant="body" weight="bold" numberOfLines={1} style={{ flex: 1 }}>
-                                                        {item.accountName}
-                                                    </AppText>
-                                                    <AppText variant="body" weight="bold" color="secondary">
-                                                        {format(item.amount)}
-                                                    </AppText>
-                                                </View>
-                                                <View style={{ marginTop: Spacing.xs, gap: 4 }}>
-                                                    {item.details.map((d) => {
-                                                        const isPostIncome = firstMajorInflowDay !== null && d.dayOffset !== undefined && d.dayOffset >= firstMajorInflowDay;
-                                                        return <View key={d.id} style={[styles.breakdownRow, { paddingLeft: Spacing.md }]}>
-                                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, flex: 1 }}>
-                                                                <AppIcon
-                                                                    name={d.type === 'BUDGET' ? 'pieChart' : d.type === 'PLANNED_PAYMENT' ? 'calendar' : 'refresh'}
-                                                                    size={12}
-                                                                    color={withOpacity(theme.textSecondary, 0.5)}
-                                                                />
-                                                                <AppText variant="caption" color="secondary" numberOfLines={1}>
+                                const beforeIncome = flatCommitted.filter(d => (d.dayOffset ?? 0) <= (firstMajorInflowDay || 0));
+                                const afterIncome = flatCommitted.filter(d => (d.dayOffset ?? 0) > (firstMajorInflowDay || 0));
 
-                                                                    {isPostIncome && (
-                                                                        <View style={{ backgroundColor: withOpacity(theme.success, 0.1), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginRight: Spacing.xs }}>
-                                                                            <AppText style={{ fontSize: 8, color: theme.success, fontWeight: 'bold' }}>WAITING FOR INCOME</AppText>
-                                                                        </View>
-                                                                    )}
-                                                                    {d.name}
-                                                                </AppText>
-                                                            </View>
+                                const renderGroup = (items: typeof flatCommitted, title: string) => {
+                                    if (items.length === 0) return null;
+                                    const total = items.reduce((sum, item) => sum + item.amount, 0);
+
+                                    return (
+                                        <View key={title} style={{ marginBottom: Spacing.xl }}>
+                                            <View style={[styles.breakdownRow, { marginBottom: Spacing.sm }]}>
+                                                <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                                                    {title}
+                                                </AppText>
+                                                <AppText variant="caption" weight="bold" color="warning">{format(total)}</AppText>
+                                            </View>
+                                            <View style={{ gap: Spacing.md }}>
+                                                {items.map((item) => (
+                                                    <View key={item.id} style={styles.breakdownRow}>
+                                                        <View style={{ flex: 1 }}>
+                                                            <AppText variant="body" weight="bold">{item.name}</AppText>
                                                             <AppText variant="caption" color="secondary">
-                                                                {format(d.amount)}
+                                                                {item.type === 'BUDGET' ? 'Budget Reserve' : item.type === 'PLANNED_PAYMENT' ? 'Planned Payment' : 'Planned Transfer'} • {item.accountName}
                                                             </AppText>
                                                         </View>
-
-                                                    })}
-                                                </View>
+                                                        <AppText variant="body" weight="bold" color="warning">
+                                                            {format(item.amount)}
+                                                        </AppText>
+                                                    </View>
+                                                ))}
                                             </View>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
-                            <Separator />
+                                        </View>
+                                    );
+                                };
+
+                                return (
+                                    <>
+                                        {renderGroup(beforeIncome, "Due Before Major Income")}
+                                        {firstMajorInflowDay !== null && renderGroup(afterIncome, "Due After Major Income")}
+                                    </>
+                                );
+                            })()}
+
+                            <Separator marginVertical="xs" opacity={0.3} />
                             <View style={styles.breakdownRow}>
                                 <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>{labels.totalCommitted}</AppText>
                                 <AppText variant="body" weight="bold" color="warning" style={{ fontSize: Typography.sizes.lg }}>{format(committedTotal)}</AppText>
@@ -907,6 +902,7 @@ export const SafeToSpendCard = ({
                         </AppText>
 
                         <View style={{ gap: Spacing.md }}>
+                            {/* Summary rows */}
                             <View style={styles.breakdownRow}>
                                 <AppText variant="body" weight="medium">{labels.creditCardStatements}</AppText>
                                 <AppText variant="body" weight="bold">{format(committedLiabilitiesCC)}</AppText>
@@ -915,13 +911,65 @@ export const SafeToSpendCard = ({
                                 <AppText variant="body" weight="medium">{labels.otherLiquidLiabilities}</AppText>
                                 <AppText variant="body" weight="bold">{format(committedLiabilitiesOther)}</AppText>
                             </View>
+
+                            <Separator marginVertical="xl" opacity={0.3} />
+
+                            {/* Grouped Breakdowns */}
+                            {(() => {
+                                const beforeIncome = debtBreakdown.filter(d => d.amount !== 0 && d.dayOffset <= (firstMajorInflowDay || 0));
+                                const afterIncome = debtBreakdown.filter(d => d.amount !== 0 && d.dayOffset > (firstMajorInflowDay || 0));
+
+                                const renderGroup = (items: typeof debtBreakdown, title: string) => {
+                                    if (items.length === 0) return null;
+                                    const total = items.reduce((sum, item) => sum + item.amount, 0);
+
+                                    return (
+                                        <View key={title} style={{ marginBottom: Spacing.xl }}>
+                                            <View style={[styles.breakdownRow, { marginBottom: Spacing.sm }]}>
+                                                <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                                                    {title}
+                                                </AppText>
+                                                <AppText variant="caption" weight="bold" color="error">{format(total)}</AppText>
+                                            </View>
+                                            <View style={{ gap: Spacing.md }}>
+                                                {items.map((item) => (
+                                                    <View key={item.accountId} style={styles.breakdownRow}>
+                                                        <View style={{ flex: 1 }}>
+                                                            <AppText variant="body" weight="bold">{item.accountName}</AppText>
+                                                            <AppText variant="caption" color="secondary">
+                                                                {item.type === 'FALLBACK' ? labels.unplannedBalance : labels.scheduledCommitment} • Day {item.dayOffset}
+                                                            </AppText>
+                                                        </View>
+                                                        <AppText variant="body" weight="bold" color="error">
+                                                            {format(item.amount)}
+                                                        </AppText>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        </View>
+                                    );
+                                };
+
+                                return (
+                                    <>
+                                        {renderGroup(beforeIncome, "Due Before Major Income")}
+                                        {firstMajorInflowDay !== null && renderGroup(afterIncome, "Due After Major Income")}
+                                    </>
+                                );
+                            })()}
+
                             <Separator marginVertical="xs" opacity={0.3} />
+
+                            <View style={styles.breakdownRow}>
+                                <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>{labels.debtsBucket}</AppText>
+                                <AppText variant="body" weight="bold" color="error" style={{ fontSize: Typography.sizes.lg }}>{format(committedLiabilities)}</AppText>
+                            </View>
+                            <Separator marginVertical="md" opacity={0.3} />
                             <View style={styles.breakdownRow}>
                                 <AppText variant="caption" color="secondary" weight="bold">{labels.totalBalanceInfo.toUpperCase()}</AppText>
                                 <AppText variant="body" color="secondary" weight="bold">{format(totalLiabilities)}</AppText>
                             </View>
                         </View>
-
                     </View>
                 )}
             </PopupModal>
@@ -1044,11 +1092,6 @@ const styles = StyleSheet.create({
         gap: Spacing.xs,
         marginTop: Spacing.xs,
     },
-    snapshotSeparator: {
-        height: 1,
-        width: '100%',
-        marginVertical: Spacing.xs,
-    },
     benefitDot: {
         width: 6,
         height: 6,
@@ -1100,12 +1143,6 @@ const styles = StyleSheet.create({
     expandedContentRow: {
         paddingHorizontal: Spacing.lg,
         paddingBottom: Spacing.md,
-    },
-    snapshotCard: {
-        marginBottom: Spacing.lg,
-        borderStyle: 'dashed',
-        borderWidth: 1,
-        borderColor: '#CBD5E1', // Default border color fallback
     },
     breakdownRow: {
         flexDirection: 'row',

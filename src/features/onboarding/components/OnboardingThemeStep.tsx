@@ -24,23 +24,18 @@ const MOCK_SAFE_TO_SPEND_PROPS: any = {
     committedLiabilities: 100,
     committedLiabilitiesCC: 50,
     committedLiabilitiesOther: 50,
-    committedPlannedPayments: 150,
-    committedPlannedJournals: 50,
     totalFutureInflow: 3000,
     totalLiquidAssets: 4000,
     totalLiabilities: 1000,
     currencyCode: AppConfig.defaultCurrency,
     liquidAssetSubtypes: [],
     liquidAssetAccounts: [],
-    currentMonthBudgetRemaining: 400,
-    nextMonthBudgetProjected: 1000,
-    nextMonthProjectionDays: 30,
     committedBreakdown: [
         {
             accountId: 'mock1',
             accountName: 'Groceries',
             amount: 150,
-            details: [{ id: 'mock1-detail', name: 'Whole Foods Target', amount: 150, type: 'BUDGET' }]
+            details: [{ id: 'mock1-detail', name: 'Whole Foods Target', amount: 150, type: 'BUDGET', dayOffset: 10 }]
         }
     ],
     debtBreakdown: [],
