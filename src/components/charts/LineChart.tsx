@@ -1,19 +1,21 @@
 
 import { AppText } from '@/src/components/core';
 import { Layout, Spacing } from '@/src/constants';
-import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { REPORT_CHART_EVENTS, REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { triggerHaptic } from '@/src/utils/haptics';
-import React, { useMemo, useRef } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { DeviceEventEmitter, Dimensions, StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
 
-interface DataPoint {
+export interface DataPoint {
     x: number; // timestamp
     y: number; // value
+    [key: string]: any; // Allow arbitrary extra data to be passed to tooltips
 }
 
 export interface HorizontalLine {
@@ -23,8 +25,8 @@ export interface HorizontalLine {
     strokeDasharray?: string;
 }
 
-interface LineChartProps {
-    data: DataPoint[];
+interface LineChartProps<T extends DataPoint = DataPoint> {
+    data: T[];
     height?: number;
     color?: string;
     showGradient?: boolean;
@@ -32,17 +34,20 @@ interface LineChartProps {
     onPress?: (index: number) => void;
     selectedIndex?: number;
     domainX?: [number, number]; // [min, max] bound for the time range
-    renderTooltip?: (params: { index: number; x: number; y: number; dataPoint: DataPoint }) => React.ReactNode;
+    renderTooltip?: (params: { index: number; x: number; y: number; dataPoint: T }) => React.ReactNode;
+    renderTooltipContent?: (point: T, index: number) => React.ReactNode; // Content to render inside built-in popup
+    tooltipWidth?: number; // Needed if using renderTooltipContent
+    tooltipHeight?: number; // Needed if using renderTooltipContent
     xTicks?: number[]; // Array of X values where ticks/grid lines should be drawn
     formatXTick?: (x: number) => string; // Function to format the tick labels
-    secondaryData?: DataPoint[]; // Optional secondary line data
+    secondaryData?: T[]; // Optional secondary line data
     secondaryColor?: string; // Color for the secondary line
     todayX?: number; // Timestamp for the 'Today' vertical marker
     hideLabels?: boolean; // Whether to hide axis labels (Privacy Mode)
     extraHorizontalLines?: HorizontalLine[]; // Arbitrary reference lines (e.g., 0 balance, safe-to-spend floor)
 }
 
-export const LineChart = ({
+export const LineChart = <T extends DataPoint>({
     data,
     height = Layout.chart.line.defaultHeight,
     color,
@@ -52,6 +57,9 @@ export const LineChart = ({
     selectedIndex,
     domainX,
     renderTooltip,
+    renderTooltipContent,
+    tooltipWidth = REPORT_CHART_LAYOUT.tooltipWidth,
+    tooltipHeight = REPORT_CHART_LAYOUT.barTooltipHeight, // Using barTooltipHeight as 80 is a good standard
     xTicks,
     formatXTick,
     secondaryData,
@@ -59,7 +67,7 @@ export const LineChart = ({
     todayX,
     hideLabels,
     extraHorizontalLines,
-}: LineChartProps) => {
+}: LineChartProps<T>) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
     const { width: windowWidth } = Dimensions.get('window');
@@ -140,11 +148,40 @@ export const LineChart = ({
         return { path: pathStr, secondaryPath: secondaryPathStr, gradientPath: gradientPathStr, minX, maxX, displayMinY, displayRange, maxValPoint };
     }, [data, height, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX, secondaryData]);
 
+    const [internalSelectedIndex, setInternalSelectedIndex] = React.useState<number | undefined>(undefined);
     const lastGestureIndex = useRef(-1);
+    
+    // Unify state: props.selectedIndex always wins. If not provided, use internal state.
+    const isControlled = selectedIndex !== undefined;
+    const activeIndex = isControlled ? selectedIndex : internalSelectedIndex;
+    const chartRef = useRef<View>(null);
+
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener(REPORT_CHART_EVENTS.globalTouch, (e) => {
+            if (activeIndex !== undefined && activeIndex !== -1) {
+                chartRef.current?.measure((_x, _y, _width, height, pageX, pageY) => {
+                    const { pageX: touchX, pageY: touchY } = e;
+                    const isInside = touchX >= pageX && touchX <= pageX + _width && touchY >= pageY && touchY <= pageY + height;
+                    if (!isInside) {
+                        if (!isControlled) setInternalSelectedIndex(undefined);
+                        if (onPress) onPress(-1);
+                    }
+                });
+            }
+        });
+        return () => sub.remove();
+    }, [activeIndex, onPress, isControlled]);
+
+    const getTooltipPosition = useChartTooltipPosition({
+        containerWidth: CHART_WIDTH,
+        containerHeight: height,
+        tooltipWidth: tooltipWidth,
+        tooltipHeight: tooltipHeight,
+    });
 
     const handleGesture = (x: number, isStart: boolean) => {
         if (data.length === 0) return;
-        if (!onPress) return;
+        // Proceed even without onPress to handle internalSelectedIndex
 
         // Calculate index from x
         const contentWidth = PLOT_WIDTH;
@@ -168,20 +205,22 @@ export const LineChart = ({
                 // New gesture - always report (allows toggle)
                 lastGestureIndex.current = index;
                 triggerHaptic('light');
-                onPress(index);
+                if (onPress) onPress(index);
+                setInternalSelectedIndex(index);
             } else {
                 // Continuation - only report change
                 if (index !== lastGestureIndex.current) {
                     lastGestureIndex.current = index;
                     triggerHaptic('light');
-                    onPress(index);
+                    if (onPress) onPress(index);
+                    if (!isControlled) setInternalSelectedIndex(index);
                 }
             }
         }
     };
 
     const pan = Gesture.Pan()
-        //.activeOffsetX([-10, 10]) // Removed to allow immediate touch recognition
+        .activeOffsetX([-REPORT_CHART_LAYOUT.gestureSensitivity, REPORT_CHART_LAYOUT.gestureSensitivity]) // Require move to activate and lock parent scroll
         .onBegin((e) => {
             runOnJS(handleGesture)(e.x, true);
         })
@@ -190,16 +229,16 @@ export const LineChart = ({
         });
 
     const selectedPointInfo = useMemo(() => {
-        if (selectedIndex === undefined || selectedIndex === -1 || !data[selectedIndex] || data.length === 0) return null;
+        if (activeIndex === undefined || activeIndex === -1 || !data[activeIndex] || data.length === 0) return null;
         const xRange = maxX - minX;
 
-        const point = data[selectedIndex];
+        const point = data[activeIndex];
         const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
         const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
         const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
 
         return { x, y, point };
-    }, [selectedIndex, data, minX, maxX, displayMinY, displayRange, height, PLOT_WIDTH, PADDING_LEFT, PADDING_VERTICAL]);
+    }, [activeIndex, data, minX, maxX, displayMinY, displayRange, height, PLOT_WIDTH, PADDING_LEFT, PADDING_VERTICAL]);
 
     if (data.length === 0) {
         return (
@@ -210,267 +249,278 @@ export const LineChart = ({
     }
 
     return (
-        <View style={{ height, width: CHART_WIDTH }}>
+        <View style={{ height, width: CHART_WIDTH }} ref={chartRef} collapsable={false}>
             <View style={{ width: CHART_WIDTH, height }}>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                    <GestureDetector gesture={pan}>
-                        <View style={{ width: CHART_WIDTH, height }}>
-                            <Svg height={height} width={CHART_WIDTH}>
-                                <Defs>
-                                    <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-                                        <Stop offset="0" stopColor={chartColor} stopOpacity="0.5" />
-                                        <Stop offset="1" stopColor={chartColor} stopOpacity="0" />
-                                    </LinearGradient>
-                                </Defs>
+                <GestureDetector gesture={pan}>
+                    <View style={{ width: CHART_WIDTH, height }}>
+                        <Svg height={height} width={CHART_WIDTH}>
+                            <Defs>
+                                <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                                    <Stop offset="0" stopColor={chartColor} stopOpacity="0.5" />
+                                    <Stop offset="1" stopColor={chartColor} stopOpacity="0" />
+                                </LinearGradient>
+                            </Defs>
 
-                                {/* Grid Lines & Ticks */}
-                                {REPORT_CHART_LAYOUT.lineChartTicks.map((t) => {
-                                    const val = displayMinY + (t * displayRange);
-                                    const y = height - PADDING_VERTICAL - (t * (height - PADDING_VERTICAL * 2));
-                                    return (
-                                        <React.Fragment key={t}>
-                                            <Line
-                                                x1={PADDING_LEFT}
-                                                y1={y}
-                                                x2={CHART_WIDTH - PADDING_RIGHT}
-                                                y2={y}
-                                                stroke={theme.border}
-                                                strokeWidth={1}
-                                                strokeDasharray="4,4"
-                                                opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
-                                            />
-                                            <SvgText
-                                                x={PADDING_LEFT - REPORT_CHART_LAYOUT.lineChartYLabelOffsetX}
-                                                y={y + REPORT_CHART_LAYOUT.lineChartYLabelOffsetY}
-                                                fontSize={REPORT_CHART_LAYOUT.lineChartYLabelFontSize}
-                                                fill={theme.textSecondary}
-                                                textAnchor="end"
-                                            >
-                                                {hideLabels ? '••••' : CurrencyFormatter.formatShort(val)}
-                                            </SvgText>
-                                        </React.Fragment>
-                                    );
-                                })}
+                            {/* Grid Lines & Ticks */}
+                            {REPORT_CHART_LAYOUT.lineChartTicks.map((t) => {
+                                const val = displayMinY + (t * displayRange);
+                                const y = height - PADDING_VERTICAL - (t * (height - PADDING_VERTICAL * 2));
+                                return (
+                                    <React.Fragment key={t}>
+                                        <Line
+                                            x1={PADDING_LEFT}
+                                            y1={y}
+                                            x2={CHART_WIDTH - PADDING_RIGHT}
+                                            y2={y}
+                                            stroke={theme.border}
+                                            strokeWidth={1}
+                                            strokeDasharray="4,4"
+                                            opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
+                                        />
+                                        <SvgText
+                                            x={PADDING_LEFT - REPORT_CHART_LAYOUT.lineChartYLabelOffsetX}
+                                            y={y + REPORT_CHART_LAYOUT.lineChartYLabelOffsetY}
+                                            fontSize={REPORT_CHART_LAYOUT.lineChartYLabelFontSize}
+                                            fill={theme.textSecondary}
+                                            textAnchor="end"
+                                        >
+                                            {hideLabels ? '••••' : CurrencyFormatter.formatShort(val)}
+                                        </SvgText>
+                                    </React.Fragment>
+                                );
+                            })}
 
-                                {/* X-Axis Grid Lines & Ticks */}
-                                {xTicks && formatXTick && xTicks.map((xVal, i) => {
-                                    const normalizedX = maxX === minX ? 0.5 : (xVal - minX) / (maxX - minX);
-                                    if (normalizedX < 0 || normalizedX > 1) return null;
-                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
-                                    return (
-                                        <React.Fragment key={`xtick-${i}`}>
-                                            <Line
-                                                x1={x}
-                                                y1={PADDING_VERTICAL}
-                                                x2={x}
-                                                y2={height - Math.max(0, PADDING_VERTICAL - 5)}
-                                                stroke={theme.border}
-                                                strokeWidth={1}
-                                                strokeDasharray="4,4"
-                                                opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
-                                            />
-                                            <SvgText
-                                                x={x}
-                                                y={height - Math.max(0, PADDING_VERTICAL - 20)}
-                                                fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                                                fill={theme.textSecondary}
-                                                textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
-                                            >
-                                                {formatXTick(xVal)}
-                                            </SvgText>
-                                        </React.Fragment>
-                                    );
-                                })}
+                            {/* X-Axis Grid Lines & Ticks */}
+                            {xTicks && formatXTick && xTicks.map((xVal, i) => {
+                                const normalizedX = maxX === minX ? 0.5 : (xVal - minX) / (maxX - minX);
+                                if (normalizedX < 0 || normalizedX > 1) return null;
+                                const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
+                                return (
+                                    <React.Fragment key={`xtick-${i}`}>
+                                        <Line
+                                            x1={x}
+                                            y1={PADDING_VERTICAL}
+                                            x2={x}
+                                            y2={height - Math.max(0, PADDING_VERTICAL - 5)}
+                                            stroke={theme.border}
+                                            strokeWidth={1}
+                                            strokeDasharray="4,4"
+                                            opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
+                                        />
+                                        <SvgText
+                                            x={x}
+                                            y={height - Math.max(0, PADDING_VERTICAL - 20)}
+                                            fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                                            fill={theme.textSecondary}
+                                            textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
+                                        >
+                                            {formatXTick(xVal)}
+                                        </SvgText>
+                                    </React.Fragment>
+                                );
+                            })}
 
-                                {/* Today marker */}
-                                {todayX !== undefined && (() => {
-                                    const normalizedX = maxX === minX ? 0.5 : (todayX - minX) / (maxX - minX);
-                                    if (normalizedX < 0 || normalizedX > 1) return null;
-                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
-                                    return (
-                                        <React.Fragment>
-                                            <Line
-                                                x1={x}
-                                                y1={PADDING_VERTICAL}
-                                                x2={x}
-                                                y2={height - PADDING_VERTICAL}
-                                                stroke={theme.textSecondary}
-                                                strokeWidth={1.5}
-                                                opacity={0.6}
-                                            />
-                                            <SvgText
-                                                x={x + 4}
-                                                y={PADDING_VERTICAL + 10}
-                                                fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                                                fill={theme.textSecondary}
-                                                textAnchor="start"
-                                                opacity={0.8}
-                                            >
-                                                Today
-                                            </SvgText>
-                                            {(() => {
-                                                const todayPoint = data.find(d => Math.abs(d.x - todayX) < 1000); // Allow some small gap
-                                                if (!todayPoint || hideLabels) return null;
-                                                const y = height - PADDING_VERTICAL - (((todayPoint.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
+                            {/* Today marker */}
+                            {todayX !== undefined && (() => {
+                                const normalizedX = maxX === minX ? 0.5 : (todayX - minX) / (maxX - minX);
+                                if (normalizedX < 0 || normalizedX > 1) return null;
+                                const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
+                                return (
+                                    <React.Fragment>
+                                        <Line
+                                            x1={x}
+                                            y1={PADDING_VERTICAL}
+                                            x2={x}
+                                            y2={height - PADDING_VERTICAL}
+                                            stroke={theme.textSecondary}
+                                            strokeWidth={1.5}
+                                            opacity={0.6}
+                                        />
+                                        <SvgText
+                                            x={x + 4}
+                                            y={PADDING_VERTICAL + 10}
+                                            fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                                            fill={theme.textSecondary}
+                                            textAnchor="start"
+                                            opacity={0.8}
+                                        >
+                                            Today
+                                        </SvgText>
+                                        {(() => {
+                                            const todayPoint = data.find(d => Math.abs(d.x - todayX) < 1000);
+                                            if (!todayPoint || hideLabels) return null;
+                                            const y = height - PADDING_VERTICAL - (((todayPoint.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
 
-                                                return (
-                                                    <React.Fragment>
-                                                        <Circle
-                                                            cx={x}
-                                                            cy={y}
-                                                            r={4}
-                                                            fill={chartColor}
-                                                            stroke={theme.surface}
-                                                            strokeWidth={1}
-                                                        />
-                                                        <SvgText
-                                                            x={x + 4}
-                                                            y={y - 8}
-                                                            fontSize={11}
-                                                            fontWeight="bold"
-                                                            fill={chartColor}
-                                                            textAnchor="start"
-                                                        >
-                                                            {CurrencyFormatter.formatShort(todayPoint.y)}
-                                                        </SvgText>
-                                                    </React.Fragment>
-                                                );
-                                            })()}
-                                        </React.Fragment>
-                                    );
-                                })()}
-
-                                {/* Extra Horizontal Reference Lines (e.g. 0 line, Safe-to-Spend floor) */}
-                                {extraHorizontalLines?.map((line, i) => {
-                                    if (line.value < displayMinY || line.value > displayMinY + displayRange) return null;
-                                    const y = height - PADDING_VERTICAL - (((line.value - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
-                                    const lineColor = line.color || theme.textSecondary;
-
-                                    return (
-                                        <React.Fragment key={`extra-h-${i}`}>
-                                            <Line
-                                                x1={PADDING_LEFT}
-                                                y1={y}
-                                                x2={CHART_WIDTH - PADDING_RIGHT}
-                                                y2={y}
-                                                stroke={lineColor}
-                                                strokeWidth={1}
-                                                strokeDasharray={line.strokeDasharray || "4,4"}
-                                                opacity={0.8}
-                                            />
-                                            {line.label && !hideLabels && (
-                                                <SvgText
-                                                    x={CHART_WIDTH - PADDING_RIGHT - 4}
-                                                    y={y - 6}
-                                                    fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                                                    fill={lineColor}
-                                                    textAnchor="end"
-                                                    fontWeight="bold"
-                                                    opacity={0.9}
-                                                >
-                                                    {line.label}
-                                                </SvgText>
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })}
-
-                                {/* Max Value Annotation */}
-                                {maxValPoint && (() => {
-                                    const normalizedX = maxX === minX ? 0.5 : (maxValPoint.x - minX) / (maxX - minX);
-                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
-                                    const y = height - PADDING_VERTICAL - (((maxValPoint.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
-                                    return (
-                                        <React.Fragment>
-                                            <Circle cx={x} cy={y} r={REPORT_CHART_LAYOUT.lineChartMaxPointRadius} fill={chartColor} opacity={0.8} />
-                                            <SvgText
-                                                x={x}
-                                                y={y - REPORT_CHART_LAYOUT.lineChartMaxLabelOffsetY}
-                                                fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                                                fontWeight="bold"
-                                                fill={chartColor}
-                                                textAnchor="middle"
-                                            >
-                                                {REPORT_CHART_STRINGS.maxLabel}
-                                            </SvgText>
-                                        </React.Fragment>
-                                    );
-                                })()}
-
-                                {showGradient && (
-                                    <Path
-                                        d={gradientPath}
-                                        fill="url(#gradient)"
-                                    />
-                                )}
-                                <Path
-                                    d={path}
-                                    stroke={chartColor}
-                                    strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
-                                    fill="none"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    opacity={selectedIndex !== undefined && selectedIndex !== -1 ? REPORT_CHART_LAYOUT.lineChartSelectedSeriesOpacity : 1}
-                                />
-                                {secondaryPath ? (
-                                    <Path
-                                        d={secondaryPath}
-                                        stroke={secondaryColor || theme.textSecondary}
-                                        strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
-                                        fill="none"
-                                        opacity={0.7}
-                                    />
-                                ) : null}
-
-                                {/* Interactive Points */}
-                                {data.map((point, index) => {
-                                    const normalizedX = maxX === minX ? 0.5 : (point.x - minX) / (maxX - minX);
-                                    const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
-                                    const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
-
-                                    const isSelected = selectedIndex === index;
-
-                                    return (
-                                        <React.Fragment key={index}>
-                                            {isSelected && (
-                                                <>
+                                            return (
+                                                <React.Fragment>
                                                     <Circle
                                                         cx={x}
                                                         cy={y}
-                                                        r={REPORT_CHART_LAYOUT.lineChartSelectedPointRadius}
+                                                        r={4}
                                                         fill={chartColor}
                                                         stroke={theme.surface}
-                                                        strokeWidth={REPORT_CHART_LAYOUT.lineChartSelectedPointStrokeWidth}
+                                                        strokeWidth={1}
                                                     />
-                                                    {/* Vertical Line indicator */}
-                                                    <Path
-                                                        d={`M ${x} ${height - PADDING_VERTICAL} L ${x} ${y + REPORT_CHART_LAYOUT.lineChartSelectedIndicatorOffsetY}`}
-                                                        stroke={chartColor}
-                                                        strokeWidth={REPORT_CHART_LAYOUT.lineChartSelectedIndicatorStrokeWidth}
-                                                        strokeDasharray="4,4"
-                                                        opacity={REPORT_CHART_LAYOUT.lineChartSelectedSeriesOpacity}
-                                                    />
-                                                </>
-                                            )}
-                                            {/* Invisible touch target removed - handled by PanGesture */}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </Svg>
-                        </View>
-                    </GestureDetector>
-                </GestureHandlerRootView>
+                                                    <SvgText
+                                                        x={x + 4}
+                                                        y={y - 8}
+                                                        fontSize={11}
+                                                        fontWeight="bold"
+                                                        fill={chartColor}
+                                                        textAnchor="start"
+                                                    >
+                                                        {CurrencyFormatter.formatShort(todayPoint.y)}
+                                                    </SvgText>
+                                                </React.Fragment>
+                                            );
+                                        })()}
+                                    </React.Fragment>
+                                );
+                            })()}
+
+                            {/* Extra Horizontal Reference Lines */}
+                            {extraHorizontalLines?.map((line, i) => {
+                                if (line.value < displayMinY || line.value > displayMinY + displayRange) return null;
+                                const y = height - PADDING_VERTICAL - (((line.value - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
+                                const lineColor = line.color || theme.textSecondary;
+
+                                return (
+                                    <React.Fragment key={`extra-h-${i}`}>
+                                        <Line
+                                            x1={PADDING_LEFT}
+                                            y1={y}
+                                            x2={CHART_WIDTH - PADDING_RIGHT}
+                                            y2={y}
+                                            stroke={lineColor}
+                                            strokeWidth={1}
+                                            strokeDasharray={line.strokeDasharray || "4,4"}
+                                            opacity={0.8}
+                                        />
+                                        {line.label && !hideLabels && (
+                                            <SvgText
+                                                x={CHART_WIDTH - PADDING_RIGHT - 4}
+                                                y={y - 6}
+                                                fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                                                fill={lineColor}
+                                                textAnchor="end"
+                                                fontWeight="bold"
+                                                opacity={0.9}
+                                            >
+                                                {line.label}
+                                            </SvgText>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
+
+                            {/* Max Value Annotation */}
+                            {maxValPoint && (() => {
+                                const normalizedX = maxX === minX ? 0.5 : (maxValPoint.x - minX) / (maxX - minX);
+                                const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
+                                const y = height - PADDING_VERTICAL - (((maxValPoint.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
+                                return (
+                                    <React.Fragment>
+                                        <Circle cx={x} cy={y} r={REPORT_CHART_LAYOUT.lineChartMaxPointRadius} fill={chartColor} opacity={0.8} />
+                                        <SvgText
+                                            x={x}
+                                            y={y - REPORT_CHART_LAYOUT.lineChartMaxLabelOffsetY}
+                                            fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
+                                            fontWeight="bold"
+                                            fill={chartColor}
+                                            textAnchor="middle"
+                                        >
+                                            {REPORT_CHART_STRINGS.maxLabel}
+                                        </SvgText>
+                                    </React.Fragment>
+                                );
+                            })()}
+
+                            {showGradient && (
+                                <Path
+                                    d={gradientPath}
+                                    fill="url(#gradient)"
+                                />
+                            )}
+                            <Path
+                                d={path}
+                                stroke={chartColor}
+                                strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                opacity={activeIndex !== undefined && activeIndex !== -1 ? REPORT_CHART_LAYOUT.lineChartSelectedSeriesOpacity : 1}
+                            />
+                            {secondaryPath ? (
+                                <Path
+                                    d={secondaryPath}
+                                    stroke={secondaryColor || theme.textSecondary}
+                                    strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
+                                    fill="none"
+                                    opacity={0.7}
+                                />
+                            ) : null}
+
+                            {/* Interactive Points */}
+                            {data.map((point, index) => {
+                                const normalizedX = maxX === minX ? 0.5 : (point.x - minX) / (maxX - minX);
+                                const x = PADDING_LEFT + (normalizedX * PLOT_WIDTH);
+                                const y = height - PADDING_VERTICAL - (((point.y - displayMinY) / displayRange) * (height - (PADDING_VERTICAL * 2)));
+
+                                const isSelected = activeIndex === index;
+
+                                return (
+                                    <React.Fragment key={index}>
+                                        {isSelected && (
+                                            <>
+                                                <Circle
+                                                    cx={x}
+                                                    cy={y}
+                                                    r={REPORT_CHART_LAYOUT.lineChartSelectedPointRadius}
+                                                    fill={chartColor}
+                                                    stroke={theme.surface}
+                                                    strokeWidth={REPORT_CHART_LAYOUT.lineChartSelectedPointStrokeWidth}
+                                                />
+                                                <Path
+                                                    d={`M ${x} ${height - PADDING_VERTICAL} L ${x} ${y + REPORT_CHART_LAYOUT.lineChartSelectedIndicatorOffsetY}`}
+                                                    stroke={chartColor}
+                                                    strokeWidth={REPORT_CHART_LAYOUT.lineChartSelectedIndicatorStrokeWidth}
+                                                    strokeDasharray="4,4"
+                                                    opacity={REPORT_CHART_LAYOUT.lineChartSelectedSeriesOpacity}
+                                                />
+                                            </>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </Svg>
+                    </View>
+                </GestureDetector>
             </View>
 
-            {/* Render Tooltip Overlay - Outside gesture detector but inside main container */}
+            {/* Render Tooltip Overlay */}
             {selectedPointInfo && renderTooltip && (
                 <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
                     {renderTooltip({
-                        index: selectedIndex!,
+                        index: activeIndex!,
                         x: selectedPointInfo.x,
                         y: selectedPointInfo.y,
                         dataPoint: selectedPointInfo.point
                     })}
+                </View>
+            )}
+
+            {/* Built-in Tooltip Overlay */}
+            {selectedPointInfo && renderTooltipContent && (
+                <View style={[StyleSheet.absoluteFill, { zIndex: 100 }]} pointerEvents="box-none">
+                    {(() => {
+                        const info = selectedPointInfo;
+                        const { left, top } = getTooltipPosition(info.x, info.y);
+                        return (
+                            <View style={{ position: 'absolute', left, top, width: tooltipWidth, height: tooltipHeight, pointerEvents: 'none' }}>
+                                {renderTooltipContent!(info.point, activeIndex!)}
+                            </View>
+                        );
+                    })()}
                 </View>
             )}
         </View>

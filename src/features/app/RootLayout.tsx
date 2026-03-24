@@ -39,9 +39,11 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, usePathname, useSegments } from 'expo-router';
 import { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
-import 'react-native-reanimated';
+import { DeviceEventEmitter, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { REPORT_CHART_EVENTS } from '@/src/constants/report-constants';
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
 
 function PostHogScreenTracker() {
@@ -87,27 +89,34 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <DatabaseProvider database={database}>
-          <UIProvider>
-            <PostHogProvider
-              client={posthogClient ?? undefined}
-              debug={__DEV__}
-            >
-              <PostHogScreenTracker />
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <AppLockInterceptor>
-                  <AppContent />
-                </AppLockInterceptor>
-                <AlertContainer />
-                <ToastContainer />
-              </ThemeProvider>
-            </PostHogProvider>
-          </UIProvider>
-        </DatabaseProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }} onStartShouldSetResponderCapture={(e) => {
+        DeviceEventEmitter.emit(REPORT_CHART_EVENTS.globalTouch, { pageX: e.nativeEvent.pageX, pageY: e.nativeEvent.pageY });
+        return false;
+      }}>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <DatabaseProvider database={database}>
+              <UIProvider>
+                <PostHogProvider
+                  client={posthogClient ?? undefined}
+                  debug={__DEV__}
+                >
+                  <PostHogScreenTracker />
+                  <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                    <AppLockInterceptor>
+                      <AppContent />
+                    </AppLockInterceptor>
+                    <AlertContainer />
+                    <ToastContainer />
+                  </ThemeProvider>
+                </PostHogProvider>
+              </UIProvider>
+            </DatabaseProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 

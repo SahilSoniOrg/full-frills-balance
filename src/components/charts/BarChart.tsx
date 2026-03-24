@@ -1,10 +1,11 @@
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { REPORT_CHART_EVENTS, REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import React, { useCallback, useMemo, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DeviceEventEmitter, Dimensions, StyleSheet, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 
 export interface BarChartDataPoint {
@@ -36,13 +37,13 @@ export const BarChart = ({
     const { width: windowWidth } = Dimensions.get('window');
     const [scrollX, setScrollX] = useState(0);
 
-    // Width logic
     const containerWidth = customWidth || (windowWidth - (Spacing.lg * 2));
     const Y_AXIS_WIDTH = Spacing.xl * 2;
     const BAR_SPACING = REPORT_CHART_LAYOUT.barSpacing;
     const plotAreaWidth = Math.max(containerWidth - Y_AXIS_WIDTH, 0);
     const minContentWidth = data.length * (barWidth + BAR_SPACING * 2);
     const svgWidth = Math.max(plotAreaWidth, minContentWidth);
+    const chartRef = useRef<View>(null);
 
     const PADDING_LEFT = Spacing.sm;
     const PADDING_RIGHT = Spacing.lg;
@@ -68,7 +69,7 @@ export const BarChart = ({
     const chartHeight = height - PADDING_VERTICAL - PADDING_BOTTOM;
     const yForValue = useCallback((value: number) =>
         height - PADDING_BOTTOM - (((value - domainMin) / domainRange) * chartHeight)
-    , [PADDING_BOTTOM, chartHeight, domainMin, domainRange, height]);
+        , [PADDING_BOTTOM, chartHeight, domainMin, domainRange, height]);
 
     const hasData = data.length > 0;
     const groupWidth = hasData ? (svgWidth - PADDING_LEFT - PADDING_RIGHT) / data.length : 0;
@@ -94,6 +95,21 @@ export const BarChart = ({
         return renderTooltip({ index: selectedIndex, x: viewportX, y });
     }, [selectedIndex, processedData, groupWidth, centerOffset, PADDING_LEFT, renderTooltip, Y_AXIS_WIDTH, scrollX, yForValue]);
 
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener(REPORT_CHART_EVENTS.globalTouch, (e) => {
+            if (selectedIndex !== undefined && selectedIndex !== -1) {
+                chartRef.current?.measure((_x, _y, _width, height, pageX, pageY) => {
+                    const { pageX: touchX, pageY: touchY } = e;
+                    const isInside = touchX >= pageX && touchX <= pageX + _width && touchY >= pageY && touchY <= pageY + height;
+                    if (!isInside) {
+                        if (onPress) onPress(-1);
+                    }
+                });
+            }
+        });
+        return () => sub.remove();
+    }, [selectedIndex, onPress]);
+
     if (data.length === 0) {
         return (
             <View style={[styles.container, { height, borderColor: theme.border }]}>
@@ -103,7 +119,7 @@ export const BarChart = ({
     }
 
     return (
-        <View style={{ height, width: containerWidth }}>
+        <View style={{ height, width: containerWidth }} ref={chartRef} collapsable={false}>
             <View style={styles.chartRow}>
                 <View style={[styles.yAxisColumn, { width: Y_AXIS_WIDTH }]}>
                     {REPORT_CHART_LAYOUT.yAxisTicks.map((t) => {
@@ -125,10 +141,19 @@ export const BarChart = ({
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     onScroll={(event) => setScrollX(event.nativeEvent.contentOffset.x)}
+                    onScrollBeginDrag={() => onPress?.(-1)}
                     scrollEventThrottle={16}
                 >
                     <View>
                         <Svg height={height} width={svgWidth}>
+                            <Rect
+                                x={0}
+                                y={0}
+                                width={svgWidth}
+                                height={height}
+                                fill="transparent"
+                                onPress={() => onPress?.(-1)}
+                            />
                             {REPORT_CHART_LAYOUT.yAxisTicks.map((t) => {
                                 const y = yForValue(domainMin + (t * (domainMax - domainMin)));
                                 return (
@@ -204,7 +229,11 @@ export const BarChart = ({
                     </View>
                 </ScrollView>
             </View>
-            {tooltipElement}
+            {tooltipElement && (
+                <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+                    {tooltipElement}
+                </View>
+            )}
         </View>
     );
 };

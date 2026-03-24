@@ -7,12 +7,13 @@ import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownDonutCard';
 import { IncomeExpenseTooltip, NetWorthTooltip } from '@/src/features/reports/components/ReportTooltip';
-import { useChartTooltipPosition } from '@/src/features/reports/hooks/useChartTooltipPosition';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { AppNavigation } from '@/src/utils/navigation';
 import React, { useCallback } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { RefreshControl, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 
 const NET_WORTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;
 const BAR_CHART_HEIGHT = REPORT_CHART_LAYOUT.barChartHeight;

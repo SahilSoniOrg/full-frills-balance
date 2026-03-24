@@ -1,7 +1,9 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { ChartTooltip } from '@/src/components/charts/ChartTooltip';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Bleed, Box, FadeIn, Inline, Separator, Skeleton, Stack, Text } from '@/src/design-system';
@@ -334,8 +336,8 @@ export const SafeToSpendCard = ({
 
                 {projection && projection.history.length > 0 && (() => {
                     const chartData = [
-                        ...projection.history.map(p => ({ x: p.timestamp, y: p.value })),
-                        ...projection.projection.slice(1).map(p => ({ x: p.timestamp, y: p.value }))
+                        ...projection.history.map(p => ({ x: p.timestamp, y: p.value, isHistory: true })),
+                        ...projection.projection.slice(1).map(p => ({ x: p.timestamp, y: p.value, isHistory: false }))
                     ];
 
                     const minX = Math.min(...chartData.map(d => d.x));
@@ -389,6 +391,23 @@ export const SafeToSpendCard = ({
                                 todayX={dayjs().startOf('day').valueOf()}
                                 hideLabels={isPrivacyMode}
                                 extraHorizontalLines={extraHorizontalLines}
+                                tooltipWidth={120}
+                                tooltipHeight={70}
+                                renderTooltipContent={(point) => (
+                                    <ChartTooltip>
+                                        <AppText variant="caption" color="secondary" style={{ marginBottom: REPORT_CHART_LAYOUT.tooltipDateMarginBottom }}>
+                                            {dayjs(point.x).format('MMM D, YYYY')}
+                                        </AppText>
+                                        <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
+                                            {format(point.y)}
+                                        </AppText>
+                                        {!point.isHistory && (
+                                            <AppText variant="caption" color="secondary" style={{ marginTop: 2, fontSize: 10 }}>
+                                                {AppConfig.strings.dashboard.safeToSpendUi.projectedLabel}
+                                            </AppText>
+                                        )}
+                                    </ChartTooltip>
+                                )}
                             />
                         </View>
                     );

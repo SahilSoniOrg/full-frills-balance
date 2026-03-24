@@ -58,6 +58,7 @@ export const REPORT_CHART_LAYOUT = {
   barChartEmptyBorderRadius: 16,
   barSpacing: 4,
   yAxisTicks: [0, 0.25, 0.5, 0.75, 1] as const,
+  gestureSensitivity: 5,
 } as const;
 
 export const REPORT_CHART_STRINGS = {
@@ -65,6 +66,10 @@ export const REPORT_CHART_STRINGS = {
   incomeShort: 'Inc',
   expenseShort: 'Exp',
   maxLabel: 'Max',
+} as const;
+ 
+export const REPORT_CHART_EVENTS = {
+  globalTouch: 'globalTouch',
 } as const;
 
 export const REPORT_CHART_COLORS = {

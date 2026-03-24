@@ -238,6 +238,7 @@ export const AppConfig = {
         scheduledCommitment: 'Scheduled amount',
         waitingForIncome: 'Incoming needed',
         calculationLedger: 'Calculation details',
+        projectedLabel: 'Projected',
       },
       hub: {
         title: 'Review',
