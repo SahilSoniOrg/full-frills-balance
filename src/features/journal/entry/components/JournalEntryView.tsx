@@ -11,11 +11,12 @@ import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/S
 import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
 import { Page } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Keyboard, StyleSheet, View } from 'react-native';
 
 export function JournalEntryView(vm: JournalEntryViewModel) {
     const { theme } = useTheme();
+    const [isAmountFocused, setIsAmountFocused] = useState(false);
     const {
         isLoading,
         headerTitle,
@@ -61,10 +62,24 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             }
             footer={
                 <SubmitFooter
-                    onPress={isGuidedMode ? vm.simpleEditor.handleSave : vm.editor.submit}
-                    disabled={isGuidedMode ? !vm.simpleFormIsValid : !vm.advancedFormIsValid}
+                    onPress={
+                        isGuidedMode 
+                            ? (isAmountFocused && !vm.simpleFormIsValid 
+                                ? () => Keyboard.dismiss() 
+                                : vm.simpleEditor.handleSave) 
+                            : vm.editor.submit
+                    }
+                    disabled={
+                        isGuidedMode 
+                            ? (isAmountFocused ? false : !vm.simpleFormIsValid) 
+                            : !vm.advancedFormIsValid
+                    }
                     label={isGuidedMode
-                        ? (vm.simpleEditor.isSubmitting ? AppConfig.strings.transactionFlow.saving : AppConfig.strings.transactionFlow.save(vm.simpleEditor.type))
+                        ? (isAmountFocused && !vm.simpleFormIsValid
+                            ? AppConfig.strings.transactionFlow.continue
+                            : (vm.simpleEditor.isSubmitting 
+                                ? AppConfig.strings.transactionFlow.saving 
+                                : AppConfig.strings.transactionFlow.save(vm.simpleEditor.type)))
                         : (vm.editor.isSubmitting
                             ? (vm.editor.isEdit ? AppConfig.strings.advancedEntry.updating : AppConfig.strings.advancedEntry.creating)
                             : (vm.editor.isEdit ? AppConfig.strings.advancedEntry.updateJournal : AppConfig.strings.advancedEntry.createJournal))
@@ -79,6 +94,8 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
                                 : (vm.isBalanced ? theme.success : theme.error)
                             }
                             displayCurrency={vm.primaryDisplayCurrency}
+                            onFocus={() => setIsAmountFocused(true)}
+                            onBlur={() => setIsAmountFocused(false)}
                         />
                     }
                 />

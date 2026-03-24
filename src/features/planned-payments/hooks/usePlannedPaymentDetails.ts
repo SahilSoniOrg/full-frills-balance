@@ -51,6 +51,7 @@ export function usePlannedPaymentDetails(id: string) {
         if (!item) return;
         try {
             await plannedPaymentService.postOccurrence(item as any, item.nextOccurrence);
+            AppNavigation.back();
         } catch {
             // Error logged in service
         }
@@ -60,6 +61,7 @@ export function usePlannedPaymentDetails(id: string) {
         if (!item) return;
         try {
             await plannedPaymentService.skipOccurrence(item as any, item.nextOccurrence);
+            AppNavigation.back();
         } catch {
             // Error logged in service
         }

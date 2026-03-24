@@ -442,6 +442,7 @@ export const AppConfig = {
       descriptionOptional: 'Description',
       saving: 'Saving…',
       save: (type: string) => `Save ${type.toUpperCase()}`,
+      continue: 'Continue',
       chooseDifferentAccounts: 'Change accounts',
       fetchingRate: 'Getting exchange rate…',
       simple: 'Simple',

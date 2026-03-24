@@ -1,7 +1,7 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
-import { AppCard, AppText, AppIcon, Badge } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing, Typography, withOpacity, Opacity } from '@/src/constants';
+import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Bleed, Box, FadeIn, Inline, Separator, Skeleton, Stack, Text } from '@/src/design-system';
@@ -98,7 +98,6 @@ export const SafeToSpendCard = ({
         'Unsettled Debts: Obligations not yet covered by a plan.',
         'Safe to Spend is the lowest point your balance hits in the next 30 days.'
     ];
-    const projectionWindowDays = AppConfig.defaults.safeToSpendDays * 2;
 
     const format = (val: number) => {
         if (isLoading) return <Skeleton width={60} height={24} />;
@@ -279,11 +278,11 @@ export const SafeToSpendCard = ({
                     {effectiveTotal > 0 ? (
                         <>
                             {/* Segmented Bar */}
-                            <Box 
-                                background="surfaceSecondary" 
-                                height={12} 
-                                borderRadius="full" 
-                                flexDirection="row" 
+                            <Box
+                                background="surfaceSecondary"
+                                height={12}
+                                borderRadius="full"
+                                flexDirection="row"
                                 overflow="hidden"
                                 marginBottom="md"
                             >
@@ -360,9 +359,27 @@ export const SafeToSpendCard = ({
 
                     return (
                         <View style={[styles.projectionContainer, { borderColor: theme.border }]}>
-                            <AppText variant="body" weight="medium" style={styles.projectionTitle}>
-                                {`Trajectory (${projectionWindowDays}-day projected)`}
-                            </AppText>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
+                                <AppText variant="body" weight="medium">
+                                    {`Projection (${AppConfig.defaults.safeToSpendDays}-day)`}
+                                </AppText>
+                                {!isOverCommitted && projection.safeDaysCount !== null && (
+                                    <View style={[styles.safetyMetricContainer, { marginTop: 0, paddingVertical: 2, paddingHorizontal: 6, backgroundColor: withOpacity(theme.success, 0.1), borderColor: withOpacity(theme.success, 0.2), borderWidth: 1 }]}>
+                                        <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={12} color={theme.success} />
+                                        <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 10 }}>
+                                            Safe for {projection.safeDaysCount > AppConfig.defaults.safeToSpendDaysCap ? `${AppConfig.defaults.safeToSpendDaysCap}+` : projection.safeDaysCount} {projection.safeDaysCount === 1 ? 'd' : 'd'}
+                                        </AppText>
+                                    </View>
+                                )}
+                                {!isOverCommitted && projection.safeDaysCount === null && (
+                                    <View style={[styles.safetyMetricContainer, { marginTop: 0, paddingVertical: 2, paddingHorizontal: 6, backgroundColor: withOpacity(theme.success, 0.1), borderColor: withOpacity(theme.success, 0.2), borderWidth: 1 }]}>
+                                        <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={12} color={theme.success} />
+                                        <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 10 }}>
+                                            {labels.financiallySecure}
+                                        </AppText>
+                                    </View>
+                                )}
+                            </View>
                             <LineChart
                                 data={chartData}
                                 height={AppConfig.layout.safeToSpendChartHeight}
@@ -373,22 +390,6 @@ export const SafeToSpendCard = ({
                                 hideLabels={isPrivacyMode}
                                 extraHorizontalLines={extraHorizontalLines}
                             />
-                            {projection.safeDaysCount !== null && !isOverCommitted && (
-                                <View style={[styles.safetyMetricContainer, { backgroundColor: withOpacity(theme.success, 0.1), borderColor: withOpacity(theme.success, 0.2), borderWidth: 1 }]}>
-                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={14} color={theme.success} />
-                                    <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 11 }}>
-                                        Safe for the next {projection.safeDaysCount > AppConfig.defaults.safeToSpendDaysCap ? `${AppConfig.defaults.safeToSpendDaysCap}+` : projection.safeDaysCount} {projection.safeDaysCount === 1 ? 'day' : 'days'}
-                                    </AppText>
-                                </View>
-                            )}
-                            {projection.safeDaysCount === null && !isOverCommitted && (
-                                <View style={[styles.safetyMetricContainer, { backgroundColor: withOpacity(theme.success, 0.1), borderColor: withOpacity(theme.success, 0.2), borderWidth: 1 }]}>
-                                    <AppIcon name="checkCircle" fallbackIcon="checkCircle" size={14} color={theme.success} />
-                                    <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 11 }}>
-                                        {labels.financiallySecure}
-                                    </AppText>
-                                </View>
-                            )}
                         </View>
                     );
                 })()}
@@ -824,7 +825,7 @@ export const SafeToSpendCard = ({
 
                             {committedBreakdown.length > 0 && (
                                 <View style={styles.accountBreakdownContainer}>
-                                <Separator marginVertical="md" opacity={0.3} />
+                                    <Separator marginVertical="md" opacity={0.3} />
                                     <AppText variant="caption" weight="bold" color="secondary" style={{ textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.md }}>
                                         {labels.breakdownByAccount}
                                     </AppText>

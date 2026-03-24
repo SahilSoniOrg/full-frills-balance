@@ -11,6 +11,8 @@ interface SimpleFormAmountInputProps {
     displayCurrency: string;
     sectionLabelColor?: string;
     readOnly?: boolean;
+    onFocus?: () => void;
+    onBlur?: () => void;
 }
 
 export function SimpleFormAmountInput({
@@ -19,6 +21,8 @@ export function SimpleFormAmountInput({
     activeColor,
     displayCurrency,
     readOnly,
+    onFocus,
+    onBlur,
 }: SimpleFormAmountInputProps) {
     const { theme, fonts } = useTheme();
 
@@ -53,6 +57,8 @@ export function SimpleFormAmountInput({
                     cursorColor={activeColor}
                     selectionColor={withOpacity(activeColor, Opacity.muted)}
                     testID="amount-input"
+                    onFocus={onFocus}
+                    onBlur={onBlur}
                 />
             )}
         </View>
