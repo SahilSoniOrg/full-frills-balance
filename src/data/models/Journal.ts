@@ -8,6 +8,7 @@ export enum JournalStatus {
   POSTED = 'POSTED',
   REVERSED = 'REVERSED',
   PLANNED = 'PLANNED',
+  SKIPPED = 'SKIPPED',
 }
 
 export default class Journal extends Model {

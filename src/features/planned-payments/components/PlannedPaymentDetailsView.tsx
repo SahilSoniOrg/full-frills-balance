@@ -250,9 +250,9 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                                 plannedAmount={vm.rawAmount ?? 0}
                                 plannedTitle={vm.rawName ?? ''}
                                 presentation={{
-                                    label: journal.status === 'PLANNED' ? 'Scheduled' : 'Posted',
+                                    label: journal.status === 'PLANNED' ? 'Scheduled' : (journal.status === 'SKIPPED' ? 'Skipped' : 'Posted'),
                                     typeIcon: journal.displayType === 'INCOME' ? 'arrowUp' : (journal.displayType === 'EXPENSE' ? 'arrowDown' : 'swapHorizontal'),
-                                    typeColor: journal.status === 'PLANNED' ? 'textSecondary' : (journal.displayType === 'INCOME' ? 'income' : (journal.displayType === 'EXPENSE' ? 'expense' : 'transfer')),
+                                    typeColor: (journal.status === 'PLANNED' || journal.status === 'SKIPPED') ? 'textSecondary' : (journal.displayType === 'INCOME' ? 'income' : (journal.displayType === 'EXPENSE' ? 'expense' : 'transfer')),
                                 }}
                                 onPress={() => AppNavigation.toTransactionDetails(journal.id)}
                             />

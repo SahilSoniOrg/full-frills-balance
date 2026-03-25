@@ -306,6 +306,23 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                             )}
                         </Stack>
                     )}
+
+                    {vm.onRevertToScheduled && (
+                        <Stack space="sm" padding="md">
+                            <AppButton
+                                variant="outline"
+                                onPress={vm.onRevertToScheduled}
+                                style={{ width: '100%' }}
+                            >
+                                <Inline space="sm" alignItems="center">
+                                    <AppIcon name="history" size={18} color={theme.primary} />
+                                    <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
+                                        {vm.revertButtonLabel}
+                                    </AppText>
+                                </Inline>
+                            </AppButton>
+                        </Stack>
+                    )}
                 </Stack>
             </Inset>
         </Page>

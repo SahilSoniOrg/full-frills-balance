@@ -53,9 +53,8 @@ export async function prepareJournalData(data: CreateJournalData): Promise<Prepa
     const accountsToRebuild = new Set<string>(accountIds);
     const calculatedBalances = new Map<string, number>();
 
-    const isPlanned = data.status === JournalStatus.PLANNED;
-
-    if (!isPlanned) {
+    const isInactive = data.status === JournalStatus.PLANNED || data.status === JournalStatus.SKIPPED;
+    if (!isInactive) {
         for (const tx of roundedTransactions) {
             const latestTx = await transactionRepository.findLatestForAccountBeforeDate(tx.accountId, data.journalDate);
             if (!accountingService.isBackdated(data.journalDate, latestTx?.transactionDate)) {

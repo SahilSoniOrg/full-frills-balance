@@ -21,7 +21,7 @@ export function usePlannedPaymentDetails(id: string) {
         20,
         undefined,
         undefined,
-        [JournalStatus.POSTED, JournalStatus.PLANNED],
+        [JournalStatus.POSTED, JournalStatus.PLANNED, JournalStatus.SKIPPED],
         id
     );
 

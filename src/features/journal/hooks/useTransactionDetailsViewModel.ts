@@ -66,6 +66,8 @@ export interface TransactionDetailsViewModel {
     };
     onOpenSmsInbox?: () => void;
     onPost?: () => void;
+    onRevertToScheduled?: () => void;
+    revertButtonLabel?: string;
     onSkip?: () => void;
     splitItems: TransactionSplitItemViewModel[];
     isExpense: boolean;
@@ -93,7 +95,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         displayType?: string;
     }>();
     const { theme } = useTheme();
-    const { deleteJournal, findJournal, duplicateJournal, postJournal } = useJournalActions();
+    const { deleteJournal, findJournal, duplicateJournal, postJournal, revertToPlanned } = useJournalActions();
     const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
     const { journal, isLoading: isLoadingJournal } = useJournal(journalId);
 
@@ -244,6 +246,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 try {
                     await postJournal(journalId);
                     showSuccessAlert('Posted', 'Transaction has been marked as posted.');
+                    AppNavigation.back();
                 } catch (error) {
                     logger.error('Failed to post transaction:', error);
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -252,6 +255,30 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
             }
         );
     }, [journalId, journalInfo, postJournal, amountText]);
+
+    const handleRevertToScheduled = useCallback(async () => {
+        const isSkipped = journalInfo?.status === 'SKIPPED';
+        const actionLabel = isSkipped ? 'Unskip' : 'Unpost';
+        const statusLabel = isSkipped ? 'skipped' : 'posted';
+
+        if (!journalInfo || (journalInfo.status !== 'POSTED' && journalInfo.status !== 'SKIPPED')) return;
+
+        showConfirmationAlert(
+            `${actionLabel} Transaction`,
+            `Are you sure you want to revert this ${statusLabel} transaction for ${amountText} back to scheduled status?`,
+            async () => {
+                try {
+                    await revertToPlanned(journalId);
+                    showSuccessAlert(`${actionLabel}ed`, `Transaction has been reverted to scheduled status.`);
+                    AppNavigation.back();
+                } catch (error) {
+                    logger.error(`Failed to ${actionLabel.toLowerCase()} transaction:`, error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    showErrorAlert(`Could not ${actionLabel.toLowerCase()} transaction: ${errorMessage}`);
+                }
+            }
+        );
+    }, [journalId, journalInfo, revertToPlanned, amountText]);
 
     const handleSkip = useCallback(async () => {
         if (!journalInfo || journalInfo.status !== 'PLANNED' || !journalInfo.plannedPaymentId) return;
@@ -328,6 +355,8 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         smsInfo,
         onOpenSmsInbox: smsInfo?.inboxRecordId ? AppNavigation.toSmsInbox : undefined,
         onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
+        onRevertToScheduled: (journalInfo?.status === 'POSTED' || journalInfo?.status === 'SKIPPED') ? handleRevertToScheduled : undefined,
+        revertButtonLabel: journalInfo?.status === 'SKIPPED' ? 'Unskip (Revert to Scheduled)' : 'Unpost (Revert to Scheduled)',
         onSkip: journalInfo?.status === 'PLANNED' ? handleSkip : undefined,
         splitItems,
         isExpense,

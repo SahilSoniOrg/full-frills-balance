@@ -29,6 +29,10 @@ export function useJournalActions() {
         return journalService.postJournal(journalId);
     }, []);
 
+    const revertToPlanned = useCallback(async (journalId: string) => {
+        return journalService.revertToPlanned(journalId);
+    }, []);
+
     return {
         createJournal,
         updateJournal,
@@ -36,5 +40,6 @@ export function useJournalActions() {
         findJournal,
         duplicateJournal,
         postJournal,
+        revertToPlanned,
     };
 }

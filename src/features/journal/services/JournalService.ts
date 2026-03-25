@@ -15,6 +15,7 @@ import { ledgerWriteService } from '@/src/services/ledger';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { EnrichedJournal, JournalEntryLine } from '@/src/types/domain';
+import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { accountingService } from '@/src/utils/accountingService';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -150,26 +151,115 @@ export class JournalService {
             throw new Error(`Cannot post journal with status ${journal.status}. Only PLANNED journals can be posted.`);
         }
 
-        // M-3 fix: status-only patch — updateJournalWithTransactions was soft-deleting
-        // and re-creating every transaction line just to flip a status field, which
-        // (a) produced spurious audit log noise and (b) unnecessarily churned balances.
-        const updatedJournal = await journalRepository.updateJournalStatus(journalId, JournalStatus.POSTED);
+        const postTime = Date.now();
+        const transactions = await transactionRepository.findByJournal(journalId);
+
+        // M-3 fix evolved: status-only patch + date propagation (F-14 fix).
+        // Update both the journal date and all associated transaction dates to "now".
+        const originalDate = journal.journalDate;
+        await database.write(async () => {
+            // Store original planned date in metadata for potential unposting
+            await journalRepository.patchMetadata(
+                journalId,
+                { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
+                MetadataSources.MANUAL_POST
+            );
+
+            await journal.update((record: Journal) => {
+                record.status = JournalStatus.POSTED;
+                record.journalDate = postTime;
+                record.updatedAt = new Date();
+            });
+
+            for (const tx of transactions) {
+                await tx.update((record: Transaction) => {
+                    record.transactionDate = postTime;
+                    record.updatedAt = new Date();
+                });
+            }
+        });
 
         // 2. Audit log
         await auditService.log({
             entityType: 'journal',
             entityId: journalId,
             action: AuditAction.UPDATE,
-            changes: { status: JournalStatus.POSTED }
+            changes: { status: JournalStatus.POSTED, journalDate: postTime }
         });
 
         // 3. Rebuild balances for the accounts involved in this journal
-        const transactions = await transactionRepository.findByJournal(journalId);
         const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-        rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
+        rebuildQueueService.enqueueMany(accountIds, postTime);
 
-        logger.info(`Manually posted journal ${journalId}`);
-        return updatedJournal;
+        logger.info(`Manually posted journal ${journalId} at ${new Date(postTime).toLocaleString()}`);
+        return journal;
+    }
+
+    async revertToPlanned(journalId: string): Promise<Journal> {
+        const journal = await journalRepository.find(journalId);
+        if (!journal) throw new Error('Journal not found');
+        if (journal.status !== JournalStatus.POSTED && journal.status !== JournalStatus.SKIPPED) {
+            throw new Error(`Cannot revert journal with status ${journal.status}. Only POSTED or SKIPPED journals can be reverted.`);
+        }
+
+        const currentJournalDate = journal.journalDate;
+        let revertTime: number;
+
+        // Try to recover original scheduled date from metadata
+        const metadata = await journalRepository.findMetadataByJournalId(journalId);
+        if (metadata?.metadataJson) {
+            try {
+                const json = JSON.parse(metadata.metadataJson);
+                if (json[MetadataKeys.ORIGINAL_PLANNED_DATE]) {
+                    revertTime = json[MetadataKeys.ORIGINAL_PLANNED_DATE];
+                } else {
+                    // Fallback to midnight of current date if no record found
+                    const date = new Date(currentJournalDate);
+                    date.setHours(0, 0, 0, 0);
+                    revertTime = date.getTime();
+                }
+            } catch {
+                const date = new Date(currentJournalDate);
+                date.setHours(0, 0, 0, 0);
+                revertTime = date.getTime();
+            }
+        } else {
+            const date = new Date(currentJournalDate);
+            date.setHours(0, 0, 0, 0);
+            revertTime = date.getTime();
+        }
+
+        const transactions = await transactionRepository.findByJournal(journalId);
+
+        await database.write(async () => {
+            await journal.update((record: Journal) => {
+                record.status = JournalStatus.PLANNED;
+                record.journalDate = revertTime;
+                record.updatedAt = new Date();
+            });
+
+            for (const tx of transactions) {
+                await tx.update((record: Transaction) => {
+                    record.transactionDate = revertTime;
+                    record.updatedAt = new Date();
+                });
+            }
+        });
+
+        // 2. Audit log
+        await auditService.log({
+            entityType: 'journal',
+            entityId: journalId,
+            action: AuditAction.UPDATE,
+            changes: { status: JournalStatus.PLANNED, journalDate: revertTime }
+        });
+
+        // 3. Rebuild balances for the accounts involved (for both old and new dates)
+        const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
+        rebuildQueueService.enqueueMany(accountIds, Math.min(currentJournalDate, revertTime));
+
+        logger.info(`Unposted journal ${journalId}, reverted to PLANNED at ${new Date(revertTime).toLocaleDateString()}`);
+        return journal;
     }
 
     /**

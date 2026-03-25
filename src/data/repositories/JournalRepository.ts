@@ -229,7 +229,31 @@ export class JournalRepository {
 
     return records[0] || null
   }
-
+ 
+  /**
+   * Updates or creates metadata for a journal, merging existing metadata JSON.
+   * Assumes it's being called inside a database.write() block.
+   */
+  async patchMetadata(journalId: string, partialMetadata: Record<string, any>, source?: string): Promise<void> {
+    const existingMeta = await this.findMetadataByJournalId(journalId)
+    if (existingMeta) {
+      await existingMeta.update((record: any) => {
+        const currentJson = record.metadataJson ? JSON.parse(record.metadataJson) : {}
+        record.metadataJson = JSON.stringify({ ...currentJson, ...partialMetadata })
+        if (source) record.importSource = source
+        record.updatedAt = new Date()
+      })
+    } else {
+      await this.journalMetadata.create((record: any) => {
+        record.journalId = journalId
+        record.importSource = source || 'manual'
+        record.metadataJson = JSON.stringify(partialMetadata)
+        record.createdAt = new Date()
+        record.updatedAt = new Date()
+      })
+    }
+  }
+ 
   async findJournalByOriginalSmsId(originalSmsId: string): Promise<Journal | null> {
     const metadata = await this.journalMetadata
       .query(Q.where('original_sms_id', originalSmsId))

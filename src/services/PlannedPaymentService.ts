@@ -10,6 +10,7 @@ import { ledgerWriteService } from '@/src/services/ledger'
 import { rebuildQueueService } from '@/src/services/RebuildQueueService'
 import { logger } from '@/src/utils/logger'
 import { Money } from '@/src/utils/money'
+import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants'
 import { Q } from '@nozbe/watermelondb'
 
 export class PlannedPaymentService {
@@ -203,8 +204,17 @@ export class PlannedPaymentService {
     async postOccurrence(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
         try {
             // normalizedDate is midnight of the occurrence day — used only for day-window queries.
-            const normalizedDate = this.normalizeToStartOfDay(occurrenceDate)
-            const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1)
+            const earliestPlanned = await database.collections.get<Journal>('journals').query(
+                Q.where('planned_payment_id', pp.id),
+                Q.where('status', JournalStatus.PLANNED),
+                Q.where('deleted_at', Q.eq(null)),
+                Q.sortBy('journal_date', Q.asc)
+            ).fetch().then(res => res[0]);
+
+            const targetDate = earliestPlanned ? earliestPlanned.journalDate : occurrenceDate;
+            const normalizedDate = this.normalizeToStartOfDay(targetDate);
+            const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
+            
             // Use current time as the actual journal timestamp so manually posted
             // journals aren't all stamped at midnight (Bug 3 fix).
             const postTime = Date.now()
@@ -221,15 +231,34 @@ export class PlannedPaymentService {
                 // Promote to POSTED by patching status and updating the journal date
                 // to the current time so the post timestamp is accurate.
                 const j = existingPlanned[0];
+                const txs = await transactionRepository.findByJournal(j.id);
+                const originalDate = j.journalDate;
+
                 await database.write(async () => {
+                    // Store original planned date in metadata for potential unposting
+                    await journalRepository.patchMetadata(
+                        j.id,
+                        { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
+                        MetadataSources.MANUAL_POST
+                    );
+
                     await j.update((record: Journal) => {
                         record.status = JournalStatus.POSTED;
                         record.journalDate = postTime;
                         record.updatedAt = new Date();
                     });
+
+                    // F-14 Fix: Propagate the new journal date to all associated transactions
+                    // so the "Post Now" action stamps them at the current time (the moment
+                    // the user pressed the button).
+                    for (const tx of txs) {
+                        await tx.update((record: Transaction) => {
+                            record.transactionDate = postTime;
+                            record.updatedAt = new Date();
+                        });
+                    }
                 });
                 // Rebuild balance for affected accounts.
-                const txs = await transactionRepository.findByJournal(j.id);
                 rebuildQueueService.enqueueMany(new Set(txs.map((t: Transaction) => t.accountId)), postTime);
             } else {
                 // Fallback: Create new POSTED journal if none existed
@@ -269,15 +298,18 @@ export class PlannedPaymentService {
             const nextOcc = this.calculateNextOccurrence(normalizedDate, pp)
 
             // 3. Update the planned payment record
-            if (pp.endDate && nextOcc > pp.endDate) {
-                await plannedPaymentRepository.update(pp, {
-                    nextOccurrence: nextOcc,
-                    status: PlannedPaymentStatus.COMPLETED
-                })
-            } else {
-                await plannedPaymentRepository.update(pp, {
-                    nextOccurrence: nextOcc
-                })
+            // Only advance if the new next occurrence is actually later than the current one.
+            if (nextOcc > pp.nextOccurrence) {
+                if (pp.endDate && nextOcc > pp.endDate) {
+                    await plannedPaymentRepository.update(pp, {
+                        nextOccurrence: nextOcc,
+                        status: PlannedPaymentStatus.COMPLETED
+                    })
+                } else {
+                    await plannedPaymentRepository.update(pp, {
+                        nextOccurrence: nextOcc
+                    })
+                }
             }
 
             logger.info(`Manually posted occurrence for planned payment ${pp.id} at ${new Date(postTime).toLocaleString()}`)
@@ -295,34 +327,75 @@ export class PlannedPaymentService {
      */
     async skipOccurrence(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
         try {
-            const normalizedDate = this.normalizeToStartOfDay(occurrenceDate)
-            const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1)
+            // 1. Target the earliest scheduled journal if one exists, otherwise use the provided occurrenceDate
+            const earliestPlanned = await database.collections.get<Journal>('journals').query(
+                Q.where('planned_payment_id', pp.id),
+                Q.where('status', JournalStatus.PLANNED),
+                Q.where('deleted_at', Q.eq(null)),
+                Q.sortBy('journal_date', Q.asc)
+            ).fetch().then(res => res[0]);
 
-            // 1. Find and delete any existing PLANNED journal for this occurrence
+            const targetDate = earliestPlanned ? earliestPlanned.journalDate : occurrenceDate;
+            const normalizedDate = this.normalizeToStartOfDay(targetDate);
+            const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
+
             const existingPlanned = await database.collections.get<Journal>('journals').query(
                 Q.where('planned_payment_id', pp.id),
                 Q.where('journal_date', Q.between(normalizedDate, dayEnd)),
                 Q.where('status', JournalStatus.PLANNED),
                 Q.where('deleted_at', Q.eq(null))
-            ).fetch()
+            ).fetch();
 
-            for (const journal of existingPlanned) {
-                await journalRepository.deleteJournal(journal.id)
+            await database.write(async () => {
+                for (const journal of existingPlanned) {
+                    await journal.update((record: Journal) => {
+                        record.status = JournalStatus.SKIPPED;
+                        record.updatedAt = new Date();
+                    });
+                }
+            });
+
+            if (existingPlanned.length === 0) {
+                const amount = Money.from(pp.amount, pp.currencyCode)
+                const transactions = [
+                    {
+                        accountId: pp.fromAccountId,
+                        amount: amount.amount,
+                        transactionType: TransactionType.CREDIT,
+                    },
+                    {
+                        accountId: pp.toAccountId,
+                        amount: amount.amount,
+                        transactionType: TransactionType.DEBIT,
+                    },
+                ]
+
+                await ledgerWriteService.createJournal({
+                    journalDate: normalizedDate,
+                    description: pp.name,
+                    currencyCode: pp.currencyCode,
+                    transactions,
+                    status: JournalStatus.SKIPPED,
+                    plannedPaymentId: pp.id,
+                })
             }
 
             // 2. Advance the schedule
             const nextOcc = this.calculateNextOccurrence(normalizedDate, pp)
 
             // 3. Update the planned payment record
-            if (pp.endDate && nextOcc > pp.endDate) {
-                await plannedPaymentRepository.update(pp, {
-                    nextOccurrence: nextOcc,
-                    status: PlannedPaymentStatus.COMPLETED
-                })
-            } else {
-                await plannedPaymentRepository.update(pp, {
-                    nextOccurrence: nextOcc
-                })
+            // Only advance if the new next occurrence is actually later than the current one.
+            if (nextOcc > pp.nextOccurrence) {
+                if (pp.endDate && nextOcc > pp.endDate) {
+                    await plannedPaymentRepository.update(pp, {
+                        nextOccurrence: nextOcc,
+                        status: PlannedPaymentStatus.COMPLETED
+                    })
+                } else {
+                    await plannedPaymentRepository.update(pp, {
+                        nextOccurrence: nextOcc
+                    })
+                }
             }
 
             logger.info(`Skipped occurrence for planned payment ${pp.id} at ${new Date(normalizedDate).toLocaleDateString()}`)
