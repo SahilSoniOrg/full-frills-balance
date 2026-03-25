@@ -1,12 +1,12 @@
+import { ChartTooltip } from '@/src/components/charts/ChartTooltip';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
-import { ChartTooltip } from '@/src/components/charts/ChartTooltip';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
-import { Bleed, Box, FadeIn, Inline, Separator, Skeleton, Stack, Text } from '@/src/design-system';
+import { Box, FadeIn, Inline, Separator, Skeleton, Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SafeToSpendProjection } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -95,7 +95,7 @@ export const SafeToSpendCard = ({
     const format = (val: number) => {
         if (isLoading) return <Skeleton width={60} height={24} />;
         if (isPrivacyMode) return '••••';
-        
+
         const isVerySmall = Math.abs(val) > 0 && Math.abs(val) < 0.5;
         if (isVerySmall) {
             const oneFormatted = CurrencyFormatter.format(1, currencyCode, {
@@ -461,20 +461,18 @@ export const SafeToSpendCard = ({
                     }}
                 >
                     {/* Header */}
-                    <Bleed horizontal="lg">
-                        <View style={{
-                            padding: Spacing.lg,
-                            borderBottomWidth: 1,
-                            borderBottomColor: withOpacity(theme.border, 0.4),
-                            backgroundColor: withOpacity(theme.surfaceSecondary, 0.5),
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: Spacing.sm
-                        }}>
-                            <AppIcon name="calculator" size={Size.xs} color={theme.textTertiary} />
-                            <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1.5 }}>{labels.calculationLedger}</AppText>
-                        </View>
-                    </Bleed>
+                    <View style={{
+                        padding: Spacing.xl,
+                        borderBottomWidth: 1,
+                        borderBottomColor: withOpacity(theme.border, 0.4),
+                        backgroundColor: withOpacity(theme.surfaceSecondary, 0.5),
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: Spacing.sm
+                    }}>
+                        <AppIcon name="calculator" size={Size.xs} color={theme.textTertiary} />
+                        <AppText variant="caption" weight="bold" color="secondary" style={{ letterSpacing: 1.5 }}>{labels.calculationLedger}</AppText>
+                    </View>
 
                     {/* Step 1: Assets */}
                     <TouchableOpacity
@@ -482,7 +480,7 @@ export const SafeToSpendCard = ({
                         onPress={() => setExpandedSection(expandedSection === 'assets' ? null : 'assets')}
                     >
                         <View style={{ width: 4, backgroundColor: theme.primary }} />
-                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                        <View style={{ flex: 1, padding: Spacing.xl }}>
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
                                     <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.primary, 0.1) }]}>
@@ -493,7 +491,7 @@ export const SafeToSpendCard = ({
                                         <AppText variant="caption" color="secondary">{info.formulaItems[0].split(': ')[1]}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="subheading" color="primary">{format(totalLiquidAssets)}</AppText>
+                                <AppText variant="subheading" color="primary" style={{ fontFamily: Typography.fonts.heading }}>{format(totalLiquidAssets)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -510,7 +508,7 @@ export const SafeToSpendCard = ({
                         onPress={() => setExpandedSection(expandedSection === 'income' ? null : 'income')}
                     >
                         <View style={{ width: 4, backgroundColor: theme.primary }} />
-                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                        <View style={{ flex: 1, padding: Spacing.xl }}>
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
                                     <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.primary, 0.1) }]}>
@@ -521,7 +519,7 @@ export const SafeToSpendCard = ({
                                         <AppText variant="caption" color="secondary">{formulaItems[1].split(': ')[1]}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="subheading" color="primary">{format(totalFutureInflow)}</AppText>
+                                <AppText variant="subheading" color="primary" style={{ fontFamily: Typography.fonts.heading }}>{format(totalFutureInflow)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -562,7 +560,7 @@ export const SafeToSpendCard = ({
                         onPress={() => setExpandedSection(expandedSection === 'committed' ? null : 'committed')}
                     >
                         <View style={{ width: 4, backgroundColor: theme.warning }} />
-                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                        <View style={{ flex: 1, padding: Spacing.xl }}>
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
                                     <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.warning, 0.1) }]}>
@@ -573,7 +571,7 @@ export const SafeToSpendCard = ({
                                         <AppText variant="caption" color="secondary">{formulaItems[2] ? formulaItems[2].split(': ')[1] : 'Bills and Budgets'}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="subheading" color="warning">–{format(committedBudget + committedPlanned)}</AppText>
+                                <AppText variant="subheading" color="warning" style={{ fontFamily: Typography.fonts.heading }}>–{format(committedBudget + committedPlanned)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -628,7 +626,7 @@ export const SafeToSpendCard = ({
                         onPress={() => setExpandedSection(expandedSection === 'debts' ? null : 'debts')}
                     >
                         <View style={{ width: 4, backgroundColor: theme.error }} />
-                        <View style={{ flex: 1, padding: Spacing.lg }}>
+                        <View style={{ flex: 1, padding: Spacing.xl }}>
                             <View style={styles.breakdownRow}>
                                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
                                     <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.error, 0.1) }]}>
@@ -639,7 +637,7 @@ export const SafeToSpendCard = ({
                                         <AppText variant="caption" color="secondary">{formulaItems[3] ? formulaItems[3].split(': ')[1] : 'Short-term liabilities'}</AppText>
                                     </View>
                                 </View>
-                                <AppText variant="subheading" color="error">–{format(committedLiabilities)}</AppText>
+                                <AppText variant="subheading" color="error" style={{ fontFamily: Typography.fonts.heading }}>–{format(committedLiabilities)}</AppText>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -687,7 +685,7 @@ export const SafeToSpendCard = ({
                         <View style={{ width: 4, backgroundColor: theme.primary }} />
                         <View style={{
                             flex: 1,
-                            padding: Spacing.lg,
+                            padding: Spacing.xl,
                             backgroundColor: withOpacity(theme.primary, 0.08),
                             borderTopWidth: 1,
                             borderTopColor: withOpacity(theme.primary, 0.3),
@@ -835,7 +833,7 @@ export const SafeToSpendCard = ({
                         <View style={{ gap: Spacing.md }}>
                             {(() => {
                                 // Flatten details across all accounts for unified grouping
-                                const flatCommitted = committedBreakdown.flatMap(acc => 
+                                const flatCommitted = committedBreakdown.flatMap(acc =>
                                     acc.details
                                         .filter(d => d.amount !== 0)
                                         .map(d => ({
@@ -1141,7 +1139,7 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.md,
     },
     expandedContentRow: {
-        paddingHorizontal: Spacing.lg,
+        paddingHorizontal: Spacing.xl,
         paddingBottom: Spacing.md,
     },
     breakdownRow: {
