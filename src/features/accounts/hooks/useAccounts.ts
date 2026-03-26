@@ -1,6 +1,7 @@
 /**
  * Reactive Data Hooks for Accounts
  */
+import { IconName } from '@/src/components/core'
 import { Animation } from '@/src/constants'
 import { AppConfig } from '@/src/constants/app-config'
 import { useUI } from '@/src/contexts/UIContext'
@@ -174,7 +175,7 @@ export function useAccountActions() {
         accountType: AccountType;
         accountSubtype?: AccountSubtype;
         currencyCode: string;
-        icon?: string;
+        icon?: IconName;
         initialBalance?: number;
         parentAccountId?: string | null;
         metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
@@ -188,7 +189,7 @@ export function useAccountActions() {
         accountSubtype?: AccountSubtype;
         currencyCode?: string;
         description?: string;
-        icon?: string;
+        icon?: IconName;
         parentAccountId?: string | null;
         metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'];
     }) => {

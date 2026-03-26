@@ -10,7 +10,8 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 
 export interface TransactionBadge {
     text: string;
-    icon?: IconName;
+    icon?: IconName | string | null;
+    fallbackIcon?: IconName;
     colorKey?: string; // semantic theme key
     variant?: ComponentVariant;
 }
@@ -68,6 +69,7 @@ export const TransactionCard = ({
                         size="sm"
                         backgroundColor={badge.colorKey ? theme[badge.colorKey as keyof typeof theme] as string : undefined}
                         icon={badge.icon}
+                        fallbackIcon={badge.fallbackIcon}
                     >
                         {badge.text}
                     </Badge>

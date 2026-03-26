@@ -158,7 +158,8 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                         <View style={styles.accountRow}>
                             <View style={styles.accountInfo}>
                                 <IvyIcon
-                                    name={fromAccount?.icon as any}
+                                    name={fromAccount?.icon}
+                                    fallbackIcon="wallet"
                                     label={fromAccount?.name}
                                     color={theme[getAccountTypeVariant(fromAccount?.accountType) as keyof typeof theme] as string || theme.text}
                                     size={Size.avatarMd}
@@ -176,7 +177,8 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                                     {toAccount?.name || AppConfig.strings.common.loading}
                                 </AppText>
                                 <IvyIcon
-                                    name={toAccount?.icon as any}
+                                    name={toAccount?.icon}
+                                    fallbackIcon="wallet"
                                     label={toAccount?.name}
                                     color={theme[getAccountTypeVariant(toAccount?.accountType) as keyof typeof theme] as string || theme.text}
                                     size={Size.avatarMd}
@@ -194,7 +196,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                         style={{ width: '100%', marginBottom: Spacing.md }}
                     >
                         <View style={styles.buttonInner}>
-                            <AppIcon name="checkmark" size={18} color={theme.onPrimary} />
+                            <AppIcon name="check" size={18} color={theme.onPrimary} />
                             <AppText variant="body" weight="bold" style={{ marginLeft: Spacing.sm, color: theme.onPrimary }}>
                                 Post Next Occurrence
                             </AppText>

@@ -12,7 +12,8 @@ export type BadgeProps = ViewProps & {
   size?: 'sm' | 'md'
   solid?: boolean
   themeMode?: ThemeMode
-  icon?: IconName
+  icon?: IconName | string | null
+  fallbackIcon?: IconName
   backgroundColor?: string
   textColor?: string
 }
@@ -23,6 +24,7 @@ export function Badge({
   size = 'md',
   solid = false,
   icon,
+  fallbackIcon,
   backgroundColor: customBg,
   textColor: customText,
   themeMode,
@@ -62,9 +64,10 @@ export function Badge({
   return (
     <View style={badgeStyle} {...props}>
       <View style={styles.content}>
-        {icon && (
+        {(icon || fallbackIcon) && (
           <AppIcon
-            name={icon}
+            name={icon as any}
+            fallbackIcon={fallbackIcon}
             size={iconSize}
             color={finalTextColor}
             style={styles.icon}

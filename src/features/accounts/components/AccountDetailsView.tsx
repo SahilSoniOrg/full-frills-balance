@@ -152,7 +152,8 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                         <AppCard elevation="sm" style={styles.accountInfoCard}>
                             <View style={styles.accountHeader}>
                                 <IvyIcon
-                                    name={accountIcon as any}
+                                    name={accountIcon || undefined}
+                                    fallbackIcon="wallet"
                                     label={accountName}
                                     color={theme[accountTypeColorKey as keyof typeof theme] as string}
                                     size={Size.avatarMd}

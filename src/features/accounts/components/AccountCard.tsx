@@ -39,7 +39,8 @@ export function AccountCard({
                 <View style={[styles.headerSection, { backgroundColor: account.accentColor }]}>
                     <View style={styles.cardHeaderTop}>
                         <IvyIcon
-                            name={account.icon as any}
+                            name={account.icon || undefined}
+                            fallbackIcon="wallet"
                             label={account.name}
                             color={account.textColor}
                             size={Size.avatarSm}
@@ -73,7 +74,7 @@ export function AccountCard({
                                         <AppIcon name="chevronUp" color={account.textColor} size={Size.iconSm} />
                                     </TouchableOpacity>
                                 ) : (
-                                    <IvyIcon name="folder" color={account.textColor} size={Size.iconXs} />
+                                    <IvyIcon name="hierarchy" color={account.textColor} size={Size.iconXs} />
                                 )}
                             </View>
                         )}

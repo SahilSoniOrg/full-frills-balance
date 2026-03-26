@@ -109,7 +109,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                 <Stack space="xl">
                     <Box alignItems="center" marginTop="md">
                         <Box
-                           background={withOpacity(amountColor, Opacity.soft) as any}
+                           background={withOpacity(amountColor, Opacity.soft)}
                            width={Size.avatarLg}
                            height={Size.avatarLg}
                            borderRadius="full"
@@ -152,7 +152,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                                         subtitle={item.transactionType}
                                         leading={
                                             <Box
-                                                background={item.iconBackground as any}
+                                                background={item.iconBackground}
                                                 width={Size.lg}
                                                 height={Size.lg}
                                                 borderRadius="full"
@@ -161,6 +161,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                                             >
                                                 <AppIcon
                                                     name={item.iconName as any}
+                                                    fallbackIcon={item.fallbackIcon}
                                                     size={16}
                                                     color={item.iconColor}
                                                 />
@@ -283,7 +284,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                                 style={{ width: '100%' }}
                             >
                                 <Inline space="sm" alignItems="center">
-                                    <AppIcon name="checkmark" size={18} color={theme.onPrimary} />
+                                    <AppIcon name="check" size={18} color={theme.onPrimary} />
                                     <AppText variant="body" weight="bold" style={{ color: theme.onPrimary }}>
                                         Post Transaction Now
                                     </AppText>

@@ -1,5 +1,6 @@
 import { generator } from '@/src/data/database/idGenerator';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { IconName } from '@/src/components/core/AppIcon';
 import {
     BatchImportData,
     importRepository
@@ -112,38 +113,38 @@ interface CashewAppSetting {
     date_updated: string;
 }
 
-// Map cashew icon (string) to app icon (string within the predefined set).
-const getAppIconFromCashewIcon = (cashewIcon: string | null): string => {
+// Map cashew icon (string) to app icon (IconName).
+const getAppIconFromCashewIcon = (cashewIcon: string | null): IconName => {
     if (!cashewIcon) return 'star';
-    const mapping: Record<string, string> = {
-        'cutlery.png': 'restaurant',
-        'groceries.png': 'shopping-basket',
-        'shopping.png': 'shopping-cart',
-        'tram.png': 'train-car',
-        'popcorn.png': 'movie',
-        'bills.png': 'file-invoice-dollar',
-        'gift.png': 'gift',
-        'flower.png': 'flower',
+    const mapping: Record<string, IconName> = {
+        'cutlery.png': 'coffee',
+        'groceries.png': 'shoppingBag',
+        'shopping.png': 'shoppingCart',
+        'tram.png': 'bus',
+        'popcorn.png': 'film',
+        'bills.png': 'receipt',
+        'gift.png': 'sparkles',
+        'flower.png': 'sparkles',
         'briefcase.png': 'briefcase',
-        'plane.png': 'airplane',
-        'coin.png': 'cash-multiple',
+        'plane.png': 'bus',
+        'coin.png': 'transaction',
         'bank.png': 'bank',
-        'wallet.png': 'wallet',
+        'wallet.png': 'creditCard',
         'home.png': 'home',
-        'car.png': 'car',
+        'car.png': 'bus',
         'heart.png': 'heart',
-        'music.png': 'music',
-        'game-controller.png': 'gamepad-variant',
-        'camera.png': 'camera',
-        'phone.png': 'phone',
-        'laptop.png': 'laptop',
-        'book.png': 'book-open-variant',
+        'music.png': 'playSquare',
+        'game-controller.png': 'playSquare',
+        'camera.png': 'film',
+        'phone.png': 'messageCircle',
+        'laptop.png': 'database',
+        'book.png': 'document',
         'coffee.png': 'coffee',
-        'dumbbell.png': 'dumbbell',
-        'stethoscope.png': 'medical-bag',
-        'graduation-cap.png': 'school',
-        'shirt.png': 'tshirt-crew',
-        'beach-umbrella.png': 'beach',
+        'dumbbell.png': 'trendingUp',
+        'stethoscope.png': 'shieldCheck',
+        'graduation-cap.png': 'briefcase',
+        'shirt.png': 'shoppingBag',
+        'beach-umbrella.png': 'palette',
     };
     return mapping[cashewIcon] || 'star';
 };
@@ -276,7 +277,7 @@ export const cashewPlugin: ImportPlugin = {
                         accountType: isLent ? AccountType.ASSET : AccountType.LIABILITY,
                         accountSubtype: AccountSubtype.LOAN,
                         currencyCode: currencyMap.get(objective.wallet_fk) || preferences.defaultCurrencyCode || 'USD',
-                        icon: objective.icon_name || 'handshake',
+                        icon: (objective.icon_name as IconName) || 'handshake',
                         orderNum: objective.order,
                         createdAt: new Date(objective.date_created).getTime(),
                         updatedAt: objective.date_time_modified ? new Date(objective.date_time_modified).getTime() : undefined,

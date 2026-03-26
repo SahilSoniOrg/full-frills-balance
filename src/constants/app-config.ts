@@ -112,7 +112,7 @@ export const AppConfig = {
     },
     balanceCorrections: {
       namePrefix: 'Balance Corrections',
-      icon: 'construct',
+      icon: 'wrench',
       description: 'System account that stores balance corrections',
       legacyNames: ['Balance Corrections', 'Balance Correction', 'Balance Corrections ()'],
     },

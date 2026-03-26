@@ -1,5 +1,6 @@
 import { useTheme } from '@/src/hooks/use-theme';
 import {
+    Activity,
     AlertCircle,
     AlertTriangle,
     ArrowDown,
@@ -12,6 +13,7 @@ import {
     Bell,
     Briefcase,
     Bus,
+    Calculator,
     Calendar,
     Check,
     CheckCircle2,
@@ -31,13 +33,17 @@ import {
     EyeOff,
     FileText,
     Film,
+    Flame,
     FolderOpen,
     Github,
+    Handshake,
     Heart,
     HelpCircle,
     History,
     Home,
+    Info,
     Landmark,
+    LayoutDashboard,
     Lock,
     LogOut,
     Menu,
@@ -45,12 +51,16 @@ import {
     MessageSquare,
     MoreVertical,
     Palette,
+    Pause,
     PieChart,
+    Play,
     PlaySquare,
     Plus,
     PlusCircle,
     Receipt,
     RefreshCw,
+    Repeat,
+    Scale,
     Search,
     Settings,
     Shield,
@@ -66,6 +76,7 @@ import {
     User,
     Vault,
     Wallet,
+    Wrench,
     X,
     XCircle
 } from 'lucide-react-native';
@@ -144,6 +155,17 @@ export const IconMap = {
     heart: Heart,
     shieldCheck: ShieldCheck,
     trendingUpDown: TrendingUpDown,
+    calculator: Calculator,
+    pause: Pause,
+    play: Play,
+    flame: Flame,
+    info: Info,
+    scale: Scale,
+    wrench: Wrench,
+    handshake: Handshake,
+    dashboard: LayoutDashboard,
+    repeat: Repeat,
+    activity: Activity,
 } as const;
 
 export type IconName = keyof typeof IconMap;
@@ -156,7 +178,7 @@ export const isValidIconName = (name: string | undefined): name is IconName => {
 };
 
 interface AppIconProps {
-    name: IconName | string | undefined;
+    name: IconName | undefined;
     fallbackIcon?: IconName;
     color?: string;
     size?: number;

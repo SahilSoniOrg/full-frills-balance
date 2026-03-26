@@ -5,7 +5,8 @@ import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 
 interface IvyIconProps {
-    name?: string | IconName;
+    name?: string;
+    fallbackIcon?: IconName;
     label?: string;
     color: string;
     size?: number;
@@ -18,12 +19,13 @@ interface IvyIconProps {
  * IvyIcon - Circular icon container with contrast-aware content
  * Designed to provide a consistent visual identity for accounts and transaction types.
  */
-export const IvyIcon = ({ name, label, color, size = 40, style, iconColor, shape = 'circle' }: IvyIconProps) => {
+export const IvyIcon = ({ name, fallbackIcon, label, color, size = 40, style, iconColor, shape = 'circle' }: IvyIconProps) => {
     const textColor = iconColor || getContrastColor(color);
     const iconSize = size * 0.6;
     const labelSize = size * 0.5;
 
-    const hasValidIcon = name && isValidIconName(name as string);
+    const hasValidIcon = isValidIconName(name);
+    const hasValidFallback = isValidIconName(fallbackIcon);
 
     return (
         <View style={[
@@ -38,6 +40,8 @@ export const IvyIcon = ({ name, label, color, size = 40, style, iconColor, shape
         ]}>
             {hasValidIcon ? (
                 <AppIcon name={name as IconName} size={iconSize} color={textColor} />
+            ) : hasValidFallback ? (
+                <AppIcon name={fallbackIcon} size={iconSize} color={textColor} />
             ) : label ? (
                 <AppText
                     style={{

@@ -39,7 +39,7 @@ export interface PeriodMetrics {
 export interface SubAccountViewModel {
     id: string;
     name: string;
-    icon: string;
+    icon: IconName;
     balanceText: string;
     color: string;
     level: number;
@@ -54,7 +54,7 @@ export interface AccountDetailsViewModel {
     accountType: string;
     accountSubtypeLabel: string;
     accountTypeVariant: string;
-    accountIcon: string | null;
+    accountIcon: IconName | null;
     accountTypeColorKey: string;
     isDeleted: boolean;
     balanceText: string;
@@ -544,7 +544,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
                     badges: displayAccounts.map(acc => ({
                         text: acc.name,
                         variant: getAccountTypeVariant(acc.accountType),
-                        icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
+                        icon: acc.icon,
+                        fallbackIcon: (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet') as IconName,
                     })),
                     notes: transaction.notes,
                 }

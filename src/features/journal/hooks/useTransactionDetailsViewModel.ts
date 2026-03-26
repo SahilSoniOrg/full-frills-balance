@@ -27,7 +27,8 @@ export interface TransactionSplitItemViewModel {
     transactionType: string;
     amountText: string;
     amountColor: string;
-    iconName: IconName;
+    iconName: IconName | string | null;
+    fallbackIcon?: IconName;
     iconColor: string;
     iconBackground: string;
     onPress: () => void;
@@ -323,7 +324,8 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 amountText: `${isDebit ? '+' : '-'}${CurrencyFormatter.format(item.amount, item.currencyCode)}`,
                 amountColor: color,
                 // Icons should reflect flow: Down (+) to account, Up (-) from account
-                iconName: (isDebit ? 'arrowDown' : 'arrowUp') as IconName,
+                iconName: item.icon || null,
+                fallbackIcon: (isDebit ? 'wallet' : 'wallet') as IconName, // Use wallet as general fallback for accounts
                 iconColor: color,
                 iconBackground: withOpacity(color, Opacity.soft),
                 onPress: () => AppNavigation.toAccountDetails(item.accountId),

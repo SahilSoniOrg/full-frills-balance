@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { IconName } from '@/src/components/core/AppIcon';
 import Account, {
     AccountSubtype,
     AccountType,
@@ -25,7 +26,7 @@ export interface CreateAccountData {
     accountSubtype?: AccountSubtype;
     currencyCode: string;
     description?: string;
-    icon?: string;
+    icon?: IconName;
     initialBalance?: number;
     orderNum?: number;
     parentAccountId?: string | null;
@@ -273,7 +274,7 @@ export class AccountService {
             accountSubtype: getDefaultSubtypeForType(AccountType.EQUITY),
             currencyCode,
             description: openingBalances.description,
-            icon: openingBalances.icon as any
+            icon: openingBalances.icon as IconName
         })).id;
     }
 
@@ -366,7 +367,7 @@ export class AccountService {
             accountSubtype: AccountSubtype.OPENING_BALANCE,
             currencyCode: targetCurrency,
             description: balanceCorrections.description,
-            icon: balanceCorrections.icon as any
+            icon: balanceCorrections.icon as IconName
         })).id;
     }
 

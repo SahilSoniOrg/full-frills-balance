@@ -7,6 +7,7 @@ import Account, {
     getDefaultSubtypeForType,
 } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
+import { IconName } from '@/src/components/core';
 import Currency from '@/src/data/models/Currency';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
@@ -36,8 +37,8 @@ export interface AccountFormViewModel {
     selectedCurrency: string;
     currencies: Currency[];
     setSelectedCurrency: (value: string) => void;
-    selectedIcon: string;
-    setSelectedIcon: (value: string) => void;
+    selectedIcon: IconName;
+    setSelectedIcon: (value: IconName) => void;
     isIconPickerVisible: boolean;
     setIsIconPickerVisible: (value: boolean) => void;
     initialBalance: string;
@@ -133,7 +134,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         getDefaultSubtypeForType(getInitialAccountType())
     );
     const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || defaultCurrency || AppConfig.defaultCurrency);
-    const [selectedIcon, setSelectedIcon] = useState<string>(pIcon || 'wallet');
+    const [selectedIcon, setSelectedIcon] = useState<IconName>((pIcon as IconName) || 'wallet');
     const [initialBalance, setInitialBalance] = useState('');
     const [parentAccountId, setParentAccountId] = useState('');
     const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);

@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText, Badge } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -93,9 +93,14 @@ export function SubAccountListModal({
                                         }]} />
                                     ))}
                                     <View style={styles.accountLeft}>
-                                        <View style={[styles.iconWrapper, { backgroundColor: withOpacity(account.color, Opacity.hover) }]}>
-                                            <AppIcon name={account.icon as any} size={Size.iconSm} color={account.color} />
-                                        </View>
+                                        <IvyIcon
+                                            name={account.icon}
+                                            fallbackIcon="wallet"
+                                            label={account.name}
+                                            color={account.color}
+                                            size={36}
+                                            shape="square"
+                                        />
                                         <AppText variant="body" weight="medium" style={styles.accountName} numberOfLines={1}>
                                             {account.name}
                                         </AppText>

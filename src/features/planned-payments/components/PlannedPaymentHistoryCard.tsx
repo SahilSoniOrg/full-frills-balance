@@ -86,7 +86,7 @@ export const PlannedPaymentHistoryCard = ({
                             </AppText>
                             {isAmountDeviated && (
                                 <View style={[styles.badgeContainer, { backgroundColor: withOpacity(theme.warning, Opacity.soft) }]}>
-                                    <AppIcon name="alert-circle" size={12} color={theme.warning} />
+                                    <AppIcon name="error" size={12} color={theme.warning} />
                                 </View>
                             )}
                         </View>
@@ -107,7 +107,7 @@ export const PlannedPaymentHistoryCard = ({
                             </AppText>
                             {isTitleDeviated && (
                                 <View style={[styles.badgeContainer, { backgroundColor: withOpacity(theme.primary, Opacity.soft), marginLeft: Spacing.xs }]}>
-                                    <AppIcon name="pencil" size={12} color={theme.primary} />
+                                    <AppIcon name="edit" size={12} color={theme.primary} />
                                 </View>
                             )}
                         </View>

@@ -33,7 +33,8 @@ export function mapJournalToCardProps(journal: EnrichedJournal): Omit<Transactio
         return {
             text: `${showPrefix}${acc.name}`,
             variant: getAccountTypeVariant(acc.accountType),
-            icon: (acc.icon as IconName) || (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet'),
+            icon: acc.icon,
+            fallbackIcon: (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet') as IconName,
         };
     });
 

@@ -1,3 +1,4 @@
+import { IconName } from '@/src/components/core/AppIcon'
 import { AppConfig, Palette } from '@/src/constants'
 import { Theme } from '@/src/constants/design-tokens'
 import Account from '@/src/data/models/Account'
@@ -8,7 +9,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 export interface AccountCardViewModel {
     id: string
     name: string
-    icon: string | null
+    icon: IconName | null
     accentColor: string
     textColor: string
     balanceText: string

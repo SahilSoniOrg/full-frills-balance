@@ -1,3 +1,4 @@
+import { IconName } from '@/src/components/core/AppIcon'
 import AccountMetadata from '@/src/data/models/AccountMetadata'
 import Transaction from '@/src/data/models/Transaction'
 import { Model, Query } from '@nozbe/watermelondb'
@@ -177,7 +178,7 @@ export default class Account extends Model {
   @field('currency_code') currencyCode!: string
   @field('parent_account_id') parentAccountId?: string
   @field('description') description?: string
-  @field('icon') icon?: string
+  @field('icon') icon?: IconName
   @field('order_num') orderNum?: number
   @date('reconciled_at') reconciledAt?: Date
 

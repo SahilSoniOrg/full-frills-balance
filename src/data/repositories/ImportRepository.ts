@@ -1,3 +1,4 @@
+import { IconName } from '@/src/components/core/AppIcon'
 import { database } from '@/src/data/database/Database'
 import Account, {
   AccountSubtype,
@@ -30,7 +31,7 @@ export interface ImportedAccount {
   currencyCode: string
   parentAccountId?: string
   description?: string
-  icon?: string
+  icon?: IconName
   orderNum?: number
   createdAt?: number
   updatedAt?: number

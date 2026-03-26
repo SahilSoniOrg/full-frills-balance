@@ -22,8 +22,8 @@ export function TabsLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon name="home" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AppIcon name="home" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
@@ -31,8 +31,8 @@ export function TabsLayout() {
         name="accounts"
         options={{
           title: 'Accounts',
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon name="wallet" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AppIcon name="wallet" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
@@ -40,8 +40,8 @@ export function TabsLayout() {
         name="commitments"
         options={{
           title: 'Commitments',
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon name="pieChart" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AppIcon name="handshake" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
@@ -49,8 +49,8 @@ export function TabsLayout() {
         name="activity"
         options={{
           title: 'Activity',
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon name="receipt" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AppIcon name="activity" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />
@@ -58,8 +58,8 @@ export function TabsLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <AppIcon name="settings" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <AppIcon name="settings" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
           ),
         }}
       />

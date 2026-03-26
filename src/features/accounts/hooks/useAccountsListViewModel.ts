@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config'
 import { useUI } from '@/src/contexts/UIContext'
+import { IconName } from '@/src/components/core/AppIcon'
 import Account from '@/src/data/models/Account'
 import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts'
 import { useTheme } from '@/src/hooks/use-theme'
@@ -11,7 +12,7 @@ import { useCallback, useMemo, useState } from 'react'
 export interface AccountCardViewModel {
     id: string
     name: string
-    icon: string | null
+    icon: IconName | null
     accentColor: string
     textColor: string
     balanceText: string
