@@ -52,20 +52,24 @@ export function DashboardScreenView({
                 ref={listRef}
                 showBack={false}
                 listHeader={
-                    <View>
+                    <View style={{ zIndex: 10 }}>
                         <DashboardHeader
                             {...headerProps}
                         />
                         {safeToSpendData && (
-                            <SafeToSpendCard
-                                {...safeToSpendData}
-                                isLoading={!isInitialized}
-                            />
+                            <View style={{ zIndex: 10 }}>
+                                <SafeToSpendCard
+                                    {...safeToSpendData}
+                                    isLoading={!isInitialized}
+                                />
+                            </View>
                         )}
-                        <PlannedPaymentsSection
-                            items={listViewProps.plannedJournals || []}
-                            onItemPress={listViewProps.onPlannedJournalPress}
-                        />
+                        <View style={{ zIndex: 1 }}>
+                            <PlannedPaymentsSection
+                                items={listViewProps.plannedJournals || []}
+                                onItemPress={listViewProps.onPlannedJournalPress}
+                            />
+                        </View>
                         <AppText variant="subheading" color="secondary" style={styles.transactionSectionTitle}>
                             {transactionSectionTitle}
                         </AppText>

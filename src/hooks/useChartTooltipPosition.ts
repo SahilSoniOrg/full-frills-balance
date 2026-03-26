@@ -3,35 +3,30 @@ import { useCallback } from 'react';
 interface UseChartTooltipPositionParams {
     containerWidth: number;
     containerHeight: number;
-    tooltipWidth: number;
-    tooltipHeight: number;
     offset?: number;
     edgePadding?: number;
+    avoidPointVertical?: boolean;
 }
 
 export function useChartTooltipPosition({
     containerWidth,
     containerHeight,
-    tooltipWidth,
-    tooltipHeight,
     offset = 15,
     edgePadding = 10,
+    avoidPointVertical = false,
 }: UseChartTooltipPositionParams) {
     return useCallback((x: number, y: number) => {
         const showOnRight = x < (containerWidth / 2);
-        let left = showOnRight ? x + offset : x - tooltipWidth - offset;
+        const showBelow = avoidPointVertical ? (y < containerHeight * 0.6) : false;
 
-        if (left < 0) left = edgePadding;
-        if (left + tooltipWidth > containerWidth) {
-            left = containerWidth - tooltipWidth - edgePadding;
-        }
-
-        let top = y - (tooltipHeight / 2);
-        if (top < edgePadding) top = edgePadding;
-        if (top + tooltipHeight > containerHeight - edgePadding) {
-            top = containerHeight - tooltipHeight - edgePadding;
-        }
-
-        return { left, top };
-    }, [containerHeight, containerWidth, edgePadding, offset, tooltipHeight, tooltipWidth]);
+        return { 
+            showOnRight, 
+            showBelow,
+            offset,
+            edgePadding,
+            containerWidth,
+            containerHeight
+        };
+    }, [containerHeight, containerWidth, offset, edgePadding, avoidPointVertical]);
 }
+

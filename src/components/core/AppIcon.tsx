@@ -33,8 +33,8 @@ import {
     Film,
     FolderOpen,
     Github,
-    HelpCircle,
     Heart,
+    HelpCircle,
     History,
     Home,
     Landmark,
@@ -54,6 +54,7 @@ import {
     Search,
     Settings,
     Shield,
+    ShieldCheck,
     ShoppingBag,
     ShoppingCart,
     Sparkles,
@@ -61,12 +62,12 @@ import {
     Tag,
     Trash2,
     TrendingUp,
+    TrendingUpDown,
     User,
     Vault,
     Wallet,
     X,
-    XCircle,
-    ShieldCheck
+    XCircle
 } from 'lucide-react-native';
 import React from 'react';
 import { ViewStyle } from 'react-native';
@@ -142,6 +143,7 @@ export const IconMap = {
     database: Database,
     heart: Heart,
     shieldCheck: ShieldCheck,
+    trendingUpDown: TrendingUpDown,
 } as const;
 
 export type IconName = keyof typeof IconMap;

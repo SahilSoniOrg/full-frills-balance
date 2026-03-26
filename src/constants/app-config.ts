@@ -724,6 +724,8 @@ export const AppConfig = {
     journalPageSize: 50,
     insightDetailsFetchLimit: 100,
     plannedJournalLimit: 10,
+    majorInflowThreshold: 1000,
+    maxTooltipDetails: 6,
   },
   // Insight Configuration
   insights: {

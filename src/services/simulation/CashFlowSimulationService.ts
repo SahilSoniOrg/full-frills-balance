@@ -70,7 +70,7 @@ export class CashFlowSimulationService {
         firstMajorInflowDay: number | null;
         committedSubtypes: AccountSubtype[];
         debtSubtypes: AccountSubtype[];
-        projectionPoints: { timestamp: number, value: number, isProjected: boolean }[];
+        projectionPoints: { timestamp: number, value: number, isProjected: boolean, details?: { name: string, amount: number, type: 'INFLOW' | 'OUTFLOW' | 'CC_DATE' }[], dailyBurn?: number }[];
         safeDaysCount: number | null;
     }> {
         const now = dayjs().startOf('day');
@@ -92,7 +92,7 @@ export class CashFlowSimulationService {
 
         let currentBalance = startingBalance;
         let minBalance = currentBalance;
-        const projectionPoints: { timestamp: number, value: number, isProjected: boolean }[] = [];
+        const projectionPoints: { timestamp: number, value: number, isProjected: boolean, details?: { name: string, amount: number, type: 'INFLOW' | 'OUTFLOW' | 'CC_DATE' }[], dailyBurn?: number }[] = [];
         let safeDaysCount: number | null = (startingBalance.amount < 0) ? 0 : null;
 
         projectionPoints.push({ timestamp: now.valueOf(), value: currentBalance.amount, isProjected: true });
@@ -105,10 +105,15 @@ export class CashFlowSimulationService {
             currentBalance = currentBalance.add(Money.from(offsetFlow, resultCurrency));
             
             const dayOffset = d + 1;
+            const dayDetails = flows.detailsByDayOffset.get(d);
+            const dailyBurn = Array.isArray(flows.effectiveDailyDrain) ? flows.effectiveDailyDrain[d] : flows.effectiveDailyDrain;
+
             projectionPoints.push({
                 timestamp: now.add(dayOffset, 'day').valueOf(),
                 value: currentBalance.amount,
-                isProjected: true
+                isProjected: true,
+                details: dayDetails,
+                dailyBurn: typeof dailyBurn === 'number' ? dailyBurn : undefined
             });
 
             if (currentBalance.amount < minBalance.amount) minBalance = currentBalance;
@@ -207,7 +212,8 @@ export class CashFlowSimulationService {
         }[],
         firstMajorInflowDay: number | null,
         committedSubtypes: AccountSubtype[],
-        debtSubtypes: AccountSubtype[]
+        debtSubtypes: AccountSubtype[],
+        detailsByDayOffset: Map<number, { name: string, amount: number, type: 'INFLOW' | 'OUTFLOW' | 'CC_DATE' }[]>
     }> {
         const flowByDayOffset = new Map<number, number>();
         let futureInflow = Money.from(0, resultCurrency);
@@ -238,7 +244,15 @@ export class CashFlowSimulationService {
         const debtSubtypesSet = new Set<AccountSubtype>();
         const incomeBreakdownList: { id: string, name: string, amount: number, dayOffset: number, type: 'PLANNED_PAYMENT' | 'PLANNED_JOURNAL' }[] = [];
         let firstMajorInflowDay: number | null = null;
-        const MAJOR_INFLOW_THRESHOLD = 1000; // Configurable threshold for "Major Paycheck"
+        const MAJOR_INFLOW_THRESHOLD = AppConfig.defaults.majorInflowThreshold; // Configurable threshold for "Major Paycheck"
+
+        const detailsByDayOffset = new Map<number, { name: string, amount: number, type: 'INFLOW' | 'OUTFLOW' | 'CC_DATE' }[]>();
+        const addDetail = (dayOffset: number, name: string, amount: number, type: 'INFLOW' | 'OUTFLOW' | 'CC_DATE') => {
+            if (dayOffset < 0 || dayOffset > simulationDays) return;
+            const current = detailsByDayOffset.get(dayOffset) || [];
+            current.push({ name, amount, type });
+            detailsByDayOffset.set(dayOffset, current);
+        };
 
         const liabilityAccountIds = new Set(liabilityAccountBalances.map(lb => lb.account.id));
 
@@ -499,6 +513,7 @@ export class CashFlowSimulationService {
                     if (unsettledAmount > 0) {
                         const dayOffset = targetDueDate.startOf('day').diff(now.startOf('day'), 'day');
                         addFlow(dayOffset, -unsettledAmount, 'LIABILITY_CC', `Liability (Unsettled): ${lb.account.name} (Credit Card Statement)`);
+                        addDetail(dayOffset, `${lb.account.name} CC`, Math.abs(unsettledAmount), 'OUTFLOW');
                         
                         debtBreakdownMap.set(lb.account.id, {
                             accountId: lb.account.id,
@@ -604,6 +619,13 @@ export class CashFlowSimulationService {
 
                     logger.info(`[SafeToSpend] Simulating PP ${pp.name}: impact ${impact} on day ${dayOffset} (type: ${flowType})`);
                     addFlow(dayOffset, impact, flowType, `Planned Payment: ${pp.name || 'unnamed'} (${isLiquidTo ? 'Inflow' : 'Outflow'})`, commitAmount);
+                    
+                    if (!isInternalTransfer) {
+                        addDetail(dayOffset, pp.name || 'Planned', Math.abs(amountDefault), impact > 0 ? 'INFLOW' : 'OUTFLOW');
+                    } else if (isDebtPaymentCommitment) {
+                        const acc = accountById.get(pp.toAccountId);
+                        addDetail(dayOffset, `Pay ${acc?.name || pp.name}`, Math.abs(amountDefault), 'OUTFLOW');
+                    }
 
                     // Income tracking
                     if (impact > 0 && !isInternalTransfer) {
@@ -711,6 +733,13 @@ export class CashFlowSimulationService {
                     const commitAmount = (isOutflowFromLiquid || isInternalCommitToDebt) ? amountDefault : undefined;
 
                     addFlow(dayOffset, impact, flowType, `Planned Journal Tx: ${journal.description} (${tx.transactionType === TransactionType.DEBIT ? 'Debit' : 'Credit'})`, commitAmount);
+                    
+                    if (!isInternalTransfer && impact !== 0) {
+                        addDetail(dayOffset, journal.description || 'Planned', Math.abs(amountDefault), impact > 0 ? 'INFLOW' : 'OUTFLOW');
+                    } else if (isInternalCommitToDebt) {
+                        const acc = accountById.get(tx.accountId);
+                        addDetail(dayOffset, `Pay ${acc?.name || journal.description}`, Math.abs(amountDefault), 'OUTFLOW');
+                    }
 
                     // Income tracking for journals
                     if (impact > 0 && !isInternalTransfer) {
@@ -776,7 +805,8 @@ export class CashFlowSimulationService {
             incomeBreakdown: incomeBreakdownList.sort((a, b) => a.dayOffset - b.dayOffset),
             firstMajorInflowDay,
             committedSubtypes: Array.from(committedSubtypesSet),
-            debtSubtypes: Array.from(debtSubtypesSet)
+            debtSubtypes: Array.from(debtSubtypesSet),
+            detailsByDayOffset
         };
     }
 }

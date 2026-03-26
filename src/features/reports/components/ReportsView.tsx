@@ -59,20 +59,22 @@ export function ReportsView(vm: ReportsViewModel) {
     const getNetWorthTooltipPosition = useChartTooltipPosition({
         containerWidth: CHART_WIDTH,
         containerHeight: NET_WORTH_CHART_HEIGHT,
-        tooltipWidth: REPORT_CHART_LAYOUT.tooltipWidth,
-        tooltipHeight: REPORT_CHART_LAYOUT.netWorthTooltipHeight,
     });
     const getBarTooltipPosition = useChartTooltipPosition({
         containerWidth: CHART_WIDTH,
         containerHeight: BAR_CHART_HEIGHT,
-        tooltipWidth: REPORT_CHART_LAYOUT.tooltipWidth,
-        tooltipHeight: REPORT_CHART_LAYOUT.barTooltipHeight,
     });
 
     const renderNetWorthTooltip = useCallback(({ index, x, y }: { index: number; x: number; y: number }) => {
         const data = dailyData[index];
         if (!data) return null;
-        const { left, top } = getNetWorthTooltipPosition(x, y);
+        
+        const pos = getNetWorthTooltipPosition(x, y);
+        const tooltipWidth = REPORT_CHART_LAYOUT.tooltipWidth;
+        const tooltipHeight = REPORT_CHART_LAYOUT.netWorthTooltipHeight;
+        
+        const left = pos.showOnRight ? (x + pos.offset) : (x - tooltipWidth - pos.offset);
+        const top = pos.showBelow ? (y + pos.offset) : (y - tooltipHeight - pos.offset);
 
         return (
             <NetWorthTooltip
@@ -96,7 +98,13 @@ export function ReportsView(vm: ReportsViewModel) {
     const renderBarTooltip = useCallback(({ index, x, y }: { index: number; x: number; y: number }) => {
         const data = barChartData[index];
         if (!data) return null;
-        const { left, top } = getBarTooltipPosition(x, y);
+        
+        const pos = getBarTooltipPosition(x, y);
+        const tooltipWidth = REPORT_CHART_LAYOUT.tooltipWidth;
+        const tooltipHeight = REPORT_CHART_LAYOUT.barTooltipHeight;
+        
+        const left = pos.showOnRight ? (x + pos.offset) : (x - tooltipWidth - pos.offset);
+        const top = pos.showBelow ? (y + pos.offset) : (y - tooltipHeight - pos.offset);
 
         return (
             <IncomeExpenseTooltip
@@ -137,7 +145,7 @@ export function ReportsView(vm: ReportsViewModel) {
                     <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={theme.primary} />
                 }
             >
-                <AppCard style={styles.chartCard} padding="lg">
+                <AppCard style={[styles.chartCard, { zIndex: 10, overflow: 'visible' }]} padding="lg">
                     <View style={styles.headerRow}>
                         <View>
                             <AppText variant="caption" color="secondary">{AppConfig.strings.reports.netWorthChange}</AppText>
@@ -159,7 +167,7 @@ export function ReportsView(vm: ReportsViewModel) {
                 </AppCard>
 
                 <AppText variant="subheading" style={styles.sectionTitle}>{AppConfig.strings.reports.incomeVsExpenseTrend}</AppText>
-                <AppCard style={styles.chartCard} padding="lg">
+                <AppCard style={[styles.chartCard, { zIndex: 5, overflow: 'visible' }]} padding="lg">
                     <View style={styles.chartContainer}>
                         <BarChart
                             data={barChartData}

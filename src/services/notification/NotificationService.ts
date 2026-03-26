@@ -36,6 +36,8 @@ export interface SafeToSpendDataPoint {
     timestamp: number;
     value: number;
     isProjected: boolean;
+    details?: { name: string, amount: number, type: 'INFLOW' | 'OUTFLOW' | 'CC_DATE' }[];
+    dailyBurn?: number;
 }
 
 export interface SafeToSpendProjection {

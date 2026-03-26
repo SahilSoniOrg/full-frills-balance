@@ -3,12 +3,11 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { PopupModal } from '@/src/components/common/PopupModal';
 import { AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
-import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Box, FadeIn, Inline, Separator, Skeleton, Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { SafeToSpendProjection } from '@/src/services/notification/NotificationService';
+import { SafeToSpendProjection, SafeToSpendDataPoint } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import React from 'react';
@@ -328,13 +327,14 @@ export const SafeToSpendCard = ({
                 </Stack>
 
                 {projection && projection.history.length > 0 && (() => {
-                    const chartData = [
-                        ...projection.history.map(p => ({ x: p.timestamp, y: p.value, isHistory: true })),
-                        ...projection.projection.slice(1).map(p => ({ x: p.timestamp, y: p.value, isHistory: false }))
+                    type SafeToSpendChartPoint = SafeToSpendDataPoint & { x: number; y: number; isHistory: boolean };
+                    const data: SafeToSpendChartPoint[] = [
+                        ...projection.history.map(p => ({ ...p, x: p.timestamp, y: p.value, isHistory: true })),
+                        ...projection.projection.map(p => ({ ...p, x: p.timestamp, y: p.value, isHistory: false })),
                     ];
 
-                    const minX = Math.min(...chartData.map(d => d.x));
-                    const maxX = Math.max(...chartData.map(d => d.x));
+                    const minX = Math.min(...data.map(d => d.x));
+                    const maxX = Math.max(...data.map(d => d.x));
 
                     const tickCount = AppConfig.defaults.chartTickCount;
                     const xTicks = [];
@@ -353,7 +353,7 @@ export const SafeToSpendCard = ({
                     ];
 
                     return (
-                        <View style={[styles.projectionContainer, { borderColor: theme.border }]}>
+                        <View style={[styles.projectionContainer, { borderColor: theme.border, overflow: 'visible', zIndex: 1 }]}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
                                 <AppText variant="body" weight="medium">
                                     {`Projection (${AppConfig.defaults.safeToSpendDays}-day)`}
@@ -375,33 +375,98 @@ export const SafeToSpendCard = ({
                                     </View>
                                 )}
                             </View>
-                            <LineChart
-                                data={chartData}
-                                height={AppConfig.layout.safeToSpendChartHeight}
-                                color={isOverCommitted ? theme.error : theme.primary}
-                                xTicks={xTicks}
-                                formatXTick={(x) => dayjs(x).format('MMM D')}
-                                todayX={dayjs().startOf('day').valueOf()}
-                                hideLabels={isPrivacyMode}
-                                extraHorizontalLines={extraHorizontalLines}
-                                tooltipWidth={120}
-                                tooltipHeight={70}
-                                renderTooltipContent={(point) => (
-                                    <ChartTooltip>
-                                        <AppText variant="caption" color="secondary" style={{ marginBottom: REPORT_CHART_LAYOUT.tooltipDateMarginBottom }}>
-                                            {dayjs(point.x).format('MMM D, YYYY')}
-                                        </AppText>
-                                        <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
-                                            {format(point.y)}
-                                        </AppText>
-                                        {!point.isHistory && (
-                                            <AppText variant="caption" color="secondary" style={{ marginTop: 2, fontSize: 10 }}>
-                                                {AppConfig.strings.dashboard.safeToSpendUi.projectedLabel}
-                                            </AppText>
-                                        )}
-                                    </ChartTooltip>
-                                )}
-                            />
+                            <View style={{ overflow: 'visible' }}>
+                                <LineChart
+                                    data={data}
+                                    height={AppConfig.layout.safeToSpendChartHeight}
+                                    color={isOverCommitted ? theme.error : theme.primary}
+                                    xTicks={xTicks}
+                                    formatXTick={(x) => dayjs(x).format('MMM D')}
+                                    todayX={dayjs().startOf('day').valueOf()}
+                                    hideLabels={isPrivacyMode}
+                                    extraHorizontalLines={extraHorizontalLines}
+                                    avoidPointVertical={true}
+                                    renderTooltipContent={(point) => (
+                                        <ChartTooltip style={{ minWidth: 100 }}>
+                                            <Stack gap="xs">
+                                                <Inline justifyContent="space-between" alignItems="center">
+                                                    <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
+                                                        {dayjs(point.x).format('MMM D, YYYY')}
+                                                    </AppText>
+                                                    {!point.isHistory && (
+                                                        <AppIcon
+                                                            name="trendingUpDown"
+                                                            size={12}
+                                                            color={theme.primary}
+                                                            style={{ opacity: 0.8 }}
+                                                        />
+                                                    )}
+                                                </Inline>
+
+                                                <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
+                                                    {format(point.y)}
+                                                </AppText>
+
+                                                {((point as any).dailyBurn > 0 || ((point as any).details?.length || 0) > 0) && (
+                                                    <>
+                                                        <Separator opacity={0.1} marginVertical="xs" />
+
+                                                        {(point.dailyBurn ?? 0) > 0 && (
+                                                            <View style={{ 
+                                                                backgroundColor: withOpacity(theme.error, 0.08), 
+                                                                paddingHorizontal: 6, 
+                                                                paddingVertical: 4, 
+                                                                borderRadius: 4, 
+                                                                marginBottom: 2 
+                                                            }}>
+                                                                <Inline gap="xs" alignItems="center">
+                                                                    <AppIcon name="flame" size={10} color={theme.error} />
+                                                                    <AppText variant="caption" weight="bold" color="error" style={{ fontSize: 10 }}>
+                                                                        Daily Burn: {format(point.dailyBurn!)}
+                                                                    </AppText>
+                                                                </Inline>
+                                                            </View>
+                                                        )}
+
+                                                        {point.details?.slice(0, AppConfig.defaults.maxTooltipDetails).map((detail, idx) => {
+                                                            const isTotalInflow = detail.type === 'INFLOW';
+                                                            const isTotalOutflow = detail.type === 'OUTFLOW';
+                                                            const isCcDate = detail.type === 'CC_DATE';
+
+                                                            let iconName: any = 'receipt';
+                                                            let color = theme.textSecondary;
+                                                            if (isTotalInflow) { iconName = 'trending-up'; color = theme.success; }
+                                                            else if (isTotalOutflow) { iconName = 'trending-down'; color = theme.error; }
+                                                            else if (isCcDate) { iconName = 'calendar'; color = theme.warning; }
+
+                                                            return (
+                                                                <Inline key={idx} space="md" justifyContent="space-between" alignItems="center">
+                                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                                                        <AppIcon name={iconName} size={10} color={color} />
+                                                                        <AppText variant="caption" color="secondary" numberOfLines={1} style={{ fontSize: 10, opacity: 0.9 }}>
+                                                                            {detail.name}
+                                                                        </AppText>
+                                                                    </View>
+                                                                    {detail.amount !== 0 && (
+                                                                        <AppText variant="caption" weight="bold" color={isTotalInflow ? 'success' : (isTotalOutflow ? 'error' : 'primary')} style={{ fontSize: 10 }}>
+                                                                            {isTotalOutflow ? '-' : (isTotalInflow ? '+' : '')}{format(detail.amount)}
+                                                                        </AppText>
+                                                                    )}
+                                                                </Inline>
+                                                            );
+                                                        })}
+                                                        {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
+                                                            <AppText variant="caption" color="secondary" style={{ fontSize: 9, marginLeft: 14 }}>
+                                                                + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
+                                                            </AppText>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </Stack>
+                                        </ChartTooltip>
+                                    )}
+                                />
+                            </View>
                         </View>
                     );
                 })()}

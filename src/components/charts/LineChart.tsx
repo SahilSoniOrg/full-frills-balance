@@ -11,6 +11,8 @@ import { DeviceEventEmitter, Dimensions, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
+ 
+ const TOOLTIP_CENTER_OFFSET = 40;
 
 export interface DataPoint {
     x: number; // timestamp
@@ -45,6 +47,8 @@ interface LineChartProps<T extends DataPoint = DataPoint> {
     todayX?: number; // Timestamp for the 'Today' vertical marker
     hideLabels?: boolean; // Whether to hide axis labels (Privacy Mode)
     extraHorizontalLines?: HorizontalLine[]; // Arbitrary reference lines (e.g., 0 balance, safe-to-spend floor)
+    avoidPointVertical?: boolean; // Whether to place tooltip above/below point instead of centered
+    offset?: number; // Distance from point to tooltip
 }
 
 export const LineChart = <T extends DataPoint>({
@@ -58,8 +62,6 @@ export const LineChart = <T extends DataPoint>({
     domainX,
     renderTooltip,
     renderTooltipContent,
-    tooltipWidth = REPORT_CHART_LAYOUT.tooltipWidth,
-    tooltipHeight = REPORT_CHART_LAYOUT.barTooltipHeight, // Using barTooltipHeight as 80 is a good standard
     xTicks,
     formatXTick,
     secondaryData,
@@ -67,6 +69,8 @@ export const LineChart = <T extends DataPoint>({
     todayX,
     hideLabels,
     extraHorizontalLines,
+    avoidPointVertical = false,
+    offset = 15,
 }: LineChartProps<T>) => {
     const { theme } = useTheme();
     const chartColor = color || theme.primary;
@@ -175,8 +179,9 @@ export const LineChart = <T extends DataPoint>({
     const getTooltipPosition = useChartTooltipPosition({
         containerWidth: CHART_WIDTH,
         containerHeight: height,
-        tooltipWidth: tooltipWidth,
-        tooltipHeight: tooltipHeight,
+        offset,
+        edgePadding: REPORT_CHART_LAYOUT.gestureSensitivity * 2,
+        avoidPointVertical,
     });
 
     const handleGesture = (x: number, isStart: boolean) => {
@@ -249,8 +254,8 @@ export const LineChart = <T extends DataPoint>({
     }
 
     return (
-        <View style={{ height, width: CHART_WIDTH }} ref={chartRef} collapsable={false}>
-            <View style={{ width: CHART_WIDTH, height }}>
+        <View style={{ height, width: CHART_WIDTH, overflow: 'visible', zIndex: 1 }} ref={chartRef} collapsable={false}>
+            <View style={{ width: CHART_WIDTH, height, overflow: 'visible' }}>
                 <GestureDetector gesture={pan}>
                     <View style={{ width: CHART_WIDTH, height }}>
                         <Svg height={height} width={CHART_WIDTH}>
@@ -511,12 +516,41 @@ export const LineChart = <T extends DataPoint>({
 
             {/* Built-in Tooltip Overlay */}
             {selectedPointInfo && renderTooltipContent && (
-                <View style={[StyleSheet.absoluteFill, { zIndex: 100 }]} pointerEvents="box-none">
+                <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
                     {(() => {
                         const info = selectedPointInfo;
-                        const { left, top } = getTooltipPosition(info.x, info.y);
+                        const { showOnRight, showBelow, offset, edgePadding, containerWidth, containerHeight } = getTooltipPosition(info.x, info.y);
+                        
+                        const style: any = { 
+                            position: 'absolute', 
+                            pointerEvents: 'none',
+                            zIndex: 1000,
+                            elevation: 10,
+                        };
+
+                        if (showOnRight) {
+                            style.left = info.x + offset;
+                            style.maxWidth = containerWidth - info.x - offset - edgePadding;
+                        } else {
+                            // Anchor to right to grow left
+                            style.right = (containerWidth - info.x) + offset;
+                            style.maxWidth = info.x - offset - edgePadding;
+                        }
+
+                        if (avoidPointVertical) {
+                            if (showBelow) {
+                                style.top = info.y + offset;
+                                // Tall tooltips are ok, so we don't strictly constrain height to chart bounds
+                            } else {
+                                // Anchor to bottom to grow up
+                                style.bottom = (containerHeight - info.y) + offset;
+                            }
+                        } else {
+                            style.top = info.y - TOOLTIP_CENTER_OFFSET; // Default center-ish
+                        }
+
                         return (
-                            <View style={{ position: 'absolute', left, top, width: tooltipWidth, height: tooltipHeight, pointerEvents: 'none' }}>
+                            <View style={style}>
                                 {renderTooltipContent!(info.point, activeIndex!)}
                             </View>
                         );
