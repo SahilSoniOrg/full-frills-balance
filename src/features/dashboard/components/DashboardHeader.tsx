@@ -9,6 +9,8 @@ interface DashboardHeaderProps {
     greeting: string;
     notificationCount?: number;
     onNotificationsPress?: () => void;
+    unreadSmsCount?: number;
+    onSmsPress?: () => void;
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
 }
@@ -17,6 +19,8 @@ export function DashboardHeader({
     greeting,
     notificationCount = 0,
     onNotificationsPress,
+    unreadSmsCount = 0,
+    onSmsPress,
     isPrivacyMode,
     onTogglePrivacy
 }: DashboardHeaderProps) {
@@ -40,6 +44,22 @@ export function DashboardHeader({
                         accessibilityLabel={isPrivacyMode ? "Show balances" : "Hide balances"}
                         iconColor={theme.text}
                     />
+                    {onSmsPress && (
+                        <View style={styles.bellContainer}>
+                            <IconButton
+                                name="messageSquare"
+                                size={Size.iconSm}
+                                variant="clear"
+                                onPress={onSmsPress}
+                                accessibilityRole="button"
+                                accessibilityLabel="View SMS Inbox"
+                                iconColor={theme.text}
+                            />
+                            {unreadSmsCount > 0 && (
+                                <View style={[styles.badge, { backgroundColor: theme.primary }]} />
+                            )}
+                        </View>
+                    )}
                     {onNotificationsPress && (
                         <View style={styles.bellContainer}>
                             <IconButton

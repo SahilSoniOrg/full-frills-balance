@@ -24,6 +24,8 @@ export interface DashboardViewModel {
         isPrivacyMode: boolean;
         onTogglePrivacy: () => void;
         onNotificationsPress: () => void;
+        unreadSmsCount?: number;
+        onSmsPress?: () => void;
     };
     transactionSectionTitle: string;
     fab: {
@@ -57,7 +59,7 @@ export function useDashboardViewModel(): DashboardViewModel {
         0
     );
 
-    const totalNotifications = (insights?.length || 0) + (unreadSmsCount || 0);
+    const totalNotifications = insights?.length || 0;
 
     const { strings } = AppConfig;
 
@@ -84,7 +86,9 @@ export function useDashboardViewModel(): DashboardViewModel {
         isPrivacyMode,
         onTogglePrivacy,
         onNotificationsPress: AppNavigation.toHub,
-    }), [greeting, totalNotifications, isPrivacyMode, onTogglePrivacy]);
+        unreadSmsCount: unreadSmsCount || 0,
+        onSmsPress: Platform.OS === 'android' ? AppNavigation.toSmsInbox : undefined,
+    }), [greeting, totalNotifications, isPrivacyMode, onTogglePrivacy, unreadSmsCount]);
 
     // Memoize fab object to prevent re-renders
     const fab = useMemo(() => ({
