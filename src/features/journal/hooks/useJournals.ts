@@ -13,14 +13,22 @@ import { JournalStatus } from '@/src/data/models/Journal'
 /**
  * Hook to reactively get journals with pagination and account enrichment
  */
-export function useJournals(pageSize: number = AppConfig.defaults.journalPageSize, dateRange?: { startDate: number, endDate: number }, searchQuery?: string, status?: JournalStatus[], plannedPaymentId?: string) {
+export function useJournals(
+    pageSize: number = AppConfig.defaults.journalPageSize,
+    dateRange?: { startDate: number, endDate: number },
+    searchQuery?: string,
+    status?: JournalStatus[],
+    plannedPaymentId?: string,
+    options?: { minAmount?: number; maxAmount?: number; displayType?: string; accountIds?: string[] }
+) {
     const observe = useCallback((limit: number, range?: { startDate: number, endDate: number }, query?: string) => {
-        return journalService.observeEnrichedJournals(limit, { ...range, plannedPaymentId } as any, query, status)
-    }, [status, plannedPaymentId])
+        const enrichedRange = (range || plannedPaymentId) ? { ...range, plannedPaymentId, accountIds: options?.accountIds } as any : undefined;
+        return journalService.observeEnrichedJournals(limit, enrichedRange, query, status, options)
+    }, [status, plannedPaymentId, options])
 
     const { items: journals, isLoading, isLoadingMore, hasMore, loadMore, version } = usePaginatedObservable<any, EnrichedJournal>({
         pageSize,
-        dateRange: (dateRange || plannedPaymentId) ? { ...dateRange, plannedPaymentId } as any : undefined,
+        dateRange: (dateRange || plannedPaymentId || options?.accountIds) ? { ...dateRange, plannedPaymentId, accountIds: options?.accountIds } as any : undefined,
         searchQuery,
         observe,
         suppressResetOnSearch: true,

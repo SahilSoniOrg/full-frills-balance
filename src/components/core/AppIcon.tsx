@@ -33,6 +33,7 @@ import {
     EyeOff,
     FileText,
     Film,
+    Filter,
     Flame,
     FolderOpen,
     Github,
@@ -166,6 +167,7 @@ export const IconMap = {
     dashboard: LayoutDashboard,
     repeat: Repeat,
     activity: Activity,
+    filter: Filter,
 } as const;
 
 export type IconName = keyof typeof IconMap;

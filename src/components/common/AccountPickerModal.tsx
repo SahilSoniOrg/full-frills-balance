@@ -76,8 +76,9 @@ export function AccountPickerModal(props: AccountPickerModalProps) {
     const handleApply = useCallback(() => {
         if (props.multiple) {
             props.onSelect(Array.from(selectedIds));
+            onClose();
         }
-    }, [props, selectedIds]);
+    }, [props, selectedIds, onClose]);
 
     const toggleSection = useCallback((sectionTitle: string) => {
         setCollapsedSections((prev) => {

@@ -474,6 +474,31 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to the Journal Search/Filter screen.
+     */
+    toJournalSearch: (params?: { 
+        searchQuery?: string;
+        startDate?: number; 
+        endDate?: number;
+        accountIds?: string[];
+        minAmount?: number;
+        maxAmount?: number;
+        displayType?: string;
+    }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.searchQuery) queryParams.append('q', params.searchQuery);
+        if (params?.startDate) queryParams.append('startDate', String(params.startDate));
+        if (params?.endDate) queryParams.append('endDate', String(params.endDate));
+        if (params?.accountIds?.length) queryParams.append('accountIds', params.accountIds.join(','));
+        if (params?.minAmount !== undefined) queryParams.append('minAmount', String(params.minAmount));
+        if (params?.maxAmount !== undefined) queryParams.append('maxAmount', String(params.maxAmount));
+        if (params?.displayType) queryParams.append('displayType', params.displayType);
+
+        const queryString = queryParams.toString();
+        router.push((queryString ? `/journal-search?${queryString}` : '/journal-search') as any);
+    },
+
+    /**
      * Navigate to the Design Preview screen.
      */
     toDesignPreview: () => {

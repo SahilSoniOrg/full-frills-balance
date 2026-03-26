@@ -1,16 +1,15 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
-import { ExpandableSearchButton, IconButton } from '@/src/components/core';
+import { IconButton } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {
     const initialDateRange = useJournalRouteDateRange();
-    const [isSearching, setIsSearching] = useState(false);
 
     const { listViewProps, vm } = useJournalListScreen({
         pageSize: AppConfig.pagination.dashboardPageSize,
@@ -29,7 +28,7 @@ export default function JournalScreen() {
 
     const headerActions = useMemo(() => (
         <View style={styles.headerActions}>
-            {Platform.OS === 'android' && !isSearching && (
+            {Platform.OS === 'android' && (
                 <IconButton
                     name="messageCircle"
                     size={Size.iconSm}
@@ -38,39 +37,29 @@ export default function JournalScreen() {
                     accessibilityLabel="Import SMS"
                 />
             )}
-            {!isSearching && (
-                <IconButton
-                    name="reports"
-                    size={Size.iconSm}
-                    variant="surface"
-                    onPress={AppNavigation.toReports}
-                    accessibilityLabel="View Analytics"
-                />
-            )}
-            <ExpandableSearchButton
-                value={vm.searchQuery}
-                onChangeText={vm.onSearchChange}
-                onExpandChange={setIsSearching}
+            <IconButton
+                name="reports"
+                size={Size.iconSm}
+                variant="surface"
+                onPress={AppNavigation.toReports}
+                accessibilityLabel="View Analytics"
             />
-            {isSearching ? (
-                <DateRangeFilter
-                    range={vm.isSearchGlobal ? null : vm.dateRange}
-                    onPress={vm.isSearchGlobal ? vm.showDatePicker : vm.toggleSearchGlobal}
-                    showNavigationArrows={false}
-                />
-            ) : (
-                vm.searchQuery.length === 0 && (
-                    <DateRangeFilter
-                        range={vm.dateRange}
-                        onPress={vm.showDatePicker}
-                        onPrevious={vm.navigatePrevious}
-                        onNext={vm.navigateNext}
-                        showNavigationArrows={false}
-                    />
-                )
-            )}
+            <IconButton
+                name="search"
+                size={Size.iconSm}
+                variant="surface"
+                onPress={() => AppNavigation.toJournalSearch()}
+                accessibilityLabel="Search and Filter"
+            />
+            <DateRangeFilter
+                range={vm.dateRange}
+                onPress={vm.showDatePicker}
+                onPrevious={vm.navigatePrevious}
+                onNext={vm.navigateNext}
+                showNavigationArrows={false}
+            />
         </View>
-    ), [isSearching, vm.searchQuery, vm.isSearchGlobal, vm.dateRange, vm.showDatePicker, vm.toggleSearchGlobal, vm.navigatePrevious, vm.navigateNext, vm.onSearchChange]);
+    ), [vm.dateRange, vm.showDatePicker, vm.navigatePrevious, vm.navigateNext]);
 
     const fab = useMemo(() => ({ onPress: handleFabPress }), [handleFabPress]);
 
@@ -78,14 +67,14 @@ export default function JournalScreen() {
         <>
             <JournalListView
                 {...listViewProps}
-                screenTitle={isSearching ? undefined : AppConfig.strings.journal.transactions}
+                screenTitle={AppConfig.strings.journal.transactions}
                 headerActions={headerActions}
                 listHeader={null}
                 fab={fab}
                 plannedJournals={vm.plannedJournals}
                 onPlannedJournalPress={listViewProps.onPlannedJournalPress}
                 showBack={false}
-                isSearchActive={isSearching}
+                isSearchActive={false}
                 alignTitle="left"
             />
         </>

@@ -393,7 +393,13 @@ export class JournalService {
      * Observe journals with their associated accounts for list display.
      * Uses a reactive pipeline to enrich journals with account info without manual caching.
      */
-    observeEnrichedJournals(limit: number, dateRange?: AccountDateRange, searchQuery?: string, status?: JournalStatus[]) {
+    observeEnrichedJournals(
+        limit: number,
+        dateRange?: AccountDateRange & { accountIds?: string[] },
+        searchQuery?: string,
+        status?: JournalStatus[],
+        options?: { minAmount?: number; maxAmount?: number; displayType?: string }
+    ) {
         const clauses: any[] = [
             Q.where('deleted_at', Q.eq(null)),
             Q.where('status', Q.oneOf(status || [...ACTIVE_JOURNAL_STATUSES])),
@@ -402,9 +408,12 @@ export class JournalService {
             Q.take(limit)
         ];
 
-        if (dateRange?.accountId && !dateRange.plannedPaymentId) {
+        // Multi-account filtering
+        const accountIds = dateRange?.accountIds || (dateRange?.accountId ? [dateRange.accountId] : []);
+
+        if (accountIds.length > 0 && !dateRange?.plannedPaymentId) {
             clauses.push(Q.experimentalJoinTables(['transactions']));
-            clauses.push(Q.on('transactions', Q.where('account_id', dateRange.accountId)));
+            clauses.push(Q.on('transactions', Q.where('account_id', Q.oneOf(accountIds))));
         }
 
         if (dateRange) {
@@ -429,6 +438,16 @@ export class JournalService {
             if (q) {
                 clauses.push(Q.where('description', Q.like(`%${Q.sanitizeLikeString(q)}%`)));
             }
+        }
+
+        if (options?.minAmount !== undefined) {
+            clauses.push(Q.where('total_amount', Q.gte(options.minAmount)));
+        }
+        if (options?.maxAmount !== undefined) {
+            clauses.push(Q.where('total_amount', Q.lte(options.maxAmount)));
+        }
+        if (options?.displayType) {
+            clauses.push(Q.where('display_type', Q.eq(options.displayType)));
         }
 
         const journalsObservable = journalRepository.journalsQuery(...clauses).observeWithColumns([
