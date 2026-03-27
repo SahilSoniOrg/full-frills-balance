@@ -1,18 +1,29 @@
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
+import { HeatmapPoint, SankeyData } from '@/src/services/report-service';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
 import { useReportDateFilter } from './useReportDateFilter';
 
+export type ReportTab = 'OVERVIEW' | 'SPENDING' | 'WEALTH';
+
 export interface ReportsViewModel {
+    activeTab: ReportTab;
+    setActiveTab: (tab: ReportTab) => void;
+    showAccountPicker: boolean;
+    onOpenAccountPicker: () => void;
+    onCloseAccountPicker: () => void;
+    accountIds: string[];
+    onAccountSelect: (ids: string[]) => void;
     showDatePicker: boolean;
     onOpenDatePicker: () => void;
     onCloseDatePicker: () => void;
     onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
     dateLabel: string;
+    accounts: any[]; // Using any for simplicity as it matches expected prop
     loading: boolean;
     periodFilter: PeriodFilter;
     onRefresh: () => void;
@@ -41,6 +52,14 @@ export interface ReportsViewModel {
     onViewSelectedTransactions: () => void;
     onLegendRowPress: (accountId: string) => void;
 
+    // Advanced Charts
+    wealthAreaSeries: { x: number; y: number }[][];
+    selectedWealthIndex: number | undefined;
+    onWealthPointSelect: (index: number) => void;
+    sankeyData: SankeyData;
+    spendingHeatmap: HeatmapPoint[];
+    calendarHeatmap: HeatmapPoint[];
+
     // Expansion State
     expandedExpenses: boolean;
     toggleExpenseExpansion: () => void;
@@ -50,36 +69,60 @@ export interface ReportsViewModel {
     totalIncomeCount: number;
     showExpenseExpansionButton: boolean;
     showIncomeExpansionButton: boolean;
+
+    // Category Breakdown
+    expenseCategoryViewState: any;
+    incomeCategoryViewState: any;
+    expandedExpenseCategories: boolean;
+    expandedIncomeCategories: boolean;
+    toggleExpenseCategoryExpansion: () => void;
+    toggleIncomeCategoryExpansion: () => void;
+    targetCurrency: string;
 }
 
 export function useReportsViewModel(): ReportsViewModel {
     const { theme } = useTheme();
 
     const {
+        accounts,
         netWorthHistory,
         expenses: globalExpenses,
         incomeBreakdown: globalIncomeBreakdown,
+        expenseCategories,
+        incomeCategories,
         incomeVsExpenseHistory,
         incomeVsExpense,
         loading,
         targetCurrency,
         dateRange,
         periodFilter,
+        accountIds,
         updateFilter,
         dailyIncomeVsExpense,
+        sankeyData,
+        spendingHeatmap,
+        calendarHeatmap,
     } = useReports();
+
+    const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
+    const [showAccountPicker, setShowAccountPicker] = useState(false);
 
     const chartData = useReportChartData({
         netWorthHistory,
         incomeVsExpenseHistory,
         incomeVsExpense,
         dailyIncomeVsExpense,
+        sankeyData,
+        spendingHeatmap,
+        calendarHeatmap,
         theme,
     });
 
     const breakdownDetails = useReportBreakdownDetails({
         globalExpenses,
         globalIncomeBreakdown,
+        expenseCategories,
+        incomeCategories,
         incomeVsExpenseHistory,
         selectedIncomeExpenseIndex: chartData.selectedIncomeExpenseIndex,
         targetCurrency,
@@ -95,6 +138,7 @@ export function useReportsViewModel(): ReportsViewModel {
 
     const dateFilter = useReportDateFilter({
         dateRange,
+        accountIds,
         updateFilter,
         onResetSelections: resetSelections,
     });
@@ -108,11 +152,29 @@ export function useReportsViewModel(): ReportsViewModel {
         resetSelections();
         updateFilter(
             { ...dateRange },
-            { ...periodFilter }
+            { ...periodFilter },
+            [...accountIds]
         );
-    }, [dateRange, periodFilter, resetSelections, updateFilter]);
+    }, [dateRange, periodFilter, accountIds, resetSelections, updateFilter]);
+
+    const onAccountSelect = useCallback((ids: string[]) => {
+        updateFilter(dateRange, periodFilter, ids);
+        setShowAccountPicker(false);
+        resetSelections();
+    }, [dateRange, periodFilter, updateFilter, resetSelections]);
 
     return {
+        // Tab State
+        activeTab,
+        setActiveTab,
+
+        // Account Filter
+        showAccountPicker,
+        onOpenAccountPicker: () => setShowAccountPicker(true),
+        onCloseAccountPicker: () => setShowAccountPicker(false),
+        accountIds,
+        onAccountSelect,
+
         // Date Filter
         showDatePicker: dateFilter.showDatePicker,
         onOpenDatePicker: dateFilter.onOpenDatePicker,
@@ -121,6 +183,7 @@ export function useReportsViewModel(): ReportsViewModel {
         dateLabel: dateFilter.dateLabel,
 
         // Reports state
+        accounts,
         loading,
         periodFilter,
         onRefresh,
@@ -158,9 +221,26 @@ export function useReportsViewModel(): ReportsViewModel {
         showExpenseExpansionButton: breakdownDetails.expenseViewState.showExpansionButton,
         showIncomeExpansionButton: breakdownDetails.incomeViewState.showExpansionButton,
 
+        // Advanced charts
+        wealthAreaSeries: chartData.wealthAreaSeries,
+        selectedWealthIndex: chartData.selectedWealthIndex,
+        onWealthPointSelect: chartData.onWealthPointSelect,
+        sankeyData: chartData.sankeyData,
+        spendingHeatmap: chartData.spendingHeatmap,
+        calendarHeatmap: chartData.calendarHeatmap,
+
+        // Category Breakdown
+        expenseCategoryViewState: breakdownDetails.expenseCategoryViewState,
+        incomeCategoryViewState: breakdownDetails.incomeCategoryViewState,
+        expandedExpenseCategories: breakdownDetails.expandedExpenseCategories,
+        expandedIncomeCategories: breakdownDetails.expandedIncomeCategories,
+        toggleExpenseCategoryExpansion: breakdownDetails.toggleExpenseCategoryExpansion,
+        toggleIncomeCategoryExpansion: breakdownDetails.toggleIncomeCategoryExpansion,
+
         // Actions
         onViewTransactions: actions.onViewTransactions,
         onViewSelectedTransactions: actions.onViewSelectedTransactions,
         onLegendRowPress: actions.onLegendRowPress,
+        targetCurrency,
     };
 }

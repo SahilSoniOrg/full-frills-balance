@@ -59,6 +59,25 @@ export const REPORT_CHART_LAYOUT = {
   barSpacing: 4,
   yAxisTicks: [0, 0.25, 0.5, 0.75, 1] as const,
   gestureSensitivity: 5,
+  areaChartPaddingV: 10,
+  areaChartPaddingH: 0,
+  areaChartDefaultHeight: 200,
+  heatmapPaddingLeft: 35,
+  heatmapPaddingTop: 10,
+  heatmapPaddingBottom: 45,
+  heatmapCellSpacing: 1,
+  heatmapDefaultHeight: 240,
+  calendarPaddingLeft: 35,
+  calendarPaddingTop: 30,
+  calendarPaddingBottom: 60,
+  calendarCellSpacing: 5,
+  calendarDayLabelHeight: 15,
+  calendarCellHeight: 20,
+  calendarDefaultHeight: 200,
+  sankeyNodeWidth: 12,
+  sankeyNodeSpacing: 30,
+  sankeyLabelOffset: 8,
+  sankeyDefaultHeight: 300,
 } as const;
 
 export const REPORT_CHART_STRINGS = {
@@ -66,6 +85,7 @@ export const REPORT_CHART_STRINGS = {
   incomeShort: 'Inc',
   expenseShort: 'Exp',
   maxLabel: 'Max',
+  categoryOther: 'Other',
 } as const;
  
 export const REPORT_CHART_EVENTS = {

@@ -22,6 +22,7 @@ export function useReports() {
         lastNUnit: 'days'
     });
     const [dateRange, setDateRange] = useState<DateRange>(getLastNRange(AppConfig.defaults.reportDays, 'days'));
+    const [accountIds, setAccountIds] = useState<string[]>([]);
 
     const triggerObservable = useMemo(() => {
         return combineLatest([
@@ -35,9 +36,9 @@ export function useReports() {
         () => triggerObservable,
         async () => {
             const { startDate, endDate } = dateRange;
-            return await wealthService.getNetWorthHistory(startDate, endDate, targetCurrency);
+            return await wealthService.getNetWorthHistory(startDate, endDate, targetCurrency, accountIds);
         },
-        [dateRange, triggerObservable, defaultCurrency],
+        [dateRange, triggerObservable, defaultCurrency, accountIds],
         []
     );
 
@@ -46,15 +47,20 @@ export function useReports() {
         () => triggerObservable,
         async () => {
             const { startDate, endDate } = dateRange;
-            return await reportService.getReportSnapshot(startDate, endDate, targetCurrency);
+            return await reportService.getReportSnapshot(startDate, endDate, targetCurrency, accountIds);
         },
-        [dateRange, triggerObservable, defaultCurrency],
+        [dateRange, triggerObservable, defaultCurrency, accountIds],
         {
             expenseBreakdown: [],
             incomeBreakdown: [],
+            expenseCategoryBreakdown: [],
+            incomeCategoryBreakdown: [],
             incomeVsExpenseHistory: [],
             incomeVsExpense: { income: 0, expense: 0 },
-            dailyIncomeVsExpense: []
+            dailyIncomeVsExpense: [],
+            sankeyData: { nodes: [], links: [] },
+            spendingHeatmap: [],
+            calendarHeatmap: []
         }
     );
 
@@ -75,23 +81,50 @@ export function useReports() {
         return data.incomeBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
     }, [data.incomeBreakdown, theme]);
 
-    const updateFilter = useCallback((range: DateRange, filter: PeriodFilter) => {
+    const expenseCategories = useMemo(() => {
+        const colors = REPORT_CHART_COLOR_KEYS.expense.map((colorKey) => theme[colorKey]);
+        return data.expenseCategoryBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
+    }, [data.expenseCategoryBreakdown, theme]);
+
+    const incomeCategories = useMemo(() => {
+        const colors = REPORT_CHART_COLOR_KEYS.income.map((colorKey) => theme[colorKey]);
+        return data.incomeCategoryBreakdown.map((b, i) => ({ ...b, color: colors[i % colors.length] }));
+    }, [data.incomeCategoryBreakdown, theme]);
+
+    const updateFilter = useCallback((range: DateRange, filter: PeriodFilter, accounts?: string[]) => {
         setDateRange(range);
         setPeriodFilter(filter);
+        if (accounts !== undefined) {
+            setAccountIds(accounts);
+        }
     }, []);
 
+    const { data: accounts = [] } = useObservableWithEnrichment(
+        () => accountRepository.observeAll(),
+        async () => await accountRepository.findAll(),
+        [],
+        []
+    );
+
     return {
+        accounts,
         netWorthHistory: data.netWorthHistory,
         expenses,
         incomeBreakdown,
+        expenseCategories,
+        incomeCategories,
         incomeVsExpenseHistory: data.incomeVsExpenseHistory,
         incomeVsExpense: data.incomeVsExpense,
         dailyIncomeVsExpense: data.dailyIncomeVsExpense,
+        sankeyData: data.sankeyData,
+        spendingHeatmap: data.spendingHeatmap,
+        calendarHeatmap: data.calendarHeatmap,
         targetCurrency,
         loading,
         error,
         dateRange,
         periodFilter,
+        accountIds,
         updateFilter
     };
 }

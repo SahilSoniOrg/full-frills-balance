@@ -85,7 +85,7 @@ export const wealthService = {
      * 4. Iterate backward day-by-day using dayjs, "undoing" transactions.
      * 5. Record snapshots for the requested range.
      */
-    async getNetWorthHistory(startDate: number, endDate: number, targetCurrency?: string): Promise<DailyNetWorth[]> {
+    async getNetWorthHistory(startDate: number, endDate: number, targetCurrency?: string, accountIds?: string[]): Promise<DailyNetWorth[]> {
         const currency = targetCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
         const start = dayjs(startDate).startOf('day');
@@ -97,10 +97,14 @@ export const wealthService = {
         const parentIds = new Set(allAccounts.map((a: { parentAccountId?: string }) => a.parentAccountId).filter(Boolean) as string[]);
 
         const allBalances = await balanceService.getAccountBalances();
-        const relevantBalances = allBalances.filter((a: AccountBalance) =>
+        let relevantBalances = allBalances.filter((a: AccountBalance) =>
             !parentIds.has(a.accountId) &&
             (a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY)
         );
+
+        if (accountIds && accountIds.length > 0) {
+            relevantBalances = relevantBalances.filter(a => accountIds.includes(a.accountId));
+        }
 
         if (relevantBalances.length === 0) return [];
 
@@ -123,9 +127,9 @@ export const wealthService = {
         }
 
         // 3. BULK FETCH daily deltas grouped by currency and type (O(1) round-trip, O(M) rows)
-        const accountIds = relevantBalances.map(b => b.accountId);
+        const activeIds = relevantBalances.map(b => b.accountId);
         const deltas: DailyDelta[] = await transactionRawRepository.getDailyDeltasGroupedRaw(
-            accountIds,
+            activeIds,
             start.valueOf(),
             now.valueOf()
         );
@@ -145,7 +149,7 @@ export const wealthService = {
         if (deltas.length === 0) {
             const accountTypeById = new Map(relevantBalances.map((a) => [a.accountId, a.accountType]));
             const transactions = await transactionRepository.findByAccountsAndDateRange(
-                accountIds,
+                activeIds,
                 start.valueOf(),
                 now.valueOf()
             );

@@ -5,11 +5,13 @@ import { JournalListView } from '@/src/features/journal/components/JournalListVi
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
 import { AppNavigation } from '@/src/utils/navigation';
+import { router } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {
     const initialDateRange = useJournalRouteDateRange();
+    const canGoBack = router.canGoBack();
 
     const { listViewProps, vm } = useJournalListScreen({
         pageSize: AppConfig.pagination.dashboardPageSize,
@@ -64,20 +66,18 @@ export default function JournalScreen() {
     const fab = useMemo(() => ({ onPress: handleFabPress }), [handleFabPress]);
 
     return (
-        <>
-            <JournalListView
-                {...listViewProps}
-                screenTitle={AppConfig.strings.journal.transactions}
-                headerActions={headerActions}
-                listHeader={null}
-                fab={fab}
-                plannedJournals={vm.plannedJournals}
-                onPlannedJournalPress={listViewProps.onPlannedJournalPress}
-                showBack={false}
-                isSearchActive={false}
-                alignTitle="left"
-            />
-        </>
+        <JournalListView
+            {...listViewProps}
+            screenTitle={AppConfig.strings.journal.transactions}
+            headerActions={headerActions}
+            listHeader={null}
+            fab={fab}
+            plannedJournals={vm.plannedJournals}
+            onPlannedJournalPress={listViewProps.onPlannedJournalPress}
+            showBack={canGoBack}
+            isSearchActive={false}
+            alignTitle={canGoBack ? 'center' : 'left'}
+        />
     );
 }
 

@@ -1,13 +1,12 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import dayjs from 'dayjs';
-import { ChartTooltip } from '@/src/components/charts/ChartTooltip';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { SafeToSpendProjection, SafeToSpendDataPoint } from '@/src/services/notification/NotificationService';
+import { SafeToSpendDataPoint, SafeToSpendProjection } from '@/src/services/notification/NotificationService';
+import dayjs from 'dayjs';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 
 interface SafeToSpendChartProps {
     projection: SafeToSpendProjection;
@@ -87,83 +86,83 @@ export const SafeToSpendChart = ({
                     extraHorizontalLines={extraHorizontalLines}
                     avoidPointVertical={true}
                     renderTooltipContent={(point) => (
-                        <ChartTooltip style={{ minWidth: 100 }}>
-                            <Stack gap="xs">
-                                <Inline justifyContent="space-between" alignItems="center">
-                                    <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
-                                        {dayjs(point.x).format('MMM D, YYYY')}
-                                    </AppText>
-                                    {!point.isHistory && (
-                                        <AppIcon
-                                            name="trendingUpDown"
-                                            size={12}
-                                            color={theme.primary}
-                                            style={{ opacity: 0.8 }}
-                                        />
-                                    )}
-                                </Inline>
-
-                                <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
-                                    {formatValue(point.y)}
+                        // <ChartTooltip style={{ minWidth: 100 }}>
+                        <Stack gap="xs">
+                            <Inline justifyContent="space-between" alignItems="center">
+                                <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
+                                    {dayjs(point.x).format('MMM D, YYYY')}
                                 </AppText>
-
-                                {((point as any).dailyBurn > 0 || ((point as any).details?.length || 0) > 0) && (
-                                    <>
-                                        <Separator opacity={0.1} marginVertical="xs" />
-
-                                        {(point.dailyBurn ?? 0) > 0 && (
-                                            <View style={{ 
-                                                backgroundColor: withOpacity(theme.error, 0.08), 
-                                                paddingHorizontal: 6, 
-                                                paddingVertical: 4, 
-                                                borderRadius: 4, 
-                                                marginBottom: 2 
-                                            }}>
-                                                <Inline gap="xs" alignItems="center">
-                                                    <AppIcon name="flame" size={10} color={theme.error} />
-                                                    <AppText variant="caption" weight="bold" color="error" style={{ fontSize: 10 }}>
-                                                        Daily Burn: {formatValue(point.dailyBurn!)}
-                                                    </AppText>
-                                                </Inline>
-                                            </View>
-                                        )}
-
-                                        {point.details?.slice(0, AppConfig.defaults.maxTooltipDetails).map((detail, idx) => {
-                                            const isTotalInflow = detail.type === 'INFLOW';
-                                            const isTotalOutflow = detail.type === 'OUTFLOW';
-                                            const isCcDate = detail.type === 'CC_DATE';
-
-                                            let iconName: any = 'receipt';
-                                            let color = theme.textSecondary;
-                                            if (isTotalInflow) { iconName = 'trendingUp'; color = theme.success; }
-                                            else if (isTotalOutflow) { iconName = 'trendingDown'; color = theme.error; }
-                                            else if (isCcDate) { iconName = 'calendar'; color = theme.warning; }
-
-                                            return (
-                                                <Inline key={idx} space="md" justifyContent="space-between" alignItems="center">
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                                        <AppIcon name={iconName} size={10} color={color} />
-                                                        <AppText variant="caption" color="secondary" numberOfLines={1} style={{ fontSize: 10, opacity: 0.9 }}>
-                                                            {detail.name}
-                                                        </AppText>
-                                                    </View>
-                                                    {detail.amount !== 0 && (
-                                                        <AppText variant="caption" weight="bold" color={isTotalInflow ? 'success' : (isTotalOutflow ? 'error' : 'primary')} style={{ fontSize: 10 }}>
-                                                            {isTotalOutflow ? '-' : (isTotalInflow ? '+' : '')}{formatValue(detail.amount)}
-                                                        </AppText>
-                                                    )}
-                                                </Inline>
-                                            );
-                                        })}
-                                        {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
-                                            <AppText variant="caption" color="secondary" style={{ fontSize: 9, marginLeft: 14 }}>
-                                                + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
-                                            </AppText>
-                                        )}
-                                    </>
+                                {!point.isHistory && (
+                                    <AppIcon
+                                        name="trendingUpDown"
+                                        size={12}
+                                        color={theme.primary}
+                                        style={{ opacity: 0.8 }}
+                                    />
                                 )}
-                            </Stack>
-                        </ChartTooltip>
+                            </Inline>
+
+                            <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
+                                {formatValue(point.y)}
+                            </AppText>
+
+                            {((point as any).dailyBurn > 0 || ((point as any).details?.length || 0) > 0) && (
+                                <>
+                                    <Separator opacity={0.1} marginVertical="xs" />
+
+                                    {(point.dailyBurn ?? 0) > 0 && (
+                                        <View style={{
+                                            backgroundColor: withOpacity(theme.error, 0.08),
+                                            paddingHorizontal: 6,
+                                            paddingVertical: 4,
+                                            borderRadius: 4,
+                                            marginBottom: 2
+                                        }}>
+                                            <Inline gap="xs" alignItems="center">
+                                                <AppIcon name="flame" size={10} color={theme.error} />
+                                                <AppText variant="caption" weight="bold" color="error" style={{ fontSize: 10 }}>
+                                                    Daily Burn: {formatValue(point.dailyBurn!)}
+                                                </AppText>
+                                            </Inline>
+                                        </View>
+                                    )}
+
+                                    {point.details?.slice(0, AppConfig.defaults.maxTooltipDetails).map((detail, idx) => {
+                                        const isTotalInflow = detail.type === 'INFLOW';
+                                        const isTotalOutflow = detail.type === 'OUTFLOW';
+                                        const isCcDate = detail.type === 'CC_DATE';
+
+                                        let iconName: any = 'receipt';
+                                        let color = theme.textSecondary;
+                                        if (isTotalInflow) { iconName = 'trendingUp'; color = theme.success; }
+                                        else if (isTotalOutflow) { iconName = 'trendingDown'; color = theme.error; }
+                                        else if (isCcDate) { iconName = 'calendar'; color = theme.warning; }
+
+                                        return (
+                                            <Inline key={idx} space="md" justifyContent="space-between" alignItems="center">
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                                    <AppIcon name={iconName} size={10} color={color} />
+                                                    <AppText variant="caption" color="secondary" numberOfLines={1} style={{ fontSize: 10, opacity: 0.9 }}>
+                                                        {detail.name}
+                                                    </AppText>
+                                                </View>
+                                                {detail.amount !== 0 && (
+                                                    <AppText variant="caption" weight="bold" color={isTotalInflow ? 'success' : (isTotalOutflow ? 'error' : 'primary')} style={{ fontSize: 10 }}>
+                                                        {isTotalOutflow ? '-' : (isTotalInflow ? '+' : '')}{formatValue(detail.amount)}
+                                                    </AppText>
+                                                )}
+                                            </Inline>
+                                        );
+                                    })}
+                                    {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
+                                        <AppText variant="caption" color="secondary" style={{ fontSize: 9, marginLeft: 14 }}>
+                                            + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
+                                        </AppText>
+                                    )}
+                                </>
+                            )}
+                        </Stack>
+                        // </ChartTooltip>
                     )}
                 />
             </View>

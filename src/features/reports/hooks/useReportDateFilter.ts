@@ -5,14 +5,15 @@ import { useCallback, useMemo, useState } from 'react';
 
 interface UseReportDateFilterProps {
     dateRange: DateRange;
-    updateFilter: (range: DateRange, filter: PeriodFilter) => void;
+    accountIds: string[];
+    updateFilter: (range: DateRange, filter: PeriodFilter, accounts?: string[]) => void;
     onResetSelections: () => void;
 }
 
 /**
  * Hook to manage report date range selection and picker state.
  */
-export function useReportDateFilter({ dateRange, updateFilter, onResetSelections }: UseReportDateFilterProps) {
+export function useReportDateFilter({ dateRange, accountIds, updateFilter, onResetSelections }: UseReportDateFilterProps) {
     const [showDatePicker, setShowDatePicker] = useState(false);
 
     const onDateSelect = useCallback(async (range: DateRange | null, filter: PeriodFilter) => {
@@ -35,11 +36,11 @@ export function useReportDateFilter({ dateRange, updateFilter, onResetSelections
         }
 
         if (finalRange) {
-            updateFilter(finalRange, filter);
+            updateFilter(finalRange, filter, accountIds);
         }
         setShowDatePicker(false);
         onResetSelections();
-    }, [updateFilter, onResetSelections]);
+    }, [updateFilter, onResetSelections, accountIds]);
 
     const onOpenDatePicker = useCallback(() => setShowDatePicker(true), []);
     const onCloseDatePicker = useCallback(() => setShowDatePicker(false), []);

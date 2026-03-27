@@ -1,14 +1,16 @@
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
 import { useBreakdownViewState } from '@/src/features/reports/hooks/useBreakdownViewState';
-import { reportService } from '@/src/services/report-service';
 import { useObservable } from '@/src/hooks/useObservable';
+import { reportService } from '@/src/services/report-service';
+import { useMemo, useState } from 'react';
 import { combineLatest, of } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { useMemo, useState } from 'react';
 
 interface UseReportBreakdownDetailsProps {
     globalExpenses: any[];
     globalIncomeBreakdown: any[];
+    expenseCategories: any[];
+    incomeCategories: any[];
     incomeVsExpenseHistory: any[];
     selectedIncomeExpenseIndex: number | undefined;
     targetCurrency: string;
@@ -21,6 +23,8 @@ interface UseReportBreakdownDetailsProps {
 export function useReportBreakdownDetails({
     globalExpenses,
     globalIncomeBreakdown,
+    expenseCategories,
+    incomeCategories,
     incomeVsExpenseHistory,
     selectedIncomeExpenseIndex,
     targetCurrency,
@@ -28,6 +32,8 @@ export function useReportBreakdownDetails({
 }: UseReportBreakdownDetailsProps) {
     const [expandedExpenses, setExpandedExpenses] = useState(false);
     const [expandedIncome, setExpandedIncome] = useState(false);
+    const [expandedExpenseCategories, setExpandedExpenseCategories] = useState(false);
+    const [expandedIncomeCategories, setExpandedIncomeCategories] = useState(false);
 
     const toggleExpenseExpansion = () => setExpandedExpenses(prev => !prev);
     const toggleIncomeExpansion = () => setExpandedIncome(prev => !prev);
@@ -79,14 +85,34 @@ export function useReportBreakdownDetails({
         fallbackColor: theme.success,
     });
 
+    const expenseCategoryViewState = useBreakdownViewState({
+        globalBreakdown: expenseCategories.map(c => ({ ...c, accountId: c.category, accountName: c.category })),
+        selectedBreakdown: null,
+        expanded: expandedExpenseCategories,
+        fallbackColor: theme.error,
+    });
+
+    const incomeCategoryViewState = useBreakdownViewState({
+        globalBreakdown: incomeCategories.map(c => ({ ...c, accountId: c.category, accountName: c.category })),
+        selectedBreakdown: null,
+        expanded: expandedIncomeCategories,
+        fallbackColor: theme.success,
+    });
+
     return {
         selectedPeriod,
         expandedExpenses,
         expandedIncome,
+        expandedExpenseCategories,
+        expandedIncomeCategories,
         toggleExpenseExpansion,
         toggleIncomeExpansion,
+        toggleExpenseCategoryExpansion: () => setExpandedExpenseCategories(prev => !prev),
+        toggleIncomeCategoryExpansion: () => setExpandedIncomeCategories(prev => !prev),
         expenseViewState,
         incomeViewState,
+        expenseCategoryViewState,
+        incomeCategoryViewState,
         setExpandedExpenses,
         setExpandedIncome,
     };
