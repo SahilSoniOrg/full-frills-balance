@@ -1,4 +1,4 @@
-import { PopupModal } from '@/src/components/common/PopupModal';
+import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -20,7 +20,7 @@ export function EmergencyFundPopupModal({
     const { emergencyFund: strings } = AppConfig.strings.dashboard.hub;
 
     return (
-        <PopupModal
+        <InfoSheet
             visible={visible}
             title={strings.title}
             onClose={onClose}
@@ -28,10 +28,8 @@ export function EmergencyFundPopupModal({
             fixedHeight={false}
             scrollable={false}
             accessibilityCloseLabel={strings.title}
-            actions={[
-                { label: strings.actionClose, variant: 'secondary', onPress: onClose },
-                { label: strings.actionCreate, variant: 'primary', onPress: onCreateAccount },
-            ]}
+            secondaryAction={{ label: strings.actionClose, variant: 'secondary', onPress: onClose }}
+            primaryAction={{ label: strings.actionCreate, variant: 'primary', onPress: onCreateAccount }}
         >
             <View style={styles.modalSection}>
                 <AppText variant="body">
@@ -66,7 +64,7 @@ export function EmergencyFundPopupModal({
                     </AppText>
                 </View>
             </View>
-        </PopupModal>
+        </InfoSheet>
     );
 }
 

@@ -1,4 +1,4 @@
-import { PopupModal } from '@/src/components/common/PopupModal';
+import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
@@ -55,18 +55,16 @@ export const SafeToSpendExplanationModal = ({
     const { theme } = useTheme();
 
     return (
-        <PopupModal
+        <InfoSheet
             visible={visible}
             title={info.title}
             onClose={onClose}
             accessibilityCloseLabel="Close safe-to-spend info"
-            actions={[
-                {
-                    label: info.closeCta,
-                    variant: 'primary',
-                    onPress: onClose,
-                }
-            ]}
+            primaryAction={{
+                label: info.closeCta,
+                variant: 'primary',
+                onPress: onClose,
+            }}
         >
             <AppText
                 variant="heading"
@@ -359,7 +357,7 @@ export const SafeToSpendExplanationModal = ({
                     {info.footer}
                 </AppText>
             </View>
-        </PopupModal>
+        </InfoSheet>
     );
 };
 

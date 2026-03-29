@@ -1,38 +1,32 @@
-import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-type PopupModalAction = {
-    label: string;
-    onPress: () => void;
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
-};
-
-interface PopupModalProps {
+interface ModalSurfaceProps {
     visible: boolean;
     title: string;
     onClose: () => void;
     children: React.ReactNode;
-    actions: PopupModalAction[];
+    footer?: React.ReactNode;
     maxHeightPercent?: number;
     accessibilityCloseLabel?: string;
     fixedHeight?: boolean;
     scrollable?: boolean;
 }
 
-export function PopupModal({
+export function ModalSurface({
     visible,
     title,
     onClose,
     children,
-    actions,
+    footer,
     maxHeightPercent = AppConfig.layout.popupModalHeightPercent,
-    accessibilityCloseLabel = 'Close popup',
+    accessibilityCloseLabel = 'Close dialog',
     fixedHeight = true,
     scrollable = true,
-}: PopupModalProps) {
+}: ModalSurfaceProps) {
     const { theme } = useTheme();
 
     return (
@@ -49,12 +43,12 @@ export function PopupModal({
                     accessibilityRole="button"
                     accessibilityLabel={accessibilityCloseLabel}
                 />
-                <View style={[
-                    styles.modalContainer,
-                    fixedHeight
-                        ? { height: `${maxHeightPercent}%` }
-                        : { maxHeight: `${maxHeightPercent}%` }
-                ]}>
+                <View
+                    style={[
+                        styles.modalContainer,
+                        fixedHeight ? { height: `${maxHeightPercent}%` } : { maxHeight: `${maxHeightPercent}%` },
+                    ]}
+                >
                     <AppCard
                         elevation="lg"
                         padding="lg"
@@ -62,11 +56,13 @@ export function PopupModal({
                         style={[
                             styles.modalCard,
                             fixedHeight ? styles.modalCardFixed : styles.modalCardFit,
-                            { backgroundColor: theme.surface }
+                            { backgroundColor: theme.surface },
                         ]}
                     >
                         <View style={styles.header}>
-                            <AppText variant="subheading" weight="bold">{title}</AppText>
+                            <AppText variant="subheading" weight="bold">
+                                {title}
+                            </AppText>
                             <TouchableOpacity
                                 onPress={onClose}
                                 accessibilityRole="button"
@@ -85,23 +81,10 @@ export function PopupModal({
                                 {children}
                             </ScrollView>
                         ) : (
-                            <View style={styles.staticContent}>
-                                {children}
-                            </View>
+                            <View style={styles.staticContent}>{children}</View>
                         )}
 
-                        <View style={[styles.bottomBar, { borderTopColor: theme.border }]}>
-                            {actions.map((action, index) => (
-                                <AppButton
-                                    key={`${action.label}-${index}`}
-                                    variant={action.variant || 'primary'}
-                                    onPress={action.onPress}
-                                    style={styles.actionButton}
-                                >
-                                    {action.label}
-                                </AppButton>
-                            ))}
-                        </View>
+                        {footer}
                     </AppCard>
                 </View>
             </View>
@@ -153,16 +136,5 @@ const styles = StyleSheet.create({
     staticContent: {
         marginTop: Spacing.md,
         gap: Spacing.md,
-    },
-    bottomBar: {
-        marginTop: Spacing.md,
-        paddingTop: Spacing.md,
-        borderTopWidth: 1,
-        flexDirection: 'row',
-        gap: Spacing.sm,
-    },
-    actionButton: {
-        flex: 1,
-        borderRadius: Shape.radius.full,
     },
 });

@@ -1,6 +1,5 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal'
-import { FormScreenScaffold } from '@/src/components/common/FormScreenScaffold'
-import { SubmitFooter } from '@/src/components/common/SubmitFooter'
+import { EntityFormScreen } from '@/src/components/common/EntityFormScreen'
 import { AppButton, AppCard, AppText, ListRow, LoadingView } from '@/src/components/core'
 import { AppInput } from '@/src/components/core/AppInput'
 import { Screen } from '@/src/components/layout'
@@ -46,7 +45,7 @@ export default function BudgetEditScreen() {
 
     return (
         <>
-            <FormScreenScaffold
+            <EntityFormScreen
                 title={budget ? 'Edit Budget' : 'New Budget'}
                 edges={['top', 'bottom']}
                 headerActions={
@@ -55,14 +54,11 @@ export default function BudgetEditScreen() {
                     </AppButton>
                 }
                 contentContainerStyle={{ padding: Spacing.lg }}
-                footerSlot={
-                    <SubmitFooter
-                        onPress={handleSave}
-                        disabled={!isFormValid || isSaving}
-                        label={budget ? (isSaving ? 'Updating...' : 'Update Budget') : (isSaving ? 'Creating...' : 'Create Budget')}
-                        topSlot={undefined}
-                    />
-                }
+                submitAction={{
+                    onPress: handleSave,
+                    disabled: !isFormValid || isSaving,
+                    label: budget ? (isSaving ? 'Updating...' : 'Update Budget') : (isSaving ? 'Creating...' : 'Create Budget'),
+                }}
             >
                 <AppCard style={{ marginBottom: Spacing.xxl }}>
                     <AppInput
@@ -98,7 +94,7 @@ export default function BudgetEditScreen() {
                         onPress={() => setIsAccountPickerVisible(true)}
                     />
                 </AppCard>
-            </FormScreenScaffold>
+            </EntityFormScreen>
 
             <AccountPickerModal
                 multiple

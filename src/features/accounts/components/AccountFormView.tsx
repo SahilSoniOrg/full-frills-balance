@@ -1,7 +1,6 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
-import { SubmitFooter } from '@/src/components/common/SubmitFooter';
+import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
-import { Screen } from '@/src/components/layout';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { Box, Inset, Separator } from '@/src/design-system';
@@ -71,31 +70,37 @@ export function AccountFormView(vm: AccountFormViewModel) {
     } = vm;
 
     return (
-        <Screen
+        <EntityFormScreen
             title={heroTitle}
             onBack={onBack}
-            scrollable
-            keyboardAvoiding
-            footer={
-                <SubmitFooter
-                    onPress={onSave}
-                    label={saveLabel}
-                    disabled={isSaveDisabled}
-                />
+            contentContainerStyle={{ paddingBottom: Spacing.lg }}
+            submitAction={{
+                onPress: onSave,
+                label: saveLabel,
+                disabled: isSaveDisabled,
+            }}
+            intro={
+                <Inset space="lg">
+                    <AppText variant="body" color="secondary" style={[styles.subtitle, { color: theme.textSecondary }]}>
+                        {heroSubtitle}
+                    </AppText>
+
+                    {formError ? (
+                        <View
+                            style={[
+                                styles.errorContainer,
+                                { backgroundColor: withOpacity(theme.error, Opacity.soft), borderColor: theme.error },
+                            ]}
+                        >
+                            <AppText variant="body" style={{ color: theme.error }}>
+                                {formError}
+                            </AppText>
+                        </View>
+                    ) : null}
+                </Inset>
             }
         >
             <Inset space="lg">
-                <AppText variant="body" color="secondary" style={[styles.subtitle, { color: theme.textSecondary }]}>
-                    {heroSubtitle}
-                </AppText>
-
-                {formError && (
-                    <View style={[styles.errorContainer, { backgroundColor: withOpacity(theme.error, Opacity.soft), borderColor: theme.error }]}
-                    >
-                        <AppText variant="body" style={{ color: theme.error }}>{formError}</AppText>
-                    </View>
-                )}
-
                 <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
                     <View style={styles.nameRow}>
                         <TouchableOpacity
@@ -246,7 +251,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                     setIsParentPickerVisible(false);
                 }}
             />
-        </Screen >
+        </EntityFormScreen>
     );
 }
 

@@ -6,6 +6,7 @@ import { Edge } from 'react-native-safe-area-context';
 type FormScreenScaffoldProps = {
     title: string;
     showBack?: boolean;
+    onBack?: () => void;
     edges?: Edge[];
     headerActions?: React.ReactNode;
     footerSlot?: React.ReactNode;
@@ -17,6 +18,7 @@ type FormScreenScaffoldProps = {
 export function FormScreenScaffold({
     title,
     showBack = true,
+    onBack,
     edges,
     headerActions,
     footerSlot,
@@ -28,6 +30,7 @@ export function FormScreenScaffold({
         <Screen
             title={title}
             showBack={showBack}
+            onBack={onBack}
             edges={edges}
             headerActions={headerActions}
             scrollable

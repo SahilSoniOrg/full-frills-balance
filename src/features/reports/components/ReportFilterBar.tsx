@@ -1,5 +1,6 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
+import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
@@ -32,16 +33,7 @@ export function ReportFilterBar(vm: ReportsViewModel) {
     return (
         <View style={styles.container}>
             <View style={styles.filterRow}>
-                <TouchableOpacity
-                    style={[styles.filterButton, { borderColor: theme.border, backgroundColor: theme.surface }]}
-                    onPress={onOpenDatePicker}
-                >
-                    <AppIcon name="calendar" size={Size.iconSm} color={theme.textSecondary} />
-                    <AppText variant="caption" style={{ marginLeft: Spacing.xs }}>
-                        {dateLabel}
-                    </AppText>
-                    <AppIcon name="chevronDown" size={Size.iconSm} color={theme.textSecondary} style={{ marginLeft: Spacing.xs }} />
-                </TouchableOpacity>
+                <DateRangeTrigger label={dateLabel} onPress={onOpenDatePicker} />
 
                 <TouchableOpacity
                     style={[styles.filterButton, { borderColor: theme.border, backgroundColor: theme.surface, marginLeft: Spacing.sm }]}

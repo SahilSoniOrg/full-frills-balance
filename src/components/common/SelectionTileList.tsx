@@ -19,6 +19,7 @@ export interface SelectionTileListProps {
     onSelect: (id: string) => void;
     disabled?: boolean;
     testIDPrefix?: string;
+    allowDeselect?: boolean;
 }
 
 export const SelectionTileList: React.FC<SelectionTileListProps> = ({
@@ -27,6 +28,7 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
     onSelect,
     disabled = false,
     testIDPrefix = 'selection-tile',
+    allowDeselect = false,
 }) => {
     const { theme } = useTheme();
     const scrollViewRef = React.useRef<ScrollView>(null);
@@ -61,64 +63,64 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-            {items.map((item) => {
-                const isSelected = selectedId === item.id;
+                {items.map((item) => {
+                    const isSelected = selectedId === item.id;
 
-                return (
-                    <TouchableOpacity
-                        key={item.id}
-                        testID={`${testIDPrefix}-${item.id}`}
-                        onLayout={(event) => {
-                            const isFirstLayout = !itemLayouts.current[item.id];
-                            itemLayouts.current[item.id] = event.nativeEvent.layout;
-                            if (item.id === selectedId) {
-                                scrollToSelected(isFirstLayout);
-                            }
-                        }}
-                        style={[
-                            styles.tile,
-                            {
-                                backgroundColor: theme.surface,
-                                borderColor: withOpacity(theme.textSecondary, Opacity.muted)
-                            },
-                            isSelected && {
-                                backgroundColor: withOpacity(item.color, Opacity.soft),
-                                borderColor: withOpacity(item.color, Opacity.medium)
-                            },
-                        ]}
-                        onPress={() => onSelect(isSelected ? '' : item.id)}
-                        disabled={disabled}
-                    >
-                        <Inline align="center" space="sm">
-                            <Box
-                                width={4}
-                                height={Spacing.md}
-                                borderRadius="full"
-                                background={item.color as any}
-                                style={{ opacity: isSelected ? 1 : Opacity.soft }}
-                            />
-                            {item.icon && (
-                                <AppIcon name={item.icon} size={Size.iconXs} color={item.color} fallbackIcon="wallet" />
-                            )}
-                            <AppText
-                                variant="body"
-                                weight={isSelected ? "semibold" : "regular"}
-                                style={{ color: theme.text, flexShrink: 1 }}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                            >
-                                {item.label}
-                            </AppText>
-                            {isSelected && (
-                                <AppIcon name="checkCircle" size={Size.iconSm} color={item.color} />
-                            )}
-                        </Inline>
-                    </TouchableOpacity>
-                );
-            })}
-        </ScrollView>
-    </Bleed>
-);
+                    return (
+                        <TouchableOpacity
+                            key={item.id}
+                            testID={`${testIDPrefix}-${item.id}`}
+                            onLayout={(event) => {
+                                const isFirstLayout = !itemLayouts.current[item.id];
+                                itemLayouts.current[item.id] = event.nativeEvent.layout;
+                                if (item.id === selectedId) {
+                                    scrollToSelected(isFirstLayout);
+                                }
+                            }}
+                            style={[
+                                styles.tile,
+                                {
+                                    backgroundColor: theme.surface,
+                                    borderColor: withOpacity(theme.textSecondary, Opacity.muted)
+                                },
+                                isSelected && {
+                                    backgroundColor: withOpacity(item.color, Opacity.soft),
+                                    borderColor: withOpacity(item.color, Opacity.medium)
+                                },
+                            ]}
+                            onPress={() => onSelect(isSelected && allowDeselect ? '' : item.id)}
+                            disabled={disabled}
+                        >
+                            <Inline align="center" space="sm">
+                                <Box
+                                    width={4}
+                                    height={Spacing.md}
+                                    borderRadius="full"
+                                    background={item.color as any}
+                                    style={{ opacity: isSelected ? 1 : Opacity.soft }}
+                                />
+                                {item.icon && (
+                                    <AppIcon name={item.icon} size={Size.iconXs} color={item.color} fallbackIcon="wallet" />
+                                )}
+                                <AppText
+                                    variant="body"
+                                    weight={isSelected ? "semibold" : "regular"}
+                                    style={{ color: theme.text, flexShrink: 1 }}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {item.label}
+                                </AppText>
+                                {isSelected && (
+                                    <AppIcon name="checkCircle" size={Size.iconSm} color={item.color} />
+                                )}
+                            </Inline>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+        </Bleed>
+    );
 };
 
 const styles = StyleSheet.create({

@@ -1,4 +1,4 @@
-import { PopupModal } from '@/src/components/common/PopupModal'
+import { ConfirmDialog } from '@/src/components/common/ConfirmDialog'
 import { AppText } from '@/src/components/core/AppText'
 import { AppConfig } from '@/src/constants'
 import { AlertPayload, clearAlertListener, clearConfirmListener, ConfirmPayload, setAlertListener, setConfirmListener } from '@/src/utils/alerts'
@@ -35,56 +35,48 @@ export function AlertContainer() {
     if (activeAlert.type === 'alert') {
         const { payload } = activeAlert
         return (
-            <PopupModal
+            <ConfirmDialog
                 visible={true}
                 title={payload.title || AppConfig.strings.common.alert}
                 onClose={() => setActiveAlert(null)}
-                actions={[
-                    {
-                        label: AppConfig.strings.common.ok,
-                        onPress: () => setActiveAlert(null),
-                        variant: 'primary',
-                    }
-                ]}
-                fixedHeight={false}
-            >
-                <AppText>{payload.message}</AppText>
-            </PopupModal>
+                primaryAction={{
+                    label: AppConfig.strings.common.ok,
+                    onPress: () => setActiveAlert(null),
+                    variant: 'primary',
+                }}
+                message={<AppText>{payload.message}</AppText>}
+            />
         )
     }
 
     if (activeAlert.type === 'confirm') {
         const { payload } = activeAlert
         return (
-            <PopupModal
+            <ConfirmDialog
                 visible={true}
                 title={payload.title}
                 onClose={() => {
                     payload.onCancel()
                     setActiveAlert(null)
                 }}
-                actions={[
-                    {
-                        label: payload.cancelText || AppConfig.strings.common.cancel,
-                        onPress: () => {
-                            payload.onCancel()
-                            setActiveAlert(null)
-                        },
-                        variant: 'outline',
+                secondaryAction={{
+                    label: payload.cancelText || AppConfig.strings.common.cancel,
+                    onPress: () => {
+                        payload.onCancel()
+                        setActiveAlert(null)
                     },
-                    {
-                        label: payload.confirmText || AppConfig.strings.common.confirm,
-                        onPress: () => {
-                            payload.onConfirm()
-                            setActiveAlert(null)
-                        },
-                        variant: payload.destructive ? 'destructive' : 'primary',
-                    }
-                ]}
-                fixedHeight={false}
-            >
-                <AppText>{payload.message}</AppText>
-            </PopupModal>
+                    variant: 'outline',
+                }}
+                primaryAction={{
+                    label: payload.confirmText || AppConfig.strings.common.confirm,
+                    onPress: () => {
+                        payload.onConfirm()
+                        setActiveAlert(null)
+                    },
+                    variant: payload.destructive ? 'destructive' : 'primary',
+                }}
+                message={<AppText>{payload.message}</AppText>}
+            />
         )
     }
 

@@ -1,9 +1,7 @@
-import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
-import { useTheme } from '@/src/hooks/use-theme';
-import { DateRange, formatDate, formatShortDate } from '@/src/utils/dateUtils';
-import React, { useMemo } from 'react';
-import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { DateRange } from '@/src/utils/dateUtils';
+import React from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
+import { DateRangeTrigger } from './DateRangeTrigger';
 
 interface DateRangeFilterProps {
     range: DateRange | null;
@@ -24,101 +22,15 @@ export function DateRangeFilter({
     showNavigationArrows = true,
     fullWidth = false
 }: DateRangeFilterProps) {
-    const { theme, fonts } = useTheme();
-    const showNavigation = !!(onPrevious && onNext) && showNavigationArrows;
-
-    const displayText = useMemo(() => {
-        if (!range) return AppConfig.strings.common.allTime;
-
-        // Check if same day
-        const start = new Date(range.startDate);
-        const end = new Date(range.endDate);
-
-        if (start.toDateString() === end.toDateString()) {
-            return formatDate(start);
-        }
-
-        // Use existing label if available (e.g., "This Month", "Last 30 Days")
-        if (range.label) return range.label;
-
-        // Fallback for custom ranges without label
-        return `${formatShortDate(start)} - ${formatShortDate(end)}`;
-    }, [range]);
-
     return (
-        <View style={[styles.wrapper, style]}>
-            {showNavigation && (
-                <TouchableOpacity
-                    onPress={onPrevious}
-                    style={[
-                        styles.navButton,
-                        { backgroundColor: theme.surface },
-                        Shape.elevation.sm
-                    ]}
-                    activeOpacity={Opacity.heavy}
-                >
-                    <AppIcon name="chevronLeft" size={Size.sm} color={theme.textSecondary} />
-                </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-                style={[
-                    styles.container,
-                    { backgroundColor: theme.surface },
-                    Shape.elevation.sm,
-                    fullWidth && { flex: 1, justifyContent: 'center' }
-                ]}
-                onPress={onPress}
-                activeOpacity={Opacity.heavy}
-            >
-                <AppIcon name="calendar" size={Size.sm} color={theme.primary} />
-                <AppText variant="body" style={[styles.text, { flexShrink: 1, fontFamily: fonts.medium }]} numberOfLines={1}>
-                    {displayText}
-                </AppText>
-                <AppIcon name="chevronDown" size={Size.xs} color={theme.textSecondary} />
-            </TouchableOpacity>
-
-            {/* ... navigation right button ... */}
-            {showNavigation && (
-                <TouchableOpacity
-                    onPress={onNext}
-                    style={[
-                        styles.navButton,
-                        { backgroundColor: theme.surface },
-                        Shape.elevation.sm
-                    ]}
-                    activeOpacity={Opacity.heavy}
-                >
-                    <AppIcon name="chevronRight" size={Size.sm} color={theme.textSecondary} />
-                </TouchableOpacity>
-            )}
-        </View>
+        <DateRangeTrigger
+            range={range}
+            onPress={onPress}
+            onPrevious={onPrevious}
+            onNext={onNext}
+            style={style}
+            showNavigationArrows={showNavigationArrows}
+            fullWidth={fullWidth}
+        />
     );
 }
-
-const styles = StyleSheet.create({
-    wrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-    },
-    navButton: {
-        width: Size.xl,
-        height: Size.xl,
-        borderRadius: Shape.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: Size.xl,
-        paddingHorizontal: Spacing.md,
-        borderRadius: Shape.radius.full,
-        gap: Spacing.sm,
-    },
-    text: {
-        fontSize: Typography.sizes.sm,
-        marginHorizontal: Spacing.xs,
-    },
-});

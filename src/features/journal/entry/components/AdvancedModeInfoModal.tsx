@@ -1,4 +1,4 @@
-import { PopupModal } from '@/src/components/common/PopupModal';
+import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -15,13 +15,13 @@ export const AdvancedModeInfoModal = ({ visible, onClose }: AdvancedModeInfoModa
     const str = AppConfig.strings.advancedModeExplanation;
 
     return (
-        <PopupModal
+        <InfoSheet
             visible={visible}
             title={str.title}
             onClose={onClose}
             maxHeightPercent={85}
             accessibilityCloseLabel={AppConfig.strings.transactionFlow.explanationIconAccessibility}
-            actions={[{ label: 'Got it!', variant: 'primary', onPress: onClose }]}
+            primaryAction={{ label: 'Got it!', variant: 'primary', onPress: onClose }}
         >
             <View style={styles.section}>
                 <AppText variant="body">{str.intro}</AppText>
@@ -63,7 +63,7 @@ export const AdvancedModeInfoModal = ({ visible, onClose }: AdvancedModeInfoModa
                     {str.footer}
                 </AppText>
             </View>
-        </PopupModal>
+        </InfoSheet>
     );
 };
 

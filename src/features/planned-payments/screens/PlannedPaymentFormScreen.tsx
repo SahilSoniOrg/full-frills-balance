@@ -1,68 +1,61 @@
-import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
-import { FormScreenScaffold } from '@/src/components/common/FormScreenScaffold';
-import { SubmitFooter } from '@/src/components/common/SubmitFooter';
+import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
+import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { AppCard, AppInput, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { useAccounts } from '@/src/features/accounts';
-import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
+import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
 
 export default function PlannedPaymentFormScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
-    const vm = usePlannedPaymentForm(id);
-    const { accounts } = useAccounts();
+    const vm = usePlannedPaymentFormScreen(id);
     const { theme } = useTheme();
-
-    const [pickingAccountFor, setPickingAccountFor] = useState<'from' | 'to' | null>(null);
 
     return (
         <>
-            <FormScreenScaffold
+            <EntityFormScreen
                 title={id ? AppConfig.strings.plannedPayments.formTitleEdit : AppConfig.strings.plannedPayments.formTitleNew}
-                footerSlot={
-                    <SubmitFooter
-                        label={vm.isSubmitting ? AppConfig.strings.plannedPayments.savingLabel : AppConfig.strings.plannedPayments.saveLabel}
-                        onPress={vm.handleSave}
-                        disabled={!vm.isValid || vm.isSubmitting}
-                    />
-                }
+                submitAction={{
+                    label: vm.isSubmitting ? AppConfig.strings.plannedPayments.savingLabel : AppConfig.strings.plannedPayments.saveLabel,
+                    onPress: vm.handleSave,
+                    disabled: !vm.isValid || vm.isSubmitting,
+                }}
             >
                 <View style={styles.formSection}>
                     <AppCard padding="lg">
                         <AppInput
                             label={AppConfig.strings.plannedPayments.nameLabel}
                             value={vm.form.name}
-                            onChangeText={(val) => vm.setForm({ ...vm.form, name: val })}
+                            onChangeText={(val) => vm.setField('name', val)}
                             placeholder={AppConfig.strings.plannedPayments.namePlaceholder}
                         />
 
                         <AppInput
                             label={AppConfig.strings.plannedPayments.amountLabel}
                             value={vm.form.amount}
-                            onChangeText={(val) => vm.setForm({ ...vm.form, amount: val })}
+                            onChangeText={(val) => vm.setField('amount', val)}
                             placeholder={AppConfig.strings.plannedPayments.amountPlaceholder}
                             keyboardType="numeric"
                         />
 
                         <AccountSelectionRow
                             title={AppConfig.strings.plannedPayments.fromAccountLabel}
-                            accounts={accounts}
+                            accounts={vm.accounts}
                             selectedAccountId={vm.form.fromAccountId}
                             placeholder={AppConfig.strings.plannedPayments.selectAccount}
-                            onPress={() => setPickingAccountFor('from')}
+                            onPress={() => vm.pickerState.open('from')}
                         />
 
                         <AccountSelectionRow
                             title={AppConfig.strings.plannedPayments.toAccountLabel}
-                            accounts={accounts}
+                            accounts={vm.accounts}
                             selectedAccountId={vm.form.toAccountId}
                             placeholder={AppConfig.strings.plannedPayments.selectAccount}
-                            onPress={() => setPickingAccountFor('to')}
+                            onPress={() => vm.pickerState.open('to')}
                         />
                     </AppCard>
 
@@ -72,29 +65,7 @@ export default function PlannedPaymentFormScreen() {
                         <ListRow
                             title={AppConfig.strings.plannedPayments.intervalLabel}
                             subtitle={vm.form.intervalType}
-                            onPress={() => {
-                                const types = Object.values(PlannedPaymentInterval);
-                                const next = types[(types.indexOf(vm.form.intervalType) + 1) % types.length];
-
-                                // Set defaults when changing type
-                                const d = new Date(vm.form.startDate);
-                                const updates: {
-                                    intervalType: PlannedPaymentInterval;
-                                    recurrenceDay?: number;
-                                    recurrenceMonth?: number;
-                                } = { intervalType: next };
-
-                                if (next === PlannedPaymentInterval.WEEKLY) {
-                                    updates.recurrenceDay = d.getDay();
-                                } else if (next === PlannedPaymentInterval.MONTHLY) {
-                                    updates.recurrenceDay = d.getDate();
-                                } else if (next === PlannedPaymentInterval.YEARLY) {
-                                    updates.recurrenceMonth = d.getMonth() + 1;
-                                    updates.recurrenceDay = d.getDate();
-                                }
-
-                                vm.setForm({ ...vm.form, ...updates });
-                            }}
+                            onPress={vm.cycleIntervalType}
                         />
 
                         {vm.form.intervalType === PlannedPaymentInterval.WEEKLY && (
@@ -108,7 +79,7 @@ export default function PlannedPaymentFormScreen() {
                                                 styles.chip,
                                                 { backgroundColor: vm.form.recurrenceDay === index ? theme.primary : theme.surfaceSecondary }
                                             ]}
-                                            onPress={() => vm.setForm({ ...vm.form, recurrenceDay: index })}
+                                            onPress={() => vm.setField('recurrenceDay', index)}
                                         >
                                             <AppText style={{ color: vm.form.recurrenceDay === index ? '#fff' : theme.textSecondary }}>{day}</AppText>
                                         </TouchableOpacity>
@@ -122,14 +93,7 @@ export default function PlannedPaymentFormScreen() {
                                 <AppInput
                                     label="Day of Month (1-31)"
                                     value={vm.form.recurrenceDay?.toString() || ''}
-                                    onChangeText={(val) => {
-                                        const day = parseInt(val);
-                                        if (!isNaN(day) && day >= 1 && day <= 31) {
-                                            vm.setForm({ ...vm.form, recurrenceDay: day });
-                                        } else if (val === '') {
-                                            vm.setForm({ ...vm.form, recurrenceDay: undefined });
-                                        }
-                                    }}
+                                    onChangeText={vm.setRecurrenceDayFromInput}
                                     keyboardType="numeric"
                                 />
                             </View>
@@ -140,22 +104,12 @@ export default function PlannedPaymentFormScreen() {
                                 <ListRow
                                     title={AppConfig.strings.plannedPayments.month}
                                     subtitle={AppConfig.strings.plannedPayments.monthNames[(vm.form.recurrenceMonth || 1) - 1]}
-                                    onPress={() => {
-                                        const nextMonth = ((vm.form.recurrenceMonth || 1) % 12) + 1;
-                                        vm.setForm({ ...vm.form, recurrenceMonth: nextMonth });
-                                    }}
+                                    onPress={vm.cycleRecurrenceMonth}
                                 />
                                 <AppInput
                                     label="Day of Month (1-31)"
                                     value={vm.form.recurrenceDay?.toString() || ''}
-                                    onChangeText={(val) => {
-                                        const day = parseInt(val);
-                                        if (!isNaN(day) && day >= 1 && day <= 31) {
-                                            vm.setForm({ ...vm.form, recurrenceDay: day });
-                                        } else if (val === '') {
-                                            vm.setForm({ ...vm.form, recurrenceDay: undefined });
-                                        }
-                                    }}
+                                    onChangeText={vm.setRecurrenceDayFromInput}
                                     keyboardType="numeric"
                                 />
                             </View>
@@ -165,26 +119,19 @@ export default function PlannedPaymentFormScreen() {
                             <AppText>{AppConfig.strings.plannedPayments.autoPostLabel}</AppText>
                             <Switch
                                 value={vm.form.isAutoPost}
-                                onValueChange={(val) => vm.setForm({ ...vm.form, isAutoPost: val })}
+                                onValueChange={(val) => vm.setField('isAutoPost', val)}
                             />
                         </View>
                     </AppCard>
                 </View>
-            </FormScreenScaffold>
+            </EntityFormScreen>
 
             <AccountPickerModal
-                visible={pickingAccountFor !== null}
-                accounts={accounts}
-                selectedId={pickingAccountFor === 'from' ? vm.form.fromAccountId : vm.form.toAccountId}
-                onClose={() => setPickingAccountFor(null)}
-                onSelect={(accId: string) => {
-                    if (pickingAccountFor === 'from') {
-                        vm.setForm({ ...vm.form, fromAccountId: accId });
-                    } else {
-                        vm.setForm({ ...vm.form, toAccountId: accId });
-                    }
-                    setPickingAccountFor(null);
-                }}
+                visible={vm.pickerState.visible}
+                accounts={vm.accounts}
+                selectedId={vm.pickerState.selectedId}
+                onClose={vm.pickerState.close}
+                onSelect={vm.pickerState.onSelect}
             />
         </>
     );

@@ -1,12 +1,13 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal'
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow'
-import { FormScreenScaffold } from '@/src/components/common/FormScreenScaffold'
+import { EntityFormScreen } from '@/src/components/common/EntityFormScreen'
+import { FilterChipRow } from '@/src/components/common/FilterChipRow'
+import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions'
 import { SelectionTileList } from '@/src/components/common/SelectionTileList'
-import { SubmitFooter } from '@/src/components/common/SubmitFooter'
 import { AppCard, AppInput, AppText } from '@/src/components/core'
 import { Spacing } from '@/src/constants'
-import { useTheme } from '@/src/hooks/use-theme'
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel'
+import { useTheme } from '@/src/hooks/use-theme'
 import dayjs from 'dayjs'
 import React from 'react'
 import { StyleSheet, Switch, View } from 'react-native'
@@ -62,15 +63,27 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
 
   return (
     <>
-      <FormScreenScaffold
+      <EntityFormScreen
         title={id ? 'Edit SMS Rule' : 'New SMS Rule'}
-        footerSlot={(
-          <SubmitFooter
-            label={isSubmitting ? 'Saving...' : 'Save Rule'}
-            onPress={handleSave}
-            disabled={!isValid || isSubmitting}
+        headerActions={id ? (
+          <ScreenHeaderActions
+            actions={[
+              {
+                name: 'delete',
+                onPress: handleDelete,
+                iconColor: theme.error,
+                variant: 'surface',
+                disabled: isSubmitting,
+                testID: 'delete-rule-button',
+              },
+            ]}
           />
-        )}
+        ) : undefined}
+        submitAction={{
+          label: isSubmitting ? 'Saving...' : 'Save Rule',
+          onPress: handleSave,
+          disabled: !isValid || isSubmitting,
+        }}
       >
         <View style={styles.formSection}>
           <AppCard padding="lg" style={styles.card}>
@@ -123,7 +136,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                 />
 
                 <AppText variant="body" weight="medium" style={styles.inlineLabel}>Direction</AppText>
-                <SelectionTileList
+                <FilterChipRow
                   items={[
                     { id: 'debit', label: 'Debit', icon: 'arrowUp', color: theme.error },
                     { id: 'credit', label: 'Credit', icon: 'arrowDown', color: theme.success },
@@ -133,7 +146,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                 />
 
                 <AppText variant="body" weight="medium" style={styles.inlineLabel}>Amount Filter</AppText>
-                <SelectionTileList
+                <FilterChipRow
                   items={[
                     { id: 'eq', label: 'Equals', color: theme.primary },
                     { id: 'gt', label: 'Greater Than', color: theme.primary },
@@ -233,14 +246,6 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
             </View>
           </AppCard>
 
-          {id ? (
-            <SubmitFooter
-              label="Delete Rule"
-              onPress={handleDelete}
-              disabled={isSubmitting}
-            />
-          ) : null}
-
           {previewMatches.length > 0 ? (
             <AppCard padding="lg" style={styles.card}>
               <AppText variant="subheading" style={styles.sectionTitle}>Recent Matches</AppText>
@@ -258,7 +263,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
             </AppCard>
           ) : null}
         </View>
-      </FormScreenScaffold>
+      </EntityFormScreen>
 
       <AccountPickerModal
         visible={pickingAccountFor !== null}

@@ -1,10 +1,10 @@
+import { InfoSheet } from '@/src/components/common/InfoSheet';
+import { AppCard, AppText } from '@/src/components/core';
+import { AppConfig, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Separator } from '@/src/design-system';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { PopupModal } from '@/src/components/common/PopupModal';
-import { AppCard, AppText } from '@/src/components/core';
-import { Separator } from '@/src/design-system';
-import { AppConfig, Spacing, Typography, withOpacity } from '@/src/constants';
-import { useTheme } from '@/src/hooks/use-theme';
 
 interface SafeToSpendLegendModalProps {
     visible: boolean;
@@ -29,16 +29,16 @@ interface SafeToSpendLegendModalProps {
 }
 
 export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
-    const { 
-        visible, onClose, type, labels, formatValue, 
-        totalLiquidAssets, totalFutureInflow, committedBudget, 
+    const {
+        visible, onClose, type, labels, formatValue,
+        totalLiquidAssets, totalFutureInflow, committedBudget,
         committedPlanned, committedLiabilities, safeToSpend,
         incomeBreakdown, committedBreakdown, debtBreakdown,
         firstMajorInflowDay, totalLiabilities,
         committedLiabilitiesCC, committedLiabilitiesOther,
         committedTotal
     } = props;
-    
+
     const { theme } = useTheme();
     const strings = AppConfig.strings.dashboard;
     const legendStrings = strings.legendDetails;
@@ -46,20 +46,18 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
     if (!type) return null;
 
     const title = type === 'safe' ? legendStrings.safeTitle :
-                  type === 'committed' ? legendStrings.committedTitle :
-                  legendStrings.debtsTitle;
+        type === 'committed' ? legendStrings.committedTitle :
+            legendStrings.debtsTitle;
 
     return (
-        <PopupModal
+        <InfoSheet
             visible={visible}
             title={title}
             onClose={onClose}
-            actions={[
-                {
-                    label: strings.safeToSpendExplanation.closeCta,
-                    onPress: onClose,
-                }
-            ]}
+            primaryAction={{
+                label: strings.safeToSpendExplanation.closeCta,
+                onPress: onClose,
+            }}
         >
             {type === 'safe' && (
                 <View style={styles.modalSection}>
@@ -104,7 +102,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
 
                         <View style={{ marginTop: Spacing.lg, paddingTop: Spacing.lg, borderTopWidth: 1, borderTopColor: withOpacity(theme.border, 0.2), borderStyle: 'dashed' }}>
                             <AppText variant="caption" italic color="secondary" style={{ lineHeight: 18 }}>
-                                Logic: Future income is used to "buffer" your bills. Today's cash is only reserved if future income won't cover an obligation before its due date.
+                                Logic: Future income is used to &quot;buffer&quot; your bills. Today&apos;s cash is only reserved if future income won&apos;t cover an obligation before its due date.
                             </AppText>
                         </View>
                     </AppCard>
@@ -273,7 +271,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                     </View>
                 </View>
             )}
-        </PopupModal>
+        </InfoSheet>
     );
 };
 

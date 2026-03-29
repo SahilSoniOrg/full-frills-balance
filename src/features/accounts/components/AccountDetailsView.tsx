@@ -1,18 +1,16 @@
-import { LineChart } from '@/src/components/charts/LineChart';
-import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { PopupModal } from '@/src/components/common/PopupModal';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
-import { AppButton, AppCard, AppText, Badge, FloatingActionButton, IvyIcon } from '@/src/components/core';
+import { AppButton, AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
+import { AccountDetailsHeader } from '@/src/features/accounts/components/AccountDetailsHeader';
+import { AccountReconcileDialog } from '@/src/features/accounts/components/AccountReconcileDialog';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatRelativeReconciledDate, formatShortDate } from '@/src/utils/dateUtils';
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function AccountDetailsView(vm: AccountDetailsViewModel) {
     const { theme } = useTheme();
@@ -148,137 +146,30 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                 emptyTitle="No transactions yet"
                 emptySubtitle="Transactions for this account will appear here."
                 ListHeaderComponent={
-                    <View style={styles.headerListRegion}>
-                        <AppCard elevation="sm" style={styles.accountInfoCard}>
-                            <View style={styles.accountHeader}>
-                                <IvyIcon
-                                    name={accountIcon || undefined}
-                                    fallbackIcon="wallet"
-                                    label={accountName}
-                                    color={theme[accountTypeColorKey as keyof typeof theme] as string}
-                                    size={Size.avatarMd}
-                                    shape={isParent ? 'square' : 'circle'}
-                                />
-                                <View style={styles.titleInfo}>
-                                    <AppText variant="title">
-                                        {accountName}
-                                    </AppText>
-                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, rowGap: Spacing.xs, alignItems: 'center' }}>
-                                        <Badge variant={accountTypeVariant as any}>
-                                            {accountType}
-                                        </Badge>
-                                        {accountSubtypeLabel ? (
-                                            <Badge variant={accountTypeVariant as any}>
-                                                {accountSubtypeLabel}
-                                            </Badge>
-                                        ) : null}
-                                        {isParent && (
-                                            <Pressable
-                                                onPress={onShowSubAccounts}
-                                                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                                            >
-                                                <Badge variant={accountTypeVariant as any} icon="hierarchy">
-                                                    {subAccountCount} {subAccountCount === 1 ? 'SUB-ACCOUNT' : 'SUB-ACCOUNTS'}
-                                                </Badge>
-                                            </Pressable>
-                                        )}
-                                        {isDeleted && (
-                                            <Badge variant="expense">
-                                                DELETED
-                                            </Badge>
-                                        )}
-                                        {vm.reconciledAt && (
-                                            <Badge
-                                                variant="success"
-                                                icon="shieldCheck"
-                                            >
-                                                {formatRelativeReconciledDate(vm.reconciledAt)}
-                                            </Badge>
-                                        )}
-                                    </View>
-                                </View>
-                            </View>
-
-                            <View style={styles.accountStats}>
-                                <View style={styles.statItem}>
-                                    <AppText variant="caption" color="secondary">
-                                        Current Balance
-                                    </AppText>
-                                    <AppText variant="heading">
-                                        {balanceText}
-                                    </AppText>
-                                    {secondaryBalances.length > 0 && (
-                                        <View style={styles.secondaryBalances}>
-                                            {secondaryBalances.map((sb: any, idx: number) => (
-                                                <AppText key={idx} variant="caption" color="secondary">
-                                                    + {sb.amountText}
-                                                </AppText>
-                                            ))}
-                                        </View>
-                                    )}
-                                </View>
-
-                                <View style={styles.statItem}>
-                                    <AppText variant="caption" color="secondary">
-                                        Transactions
-                                    </AppText>
-                                    <AppText variant="subheading">
-                                        {transactionCountText}
-                                    </AppText>
-                                </View>
-                            </View>
-                        </AppCard>
-
-                        <View style={styles.sectionHeader}>
-                            <DateRangeFilter
-                                fullWidth
-                                range={dateRange}
-                                onPress={showDatePicker}
-                                onPrevious={navigatePrevious}
-                                onNext={navigateNext}
-                            />
-                        </View>
-
-                        {chartData.length > 0 && (
-                            <LineChart
-                                data={chartData}
-                                secondaryData={rollingAverageData}
-                                secondaryColor={theme.warning}
-                                xTicks={xTicks}
-                                formatXTick={formatShortDate}
-                                height={180}
-                            />
-                        )}
-
-                        <View style={styles.metricsContainer}>
-                            <View style={styles.metricItem}>
-                                <AppText variant="caption" color="secondary">
-                                    {accountType === 'ASSET' ? 'Total In' :
-                                        (accountType === 'LIABILITY' || accountType === 'CREDIT_CARD' ? 'Total Spent' : 'Total In')}
-                                </AppText>
-                                <AppText variant="heading" color="income">
-                                    {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.totalIncreaseText}
-                                </AppText>
-                            </View>
-                            <View style={styles.metricItem}>
-                                <AppText variant="caption" color="secondary">
-                                    {accountType === 'ASSET' ? 'Total Out' :
-                                        (accountType === 'LIABILITY' || accountType === 'CREDIT_CARD' ? 'Total Paid' : 'Total Out')}
-                                </AppText>
-                                <AppText variant="heading" color="expense">
-                                    {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.totalDecreaseText}
-                                </AppText>
-                            </View>
-                            {periodMetricsFormatted.dailyAverageText && (
-                                <View style={styles.metricItem}>
-                                    <AppText variant="caption" color="secondary">Daily Avg</AppText>
-                                    <AppText variant="heading" color={periodMetricsFormatted.dailyAverageText.startsWith('-') ? 'expense' : 'income'}>
-                                        {periodMetricsFormatted.isLoading ? '...' : periodMetricsFormatted.dailyAverageText}
-                                    </AppText>
-                                </View>
-                            )}
-                        </View>
-                    </View>
+                    <AccountDetailsHeader
+                        accountName={accountName}
+                        accountIcon={accountIcon}
+                        accountType={accountType}
+                        accountSubtypeLabel={accountSubtypeLabel}
+                        accountTypeVariant={accountTypeVariant}
+                        accountTypeColorKey={accountTypeColorKey}
+                        isParent={isParent}
+                        isDeleted={isDeleted}
+                        subAccountCount={subAccountCount}
+                        onShowSubAccounts={onShowSubAccounts}
+                        balanceText={balanceText}
+                        secondaryBalances={secondaryBalances}
+                        transactionCountText={transactionCountText}
+                        reconciledAt={vm.reconciledAt}
+                        dateRange={dateRange}
+                        onShowDatePicker={showDatePicker}
+                        onPreviousPeriod={navigatePrevious}
+                        onNextPeriod={navigateNext}
+                        chartData={chartData}
+                        rollingAverageData={rollingAverageData}
+                        xTicks={xTicks}
+                        periodMetricsFormatted={periodMetricsFormatted}
+                    />
                 }
                 contentContainerStyle={styles.listContainer}
                 estimatedItemSize={AppConfig.layout.listEstimatedItemSize}
@@ -305,43 +196,13 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                 isLoading={subAccountsLoading}
             />
 
-            <PopupModal
+            <AccountReconcileDialog
                 visible={vm.isReconcileModalVisible}
                 onClose={() => vm.setIsReconcileModalVisible(false)}
-                title={AppConfig.strings.accounts.reconciliation.alert.title}
-                actions={[
-                    {
-                        label: AppConfig.strings.common.cancel,
-                        onPress: () => vm.setIsReconcileModalVisible(false),
-                        variant: 'ghost',
-                    },
-                    {
-                        label: 'Reconcile',
-                        onPress: vm.onConfirmReconcile,
-                        variant: 'primary',
-                    },
-                ]}
-                fixedHeight={false}
-            >
-                <AppText style={{ color: theme.textSecondary, marginBottom: 12 }}>
-                    {AppConfig.strings.accounts.reconciliation.alert.message}
-                </AppText>
-
-                {vm.unreconciledCount > 0 && (
-                    <View style={{ backgroundColor: theme.surfaceSecondary, padding: 12, borderRadius: 8, marginBottom: 16 }}>
-                        <AppText style={{ color: theme.text, fontWeight: '600', marginBottom: 4 }}>
-                            {AppConfig.strings.accounts.reconciliation.alert.matchingBalance(vm.balanceText)}
-                        </AppText>
-                        <AppText style={{ color: theme.textSecondary, fontSize: 13 }}>
-                            {AppConfig.strings.accounts.reconciliation.alert.pendingTransactions(vm.unreconciledCount)}
-                        </AppText>
-                    </View>
-                )}
-
-                <AppText style={{ color: theme.textSecondary, fontSize: 13, fontStyle: 'italic', marginBottom: 16 }}>
-                    {AppConfig.strings.accounts.reconciliation.alert.guide}
-                </AppText>
-            </PopupModal>
+                onConfirm={vm.onConfirmReconcile}
+                balanceText={vm.balanceText}
+                unreconciledCount={vm.unreconciledCount}
+            />
         </Screen>
     );
 }
@@ -359,61 +220,8 @@ const styles = StyleSheet.create({
         gap: Spacing.lg,
         padding: Spacing.lg,
     },
-    headerListRegion: {
-        paddingVertical: Spacing.md,
-    },
-    accountInfoCard: {
-        marginBottom: Spacing.lg,
-        padding: Spacing.lg,
-        borderRadius: Shape.radius.xl,
-    },
-    accountHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.md,
-    },
-    titleInfo: {
-        marginLeft: Spacing.md,
-        flex: 1,
-        gap: Spacing.xs,
-    },
-    accountStats: {
-        flexDirection: 'row',
-        gap: Spacing.xl,
-        marginBottom: Spacing.md,
-        paddingVertical: Spacing.md,
-    },
-    statItem: {
-        flex: 1,
-    },
-    secondaryBalances: {
-        marginTop: Spacing.xs,
-        gap: 2,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: Spacing.sm,
-    },
-    chartContainer: {
-        marginTop: Spacing.md,
-        alignItems: 'center',
-    },
     listContainer: {
         paddingHorizontal: Spacing.lg,
         paddingBottom: Spacing.xxxxl * 2.5,
-    },
-    metricsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: Spacing.xl,
-        marginBottom: Spacing.md,
-        paddingHorizontal: Spacing.md,
-    },
-    metricItem: {
-        flex: 1,
-        alignItems: 'center',
-        gap: Spacing.xs,
     },
 });
