@@ -8,32 +8,6 @@ import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { analytics, posthogClient } from '@/src/services/analytics-service';
-import {
-  CrimsonText_400Regular,
-  CrimsonText_700Bold,
-} from '@expo-google-fonts/crimson-text';
-import {
-  DMSerifDisplay_400Regular,
-} from '@expo-google-fonts/dm-serif-display';
-import {
-  InstrumentSans_400Regular,
-  InstrumentSans_500Medium,
-  InstrumentSans_600SemiBold,
-  InstrumentSans_700Bold,
-  useFonts,
-} from '@expo-google-fonts/instrument-sans';
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import {
-  Raleway_400Regular,
-  Raleway_500Medium,
-  Raleway_600SemiBold,
-  Raleway_700Bold,
-} from '@expo-google-fonts/raleway';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, usePathname, useSegments } from 'expo-router';
@@ -42,6 +16,7 @@ import React from 'react';
 import { DeviceEventEmitter, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { FontManager } from './components/FontManager';
 
 import { REPORT_CHART_EVENTS } from '@/src/constants/report-constants';
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
@@ -65,52 +40,35 @@ function PostHogScreenTracker() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [fontsLoaded] = useFonts({
-    'DMSerifDisplay-Regular': DMSerifDisplay_400Regular,
-    'InstrumentSans-Regular': InstrumentSans_400Regular,
-    'InstrumentSans-Medium': InstrumentSans_500Medium,
-    'InstrumentSans-SemiBold': InstrumentSans_600SemiBold,
-    'InstrumentSans-Bold': InstrumentSans_700Bold,
-    'Raleway-Regular': Raleway_400Regular,
-    'Raleway-Medium': Raleway_500Medium,
-    'Raleway-SemiBold': Raleway_600SemiBold,
-    'Raleway-Bold': Raleway_700Bold,
-    'CrimsonText-Regular': CrimsonText_400Regular,
-    'CrimsonText-Bold': CrimsonText_700Bold,
-    'Inter-Regular': Inter_400Regular,
-    'Inter-Medium': Inter_500Medium,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
-  });
-
-
-  if (!fontsLoaded) {
-    return null;
-  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }} onStartShouldSetResponderCapture={(e) => {
-        DeviceEventEmitter.emit(REPORT_CHART_EVENTS.globalTouch, { pageX: e.nativeEvent.pageX, pageY: e.nativeEvent.pageY });
-        return false;
-      }}>
+      <View
+        style={{ flex: 1 }}
+        onStartShouldSetResponderCapture={e => {
+          DeviceEventEmitter.emit(REPORT_CHART_EVENTS.globalTouch, {
+            pageX: e.nativeEvent.pageX,
+            pageY: e.nativeEvent.pageY,
+          });
+          return false;
+        }}
+      >
         <SafeAreaProvider>
           <ErrorBoundary>
             <DatabaseProvider database={database}>
               <UIProvider>
-                <PostHogProvider
-                  client={posthogClient ?? undefined}
-                  debug={__DEV__}
-                >
-                  <PostHogScreenTracker />
-                  <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                    <AppLockInterceptor>
-                      <AppContent />
-                    </AppLockInterceptor>
-                    <AlertContainer />
-                    <ToastContainer />
-                  </ThemeProvider>
-                </PostHogProvider>
+                <FontManager>
+                  <PostHogProvider client={posthogClient ?? undefined} debug={__DEV__}>
+                    <PostHogScreenTracker />
+                    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                      <AppLockInterceptor>
+                        <AppContent />
+                      </AppLockInterceptor>
+                      <AlertContainer />
+                      <ToastContainer />
+                    </ThemeProvider>
+                  </PostHogProvider>
+                </FontManager>
               </UIProvider>
             </DatabaseProvider>
           </ErrorBoundary>
@@ -140,16 +98,28 @@ function AppContent() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="journal-entry" options={{ headerShown: false, presentation: 'modal' }} />
-      <Stack.Screen name="account-creation" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen
+        name="account-creation"
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
       <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'modal' }} />
       <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
       <Stack.Screen name="account-details" options={{ headerShown: false }} />
       <Stack.Screen name="transaction-details" options={{ headerShown: false }} />
-      <Stack.Screen name="account-reorder" options={{ headerShown: false, presentation: 'modal' }} />
-      <Stack.Screen name="manage-hierarchy" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen
+        name="account-reorder"
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="manage-hierarchy"
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
       <Stack.Screen name="import-selection" options={{ headerShown: false }} />
       <Stack.Screen name="audit-log" options={{ headerShown: false }} />
-      <Stack.Screen name="appearance-settings" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen
+        name="appearance-settings"
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
     </Stack>
   );
 }

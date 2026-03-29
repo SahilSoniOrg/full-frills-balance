@@ -3,13 +3,16 @@ const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 const fs = require('fs');
 const path = require('path');
+const eslintConfigPrettier = require('eslint-config-prettier');
 
 // Determine feature directories to enforce boundary rules
 const featuresDir = path.join(__dirname, 'src/features');
 let features = [];
 try {
-  features = fs.readdirSync(featuresDir).filter(f => fs.statSync(path.join(featuresDir, f)).isDirectory());
-} catch (e) {
+  features = fs
+    .readdirSync(featuresDir)
+    .filter(f => fs.statSync(path.join(featuresDir, f)).isDirectory());
+} catch (_) {
   // Ignore if src/features doesn't exist yet
 }
 
@@ -21,7 +24,11 @@ const featureRules = features.map(feature => ({
       'error',
       {
         patterns: [
-          'app/*', 'app/**', '@/app', '@/app/*', '@/app/**',
+          'app/*',
+          'app/**',
+          '@/app',
+          '@/app/*',
+          '@/app/**',
           ...features.filter(f => f !== feature).map(f => `@/src/features/${f}/*`),
         ],
       },
@@ -33,6 +40,14 @@ module.exports = defineConfig([
   expoConfig,
   {
     ignores: ['dist/*'],
+  },
+  {
+    languageOptions: {
+      globals: {
+        __dirname: 'readonly',
+        process: 'readonly',
+      },
+    },
   },
   {
     files: ['app/**/*.{ts,tsx}'],
@@ -68,4 +83,5 @@ module.exports = defineConfig([
     },
   },
   ...featureRules,
+  eslintConfigPrettier,
 ]);
