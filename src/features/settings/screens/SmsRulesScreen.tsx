@@ -119,6 +119,8 @@ function SmsRulesList({ rules }: Props) {
                         <EmptyStateView
                             title="No Auto-Post Rules"
                             subtitle="Automatically post journal entries when matching SMS messages are received."
+                            primaryActionLabel="Create Rule"
+                            onPrimaryAction={() => AppNavigation.toSmsRuleForm()}
                         />
                     </>
                 )}
@@ -214,6 +216,9 @@ export default function SmsRulesScreen() {
             <EnhancedSmsRulesList />
             <FloatingActionButton
                 onPress={() => AppNavigation.toSmsRuleForm()}
+                label="Create Rule"
+                placement="end"
+                accessibilityLabel="Create a new SMS rule"
             />
         </Screen>
     );

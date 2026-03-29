@@ -1,4 +1,4 @@
-import { AppText, ExpandableSearchButton, FloatingActionButton, IconButton } from '@/src/components/core';
+import { AppButton, AppText, ExpandableSearchButton, FloatingActionButton, IconButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
@@ -142,9 +142,19 @@ export function AccountsListView({
                             {isLoading ? (
                                 <ActivityIndicator size="small" color={theme.primary} />
                             ) : (
-                                <AppText variant="body" color="secondary">
-                                    No accounts yet. Create your first account to get started!
-                                </AppText>
+                                <View style={styles.emptyStateContent}>
+                                    <AppText variant="body" color="secondary">
+                                        No accounts yet. Create your first account to get started!
+                                    </AppText>
+                                    <AppButton
+                                        variant="secondary"
+                                        size="sm"
+                                        onPress={onCreateAccount}
+                                        style={styles.emptyStateButton}
+                                    >
+                                        Create Your First Account
+                                    </AppButton>
+                                </View>
                             )}
                         </View>
                     }
@@ -152,7 +162,14 @@ export function AccountsListView({
                     stickySectionHeadersEnabled={false}
                 />
 
-                <FloatingActionButton onPress={onCreateAccount} />
+                {!isSearching ? (
+                    <FloatingActionButton
+                        onPress={onCreateAccount}
+                        label="New Account"
+                        placement="end"
+                        accessibilityLabel="Create a new account"
+                    />
+                ) : null}
             </View>
         </Screen>
     );
@@ -164,14 +181,14 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         paddingHorizontal: Spacing.lg,
-        paddingBottom: Size.fab + Spacing.xxxl,
+        paddingBottom: Spacing.xxxl,
     },
     header: {
         paddingTop: Spacing.xl,
         paddingBottom: Spacing.lg,
     },
     screenHeaderTop: {
-        marginBottom: Spacing.xl,
+        marginBottom: Spacing.md,
     },
     summaryRow: {
         flexDirection: 'row',
@@ -204,5 +221,11 @@ const styles = StyleSheet.create({
     emptyState: {
         marginTop: Spacing.xxl,
         alignItems: 'center',
+    },
+    emptyStateContent: {
+        alignItems: 'center',
+    },
+    emptyStateButton: {
+        marginTop: Spacing.lg,
     },
 });

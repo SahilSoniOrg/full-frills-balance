@@ -4,6 +4,7 @@ import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
+import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { router } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
@@ -25,6 +26,8 @@ export default function JournalScreen() {
     });
 
     const handleFabPress = useCallback(() => {
+        analytics.logEntrypointOpened('activity', 'bottom_action');
+        analytics.logEntrypointSelected('activity', 'bottom_action', 'journal_entry');
         AppNavigation.toJournalEntry();
     }, []);
 
@@ -63,7 +66,12 @@ export default function JournalScreen() {
         </View>
     ), [vm.dateRange, vm.showDatePicker, vm.navigatePrevious, vm.navigateNext]);
 
-    const fab = useMemo(() => ({ onPress: handleFabPress }), [handleFabPress]);
+    const fab = useMemo(() => ({
+        onPress: handleFabPress,
+        label: 'New Entry',
+        placement: 'end' as const,
+        accessibilityLabel: 'Open new entry options',
+    }), [handleFabPress]);
 
     return (
         <JournalListView

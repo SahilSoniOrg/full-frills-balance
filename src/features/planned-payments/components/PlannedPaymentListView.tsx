@@ -6,7 +6,11 @@ import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
-export function PlannedPaymentListView() {
+interface PlannedPaymentListViewProps {
+    onAddPress?: () => void;
+}
+
+export function PlannedPaymentListView({ onAddPress }: PlannedPaymentListViewProps) {
     const { items, isLoading } = usePlannedPayments();
 
     if (isLoading && items.length === 0) {
@@ -27,6 +31,8 @@ export function PlannedPaymentListView() {
                     title={AppConfig.strings.plannedPayments.emptyTitle}
                     subtitle={AppConfig.strings.plannedPayments.emptySubtitle}
                     style={styles.emptyState}
+                    primaryActionLabel={onAddPress ? 'Create Planned Payment' : undefined}
+                    onPrimaryAction={onAddPress}
                 />
             }
             renderItem={({ item }) => (
@@ -52,7 +58,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: Spacing.md,
-        paddingBottom: 80,
+        paddingBottom: Spacing.xxxl,
     },
     emptyState: {
         marginTop: Spacing.xxxl,

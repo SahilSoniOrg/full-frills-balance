@@ -661,7 +661,7 @@ const EditorialTheme: { light: Theme; dark: Theme } = {
     divider: '#34495E',
     pure: '#000000',
     pureInverse: '#FFFFFF',
-    onPrimary: '#FFFFFF',
+    onPrimary: '#ECF0F1',
   },
 };
 

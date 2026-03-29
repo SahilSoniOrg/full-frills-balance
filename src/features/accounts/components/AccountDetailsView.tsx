@@ -30,7 +30,6 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         onBack,
         onAuditPress,
         onAddPress,
-        showFab,
         dateRange,
         periodFilter,
         isDatePickerVisible,
@@ -175,11 +174,15 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                 estimatedItemSize={AppConfig.layout.listEstimatedItemSize}
             />
 
-            {showFab && (
+            {!isDeleted ? (
                 <FloatingActionButton
                     onPress={onAddPress}
+                    label="Add Transaction"
+                    icon="plusCircle"
+                    placement="end"
+                    accessibilityLabel="Add transaction for this account"
                 />
-            )}
+            ) : null}
 
             <DateRangePicker
                 visible={isDatePickerVisible}
@@ -222,6 +225,6 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         paddingHorizontal: Spacing.lg,
-        paddingBottom: Spacing.xxxxl * 2.5,
+        paddingBottom: Spacing.xxxxl,
     },
 });

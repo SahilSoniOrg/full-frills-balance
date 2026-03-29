@@ -25,47 +25,53 @@ export default function CommitmentsScreen() {
     return (
         <Screen title="Commitments" showBack={false} scrollable={false}>
             <View style={[styles.tabContainer, { borderBottomColor: theme.border }]}>
-                <TouchableOpacity
-                    onPress={() => setActiveTab('budgets')}
-                    style={[
-                        styles.tab,
-                        activeTab === 'budgets' && { borderBottomColor: theme.primary, borderBottomWidth: 2 }
-                    ]}
-                >
-                    <AppText
-                        variant="body"
-                        weight={activeTab === 'budgets' ? 'bold' : 'medium'}
-                        style={{ color: activeTab === 'budgets' ? theme.primary : theme.textSecondary }}
+                <View style={styles.tabRow}>
+                    <TouchableOpacity
+                        onPress={() => setActiveTab('budgets')}
+                        style={[
+                            styles.tab,
+                            activeTab === 'budgets' && { borderBottomColor: theme.primary, borderBottomWidth: 2 }
+                        ]}
                     >
-                        Budgets
-                    </AppText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => setActiveTab('planned')}
-                    style={[
-                        styles.tab,
-                        activeTab === 'planned' && { borderBottomColor: theme.primary, borderBottomWidth: 2 }
-                    ]}
-                >
-                    <AppText
-                        variant="body"
-                        weight={activeTab === 'planned' ? 'bold' : 'medium'}
-                        style={{ color: activeTab === 'planned' ? theme.primary : theme.textSecondary }}
+                        <AppText
+                            variant="body"
+                            weight={activeTab === 'budgets' ? 'bold' : 'medium'}
+                            style={{ color: activeTab === 'budgets' ? theme.primary : theme.textSecondary }}
+                        >
+                            Budgets
+                        </AppText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => setActiveTab('planned')}
+                        style={[
+                            styles.tab,
+                            activeTab === 'planned' && { borderBottomColor: theme.primary, borderBottomWidth: 2 }
+                        ]}
                     >
-                        Planned
-                    </AppText>
-                </TouchableOpacity>
+                        <AppText
+                            variant="body"
+                            weight={activeTab === 'planned' ? 'bold' : 'medium'}
+                            style={{ color: activeTab === 'planned' ? theme.primary : theme.textSecondary }}
+                        >
+                            Planned
+                        </AppText>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.content}>
                 {activeTab === 'budgets' ? (
                     <BudgetListView onAddPress={() => AppNavigation.toBudgetForm()} />
                 ) : (
-                    <PlannedPaymentListView />
+                    <PlannedPaymentListView onAddPress={() => AppNavigation.toPlannedPaymentForm()} />
                 )}
             </View>
-
-            <FloatingActionButton onPress={handleAdd} />
+            <FloatingActionButton
+                onPress={handleAdd}
+                label={activeTab === 'budgets' ? 'New Budget' : 'New Planned Payment'}
+                placement="end"
+                accessibilityLabel={activeTab === 'budgets' ? 'Create a new budget' : 'Create a new planned payment'}
+            />
         </Screen>
     );
 }
@@ -73,8 +79,15 @@ export default function CommitmentsScreen() {
 const styles = StyleSheet.create({
     tabContainer: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.sm,
         borderBottomWidth: 1,
+    },
+    tabRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     tab: {
         paddingVertical: Spacing.md,

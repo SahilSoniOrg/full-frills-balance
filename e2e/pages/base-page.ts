@@ -49,14 +49,14 @@ export class BasePage {
             return;
         }
 
-        fab = this.page.getByText('+', { exact: true }).first();
+        fab = this.page.getByRole('button', { name: 'New Entry', exact: true }).first();
         if (await fab.count() > 0) {
             await fab.waitFor({ state: 'visible' });
             await fab.click({ force: true });
             return;
         }
 
-        throw new Error('Could not find FAB button');
+        throw new Error('Could not find primary journal entry button');
     }
 
     async selectAccount(accountName: string) {

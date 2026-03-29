@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         paddingHorizontal: Spacing.lg,
-        paddingBottom: 80,
+        paddingBottom: Spacing.xxxl,
     },
     emptyState: {
         flex: 1,

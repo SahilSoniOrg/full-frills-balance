@@ -223,6 +223,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: Spacing.sm,
+        gap: Spacing.md,
     },
     metricsContainer: {
         flexDirection: 'row',

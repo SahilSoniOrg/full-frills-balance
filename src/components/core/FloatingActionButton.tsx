@@ -1,4 +1,5 @@
-import { AppIcon } from '@/src/components/core/AppIcon';
+import { AppIcon, type IconName } from '@/src/components/core/AppIcon';
+import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, ZIndex } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -7,15 +8,29 @@ import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 interface FABProps {
     onPress: () => void;
     style?: ViewStyle;
+    label?: string;
+    icon?: IconName;
+    placement?: 'end' | 'center';
+    accessibilityLabel?: string;
 }
 
-export const FloatingActionButton = ({ onPress, style }: FABProps) => {
+export const FloatingActionButton = ({
+    onPress,
+    style,
+    label,
+    icon = 'add',
+    placement = 'end',
+    accessibilityLabel,
+}: FABProps) => {
     const { theme } = useTheme();
+    const isExtended = Boolean(label);
 
     return (
         <TouchableOpacity
             style={[
-                styles.fab,
+                styles.base,
+                placement === 'center' ? styles.centerPlacement : styles.endPlacement,
+                isExtended ? styles.extended : styles.fab,
                 {
                     backgroundColor: theme.primary,
                 },
@@ -24,25 +39,49 @@ export const FloatingActionButton = ({ onPress, style }: FABProps) => {
             onPress={onPress}
             activeOpacity={Opacity.heavy}
             testID="fab-button"
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel ?? label ?? 'Create new item'}
         >
-            <AppIcon name="add" size={Size.buttonSm} color={theme.pureInverse} />
+            <AppIcon name={icon} size={Size.iconSm} color={theme.onPrimary} />
+            {label ? (
+                <AppText variant="body" weight="semibold" style={[styles.label, { color: theme.onPrimary }]}>
+                    {label}
+                </AppText>
+            ) : null}
         </TouchableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
-    fab: {
+    base: {
         position: 'absolute',
-        right: Spacing.xl,
         bottom: Spacing.xl,
-        width: Size.fab,
-        height: Size.fab,
-        borderRadius: Shape.radius.full,
         alignItems: 'center',
         justifyContent: 'center',
         // @ts-ignore
         boxShadow: Shape.elevation.lg.boxShadow,
         elevation: Shape.elevation.lg.elevation,
         zIndex: ZIndex.fab,
+    },
+    endPlacement: {
+        right: Spacing.xl,
+    },
+    centerPlacement: {
+        alignSelf: 'center',
+    },
+    fab: {
+        width: Size.fab,
+        height: Size.fab,
+        borderRadius: Shape.radius.full,
+    },
+    extended: {
+        minHeight: Size.buttonLg,
+        paddingHorizontal: Spacing.xl,
+        borderRadius: Shape.radius.full,
+        flexDirection: 'row',
+        gap: Spacing.sm,
+    },
+    label: {
+        includeFontPadding: false,
     },
 });

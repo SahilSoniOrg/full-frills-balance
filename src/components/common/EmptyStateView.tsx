@@ -1,3 +1,4 @@
+import { AppButton } from '@/src/components/core/AppButton'
 import { AppText } from '@/src/components/core/AppText'
 import { Spacing } from '@/src/constants'
 import React from 'react'
@@ -7,9 +8,11 @@ export interface EmptyStateViewProps {
     title: string
     subtitle?: string
     style?: ViewStyle
+    primaryActionLabel?: string
+    onPrimaryAction?: () => void
 }
 
-export function EmptyStateView({ title, subtitle, style }: EmptyStateViewProps) {
+export function EmptyStateView({ title, subtitle, style, primaryActionLabel, onPrimaryAction }: EmptyStateViewProps) {
     return (
         <View style={[styles.container, style]}>
             <AppText variant="heading" style={styles.title}>
@@ -20,6 +23,15 @@ export function EmptyStateView({ title, subtitle, style }: EmptyStateViewProps) 
                     {subtitle}
                 </AppText>
             )}
+            {primaryActionLabel && onPrimaryAction ? (
+                <AppButton
+                    onPress={onPrimaryAction}
+                    style={styles.actionButton}
+                    accessibilityLabel={primaryActionLabel}
+                >
+                    {primaryActionLabel}
+                </AppButton>
+            ) : null}
         </View>
     )
 }
@@ -36,5 +48,8 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         textAlign: 'center',
+    },
+    actionButton: {
+        marginTop: Spacing.lg,
     },
 })

@@ -2,7 +2,7 @@ import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { EnrichedJournal } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -33,6 +33,9 @@ export interface JournalListViewProps {
     };
     fab?: {
         onPress: () => void;
+        label?: string;
+        placement?: 'end' | 'center';
+        accessibilityLabel?: string;
     };
     plannedJournals?: EnrichedJournal[];
     onPlannedJournalPress?: (item: EnrichedJournal) => void;
@@ -92,7 +95,12 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
                 />
 
                 {fab && (
-                    <FloatingActionButton onPress={fab.onPress} />
+                    <FloatingActionButton
+                        onPress={fab.onPress}
+                        label={fab.label}
+                        placement={fab.placement}
+                        accessibilityLabel={fab.accessibilityLabel}
+                    />
                 )}
 
                 <DateRangePicker
@@ -114,5 +122,6 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: Spacing.lg,
+        paddingBottom: Size.buttonLg + Spacing.xl,
     },
 });

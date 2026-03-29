@@ -30,6 +30,9 @@ export interface DashboardViewModel {
     transactionSectionTitle: string;
     fab: {
         onPress: () => void;
+        label?: string;
+        placement?: 'end' | 'center';
+        accessibilityLabel?: string;
     };
     safeToSpendData: SafeToSpendResult | null;
 }

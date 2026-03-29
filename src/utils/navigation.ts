@@ -90,6 +90,46 @@ export const AppNavigation = {
     },
 
     /**
+     * Navigate to the journal editor in simple mode with a preselected type.
+     */
+    toSimpleJournalEntry: (
+        type: 'expense' | 'income' | 'transfer',
+        options?: { sourceAccountId?: string; destinationAccountId?: string }
+    ) => {
+        const params: Record<string, string> = {
+            mode: 'simple',
+            type,
+        };
+
+        if (options?.destinationAccountId) {
+            params.destinationAccountId = options.destinationAccountId;
+        }
+
+        AppNavigation.toJournalEntry({
+            sourceAccountId: options?.sourceAccountId,
+            params,
+        });
+    },
+
+    /**
+     * Navigate to the journal editor in advanced mode.
+     */
+    toAdvancedJournalEntry: (options?: { sourceAccountId?: string; destinationAccountId?: string }) => {
+        const params: Record<string, string> = {
+            mode: 'advanced',
+        };
+
+        if (options?.destinationAccountId) {
+            params.destinationAccountId = options.destinationAccountId;
+        }
+
+        AppNavigation.toJournalEntry({
+            sourceAccountId: options?.sourceAccountId,
+            params,
+        });
+    },
+
+    /**
      * Navigate to the Journal list filtered by a date range.
      */
     toJournalWithDateRange: (startDate: number, endDate: number) => {

@@ -73,7 +73,6 @@ export interface AccountDetailsViewModel {
     onBack: () => void;
     onAuditPress: () => void;
     onAddPress: () => void;
-    showFab: boolean;
     dateRange: DateRange | null;
     periodFilter: PeriodFilter;
     isDatePickerVisible: boolean;
@@ -763,7 +762,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         onBack,
         onAuditPress,
         onAddPress,
-        showFab: !isDeleted,
         dateRange,
         periodFilter,
         isDatePickerVisible,

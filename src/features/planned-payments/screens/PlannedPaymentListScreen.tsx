@@ -11,8 +11,13 @@ export default function PlannedPaymentListScreen() {
             title={AppConfig.strings.journal.plannedPayments}
             showBack={true}
         >
-            <PlannedPaymentListView />
-            <FloatingActionButton onPress={() => AppNavigation.toPlannedPaymentForm()} />
+            <PlannedPaymentListView onAddPress={() => AppNavigation.toPlannedPaymentForm()} />
+            <FloatingActionButton
+                onPress={() => AppNavigation.toPlannedPaymentForm()}
+                label="New Planned Payment"
+                placement="end"
+                accessibilityLabel="Create a new planned payment"
+            />
         </Screen>
     );
 }

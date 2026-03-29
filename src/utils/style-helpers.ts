@@ -31,7 +31,7 @@ export const getVariantColors = (theme: Theme, variant: ComponentVariant): Varia
             return {
                 main: theme.primary,
                 light: theme.primaryLight,
-                contrast: theme.pureInverse,
+                contrast: theme.onPrimary,
             };
         case 'secondary':
             return {

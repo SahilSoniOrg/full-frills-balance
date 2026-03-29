@@ -141,6 +141,14 @@ export class AnalyticsService {
         this.track('factory_reset');
     }
 
+    logEntrypointOpened(screen: string, entrypoint: string) {
+        this.track('entrypoint_opened', { screen, entrypoint });
+    }
+
+    logEntrypointSelected(screen: string, entrypoint: string, target: string) {
+        this.track('entrypoint_selected', { screen, entrypoint, target });
+    }
+
     logError(error: Error, componentStack?: string) {
         const trimLimit = AppConfig.constants.validation.maxTrimLength;
         this.track('app_error', {

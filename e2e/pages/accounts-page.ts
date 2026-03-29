@@ -8,13 +8,13 @@ export class AccountsPage extends BasePage {
             console.log(this.page.url());
             await this.switchToAccounts();
         }
-        const fab = this.page.getByTestId('fab-button');
-        if (await fab.count() > 0) {
-            await fab.first().waitFor({ state: 'visible' });
-            await fab.nth(1).click();
+        const bottomAction = this.page.getByRole('button', { name: 'New Account', exact: true });
+        if (await bottomAction.count() > 0) {
+            await bottomAction.first().waitFor({ state: 'visible' });
+            await bottomAction.first().click();
             return;
         }
-        throw new Error('Could not find FAB button');
+        throw new Error('Could not find New Account entry button');
     }
 
     async createAccount(name: string, type: 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity') {

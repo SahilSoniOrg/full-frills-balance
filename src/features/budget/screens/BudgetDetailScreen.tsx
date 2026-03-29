@@ -4,7 +4,6 @@ import { TransactionListView } from '@/src/components/common/TransactionListView
 import { AppButton, AppCard, AppIcon, AppText, IvyIcon, LoadingView } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
 import { AppConfig, REPORT_CHART_LAYOUT, Shape, Size, Spacing, Typography } from '@/src/constants'
-import { ChartTooltip } from '@/src/components/charts/ChartTooltip'
 import { useTheme } from '@/src/hooks/use-theme'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
 import { AppNavigation } from '@/src/utils/navigation'
@@ -111,14 +110,14 @@ export function BudgetDetailScreen() {
                                 tooltipWidth={100}
                                 tooltipHeight={60}
                                 renderTooltipContent={(point) => (
-                                    <ChartTooltip>
+                                    <View>
                                         <AppText variant="caption" color="secondary" style={{ marginBottom: REPORT_CHART_LAYOUT.tooltipDateMarginBottom }}>
                                             {dayjs(point.x).format('MMM D')}
                                         </AppText>
                                         <AppText variant="body" weight="bold">
                                             {CurrencyFormatter.format(point.y, budget.currencyCode, { maximumFractionDigits: 0 })}
                                         </AppText>
-                                    </ChartTooltip>
+                                    </View>
                                 )}
                             />
                         )}

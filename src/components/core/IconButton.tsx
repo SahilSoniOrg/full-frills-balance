@@ -32,7 +32,7 @@ type VariantConfig = {
 const VARIANTS: Record<IconButtonVariant, (theme: ReturnType<typeof useTheme>['theme'], disabled: boolean) => VariantConfig> = {
     primary: (theme, disabled) => ({
         backgroundColor: disabled ? theme.textTertiary : theme.primary,
-        iconColor: disabled ? theme.textTertiary : theme.pureInverse,
+        iconColor: disabled ? theme.textTertiary : theme.onPrimary,
     }),
     surface: (theme, disabled) => ({
         backgroundColor: disabled ? theme.textTertiary : theme.surface,
