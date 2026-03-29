@@ -32,11 +32,15 @@
         "key": "v1-prod"
       },
       "android": {
-        "buildType": "app-bundle"
+        "gradleCommand": ":app:bundleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a"
       },
       "env": {
         "APP_VARIANT": "production"
       }
+    },
+    "production-test": {
+      "extends": "production",
+      "autoIncrement": false
     }
   },
   "submit": {

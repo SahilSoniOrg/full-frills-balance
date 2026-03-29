@@ -106,6 +106,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'react-native-quick-crypto',
     'expo-localization',
     './plugins/withTelephony',
+    './plugins/withGradleOptimizations',
     './plugins/withJournalLauncherWidget',
     [
       'expo-notifications',

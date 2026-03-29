@@ -1,7 +1,10 @@
+const os = require('os');
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
+
+config.maxWorkers = os.cpus().length;
 
 const nativeNodePolyfills = {
   buffer: path.resolve(__dirname, 'node_modules/@craftzdog/react-native-buffer'),
@@ -13,11 +16,7 @@ const nativeNodePolyfills = {
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform !== 'web' && nativeNodePolyfills[moduleName]) {
-    return context.resolveRequest(
-      context,
-      nativeNodePolyfills[moduleName],
-      platform
-    );
+    return context.resolveRequest(context, nativeNodePolyfills[moduleName], platform);
   }
 
   return context.resolveRequest(context, moduleName, platform);
