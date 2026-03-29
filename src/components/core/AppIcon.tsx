@@ -11,6 +11,7 @@ import {
     ArrowUpDown,
     BarChart3,
     Bell,
+    BetweenHorizontalStart,
     Briefcase,
     Bus,
     Calculator,
@@ -168,6 +169,7 @@ export const IconMap = {
     repeat: Repeat,
     activity: Activity,
     filter: Filter,
+    timeline: BetweenHorizontalStart,
 } as const;
 
 export type IconName = keyof typeof IconMap;

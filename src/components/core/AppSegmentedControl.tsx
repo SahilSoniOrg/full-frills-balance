@@ -16,6 +16,11 @@ interface AppSegmentedControlProps {
   onChange: (id: any) => void;
   minWidth?: number;
   flex?: boolean;
+  size?: 'sm' | 'md';
+  trackColor?: string;
+  pillColor?: string;
+  activeTextColor?: string;
+  inactiveTextColor?: string;
 }
 
 /**
@@ -28,10 +33,15 @@ export const AppSegmentedControl = ({
   onChange,
   minWidth = 64,
   flex = false,
+  size = 'md',
+  trackColor,
+  pillColor,
+  activeTextColor,
+  inactiveTextColor,
 }: AppSegmentedControlProps) => {
   const { theme } = useTheme();
   const [containerWidth, setContainerWidth] = useState(0);
-  
+
   // Find index of current value
   const selectedIndex = options.findIndex((opt: SegmentedOption) => opt.id === value);
   const safeIndex = selectedIndex === -1 ? 0 : selectedIndex;
@@ -61,6 +71,7 @@ export const AppSegmentedControl = ({
 
   const contentWidth = Math.max(0, containerWidth - 8); // 2 * Spacing.xs (padding)
   const itemWidth = contentWidth / options.length;
+  const isSmall = size === 'sm';
 
   const translateX = scrollValue.interpolate({
     inputRange: options.map((_, i: number) => i),
@@ -73,7 +84,12 @@ export const AppSegmentedControl = ({
       borderRadius="full"
       padding="xs"
       onLayout={onContainerLayout}
-      style={[styles.container, flex ? { width: '100%' } : { alignSelf: 'flex-start' }]}
+      style={[
+        styles.container,
+        isSmall && styles.containerSm,
+        { backgroundColor: trackColor || theme.surfaceSecondary },
+        flex ? { width: '100%' } : { alignSelf: 'flex-start' },
+      ]}
     >
       {containerWidth > 0 && (
         <Animated.View
@@ -81,9 +97,10 @@ export const AppSegmentedControl = ({
             styles.pill,
             {
               width: itemWidth,
-              backgroundColor: theme.primary,
+              backgroundColor: pillColor || theme.primary,
               transform: [{ translateX }],
             },
+            isSmall && styles.pillSm,
           ]}
         />
       )}
@@ -95,13 +112,19 @@ export const AppSegmentedControl = ({
               key={option.id}
               onPress={() => onChange(option.id)}
               activeOpacity={0.7}
-              style={[styles.option, flex ? { flex: 1 } : { width: minWidth }]}
+              style={[
+                styles.option,
+                isSmall && styles.optionSm,
+                flex ? { flex: 1 } : { width: minWidth },
+              ]}
             >
               <AppText
                 variant="caption"
                 weight={isSelected ? 'semibold' : 'medium'}
                 style={{
-                  color: isSelected ? theme.onPrimary : theme.textSecondary,
+                  color: isSelected
+                    ? (activeTextColor || theme.onPrimary)
+                    : (inactiveTextColor || theme.textSecondary),
                   textAlign: 'center',
                 }}
               >
@@ -120,6 +143,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 32,
   },
+  containerSm: {
+    minHeight: 28,
+  },
   pill: {
     position: 'absolute',
     top: 4,
@@ -128,10 +154,18 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.full,
     zIndex: 0,
   },
+  pillSm: {
+    top: 3,
+    bottom: 3,
+    left: 3,
+  },
   option: {
     paddingVertical: 6,
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  optionSm: {
+    paddingVertical: 4,
   },
 });

@@ -1,5 +1,5 @@
 import { AppText, IconButton } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { Shape, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React, { useMemo, useState } from 'react';
@@ -41,11 +41,16 @@ export function DateView({ date, onChange }: DateViewProps) {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <IconButton name="chevronLeft" onPress={handlePrevMonth} iconColor={theme.textSecondary} />
-                <AppText variant="body" style={{ fontFamily: fonts.bold }}>
-                    {currentMonth.format('MMMM YYYY')}
-                </AppText>
-                <IconButton name="chevronRight" onPress={handleNextMonth} iconColor={theme.textSecondary} />
+                <IconButton name="chevronLeft" onPress={handlePrevMonth} variant="surface" iconColor={theme.textSecondary} />
+                <View style={styles.monthTitle}>
+                    <AppText variant="caption" color="secondary">
+                        Calendar
+                    </AppText>
+                    <AppText variant="body" style={{ fontFamily: fonts.bold }}>
+                        {currentMonth.format('MMMM YYYY')}
+                    </AppText>
+                </View>
+                <IconButton name="chevronRight" onPress={handleNextMonth} variant="surface" iconColor={theme.textSecondary} />
             </View>
             <View style={styles.daysHeader}>
                 {DAYS_OF_WEEK.map(day => (
@@ -71,7 +76,9 @@ export function DateView({ date, onChange }: DateViewProps) {
                             key={`day-${day}`}
                             style={[
                                 styles.dayCell,
-                                isSelected && { backgroundColor: theme.primary, borderRadius: Shape.radius.full }
+                                { borderColor: 'transparent', borderWidth: 1 },
+                                isToday && !isSelected && { borderColor: withOpacity(theme.primary, 0.35), borderRadius: Shape.radius.full },
+                                isSelected && { backgroundColor: theme.primary, borderRadius: Shape.radius.full, borderColor: theme.primary }
                             ]}
                             onPress={() => handleSelectDate(day)}
                         >
@@ -98,7 +105,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: Spacing.md,
+        marginBottom: Spacing.lg,
+    },
+    monthTitle: {
+        alignItems: 'center',
+        gap: 2,
     },
     daysHeader: {
         flexDirection: 'row',

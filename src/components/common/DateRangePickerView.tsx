@@ -1,9 +1,9 @@
-import { AppButton } from '@/src/components/core';
-import { Layout, Shape, Spacing } from '@/src/constants';
+import { AppButton, AppText, IconButton } from '@/src/components/core';
+import { Layout, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
-import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import React from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ export interface DateRangePickerViewProps {
     view: PickerView;
     setView: (view: PickerView) => void;
     draftFilter: PeriodFilter;
-    customRange: { startDate: dayjs.Dayjs | null; endDate: dayjs.Dayjs | null };
+    customRange: { startDate: Dayjs | null; endDate: Dayjs | null };
     lastNValue: string;
     lastNUnit: 'days' | 'weeks' | 'months';
     monthList: { month: number; year: number; label: string }[];
@@ -28,7 +28,7 @@ export interface DateRangePickerViewProps {
     handleSelectMonth: (month: number, year: number) => void;
     handleSelectAllTime: () => void;
     updateLastN: (value: string, unit: 'days' | 'weeks' | 'months') => void;
-    handleDateSelect: (date: dayjs.Dayjs) => void;
+    handleDateSelect: (date: Dayjs) => void;
     handleApply: () => void;
     INITIAL_MONTH_INDEX: number;
 }
@@ -67,13 +67,39 @@ export function DateRangePickerView({
         >
             <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
                 <Pressable
-                    style={[styles.content, { backgroundColor: theme.background, paddingBottom: insets.bottom + Spacing.md }]}
+                    style={[
+                        styles.content,
+                        {
+                            backgroundColor: theme.background,
+                            paddingBottom: insets.bottom + Spacing.md,
+                            borderTopColor: withOpacity(theme.border, 0.45),
+                        },
+                    ]}
                     onPress={(event) => event.stopPropagation()}
                 >
                     {view === 'MENU' ? (
-                        <View style={styles.dragHandleContainer}>
-                            <View style={[styles.dragHandle, { backgroundColor: theme.border }]} />
-                        </View>
+                        <>
+                            <View style={styles.dragHandleContainer}>
+                                <View style={[styles.dragHandle, { backgroundColor: withOpacity(theme.textSecondary, 0.35) }]} />
+                            </View>
+
+                            <View style={styles.header}>
+                                <View style={styles.headerCopy}>
+                                    <AppText variant="heading" style={{ fontFamily: fonts.bold }}>
+                                        Choose Range
+                                    </AppText>
+                                    <AppText variant="caption" color="secondary" style={styles.headerSubtitle}>
+                                        Pick a month, custom dates, or a rolling window.
+                                    </AppText>
+                                </View>
+                                <IconButton
+                                    name="close"
+                                    onPress={onClose}
+                                    variant="surface"
+                                    iconColor={theme.textSecondary}
+                                />
+                            </View>
+                        </>
                     ) : null}
 
                     <View style={{ flex: 1 }}>
@@ -105,9 +131,9 @@ export function DateRangePickerView({
                     </View>
 
                     {view === 'MENU' ? (
-                        <View style={[styles.footer, { borderTopColor: theme.border }]}>
-                            <AppButton onPress={handleApply} variant="primary">
-                                Set
+                        <View style={[styles.footer, { borderTopColor: withOpacity(theme.border, 0.65) }]}>
+                            <AppButton onPress={handleApply} variant="primary" size="lg">
+                                Apply Range
                             </AppButton>
                         </View>
                     ) : null}
@@ -125,18 +151,34 @@ const styles = StyleSheet.create({
     content: {
         borderTopLeftRadius: Shape.radius.r2,
         borderTopRightRadius: Shape.radius.r2,
+        borderTopWidth: 1,
         height: Layout.modal.defaultHeight,
         paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.md,
+        paddingTop: Spacing.sm,
     },
     dragHandleContainer: {
         alignItems: 'center',
-        paddingBottom: Spacing.lg,
+        paddingBottom: Spacing.md,
     },
     dragHandle: {
-        width: Layout.modal.dragHandle.width,
+        width: Layout.modal.dragHandle.width + 16,
         height: Layout.modal.dragHandle.height,
         borderRadius: Layout.modal.dragHandle.borderRadius,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: Spacing.md,
+        gap: Spacing.md,
+    },
+    headerCopy: {
+        flex: 1,
+        paddingTop: Spacing.xs,
+    },
+    headerSubtitle: {
+        marginTop: Spacing.xs,
+        lineHeight: Typography.sizes.sm * 1.5,
     },
     footer: {
         paddingTop: Spacing.md,
