@@ -1,25 +1,20 @@
 import { FontIds } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
-import { CrimsonText_400Regular, CrimsonText_700Bold } from '@expo-google-fonts/crimson-text';
-import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
-import {
-  InstrumentSans_400Regular,
-  InstrumentSans_500Medium,
-  InstrumentSans_600SemiBold,
-  InstrumentSans_700Bold,
-} from '@expo-google-fonts/instrument-sans';
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import {
-  Raleway_400Regular,
-  Raleway_500Medium,
-  Raleway_600SemiBold,
-  Raleway_700Bold,
-} from '@expo-google-fonts/raleway';
+import { CrimsonText_400Regular } from '@expo-google-fonts/crimson-text/400Regular';
+import { CrimsonText_700Bold } from '@expo-google-fonts/crimson-text/700Bold';
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display/400Regular';
+import { InstrumentSans_400Regular } from '@expo-google-fonts/instrument-sans/400Regular';
+import { InstrumentSans_500Medium } from '@expo-google-fonts/instrument-sans/500Medium';
+import { InstrumentSans_600SemiBold } from '@expo-google-fonts/instrument-sans/600SemiBold';
+import { InstrumentSans_700Bold } from '@expo-google-fonts/instrument-sans/700Bold';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { Raleway_400Regular } from '@expo-google-fonts/raleway/400Regular';
+import { Raleway_500Medium } from '@expo-google-fonts/raleway/500Medium';
+import { Raleway_600SemiBold } from '@expo-google-fonts/raleway/600SemiBold';
+import { Raleway_700Bold } from '@expo-google-fonts/raleway/700Bold';
 import * as Font from 'expo-font';
 import React, { useEffect, useState } from 'react';
 

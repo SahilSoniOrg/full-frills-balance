@@ -15,6 +15,10 @@ const nativeNodePolyfills = {
 };
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (platform !== 'web' && moduleName === 'framer-motion') {
+    return { type: 'empty' };
+  }
+
   if (platform !== 'web' && nativeNodePolyfills[moduleName]) {
     return context.resolveRequest(context, nativeNodePolyfills[moduleName], platform);
   }
