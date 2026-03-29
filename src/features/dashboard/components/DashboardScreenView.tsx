@@ -1,4 +1,4 @@
-import { AppText } from '@/src/components/core';
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { Spacing } from '@/src/constants';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
@@ -70,9 +70,10 @@ export function DashboardScreenView({
                                 onItemPress={listViewProps.onPlannedJournalPress}
                             />
                         </View>
-                        <AppText variant="subheading" color="secondary" style={styles.transactionSectionTitle}>
-                            {transactionSectionTitle}
-                        </AppText>
+                        <ScreenSectionHeader
+                            title={transactionSectionTitle}
+                            style={styles.transactionSectionTitle}
+                        />
                     </View>
                 }
                 fab={fab}

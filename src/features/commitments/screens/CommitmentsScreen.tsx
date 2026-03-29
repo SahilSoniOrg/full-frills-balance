@@ -1,3 +1,4 @@
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
@@ -24,7 +25,7 @@ export default function CommitmentsScreen() {
 
     return (
         <Screen title="Commitments" showBack={false} scrollable={false}>
-            <View style={[styles.tabContainer, { borderBottomColor: theme.border }]}>
+            <View style={[styles.topRegion, { borderBottomColor: theme.border }]}>
                 <View style={styles.tabRow}>
                     <TouchableOpacity
                         onPress={() => setActiveTab('budgets')}
@@ -57,13 +58,20 @@ export default function CommitmentsScreen() {
                         </AppText>
                     </TouchableOpacity>
                 </View>
+                <ScreenSectionHeader
+                    title={activeTab === 'budgets' ? 'Budgets' : 'Planned Payments'}
+                    subtitle={activeTab === 'budgets'
+                        ? 'Monthly budget limits and usage.'
+                        : 'Recurring rules and upcoming posts.'}
+                    style={styles.sectionHeader}
+                />
             </View>
 
             <View style={styles.content}>
                 {activeTab === 'budgets' ? (
-                    <BudgetListView onAddPress={() => AppNavigation.toBudgetForm()} />
+                    <BudgetListView />
                 ) : (
-                    <PlannedPaymentListView onAddPress={() => AppNavigation.toPlannedPaymentForm()} />
+                    <PlannedPaymentListView />
                 )}
             </View>
             <FloatingActionButton
@@ -77,10 +85,7 @@ export default function CommitmentsScreen() {
 }
 
 const styles = StyleSheet.create({
-    tabContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+    topRegion: {
         paddingHorizontal: Spacing.lg,
         paddingVertical: Spacing.sm,
         borderBottomWidth: 1,
@@ -88,6 +93,10 @@ const styles = StyleSheet.create({
     tabRow: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    sectionHeader: {
+        marginTop: Spacing.sm,
+        paddingVertical: Spacing.sm,
     },
     tab: {
         paddingVertical: Spacing.md,

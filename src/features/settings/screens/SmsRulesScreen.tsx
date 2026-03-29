@@ -1,3 +1,4 @@
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppIcon, AppText, EmptyStateView, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
@@ -89,7 +90,7 @@ function SmsRulesList({ rules }: Props) {
                     <>
                         {suggestions.length > 0 && (
                             <View style={styles.suggestionsSection}>
-                                <AppText variant="subheading" style={styles.suggestionsTitle}>Suggested Rules</AppText>
+                                <ScreenSectionHeader title="Suggested Rules" style={styles.suggestionsTitle} />
                                 {suggestions.map((suggestion) => (
                                     <AppCard key={`${suggestion.senderMatch}-${suggestion.categoryAccountId}`} elevation="sm" style={styles.card}>
                                         <AppText variant="body" weight="semibold">
@@ -119,8 +120,6 @@ function SmsRulesList({ rules }: Props) {
                         <EmptyStateView
                             title="No Auto-Post Rules"
                             subtitle="Automatically post journal entries when matching SMS messages are received."
-                            primaryActionLabel="Create Rule"
-                            onPrimaryAction={() => AppNavigation.toSmsRuleForm()}
                         />
                     </>
                 )}
@@ -135,7 +134,7 @@ function SmsRulesList({ rules }: Props) {
             keyExtractor={r => r.id}
             ListHeaderComponent={suggestions.length > 0 ? (
                 <View style={styles.suggestionsSection}>
-                    <AppText variant="subheading" style={styles.suggestionsTitle}>Suggested Rules</AppText>
+                    <ScreenSectionHeader title="Suggested Rules" style={styles.suggestionsTitle} />
                     {suggestions.map((suggestion) => (
                         <TouchableOpacity
                             key={`${suggestion.senderMatch}-${suggestion.categoryAccountId}`}
@@ -209,7 +208,7 @@ const EnhancedSmsRulesList = withObservables([], () => ({
 export default function SmsRulesScreen() {
     return (
         <Screen
-            title="SMS Auto-Post Rules"
+            title="SMS Rules"
             showBack={true}
             scrollable={false}
         >

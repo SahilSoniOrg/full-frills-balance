@@ -7,7 +7,7 @@ import { BudgetListView } from '../components/BudgetListView'
 export default function BudgetListScreen() {
     return (
         <Screen showBack={true} title="Budgets">
-            <BudgetListView onAddPress={() => AppNavigation.toBudgetForm()} />
+            <BudgetListView />
             <FloatingActionButton
                 onPress={() => AppNavigation.toBudgetForm()}
                 label="New Budget"

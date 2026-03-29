@@ -1,4 +1,5 @@
 import { TransactionListView } from '@/src/components/common/TransactionListView';
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
@@ -88,9 +89,10 @@ export default function InsightDetailsScreen() {
                     {strings.basisText(AppConfig.insights.lookbackDays)}
                 </AppText>
             </View>
-            <AppText variant="subheading" color="secondary" style={styles.listTitle}>
-                {AppConfig.strings.dashboard.triggeringTransactionsTitle}
-            </AppText>
+            <ScreenSectionHeader
+                title={AppConfig.strings.dashboard.triggeringTransactionsTitle}
+                style={styles.listTitle}
+            />
         </View>
     );
 

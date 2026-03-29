@@ -1,4 +1,5 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppButton, AppCard, AppIcon, AppText, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
@@ -234,7 +235,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                     </View>
                 </View>
 
-                <AppText variant="subheading" weight="bold" style={[styles.sectionTitle, { marginLeft: Spacing.sm }]}>History</AppText>
+                <ScreenSectionHeader title="History" style={styles.sectionTitle} />
                 {history?.length === 0 ? (
                     <AppCard padding="lg" style={styles.emptyHistory} radius="r2">
                         <AppText color="secondary" style={{ textAlign: 'center' }}>No transactions generated yet.</AppText>
@@ -356,6 +357,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     sectionTitle: {
+        marginHorizontal: Spacing.sm,
         marginBottom: Spacing.md,
     },
     historyList: {

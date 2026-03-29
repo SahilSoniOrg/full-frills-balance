@@ -642,6 +642,7 @@ export const AppConfig = {
     plannedPayments: {
       title: 'Planned Payments',
       details: {
+        screenTitle: 'Planned Payment Details',
         deleteConfirmTitle: 'Delete Planned Payment',
         deleteConfirmMessage: 'This permanently removes this planned payment rule.',
         postNowTitle: 'Post Planned Payment Now',

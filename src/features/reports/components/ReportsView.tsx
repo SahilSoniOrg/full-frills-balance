@@ -4,6 +4,7 @@ import { CalendarHeatmap } from '@/src/components/charts/CalendarHeatmap';
 import { HeatmapChart } from '@/src/components/charts/HeatmapChart';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { SankeyChart } from '@/src/components/charts/SankeyChart';
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
@@ -158,7 +159,7 @@ export function ReportsView(vm: ReportsViewModel) {
                 </View>
             </AppCard>
 
-            <AppText variant="subheading" style={styles.sectionTitle}>{AppConfig.strings.reports.incomeVsExpenseTrend}</AppText>
+            <ScreenSectionHeader title={AppConfig.strings.reports.incomeVsExpenseTrend} style={styles.sectionTitle} />
             <AppCard style={[styles.chartCard, { zIndex: selectedIncomeExpenseIndex !== undefined ? 100 : 40, overflow: 'visible' }]} padding="lg">
                 <View style={styles.chartContainer}>
                     <BarChart
@@ -191,7 +192,7 @@ export function ReportsView(vm: ReportsViewModel) {
                 </View>
             </AppCard>
 
-            <AppText variant="subheading" style={styles.sectionTitle}>Money Flow (Sankey)</AppText>
+            <ScreenSectionHeader title="Money Flow (Sankey)" style={styles.sectionTitle} />
             <AppCard style={[styles.chartCard, { zIndex: 20, overflow: 'visible' }]} padding="lg">
                 <SankeyChart
                     nodes={sankeyData.nodes}
@@ -204,7 +205,7 @@ export function ReportsView(vm: ReportsViewModel) {
 
     const renderSpending = () => (
         <>
-            <AppText variant="subheading" style={styles.sectionTitle}>Spending by Category</AppText>
+            <ScreenSectionHeader title="Spending by Category" style={styles.sectionTitle} />
             {expenseCategoryViewState.hasData ? (
                 <BreakdownDonutCard
                     donutData={expenseCategoryViewState.donutData}
@@ -223,7 +224,7 @@ export function ReportsView(vm: ReportsViewModel) {
                 </AppCard>
             )}
 
-            <AppText variant="subheading" style={styles.sectionTitle}>Spending by Account</AppText>
+            <ScreenSectionHeader title="Spending by Account" style={styles.sectionTitle} />
             {hasExpenseData ? (
                 <BreakdownDonutCard
                     donutData={expenseDonutData}
@@ -244,7 +245,7 @@ export function ReportsView(vm: ReportsViewModel) {
 
             {hasIncomeData && (
                 <>
-                    <AppText variant="subheading" style={styles.sectionTitle}>Income by Category</AppText>
+                    <ScreenSectionHeader title="Income by Category" style={styles.sectionTitle} />
                     {incomeCategoryViewState.hasData ? (
                         <BreakdownDonutCard
                             donutData={incomeCategoryViewState.donutData}
@@ -263,7 +264,7 @@ export function ReportsView(vm: ReportsViewModel) {
                         </AppCard>
                     )}
 
-                    <AppText variant="subheading" style={styles.sectionTitle}>Income by Account</AppText>
+                    <ScreenSectionHeader title="Income by Account" style={styles.sectionTitle} />
                     <BreakdownDonutCard
                         donutData={incomeDonutData}
                         legendRows={incomeLegendRows}
@@ -276,7 +277,7 @@ export function ReportsView(vm: ReportsViewModel) {
                 </>
             )}
 
-            <AppText variant="subheading" style={styles.sectionTitle}>Spending Heatmap (Density)</AppText>
+            <ScreenSectionHeader title="Spending Heatmap (Density)" style={styles.sectionTitle} />
             <AppCard style={[styles.chartCard, { zIndex: 15, overflow: 'visible' }]} padding="lg">
                 <HeatmapChart
                     data={spendingHeatmap}
@@ -298,7 +299,7 @@ export function ReportsView(vm: ReportsViewModel) {
 
                 return (
                     <>
-                        <AppText variant="subheading" style={styles.sectionTitle}>{mainTitle}</AppText>
+                        <ScreenSectionHeader title={mainTitle} style={styles.sectionTitle} />
                         <AppCard style={[styles.chartCard, { zIndex: 10, overflow: 'visible' }]} padding="lg">
                             <CalendarHeatmap
                                 data={calendarHeatmap}
@@ -352,7 +353,7 @@ export function ReportsView(vm: ReportsViewModel) {
 
     const renderWealth = () => (
         <>
-            <AppText variant="subheading" style={styles.sectionTitle}>Net Worth History</AppText>
+            <ScreenSectionHeader title="Net Worth History" style={styles.sectionTitle} />
             <AppCard style={[styles.chartCard, { zIndex: vm.selectedNetWorthIndex !== undefined ? 100 : 50, overflow: 'visible' }]} padding="lg">
                 <View style={styles.headerRow}>
                     <View>
@@ -372,7 +373,7 @@ export function ReportsView(vm: ReportsViewModel) {
                 </View>
             </AppCard>
 
-            <AppText variant="subheading" style={styles.sectionTitle}>Assets vs Liabilities</AppText>
+            <ScreenSectionHeader title="Assets vs Liabilities" style={styles.sectionTitle} />
             <AppCard style={[styles.chartCard, { zIndex: vm.selectedWealthIndex !== undefined ? 100 : 40, overflow: 'visible' }]} padding="lg">
                 <AreaChart
                     series={vm.wealthAreaSeries}

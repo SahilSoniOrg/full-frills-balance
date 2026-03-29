@@ -48,7 +48,7 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
                     isLoading: isLoadingVisible,
                     isMissing: false,
                     onBack: () => AppNavigation.back(),
-                    title: AppConfig.strings.plannedPayments.title,
+                    title: AppConfig.strings.plannedPayments.details.screenTitle,
                     amountText: pAmount ? CurrencyFormatter.format(parseFloat(pAmount), pCurrency) : '...',
                     nameText: pDesc,
                     statusLabel: '',
@@ -157,7 +157,7 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
             onBack: () => AppNavigation.back(),
 
             // Core Details
-            title: AppConfig.strings.plannedPayments.title,
+            title: AppConfig.strings.plannedPayments.details.screenTitle,
             amountText: CurrencyFormatter.format(item.amount, item.currencyCode),
             nameText: item.name,
             statusLabel: item.status,

@@ -1,6 +1,7 @@
 import { AppIcon, AppText, AppToggle } from '@/src/components/core';
+import { Screen } from '@/src/components/layout';
 import { AppConfig, Spacing } from '@/src/constants';
-import { Box, Inline, Inset, Page, Stack } from '@/src/design-system';
+import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { NotificationPreference } from '@/src/features/settings/components/NotificationPreference';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
@@ -23,7 +24,7 @@ export function SettingsView(vm: SettingsViewModel) {
     } = vm;
 
     return (
-        <Page scrollable>
+        <Screen title="Settings" showBack={false} alignTitle="left" scrollable>
             <Inset space="md" vertical="md">
                 <Stack space="xl">
                     {/* Profile & Preferences */}
@@ -174,7 +175,6 @@ export function SettingsView(vm: SettingsViewModel) {
                     </Box>
                 </Stack>
             </Inset>
-        </Page>
+        </Screen>
     );
 }
-

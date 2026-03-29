@@ -1,5 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -123,15 +124,18 @@ export function AccountDetailsHeader({
                 </View>
             </AppCard>
 
-            <View style={styles.sectionHeader}>
-                <DateRangeTrigger
-                    fullWidth
-                    range={dateRange}
-                    onPress={onShowDatePicker}
-                    onPrevious={onPreviousPeriod}
-                    onNext={onNextPeriod}
-                />
-            </View>
+            <ScreenSectionHeader
+                title="Activity"
+                style={styles.sectionHeader}
+                action={
+                    <DateRangeTrigger
+                        range={dateRange}
+                        onPress={onShowDatePicker}
+                        onPrevious={onPreviousPeriod}
+                        onNext={onNextPeriod}
+                    />
+                }
+            />
 
             {chartData.length > 0 ? (
                 <LineChart
@@ -219,11 +223,7 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         marginBottom: Spacing.sm,
-        gap: Spacing.md,
     },
     metricsContainer: {
         flexDirection: 'row',

@@ -8,10 +8,10 @@ import { PlannedPaymentListView } from '../components/PlannedPaymentListView';
 export default function PlannedPaymentListScreen() {
     return (
         <Screen
-            title={AppConfig.strings.journal.plannedPayments}
+            title={AppConfig.strings.plannedPayments.title}
             showBack={true}
         >
-            <PlannedPaymentListView onAddPress={() => AppNavigation.toPlannedPaymentForm()} />
+            <PlannedPaymentListView />
             <FloatingActionButton
                 onPress={() => AppNavigation.toPlannedPaymentForm()}
                 label="New Planned Payment"

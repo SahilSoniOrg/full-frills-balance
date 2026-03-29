@@ -1,4 +1,4 @@
-import { AppButton, AppText, ExpandableSearchButton, FloatingActionButton, IconButton } from '@/src/components/core';
+import { AppText, ExpandableSearchButton, FloatingActionButton, IconButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
@@ -31,8 +31,51 @@ export function AccountsListView({
     setIsSearching,
 }: AccountsListViewModel) {
     const { theme } = useTheme();
+
+    const headerActions = (
+        <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
+            {!isSearching ? (
+                <>
+                    <IconButton
+                        name={isPrivacyMode ? 'eyeOff' : 'eye'}
+                        size={Size.iconSm}
+                        variant="surface"
+                        onPress={onTogglePrivacy}
+                        accessibilityLabel={isPrivacyMode ? 'Show balances' : 'Hide balances'}
+                    />
+                    <IconButton
+                        name="reorder"
+                        size={Size.iconSm}
+                        variant="surface"
+                        onPress={onReorderPress}
+                        accessibilityLabel="Reorder accounts"
+                    />
+                    <IconButton
+                        name="hierarchy"
+                        size={Size.iconSm}
+                        variant="surface"
+                        onPress={onManageHierarchy}
+                        accessibilityLabel="Manage hierarchy"
+                    />
+                </>
+            ) : null}
+            <ExpandableSearchButton
+                value={searchQuery}
+                onChangeText={onSearchChange}
+                onExpandChange={setIsSearching}
+                placeholder="Search accounts..."
+            />
+        </View>
+    );
+
     return (
-        <Screen showBack={false} isSearchActive={isSearching}>
+        <Screen
+            title="Accounts"
+            showBack={false}
+            alignTitle="left"
+            isSearchActive={isSearching}
+            headerActions={headerActions}
+        >
             <View style={styles.container}>
                 <SectionList
                     sections={sections}
@@ -67,7 +110,7 @@ export function AccountsListView({
                                         {section.totalDisplay}
                                     </AppText>
                                     <IconButton
-                                        name={section.isCollapsed ? "chevronRight" : "chevronDown"}
+                                        name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
                                         size={Size.iconSm}
                                         variant="clear"
                                         iconColor={theme.textSecondary}
@@ -91,42 +134,6 @@ export function AccountsListView({
                     }}
                     ListHeaderComponent={
                         <View style={styles.header}>
-                            <View style={[styles.summaryRow, styles.screenHeaderTop]}>
-                                {!isSearching && <AppText variant="title" weight="bold">Accounts</AppText>}
-                                <View style={[styles.flexRowGapSm, isSearching && { flex: 1 }]}>
-                                    {!isSearching && (
-                                        <>
-                                            <IconButton
-                                                name={isPrivacyMode ? "eyeOff" : "eye"}
-                                                size={Size.iconSm}
-                                                variant="surface"
-                                                onPress={onTogglePrivacy}
-                                                accessibilityLabel={isPrivacyMode ? "Show balances" : "Hide balances"}
-                                            />
-                                            <IconButton
-                                                name="reorder"
-                                                size={Size.iconSm}
-                                                variant="surface"
-                                                onPress={onReorderPress}
-                                                accessibilityLabel="Reorder accounts"
-                                            />
-                                            <IconButton
-                                                name="hierarchy"
-                                                size={Size.iconSm}
-                                                variant="surface"
-                                                onPress={onManageHierarchy}
-                                                accessibilityLabel="Manage hierarchy"
-                                            />
-                                        </>
-                                    )}
-                                    <ExpandableSearchButton
-                                        value={searchQuery}
-                                        onChangeText={onSearchChange}
-                                        onExpandChange={setIsSearching}
-                                        placeholder="Search accounts..."
-                                    />
-                                </View>
-                            </View>
                             <NetWorthCard
                                 netWorth={netWorth}
                                 totalAssets={totalAssets}
@@ -146,14 +153,6 @@ export function AccountsListView({
                                     <AppText variant="body" color="secondary">
                                         No accounts yet. Create your first account to get started!
                                     </AppText>
-                                    <AppButton
-                                        variant="secondary"
-                                        size="sm"
-                                        onPress={onCreateAccount}
-                                        style={styles.emptyStateButton}
-                                    >
-                                        Create Your First Account
-                                    </AppButton>
                                 </View>
                             )}
                         </View>
@@ -184,11 +183,8 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.xxxl,
     },
     header: {
-        paddingTop: Spacing.xl,
+        paddingTop: Spacing.lg,
         paddingBottom: Spacing.lg,
-    },
-    screenHeaderTop: {
-        marginBottom: Spacing.md,
     },
     summaryRow: {
         flexDirection: 'row',
@@ -204,6 +200,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: Spacing.md,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.xs,
+    },
+    headerActionsSearchActive: {
+        flex: 1,
     },
     sectionHeaderContainer: {
         marginTop: Spacing.xl,
@@ -224,8 +228,5 @@ const styles = StyleSheet.create({
     },
     emptyStateContent: {
         alignItems: 'center',
-    },
-    emptyStateButton: {
-        marginTop: Spacing.lg,
     },
 });

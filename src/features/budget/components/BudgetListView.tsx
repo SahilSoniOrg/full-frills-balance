@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppIcon, AppText } from '@/src/components/core'
+import { AppCard, AppIcon, AppText } from '@/src/components/core'
 import { Shape, Spacing } from '@/src/constants'
 import { useTheme } from '@/src/hooks/use-theme'
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
@@ -8,11 +8,7 @@ import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useBudgetListViewModel } from '../hooks/useBudgetListViewModel'
 import { BudgetItem } from '../types'
 
-interface BudgetListViewProps {
-    onAddPress: () => void;
-}
-
-export function BudgetListView({ onAddPress }: BudgetListViewProps) {
+export function BudgetListView() {
     const { items } = useBudgetListViewModel()
     const { theme } = useTheme()
 
@@ -113,12 +109,6 @@ export function BudgetListView({ onAddPress }: BudgetListViewProps) {
                     <AppText variant="subheading" color="secondary" style={{ marginTop: Spacing.md }}>
                         No budgets yet
                     </AppText>
-                    <AppButton
-                        onPress={onAddPress}
-                        style={{ marginTop: Spacing.lg }}
-                    >
-                        Create Budget
-                    </AppButton>
                 </View>
             }
             contentContainerStyle={styles.listContainer}

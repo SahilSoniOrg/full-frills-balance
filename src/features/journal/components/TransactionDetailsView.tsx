@@ -1,4 +1,5 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppButton, AppIcon, AppText, Badge } from '@/src/components/core';
 import { ListRow } from '@/src/components/core/ListRow';
 import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
@@ -140,9 +141,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                     </Stack>
 
                     <Stack space="md">
-                        <AppText variant="caption" color="secondary" style={{ paddingHorizontal: Spacing.md }}>
-                            BREAKDOWN
-                        </AppText>
+                        <ScreenSectionHeader title="Breakdown" style={{ paddingHorizontal: Spacing.md }} />
 
                         <Stack space="xs">
                             {splitItems.map((item, index) => (
@@ -213,9 +212,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                     {smsInfo && (
                         <Stack space="md">
                             <Separator />
-                            <AppText variant="caption" color="secondary" style={{ paddingHorizontal: Spacing.md }}>
-                                IMPORTED FROM SMS
-                            </AppText>
+                            <ScreenSectionHeader title="Imported From SMS" style={{ paddingHorizontal: Spacing.md }} />
                             <Stack space="xs">
                                 <ListRow
                                     title="Sender"

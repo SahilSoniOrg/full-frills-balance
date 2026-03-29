@@ -16,16 +16,7 @@ export function AccountReorderView({
     if (isLoading) return null;
 
     return (
-        <Screen showBack={false}>
-            <View style={[styles.header, { borderBottomColor: theme.border }]}
-            >
-                <TouchableOpacity onPress={onBack} style={styles.backButton} accessibilityLabel="Close" accessibilityRole="button">
-                    <AppIcon name="close" size={24} color={theme.text} />
-                </TouchableOpacity>
-                <AppText variant="subheading" weight="bold">Reorder Accounts</AppText>
-                <View style={{ width: 40 }} />
-            </View>
-
+        <Screen title="Reorder Accounts" showBack backIcon="close" onBack={onBack}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <AppText variant="caption" color="secondary" style={styles.tipText}>
                     Manual ordering affects all lists. Accounts are grouped by category but follow this sequence.
@@ -104,17 +95,6 @@ export function AccountReorderView({
 }
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.md,
-        borderBottomWidth: 1,
-    },
-    backButton: {
-        padding: Spacing.xs,
-    },
     scrollContent: {
         padding: Spacing.lg,
     },

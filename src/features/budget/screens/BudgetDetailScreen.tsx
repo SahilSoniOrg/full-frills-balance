@@ -1,5 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart'
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions'
+import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader'
 import { TransactionListView } from '@/src/components/common/TransactionListView'
 import { AppButton, AppCard, AppIcon, AppText, IvyIcon, LoadingView } from '@/src/components/core'
 import { Screen } from '@/src/components/layout'
@@ -125,7 +126,7 @@ export function BudgetDetailScreen() {
                 )}
             </AppCard>
 
-            <AppText variant="subheading" color="secondary" style={styles.activityTitle}>Activity</AppText>
+            <ScreenSectionHeader title="Activity" style={styles.activityTitle} />
         </View>
     )
 
