@@ -1,7 +1,7 @@
-import { AppCard, AppText } from '@/src/components/core';
-import { Spacing, Typography } from '@/src/constants';
+import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { Spacing } from '@/src/constants';
+import { Separator } from '@/src/design-system';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { useTheme } from '@/src/hooks/use-theme';
 import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -34,7 +34,6 @@ interface AccountMetadataSectionProps {
 }
 
 export const AccountMetadataSection: React.FC<AccountMetadataSectionProps> = (props) => {
-    const { theme } = useTheme();
     const { accountType, accountSubtype, notes, setNotes } = props;
 
     const showLiabilityFields = accountType === AccountType.LIABILITY;
@@ -45,13 +44,9 @@ export const AccountMetadataSection: React.FC<AccountMetadataSectionProps> = (pr
     if (!showLiabilityFields && !notes) return null;
 
     return (
-        <View style={styles.container}>
-            <AppText variant="body" weight="semibold" style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-                ADDITIONAL INFO
-            </AppText>
-
+        <FormSectionGroup title="Additional Info" style={styles.container}>
             {hasSpecificMetadata && (
-                <AppCard elevation="sm" padding="lg" style={styles.card}>
+                <View style={styles.group}>
                     {isCreditCard && (
                         <CreditCardMetadataFields
                             statementDay={props.statementDay}
@@ -76,28 +71,23 @@ export const AccountMetadataSection: React.FC<AccountMetadataSectionProps> = (pr
                             setApr={props.setApr}
                         />
                     )}
-                </AppCard>
+                </View>
             )}
 
-            <AppCard elevation="sm" padding="lg" style={styles.card}>
+            {hasSpecificMetadata ? <Separator /> : null}
+
+            <View style={styles.group}>
                 <NotesMetadataField notes={notes} setNotes={setNotes} />
-            </AppCard>
-        </View>
+            </View>
+        </FormSectionGroup>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         marginTop: Spacing.sm,
-        marginBottom: Spacing.xl,
     },
-    sectionTitle: {
-        fontSize: Typography.sizes.sm,
-        letterSpacing: 1.5,
-        marginLeft: Spacing.xs,
-        marginBottom: Spacing.sm,
-    },
-    card: {
-        marginBottom: Spacing.md,
+    group: {
+        gap: Spacing.md,
     },
 });

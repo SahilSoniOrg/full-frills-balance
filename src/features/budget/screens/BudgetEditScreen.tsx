@@ -1,6 +1,7 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal'
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen'
-import { AppButton, AppCard, AppText, ListRow, LoadingView } from '@/src/components/core'
+import { FormSectionGroup } from '@/src/components/common/FormSectionGroup'
+import { AppButton, AppText, ListRow, LoadingView } from '@/src/components/core'
 import { AppInput } from '@/src/components/core/AppInput'
 import { Screen } from '@/src/components/layout'
 import { AppConfig, Spacing } from '@/src/constants'
@@ -60,7 +61,7 @@ export default function BudgetEditScreen() {
                     label: budget ? (isSaving ? 'Updating...' : 'Update Budget') : (isSaving ? 'Creating...' : 'Create Budget'),
                 }}
             >
-                <AppCard style={{ marginBottom: Spacing.xxl }}>
+                <FormSectionGroup title="Budget Details">
                     <AppInput
                         label="Budget Name"
                         value={name}
@@ -82,18 +83,15 @@ export default function BudgetEditScreen() {
                         currencies={currencies}
                         onSelect={setCurrencyCode}
                     />
-                </AppCard>
+                </FormSectionGroup>
 
-                <AppText variant="subheading" style={{ marginBottom: Spacing.md }}>
-                    Scope (Accounts)
-                </AppText>
-                <AppCard style={{ marginBottom: Spacing.xxxl }}>
+                <FormSectionGroup title="Scope (Accounts)">
                     <ListRow
                         title={selectedAccountIds.length > 0 ? `${selectedAccountIds.length} accounts selected` : 'Select accounts'}
                         subtitle="Choose which accounts this budget applies to"
                         onPress={() => setIsAccountPickerVisible(true)}
                     />
-                </AppCard>
+                </FormSectionGroup>
             </EntityFormScreen>
 
             <AccountPickerModal

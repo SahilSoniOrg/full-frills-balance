@@ -2,9 +2,10 @@ import { AccountPickerModal } from '@/src/components/common/AccountPickerModal'
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow'
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen'
 import { FilterChipRow } from '@/src/components/common/FilterChipRow'
+import { FormSectionGroup } from '@/src/components/common/FormSectionGroup'
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions'
 import { SelectionTileList } from '@/src/components/common/SelectionTileList'
-import { AppCard, AppInput, AppText } from '@/src/components/core'
+import { AppInput, AppText } from '@/src/components/core'
 import { Spacing } from '@/src/constants'
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel'
 import { useTheme } from '@/src/hooks/use-theme'
@@ -86,8 +87,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
         }}
       >
         <View style={styles.formSection}>
-          <AppCard padding="lg" style={styles.card}>
-            <AppText variant="subheading" style={styles.sectionTitle}>Match Mode</AppText>
+          <FormSectionGroup title="Match Mode">
             <SelectionTileList
               items={[
                 { id: 'builder', label: 'Rule Builder', icon: 'sparkles', color: theme.primary },
@@ -196,10 +196,9 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                 </AppText>
               </View>
             )}
-          </AppCard>
+          </FormSectionGroup>
 
-          <AppCard padding="lg" style={styles.card}>
-            <AppText variant="subheading" style={styles.sectionTitle}>Action</AppText>
+          <FormSectionGroup title="Action">
             <SelectionTileList
               items={[
                 { id: 'auto_post', label: 'Auto-Post', icon: 'checkCircle', color: theme.success },
@@ -244,11 +243,10 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
               <AppText>Rule Active</AppText>
               <Switch value={isActive} onValueChange={setIsActive} />
             </View>
-          </AppCard>
+          </FormSectionGroup>
 
           {previewMatches.length > 0 ? (
-            <AppCard padding="lg" style={styles.card}>
-              <AppText variant="subheading" style={styles.sectionTitle}>Recent Matches</AppText>
+            <FormSectionGroup title="Recent Matches">
               {previewMatches.map((match) => (
                 <View key={match.id} style={styles.previewItem}>
                   <AppText variant="body">{match.parsedMerchant || match.senderAddress}</AppText>
@@ -260,7 +258,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                   </AppText>
                 </View>
               ))}
-            </AppCard>
+            </FormSectionGroup>
           ) : null}
         </View>
       </EntityFormScreen>
@@ -287,12 +285,6 @@ const styles = StyleSheet.create({
   formSection: {
     padding: Spacing.lg,
     gap: Spacing.md,
-  },
-  card: {
-    gap: Spacing.md,
-  },
-  sectionTitle: {
-    marginBottom: Spacing.sm,
   },
   group: {
     gap: Spacing.md,

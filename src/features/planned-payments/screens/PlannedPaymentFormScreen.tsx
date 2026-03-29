@@ -1,7 +1,8 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
-import { AppCard, AppInput, AppText, ListRow } from '@/src/components/core';
+import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { AppInput, AppText, ListRow } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
 import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
@@ -26,7 +27,7 @@ export default function PlannedPaymentFormScreen() {
                 }}
             >
                 <View style={styles.formSection}>
-                    <AppCard padding="lg">
+                    <FormSectionGroup title="Details">
                         <AppInput
                             label={AppConfig.strings.plannedPayments.nameLabel}
                             value={vm.form.name}
@@ -57,11 +58,9 @@ export default function PlannedPaymentFormScreen() {
                             placeholder={AppConfig.strings.plannedPayments.selectAccount}
                             onPress={() => vm.pickerState.open('to')}
                         />
-                    </AppCard>
+                    </FormSectionGroup>
 
-                    <AppCard padding="lg" style={{ marginTop: Spacing.md }}>
-                        <AppText variant="title" style={{ marginBottom: Spacing.sm }}>{AppConfig.strings.plannedPayments.recurrenceTitle}</AppText>
-
+                    <FormSectionGroup title={AppConfig.strings.plannedPayments.recurrenceTitle}>
                         <ListRow
                             title={AppConfig.strings.plannedPayments.intervalLabel}
                             subtitle={vm.form.intervalType}
@@ -122,7 +121,7 @@ export default function PlannedPaymentFormScreen() {
                                 onValueChange={(val) => vm.setField('isAutoPost', val)}
                             />
                         </View>
-                    </AppCard>
+                    </FormSectionGroup>
                 </View>
             </EntityFormScreen>
 
@@ -145,6 +144,7 @@ const styles = StyleSheet.create({
     },
     formSection: {
         padding: Spacing.lg,
+        gap: Spacing.md,
     },
     switchRow: {
         flexDirection: 'row',

@@ -1,6 +1,7 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
-import { AppCard, AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
+import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { Box, Inset, Separator } from '@/src/design-system';
@@ -101,7 +102,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
             }
         >
             <Inset space="lg">
-                <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                <FormSectionGroup>
                     <View style={styles.nameRow}>
                         <TouchableOpacity
                             onPress={() => setIsIconPickerVisible(true)}
@@ -124,9 +125,9 @@ export function AccountFormView(vm: AccountFormViewModel) {
                             />
                         </View>
                     </View>
-                </AppCard>
+                </FormSectionGroup>
                 {(showInitialBalance || showCurrency) && (
-                    <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                    <FormSectionGroup>
                         <View style={styles.balanceRow}>
                             {showInitialBalance && (
                                 <View style={{ flex: 1, marginRight: Spacing.sm }}>
@@ -158,10 +159,10 @@ export function AccountFormView(vm: AccountFormViewModel) {
                                 </View>
                             )}
                         </View>
-                    </AppCard>
+                    </FormSectionGroup>
                 )}
 
-                <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                <FormSectionGroup title="Account Type">
                     <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold, color: theme.text }]}>
                         {AppConfig.strings.accounts.form.accountType}
                     </AppText>
@@ -182,9 +183,9 @@ export function AccountFormView(vm: AccountFormViewModel) {
                         onChange={setAccountSubtype}
                         disabled={isParent}
                     />
-                </AppCard>
+                </FormSectionGroup>
 
-                <AppCard elevation="sm" padding="lg" style={styles.inputContainer}>
+                <FormSectionGroup title="Hierarchy">
                     <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>{AppConfig.strings.accounts.form.parentAccount}</AppText>
                     <TouchableOpacity
                         onPress={() => setIsParentPickerVisible(true)}
@@ -208,7 +209,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
                             <IvyIcon name="chevronDown" size={Size.iconSm} color={theme.textSecondary} />
                         </View>
                     </TouchableOpacity>
-                </AppCard>
+                </FormSectionGroup>
 
                 <AccountMetadataSection
                     accountType={accountType}
@@ -267,9 +268,6 @@ const styles = StyleSheet.create({
     subtitle: {
         textAlign: 'left',
         marginBottom: Spacing.lg,
-    },
-    inputContainer: {
-        marginBottom: Spacing.md,
     },
     label: {
         marginBottom: Spacing.xs,
