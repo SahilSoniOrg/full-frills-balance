@@ -78,7 +78,6 @@ export const SimpleForm = ({
                 type={type}
                 setType={setType}
                 activeColor={activeColor}
-                frameBorderColor={frameBorderColor}
             />
 
             <SimpleFormAccountSections

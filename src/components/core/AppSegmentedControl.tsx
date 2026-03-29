@@ -1,13 +1,14 @@
-import { AppText } from '@/src/components/core';
+import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Shape } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, StyleSheet, TouchableOpacity } from 'react-native';
+import { Animated, LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export type SegmentedOption = {
   id: string;
   label: string;
+  icon?: IconName;
 };
 
 interface AppSegmentedControlProps {
@@ -16,7 +17,7 @@ interface AppSegmentedControlProps {
   onChange: (id: any) => void;
   minWidth?: number;
   flex?: boolean;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   trackColor?: string;
   pillColor?: string;
   activeTextColor?: string;
@@ -41,6 +42,9 @@ export const AppSegmentedControl = ({
 }: AppSegmentedControlProps) => {
   const { theme } = useTheme();
   const [containerWidth, setContainerWidth] = useState(0);
+  const isSmall = size === 'sm';
+  const isLarge = size === 'lg';
+  const pillInset = isSmall ? 3 : isLarge ? 3 : 2;
 
   // Find index of current value
   const selectedIndex = options.findIndex((opt: SegmentedOption) => opt.id === value);
@@ -69,9 +73,8 @@ export const AppSegmentedControl = ({
     setContainerWidth(event.nativeEvent.layout.width);
   };
 
-  const contentWidth = Math.max(0, containerWidth - 8); // 2 * Spacing.xs (padding)
+  const contentWidth = Math.max(0, containerWidth - (pillInset * 2));
   const itemWidth = contentWidth / options.length;
-  const isSmall = size === 'sm';
 
   const translateX = scrollValue.interpolate({
     inputRange: options.map((_, i: number) => i),
@@ -82,11 +85,12 @@ export const AppSegmentedControl = ({
     <Box
       background="surfaceSecondary"
       borderRadius="full"
-      padding="xs"
       onLayout={onContainerLayout}
       style={[
         styles.container,
         isSmall && styles.containerSm,
+        isLarge && styles.containerLg,
+        { padding: pillInset },
         { backgroundColor: trackColor || theme.surfaceSecondary },
         flex ? { width: '100%' } : { alignSelf: 'flex-start' },
       ]}
@@ -98,9 +102,11 @@ export const AppSegmentedControl = ({
             {
               width: itemWidth,
               backgroundColor: pillColor || theme.primary,
+              top: pillInset,
+              bottom: pillInset,
+              left: pillInset,
               transform: [{ translateX }],
             },
-            isSmall && styles.pillSm,
           ]}
         />
       )}
@@ -115,21 +121,33 @@ export const AppSegmentedControl = ({
               style={[
                 styles.option,
                 isSmall && styles.optionSm,
+                isLarge && styles.optionLg,
                 flex ? { flex: 1 } : { width: minWidth },
               ]}
             >
-              <AppText
-                variant="caption"
-                weight={isSelected ? 'semibold' : 'medium'}
-                style={{
-                  color: isSelected
-                    ? (activeTextColor || theme.onPrimary)
-                    : (inactiveTextColor || theme.textSecondary),
-                  textAlign: 'center',
-                }}
-              >
-                {option.label}
-              </AppText>
+              <View style={styles.optionContent}>
+                {option.icon ? (
+                  <AppIcon
+                    name={option.icon}
+                    size={14}
+                    color={isSelected
+                      ? (activeTextColor || theme.onPrimary)
+                      : (inactiveTextColor || theme.textSecondary)}
+                  />
+                ) : null}
+                <AppText
+                  variant="caption"
+                  weight={isSelected ? 'semibold' : 'medium'}
+                  style={{
+                    color: isSelected
+                      ? (activeTextColor || theme.onPrimary)
+                      : (inactiveTextColor || theme.textSecondary),
+                    textAlign: 'center',
+                  }}
+                >
+                  {option.label}
+                </AppText>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -146,18 +164,13 @@ const styles = StyleSheet.create({
   containerSm: {
     minHeight: 28,
   },
+  containerLg: {
+    minHeight: 44,
+  },
   pill: {
     position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: 4,
     borderRadius: Shape.radius.full,
     zIndex: 0,
-  },
-  pillSm: {
-    top: 3,
-    bottom: 3,
-    left: 3,
   },
   option: {
     paddingVertical: 6,
@@ -167,5 +180,13 @@ const styles = StyleSheet.create({
   },
   optionSm: {
     paddingVertical: 4,
+  },
+  optionLg: {
+    minHeight: 38,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });
