@@ -1,55 +1,55 @@
-import { database } from '@/src/data/database/Database'
+import { database } from '@/src/data/database/Database';
 import Account, {
   AccountSubtype,
   AccountType,
   getDefaultSubtypeForType,
-  isSubtypeAllowedForType
-} from '@/src/data/models/Account'
-import AccountMetadata from '@/src/data/models/AccountMetadata'
-import Transaction from '@/src/data/models/Transaction'
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository'
-import { ValidationError } from '@/src/utils/errors'
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus'
-import { Q } from '@nozbe/watermelondb'
-import { map, of } from 'rxjs'
-import { supportsRawSql } from '../database/DatabaseUtils'
+  isSubtypeAllowedForType,
+} from '@/src/data/models/Account';
+import AccountMetadata from '@/src/data/models/AccountMetadata';
+import Transaction from '@/src/data/models/Transaction';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { ValidationError } from '@/src/utils/errors';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { Q } from '@nozbe/watermelondb';
+import { map, of } from 'rxjs';
+import { supportsRawSql } from '../database/DatabaseUtils';
 
 export interface AccountPersistenceInput {
-  name: string
-  accountType: AccountType
-  accountSubtype?: AccountSubtype
-  currencyCode: string
-  description?: string
-  icon?: string
-  orderNum?: number
-  reconciledAt?: Date
-  parentAccountId?: string
+  name: string;
+  accountType: AccountType;
+  accountSubtype?: AccountSubtype;
+  currencyCode: string;
+  description?: string;
+  icon?: string;
+  orderNum?: number;
+  reconciledAt?: Date;
+  parentAccountId?: string;
   metadata?: Partial<{
-    statementDay: number
-    dueDay: number
-    minimumPaymentAmount: number
-    minimumBalanceAmount: number
-    creditLimitAmount: number
-    aprBps: number
-    emiDay: number
-    loanTenureMonths: number
-    autopayEnabled: boolean
-    gracePeriodDays: number
-    notes: string
-  }>
+    statementDay: number;
+    dueDay: number;
+    minimumPaymentAmount: number;
+    minimumBalanceAmount: number;
+    creditLimitAmount: number;
+    aprBps: number;
+    emiDay: number;
+    loanTenureMonths: number;
+    autopayEnabled: boolean;
+    gracePeriodDays: number;
+    notes: string;
+  }>;
 }
 
 export class AccountRepository {
   private get db() {
-    return database
+    return database;
   }
 
   private get accounts() {
-    return this.db.collections.get<Account>('accounts')
+    return this.db.collections.get<Account>('accounts');
   }
 
   private get metadata() {
-    return this.db.collections.get<AccountMetadata>('account_metadata')
+    return this.db.collections.get<AccountMetadata>('account_metadata');
   }
 
   /**
@@ -59,38 +59,62 @@ export class AccountRepository {
   observeAll() {
     return this.accounts
       .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
-      .observeWithColumns(['account_type', 'account_subtype', 'name', 'order_num', 'currency_code', 'icon', 'description', 'parent_account_id', 'deleted_at', 'updated_at'])
+      .observeWithColumns([
+        'account_type',
+        'account_subtype',
+        'name',
+        'order_num',
+        'currency_code',
+        'icon',
+        'description',
+        'parent_account_id',
+        'deleted_at',
+        'updated_at',
+      ]);
   }
 
   observeByType(accountType: string) {
-    const query = this.accounts
-      .query(
-        Q.where('account_type', accountType),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('order_num', Q.asc)
-      )
-    return query.observeWithColumns(['name', 'account_subtype', 'order_num', 'currency_code', 'icon', 'description', 'parent_account_id', 'deleted_at'])
+    const query = this.accounts.query(
+      Q.where('account_type', accountType),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.sortBy('order_num', Q.asc),
+    );
+    return query.observeWithColumns([
+      'name',
+      'account_subtype',
+      'order_num',
+      'currency_code',
+      'icon',
+      'description',
+      'parent_account_id',
+      'deleted_at',
+    ]);
   }
 
   observeByIds(accountIds: string[]) {
     if (accountIds.length === 0) {
-      return of([] as Account[])
+      return of([] as Account[]);
     }
 
     return this.accounts
-      .query(
-        Q.where('id', Q.oneOf(accountIds)),
-        Q.where('deleted_at', Q.eq(null))
-      )
-      .observeWithColumns(['name', 'account_type', 'account_subtype', 'currency_code', 'order_num', 'icon', 'description', 'parent_account_id', 'deleted_at'])
+      .query(Q.where('id', Q.oneOf(accountIds)), Q.where('deleted_at', Q.eq(null)))
+      .observeWithColumns([
+        'name',
+        'account_type',
+        'account_subtype',
+        'currency_code',
+        'order_num',
+        'icon',
+        'description',
+        'parent_account_id',
+        'deleted_at',
+      ]);
   }
 
   observeById(accountId: string) {
     return this.accounts
       .findAndObserve(accountId)
-      .pipe(
-        map((account) => (account.deletedAt ? null : account))
-      )
+      .pipe(map(account => (account.deletedAt ? null : account)));
   }
 
   /**
@@ -98,17 +122,18 @@ export class AccountRepository {
    * Used for reactive in-memory balance calculation.
    */
   observeTransactionsForBalance(accountId: string) {
-    return database.collections.get<Transaction>('transactions')
+    return database.collections
+      .get<Transaction>('transactions')
       .query(
         Q.experimentalJoinTables(['journals']),
         Q.where('account_id', accountId),
         Q.where('deleted_at', Q.eq(null)),
         Q.on('journals', [
           Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null))
-        ])
+          Q.where('deleted_at', Q.eq(null)),
+        ]),
       )
-      .observe()
+      .observe();
   }
 
   /**
@@ -117,46 +142,38 @@ export class AccountRepository {
 
   async find(id: string): Promise<Account | null> {
     try {
-      const account = await this.accounts.find(id)
-      return account.deletedAt ? null : account
+      const account = await this.accounts.find(id);
+      return account.deletedAt ? null : account;
     } catch {
-      return null
+      return null;
     }
   }
 
   async findMetadata(accountId: string): Promise<AccountMetadata | null> {
     try {
-      const records = await this.metadata.query(Q.where('account_id', accountId)).fetch()
-      return records[0] || null
+      const records = await this.metadata.query(Q.where('account_id', accountId)).fetch();
+      return records[0] || null;
     } catch {
-      return null
+      return null;
     }
   }
 
   async findAllByIds(ids: string[]): Promise<Account[]> {
-    if (ids.length === 0) return []
-    return this.accounts.query(Q.where('id', Q.oneOf(ids))).fetch()
+    if (ids.length === 0) return [];
+    return this.accounts.query(Q.where('id', Q.oneOf(ids))).fetch();
   }
 
   async findByName(name: string): Promise<Account | null> {
     const accounts = await this.accounts
-      .query(
-        Q.and(
-          Q.where('name', name),
-          Q.where('deleted_at', Q.eq(null))
-        )
-      )
-      .fetch()
-    return accounts[0] || null
+      .query(Q.and(Q.where('name', name), Q.where('deleted_at', Q.eq(null))))
+      .fetch();
+    return accounts[0] || null;
   }
 
   async findAll(): Promise<Account[]> {
     return this.accounts
-      .query(
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('order_num', Q.asc)
-      )
-      .fetch()
+      .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
+      .fetch();
   }
 
   async findByType(accountType: AccountType): Promise<Account[]> {
@@ -164,127 +181,125 @@ export class AccountRepository {
       .query(
         Q.where('account_type', accountType),
         Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('order_num', Q.asc)
+        Q.sortBy('order_num', Q.asc),
       )
-      .fetch()
+      .fetch();
   }
 
   async exists(): Promise<boolean> {
-    const count = await this.accounts
-      .query(Q.where('deleted_at', Q.eq(null)))
-      .fetchCount()
-    return count > 0
+    const count = await this.accounts.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
+    return count > 0;
   }
 
   async countNonDeleted(): Promise<number> {
-    return this.accounts
-      .query(Q.where('deleted_at', Q.eq(null)))
-      .fetchCount()
+    return this.accounts.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
   }
 
   async seedDefaults(defaults: AccountPersistenceInput[]): Promise<void> {
-    const normalizedDefaults = defaults.map((entry) => ({
+    const normalizedDefaults = defaults.map(entry => ({
       ...entry,
-      accountSubtype: entry.accountSubtype ?? getDefaultSubtypeForType(entry.accountType)
-    }))
-    normalizedDefaults.forEach((entry) => this.validateSubtype(entry.accountType, entry.accountSubtype))
+      accountSubtype: entry.accountSubtype ?? getDefaultSubtypeForType(entry.accountType),
+    }));
+    normalizedDefaults.forEach(entry =>
+      this.validateSubtype(entry.accountType, entry.accountSubtype),
+    );
     await this.db.write(async () => {
-      const creates = normalizedDefaults.map((data) =>
-        this.accounts.prepareCreate((account) => {
-          Object.assign(account, data)
-          account.createdAt = new Date()
-          account.updatedAt = new Date()
-        })
-      )
+      const creates = normalizedDefaults.map(data =>
+        this.accounts.prepareCreate(account => {
+          Object.assign(account, data);
+          account.createdAt = new Date();
+          account.updatedAt = new Date();
+        }),
+      );
       if (creates.length > 0) {
-        await this.db.batch(...creates)
+        await this.db.batch(...creates);
       }
-    })
+    });
   }
 
   async create(data: AccountPersistenceInput): Promise<Account> {
-    await this.ensureUniqueName(data.name)
+    await this.ensureUniqueName(data.name);
     const payload: AccountPersistenceInput = {
       ...data,
-      accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType)
-    }
-    this.validateSubtype(payload.accountType, payload.accountSubtype)
+      accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType),
+    };
+    this.validateSubtype(payload.accountType, payload.accountSubtype);
 
     return await this.db.write(async () => {
-      const account = await this.accounts.create((acc) => {
-        const { metadata, ...accountData } = payload
-        Object.assign(acc, accountData)
+      const account = await this.accounts.create(acc => {
+        const { metadata, ...accountData } = payload;
+        Object.assign(acc, accountData);
         // metadata is not a field on Account model
-        acc.createdAt = new Date()
-        acc.updatedAt = new Date()
-      })
+        acc.createdAt = new Date();
+        acc.updatedAt = new Date();
+      });
 
       if (data.metadata) {
-        await this.metadata.create((meta) => {
-          Object.assign(meta, data.metadata)
-          meta.account.set(account)
-          meta.createdAt = new Date()
-          meta.updatedAt = new Date()
-        })
+        await this.metadata.create(meta => {
+          Object.assign(meta, data.metadata);
+          meta.account.set(account);
+          meta.createdAt = new Date();
+          meta.updatedAt = new Date();
+        });
       }
 
-      return account
-    })
+      return account;
+    });
   }
 
   async update(account: Account, updates: Partial<AccountPersistenceInput>): Promise<Account> {
     if (updates.name && updates.name !== account.name) {
-      await this.ensureUniqueName(updates.name, account.id)
+      await this.ensureUniqueName(updates.name, account.id);
     }
-    const normalizedUpdates: Partial<AccountPersistenceInput> = { ...updates }
+    const normalizedUpdates: Partial<AccountPersistenceInput> = { ...updates };
     if (normalizedUpdates.accountType && normalizedUpdates.accountSubtype === undefined) {
       normalizedUpdates.accountSubtype = isSubtypeAllowedForType(
         normalizedUpdates.accountType,
-        account.accountSubtype
+        account.accountSubtype,
       )
         ? account.accountSubtype
-        : getDefaultSubtypeForType(normalizedUpdates.accountType)
+        : getDefaultSubtypeForType(normalizedUpdates.accountType);
     }
 
-    const nextType = normalizedUpdates.accountType ?? account.accountType
-    const nextSubtype = normalizedUpdates.accountSubtype ?? account.accountSubtype
-    this.validateSubtype(nextType, nextSubtype)
+    const nextType = normalizedUpdates.accountType ?? account.accountType;
+    const nextSubtype = normalizedUpdates.accountSubtype ?? account.accountSubtype;
+    this.validateSubtype(nextType, nextSubtype);
 
     return await this.db.write(async () => {
-      await account.update((acc) => {
-        const { metadata, ...accountUpdates } = normalizedUpdates
-        Object.assign(acc, accountUpdates)
-        acc.updatedAt = new Date()
-      })
+      await account.update(acc => {
+        const { metadata, ...accountUpdates } = normalizedUpdates;
+        Object.assign(acc, accountUpdates);
+        acc.updatedAt = new Date();
+      });
 
       if (updates.metadata) {
-        const existingMetadata = await this.findMetadata(account.id)
+        const existingMetadata = await this.findMetadata(account.id);
         if (existingMetadata) {
-          await existingMetadata.update((meta) => {
-            Object.assign(meta, updates.metadata)
-            meta.updatedAt = new Date()
-          })
+          await existingMetadata.update(meta => {
+            Object.assign(meta, updates.metadata);
+            meta.updatedAt = new Date();
+          });
         } else {
-          await this.metadata.create((meta) => {
-            Object.assign(meta, updates.metadata)
-            meta.account.set(account)
-            meta.createdAt = new Date()
-            meta.updatedAt = new Date()
-          })
+          await this.metadata.create(meta => {
+            Object.assign(meta, updates.metadata);
+            meta.account.set(account);
+            meta.createdAt = new Date();
+            meta.updatedAt = new Date();
+          });
         }
       }
 
-      return account
-    })
+      return account;
+    });
   }
 
   async delete(account: Account): Promise<void> {
     await this.db.write(async () => {
       await account.update(record => {
-        record.deletedAt = new Date()
-        record.updatedAt = new Date()
-      })
-    })
+        record.deletedAt = new Date();
+        record.updatedAt = new Date();
+      });
+    });
   }
 
   /**
@@ -300,17 +315,16 @@ export class AccountRepository {
     }
 
     // Legacy path: fetch each level from the DB (retained for backward compat).
-    const children = await this.accounts.query(
-      Q.where('parent_account_id', accountId),
-      Q.where('deleted_at', Q.eq(null))
-    ).fetch()
+    const children = await this.accounts
+      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
 
-    let ids = children.map(c => c.id)
+    let ids = children.map(c => c.id);
     for (const child of children) {
-      const descendantIds = await this.getDescendantIds(child.id)
-      ids = [...ids, ...descendantIds]
+      const descendantIds = await this.getDescendantIds(child.id);
+      ids = [...ids, ...descendantIds];
     }
-    return ids
+    return ids;
   }
 
   /**
@@ -341,39 +355,35 @@ export class AccountRepository {
   }
 
   async hasChildren(accountId: string): Promise<boolean> {
-    const count = await this.accounts.query(
-      Q.where('parent_account_id', accountId),
-      Q.where('deleted_at', Q.eq(null))
-    ).fetchCount()
-    return count > 0
+    const count = await this.accounts
+      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
+      .fetchCount();
+    return count > 0;
   }
 
   observeHasChildren(accountId: string) {
-    return this.accounts.query(
-      Q.where('parent_account_id', accountId),
-      Q.where('deleted_at', Q.eq(null))
-    ).observe().pipe(
-      map(children => children.length > 0)
-    )
+    return this.accounts
+      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
+      .observe()
+      .pipe(map(children => children.length > 0));
   }
 
   observeSubAccountCount(accountId: string) {
-    return this.accounts.query(
-      Q.where('parent_account_id', accountId),
-      Q.where('deleted_at', Q.eq(null))
-    ).observeCount()
+    return this.accounts
+      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
+      .observeCount();
   }
 
   queryByParentId(parentId: string) {
     return this.accounts.query(
       Q.where('parent_account_id', parentId),
       Q.where('deleted_at', Q.eq(null)),
-      Q.sortBy('order_num', Q.asc)
-    )
+      Q.sortBy('order_num', Q.asc),
+    );
   }
 
   private async ensureUniqueName(name: string, excludeId?: string): Promise<void> {
-    const sanitizedName = name.trim()
+    const sanitizedName = name.trim();
 
     // Query specifically for the name to avoid fetching all accounts.
     // We use a case-insensitive check in SQLite via normalized comparison if possible,
@@ -381,23 +391,23 @@ export class AccountRepository {
     const potentialDuplicates = await this.accounts
       .query(
         Q.where('name', Q.like(Q.sanitizeLikeString(sanitizedName))),
-        Q.where('deleted_at', Q.eq(null))
+        Q.where('deleted_at', Q.eq(null)),
       )
-      .fetch()
+      .fetch();
 
     const duplicate = potentialDuplicates.find(account => {
-      if (excludeId && account.id === excludeId) return false
-      return account.name.trim().toLowerCase() === sanitizedName.toLowerCase()
-    })
+      if (excludeId && account.id === excludeId) return false;
+      return account.name.trim().toLowerCase() === sanitizedName.toLowerCase();
+    });
 
     if (duplicate) {
-      throw new ValidationError(`Account with name "${name}" already exists`)
+      throw new ValidationError(`Account with name "${name}" already exists`);
     }
   }
 
   private validateSubtype(accountType: AccountType, subtype?: AccountSubtype): void {
     if (!isSubtypeAllowedForType(accountType, subtype)) {
-      throw new ValidationError(`Subtype ${subtype} is not valid for account type ${accountType}`)
+      throw new ValidationError(`Subtype ${subtype} is not valid for account type ${accountType}`);
     }
   }
 
@@ -405,7 +415,11 @@ export class AccountRepository {
    * Optimized raw SQL fetch for account list items.
    * Returns accounts with direct balances and monthly stats in a single pass.
    */
-  async getAccountListItemsRaw(startOfMonth: number, endOfMonth: number, includeDeleted: boolean = false): Promise<any[] | null> {
+  async getAccountListItemsRaw(
+    startOfMonth: number,
+    endOfMonth: number,
+    includeDeleted: boolean = false,
+  ): Promise<any[] | null> {
     if (!supportsRawSql(this.db)) return null;
 
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
@@ -436,8 +450,10 @@ export class AccountRepository {
                 WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'DEBIT') THEN -t.amount
                 WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'CREDIT') THEN -t.amount
                 WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'DEBIT') THEN t.amount
-                WHEN (a.account_type IN ('ASSET', 'LIABILITY', 'EQUITY') AND t.transaction_type = 'CREDIT') THEN t.amount
-                WHEN (a.account_type IN ('ASSET', 'LIABILITY', 'EQUITY') AND t.transaction_type = 'DEBIT') THEN -t.amount
+                WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'DEBIT') THEN t.amount
+                WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'CREDIT') THEN -t.amount
+                WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'CREDIT') THEN t.amount
+                WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'DEBIT') THEN -t.amount
                 ELSE 0 
               END
             ELSE 0 END
@@ -476,9 +492,13 @@ export class AccountRepository {
       ORDER BY a.order_num ASC
     `;
 
-    return await transactionRawRepository.queryRaw(sql, [startOfMonth, endOfMonth, startOfMonth, endOfMonth]);
+    return await transactionRawRepository.queryRaw(sql, [
+      startOfMonth,
+      endOfMonth,
+      startOfMonth,
+      endOfMonth,
+    ]);
   }
 }
 
-
-export const accountRepository = new AccountRepository()
+export const accountRepository = new AccountRepository();

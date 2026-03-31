@@ -7,9 +7,9 @@ import { roundToPrecision } from '@/src/utils/money';
  * Validatable transaction partial
  */
 export interface JournalLineInput {
-    amount: number
-    type: TransactionType
-    exchangeRate?: number
+  amount: number;
+  type: TransactionType;
+  exchangeRate?: number;
 }
 
 /**
@@ -17,20 +17,69 @@ export interface JournalLineInput {
  * an account's balance based on its type.
  */
 export function getBalanceImpactMultiplier(
-    accountType: AccountType,
-    transactionType: TransactionType
+  accountType: AccountType,
+  transactionType: TransactionType,
 ): number {
-    switch (accountType) {
-        case AccountType.ASSET:
-        case AccountType.EXPENSE:
-            return transactionType === TransactionType.DEBIT ? 1 : -1
-        case AccountType.LIABILITY:
-        case AccountType.EQUITY:
-        case AccountType.INCOME:
-            return transactionType === TransactionType.CREDIT ? 1 : -1
-        default:
-            return 0
-    }
+  switch (accountType) {
+    case AccountType.ASSET:
+    case AccountType.EXPENSE:
+      return transactionType === TransactionType.DEBIT ? 1 : -1;
+    case AccountType.LIABILITY:
+    case AccountType.EQUITY:
+    case AccountType.INCOME:
+      return transactionType === TransactionType.CREDIT ? 1 : -1;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Returns the signed change to an account's balance.
+ * (e.g. Asset Debit = +amount, Asset Credit = -amount, Liability Credit = +amount)
+ */
+export function getAccountBalanceDelta(
+  amount: number,
+  accountType: AccountType,
+  transactionType: TransactionType,
+): number {
+  return amount * getBalanceImpactMultiplier(accountType, transactionType);
+}
+
+/**
+ * Returns true if this impact represents a physical "flow" into or out of
+ * a liquid account (Asset).
+ */
+export function isLiquidInflow(
+  accountType: AccountType,
+  transactionType: TransactionType,
+): boolean {
+  return accountType === AccountType.ASSET && transactionType === TransactionType.DEBIT;
+}
+
+export function isLiquidOutflow(
+  accountType: AccountType,
+  transactionType: TransactionType,
+): boolean {
+  return accountType === AccountType.ASSET && transactionType === TransactionType.CREDIT;
+}
+
+/**
+ * Returns the impact of a transaction on the "Liquid Net Worth" (Assets - Liabilities).
+ * This is used for simulation and consolidated wealth views.
+ *
+ * Net Worth perspective (+ means wealth increases):
+ * - Asset Increase: +
+ * - Liability Increase: -
+ */
+export function getLiquidNetWorthDelta(
+  amount: number,
+  accountType: AccountType,
+  transactionType: TransactionType,
+): number {
+  const balanceImpact = getAccountBalanceDelta(amount, accountType, transactionType);
+  return accountType === AccountType.LIABILITY || accountType === AccountType.EQUITY
+    ? -balanceImpact
+    : balanceImpact;
 }
 
 /**
@@ -38,10 +87,10 @@ export function getBalanceImpactMultiplier(
  * (e.g. Asset Debit is an increase, Liability Credit is an increase)
  */
 export function isBalanceIncrease(
-    accountType: AccountType,
-    transactionType: TransactionType
+  accountType: AccountType,
+  transactionType: TransactionType,
 ): boolean {
-    return getBalanceImpactMultiplier(accountType, transactionType) > 0
+  return getBalanceImpactMultiplier(accountType, transactionType) > 0;
 }
 
 /**
@@ -49,44 +98,47 @@ export function isBalanceIncrease(
  * This follows the "Value Flow" model where DEBIT = IN and CREDIT = OUT.
  */
 export function isValueEntering(transactionType: TransactionType): boolean {
-    return transactionType === TransactionType.DEBIT
+  return transactionType === TransactionType.DEBIT;
 }
 
 /**
  * Determines if a transaction represents value LEAVING an account (Source).
  */
 export function isValueLeaving(transactionType: TransactionType): boolean {
-    return transactionType === TransactionType.CREDIT
+  return transactionType === TransactionType.CREDIT;
 }
 
 // Deprecated: Use isBalanceIncrease for clarity
-export const isIncrease = isBalanceIncrease
+export const isIncrease = isBalanceIncrease;
 
 /**
  * Validates if a set of journal lines are balanced.
  * @param lines Journal lines to validate
  * @param precision Precision of the journal currency (default 2)
  */
-export function validateBalance(lines: JournalLineInput[], precision: number = AppConfig.constants.precision): {
-    isValid: boolean
-    imbalance: number
-    totalDebits: number
-    totalCredits: number
+export function validateBalance(
+  lines: JournalLineInput[],
+  precision: number = AppConfig.constants.precision,
+): {
+  isValid: boolean;
+  imbalance: number;
+  totalDebits: number;
+  totalCredits: number;
 } {
-    const totalDebits = lines
-        .filter((l) => l.type === TransactionType.DEBIT)
-        .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0)
+  const totalDebits = lines
+    .filter(l => l.type === TransactionType.DEBIT)
+    .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0);
 
-    const totalCredits = lines
-        .filter((l) => l.type === TransactionType.CREDIT)
-        .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0)
+  const totalCredits = lines
+    .filter(l => l.type === TransactionType.CREDIT)
+    .reduce((sum, l) => sum + l.amount * (l.exchangeRate || 1), 0);
 
-    const imbalance = roundToPrecision(totalDebits - totalCredits, precision);
+  const imbalance = roundToPrecision(totalDebits - totalCredits, precision);
 
-    return {
-        isValid: Math.abs(imbalance) < Math.pow(10, -(precision + 1)), // Use precision-aware epsilon
-        imbalance,
-        totalDebits: roundToPrecision(totalDebits, precision),
-        totalCredits: roundToPrecision(totalCredits, precision),
-    }
+  return {
+    isValid: Math.abs(imbalance) < Math.pow(10, -(precision + 1)), // Use precision-aware epsilon
+    imbalance,
+    totalDebits: roundToPrecision(totalDebits, precision),
+    totalCredits: roundToPrecision(totalCredits, precision),
+  };
 }

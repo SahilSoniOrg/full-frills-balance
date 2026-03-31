@@ -1,6 +1,6 @@
 /**
  * App Configuration - Behavior defaults and app-wide settings
- * 
+ *
  * This file contains values that affect BEHAVIOR, not visual appearance.
  * Visual tokens belong in design-tokens.ts
  */
@@ -26,9 +26,9 @@ export const AppConfig = {
 
   // Navigation and UI timing
   timing: {
-    successDelay: 1000,  // Delay after success before navigation
-    loadingDelay: 500,   // Minimum loading time
-    debounceMs: 300,    // Input debounce timing
+    successDelay: 1000, // Delay after success before navigation
+    loadingDelay: 500, // Minimum loading time
+    debounceMs: 300, // Input debounce timing
     focusDelayMs: 100,
     toastDurationMs: 3000,
     appLockGracePeriodMs: 2000,
@@ -63,15 +63,18 @@ export const AppConfig = {
 
   // Feature toggles
   features: {
-    enableAnalytics: false,  // Analytics collection
-    enableDebugMode: false,  // Debug logging
+    enableAnalytics: false, // Analytics collection
+    enableDebugMode: false, // Debug logging
     enableExperimentalFeatures: false,
+    debug: {
+      safeToSpendLogs: false,
+    },
   },
 
   // Performance settings
   performance: {
     maxConcurrentOperations: 5,
-    cacheTimeoutMs: 300000,  // 5 minutes
+    cacheTimeoutMs: 300000, // 5 minutes
     rebuild: {
       checkpointInterval: 1000,
       batchSize: 500,
@@ -168,11 +171,14 @@ export const AppConfig = {
           low: 'Small effect',
         },
       },
-      noDataForBreakdown: 'Safe to Spend is below zero, so there is no available balance to break down.',
+      noDataForBreakdown:
+        'Safe to Spend is below zero, so there is no available balance to break down.',
       safeToSpendExplanation: {
         title: 'How Safe to Spend Is Calculated',
-        intro: 'Safe to Spend is the money left after pending charges, upcoming bills, and other committed amounts are counted.',
-        unlocks: 'The number is conservative. If money may be needed soon, it is not treated as free to spend.',
+        intro:
+          'Safe to Spend is the money left after pending charges, upcoming bills, and other committed amounts are counted.',
+        unlocks:
+          'The number is conservative. If money may be needed soon, it is not treated as free to spend.',
         formulaTitle: 'Calculation',
         formulaItems: [
           'Available now: cash and cash-like account balances you can use soon.',
@@ -189,16 +195,19 @@ export const AppConfig = {
           'Pending and scheduled items affect the number before they settle.',
           'You can open any amount to see the entries behind it.',
         ],
-        footer: 'This calculation depends on account subtypes, planned payments, and budget scopes.',
+        footer:
+          'This calculation depends on account subtypes, planned payments, and budget scopes.',
         closeCta: 'Close',
       },
       legendDetails: {
         safeTitle: 'Safe to Spend',
         safeDesc: 'Money left after funds are reserved for the next 30 days.',
         committedTitle: 'Reserved',
-        committedDesc: 'Money set aside for planned payments, transfers, and active budgets in the next 30 days.',
+        committedDesc:
+          'Money set aside for planned payments, transfers, and active budgets in the next 30 days.',
         debtsTitle: 'Outstanding',
-        debtsDesc: 'Balances you still owe. The amount due within 30 days is already included in Reserved.',
+        debtsDesc:
+          'Balances you still owe. The amount due within 30 days is already included in Reserved.',
         inflowTitle: 'Incoming',
         inflowDesc: 'Expected income and transfers within 30 days.',
       },
@@ -211,7 +220,8 @@ export const AppConfig = {
         assetsBucket: 'Available Now',
         debtsBucket: 'Outstanding Debt',
         debtsHint: 'Balances you still owe and have not matched to a repayment plan.',
-        debtsCallout: 'The due amount is already included in Reserved because a repayment plan exists.',
+        debtsCallout:
+          'The due amount is already included in Reserved because a repayment plan exists.',
         budgetsBucket: 'Budget Reserves',
         categoriesUsed: 'Categories used',
         accountsUsed: 'Accounts used',
@@ -221,7 +231,7 @@ export const AppConfig = {
         debtsLine: 'Outstanding debt (no repayment plan):',
         safeToSpendLine: 'Safe to Spend:',
         calculationTitle: 'Calculation',
-        calculationFormula: 'Lower of today\'s available money and the lowest projected balance',
+        calculationFormula: "Lower of today's available money and the lowest projected balance",
         plannedPayments: 'Planned payments',
         plannedJournals: 'Planned transfers',
         activeBudgets: 'Budget reserves (30 days)',
@@ -244,7 +254,8 @@ export const AppConfig = {
         title: 'Review',
         activeTab: 'Active',
         dismissedTab: 'Dismissed',
-        unreadSmsTitle: (count: number) => `${count} SMS ${count === 1 ? 'message needs' : 'messages need'} review`,
+        unreadSmsTitle: (count: number) =>
+          `${count} SMS ${count === 1 ? 'message needs' : 'messages need'} review`,
         unreadSmsSubtitle: 'These messages may create entries after review.',
         emptyState: 'No active items.',
         noDismissed: 'No dismissed items.',
@@ -268,12 +279,14 @@ export const AppConfig = {
         },
         subscriptionAmnesia: {
           message: 'Recurring Charge',
-          description: (amount: string, desc: string, acc: string) => `${amount} for "${desc}" in "${acc}" appears repeatedly.`,
+          description: (amount: string, desc: string, acc: string) =>
+            `${amount} for "${desc}" in "${acc}" appears repeatedly.`,
           suggestion: 'This appears because similar charges were found more than once.',
         },
         spendingSpike: {
           message: 'Higher-Than-Usual Spending',
-          description: (subtype: string, percent: number) => `"${subtype}" is ${percent}% above your usual level.`,
+          description: (subtype: string, percent: number) =>
+            `"${subtype}" is ${percent}% above your usual level.`,
           suggestion: 'This is based on recent activity in the same category.',
         },
       },
@@ -281,7 +294,7 @@ export const AppConfig = {
         impact: 'Effect',
         whyThisAppeared: 'Reason: ',
         basedOnLastDays: (days: number) => `Based on the last ${days} days`,
-        triggersCount: (count: number) => count === 1 ? '1 trigger' : `${count} triggers`,
+        triggersCount: (count: number) => (count === 1 ? '1 trigger' : `${count} triggers`),
         nextStep: 'Next: ',
         planEmergencyFund: 'Emergency Fund account not found',
       },
@@ -298,10 +311,11 @@ export const AppConfig = {
       to: 'To: ',
       transaction: 'Entry',
       transfer: 'Transfer',
-      transactionCount: (count: number) => count === 1 ? '1 entry' : `${count} entries`,
+      transactionCount: (count: number) => (count === 1 ? '1 entry' : `${count} entries`),
       reconciledUntilHere: (dateText: string) => `Reconciled through ${dateText}`,
       errors: {
-        missingExchangeRate: (from: string, to: string) => `No exchange rate from ${from} to ${to} was available, so this transaction was left out of the daily net amount.`,
+        missingExchangeRate: (from: string, to: string) =>
+          `No exchange rate from ${from} to ${to} was available, so this transaction was left out of the daily net amount.`,
       },
     },
     reports: {
@@ -460,7 +474,8 @@ export const AppConfig = {
     },
     advancedModeExplanation: {
       title: 'Advanced Mode',
-      intro: 'Simple mode records one account in and one account out. Advanced mode supports journal entries with multiple lines.',
+      intro:
+        'Simple mode records one account in and one account out. Advanced mode supports journal entries with multiple lines.',
       unlocks: 'The entry saves only when total debits equal total credits.',
       exampleTitle: 'Example',
       exampleScenario: '$50 meal paid with $40 from Bank and $10 from Cash.',
@@ -512,9 +527,11 @@ export const AppConfig = {
         reconciledLabel: (date: string) => `Reconciled through ${date}`,
         alert: {
           title: 'Reconcile Account',
-          message: 'Reconciliation means matching this account to your bank or card statement. Saving it creates a checkpoint at this balance.',
+          message:
+            'Reconciliation means matching this account to your bank or card statement. Saving it creates a checkpoint at this balance.',
           successMessage: 'Reconciliation saved.',
-          pendingTransactions: (count: number) => `${count} ${count === 1 ? 'entry is' : 'entries are'} still unreconciled since the last checkpoint.`,
+          pendingTransactions: (count: number) =>
+            `${count} ${count === 1 ? 'entry is' : 'entries are'} still unreconciled since the last checkpoint.`,
           matchingBalance: (balance: string) => `Statement balance: ${balance}`,
           guide: 'If the statement balance matches, confirm below.',
         },
@@ -553,7 +570,8 @@ export const AppConfig = {
       iconPickerTitle: 'Select Icon',
       splash: {
         title: 'See What Is\nActually Available',
-        subtitle: 'Safe to Spend removes pending charges, bills, and committed money from the number you see.',
+        subtitle:
+          'Safe to Spend removes pending charges, bills, and committed money from the number you see.',
         inputLabel: 'Your name',
         inputPlaceholder: 'Enter your name',
         btnGetStarted: 'Set Up App',
@@ -676,7 +694,20 @@ export const AppConfig = {
       dayOfMonth: 'Day of Month (1-31)',
       month: 'Month',
       selectMonth: 'Month',
-      monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      monthNames: [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ],
       dayNames: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     },
     budget: {
@@ -727,6 +758,7 @@ export const AppConfig = {
     plannedJournalLimit: 10,
     majorInflowThreshold: 1000,
     maxTooltipDetails: 6,
+    budgetMode: 'SMOOTHED' as 'SMOOTHED' | 'ACTUAL',
   },
   // Insight Configuration
   insights: {
@@ -747,6 +779,9 @@ export const AppConfig = {
     liabilityDefaultDueDay: 20,
     liabilityFallbackDeductionDay: 28,
     liabilityErrorFallbackOffsetDays: 15,
+    liabilityCommitmentTolerance: 0.01,
+    useConstant30DayBurn: true,
+    burnRateLookbackMinDays: 7,
   },
   dateTimePicker: {
     hoursInDay: 24,
@@ -766,4 +801,4 @@ export const AppConfig = {
     msPerDay: 24 * 60 * 60 * 1000,
     daysPerWeek: 7,
   },
-} as const
+} as const;

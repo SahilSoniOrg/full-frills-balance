@@ -1,19 +1,15 @@
 import { database } from '@/src/data/database/Database';
+import { getAccountBalanceDelta, isBalanceIncrease } from '@/src/utils/accountingHelpers';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
-import { getRawAdapter } from '../database/DatabaseUtils';
-import Account from '../models/Account';
-import Transaction, { TransactionType } from '../models/Transaction';
-import {
-  AccountDelta,
-  DailyDelta,
-  RebuildTransaction,
-  RecurringPattern
-} from './TransactionTypes';
-import { transactionRepository } from './TransactionRepository';
 import { from, map, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { getRawAdapter } from '../database/DatabaseUtils';
+import Account, { AccountType } from '../models/Account';
+import Transaction, { TransactionType } from '../models/Transaction';
+import { transactionRepository } from './TransactionRepository';
+import { AccountDelta, DailyDelta, RebuildTransaction, RecurringPattern } from './TransactionTypes';
 
 /**
  * Specialized repository for high-performance raw SQL queries on transactions.
@@ -24,12 +20,8 @@ class TransactionRawRepository {
     return value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
   }
 
-  private getSignedDelta(accountType: string, transactionType: string, amount: number): number {
-    const isDebitNormal = accountType === 'ASSET' || accountType === 'EXPENSE';
-    if (isDebitNormal) {
-      return transactionType === TransactionType.DEBIT ? amount : -amount;
-    }
-    return transactionType === TransactionType.CREDIT ? amount : -amount;
+  private getSignedDelta(accountType: any, transactionType: string, amount: number): number {
+    return getAccountBalanceDelta(amount, accountType, transactionType as any);
   }
 
   /**
@@ -41,14 +33,16 @@ class TransactionRawRepository {
 
     try {
       const result = await sqlAdapter.queryRaw(sql, args);
-      const rawRows = Array.isArray(result) ? result : (result?.rows || []);
+      const rawRows = Array.isArray(result) ? result : result?.rows || [];
 
       // Normalize keys to camelCase if needed (some adapters return lowercase or uppercase)
       return rawRows.map((row: any) => {
         const normalized: any = {};
         for (const key of Object.keys(row)) {
           const lowerKey = key.toLowerCase();
-          const snakeLowerKey = lowerKey.includes('_') ? lowerKey : lowerKey.replace(/([a-z])([A-Z])/g, '$1_$2');
+          const snakeLowerKey = lowerKey.includes('_')
+            ? lowerKey
+            : lowerKey.replace(/([a-z])([A-Z])/g, '$1_$2');
           const camelKey = this.snakeToCamel(snakeLowerKey);
 
           // Preserve original adapter key and add predictable normalized variants.
@@ -59,17 +53,28 @@ class TransactionRawRepository {
           normalized[lowerKey] = row[key];
 
           // 2. Explicit camelCase mapping for model-matching fields
-          if (lowerKey === 'transaction_type' || lowerKey === 'transactiontype') normalized.transactionType = row[key];
-          else if (lowerKey === 'transaction_date' || lowerKey === 'transactiondate') normalized.transactionDate = row[key];
-          else if (lowerKey === 'running_balance' || lowerKey === 'runningbalance') normalized.runningBalance = row[key];
-          else if (lowerKey === 'currency_code' || lowerKey === 'currencycode') normalized.currencyCode = row[key];
-          else if (lowerKey === 'account_id' || lowerKey === 'accountid') normalized.accountId = row[key];
-          else if (lowerKey === 'journal_id' || lowerKey === 'journalid') normalized.journalId = row[key];
-          else if (lowerKey === 'created_at' || lowerKey === 'createdat') normalized.createdAt = row[key];
-          else if (lowerKey === 'updated_at' || lowerKey === 'updatedat') normalized.updatedAt = row[key];
-          else if (lowerKey === 'account_type' || lowerKey === 'accounttype') normalized.accountType = row[key];
-          else if (lowerKey === 'account_subtype' || lowerKey === 'accountsubtype') normalized.accountSubtype = row[key];
-          else if (lowerKey === 'parent_account_id' || lowerKey === 'parentaccountid') normalized.parentAccountId = row[key];
+          if (lowerKey === 'transaction_type' || lowerKey === 'transactiontype')
+            normalized.transactionType = row[key];
+          else if (lowerKey === 'transaction_date' || lowerKey === 'transactiondate')
+            normalized.transactionDate = row[key];
+          else if (lowerKey === 'running_balance' || lowerKey === 'runningbalance')
+            normalized.runningBalance = row[key];
+          else if (lowerKey === 'currency_code' || lowerKey === 'currencycode')
+            normalized.currencyCode = row[key];
+          else if (lowerKey === 'account_id' || lowerKey === 'accountid')
+            normalized.accountId = row[key];
+          else if (lowerKey === 'journal_id' || lowerKey === 'journalid')
+            normalized.journalId = row[key];
+          else if (lowerKey === 'created_at' || lowerKey === 'createdat')
+            normalized.createdAt = row[key];
+          else if (lowerKey === 'updated_at' || lowerKey === 'updatedat')
+            normalized.updatedAt = row[key];
+          else if (lowerKey === 'account_type' || lowerKey === 'accounttype')
+            normalized.accountType = row[key];
+          else if (lowerKey === 'account_subtype' || lowerKey === 'accountsubtype')
+            normalized.accountSubtype = row[key];
+          else if (lowerKey === 'parent_account_id' || lowerKey === 'parentaccountid')
+            normalized.parentAccountId = row[key];
           else if (lowerKey === 'daystart') normalized.dayStart = row[key];
           else if (lowerKey === 'journalids') normalized.journalIds = row[key];
           else if (lowerKey === 'occurrencecount') normalized.occurrenceCount = row[key];
@@ -79,7 +84,10 @@ class TransactionRawRepository {
         return normalized as T;
       });
     } catch (error) {
-      logger.error(`[TransactionRawRepository] queryRaw failed`, { sql: sql.substring(0, 500), error });
+      logger.error(`[TransactionRawRepository] queryRaw failed`, {
+        sql: sql.substring(0, 500),
+        error,
+      });
       return [];
     }
   }
@@ -88,7 +96,10 @@ class TransactionRawRepository {
    * Fetches the latest running balance for multiple accounts in a single pass.
    * Returns a Map of accountId -> latest runningBalance.
    */
-  async getLatestBalancesRaw(accountIds: string[], cutoffDate: number = Number.MAX_SAFE_INTEGER): Promise<Map<string, number>> {
+  async getLatestBalancesRaw(
+    accountIds: string[],
+    cutoffDate: number = Number.MAX_SAFE_INTEGER,
+  ): Promise<Map<string, number>> {
     if (accountIds.length === 0) return new Map();
 
     const placeholders = accountIds.map(() => '?').join(',');
@@ -116,10 +127,10 @@ class TransactionRawRepository {
       WHERE rn = 1
     `;
 
-    const raws = await this.queryRaw<{ accountId: string; runningBalance: number }>(
-      sql,
-      [...accountIds, cutoffDate]
-    );
+    const raws = await this.queryRaw<{ accountId: string; runningBalance: number }>(sql, [
+      ...accountIds,
+      cutoffDate,
+    ]);
 
     if (raws.length > 0) {
       return new Map(raws.map(r => [r.accountId, r.runningBalance]));
@@ -128,7 +139,8 @@ class TransactionRawRepository {
     // Fallback for LokiJS/Test
     const results = new Map<string, number>();
     for (const accountId of accountIds) {
-      const txs = await database.collections.get<Transaction>('transactions')
+      const txs = await database.collections
+        .get<Transaction>('transactions')
         .query(
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
@@ -137,8 +149,9 @@ class TransactionRawRepository {
           Q.where('deleted_at', Q.eq(null)),
           Q.sortBy('transaction_date', Q.desc),
           Q.sortBy('created_at', Q.desc),
-          Q.take(1)
-        ).fetch();
+          Q.take(1),
+        )
+        .fetch();
       results.set(accountId, txs[0]?.runningBalance || 0);
     }
     return results;
@@ -148,7 +161,12 @@ class TransactionRawRepository {
    * Fetches the total SUM of transaction amounts for an account as of a date.
    * Used for balance verification and recomputation.
    */
-  async getAccountSumRaw(accountId: string, cutoffDate: number, isAssetOrExpense: boolean = true, limitTransactionId?: string): Promise<number> {
+  async getAccountSumRaw(
+    accountId: string,
+    cutoffDate: number,
+    isAssetOrExpense: boolean = true,
+    limitTransactionId?: string,
+  ): Promise<number> {
     const multiplierSql = isAssetOrExpense
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
@@ -179,7 +197,8 @@ class TransactionRawRepository {
     if (raws.length > 0) return raws[0]?.total || 0;
 
     // Fallback for LokiJS/Test
-    const txs = await database.collections.get<Transaction>('transactions')
+    const txs = await database.collections
+      .get<Transaction>('transactions')
       .query(
         Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.on('journals', 'deleted_at', Q.eq(null)),
@@ -188,8 +207,9 @@ class TransactionRawRepository {
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('transaction_date', Q.desc),
         Q.sortBy('created_at', Q.desc),
-        Q.take(1)
-      ).fetch();
+        Q.take(1),
+      )
+      .fetch();
 
     return txs[0]?.runningBalance || 0;
   }
@@ -201,7 +221,7 @@ class TransactionRawRepository {
   async getDailyDeltasGroupedRaw(
     accountIds: string[],
     startDate: number,
-    endDate: number
+    endDate: number,
   ): Promise<DailyDelta[]> {
     if (accountIds.length === 0) return [];
 
@@ -238,22 +258,24 @@ class TransactionRawRepository {
 
     // Fallback for LokiJS/Test
     const [accounts, txs] = await Promise.all([
-      database.collections.get<Account>('accounts')
+      database.collections
+        .get<Account>('accounts')
         .query(Q.where('id', Q.oneOf(accountIds)))
         .fetch(),
-      database.collections.get<Transaction>('transactions')
+      database.collections
+        .get<Transaction>('transactions')
         .query(
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', Q.oneOf(accountIds)),
           Q.where('transaction_date', Q.gte(startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
-          Q.where('deleted_at', Q.eq(null))
+          Q.where('deleted_at', Q.eq(null)),
         )
-        .fetch()
+        .fetch(),
     ]);
 
-    const accountTypeById = new Map(accounts.map((a) => [a.id, a.accountType]));
+    const accountTypeById = new Map(accounts.map(a => [a.id, a.accountType]));
     const grouped = new Map<string, DailyDelta>();
 
     for (const tx of txs) {
@@ -287,7 +309,7 @@ class TransactionRawRepository {
   async getAccountDeltasGroupedRaw(
     accountIds: string[],
     startDate: number,
-    endDate: number
+    endDate: number,
   ): Promise<AccountDelta[]> {
     if (accountIds.length === 0) return [];
 
@@ -322,22 +344,24 @@ class TransactionRawRepository {
 
     // Fallback for LokiJS/Test
     const [accounts, txs] = await Promise.all([
-      database.collections.get<Account>('accounts')
+      database.collections
+        .get<Account>('accounts')
         .query(Q.where('id', Q.oneOf(accountIds)))
         .fetch(),
-      database.collections.get<Transaction>('transactions')
+      database.collections
+        .get<Transaction>('transactions')
         .query(
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', Q.oneOf(accountIds)),
           Q.where('transaction_date', Q.gte(startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
-          Q.where('deleted_at', Q.eq(null))
+          Q.where('deleted_at', Q.eq(null)),
         )
-        .fetch()
+        .fetch(),
     ]);
 
-    const accountTypeById = new Map(accounts.map((a) => [a.id, a.accountType]));
+    const accountTypeById = new Map(accounts.map(a => [a.id, a.accountType]));
     const grouped = new Map<string, AccountDelta>();
 
     for (const tx of txs) {
@@ -391,7 +415,8 @@ class TransactionRawRepository {
     if (raws.length > 0) return raws;
 
     // Fallback for LokiJS/Test
-    const txs = await database.collections.get<Transaction>('transactions')
+    const txs = await database.collections
+      .get<Transaction>('transactions')
       .query(
         Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.on('journals', 'deleted_at', Q.eq(null)),
@@ -399,8 +424,9 @@ class TransactionRawRepository {
         Q.where('transaction_date', Q.gte(startDate)),
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('transaction_date', Q.asc),
-        Q.sortBy('created_at', Q.asc)
-      ).fetch();
+        Q.sortBy('created_at', Q.asc),
+      )
+      .fetch();
 
     return txs.map((tx: Transaction) => ({
       id: tx.id,
@@ -408,7 +434,7 @@ class TransactionRawRepository {
       transactionType: tx.transactionType,
       transactionDate: tx.transactionDate,
       runningBalance: tx.runningBalance ?? null,
-      createdAt: tx.createdAt.getTime()
+      createdAt: tx.createdAt.getTime(),
     }));
   }
 
@@ -442,24 +468,28 @@ class TransactionRawRepository {
     if (raws.length > 0) return raws;
 
     // Fallback for LokiJS/Test
-    const txs = await database.collections.get<Transaction>('transactions')
+    const txs = await database.collections
+      .get<Transaction>('transactions')
       .query(
         Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.on('journals', 'deleted_at', Q.eq(null)),
         Q.where('transaction_date', Q.gte(startDate)),
-        Q.where('deleted_at', Q.eq(null))
+        Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
 
-    const grouped = new Map<string, {
-      amount: number;
-      accountId: string;
-      currencyCode: string;
-      occurrenceCount: number;
-      journalIds: Set<string>;
-      firstDate: number;
-      lastDate: number;
-    }>();
+    const grouped = new Map<
+      string,
+      {
+        amount: number;
+        accountId: string;
+        currencyCode: string;
+        occurrenceCount: number;
+        journalIds: Set<string>;
+        firstDate: number;
+        lastDate: number;
+      }
+    >();
 
     for (const tx of txs) {
       const key = `${tx.amount}|${tx.accountId}|${tx.currencyCode}`;
@@ -478,22 +508,22 @@ class TransactionRawRepository {
           occurrenceCount: 1,
           journalIds: new Set([tx.journalId]),
           firstDate: tx.transactionDate,
-          lastDate: tx.transactionDate
+          lastDate: tx.transactionDate,
         });
       }
     }
 
     return Array.from(grouped.values())
-      .filter((g) => g.occurrenceCount >= minCount)
+      .filter(g => g.occurrenceCount >= minCount)
       .sort((a, b) => b.occurrenceCount - a.occurrenceCount)
-      .map((g) => ({
+      .map(g => ({
         amount: g.amount,
         accountId: g.accountId,
         currencyCode: g.currencyCode,
         occurrenceCount: g.occurrenceCount,
         journalIds: Array.from(g.journalIds).join(','),
         firstDate: g.firstDate,
-        lastDate: g.lastDate
+        lastDate: g.lastDate,
       }));
   }
 
@@ -503,18 +533,18 @@ class TransactionRawRepository {
    */
   async getAccountTransactionCountsRaw(
     accountIdsWithStartDates: { accountId: string; startDate: number }[],
-    endDate: number
+    endDate: number,
   ): Promise<Map<string, number>> {
     if (accountIdsWithStartDates.length === 0) return new Map();
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
     // To prevent O(N) UNION ALL growth, we can select all transactions for these accounts
-    // up to the endDate, and then group by account_id in SQLite. 
-    // Since each account has a different startDate, we handle that in JS or use 
-    // conditional aggregation if we can. 
+    // up to the endDate, and then group by account_id in SQLite.
+    // Since each account has a different startDate, we handle that in JS or use
+    // conditional aggregation if we can.
     // Wait, since SQLite doesn't have an easy array binding for complex tuples,
     // and passing N separate start dates into SQL is complex without UNION ALL,
-    // simpler approach: filter by the MIN(startDate) globally, then group by, 
+    // simpler approach: filter by the MIN(startDate) globally, then group by,
     // and filter in JS if needed. Or construct a simpler CASE statement.
     // Actually, generating a CASE statement for the dates is better than UNION ALL
     // because it keeps the query plan as a single scan over the relevant accounts.
@@ -523,7 +553,9 @@ class TransactionRawRepository {
     const placeholders = accountIds.map(() => '?').join(',');
 
     // Create a CASE statement to check start dates per account
-    const caseClauses = accountIdsWithStartDates.map(() => `WHEN ? THEN t.transaction_date > ?`).join(' ');
+    const caseClauses = accountIdsWithStartDates
+      .map(() => `WHEN ? THEN t.transaction_date > ?`)
+      .join(' ');
 
     // We pass account ID, start date for each CASE branch
     const caseParams: (string | number)[] = [];
@@ -549,11 +581,7 @@ class TransactionRawRepository {
       GROUP BY t.account_id
     `;
 
-    const params = [
-      ...accountIds,
-      endDate,
-      ...caseParams
-    ];
+    const params = [...accountIds, endDate, ...caseParams];
 
     const raws = await this.queryRaw<{ account_id: string; tx_count: number }>(sql, params);
     if (raws.length > 0) {
@@ -563,15 +591,17 @@ class TransactionRawRepository {
     // Fallback for LokiJS/Test
     const results = new Map<string, number>();
     for (const item of accountIdsWithStartDates) {
-      const count = await database.collections.get<Transaction>('transactions')
+      const count = await database.collections
+        .get<Transaction>('transactions')
         .query(
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', item.accountId),
           Q.where('transaction_date', Q.gt(item.startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
-          Q.where('deleted_at', Q.eq(null))
-        ).fetchCount();
+          Q.where('deleted_at', Q.eq(null)),
+        )
+        .fetchCount();
       results.set(item.accountId, count);
     }
     return results;
@@ -585,7 +615,7 @@ class TransactionRawRepository {
     accountId: string,
     startDate: number,
     endDate: number,
-    isAssetOrExpense: boolean = true
+    isAssetOrExpense: boolean = true,
   ): Promise<{ totalIncrease: number; totalDecrease: number }> {
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
@@ -612,11 +642,14 @@ class TransactionRawRepository {
     const args = [accountId, startDate, endDate];
 
     try {
-      const raws = await this.queryRaw<{ total_increase: number | null; total_decrease: number | null }>(sql, args);
+      const raws = await this.queryRaw<{
+        total_increase: number | null;
+        total_decrease: number | null;
+      }>(sql, args);
       if (raws.length > 0) {
         return {
           totalIncrease: raws[0]?.total_increase || 0,
-          totalDecrease: raws[0]?.total_decrease || 0
+          totalDecrease: raws[0]?.total_decrease || 0,
         };
       }
     } catch (error) {
@@ -624,26 +657,27 @@ class TransactionRawRepository {
     }
 
     // Fallback for LokiJS/Test
-    const txs = await database.collections.get<Transaction>('transactions')
+    const txs = await database.collections
+      .get<Transaction>('transactions')
       .query(
         Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.on('journals', 'deleted_at', Q.eq(null)),
         Q.where('account_id', accountId),
         Q.where('transaction_date', Q.gte(startDate)),
         Q.where('transaction_date', Q.lte(endDate)),
-        Q.where('deleted_at', Q.eq(null))
-      ).fetch();
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
 
     let totalIncrease = 0;
     let totalDecrease = 0;
 
     for (const tx of txs) {
-      if (isAssetOrExpense) {
-        if (tx.transactionType === TransactionType.DEBIT) totalIncrease += tx.amount;
-        else totalDecrease += tx.amount;
+      const type = isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY;
+      if (isBalanceIncrease(type, tx.transactionType)) {
+        totalIncrease += tx.amount;
       } else {
-        if (tx.transactionType === TransactionType.CREDIT) totalIncrease += tx.amount;
-        else totalDecrease += tx.amount;
+        totalDecrease += tx.amount;
       }
     }
 
@@ -658,13 +692,18 @@ class TransactionRawRepository {
     accountId: string,
     startDate: number,
     endDate: number,
-    isAssetOrExpense: boolean = true
+    isAssetOrExpense: boolean = true,
   ): Observable<{ totalIncrease: number; totalDecrease: number }> {
     return transactionRepository.observeActive().pipe(
-      switchMap(() => from(this.getAccountPeriodMetricsRaw(accountId, startDate, endDate, isAssetOrExpense))),
-      distinctUntilChanged((prev: { totalIncrease: number; totalDecrease: number }, curr: { totalIncrease: number; totalDecrease: number }) => 
-        prev.totalIncrease === curr.totalIncrease && prev.totalDecrease === curr.totalDecrease
-      )
+      switchMap(() =>
+        from(this.getAccountPeriodMetricsRaw(accountId, startDate, endDate, isAssetOrExpense)),
+      ),
+      distinctUntilChanged(
+        (
+          prev: { totalIncrease: number; totalDecrease: number },
+          curr: { totalIncrease: number; totalDecrease: number },
+        ) => prev.totalIncrease === curr.totalIncrease && prev.totalDecrease === curr.totalDecrease,
+      ),
     );
   }
 
@@ -675,11 +714,11 @@ class TransactionRawRepository {
   observeAccountDeltasGroupedRaw(
     accountIds: string[],
     startDate: number,
-    endDate: number
+    endDate: number,
   ): Observable<AccountDelta[]> {
-    return transactionRepository.observeActive().pipe(
-      switchMap(() => from(this.getAccountDeltasGroupedRaw(accountIds, startDate, endDate)))
-    );
+    return transactionRepository
+      .observeActive()
+      .pipe(switchMap(() => from(this.getAccountDeltasGroupedRaw(accountIds, startDate, endDate))));
   }
 
   /**
@@ -688,7 +727,7 @@ class TransactionRawRepository {
   observeUnreconciledMetricsRaw(
     accountId: string,
     reconciledAt: number | null,
-    isAssetOrExpense: boolean = true
+    isAssetOrExpense: boolean = true,
   ): Observable<{ count: number; total: number }> {
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
     const multiplierSql = isAssetOrExpense
@@ -707,12 +746,18 @@ class TransactionRawRepository {
             AND j.deleted_at IS NULL
             AND j.status IN (${activeStatusesStr})
         `;
-        return from(this.queryRaw<{ count: number; total: number | null }>(sql, [accountId, reconciledAt || 0, reconciledAt ?? 0]));
+        return from(
+          this.queryRaw<{ count: number; total: number | null }>(sql, [
+            accountId,
+            reconciledAt || 0,
+            reconciledAt ?? 0,
+          ]),
+        );
       }),
       map((raws: { count: number; total: number | null }[]) => ({
         count: raws[0]?.count || 0,
-        total: raws[0]?.total || 0
-      }))
+        total: raws[0]?.total || 0,
+      })),
     );
   }
 }
