@@ -12,305 +12,329 @@ import { useCallback, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 
 export interface SettingsViewModel {
-    userName: string;
-    setUserName: (value: string) => void;
-    themePreference: 'system' | 'light' | 'dark';
-    setThemePreference: (value: 'system' | 'light' | 'dark') => void;
-    themeId: ThemeId;
-    setThemeId: (value: ThemeId) => void;
-    fontId: FontId;
-    setFontId: (value: FontId) => void;
-    isPrivacyMode: boolean;
-    onTogglePrivacy: () => void;
-    isWidgetPrivacyEnabled: boolean;
-    onToggleWidgetPrivacy: () => void;
-    isAppLockEnabled: boolean;
-    onToggleAppLock: () => void;
-    showAccountMonthlyStats: boolean;
-    onToggleAccountMonthlyStats: () => void;
-    isExporting: boolean;
-    isImporting: boolean;
-    isMaintenanceMode: boolean;
-    isCleaning: boolean;
-    isResetting: boolean;
-    isNamingExport: boolean;
-    setIsNamingExport: (value: boolean) => void;
-    exportFilename: string;
-    setExportFilename: (value: string) => void;
-    onExport: () => void;
-    onConfirmExport: () => void;
-    onImport: () => void;
-    onAuditLog: () => void;
-    onSmsInbox: () => void;
-    onManageSmsRules: () => void;
-    onPersonalizationSettings: () => void;
-    onDataManagementSettings: () => void;
-    onAppearanceSettings: () => void;
-    onFixIntegrity: () => void;
-    integrityProgress: number;
-    integrityProgressMessage: string;
-    onCleanup: () => void;
-    onFactoryReset: () => void;
+  userName: string;
+  setUserName: (value: string) => void;
+  themePreference: 'system' | 'light' | 'dark';
+  setThemePreference: (value: 'system' | 'light' | 'dark') => void;
+  themeId: ThemeId;
+  setThemeId: (value: ThemeId) => void;
+  fontId: FontId;
+  setFontId: (value: FontId) => void;
+  isPrivacyMode: boolean;
+  onTogglePrivacy: () => void;
+  isWidgetPrivacyEnabled: boolean;
+  onToggleWidgetPrivacy: () => void;
+  isAppLockEnabled: boolean;
+  onToggleAppLock: () => void;
+  showAccountMonthlyStats: boolean;
+  onToggleAccountMonthlyStats: () => void;
+  isExporting: boolean;
+  isImporting: boolean;
+  isMaintenanceMode: boolean;
+  isCleaning: boolean;
+  isResetting: boolean;
+  isNamingExport: boolean;
+  setIsNamingExport: (value: boolean) => void;
+  exportFilename: string;
+  setExportFilename: (value: string) => void;
+  onExport: () => void;
+  onConfirmExport: () => void;
+  onImport: () => void;
+  onAuditLog: () => void;
+  onSmsInbox: () => void;
+  onManageSmsRules: () => void;
+  onPersonalizationSettings: () => void;
+  onDataManagementSettings: () => void;
+  onAppearanceSettings: () => void;
+  onFixIntegrity: () => void;
+  integrityProgress: number;
+  integrityProgressMessage: string;
+  onCleanup: () => void;
+  onFactoryReset: () => void;
 }
 
 export function useSettingsViewModel(): SettingsViewModel {
-    const ui = useUI();
-    const {
-        userName,
-        updateUserDetails,
-        themePreference,
-        setThemePreference,
-        isPrivacyMode,
-        setPrivacyMode,
-        isAppLockEnabled,
-        setAppLockEnabled,
-        showAccountMonthlyStats,
-        setShowAccountMonthlyStats,
-        isWidgetPrivacyEnabled,
-        setWidgetPrivacyEnabled,
-    } = ui;
-    const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } = useSettingsActions();
-    const { isImporting: isImportingData } = useImport();
-    const [isExporting, setIsExporting] = useState(false);
-    const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
-    const [integrityProgress, setIntegrityProgress] = useState(0);
-    const [integrityProgressMessage, setIntegrityProgressMessage] = useState('');
-    const [isCleaning, setIsCleaning] = useState(false);
-    const [isResetting, setIsResetting] = useState(false);
-    const [isNamingExport, setIsNamingExport] = useState(false);
-    const [exportFilename, setExportFilename] = useState('');
+  const ui = useUI();
+  const {
+    userName,
+    updateUserDetails,
+    themePreference,
+    setThemePreference,
+    isPrivacyMode,
+    setPrivacyMode,
+    isAppLockEnabled,
+    setAppLockEnabled,
+    showAccountMonthlyStats,
+    setShowAccountMonthlyStats,
+    isWidgetPrivacyEnabled,
+    setWidgetPrivacyEnabled,
+  } = ui;
+  const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } = useSettingsActions();
+  const { isImporting: isImportingData } = useImport();
+  const [isExporting, setIsExporting] = useState(false);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [integrityProgress, setIntegrityProgress] = useState(0);
+  const [integrityProgressMessage, setIntegrityProgressMessage] = useState('');
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isNamingExport, setIsNamingExport] = useState(false);
+  const [exportFilename, setExportFilename] = useState('');
 
-    const setUserName = useCallback((newName: string) => {
-        if (newName.trim() && newName !== userName) {
-            updateUserDetails(newName.trim(), ui.defaultCurrency, ui.archetype);
+  const setUserName = useCallback(
+    (newName: string) => {
+      if (newName.trim() && newName !== userName) {
+        updateUserDetails(newName.trim(), ui.defaultCurrency, ui.archetype);
+      }
+    },
+    [ui.defaultCurrency, ui.archetype, updateUserDetails, userName],
+  );
+
+  const onExport = useCallback(() => {
+    setIsNamingExport(true);
+  }, []);
+
+  const onConfirmExport = useCallback(async () => {
+    setIsNamingExport(false);
+    setIsExporting(true);
+    try {
+      const jsonData = await exportToJSON();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
+      // Sanitize filename and use default if empty
+      const sanitizedName = exportFilename
+        .trim()
+        .replace(/[^a-z0-9-_]/gi, '-')
+        .substring(0, 50);
+      const filename = sanitizedName
+        ? `${sanitizedName}-${timestamp}.json`
+        : `balance-export-${timestamp}.json`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(fileUri, jsonData);
+
+      // On Android, provide an option to save to a user-selected location
+      if (Platform.OS === 'android') {
+        const permissions =
+          await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+        if (permissions.granted) {
+          try {
+            const fileLocation = await FileSystem.StorageAccessFramework.createFileAsync(
+              permissions.directoryUri,
+              filename,
+              'application/json',
+            );
+            await FileSystem.writeAsStringAsync(fileLocation, jsonData);
+            toast.success('Backup saved successfully');
+          } catch (err) {
+            logger.error('[onConfirmExport] SAF save failed', err);
+          }
         }
-    }, [ui.defaultCurrency, ui.archetype, updateUserDetails, userName]);
+      }
 
-    const onExport = useCallback(() => {
-        setIsNamingExport(true);
-    }, []);
-
-    const onConfirmExport = useCallback(async () => {
-        setIsNamingExport(false);
-        setIsExporting(true);
-        try {
-            const jsonData = await exportToJSON();
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            
-            // Sanitize filename and use default if empty
-            const sanitizedName = exportFilename.trim().replace(/[^a-z0-9-_]/gi, '-').substring(0, 50);
-            const filename = sanitizedName 
-                ? `${sanitizedName}-${timestamp}.json`
-                : `balance-export-${timestamp}.json`;
-
-            if (Platform.OS === 'web') {
-                const blob = new Blob([jsonData], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                return;
-            }
-
-            const fileUri = `${FileSystem.documentDirectory}${filename}`;
-            await FileSystem.writeAsStringAsync(fileUri, jsonData);
-
-            // On Android, provide an option to save to a user-selected location
-            if (Platform.OS === 'android') {
-                const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-                if (permissions.granted) {
-                    try {
-                        const fileLocation = await FileSystem.StorageAccessFramework.createFileAsync(
-                            permissions.directoryUri,
-                            filename,
-                            'application/json'
-                        );
-                        await FileSystem.writeAsStringAsync(fileLocation, jsonData);
-                        toast.success('Backup saved successfully');
-                    } catch (err) {
-                        logger.error('[onConfirmExport] SAF save failed', err);
-                    }
-                }
-            }
-
-            confirm.show({
-                title: 'Backup Generated',
-                message: 'Your backup has been created. Would you like to share or upload the file now?',
-                confirmText: 'Share File',
-                cancelText: 'Just Save',
-                onConfirm: async () => {
-                    const canShare = await Sharing.isAvailableAsync();
-                    if (canShare) {
-                        await Sharing.shareAsync(fileUri, {
-                            mimeType: 'application/json',
-                            dialogTitle: 'Export Your Balance Data',
-                        });
-                    } else {
-                        alert.show({ title: 'Export Ready', message: `File saved to ${fileUri}` });
-                    }
-                }
+      confirm.show({
+        title: 'Backup Generated',
+        message: 'Your backup has been created. Would you like to share or upload the file now?',
+        confirmText: 'Share File',
+        cancelText: 'Just Save',
+        onConfirm: async () => {
+          const canShare = await Sharing.isAvailableAsync();
+          if (canShare) {
+            await Sharing.shareAsync(fileUri, {
+              mimeType: 'application/json',
+              dialogTitle: 'Export Your Balance Data',
             });
+          } else {
+            alert.show({ title: 'Export Ready', message: `File saved to ${fileUri}` });
+          }
+        },
+      });
+    } catch (error) {
+      logger.error('[onConfirmExport] Export failed', error);
+      toast.error('Could not export data');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [exportToJSON, exportFilename]);
+
+  const onFixIntegrity = useCallback(async () => {
+    setIntegrityProgress(0);
+    setIntegrityProgressMessage('Starting check...');
+    setIsMaintenanceMode(true);
+    try {
+      const result = await runIntegrityCheck((message, progress) => {
+        setIntegrityProgressMessage(message);
+        setIntegrityProgress(progress);
+      });
+
+      // Close progress modal first
+      setIsMaintenanceMode(false);
+
+      // On iOS, wait for modal dismissal animation to complete to ensure the JS alert overlay is visible
+      if (Platform.OS === 'ios') {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      alert.show({
+        title: 'Integrity Check Complete',
+        message: `Checked ${result.totalAccounts} accounts.\nFound ${result.discrepanciesFound} issues.\nRepaired ${result.repairsSuccessful} successfully.`,
+      });
+    } catch (error) {
+      setIsMaintenanceMode(false);
+      logger.error('[onFixIntegrity] Check failed', error);
+      toast.error('Integrity check failed');
+    }
+  }, [runIntegrityCheck]);
+
+  const onCleanup = useCallback(async () => {
+    confirm.show({
+      title: 'Cleanup Database',
+      message:
+        'This will permanently delete synced records marked as deleted (journals, transactions, accounts). Unsynced deletions are preserved for sync. This action is irreversible. Continue?',
+      confirmText: 'Cleanup',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          setIsCleaning(true);
+          const result = await cleanupDatabase();
+          alert.show({
+            title: 'Cleanup Complete',
+            message: `Permanently removed ${result.deletedCount} synced records.`,
+          });
         } catch (error) {
-            logger.error('[onConfirmExport] Export failed', error);
-            toast.error('Could not export data');
+          const msg = error instanceof Error ? error.message : String(error);
+          alert.show({ title: 'Error', message: `Cleanup failed: ${msg}`, type: 'error' });
         } finally {
-            setIsExporting(false);
+          setIsCleaning(false);
         }
-    }, [exportToJSON, exportFilename]);
+      },
+    });
+  }, [cleanupDatabase]);
 
-    const onFixIntegrity = useCallback(async () => {
-        setIntegrityProgress(0);
-        setIntegrityProgressMessage('Starting check...');
-        setIsMaintenanceMode(true);
+  const onFactoryReset = useCallback(async () => {
+    confirm.show({
+      title: 'FACTORY RESET',
+      message:
+        'THIS WILL PERMANENTLY ERASE ALL YOUR DATA, ACCOUNTS, AND SETTINGS. THIS CANNOT BE UNDONE. Are you absolutely sure?',
+      confirmText: 'RESET EVERYTHING',
+      destructive: true,
+      onConfirm: async () => {
         try {
-            const result = await runIntegrityCheck((message, progress) => {
-                setIntegrityProgressMessage(message);
-                setIntegrityProgress(progress);
-            });
-            alert.show({
-                title: 'Integrity Check Complete',
-                message: `Checked ${result.totalAccounts} accounts.\nFound ${result.discrepanciesFound} issues.\nRepaired ${result.repairsSuccessful} successfully.`
-            });
+          setIsResetting(true);
+          await resetApp();
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          alert.show({ title: 'Error', message: `Reset failed: ${msg}`, type: 'error' });
         } finally {
-            setIsMaintenanceMode(false);
+          setIsResetting(false);
         }
-    }, [runIntegrityCheck]);
+      },
+    });
+  }, [resetApp]);
 
-    const onCleanup = useCallback(async () => {
-        confirm.show({
-            title: 'Cleanup Database',
-            message: 'This will permanently delete synced records marked as deleted (journals, transactions, accounts). Unsynced deletions are preserved for sync. This action is irreversible. Continue?',
-            confirmText: 'Cleanup',
-            destructive: true,
-            onConfirm: async () => {
-                try {
-                    setIsCleaning(true);
-                    const result = await cleanupDatabase();
-                    alert.show({ title: 'Cleanup Complete', message: `Permanently removed ${result.deletedCount} synced records.` });
-                } catch (error) {
-                    const msg = error instanceof Error ? error.message : String(error);
-                    alert.show({ title: 'Error', message: `Cleanup failed: ${msg}`, type: 'error' });
-                } finally {
-                    setIsCleaning(false);
-                }
-            }
-        });
-    }, [cleanupDatabase]);
+  const onToggleAppLock = useCallback(async () => {
+    if (isAppLockEnabled) {
+      // Turning it off, maybe prompt for authentication to disable?
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to disable App Lock',
+      });
+      if (result.success) {
+        setAppLockEnabled(false);
+      }
+    } else {
+      // Turning it on
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
-    const onFactoryReset = useCallback(async () => {
-        confirm.show({
-            title: 'FACTORY RESET',
-            message: 'THIS WILL PERMANENTLY ERASE ALL YOUR DATA, ACCOUNTS, AND SETTINGS. THIS CANNOT BE UNDONE. Are you absolutely sure?',
-            confirmText: 'RESET EVERYTHING',
-            destructive: true,
-            onConfirm: async () => {
-                try {
-                    setIsResetting(true);
-                    await resetApp();
-                } catch (error) {
-                    const msg = error instanceof Error ? error.message : String(error);
-                    alert.show({ title: 'Error', message: `Reset failed: ${msg}`, type: 'error' });
-                } finally {
-                    setIsResetting(false);
-                }
-            }
-        });
-    }, [resetApp]);
-
-    const onToggleAppLock = useCallback(async () => {
-        if (isAppLockEnabled) {
-            // Turning it off, maybe prompt for authentication to disable?
-            const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: 'Authenticate to disable App Lock',
-            });
-            if (result.success) {
-                setAppLockEnabled(false);
-            }
-        } else {
-            // Turning it on
-            const hasHardware = await LocalAuthentication.hasHardwareAsync();
-            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-
-            if (!hasHardware || !isEnrolled) {
-                if (Platform.OS === 'web') {
-                    alert.show({
-                        title: 'Authentication not set up',
-                        message: 'Your browser does not support Passkeys (WebAuthn).',
-                        type: 'error'
-                    });
-                    return;
-                }
-
-                confirm.show({
-                    title: 'Setup Required',
-                    message: 'Your device does not have a screen lock or biometric authentication set up. Please configure one in your device settings to enable App Lock.',
-                    confirmText: 'Go to Settings',
-                    cancelText: 'Dismiss',
-                    onConfirm: () => {
-                        if (Platform.OS === 'android') {
-                            Linking.sendIntent('android.settings.SECURITY_SETTINGS').catch(() => {
-                                Linking.openSettings();
-                            });
-                        } else {
-                            Linking.openSettings();
-                        }
-                    }
-                });
-                return;
-            }
-
-            const result = await LocalAuthentication.enrollAsync({
-                promptMessage: 'Authenticate to enable App Lock',
-            });
-            if (result.success) {
-                setAppLockEnabled(true);
-            }
+      if (!hasHardware || !isEnrolled) {
+        if (Platform.OS === 'web') {
+          alert.show({
+            title: 'Authentication not set up',
+            message: 'Your browser does not support Passkeys (WebAuthn).',
+            type: 'error',
+          });
+          return;
         }
-    }, [isAppLockEnabled, setAppLockEnabled]);
 
-    return {
-        userName,
-        setUserName,
-        themePreference,
-        setThemePreference,
-        themeId: ui.themeId,
-        setThemeId: ui.setThemeId,
-        fontId: ui.fontId,
-        setFontId: ui.setFontId,
-        isPrivacyMode,
-        onTogglePrivacy: () => setPrivacyMode(!isPrivacyMode),
-        isAppLockEnabled,
-        onToggleAppLock,
-        showAccountMonthlyStats,
-        onToggleAccountMonthlyStats: () => setShowAccountMonthlyStats(!showAccountMonthlyStats),
-        isWidgetPrivacyEnabled,
-        onToggleWidgetPrivacy: () => setWidgetPrivacyEnabled(!isWidgetPrivacyEnabled),
-        isExporting,
-        isImporting: isImportingData,
-        isMaintenanceMode,
-        integrityProgress,
-        integrityProgressMessage,
-        isCleaning,
-        isResetting,
-        isNamingExport,
-        setIsNamingExport,
-        exportFilename,
-        setExportFilename,
-        onExport,
-        onConfirmExport,
-        onImport: AppNavigation.toImportSelection,
-        onAuditLog: AppNavigation.toAuditLog,
-        onSmsInbox: AppNavigation.toSmsInbox,
-        onManageSmsRules: AppNavigation.toSmsRules,
-        onPersonalizationSettings: AppNavigation.toPersonalizationSettings,
-        onDataManagementSettings: AppNavigation.toDataManagementSettings,
-        onAppearanceSettings: AppNavigation.toAppearanceSettings,
-        onFixIntegrity,
-        onCleanup,
-        onFactoryReset,
-    };
+        confirm.show({
+          title: 'Setup Required',
+          message:
+            'Your device does not have a screen lock or biometric authentication set up. Please configure one in your device settings to enable App Lock.',
+          confirmText: 'Go to Settings',
+          cancelText: 'Dismiss',
+          onConfirm: () => {
+            if (Platform.OS === 'android') {
+              Linking.sendIntent('android.settings.SECURITY_SETTINGS').catch(() => {
+                Linking.openSettings();
+              });
+            } else {
+              Linking.openSettings();
+            }
+          },
+        });
+        return;
+      }
+
+      const result = await LocalAuthentication.enrollAsync({
+        promptMessage: 'Authenticate to enable App Lock',
+      });
+      if (result.success) {
+        setAppLockEnabled(true);
+      }
+    }
+  }, [isAppLockEnabled, setAppLockEnabled]);
+
+  return {
+    userName,
+    setUserName,
+    themePreference,
+    setThemePreference,
+    themeId: ui.themeId,
+    setThemeId: ui.setThemeId,
+    fontId: ui.fontId,
+    setFontId: ui.setFontId,
+    isPrivacyMode,
+    onTogglePrivacy: () => setPrivacyMode(!isPrivacyMode),
+    isAppLockEnabled,
+    onToggleAppLock,
+    showAccountMonthlyStats,
+    onToggleAccountMonthlyStats: () => setShowAccountMonthlyStats(!showAccountMonthlyStats),
+    isWidgetPrivacyEnabled,
+    onToggleWidgetPrivacy: () => setWidgetPrivacyEnabled(!isWidgetPrivacyEnabled),
+    isExporting,
+    isImporting: isImportingData,
+    isMaintenanceMode,
+    integrityProgress,
+    integrityProgressMessage,
+    isCleaning,
+    isResetting,
+    isNamingExport,
+    setIsNamingExport,
+    exportFilename,
+    setExportFilename,
+    onExport,
+    onConfirmExport,
+    onImport: AppNavigation.toImportSelection,
+    onAuditLog: AppNavigation.toAuditLog,
+    onSmsInbox: AppNavigation.toSmsInbox,
+    onManageSmsRules: AppNavigation.toSmsRules,
+    onPersonalizationSettings: AppNavigation.toPersonalizationSettings,
+    onDataManagementSettings: AppNavigation.toDataManagementSettings,
+    onAppearanceSettings: AppNavigation.toAppearanceSettings,
+    onFixIntegrity,
+    onCleanup,
+    onFactoryReset,
+  };
 }
