@@ -16,8 +16,14 @@ import { AccountDelta, DailyDelta, RebuildTransaction, RecurringPattern } from '
  * Bypasses the WatermelonDB bridge/ORM layers for bulk data operations.
  */
 class TransactionRawRepository {
-  private snakeToCamel(value: string): string {
-    return value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+  private keyCache: Map<string, string> = new Map();
+
+  private toCamelCase(str: string): string {
+    const cached = this.keyCache.get(str);
+    if (cached) return cached;
+    const result = str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    this.keyCache.set(str, result);
+    return result;
   }
 
   private getSignedDelta(accountType: any, transactionType: string, amount: number): number {
@@ -35,51 +41,36 @@ class TransactionRawRepository {
       const result = await sqlAdapter.queryRaw(sql, args);
       const rawRows = Array.isArray(result) ? result : result?.rows || [];
 
-      // Normalize keys to camelCase if needed (some adapters return lowercase or uppercase)
+      if (rawRows.length === 0) return [];
+
+      // High-performance mapping: Pre-calculate key transformations ONCE per result set
+      const sampleRow = rawRows[0];
+      const keys = Object.keys(sampleRow);
+      const mapping: { original: string; camel: string; lower: string }[] = keys.map(key => {
+        const lower = key.toLowerCase();
+        return {
+          original: key,
+          lower,
+          camel: this.toCamelCase(lower),
+        };
+      });
+
       return rawRows.map((row: any) => {
         const normalized: any = {};
-        for (const key of Object.keys(row)) {
-          const lowerKey = key.toLowerCase();
-          const snakeLowerKey = lowerKey.includes('_')
-            ? lowerKey
-            : lowerKey.replace(/([a-z])([A-Z])/g, '$1_$2');
-          const camelKey = this.snakeToCamel(snakeLowerKey);
+        for (let i = 0; i < mapping.length; i++) {
+          const m = mapping[i];
+          const val = row[m.original];
+          normalized[m.original] = val;
+          normalized[m.camel] = val;
+          normalized[m.lower] = val;
 
-          // Preserve original adapter key and add predictable normalized variants.
-          normalized[key] = row[key];
-          normalized[camelKey] = row[key];
-
-          // 1. Direct lowercase mapping (covers most fields like 'id', 'amount', 'total', 'delta')
-          normalized[lowerKey] = row[key];
-
-          // 2. Explicit camelCase mapping for model-matching fields
-          if (lowerKey === 'transaction_type' || lowerKey === 'transactiontype')
-            normalized.transactionType = row[key];
-          else if (lowerKey === 'transaction_date' || lowerKey === 'transactiondate')
-            normalized.transactionDate = row[key];
-          else if (lowerKey === 'running_balance' || lowerKey === 'runningbalance')
-            normalized.runningBalance = row[key];
-          else if (lowerKey === 'currency_code' || lowerKey === 'currencycode')
-            normalized.currencyCode = row[key];
-          else if (lowerKey === 'account_id' || lowerKey === 'accountid')
-            normalized.accountId = row[key];
-          else if (lowerKey === 'journal_id' || lowerKey === 'journalid')
-            normalized.journalId = row[key];
-          else if (lowerKey === 'created_at' || lowerKey === 'createdat')
-            normalized.createdAt = row[key];
-          else if (lowerKey === 'updated_at' || lowerKey === 'updatedat')
-            normalized.updatedAt = row[key];
-          else if (lowerKey === 'account_type' || lowerKey === 'accounttype')
-            normalized.accountType = row[key];
-          else if (lowerKey === 'account_subtype' || lowerKey === 'accountsubtype')
-            normalized.accountSubtype = row[key];
-          else if (lowerKey === 'parent_account_id' || lowerKey === 'parentaccountid')
-            normalized.parentAccountId = row[key];
-          else if (lowerKey === 'daystart') normalized.dayStart = row[key];
-          else if (lowerKey === 'journalids') normalized.journalIds = row[key];
-          else if (lowerKey === 'occurrencecount') normalized.occurrenceCount = row[key];
-          else if (lowerKey === 'firstdate') normalized.firstDate = row[key];
-          else if (lowerKey === 'lastdate') normalized.lastDate = row[key];
+          // Compatibility for specific fields that might not follow standard camelCase
+          if (m.lower === 'transactiontype') normalized.transactionType = val;
+          else if (m.lower === 'transactiondate') normalized.transactionDate = val;
+          else if (m.lower === 'runningbalance') normalized.runningBalance = val;
+          else if (m.lower === 'currencycode') normalized.currencyCode = val;
+          else if (m.lower === 'accountid') normalized.accountId = val;
+          else if (m.lower === 'accounttype') normalized.accountType = val;
         }
         return normalized as T;
       });
@@ -165,7 +156,8 @@ class TransactionRawRepository {
     accountId: string,
     cutoffDate: number,
     isAssetOrExpense: boolean = true,
-    limitTransactionId?: string,
+    upToTransactionId?: string,
+    afterTransactionId?: string,
   ): Promise<number> {
     const multiplierSql = isAssetOrExpense
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
@@ -185,12 +177,20 @@ class TransactionRawRepository {
     `;
     const args = [accountId, cutoffDate];
 
-    if (limitTransactionId) {
+    if (upToTransactionId) {
       // Include everything strictly chronologically before this transaction (H-6 fix)
       sql += ` AND (t.transaction_date < (SELECT transaction_date FROM transactions WHERE id = ?)
                 OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
                     AND t.created_at <= (SELECT created_at FROM transactions WHERE id = ?)))`;
-      args.push(limitTransactionId, limitTransactionId, limitTransactionId);
+      args.push(upToTransactionId, upToTransactionId, upToTransactionId);
+    }
+
+    if (afterTransactionId) {
+      // Include everything strictly chronologically AFTER this transaction
+      sql += ` AND (t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
+                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
+                    AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?)))`;
+      args.push(afterTransactionId, afterTransactionId, afterTransactionId);
     }
 
     const raws = await this.queryRaw<{ total: number }>(sql, args);

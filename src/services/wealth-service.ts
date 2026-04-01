@@ -153,12 +153,8 @@ export const wealthService = {
       now.valueOf(),
     );
 
-    // 4. Group and convert deltas per day
-    const dailyDeltas = new Map<string, { assets: number; liabilities: number }>();
-    const dateFormat = AppConfig.strings.formats.date;
-
-    // Fetch required exchange rates in one pass for all currencies found in deltas
-    const uniqueCurrencies = Array.from(new Set(deltas.map(d => d.currencyCode)));
+    // 3.5 Pre-fetch exchange rates for all accounts involved to avoid per-transaction overhead
+    const uniqueCurrencies = Array.from(new Set(relevantBalances.map(b => b.currencyCode)));
     const rates = new Map<string, number>();
     await Promise.all(
       uniqueCurrencies.map(async c => {
@@ -166,6 +162,10 @@ export const wealthService = {
         rates.set(c, convertedAmount);
       }),
     );
+
+    // 4. Group and convert deltas per day
+    const dailyDeltas = new Map<string, { assets: number; liabilities: number }>();
+    const dateFormat = AppConfig.strings.formats.date;
 
     if (deltas.length === 0) {
       const accountTypeById = new Map(relevantBalances.map(a => [a.accountId, a.accountType]));
@@ -180,11 +180,8 @@ export const wealthService = {
           const accountType = accountTypeById.get(tx.accountId);
           if (!accountType) return null;
 
-          const { convertedAmount } = await exchangeRateService.convert(
-            tx.amount,
-            tx.currencyCode,
-            currency,
-          );
+          const rate = rates.get(tx.currencyCode) || 1;
+          const convertedAmount = tx.amount * rate;
 
           return {
             dayKey: dayjs(tx.transactionDate).format(dateFormat),

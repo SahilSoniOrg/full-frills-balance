@@ -77,7 +77,11 @@ export function getLiquidNetWorthDelta(
   transactionType: TransactionType,
 ): number {
   const balanceImpact = getAccountBalanceDelta(amount, accountType, transactionType);
-  return accountType === AccountType.LIABILITY || accountType === AccountType.EQUITY
+  // Assets and Income: Balance Increase = Wealth Increase
+  // Liabilities, Equity, and Expenses: Balance Increase = Wealth Decrease
+  return accountType === AccountType.LIABILITY ||
+    accountType === AccountType.EQUITY ||
+    accountType === AccountType.EXPENSE
     ? -balanceImpact
     : balanceImpact;
 }
