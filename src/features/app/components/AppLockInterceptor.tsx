@@ -11,8 +11,7 @@ import React, { useEffect } from 'react';
 import { Modal, Platform, StyleSheet, View } from 'react-native';
 
 export function AppLockInterceptor({ children }: { children: React.ReactNode }) {
-  const { isAppLockEnabled, hasUnlockedThisSession, isAppCurrentlyLocked, requireRestart } =
-    useUI();
+  const { isAppLockEnabled, hasUnlockedThisSession, isAppCurrentlyLocked } = useUI();
   const { theme } = useTheme();
 
   // Use the extracted logic engine
@@ -41,10 +40,6 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
   // Delayed mount for cold-boot protection. once session is "hot", we keep
   // the children mounted to preserve state during fast switches.
   const shouldRenderChildren = !isAppLockEnabled || hasUnlockedThisSession;
-
-  const handlePanicReset = () => {
-    requireRestart({ type: 'RESET' });
-  };
 
   return (
     <View style={[styles.root, { backgroundColor: theme.surface }]}>
@@ -113,11 +108,6 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
                     loading={isAuthenticating}
                   >
                     Unlock
-                  </AppButton>
-
-                  {/* ELITE ESCAPE HATCH: Emergency reset path for broken biometrics */}
-                  <AppButton onPress={handlePanicReset} variant="ghost" size="sm">
-                    Reset App
                   </AppButton>
                 </View>
               </View>
