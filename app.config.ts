@@ -107,6 +107,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-localization',
     './plugins/withTelephony',
     './plugins/withGradleOptimizations',
+    './plugins/withRemoveMediaPermissions',
     './plugins/withJournalLauncherWidget',
     [
       'expo-notifications',
