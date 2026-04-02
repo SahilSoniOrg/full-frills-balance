@@ -273,6 +273,8 @@ PODS:
   - ExpoRouter (55.0.8):
     - ExpoModulesCore
     - RNScreens
+  - ExpoScreenCapture (55.0.9):
+    - ExpoModulesCore
   - ExpoSharing (55.0.14):
     - ExpoModulesCore
   - ExpoSmsInbox (1.0.0):
@@ -2615,6 +2617,7 @@ DEPENDENCIES:
   - ExpoModulesJSI (from `../node_modules/expo-modules-core`)
   - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
+  - ExpoScreenCapture (from `../node_modules/expo-screen-capture/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
   - ExpoSmsInbox (from `../modules/expo-sms-inbox/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
@@ -2786,6 +2789,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-notifications/ios"
   ExpoRouter:
     :path: "../node_modules/expo-router/ios"
+  ExpoScreenCapture:
+    :path: "../node_modules/expo-screen-capture/ios"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
   ExpoSmsInbox:
@@ -3014,6 +3019,7 @@ SPEC CHECKSUMS:
   ExpoModulesJSI: 92db390c19eb21af69005d94f430793c7ca7aec7
   ExpoNotifications: 0e3b12306933444ca6030782eaa0b1b015ee3b42
   ExpoRouter: 3e3ecbfd6baf14fc1a5c17fe840645b2db7559c5
+  ExpoScreenCapture: 35fea6139d824fbdb1fd6003fdf2020420837749
   ExpoSharing: a706da94ade9646338a63bbaa4320d4f1db02c45
   ExpoSmsInbox: f1a0632313b77b4eb7f64bbd462c1d55d3892e41
   ExpoSplashScreen: ab4d4c72364d5f60ca91c5b44ce00ec65a8a5950

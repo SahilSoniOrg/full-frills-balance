@@ -8,7 +8,10 @@ import React from 'react';
 import { Platform } from 'react-native';
 
 // Use the types from the module
-import type { WidgetDataSnapshot, WidgetThemeSnapshot } from '@/modules/expo-widgets/src/ExpoWidgets.types';
+import type {
+  WidgetDataSnapshot,
+  WidgetThemeSnapshot,
+} from '@/modules/expo-widgets/src/ExpoWidgets.types';
 
 function clampChannel(value: number) {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -19,7 +22,7 @@ function normalizeHexColor(color: string) {
   if (sanitized.length === 3) {
     return `#${sanitized
       .split('')
-      .map((char) => char + char)
+      .map(char => char + char)
       .join('')
       .toUpperCase()}`;
   }
@@ -38,17 +41,9 @@ function parseHexColor(color: string) {
   };
 }
 
-function toHexColor({
-  r,
-  g,
-  b,
-}: {
-  r: number;
-  g: number;
-  b: number;
-}) {
+function toHexColor({ r, g, b }: { r: number; g: number; b: number }) {
   return `#${[r, g, b]
-    .map((channel) => clampChannel(channel).toString(16).padStart(2, '0'))
+    .map(channel => clampChannel(channel).toString(16).padStart(2, '0'))
     .join('')
     .toUpperCase()}`;
 }
@@ -68,12 +63,13 @@ function mixHexColors(base: string, overlay: string, overlayWeight: number) {
 function buildWidgetThemeSnapshot(
   themeId: string,
   themeMode: 'light' | 'dark',
-  theme: any // Using any for theme object for now to match RootLayout's usage, but ideally should be typed
+  theme: any, // Using any for theme object for now to match RootLayout's usage, but ideally should be typed
 ): WidgetThemeSnapshot {
   const backgroundStartColor = normalizeHexColor(theme.surface);
-  const backgroundEndColor = themeMode === 'dark'
-    ? mixHexColors(theme.surface, theme.primary, 0.22)
-    : mixHexColors(theme.surface, theme.primaryLight, 0.16);
+  const backgroundEndColor =
+    themeMode === 'dark'
+      ? mixHexColors(theme.surface, theme.primary, 0.22)
+      : mixHexColors(theme.surface, theme.primaryLight, 0.16);
 
   return {
     themeId,
@@ -86,21 +82,25 @@ function buildWidgetThemeSnapshot(
     actionIconColor: normalizeHexColor(theme.primary),
     incomeAccentColor: mixHexColors(theme.income, theme.pure, themeMode === 'dark' ? 0.28 : 0.82),
     expenseAccentColor: mixHexColors(theme.expense, theme.pure, themeMode === 'dark' ? 0.28 : 0.82),
-    transferAccentColor: mixHexColors(theme.transfer, theme.pure, themeMode === 'dark' ? 0.24 : 0.84),
+    transferAccentColor: mixHexColors(
+      theme.transfer,
+      theme.pure,
+      themeMode === 'dark' ? 0.24 : 0.84,
+    ),
   };
 }
 
 export function useWidgetSync() {
-  const { themeId, isWidgetPrivacyEnabled } = useUI();
+  const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked } = useUI();
   const { theme, themeMode } = useTheme();
   const { data: safeToSpendData } = useObservable(
     () => notificationService.observeSafeToSpend(),
     [],
-    null
+    null,
   );
 
   React.useEffect(() => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' || isAppCurrentlyLocked) {
       return;
     }
 

@@ -31,8 +31,9 @@ export const AppConfig = {
     debounceMs: 300, // Input debounce timing
     focusDelayMs: 100,
     toastDurationMs: 3000,
-    appLockGracePeriodMs: 2000,
+    appLockGracePeriodMs: 10000,
     appLockAuthTransitionMs: 500,
+    appLockFadeDurationMs: 400,
   },
 
   // Input constraints

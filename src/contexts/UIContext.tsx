@@ -1,6 +1,6 @@
 /**
  * UI Context - Simple UI state management
- * 
+ *
  * ========================================
  * HARD RULES FOR THIS CONTEXT:
  * ========================================
@@ -12,77 +12,107 @@
  * ========================================
  */
 
-import { AppConfig, FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants'
-import { logger } from '@/src/utils/logger'
-import { preferences } from '@/src/utils/preferences'
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { useColorScheme } from 'react-native'
+import { AppConfig, FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants';
+import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useColorScheme } from 'react-native';
 
 // Simple UI state only - no domain data
 interface UIState {
   // Onboarding state
-  hasCompletedOnboarding: boolean
+  hasCompletedOnboarding: boolean;
 
   // Theme preference
-  themePreference: 'light' | 'dark' | 'system'
-  themeId: ThemeId
-  fontId: FontId
+  themePreference: 'light' | 'dark' | 'system';
+  themeId: ThemeId;
+  fontId: FontId;
 
   // Simple UI flags
-  isLoading: boolean
-  isInitialized: boolean // Track if preferences are loaded
+  isLoading: boolean;
+  isInitialized: boolean; // Track if preferences are loaded
 
   // User details
-  userName: string
-  defaultCurrency: string
+  userName: string;
+  defaultCurrency: string;
 
   // Privacy
-  isPrivacyMode: boolean
-  isWidgetPrivacyEnabled: boolean
-  isAppLockEnabled: boolean
+  isPrivacyMode: boolean;
+  isWidgetPrivacyEnabled: boolean;
+  isAppLockEnabled: boolean;
+  isUnlocked: boolean; // App lock transient state
+  hasUnlockedThisSession: boolean; // Session transient state for cold boot protection
+  isAppActive: boolean; // Track OS AppState in global context
+  isLockAuthenticating: boolean; // Track if biometric prompt is visible
 
   // Account Display
-  showAccountMonthlyStats: boolean
+  showAccountMonthlyStats: boolean;
 
   // Advanced Mode
-  advancedMode: boolean
+  advancedMode: boolean;
 
   // App Lifecycle
-  isRestartRequired: boolean
-  restartType: 'IMPORT' | 'RESET' | null
-  importStats: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; plannedPayments?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } | null
-  archetype: string
-  notificationCadence: 'none' | 'daily' | 'weekly'
-  notificationHour: number
-  notificationMinute: number
-  notificationWeekday: number
+  isRestartRequired: boolean;
+  restartType: 'IMPORT' | 'RESET' | null;
+  importStats: {
+    accounts: number;
+    journals: number;
+    transactions: number;
+    budgets?: number;
+    auditLogs?: number;
+    plannedPayments?: number;
+    skippedTransactions: number;
+    skippedItems?: { id: string; reason: string; description?: string }[];
+  } | null;
+  archetype: string;
+  notificationCadence: 'none' | 'daily' | 'weekly';
+  notificationHour: number;
+  notificationMinute: number;
+  notificationWeekday: number;
 }
 
 interface UIContextType extends UIState {
-  // Computed value (not stored in state)
-  themeMode: 'light' | 'dark'
+  // Computed values
+  themeMode: 'light' | 'dark';
+  isAppCurrentlyLocked: boolean; // BULLETPROOF: blocking logic unified for UI and services
+
   // Actions for UI state only
-  completeOnboarding: (name: string, currency: string, archetype?: string) => Promise<void>
-  setThemePreference: (theme: 'light' | 'dark' | 'system') => Promise<void>
-  setThemeId: (themeId: ThemeId) => Promise<void>
-  setFontId: (fontId: FontId) => Promise<void>
-  updateUserDetails: (name: string, currency: string, archetype?: string) => Promise<void>
-  setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>
-  setWidgetPrivacyEnabled: (enabled: boolean) => Promise<void>
-  setAppLockEnabled: (enabled: boolean) => Promise<void>
-  setShowAccountMonthlyStats: (show: boolean) => Promise<void>
-  setArchetype: (archetype: string) => Promise<void>
-  setAdvancedMode: (advancedMode: boolean) => Promise<void>
-  setNotificationCadence: (cadence: 'none' | 'daily' | 'weekly') => Promise<void>
-  setNotificationTime: (hour: number, minute: number) => Promise<void>
-  setNotificationWeekday: (weekday: number) => Promise<void>
-  requireRestart: (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; plannedPayments?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => void
+  completeOnboarding: (name: string, currency: string, archetype?: string) => Promise<void>;
+  setThemePreference: (theme: 'light' | 'dark' | 'system') => Promise<void>;
+  setThemeId: (themeId: ThemeId) => Promise<void>;
+  setFontId: (fontId: FontId) => Promise<void>;
+  updateUserDetails: (name: string, currency: string, archetype?: string) => Promise<void>;
+  setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>;
+  setWidgetPrivacyEnabled: (enabled: boolean) => Promise<void>;
+  setAppLockEnabled: (enabled: boolean) => Promise<void>;
+  authenticateSession: (unlocked: boolean) => void;
+  setIsAppActive: (isActive: boolean) => void;
+  setIsLockAuthenticating: (isAuthenticating: boolean) => void;
+  setShowAccountMonthlyStats: (show: boolean) => Promise<void>;
+  setArchetype: (archetype: string) => Promise<void>;
+  setAdvancedMode: (advancedMode: boolean) => Promise<void>;
+  setNotificationCadence: (cadence: 'none' | 'daily' | 'weekly') => Promise<void>;
+  setNotificationTime: (hour: number, minute: number) => Promise<void>;
+  setNotificationWeekday: (weekday: number) => Promise<void>;
+  requireRestart: (options: {
+    type: 'IMPORT' | 'RESET';
+    stats?: {
+      accounts: number;
+      journals: number;
+      transactions: number;
+      budgets?: number;
+      auditLogs?: number;
+      plannedPayments?: number;
+      skippedTransactions: number;
+      skippedItems?: { id: string; reason: string; description?: string }[];
+    };
+  }) => void;
 }
 
-export const UIContext = createContext<UIContextType | undefined>(undefined)
+export const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
-  const systemColorScheme = useColorScheme()
+  const systemColorScheme = useColorScheme();
 
   const [uiState, setUIState] = useState<UIState>({
     hasCompletedOnboarding: false,
@@ -96,6 +126,10 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     isPrivacyMode: false,
     isWidgetPrivacyEnabled: false,
     isAppLockEnabled: false,
+    isUnlocked: false,
+    hasUnlockedThisSession: false,
+    isAppActive: true, // Default to true on boot
+    isLockAuthenticating: false, // Default to false
     showAccountMonthlyStats: true,
     advancedMode: false,
     isRestartRequired: false,
@@ -106,22 +140,21 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     notificationHour: 10,
     notificationMinute: 0,
     notificationWeekday: 1,
-  })
-
-  // ... (themeMode calculation remains same)
+  });
 
   // Load preferences on mount
   useEffect(() => {
     const loadPreferences = async () => {
       try {
-        setUIState(prev => ({ ...prev, isLoading: true }))
+        setUIState(prev => ({ ...prev, isLoading: true }));
 
-        const loadedPreferences = await preferences.loadPreferences()
-        const themePreference = loadedPreferences.theme || 'system'
-        const themeId = loadedPreferences.themeId || ThemeIds.DEEP_SPACE
-        const fontId = loadedPreferences.fontId || FontIds.DEEP_SPACE
+        const loadedPreferences = await preferences.loadPreferences();
+        const themePreference = loadedPreferences.theme || 'system';
+        const themeId = loadedPreferences.themeId || ThemeIds.DEEP_SPACE;
+        const fontId = loadedPreferences.fontId || ThemeIds.DEEP_SPACE;
 
-        setUIState({
+        setUIState(prev => ({
+          ...prev,
           hasCompletedOnboarding: loadedPreferences.onboardingCompleted,
           themePreference,
           themeId,
@@ -143,186 +176,248 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           notificationHour: loadedPreferences.notificationHour ?? 10,
           notificationMinute: loadedPreferences.notificationMinute ?? 0,
           notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
-        })
-
+        }));
       } catch (error) {
-        logger.warn('Failed to load preferences', { error })
-        setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true })) // Ensure initialized even on cleanup errors
+        logger.warn('Failed to load preferences', { error });
+        setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true }));
       }
-    }
+    };
 
-    loadPreferences()
-  }, [systemColorScheme])
+    loadPreferences();
+  }, []);
 
-  const completeOnboarding = useCallback(async (name: string, currency: string, archetype?: string) => {
-    try {
-      await preferences.setUserName(name)
-      await preferences.setDefaultCurrencyCode(currency)
-      if (archetype) await preferences.setArchetype(archetype)
-      await preferences.setOnboardingCompleted(true)
-      setUIState(prev => ({
-        ...prev,
-        hasCompletedOnboarding: true,
-        userName: name,
-        defaultCurrency: currency,
-        archetype: archetype || prev.archetype
-      }))
-    } catch (error) {
-      logger.warn('Failed to save onboarding state', { error })
-      // Still update local state for better UX
-      setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }))
-    }
-  }, [])
+  const completeOnboarding = useCallback(
+    async (name: string, currency: string, archetype?: string) => {
+      try {
+        await preferences.setUserName(name);
+        await preferences.setDefaultCurrencyCode(currency);
+        if (archetype) await preferences.setArchetype(archetype);
+        await preferences.setOnboardingCompleted(true);
+        setUIState(prev => ({
+          ...prev,
+          hasCompletedOnboarding: true,
+          userName: name,
+          defaultCurrency: currency,
+          archetype: archetype || prev.archetype,
+        }));
+      } catch (error) {
+        logger.warn('Failed to save onboarding state', { error });
+        setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }));
+      }
+    },
+    [],
+  );
 
-  const updateUserDetails = useCallback(async (name: string, currency: string, archetype?: string) => {
-    try {
-      if (name) await preferences.setUserName(name)
-      if (currency) await preferences.setDefaultCurrencyCode(currency)
-      if (archetype) await preferences.setArchetype(archetype)
-      setUIState(prev => ({
-        ...prev,
-        userName: name || prev.userName,
-        defaultCurrency: currency || prev.defaultCurrency,
-        archetype: archetype || prev.archetype
-      }))
-    } catch (error) {
-      logger.warn('Failed to update user details', { error })
-    }
-  }, [])
+  const updateUserDetails = useCallback(
+    async (name: string, currency: string, archetype?: string) => {
+      try {
+        if (name) await preferences.setUserName(name);
+        if (currency) await preferences.setDefaultCurrencyCode(currency);
+        if (archetype) await preferences.setArchetype(archetype);
+        setUIState(prev => ({
+          ...prev,
+          userName: name || prev.userName,
+          defaultCurrency: currency || prev.defaultCurrency,
+          archetype: archetype || prev.archetype,
+        }));
+      } catch (error) {
+        logger.warn('Failed to update user details', { error });
+      }
+    },
+    [],
+  );
 
   const setThemePreference = useCallback(async (theme: 'light' | 'dark' | 'system') => {
     try {
-      await preferences.setTheme(theme)
-      setUIState(prev => ({ ...prev, themePreference: theme }))
+      await preferences.setTheme(theme);
+      setUIState(prev => ({ ...prev, themePreference: theme }));
     } catch (error) {
-      logger.warn('Failed to save theme preference', { error })
-      // Still update local state for better UX
-      setUIState(prev => ({ ...prev, themePreference: theme }))
+      logger.warn('Failed to save theme preference', { error });
+      setUIState(prev => ({ ...prev, themePreference: theme }));
     }
-  }, [])
+  }, []);
 
   const setThemeId = useCallback(async (themeId: ThemeId) => {
     try {
-      await preferences.setThemeId(themeId)
-      setUIState(prev => ({ ...prev, themeId }))
+      await preferences.setThemeId(themeId);
+      setUIState(prev => ({ ...prev, themeId }));
     } catch (error) {
-      logger.warn('Failed to save theme ID', { error })
-      setUIState(prev => ({ ...prev, themeId }))
+      logger.warn('Failed to save theme ID', { error });
+      setUIState(prev => ({ ...prev, themeId }));
     }
-  }, [])
+  }, []);
 
   const setFontId = useCallback(async (fontId: FontId) => {
     try {
-      await preferences.setFontId(fontId)
-      setUIState(prev => ({ ...prev, fontId }))
+      await preferences.setFontId(fontId);
+      setUIState(prev => ({ ...prev, fontId }));
     } catch (error) {
-      logger.warn('Failed to save font ID', { error })
-      setUIState(prev => ({ ...prev, fontId }))
+      logger.warn('Failed to save font ID', { error });
+      setUIState(prev => ({ ...prev, fontId }));
     }
-  }, [])
+  }, []);
 
   const setPrivacyMode = useCallback(async (isPrivacyMode: boolean) => {
     try {
-      await preferences.setIsPrivacyMode(isPrivacyMode)
-      setUIState(prev => ({ ...prev, isPrivacyMode }))
+      await preferences.setIsPrivacyMode(isPrivacyMode);
+      setUIState(prev => ({ ...prev, isPrivacyMode }));
     } catch (error) {
-      logger.warn('Failed to save privacy mode', { error })
-      setUIState(prev => ({ ...prev, isPrivacyMode }))
+      logger.warn('Failed to save privacy mode', { error });
+      setUIState(prev => ({ ...prev, isPrivacyMode }));
     }
-  }, [])
+  }, []);
 
   const setWidgetPrivacyEnabled = useCallback(async (isWidgetPrivacyEnabled: boolean) => {
     try {
-      await preferences.setIsWidgetPrivacyEnabled(isWidgetPrivacyEnabled)
-      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }))
+      await preferences.setIsWidgetPrivacyEnabled(isWidgetPrivacyEnabled);
+      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }));
     } catch (error) {
-      logger.warn('Failed to save widget privacy mode', { error })
-      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }))
+      logger.warn('Failed to save widget privacy mode', { error });
+      setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }));
     }
-  }, [])
+  }, []);
 
   const setAppLockEnabled = useCallback(async (isAppLockEnabled: boolean) => {
     try {
-      await preferences.setAppLockEnabled(isAppLockEnabled)
-      setUIState(prev => ({ ...prev, isAppLockEnabled }))
+      await preferences.setAppLockEnabled(isAppLockEnabled);
+      setUIState(prev => ({ ...prev, isAppLockEnabled }));
     } catch (error) {
-      logger.warn('Failed to save app lock preference', { error })
-      setUIState(prev => ({ ...prev, isAppLockEnabled }))
+      logger.warn('Failed to save app lock preference', { error });
+      setUIState(prev => ({ ...prev, isAppLockEnabled }));
     }
-  }, [])
+  }, []);
+
+  // Atomic Auth Action: ensuring consistency between unlock state and session access.
+  const authenticateSession = useCallback((isUnlocked: boolean) => {
+    setUIState(prev => ({
+      ...prev,
+      isUnlocked,
+      // Binding them together at the source as per hardened review.
+      hasUnlockedThisSession: isUnlocked || prev.hasUnlockedThisSession,
+    }));
+  }, []);
+
+  const setIsAppActive = useCallback((isAppActive: boolean) => {
+    setUIState(prev => ({ ...prev, isAppActive }));
+  }, []);
+
+  const setIsLockAuthenticating = useCallback((isLockAuthenticating: boolean) => {
+    setUIState(prev => ({ ...prev, isLockAuthenticating }));
+  }, []);
 
   const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
     try {
-      await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats)
-      setUIState(prev => ({ ...prev, showAccountMonthlyStats }))
+      await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats);
+      setUIState(prev => ({ ...prev, showAccountMonthlyStats }));
     } catch (error) {
-      logger.warn('Failed to save account stats preference', { error })
-      setUIState(prev => ({ ...prev, showAccountMonthlyStats }))
+      logger.warn('Failed to save account stats preference', { error });
+      setUIState(prev => ({ ...prev, showAccountMonthlyStats }));
     }
-  }, [])
+  }, []);
 
   const setArchetype = useCallback(async (archetype: string) => {
     try {
-      await preferences.setArchetype(archetype)
-      setUIState(prev => ({ ...prev, archetype }))
+      await preferences.setArchetype(archetype);
+      setUIState(prev => ({ ...prev, archetype }));
     } catch (error) {
-      logger.warn('Failed to save archetype', { error })
-      setUIState(prev => ({ ...prev, archetype }))
+      logger.warn('Failed to save archetype', { error });
+      setUIState(prev => ({ ...prev, archetype }));
     }
-  }, [])
+  }, []);
 
   const setAdvancedMode = useCallback(async (advancedMode: boolean) => {
     try {
-      await preferences.setAdvancedMode(advancedMode)
-      setUIState(prev => ({ ...prev, advancedMode }))
+      await preferences.setAdvancedMode(advancedMode);
+      setUIState(prev => ({ ...prev, advancedMode }));
     } catch (error) {
-      logger.warn('Failed to save advanced mode', { error })
-      setUIState(prev => ({ ...prev, advancedMode }))
+      logger.warn('Failed to save advanced mode', { error });
+      setUIState(prev => ({ ...prev, advancedMode }));
     }
-  }, [])
+  }, []);
 
   const setNotificationCadence = useCallback(async (cadence: 'none' | 'daily' | 'weekly') => {
     try {
-      await preferences.setNotificationCadence(cadence)
-      setUIState(prev => ({ ...prev, notificationCadence: cadence }))
+      await preferences.setNotificationCadence(cadence);
+      setUIState(prev => ({ ...prev, notificationCadence: cadence }));
     } catch (error) {
-      logger.warn('Failed to save notification cadence', { error })
-      setUIState(prev => ({ ...prev, notificationCadence: cadence }))
+      logger.warn('Failed to save notification cadence', { error });
+      setUIState(prev => ({ ...prev, notificationCadence: cadence }));
     }
-  }, [])
+  }, []);
 
   const setNotificationTime = useCallback(async (hour: number, minute: number) => {
     try {
-      await preferences.setNotificationHour(hour)
-      await preferences.setNotificationMinute(minute)
-      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }))
+      await preferences.setNotificationHour(hour);
+      await preferences.setNotificationMinute(minute);
+      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }));
     } catch (error) {
-      logger.warn('Failed to save notification time', { error })
-      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }))
+      logger.warn('Failed to save notification time', { error });
+      setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }));
     }
-  }, [])
+  }, []);
 
   const setNotificationWeekday = useCallback(async (weekday: number) => {
     try {
-      await preferences.setNotificationWeekday(weekday)
-      setUIState(prev => ({ ...prev, notificationWeekday: weekday }))
+      await preferences.setNotificationWeekday(weekday);
+      setUIState(prev => ({ ...prev, notificationWeekday: weekday }));
     } catch (error) {
-      logger.warn('Failed to save notification weekday', { error })
-      setUIState(prev => ({ ...prev, notificationWeekday: weekday }))
+      logger.warn('Failed to save notification weekday', { error });
+      setUIState(prev => ({ ...prev, notificationWeekday: weekday }));
     }
-  }, [])
+  }, []);
 
-  const requireRestart = (options: { type: 'IMPORT' | 'RESET'; stats?: { accounts: number; journals: number; transactions: number; budgets?: number; auditLogs?: number; plannedPayments?: number; skippedTransactions: number; skippedItems?: { id: string; reason: string; description?: string }[] } }) => {
-    setUIState(prev => ({ ...prev, isRestartRequired: true, restartType: options.type, importStats: options.stats || null }))
-  }
+  const requireRestart = (options: {
+    type: 'IMPORT' | 'RESET';
+    stats?: {
+      accounts: number;
+      journals: number;
+      transactions: number;
+      budgets?: number;
+      auditLogs?: number;
+      plannedPayments?: number;
+      skippedTransactions: number;
+      skippedItems?: { id: string; reason: string; description?: string }[];
+    };
+  }) => {
+    setUIState(prev => ({
+      ...prev,
+      isRestartRequired: true,
+      restartType: options.type,
+      importStats: options.stats || null,
+    }));
+  };
 
   const value: UIContextType = {
     ...uiState,
     themeMode: useMemo(() => {
       return uiState.themePreference === 'system'
-        ? (systemColorScheme === 'dark' ? 'dark' : 'light')
-        : uiState.themePreference
+        ? systemColorScheme === 'dark'
+          ? 'dark'
+          : 'light'
+        : uiState.themePreference;
     }, [uiState.themePreference, systemColorScheme]),
+
+    /**
+     * BULLETPROOF LOCK TRUTH:
+     * App is locked IF lock is enabled AND (
+     *   1. It's not unlocked (unauthorized)
+     *   OR
+     *   2. The app is inactive/backgrounded AND we are NOT currently authenticating (switcher protection)
+     * )
+     *
+     * Adding 'isLockAuthenticating' check prevents "stuck on lock" on iOS when FaceID prompt
+     * makes the app 'inactive'.
+     */
+    isAppCurrentlyLocked: useMemo(() => {
+      const isActuallyBackgrounded = !uiState.isAppActive && !uiState.isLockAuthenticating;
+      return uiState.isAppLockEnabled && (!uiState.isUnlocked || isActuallyBackgrounded);
+    }, [
+      uiState.isAppLockEnabled,
+      uiState.isUnlocked,
+      uiState.isAppActive,
+      uiState.isLockAuthenticating,
+    ]),
+
     completeOnboarding,
     setThemePreference,
     setThemeId,
@@ -331,6 +426,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setPrivacyMode,
     setWidgetPrivacyEnabled,
     setAppLockEnabled,
+    authenticateSession,
+    setIsAppActive,
+    setIsLockAuthenticating,
     setShowAccountMonthlyStats,
     setArchetype,
     setAdvancedMode,
@@ -338,26 +436,26 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setNotificationTime,
     setNotificationWeekday,
     requireRestart,
-  }
+  };
 
-  return <UIContext.Provider value={value}>{children}</UIContext.Provider>
+  return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }
 
 // Support for local theme overrides (e.g. Design Preview)
-const ThemeOverrideContext = createContext<ThemeMode | undefined>(undefined)
+const ThemeOverrideContext = createContext<ThemeMode | undefined>(undefined);
 
 export function ThemeOverride({ mode, children }: { mode: ThemeMode; children: React.ReactNode }) {
-  return <ThemeOverrideContext.Provider value={mode}>{children}</ThemeOverrideContext.Provider>
+  return <ThemeOverrideContext.Provider value={mode}>{children}</ThemeOverrideContext.Provider>;
 }
 
 export function useThemeOverride() {
-  return useContext(ThemeOverrideContext)
+  return useContext(ThemeOverrideContext);
 }
 
 export function useUI() {
-  const context = useContext(UIContext)
+  const context = useContext(UIContext);
   if (context === undefined) {
-    throw new Error('useUI must be used within a UIProvider')
+    throw new Error('useUI must be used within a UIProvider');
   }
-  return context
+  return context;
 }

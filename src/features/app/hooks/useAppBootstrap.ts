@@ -6,6 +6,7 @@ import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { smsService } from '@/src/services/sms-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { useUI } from '@/src/contexts/UIContext';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
@@ -13,7 +14,11 @@ import { Platform } from 'react-native';
  * Bootstraps app-wide side effects that must not live in UI context.
  */
 export function useAppBootstrap() {
+  const { isAppCurrentlyLocked } = useUI();
+
   useEffect(() => {
+    if (isAppCurrentlyLocked) return;
+
     let isActive = true;
 
     const bootstrap = async () => {
@@ -87,5 +92,5 @@ export function useAppBootstrap() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [isAppCurrentlyLocked]);
 }
