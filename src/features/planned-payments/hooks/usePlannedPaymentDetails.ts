@@ -4,77 +4,115 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { useJournals } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 import { of } from 'rxjs';
 
 export function usePlannedPaymentDetails(id: string) {
-    const { data: item, isLoading: isItemLoading } = useObservable<PlannedPayment | null>(
-        () => id ? plannedPaymentRepository.observeById(id) : of(null),
-        [id],
-        null
-    );
+  const { data: item, isLoading: isItemLoading } = useObservable<PlannedPayment | null>(
+    () => (id ? plannedPaymentRepository.observeById(id) : of(null)),
+    [id],
+    null,
+  );
 
-    // Fetch history (linked journals)
-    // We use a separate status filter to show both POSTED (past) and PLANNED (future generated) journals
-    const { journals: history, isLoading: isHistoryLoading } = useJournals(
-        20,
-        undefined,
-        undefined,
-        [JournalStatus.POSTED, JournalStatus.PLANNED, JournalStatus.SKIPPED],
-        id
-    );
+  // Fetch history (linked journals)
+  // We use a separate status filter to show both POSTED (past) and PLANNED (future generated) journals
+  const { journals: history, isLoading: isHistoryLoading } = useJournals(
+    20,
+    undefined,
+    undefined,
+    [JournalStatus.POSTED, JournalStatus.PLANNED, JournalStatus.SKIPPED],
+    id,
+  );
 
-    const handleEdit = useCallback(() => {
-        if (id) {
-            AppNavigation.toPlannedPaymentForm(id, item ? {
-                description: item.name,
-                amount: item.amount,
-                currency: item.currencyCode,
-            } : undefined);
-        }
-    }, [id, item]);
+  const handleEdit = useCallback(() => {
+    if (id) {
+      AppNavigation.toPlannedPaymentForm(
+        id,
+        item
+          ? {
+              description: item.name,
+              amount: item.amount,
+              currency: item.currencyCode,
+            }
+          : undefined,
+      );
+    }
+  }, [id, item]);
 
-    const handleToggleStatus = useCallback(async () => {
-        if (!item) return;
-        const newStatus = item.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-        await plannedPaymentRepository.update(item as any, { status: newStatus as any });
-    }, [item]);
+  const handleToggleStatus = useCallback(async () => {
+    if (!item) return;
+    const newStatus = item.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    await plannedPaymentRepository.update(item as any, { status: newStatus as any });
 
-    const handleDelete = useCallback(async () => {
-        if (!item) return;
-        await plannedPaymentRepository.delete(item as any);
-        AppNavigation.back();
-    }, [item]);
+    // Track Analytics
+    analytics.trackFeatureUsage('planned_payment', 'toggle_status', {
+      payment_id: item.id,
+      new_status: newStatus,
+      previous_status: item.status,
+    });
+  }, [item]);
 
-    const handlePostNow = useCallback(async () => {
-        if (!item) return;
-        try {
-            await plannedPaymentService.postOccurrence(item as any, item.nextOccurrence);
-            AppNavigation.back();
-        } catch {
-            // Error logged in service
-        }
-    }, [item]);
+  const handleDelete = useCallback(async () => {
+    if (!item) return;
+    await plannedPaymentRepository.delete(item as any);
 
-    const handleSkip = useCallback(async () => {
-        if (!item) return;
-        try {
-            await plannedPaymentService.skipOccurrence(item as any, item.nextOccurrence);
-            AppNavigation.back();
-        } catch {
-            // Error logged in service
-        }
-    }, [item]);
+    // Track Analytics
+    analytics.trackFeatureUsage('planned_payment', 'delete', {
+      payment_id: item.id,
+      payment_name: item.name,
+      amount: item.amount,
+    });
 
-    return {
-        item,
-        history,
-        isLoading: isItemLoading || isHistoryLoading,
-        handleEdit,
-        handleToggleStatus,
-        handleDelete,
-        handlePostNow,
-        handleSkip,
-    };
+    AppNavigation.back();
+  }, [item]);
+
+  const handlePostNow = useCallback(async () => {
+    if (!item) return;
+    try {
+      await plannedPaymentService.postOccurrence(item as any, item.nextOccurrence);
+
+      // Track Analytics
+      analytics.trackFeatureUsage('planned_payment', 'post_now', {
+        payment_id: item.id,
+        amount: item.amount,
+        currency: item.currencyCode,
+        next_occurrence: item.nextOccurrence,
+      });
+
+      AppNavigation.back();
+    } catch {
+      // Error logged in service
+    }
+  }, [item]);
+
+  const handleSkip = useCallback(async () => {
+    if (!item) return;
+    try {
+      await plannedPaymentService.skipOccurrence(item as any, item.nextOccurrence);
+
+      // Track Analytics
+      analytics.trackFeatureUsage('planned_payment', 'skip', {
+        payment_id: item.id,
+        amount: item.amount,
+        next_occurrence: item.nextOccurrence,
+      });
+
+      AppNavigation.back();
+    } catch {
+      // Error logged in service
+    }
+  }, [item]);
+
+  return {
+    item,
+    history,
+    isLoading: isItemLoading || isHistoryLoading,
+    handleEdit,
+    handleToggleStatus,
+    handleDelete,
+    handlePostNow,
+    handleSkip,
+  };
 }

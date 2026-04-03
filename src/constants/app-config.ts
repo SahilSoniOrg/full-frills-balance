@@ -64,7 +64,7 @@ export const AppConfig = {
 
   // Feature toggles
   features: {
-    enableAnalytics: false, // Analytics collection
+    enableAnalytics: true, // Analytics collection
     enableDebugMode: false, // Debug logging
     enableExperimentalFeatures: false,
     debug: {

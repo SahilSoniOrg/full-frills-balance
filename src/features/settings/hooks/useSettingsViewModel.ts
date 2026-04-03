@@ -2,10 +2,11 @@ import { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
+import { analytics } from '@/src/services/analytics-service';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import * as LocalAuthentication from '@/src/utils/auth';
-import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
+import { AppNavigation } from '@/src/utils/navigation';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
@@ -84,6 +85,11 @@ export function useSettingsViewModel(): SettingsViewModel {
     (newName: string) => {
       if (newName.trim() && newName !== userName) {
         updateUserDetails(newName.trim(), ui.defaultCurrency, ui.archetype);
+
+        // Track Analytics
+        analytics.trackFeatureUsage('settings', 'change_name', {
+          name_length: newName.trim().length,
+        });
       }
     },
     [ui.defaultCurrency, ui.archetype, updateUserDetails, userName],
@@ -108,6 +114,13 @@ export function useSettingsViewModel(): SettingsViewModel {
       const filename = sanitizedName
         ? `${sanitizedName}-${timestamp}.json`
         : `balance-export-${timestamp}.json`;
+
+      // Track Analytics
+      analytics.trackFeatureUsage('settings', 'export_data', {
+        has_custom_filename: !!sanitizedName,
+        filename_length: sanitizedName.length,
+        data_size_bytes: jsonData.length,
+      });
 
       if (Platform.OS === 'web') {
         const blob = new Blob([jsonData], { type: 'application/json' });
@@ -191,6 +204,13 @@ export function useSettingsViewModel(): SettingsViewModel {
         title: 'Integrity Check Complete',
         message: `Checked ${result.totalAccounts} accounts.\nFound ${result.discrepanciesFound} issues.\nRepaired ${result.repairsSuccessful} successfully.`,
       });
+
+      // Track Analytics
+      analytics.trackFeatureUsage('settings', 'integrity_check', {
+        accounts_checked: result.totalAccounts,
+        issues_found: result.discrepanciesFound,
+        repairs_successful: result.repairsSuccessful,
+      });
     } catch (error) {
       setIsMaintenanceMode(false);
       logger.error('[onFixIntegrity] Check failed', error);
@@ -212,6 +232,11 @@ export function useSettingsViewModel(): SettingsViewModel {
           alert.show({
             title: 'Cleanup Complete',
             message: `Permanently removed ${result.deletedCount} synced records.`,
+          });
+
+          // Track Analytics
+          analytics.trackFeatureUsage('settings', 'cleanup_database', {
+            records_removed: result.deletedCount,
           });
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
@@ -300,19 +325,49 @@ export function useSettingsViewModel(): SettingsViewModel {
     userName,
     setUserName,
     themePreference,
-    setThemePreference,
+    setThemePreference: (value: 'system' | 'light' | 'dark') => {
+      setThemePreference(value);
+      analytics.trackFeatureUsage('settings', 'change_theme_preference', {
+        preference: value,
+      });
+    },
     themeId: ui.themeId,
-    setThemeId: ui.setThemeId,
+    setThemeId: (value: ThemeId) => {
+      ui.setThemeId(value);
+      analytics.trackFeatureUsage('settings', 'change_theme', {
+        theme_id: value,
+      });
+    },
     fontId: ui.fontId,
-    setFontId: ui.setFontId,
+    setFontId: (value: FontId) => {
+      ui.setFontId(value);
+      analytics.trackFeatureUsage('settings', 'change_font', {
+        font_id: value,
+      });
+    },
     isPrivacyMode,
-    onTogglePrivacy: () => setPrivacyMode(!isPrivacyMode),
+    onTogglePrivacy: () => {
+      setPrivacyMode(!isPrivacyMode);
+      analytics.trackFeatureUsage('settings', 'toggle_privacy_mode', {
+        new_state: !isPrivacyMode,
+      });
+    },
     isAppLockEnabled,
     onToggleAppLock,
     showAccountMonthlyStats,
-    onToggleAccountMonthlyStats: () => setShowAccountMonthlyStats(!showAccountMonthlyStats),
+    onToggleAccountMonthlyStats: () => {
+      setShowAccountMonthlyStats(!showAccountMonthlyStats);
+      analytics.trackFeatureUsage('settings', 'toggle_monthly_stats', {
+        new_state: !showAccountMonthlyStats,
+      });
+    },
     isWidgetPrivacyEnabled,
-    onToggleWidgetPrivacy: () => setWidgetPrivacyEnabled(!isWidgetPrivacyEnabled),
+    onToggleWidgetPrivacy: () => {
+      setWidgetPrivacyEnabled(!isWidgetPrivacyEnabled);
+      analytics.trackFeatureUsage('settings', 'toggle_widget_privacy', {
+        new_state: !isWidgetPrivacyEnabled,
+      });
+    },
     isExporting,
     isImporting: isImportingData,
     isMaintenanceMode,

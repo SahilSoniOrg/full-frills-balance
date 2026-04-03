@@ -27,15 +27,68 @@ function PostHogScreenTracker() {
 
   React.useEffect(() => {
     if (pathname) {
-      // Screen name can be the pathname or a more descriptive string from segments
+      // Enhanced screen name extraction
       const screenName = segments.join('/') || 'index';
+      const screenType = getScreenType(screenName);
+      const flowContext = getFlowContext(screenName);
+
+      // Track screen view with enhanced context
       analytics.screen(screenName, {
         pathname,
+        screen_type: screenType,
+        flow_context: flowContext || 'none',
+        segment_count: segments.length,
+        is_modal: isModalScreen(screenName),
       });
+
+      // Update activity for session tracking
+      analytics.updateActivity();
+
+      // Track user flow progression
+      if (flowContext) {
+        analytics.trackUserInteraction('screen_view', {
+          screen: screenName,
+          flow: flowContext,
+          type: screenType,
+        });
+      }
     }
   }, [pathname, segments]);
 
   return null;
+}
+
+// Helper functions for screen classification
+function getScreenType(screenName: string): string {
+  if (screenName.includes('onboarding')) return 'onboarding';
+  if (screenName.includes('journal') || screenName.includes('transaction')) return 'transaction';
+  if (screenName.includes('account')) return 'account';
+  if (screenName.includes('settings')) return 'settings';
+  if (screenName.includes('import') || screenName.includes('export')) return 'data_management';
+  if (screenName === 'index' || screenName === '(tabs)') return 'main';
+  return 'other';
+}
+
+function getFlowContext(screenName: string): string | null {
+  if (screenName.includes('onboarding')) return 'user_setup';
+  if (screenName.includes('journal-entry')) return 'transaction_creation';
+  if (screenName.includes('account-creation')) return 'account_setup';
+  if (screenName.includes('import-selection')) return 'data_import';
+  if (screenName.includes('audit-log')) return 'data_review';
+  if (screenName.includes('appearance-settings')) return 'personalization';
+  return null;
+}
+
+function isModalScreen(screenName: string): boolean {
+  const modalScreens = [
+    'journal-entry',
+    'account-creation',
+    'onboarding',
+    'account-reorder',
+    'manage-hierarchy',
+    'appearance-settings',
+  ];
+  return modalScreens.some(modal => screenName.includes(modal));
 }
 
 export default function RootLayout() {
