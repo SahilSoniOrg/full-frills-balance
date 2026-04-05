@@ -1,8 +1,7 @@
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
-import { Money } from '@/src/utils/money';
+
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository');
@@ -16,50 +15,23 @@ jest.mock('@/src/utils/logger', () => ({
 
 describe('CashFlowSimulationService', () => {
   beforeEach(() => {
+    jest.resetModules();
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-03-08T00:00:00.000Z'));
+
+    // Re-import mocks and service after resetModules
+    const { transactionRepository } = require('@/src/data/repositories/TransactionRepository');
+    const {
+      transactionRawRepository,
+    } = require('@/src/data/repositories/TransactionRawRepository');
+
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
   });
 
   afterEach(() => {
     jest.useRealTimers();
-  });
-
-  it('uses only the credit card statement due in the window for safe-to-spend', async () => {
-    const creditCard = {
-      id: 'cc-1',
-      name: 'Primary Card',
-      accountType: AccountType.LIABILITY,
-      accountSubtype: AccountSubtype.CREDIT_CARD,
-      metadataRecords: {
-        fetch: jest.fn().mockResolvedValue([{ statementDay: 5, dueDay: 20 }]),
-      },
-    } as unknown as Account;
-
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
-      new Map([[creditCard.id, -250]]),
-    );
-
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
-      Money.from(1000, 'USD'),
-      [],
-      [],
-      ['cash-1'],
-      [{ account: creditCard, balance: Money.from(400, 'USD') }],
-      [],
-      [],
-      [],
-      [],
-      'USD',
-    );
-
-    expect(result.totalLiabilities).toBe(400);
-    expect(result.committedLiabilities).toBe(250);
-    expect(result.committedLiabilitiesCC).toBe(250);
-    expect(result.totalLiabilitiesCC).toBe(400);
-    expect(result.safeToSpend).toBe(750);
   });
 
   it('correctly commits statement balance when today is before the due date', async () => {
@@ -87,11 +59,11 @@ describe('CashFlowSimulationService', () => {
     });
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      Money.from(2000, 'USD'),
+      2000,
       [],
       [],
       ['cash-1'],
-      [{ account: creditCard, balance: Money.from(1000, 'USD') }],
+      [{ account: creditCard, balance: 1000 }],
       [],
       [],
       [],
@@ -100,13 +72,44 @@ describe('CashFlowSimulationService', () => {
     );
 
     // Expected: $600 is due on March 5th (since today is March 2nd and Due is 5th).
-    // Current code would likely set targetDueDate to April 5th because today (2) <= statementDay (15).
-    // And it would use the current balance (1000) instead of statement balance (600).
+    expect(result.breakdowns.liabilities.committedCreditCard).toBe(600);
+    expect(result).toMatchSnapshot();
+  });
 
-    expect(result.committedLiabilitiesCC).toBe(600);
-    // The remaining 400 would be due on April 5th (beyond simulation window if it's 30 days, but let's check committed)
-    // Wait, simulation window is 30 days. March 2 + 30 days = April 1.
-    // April 5 is outside. So only the 600 should be committed.
+  it('uses only the credit card statement due in the window for safe-to-spend', async () => {
+    const creditCard = {
+      id: 'cc-1',
+      name: 'Primary Card',
+      accountType: AccountType.LIABILITY,
+      accountSubtype: AccountSubtype.CREDIT_CARD,
+      metadataRecords: {
+        fetch: jest.fn().mockResolvedValue([{ statementDay: 5, dueDay: 20 }]),
+      },
+    } as unknown as Account;
+
+    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+      new Map([[creditCard.id, -250]]),
+    );
+
+    const result = await cashFlowSimulationService.simulateSafeToSpend(
+      1000,
+      [],
+      [],
+      ['cash-1'],
+      [{ account: creditCard, balance: 400 }],
+      [],
+      [],
+      [],
+      [],
+      'USD',
+    );
+
+    expect(result.breakdowns.liabilities.total).toBe(400);
+    expect(result.breakdowns.liabilities.committed).toBe(250);
+    expect(result.breakdowns.liabilities.committedCreditCard).toBe(250);
+    expect(result.breakdowns.liabilities.totalCreditCard).toBe(400);
+    expect(result.summary.safeToSpend).toBe(750);
+    expect(result).toMatchSnapshot();
   });
 
   it('tracks manual liability payments as commitments without subtracting the whole balance twice', async () => {
@@ -133,23 +136,32 @@ describe('CashFlowSimulationService', () => {
     };
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      Money.from(1000, 'USD'),
+      1000,
       [plannedPayment as any],
       [],
       ['cash-1'],
-      [{ account: creditCard, balance: Money.from(400, 'USD') }],
+      [{ account: creditCard, balance: 400 }],
       [],
       [],
       [],
       [],
       'USD',
     );
-
-    expect(result.totalLiabilities).toBe(400);
-    expect(result.committedLiabilities).toBe(300);
-    expect(result.committedLiabilitiesCC).toBe(300);
-    expect(result.safeToSpend).toBe(1000); // 1000 - 0 (internal transfer)
+    expect(result.breakdowns.liabilities.total).toBe(400);
+    expect(result.breakdowns.liabilities.committed).toBe(0);
+    expect(result.breakdowns.liabilities.committedCreditCard).toBe(0);
+    expect(result.breakdowns.committed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          amount: 300,
+          accountId: creditCard.id,
+        }),
+      ]),
+    );
+    expect(result.summary.safeToSpend).toBe(1000); // 1000 - 0 (internal transfer)
+    expect(result).toMatchSnapshot();
   });
+
   it('treats planned income to a liability account as an inflow', async () => {
     const creditCard = {
       id: 'cc-1',
@@ -178,11 +190,11 @@ describe('CashFlowSimulationService', () => {
     );
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      Money.from(1000, 'USD'),
+      1000,
       [plannedIncome as any],
       [],
       ['cash-1'],
-      [{ account: creditCard, balance: Money.from(400, 'USD') }],
+      [{ account: creditCard, balance: 400 }],
       [],
       [],
       [],
@@ -190,8 +202,9 @@ describe('CashFlowSimulationService', () => {
       'USD',
     );
 
-    expect(result.totalFutureInflow).toBe(500);
-    expect(result.safeToSpend).toBe(1000); // 1000 (starting balance) is the floor, income only raises it above
+    expect(result.summary.totalFutureInflow).toBe(500);
+    expect(result.summary.safeToSpend).toBe(1000); // 1000 (starting balance) is the floor, income only raises it above
+    expect(result).toMatchSnapshot();
   });
 
   it('does not include future income in safe-to-spend (conservative logic)', async () => {
@@ -220,7 +233,7 @@ describe('CashFlowSimulationService', () => {
     };
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      Money.from(1000, 'USD'),
+      1000,
       [plannedIncome as any, plannedExpense as any],
       [],
       ['cash-1'],
@@ -234,8 +247,9 @@ describe('CashFlowSimulationService', () => {
 
     // Trajectory would be: 1000 -> (D5) 2000 -> (D10) 1200. Min = 1000.
     // Dynamic Buffer: min(1000, 1000) = 1000.
-    expect(result.safeToSpend).toBe(1000);
-    expect(result.trajectoryMinBalance).toBe(1000);
+    expect(result.summary.safeToSpend).toBe(1000);
+    expect(result.summary.trajectoryMinBalance).toBe(1000);
+    expect(result).toMatchSnapshot();
   });
 
   it('buffers future outflows with income only if income arrives first', async () => {
@@ -264,7 +278,7 @@ describe('CashFlowSimulationService', () => {
     };
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      Money.from(1000, 'USD'),
+      1000,
       [plannedIncome as any, plannedExpense as any],
       [],
       ['cash-1'],
@@ -278,7 +292,8 @@ describe('CashFlowSimulationService', () => {
 
     // Trajectory: 1000 -> (D5) 200 -> (D10) 1200. Min = 200.
     // Safe to Spend = min(1000, 200) = 200.
-    expect(result.safeToSpend).toBe(200);
+    expect(result.summary.safeToSpend).toBe(200);
+    expect(result).toMatchSnapshot();
   });
 
   test('implements smoothed budget burn over 30 days', async () => {
@@ -296,7 +311,7 @@ describe('CashFlowSimulationService', () => {
     } as any;
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      Money.from(1000, 'USD'),
+      1000,
       [],
       [],
       ['cash-1'],
@@ -320,7 +335,69 @@ describe('CashFlowSimulationService', () => {
     // Final trajectory min balance: 1000 - 660 = 340.
     // Safe to Spend: min(1000, 340) = 340.
 
-    expect(result.committedBudget).toBe(660);
-    expect(result.safeToSpend).toBe(340);
+    expect(
+      result.breakdowns.budget.currentMonthRemaining + result.breakdowns.budget.nextMonthProjected,
+    ).toBe(660);
+    expect(result.summary.safeToSpend).toBe(340);
+    expect(result).toMatchSnapshot();
+  });
+
+  it('does not double count planned outflows covered by budget', async () => {
+    // Both Budget and Planned Payment cover the same expense account.
+    // Balance = 1000.
+    // Budget Burn matches = $20 / day
+    // Planned Payment hits today = $15
+    // The $15 planned payment MUST be "absorbed" by the $20 daily burn, leading to only $20 deducted from today's simulation, NOT $35.
+
+    jest.setSystemTime(new Date('2026-03-20T00:00:00.000Z'));
+    const expenseAcc = {
+      id: 'exp-covered',
+      name: 'Utilities',
+      accountType: AccountType.EXPENSE,
+    } as any;
+
+    const plannedExpense = {
+      id: 'pp-util',
+      name: 'Electric Bill',
+      fromAccountId: 'cash-1',
+      toAccountId: expenseAcc.id,
+      amount: 15,
+      nextOccurrence: dayjs().valueOf(), // Today
+      intervalType: 'MONTHLY',
+      intervalN: 1,
+      currencyCode: 'USD',
+    };
+
+    const budget = {
+      id: 'b-util',
+      name: 'Utility Budget',
+      amount: 600,
+      scopes: { fetch: jest.fn().mockResolvedValue([{ account: expenseAcc }]) },
+    } as any;
+
+    const usage = {
+      budget,
+      remaining: 600, // 30 days left roughly, so $20/day burn
+    } as any;
+
+    const result = await cashFlowSimulationService.simulateSafeToSpend(
+      1000,
+      [plannedExpense as any],
+      [],
+      ['cash-1'],
+      [],
+      [budget],
+      [usage],
+      [[{ account: expenseAcc }]],
+      [expenseAcc, { id: 'cash-1', accountType: AccountType.ASSET } as any],
+      'USD',
+    );
+
+    // Baseline calculation check:
+    // With 15 planned covered by 50 budget burn on day 0, day 0 deduction = 50 (not 65).
+    // The Safe to spend math over 30 days reduces the balance linearly by $50/day in March ($600 total) and $20/day in April ($360).
+    // Final safe to spend: 1000 - 960 = 40.
+    expect(Math.round(result.summary.safeToSpend)).toBe(40);
+    expect(result).toMatchSnapshot();
   });
 });

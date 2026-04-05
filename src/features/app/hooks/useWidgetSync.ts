@@ -107,10 +107,10 @@ export function useWidgetSync() {
     // Lazy load the module to avoid issues during bootstrap
     const expoWidgetsModule = require('@/modules/expo-widgets').default;
 
-    const isShortfall = (safeToSpendData?.shortfall ?? 0) > 0;
+    const isShortfall = (safeToSpendData?.summary?.shortfall ?? 0) > 0;
     const displayAmount = isShortfall
-      ? (safeToSpendData?.shortfall ?? 0)
-      : (safeToSpendData?.safeToSpend ?? 0);
+      ? (safeToSpendData?.summary?.shortfall ?? 0)
+      : (safeToSpendData?.summary?.safeToSpend ?? 0);
 
     const snapshot: WidgetDataSnapshot = {
       safeToSpend: safeToSpendData
@@ -156,7 +156,7 @@ export function useWidgetSync() {
     themeMode,
     isWidgetPrivacyEnabled,
     safeToSpendData?.currencyCode,
-    safeToSpendData?.safeToSpend,
-    safeToSpendData?.shortfall,
+    safeToSpendData?.summary?.safeToSpend,
+    safeToSpendData?.summary?.shortfall,
   ]);
 }

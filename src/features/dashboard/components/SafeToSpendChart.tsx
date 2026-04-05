@@ -1,6 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
@@ -225,6 +225,24 @@ export const SafeToSpendChart = ({
                             >
                               {detail.name}
                             </AppText>
+                            {detail.context && (
+                              <View
+                                style={{
+                                  backgroundColor: withOpacity(color, Opacity.hover),
+                                  paddingHorizontal: 4,
+                                  paddingVertical: 1,
+                                  borderRadius: 3,
+                                }}
+                              >
+                                <AppText
+                                  variant="caption"
+                                  style={{ fontSize: 8, color, opacity: 0.9 }}
+                                  weight="bold"
+                                >
+                                  {detail.context}
+                                </AppText>
+                              </View>
+                            )}
                           </View>
                           {detail.amount !== 0 && (
                             <AppText
