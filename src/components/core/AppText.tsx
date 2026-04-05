@@ -1,17 +1,18 @@
-import { ThemeMode, Typography } from '@/src/constants/design-tokens'
-import { useThemedComponent } from '@/src/hooks/useThemedComponent'
-import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
-import { useMemo } from 'react'
-import { StyleSheet, Text, type TextProps } from 'react-native'
+import { ThemeMode, Typography } from '@/src/constants/design-tokens';
+import { useThemedComponent } from '@/src/hooks/useThemedComponent';
+import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
+import { useMemo } from 'react';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 
 export type AppTextProps = TextProps & {
-  variant?: 'caption' | 'body' | 'subheading' | 'heading' | 'title' | 'xl' | 'hero'
-  color?: ComponentVariant
-  align?: 'auto' | 'left' | 'right' | 'center' | 'justify'
-  weight?: 'regular' | 'medium' | 'semibold' | 'bold'
-  italic?: boolean
-  themeMode?: ThemeMode
-}
+  variant?: 'caption' | 'body' | 'subheading' | 'heading' | 'title' | 'xl' | 'hero';
+  color?: ComponentVariant;
+  align?: 'auto' | 'left' | 'right' | 'center' | 'justify';
+  weight?: 'regular' | 'medium' | 'semibold' | 'bold';
+  italic?: boolean;
+  tabular?: boolean;
+  themeMode?: ThemeMode;
+};
 
 export function AppText({
   variant = 'body',
@@ -19,40 +20,49 @@ export function AppText({
   align = 'auto',
   weight = 'regular',
   italic = false,
+  tabular = false,
   themeMode,
   style,
   ...props
 }: AppTextProps) {
-  const { theme, fonts } = useThemedComponent(themeMode)
+  const { theme, fonts } = useThemedComponent(themeMode);
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
       switch (variant) {
-        case 'caption': return styles.caption
-        case 'body': return styles.body
-        case 'subheading': return styles.subheading
-        case 'heading': return styles.heading
-        case 'title': return styles.title
-        case 'xl': return styles.xl
-        case 'hero': return styles.hero
-        default: return styles.body
+        case 'caption':
+          return styles.caption;
+        case 'body':
+          return styles.body;
+        case 'subheading':
+          return styles.subheading;
+        case 'heading':
+          return styles.heading;
+        case 'title':
+          return styles.title;
+        case 'xl':
+          return styles.xl;
+        case 'hero':
+          return styles.hero;
+        default:
+          return styles.body;
       }
-    })()
+    })();
 
     const resolvedFontFamily = (() => {
       // For heading variants, strictly use the heading font (Serif)
       if (['heading', 'title', 'xl', 'hero'].includes(variant)) {
-        return fonts.heading
+        return fonts.heading;
       }
       // For subheading, use the specific subheading definition
       if (variant === 'subheading') {
-        return fonts.subheading
+        return fonts.subheading;
       }
       // For body/caption, delegate to the weight prop to select the right Sans-Serif file
-      return fonts[weight] || fonts.regular
-    })()
+      return fonts[weight] || fonts.regular;
+    })();
 
-    const variantColors = getVariantColors(theme, color)
+    const variantColors = getVariantColors(theme, color);
 
     return [
       // Base styles (fontSize, lineHeight) - we intentionally override fontFamily below
@@ -65,12 +75,13 @@ export function AppText({
         // that already embodies the weight (e.g. InstrumentSans-Bold).
         // Setting fontWeight: 'bold' effectively double-applies it or breaks linking.
         fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
+        fontVariant: (tabular ? ['tabular-nums'] : []) as any,
       },
       style,
-    ]
-  }, [variant, weight, color, theme, fonts, align, italic, style])
+    ];
+  }, [variant, weight, color, theme, fonts, align, italic, tabular, style]);
 
-  return <Text style={textStyle} {...props} />
+  return <Text style={textStyle} {...props} />;
 }
 
 const styles = StyleSheet.create({
@@ -109,4 +120,4 @@ const styles = StyleSheet.create({
     lineHeight: Typography.sizes.hero * Typography.lineHeights.tight,
     letterSpacing: Typography.letterSpacing.tight,
   },
-})
+});
