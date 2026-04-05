@@ -737,8 +737,6 @@ export const AppConfig = {
     popupModalMaxWidth: 460,
     popupModalHeightPercent: 84,
     safeToSpendChartHeight: 150,
-    listEstimatedItemSize: 120,
-    compactListEstimatedItemSize: 100,
     modalHeightPercent: '70%',
     hierarchyModalHeightPercent: '80%',
     iconCircleSize: 32, // Match Size.iconLg or similar

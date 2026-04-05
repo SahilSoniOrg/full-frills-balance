@@ -772,13 +772,6 @@ export const Layout = {
       lastN: 3,
     },
   },
-  list: {
-    estimatedItemSize: {
-      transactionCard: 120,
-      accountCard: 150,
-      journalCard: 100,
-    },
-  },
   hierarchy: {
     indentWidth: 20,
     guideOffset: 10,
