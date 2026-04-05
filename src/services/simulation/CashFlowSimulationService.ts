@@ -110,6 +110,7 @@ export class CashFlowSimulationService {
       plannedResults.coverageMap,
       metadataMap,
       statementBalances,
+      liquidAccountIdsSet,
     );
 
     // 3. Orchestration & Aggregation

@@ -29,6 +29,7 @@ export class LiabilityEngine {
     coverageMap: Map<string, number>,
     metadataMap: Map<string, any>,
     statementBalances: Map<string, number>,
+    liquidAccountIds: Set<string>,
   ): Promise<LiabilityResult> {
     const simulationDays = this.time.getSimulationDays();
     const startOfToday = this.time.getStartOfToday();
@@ -99,8 +100,15 @@ export class LiabilityEngine {
         result.totalOther += balanceInResultCurrency;
       }
 
-      const coverageAmount = coverageMap.get(acc.id) || 0;
       const metadata = metadataMap.get(acc.id);
+
+      // If the liability is configured to be paid from an account outside our tracked liquid pool,
+      // it exerts zero pressure on our Safe to Spend cash flows. Show the total, but omit the flow commitments.
+      if (metadata?.payFromAccountId && !liquidAccountIds.has(metadata.payFromAccountId)) {
+        continue;
+      }
+
+      const coverageAmount = coverageMap.get(acc.id) || 0;
       const statementDay = metadata?.statementDay;
       const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
 
