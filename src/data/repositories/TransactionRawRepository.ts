@@ -178,40 +178,115 @@ class TransactionRawRepository {
     const args = [accountId, cutoffDate];
 
     if (upToTransactionId) {
-      // Include everything strictly chronologically before this transaction (H-6 fix)
+      // Include everything strictly chronologically UP TO this transaction (H-6 fix)
+      // Logic: (date < targetDate) OR (date = targetDate AND created_at < targetCreated) OR (date = targetDate AND created_at = targetCreated AND id <= targetId)
       sql += ` AND (t.transaction_date < (SELECT transaction_date FROM transactions WHERE id = ?)
                 OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
-                    AND t.created_at <= (SELECT created_at FROM transactions WHERE id = ?)))`;
-      args.push(upToTransactionId, upToTransactionId, upToTransactionId);
+                    AND t.created_at < (SELECT created_at FROM transactions WHERE id = ?))
+                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
+                    AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
+                    AND t.id <= ?))`;
+      args.push(
+        upToTransactionId,
+        upToTransactionId,
+        upToTransactionId,
+        upToTransactionId,
+        upToTransactionId,
+        upToTransactionId,
+      );
     }
 
     if (afterTransactionId) {
       // Include everything strictly chronologically AFTER this transaction
+      // Logic: (date > targetDate) OR (date = targetDate AND created_at > targetCreated) OR (date = targetDate AND created_at = targetCreated AND id > targetId)
       sql += ` AND (t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
                 OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
-                    AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?)))`;
-      args.push(afterTransactionId, afterTransactionId, afterTransactionId);
+                    AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?))
+                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
+                    AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
+                    AND t.id > ?))`;
+      args.push(
+        afterTransactionId,
+        afterTransactionId,
+        afterTransactionId,
+        afterTransactionId,
+        afterTransactionId,
+        afterTransactionId,
+      );
     }
 
     const raws = await this.queryRaw<{ total: number }>(sql, args);
     if (raws.length > 0) return raws[0]?.total || 0;
 
     // Fallback for LokiJS/Test
+    // Fix: Fallback was incorrectly returning latest runningBalance instead of SUM of deltas
+    const filterClauses: any[] = [
+      Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+      Q.on('journals', 'deleted_at', Q.eq(null)),
+      Q.where('account_id', accountId),
+      Q.where('transaction_date', Q.lte(cutoffDate)),
+      Q.where('deleted_at', Q.eq(null)),
+    ];
+
+    if (upToTransactionId || afterTransactionId) {
+      // Simple fallback: If boundaries are used, fetch all transactions and sum in JS
+      // This is slow but functionally correct for tests/web environments
+      const txs = await database.collections
+        .get<Transaction>('transactions')
+        .query(...filterClauses)
+        .fetch();
+
+      let sum = 0;
+      let startFound = !afterTransactionId;
+      let endReached = false;
+
+      // Sort by date, then created_at, then id to match SQL logic
+      const sortedTxs = [...txs].sort((a, b) => {
+        if (a.transactionDate !== b.transactionDate) return a.transactionDate - b.transactionDate;
+        const aCreated = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt || 0;
+        const bCreated = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt || 0;
+        if (aCreated !== bCreated) return (aCreated as number) - (bCreated as number);
+        return a.id.localeCompare(b.id);
+      });
+
+      for (const tx of sortedTxs) {
+        if (endReached) break;
+
+        if (afterTransactionId && tx.id === afterTransactionId) {
+          startFound = true;
+          continue; // Skip the start transaction itself
+        }
+
+        if (startFound) {
+          sum += this.getSignedDelta(
+            isAssetOrExpense ? 'ASSET' : 'LIABILITY',
+            tx.transactionType,
+            tx.amount,
+          );
+        }
+
+        if (upToTransactionId && tx.id === upToTransactionId) {
+          endReached = true;
+        }
+      }
+      return sum;
+    }
+
+    // Full sum (no boundaries) fallback
     const txs = await database.collections
       .get<Transaction>('transactions')
-      .query(
-        Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.on('journals', 'deleted_at', Q.eq(null)),
-        Q.where('account_id', accountId),
-        Q.where('transaction_date', Q.lte(cutoffDate)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('transaction_date', Q.desc),
-        Q.sortBy('created_at', Q.desc),
-        Q.take(1),
-      )
+      .query(...filterClauses)
       .fetch();
-
-    return txs[0]?.runningBalance || 0;
+    return txs.reduce(
+      (acc, tx) =>
+        acc +
+        this.getSignedDelta(
+          isAssetOrExpense ? 'ASSET' : 'LIABILITY',
+          tx.transactionType,
+          tx.amount,
+        ),
+      0,
+    );
   }
 
   /**
@@ -532,35 +607,45 @@ class TransactionRawRepository {
    * Returns a Map of accountId -> count.
    */
   async getAccountTransactionCountsRaw(
-    accountIdsWithStartDates: { accountId: string; startDate: number }[],
+    accountIdsWithBoundaries: {
+      accountId: string;
+      startDate: number;
+      afterTransactionId?: string;
+    }[],
     endDate: number,
   ): Promise<Map<string, number>> {
-    if (accountIdsWithStartDates.length === 0) return new Map();
+    if (accountIdsWithBoundaries.length === 0) return new Map();
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
-    // To prevent O(N) UNION ALL growth, we can select all transactions for these accounts
-    // up to the endDate, and then group by account_id in SQLite.
-    // Since each account has a different startDate, we handle that in JS or use
-    // conditional aggregation if we can.
-    // Wait, since SQLite doesn't have an easy array binding for complex tuples,
-    // and passing N separate start dates into SQL is complex without UNION ALL,
-    // simpler approach: filter by the MIN(startDate) globally, then group by,
-    // and filter in JS if needed. Or construct a simpler CASE statement.
-    // Actually, generating a CASE statement for the dates is better than UNION ALL
-    // because it keeps the query plan as a single scan over the relevant accounts.
-
-    const accountIds = accountIdsWithStartDates.map(a => a.accountId);
+    const accountIds = accountIdsWithBoundaries.map(a => a.accountId);
     const placeholders = accountIds.map(() => '?').join(',');
 
-    // Create a CASE statement to check start dates per account
-    const caseClauses = accountIdsWithStartDates
-      .map(() => `WHEN ? THEN t.transaction_date > ?`)
+    // Create a CASE statement to check boundaries per account
+    const caseClauses = accountIdsWithBoundaries
+      .map(() => {
+        // Precise chronological boundary AFTER the snapshot transaction
+        return `WHEN ? THEN (
+          t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
+          OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
+              AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?))
+          OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
+              AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
+              AND t.id > ?)
+        )`;
+      })
       .join(' ');
 
-    // We pass account ID, start date for each CASE branch
     const caseParams: (string | number)[] = [];
-    accountIdsWithStartDates.forEach(item => {
-      caseParams.push(item.accountId, item.startDate);
+    accountIdsWithBoundaries.forEach(item => {
+      caseParams.push(
+        item.accountId,
+        item.afterTransactionId || '',
+        item.afterTransactionId || '',
+        item.afterTransactionId || '',
+        item.afterTransactionId || '',
+        item.afterTransactionId || '',
+        item.afterTransactionId || '',
+      );
     });
 
     const sql = `
@@ -590,18 +675,38 @@ class TransactionRawRepository {
 
     // Fallback for LokiJS/Test
     const results = new Map<string, number>();
-    for (const item of accountIdsWithStartDates) {
-      const count = await database.collections
+    for (const item of accountIdsWithBoundaries) {
+      const q = database.collections
         .get<Transaction>('transactions')
         .query(
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', item.accountId),
-          Q.where('transaction_date', Q.gt(item.startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
           Q.where('deleted_at', Q.eq(null)),
-        )
-        .fetchCount();
+        );
+
+      const txs = await q.fetch();
+      let count = 0;
+
+      const sorted = [...txs].sort((a, b) => {
+        if (a.transactionDate !== b.transactionDate) return a.transactionDate - b.transactionDate;
+        const aCreated = a.createdAt instanceof Date ? a.createdAt.getTime() : a.createdAt || 0;
+        const bCreated = b.createdAt instanceof Date ? b.createdAt.getTime() : b.createdAt || 0;
+        if (aCreated !== bCreated) return (aCreated as number) - (bCreated as number);
+        return a.id.localeCompare(b.id);
+      });
+
+      let startFound = !item.afterTransactionId;
+      for (const tx of sorted) {
+        if (item.afterTransactionId && tx.id === item.afterTransactionId) {
+          startFound = true;
+          continue;
+        }
+        if (startFound) {
+          count++;
+        }
+      }
       results.set(item.accountId, count);
     }
     return results;

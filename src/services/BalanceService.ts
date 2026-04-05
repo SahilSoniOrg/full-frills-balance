@@ -245,20 +245,22 @@ export class BalanceService {
 
     const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, cutoffDate);
     let baseCount = 0;
-    let startDate = 0;
-
     if (snapshot) {
       baseCount = snapshot.transactionCount;
-      startDate = snapshot.transactionDate;
     }
 
-    const deltaCount = await transactionRepository.getCountForAccountBetween(
-      accountId,
-      startDate,
+    const deltaCount = await transactionRawRepository.getAccountTransactionCountsRaw(
+      [
+        {
+          accountId,
+          startDate: snapshot?.transactionDate || 0,
+          afterTransactionId: snapshot?.transactionId,
+        },
+      ],
       cutoffDate,
     );
 
-    const totalCount = baseCount + deltaCount;
+    const totalCount = baseCount + (deltaCount.get(accountId) || 0);
 
     return {
       accountId: account.id,
@@ -300,10 +302,14 @@ export class BalanceService {
     );
 
     // 3. Prepare for batch count fetching
-    const countInput = accounts.map(a => ({
-      accountId: a.id,
-      startDate: latestSnapshotsMap.get(a.id)?.transactionDate || 0,
-    }));
+    const countInput = accounts.map(a => {
+      const snapshot = latestSnapshotsMap.get(a.id);
+      return {
+        accountId: a.id,
+        startDate: snapshot?.transactionDate || 0,
+        afterTransactionId: snapshot?.transactionId,
+      };
+    });
 
     // 4. Batch fetch transaction counts (O(1) round-trip vs O(N))
     const deltaCountsMap = await transactionRawRepository.getAccountTransactionCountsRaw(
