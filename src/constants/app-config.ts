@@ -137,6 +137,7 @@ export const AppConfig = {
       tryChangingFilters: 'No results match these filters',
       allTime: 'All Time',
       searchPlaceholder: 'Search…',
+      none: 'None',
     },
     dashboard: {
       emptyTitle: 'Everything is ready.',
@@ -512,6 +513,8 @@ export const AppConfig = {
         balancePlaceholder: '0.00',
         parentAccount: 'Parent Account',
         clear: 'Clear',
+        payDebtFrom: 'Pay Debt From',
+        selectPaymentAccount: 'Select Payment Account',
       },
       hierarchy: {
         title: 'Hierarchy',

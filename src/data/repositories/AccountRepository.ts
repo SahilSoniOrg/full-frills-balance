@@ -35,6 +35,7 @@ export interface AccountPersistenceInput {
     loanTenureMonths: number;
     autopayEnabled: boolean;
     gracePeriodDays: number;
+    payFromAccountId: string;
     notes: string;
   }>;
 }
