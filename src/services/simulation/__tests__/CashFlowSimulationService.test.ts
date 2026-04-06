@@ -59,7 +59,7 @@ describe('CashFlowSimulationService', () => {
     });
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      2000,
+      new Map([['cash-1', 2000]]),
       [],
       [],
       ['cash-1'],
@@ -92,7 +92,7 @@ describe('CashFlowSimulationService', () => {
     );
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      1000,
+      new Map([['cash-1', 1000]]),
       [],
       [],
       ['cash-1'],
@@ -136,7 +136,7 @@ describe('CashFlowSimulationService', () => {
     };
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      1000,
+      new Map([['cash-1', 1000]]),
       [plannedPayment as any],
       [],
       ['cash-1'],
@@ -190,7 +190,7 @@ describe('CashFlowSimulationService', () => {
     );
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      1000,
+      new Map([['cash-1', 1000]]),
       [plannedIncome as any],
       [],
       ['cash-1'],
@@ -233,7 +233,7 @@ describe('CashFlowSimulationService', () => {
     };
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      1000,
+      new Map([['cash-1', 1000]]),
       [plannedIncome as any, plannedExpense as any],
       [],
       ['cash-1'],
@@ -278,7 +278,7 @@ describe('CashFlowSimulationService', () => {
     };
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      1000,
+      new Map([['cash-1', 1000]]),
       [plannedIncome as any, plannedExpense as any],
       [],
       ['cash-1'],
@@ -311,7 +311,7 @@ describe('CashFlowSimulationService', () => {
     } as any;
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      1000,
+      new Map([['cash-1', 1000]]),
       [],
       [],
       ['cash-1'],
@@ -381,7 +381,7 @@ describe('CashFlowSimulationService', () => {
     } as any;
 
     const result = await cashFlowSimulationService.simulateSafeToSpend(
-      1000,
+      new Map([['cash-1', 1000]]),
       [plannedExpense as any],
       [],
       ['cash-1'],

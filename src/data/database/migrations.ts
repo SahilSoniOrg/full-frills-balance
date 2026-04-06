@@ -293,5 +293,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 16,
+      steps: [
+        addColumns({
+          table: 'budgets',
+          columns: [{ name: 'asset_account_ids', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

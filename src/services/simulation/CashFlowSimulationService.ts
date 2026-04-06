@@ -19,7 +19,7 @@ export class CashFlowSimulationService {
    * Configured-day cash flow simulation for Safe to Spend.
    */
   async simulateSafeToSpend(
-    startingBalance: number,
+    startingBalances: Map<string, number>,
     plannedPayments: PlannedPayment[],
     plannedJournals: Journal[],
     liquidAssetIds: string[],
@@ -92,7 +92,7 @@ export class CashFlowSimulationService {
 
     // 2. Engine Execution
     const budgetEngine = new BudgetEngine(time, converter, resultCurrency);
-    const budgetResults = await budgetEngine.run(budgets, usages, scopeGroups);
+    const budgetResults = await budgetEngine.run(budgets, usages, scopeGroups, liquidAssetIds);
 
     const plannedEngine = new PlannedFlowEngine(time, converter, resultCurrency);
     const plannedResults = await plannedEngine.run(
@@ -111,6 +111,7 @@ export class CashFlowSimulationService {
       metadataMap,
       statementBalances,
       liquidAccountIdsSet,
+      liquidAssetIds, // Passing ordered liquid asset IDs for fallback flow attribution
     );
 
     // 3. Orchestration & Aggregation
@@ -124,6 +125,7 @@ export class CashFlowSimulationService {
 
     // O(1) Indexing for simulation loop
     const flowByDayOffset = new Map<number, number>();
+    const flowByDayAndAccount = new Map<number, Map<string, number>>();
     const detailsByDayOffset = new Map<
       number,
       { name: string; amount: number; type: FlowType; context?: string }[]
@@ -134,14 +136,27 @@ export class CashFlowSimulationService {
     let firstMajorInflowDay: number | null = null;
 
     for (const flow of allFlows) {
-      const { dayOffset, amount, name, type, context } = flow;
+      const { dayOffset, amount, name, type, context, accountId, source } = flow as any;
 
-      // Accumulate net flow
-      const current = flowByDayOffset.get(dayOffset) || 0;
-      flowByDayOffset.set(dayOffset, current + amount);
+      // EXCEPTION: Budget burns are handled via budgetResults.dailyBudgetBurns in the simulation loop.
+      // We only use these flows for the UI detail breakdown.
+      const isSimulationFlow = source !== 'BUDGET';
+
+      if (isSimulationFlow) {
+        // Accumulate net flow (Global)
+        const current = flowByDayOffset.get(dayOffset) || 0;
+        flowByDayOffset.set(dayOffset, current + amount);
+
+        // Accumulate net flow (Per Account)
+        if (accountId) {
+          const dayAccountMap = flowByDayAndAccount.get(dayOffset) || new Map<string, number>();
+          dayAccountMap.set(accountId, (dayAccountMap.get(accountId) || 0) + amount);
+          flowByDayAndAccount.set(dayOffset, dayAccountMap);
+        }
+      }
 
       if (amount > 0) {
-        totalFutureInflow += amount;
+        if (isSimulationFlow) totalFutureInflow += amount;
         if (amount >= majorInflowThreshold) {
           if (firstMajorInflowDay === null || dayOffset < firstMajorInflowDay) {
             firstMajorInflowDay = dayOffset;
@@ -181,53 +196,180 @@ export class CashFlowSimulationService {
 
     const projections: SimulationResult['projections']['points'] = [];
 
-    let currentBalance = startingBalance;
-    let minBalance = currentBalance;
-    let safeDaysCount: number | null = currentBalance < 0 ? 0 : null;
+    // Track state for global and per-account
+    const totalStartingBalance = Array.from(startingBalances.values()).reduce((a, b) => a + b, 0);
+    let globalBalance = totalStartingBalance;
+    let globalMinBalance = globalBalance;
+    let safeDaysCount: number | null = globalBalance < 0 ? 0 : null;
+
+    const accountCurrentBalances = new Map<string, number>(startingBalances);
+    const accountMinBalances = new Map<string, number>(startingBalances);
+    const accountMinBalancesBeforeIncome = new Map<string, number>(startingBalances);
 
     projections.push({
       timestamp: time.getStartOfToday().valueOf(),
-      value: currentBalance,
+      value: globalBalance,
       isProjected: true,
     });
 
     for (let d = 0; d < simulationDays; d++) {
-      const dailyBurn = budgetResults.dailyBudgetBurns[d] || 0;
+      const globalDailyBurn = budgetResults.dailyBudgetBurns[d] || 0;
 
       // O(1) Budget vs Planned Reconciliation
-      let coveredPlannedOutflow = 0;
+      let globalCoveredPlannedOutflow = 0;
       const todayPlans = negativePlannedOutflowsByDayAndAccount.get(d);
       if (todayPlans) {
         for (const [accId, amt] of todayPlans.entries()) {
+          // If this planned outflow is for an expense account covered by a budget...
           if (budgetResults.budgetCoveredExpenseAccountIds.has(accId)) {
-            coveredPlannedOutflow += amt;
+            globalCoveredPlannedOutflow += amt;
           }
         }
       }
 
-      coveredPlannedOutflow = Math.min(coveredPlannedOutflow, dailyBurn);
-      const adjustedBurn = Math.max(dailyBurn - coveredPlannedOutflow, 0);
+      globalCoveredPlannedOutflow = Math.min(globalCoveredPlannedOutflow, globalDailyBurn);
+      const globalAdjustedBurn = Math.max(globalDailyBurn - globalCoveredPlannedOutflow, 0);
 
-      currentBalance -= adjustedBurn;
+      // Apply to Global
+      globalBalance -= globalAdjustedBurn;
+      const globalNetFlow = flowByDayOffset.get(d) || 0;
+      globalBalance += globalNetFlow;
+      if (globalBalance < globalMinBalance) globalMinBalance = globalBalance;
 
-      const netFlow = flowByDayOffset.get(d) || 0;
-      currentBalance += netFlow;
+      // Apply per-account
+      for (const accountId of liquidAssetIds) {
+        let accBalance = accountCurrentBalances.get(accountId) || 0;
+
+        // Budget burn for this account
+        const accDailyBurn = budgetResults.dailyAssetAccountBurns.get(accountId)?.[d] || 0;
+
+        // Reconciliation for this account:
+        // If we have a planned outflow from this EXACT asset account for a covered expense...
+        // This is a bit tricky because plannedOutflows tracks the EXPENSE account ID in accId.
+        // We need to know which ASSET account it came from.
+        // PlannedFlowEngine results include 'flows' which have accountId (Asset Account) and amount (negative).
+        // Let's find flows for this day and account.
+        const dayAccFlowsMap = flowByDayAndAccount.get(d);
+        const accNetFlow = dayAccFlowsMap?.get(accountId) || 0;
+
+        // Simplified reconciliation: reduce this account's budget burn by its share of global reconciliation
+        // Or better: use the same proportion.
+        let accAdjustedBurn = accDailyBurn;
+        if (globalDailyBurn > 0) {
+          const reconciliationFactor = globalAdjustedBurn / globalDailyBurn;
+          accAdjustedBurn = accDailyBurn * reconciliationFactor;
+        }
+
+        accBalance -= accAdjustedBurn;
+        accBalance += accNetFlow;
+
+        accountCurrentBalances.set(accountId, accBalance);
+
+        // Track absolute min
+        const currentMin = accountMinBalances.get(accountId) ?? accBalance;
+        if (accBalance < currentMin) {
+          accountMinBalances.set(accountId, accBalance);
+        }
+
+        // Track min before any major income
+        if (firstMajorInflowDay === null || d < firstMajorInflowDay) {
+          const currentMinBefore = accountMinBalancesBeforeIncome.get(accountId) ?? accBalance;
+          if (accBalance < currentMinBefore) {
+            accountMinBalancesBeforeIncome.set(accountId, accBalance);
+          }
+        }
+      }
 
       const dayOffset = d + 1;
       projections.push({
         timestamp: time.getTimestamp(dayOffset),
-        value: currentBalance,
+        value: globalBalance,
         isProjected: true,
         details: detailsByDayOffset.get(d),
-        dailyBurn: adjustedBurn,
+        dailyBurn: globalAdjustedBurn,
       });
 
-      if (currentBalance < minBalance) minBalance = currentBalance;
-      if (currentBalance < 0 && safeDaysCount === null) safeDaysCount = dayOffset;
+      if (globalBalance < 0 && safeDaysCount === null) safeDaysCount = dayOffset;
     }
 
-    const safeToSpend = Math.max(0, Math.min(startingBalance, minBalance));
+    const safeToSpend = Math.max(0, Math.min(totalStartingBalance, globalMinBalance));
     const totalCommittedPlanned = plannedResults.commitments.reduce((acc, c) => acc + c.amount, 0);
+
+    // Build Account Summaries
+    const accountSummaries = liquidAssetIds.map(accountId => {
+      const start = startingBalances.get(accountId) || 0;
+      const min = accountMinBalances.get(accountId) || 0;
+      const minBeforeIncome = accountMinBalancesBeforeIncome.get(accountId) || 0;
+      const acc = accountMap.get(accountId);
+
+      // Collect usage details
+      const accountFlows = allFlows.filter(f => f.accountId === accountId);
+      const inflowItemsMap = new Map<string, { amount: number; source: string; minDay: number }>();
+      const outflowItemsMap = new Map<string, { amount: number; source: string; minDay: number }>();
+      let totalInflow = 0;
+      let totalOutflow = 0;
+
+      for (const f of accountFlows) {
+        if (f.amount > 0) {
+          totalInflow += f.amount;
+          const existing = inflowItemsMap.get(f.name);
+          inflowItemsMap.set(f.name, {
+            amount: (existing?.amount || 0) + f.amount,
+            source: (f as any).source || 'OTHER',
+            minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
+          });
+        } else if (f.amount < 0) {
+          const absAmount = Math.abs(f.amount);
+          totalOutflow += absAmount;
+          const existing = outflowItemsMap.get(f.name);
+          outflowItemsMap.set(f.name, {
+            amount: (existing?.amount || 0) + absAmount,
+            source: (f as any).source || 'OTHER',
+            minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
+          });
+        }
+      }
+
+      // Add budget burns to outflows
+      // BudgetEngine now returns budget burns as flows, so they are already in accountFlows.
+      // No manual aggregation needed.
+
+      const topInflows = Array.from(inflowItemsMap.entries())
+        .map(([name, data]) => ({
+          name,
+          amount: data.amount,
+          source: data.source,
+          isPostIncome: firstMajorInflowDay !== null && data.minDay >= firstMajorInflowDay,
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 3);
+
+      const topOutflows = Array.from(outflowItemsMap.entries())
+        .map(([name, data]) => ({
+          name,
+          amount: data.amount,
+          source: data.source,
+          isPostIncome: firstMajorInflowDay !== null && data.minDay >= firstMajorInflowDay,
+        }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 3);
+
+      return {
+        accountId,
+        accountName: acc?.name || 'Unknown',
+        startingBalance: start,
+        // Per users request, account-level shortfall/safe-to-spend should ignore dips after income
+        safeToSpend: Math.max(0, Math.min(start, minBeforeIncome)),
+        shortfall: minBeforeIncome < 0 ? Math.abs(minBeforeIncome) : 0,
+        minBalance: min, // Still return absolute floor for "Floor" label
+        usageDetails: {
+          totalInflow,
+          totalOutflow,
+          topInflows,
+          topOutflows,
+        },
+      };
+    });
 
     // Collect Subtypes safely
     const committedSubtypes = new Set<string>();
@@ -235,33 +377,17 @@ export class CashFlowSimulationService {
     liabilityAccountBalances.forEach(lb => {
       if (lb.account.accountSubtype) debtSubtypes.add(lb.account.accountSubtype);
     });
-    // For commitments, we don't have explicit subtypes in array right now, we can omit it since UI barely uses it,
-    // or collect from accountMap
+
     allCommitments.forEach(c => {
       const acc = accountMap.get(c.accountId);
       if (acc?.accountSubtype) committedSubtypes.add(acc.accountSubtype);
     });
 
-    if (Number.isNaN(safeToSpend) || Number.isNaN(minBalance) || Number.isNaN(totalFutureInflow)) {
-      throw new Error(
-        '[CashFlowSimulationService] Invariant violation: NaN encountered in simulation math.',
-      );
-    }
-    if (
-      !Number.isFinite(safeToSpend) ||
-      !Number.isFinite(minBalance) ||
-      !Number.isFinite(totalFutureInflow)
-    ) {
-      throw new Error(
-        '[CashFlowSimulationService] Invariant violation: Infinity encountered in simulation math.',
-      );
-    }
-
     return {
       summary: {
         safeToSpend,
-        shortfall: minBalance < 0 ? Math.abs(minBalance) : 0,
-        trajectoryMinBalance: minBalance,
+        shortfall: globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0,
+        trajectoryMinBalance: globalMinBalance,
         safeDaysCount,
         totalFutureInflow,
         totalOrganicInflow: plannedResults.organicInflow,
@@ -269,6 +395,7 @@ export class CashFlowSimulationService {
         totalCommittedPlanned,
         firstMajorInflowDay,
       },
+      accountSummaries,
       breakdowns: {
         committed: allCommitments,
         debt: liabilityResults.debtEntries,

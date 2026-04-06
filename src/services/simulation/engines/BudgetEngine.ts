@@ -24,6 +24,7 @@ export class BudgetEngine {
     budgets: Budget[],
     usages: BudgetUsage[],
     scopeGroups: any[][],
+    liquidAccountIds: string[],
   ): Promise<BudgetEngineResult> {
     const simulationDays = this.time.getSimulationDays();
     const daysLeftInMonth = this.time.daysLeftInMonth();
@@ -31,12 +32,21 @@ export class BudgetEngine {
 
     const accountMaxDailyBurns = new Map<string, number[]>();
     const accountBudgetBuckets = new Map<string, Map<string, { name: string; amount: number }>>();
+    const dailyAssetAccountBurns = new Map<string, number[]>();
 
     const budgetCoveredExpenseAccountIds = new Set<string>();
     const dailyBudgetBurns = new Array(simulationDays).fill(0);
     let currentMonthRemaining = 0;
     let nextMonthProjected = 0;
     const commitmentsMap = new Map<string, AccountCommitment>();
+
+    const getTargetAssetAccountIds = (budget: Budget): string[] => {
+      if (budget.assetAccountIds) {
+        const ids = budget.assetAccountIds.split(',').filter(id => id.trim().length > 0);
+        if (ids.length > 0) return ids;
+      }
+      return liquidAccountIds.length > 0 ? [liquidAccountIds[0]] : [];
+    };
 
     for (let idx = 0; idx < usages.length; idx++) {
       const usage = usages[idx];
@@ -82,6 +92,21 @@ export class BudgetEngine {
         }
       }
 
+      // Track burn against the ASSET accounts it draws from
+      const targetAssetIds = getTargetAssetAccountIds(budget);
+      if (targetAssetIds.length > 0) {
+        const shareOfBurn = 1 / targetAssetIds.length;
+        for (const assetId of targetAssetIds) {
+          const assetBurns =
+            dailyAssetAccountBurns.get(assetId) || new Array(simulationDays).fill(0);
+          for (let i = 0; i < simulationDays; i++) {
+            assetBurns[i] += burns[i] * shareOfBurn;
+          }
+          dailyAssetAccountBurns.set(assetId, assetBurns);
+        }
+      }
+
+      // Maintain legacy expense-account based tracking for commitments view
       for (const s of scope) {
         const accountId = s.account.id;
         const acc = s.account;
@@ -110,7 +135,14 @@ export class BudgetEngine {
       }
     }
 
-    // Aggregate across all accounts
+    // Populate global daily burns from the asset accounts (which we consolidated above)
+    for (const assetBurns of dailyAssetAccountBurns.values()) {
+      for (let i = 0; i < simulationDays; i++) {
+        dailyBudgetBurns[i] += assetBurns[i];
+      }
+    }
+
+    // Aggregate commitments for XPENSE visualization
     for (const [accountId, accountBurns] of accountMaxDailyBurns) {
       const accScope = Array.from(accountBudgetBuckets.get(accountId)?.values() || []);
       const totalAccountAmount = accountBurns.reduce((sum, b) => sum + b, 0);
@@ -131,10 +163,6 @@ export class BudgetEngine {
             }))
             .sort((a, b) => b.amount - a.amount),
         });
-
-        for (let i = 0; i < simulationDays; i++) {
-          dailyBudgetBurns[i] += accountBurns[i];
-        }
       }
     }
 
@@ -147,9 +175,25 @@ export class BudgetEngine {
       }
     }
 
+    const budgetFlows: any[] = [];
+    for (const [assetId, assetBurns] of dailyAssetAccountBurns) {
+      const totalAccountBurn = assetBurns.reduce((a, b) => a + b, 0);
+      if (totalAccountBurn > 0) {
+        budgetFlows.push({
+          dayOffset: 0, // Used for summary totals, specific day less critical for usageDetails
+          amount: -totalAccountBurn,
+          name: 'Monthly Budget Burn',
+          source: 'BUDGET',
+          type: 'OUTFLOW',
+          accountId: assetId,
+        });
+      }
+    }
+
     return {
-      flows: [], // Budget doesn't produce atomic flows right now, just aggregate burns
+      flows: budgetFlows,
       dailyBudgetBurns,
+      dailyAssetAccountBurns,
       commitments: Array.from(commitmentsMap.values()),
       budgetCoveredExpenseAccountIds,
       currentMonthRemaining,

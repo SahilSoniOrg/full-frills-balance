@@ -2,6 +2,36 @@
 
 exports[`CashFlowSimulationService buffers future outflows with income only if income arrives first 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 200,
+      "safeToSpend": 200,
+      "shortfall": 0,
+      "startingBalance": 1000,
+      "usageDetails": {
+        "topInflows": [
+          {
+            "amount": 1000,
+            "isPostIncome": true,
+            "name": "Salary",
+            "source": "PLANNED_PAYMENT",
+          },
+        ],
+        "topOutflows": [
+          {
+            "amount": 800,
+            "isPostIncome": false,
+            "name": "Rent",
+            "source": "PLANNED_PAYMENT",
+          },
+        ],
+        "totalInflow": 1000,
+        "totalOutflow": 800,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 0,
@@ -354,6 +384,29 @@ exports[`CashFlowSimulationService buffers future outflows with income only if i
 
 exports[`CashFlowSimulationService correctly commits statement balance when today is before the due date 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 1400,
+      "safeToSpend": 1400,
+      "shortfall": 0,
+      "startingBalance": 2000,
+      "usageDetails": {
+        "topInflows": [],
+        "topOutflows": [
+          {
+            "amount": 600,
+            "isPostIncome": false,
+            "name": "Primary Card",
+            "source": "LIABILITY",
+          },
+        ],
+        "totalInflow": 0,
+        "totalOutflow": 600,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 0,
@@ -417,7 +470,7 @@ exports[`CashFlowSimulationService correctly commits statement balance when toda
       ],
       "flows": [
         {
-          "accountId": "cc-1",
+          "accountId": "cash-1",
           "amount": -600,
           "context": "Current bill",
           "dayOffset": 3,
@@ -725,6 +778,35 @@ exports[`CashFlowSimulationService correctly commits statement balance when toda
 
 exports[`CashFlowSimulationService does not double count planned outflows covered by budget 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 40,
+      "safeToSpend": 40,
+      "shortfall": 0,
+      "startingBalance": 1000,
+      "usageDetails": {
+        "topInflows": [],
+        "topOutflows": [
+          {
+            "amount": 960,
+            "isPostIncome": false,
+            "name": "Monthly Budget Burn",
+            "source": "BUDGET",
+          },
+          {
+            "amount": 15,
+            "isPostIncome": false,
+            "name": "Electric Bill",
+            "source": "PLANNED_PAYMENT",
+          },
+        ],
+        "totalInflow": 0,
+        "totalOutflow": 975,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 384,
@@ -824,6 +906,12 @@ exports[`CashFlowSimulationService does not double count planned outflows covere
       {
         "dailyBurn": 17,
         "details": [
+          {
+            "amount": 960,
+            "context": undefined,
+            "name": "Monthly Budget Burn",
+            "type": "OUTFLOW",
+          },
           {
             "amount": 15,
             "context": undefined,
@@ -1042,6 +1130,12 @@ exports[`CashFlowSimulationService does not double count planned outflows covere
     "safeToSpendDailyBreakdown": Map {
       0 => [
         {
+          "amount": 960,
+          "context": undefined,
+          "name": "Monthly Budget Burn",
+          "type": "OUTFLOW",
+        },
+        {
           "amount": 15,
           "context": undefined,
           "name": "Electric Bill",
@@ -1066,6 +1160,36 @@ exports[`CashFlowSimulationService does not double count planned outflows covere
 
 exports[`CashFlowSimulationService does not include future income in safe-to-spend (conservative logic) 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 1000,
+      "safeToSpend": 1000,
+      "shortfall": 0,
+      "startingBalance": 1000,
+      "usageDetails": {
+        "topInflows": [
+          {
+            "amount": 1000,
+            "isPostIncome": true,
+            "name": "Salary",
+            "source": "PLANNED_PAYMENT",
+          },
+        ],
+        "topOutflows": [
+          {
+            "amount": 800,
+            "isPostIncome": true,
+            "name": "Rent",
+            "source": "PLANNED_PAYMENT",
+          },
+        ],
+        "totalInflow": 1000,
+        "totalOutflow": 800,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 0,
@@ -1418,6 +1542,29 @@ exports[`CashFlowSimulationService does not include future income in safe-to-spe
 
 exports[`CashFlowSimulationService implements smoothed budget burn over 30 days 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 340,
+      "safeToSpend": 340,
+      "shortfall": 0,
+      "startingBalance": 1000,
+      "usageDetails": {
+        "topInflows": [],
+        "topOutflows": [
+          {
+            "amount": 660,
+            "isPostIncome": false,
+            "name": "Monthly Budget Burn",
+            "source": "BUDGET",
+          },
+        ],
+        "totalInflow": 0,
+        "totalOutflow": 660,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 264,
@@ -1500,7 +1647,14 @@ exports[`CashFlowSimulationService implements smoothed budget burn over 30 days 
       },
       {
         "dailyBurn": 22,
-        "details": undefined,
+        "details": [
+          {
+            "amount": 660,
+            "context": undefined,
+            "name": "Monthly Budget Burn",
+            "type": "OUTFLOW",
+          },
+        ],
         "isProjected": true,
         "timestamp": 1774031400000,
         "value": 978,
@@ -1709,7 +1863,16 @@ exports[`CashFlowSimulationService implements smoothed budget burn over 30 days 
         "value": 340,
       },
     ],
-    "safeToSpendDailyBreakdown": Map {},
+    "safeToSpendDailyBreakdown": Map {
+      0 => [
+        {
+          "amount": 660,
+          "context": undefined,
+          "name": "Monthly Budget Burn",
+          "type": "OUTFLOW",
+        },
+      ],
+    },
   },
   "summary": {
     "firstMajorInflowDay": null,
@@ -1727,6 +1890,22 @@ exports[`CashFlowSimulationService implements smoothed budget burn over 30 days 
 
 exports[`CashFlowSimulationService tracks manual liability payments as commitments without subtracting the whole balance twice 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 1000,
+      "safeToSpend": 1000,
+      "shortfall": 0,
+      "startingBalance": 1000,
+      "usageDetails": {
+        "topInflows": [],
+        "topOutflows": [],
+        "totalInflow": 0,
+        "totalOutflow": 0,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 0,
@@ -2039,6 +2218,22 @@ exports[`CashFlowSimulationService tracks manual liability payments as commitmen
 
 exports[`CashFlowSimulationService treats planned income to a liability account as an inflow 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 1000,
+      "safeToSpend": 1000,
+      "shortfall": 0,
+      "startingBalance": 1000,
+      "usageDetails": {
+        "topInflows": [],
+        "topOutflows": [],
+        "totalInflow": 0,
+        "totalOutflow": 0,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 0,
@@ -2362,6 +2557,29 @@ exports[`CashFlowSimulationService treats planned income to a liability account 
 
 exports[`CashFlowSimulationService uses only the credit card statement due in the window for safe-to-spend 1`] = `
 {
+  "accountSummaries": [
+    {
+      "accountId": "cash-1",
+      "accountName": "Unknown",
+      "minBalance": 750,
+      "safeToSpend": 750,
+      "shortfall": 0,
+      "startingBalance": 1000,
+      "usageDetails": {
+        "topInflows": [],
+        "topOutflows": [
+          {
+            "amount": 250,
+            "isPostIncome": false,
+            "name": "Primary Card",
+            "source": "LIABILITY",
+          },
+        ],
+        "totalInflow": 0,
+        "totalOutflow": 250,
+      },
+    },
+  ],
   "breakdowns": {
     "budget": {
       "currentMonthRemaining": 0,
@@ -2425,7 +2643,7 @@ exports[`CashFlowSimulationService uses only the credit card statement due in th
       ],
       "flows": [
         {
-          "accountId": "cc-1",
+          "accountId": "cash-1",
           "amount": -250,
           "context": "Current bill",
           "dayOffset": 12,

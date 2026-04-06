@@ -30,6 +30,7 @@ export class LiabilityEngine {
     metadataMap: Map<string, any>,
     statementBalances: Map<string, number>,
     liquidAccountIds: Set<string>,
+    orderedLiquidAccountIds: string[],
   ): Promise<LiabilityResult> {
     const simulationDays = this.time.getSimulationDays();
     const startOfToday = this.time.getStartOfToday();
@@ -51,14 +52,24 @@ export class LiabilityEngine {
       committedOther: 0,
     };
 
-    const addLiabilityFlow = (acc: Account, amount: number, dayOffset: number, context: string) => {
+    const addLiabilityFlow = (
+      acc: Account,
+      amount: number,
+      dayOffset: number,
+      context: string,
+      payFromAccountId?: string,
+    ) => {
+      const targetAccountId =
+        payFromAccountId ||
+        (orderedLiquidAccountIds.length > 0 ? orderedLiquidAccountIds[0] : acc.id);
+
       flows.push({
         dayOffset,
         amount: -amount,
         source: FlowSource.LIABILITY,
         type: FlowType.OUTFLOW,
         name: acc.name,
-        accountId: acc.id,
+        accountId: targetAccountId,
         context,
       });
 
@@ -143,7 +154,7 @@ export class LiabilityEngine {
           const unsettled = Math.max(0, amountDueAtD1 - coverageForD1);
           if (unsettled > EPSILON) {
             const dayOffset = d1Date.diff(startOfToday, 'day');
-            addLiabilityFlow(acc, unsettled, dayOffset, 'Current bill');
+            addLiabilityFlow(acc, unsettled, dayOffset, 'Current bill', metadata?.payFromAccountId);
             result.committed += unsettled;
             result.committedCreditCard += unsettled;
           }
@@ -155,7 +166,13 @@ export class LiabilityEngine {
             const d2Date = d1Date.add(1, 'month');
             const dayOffset = d2Date.diff(startOfToday, 'day');
             if (dayOffset < simulationDays) {
-              addLiabilityFlow(acc, unsettled, dayOffset, 'Future spending');
+              addLiabilityFlow(
+                acc,
+                unsettled,
+                dayOffset,
+                'Future spending',
+                metadata?.payFromAccountId,
+              );
               result.committed += unsettled;
               result.committedCreditCard += unsettled;
             }
@@ -173,7 +190,13 @@ export class LiabilityEngine {
 
           const dayOffset = targetDate.startOf('day').diff(startOfToday, 'day');
           if (dayOffset < simulationDays) {
-            addLiabilityFlow(acc, unsettledAmount, dayOffset, 'Unsettled');
+            addLiabilityFlow(
+              acc,
+              unsettledAmount,
+              dayOffset,
+              'Unsettled',
+              metadata?.payFromAccountId,
+            );
             result.committed += unsettledAmount;
             result.committedOther += unsettledAmount;
           }

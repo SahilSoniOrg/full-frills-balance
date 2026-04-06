@@ -324,8 +324,10 @@ export class NotificationService {
           switchMap(async ([usages, budgetScopeGroups, rawDeltas]) => {
             const accountBalances = await balanceService.getAccountBalances();
 
+            const startingBalances = new Map<string, number>();
             const targetMoney = Money.from(0, resultCurrency);
             let totalLiquidMoney = targetMoney;
+
             const liquidAssetAccounts: { name: string; amount: number }[] = [];
             for (const a of liquidAssets) {
               const b = accountBalances.find(bal => bal.accountId === a.id);
@@ -341,6 +343,7 @@ export class NotificationService {
                 }
                 totalLiquidMoney = totalLiquidMoney.add(Money.from(amount, resultCurrency));
                 liquidAssetAccounts.push({ name: a.name, amount });
+                startingBalances.set(a.id, amount);
               }
             }
 
@@ -366,7 +369,7 @@ export class NotificationService {
             );
 
             const simulationResults = await cashFlowSimulationService.simulateSafeToSpend(
-              totalLiquidMoney.amount,
+              startingBalances,
               plannedPayments,
               plannedJournals,
               [...liquidAssetIds, ...liquidLiabilityIds],

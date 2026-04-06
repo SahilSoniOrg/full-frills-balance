@@ -36,15 +36,8 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     committedLiabilities,
   } = useSafeToSpendView(props);
 
-  const {
-    totalLiquidAssets,
-    summary,
-    breakdowns,
-    projection,
-    liquidAssetSubtypes,
-    liquidAssetAccounts,
-    isLoading,
-  } = props;
+  const { totalLiquidAssets, summary, breakdowns, projection, liquidAssetSubtypes, isLoading } =
+    props;
 
   return (
     <Box paddingVertical="xs">
@@ -95,7 +88,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
         committedLiabilities={committedLiabilities}
         safeToSpend={safeToSpend}
         liquidAssetSubtypes={liquidAssetSubtypes}
-        liquidAssetAccounts={liquidAssetAccounts}
+        accountSummaries={props.accountSummaries}
         incomeBreakdown={breakdowns?.income}
         committedBreakdown={breakdowns?.committed}
         debtBreakdown={breakdowns?.debt}

@@ -20,7 +20,7 @@ interface SafeToSpendExplanationModalProps {
   committedLiabilities: number;
   safeToSpend: number;
   liquidAssetSubtypes: any[];
-  liquidAssetAccounts: any[];
+  accountSummaries?: any[];
   incomeBreakdown: any[];
   committedBreakdown: any[];
   debtBreakdown: any[];
@@ -43,7 +43,7 @@ export const SafeToSpendExplanationModal = ({
   committedLiabilities,
   safeToSpend,
   liquidAssetSubtypes,
-  liquidAssetAccounts,
+  accountSummaries,
   incomeBreakdown,
   committedBreakdown,
   debtBreakdown,
@@ -213,7 +213,7 @@ export const SafeToSpendExplanationModal = ({
               labels={labels}
               formatValue={formatValue}
               liquidAssetSubtypes={liquidAssetSubtypes}
-              liquidAssetAccounts={liquidAssetAccounts}
+              accountSummaries={accountSummaries}
             />
           </View>
         )}

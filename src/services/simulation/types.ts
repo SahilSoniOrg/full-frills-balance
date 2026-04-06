@@ -76,6 +76,21 @@ export interface ProjectionPoint {
   dailyBurn?: number;
 }
 
+export interface AccountSimulationSummary {
+  accountId: string;
+  accountName: string;
+  startingBalance: number;
+  safeToSpend: number;
+  shortfall: number;
+  minBalance: number;
+  usageDetails?: {
+    totalInflow: number;
+    totalOutflow: number;
+    topInflows: { name: string; amount: number; source?: string; isPostIncome?: boolean }[];
+    topOutflows: { name: string; amount: number; source?: string; isPostIncome?: boolean }[];
+  };
+}
+
 export interface SimulationResult {
   summary: {
     safeToSpend: number;
@@ -88,6 +103,7 @@ export interface SimulationResult {
     totalCommittedPlanned: number;
     firstMajorInflowDay: number | null;
   };
+  accountSummaries?: AccountSimulationSummary[];
   breakdowns: {
     committed: AccountCommitment[];
     debt: DebtEntry[];
@@ -124,7 +140,8 @@ export interface SimulationResult {
 
 export interface BudgetEngineResult {
   flows: Flow[];
-  dailyBudgetBurns: number[];
+  dailyBudgetBurns: number[]; // Global sum
+  dailyAssetAccountBurns: Map<string, number[]>; // Per asset account
   commitments: AccountCommitment[];
   budgetCoveredExpenseAccountIds: Set<string>;
   currentMonthRemaining: number;
