@@ -86,8 +86,20 @@ export interface AccountSimulationSummary {
   usageDetails?: {
     totalInflow: number;
     totalOutflow: number;
-    topInflows: { name: string; amount: number; source?: string; isPostIncome?: boolean }[];
-    topOutflows: { name: string; amount: number; source?: string; isPostIncome?: boolean }[];
+    topInflows: {
+      id?: string;
+      name: string;
+      amount: number;
+      source?: string;
+      isPostIncome?: boolean;
+    }[];
+    topOutflows: {
+      id?: string;
+      name: string;
+      amount: number;
+      source?: string;
+      isPostIncome?: boolean;
+    }[];
   };
 }
 

@@ -3,6 +3,7 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
@@ -117,6 +118,7 @@ export const SafeToSpendExplanationModal = ({
       title={info.title}
       onClose={onClose}
       accessibilityCloseLabel="Close safe-to-spend info"
+      useNativeModal={false}
       primaryAction={{
         label: info.closeCta,
         variant: 'primary',
@@ -269,13 +271,20 @@ export const SafeToSpendExplanationModal = ({
                 incomeBreakdown
                   .filter(inc => inc.amount !== 0)
                   .map((inc, i) => (
-                    <View
+                    <TouchableOpacity
                       key={i}
                       style={{
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                       }}
+                      onPress={() => {
+                        if (inc.type === 'PLANNED_PAYMENT') {
+                          AppNavigation.toPlannedPaymentDetails(inc.id);
+                        }
+                      }}
+                      disabled={inc.type !== 'PLANNED_PAYMENT'}
+                      activeOpacity={0.7}
                     >
                       <View style={{ flex: 1 }}>
                         <AppText variant="caption" weight="bold">
@@ -298,7 +307,7 @@ export const SafeToSpendExplanationModal = ({
                       <AppText variant="caption" weight="bold" color="success" tabular>
                         +{formatValue(inc.amount)}
                       </AppText>
-                    </View>
+                    </TouchableOpacity>
                   ))
               ) : (
                 <AppText variant="caption" color="secondary" italic>
@@ -385,7 +394,7 @@ export const SafeToSpendExplanationModal = ({
                             det.dayOffset !== undefined &&
                             det.dayOffset >= firstMajorInflowDay;
                           return (
-                            <View
+                            <TouchableOpacity
                               key={di}
                               style={{
                                 flexDirection: 'row',
@@ -393,6 +402,13 @@ export const SafeToSpendExplanationModal = ({
                                 alignItems: 'center',
                                 minHeight: 18,
                               }}
+                              onPress={() => {
+                                if (det.type === 'PLANNED_PAYMENT') {
+                                  AppNavigation.toPlannedPaymentDetails(det.id);
+                                }
+                              }}
+                              disabled={det.type !== 'PLANNED_PAYMENT'}
+                              activeOpacity={0.7}
                             >
                               <View
                                 style={{
@@ -470,7 +486,7 @@ export const SafeToSpendExplanationModal = ({
                               >
                                 {formatValue(det.amount)}
                               </AppText>
-                            </View>
+                            </TouchableOpacity>
                           );
                         })}
                     </View>

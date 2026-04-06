@@ -304,8 +304,14 @@ export class CashFlowSimulationService {
 
       // Collect usage details
       const accountFlows = allFlows.filter(f => f.accountId === accountId);
-      const inflowItemsMap = new Map<string, { amount: number; source: string; minDay: number }>();
-      const outflowItemsMap = new Map<string, { amount: number; source: string; minDay: number }>();
+      const inflowItemsMap = new Map<
+        string,
+        { id?: string; amount: number; source: string; minDay: number }
+      >();
+      const outflowItemsMap = new Map<
+        string,
+        { id?: string; amount: number; source: string; minDay: number }
+      >();
       let totalInflow = 0;
       let totalOutflow = 0;
 
@@ -315,6 +321,7 @@ export class CashFlowSimulationService {
           const existing = inflowItemsMap.get(f.name);
           inflowItemsMap.set(f.name, {
             amount: (existing?.amount || 0) + f.amount,
+            id: existing?.id || f.id,
             source: (f as any).source || 'OTHER',
             minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
           });
@@ -324,6 +331,7 @@ export class CashFlowSimulationService {
           const existing = outflowItemsMap.get(f.name);
           outflowItemsMap.set(f.name, {
             amount: (existing?.amount || 0) + absAmount,
+            id: existing?.id || f.id,
             source: (f as any).source || 'OTHER',
             minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
           });
@@ -336,6 +344,7 @@ export class CashFlowSimulationService {
 
       const topInflows = Array.from(inflowItemsMap.entries())
         .map(([name, data]) => ({
+          id: data.id,
           name,
           amount: data.amount,
           source: data.source,
@@ -346,6 +355,7 @@ export class CashFlowSimulationService {
 
       const topOutflows = Array.from(outflowItemsMap.entries())
         .map(([name, data]) => ({
+          id: data.id,
           name,
           amount: data.amount,
           source: data.source,

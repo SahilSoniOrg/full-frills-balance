@@ -4,8 +4,9 @@ import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Acc
 import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
+import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SafeToSpendLedgerProps {
   labels: any;
@@ -100,10 +101,22 @@ export const SafeToSpendLedger = ({
                       },
                     ]}
                   >
-                    <View style={{ flex: 1 }}>
-                      <AppText variant="caption" weight="medium">
-                        {acc.accountName}
-                      </AppText>
+                    <TouchableOpacity
+                      style={{ flex: 1 }}
+                      onPress={() => AppNavigation.toAccountDetails(acc.accountId)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <AppText variant="caption" weight="bold">
+                          {acc.accountName}
+                        </AppText>
+                        <AppIcon
+                          name="chevronRight"
+                          size={10}
+                          color={theme.textSecondary}
+                          style={{ opacity: 0.5 }}
+                        />
+                      </View>
                       <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
                         <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
                           Current: {formatValue(acc.startingBalance)}
@@ -119,7 +132,7 @@ export const SafeToSpendLedger = ({
                           Floor: {formatValue(acc.minBalance)}
                         </AppText>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                     <View style={{ alignItems: 'flex-end' }}>
                       <AppText
                         variant="caption"
@@ -167,13 +180,20 @@ export const SafeToSpendLedger = ({
                                 opacity: 0.7,
                               }}
                             >
-                              <View
+                              <TouchableOpacity
                                 style={{
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                   gap: 10,
                                   flex: 1,
                                 }}
+                                onPress={() => {
+                                  if (item.id && item.source === 'PLANNED_PAYMENT') {
+                                    AppNavigation.toPlannedPaymentDetails(item.id);
+                                  }
+                                }}
+                                disabled={!item.id || item.source !== 'PLANNED_PAYMENT'}
+                                activeOpacity={0.6}
                               >
                                 <AppIcon
                                   name={icon}
@@ -194,6 +214,14 @@ export const SafeToSpendLedger = ({
                                   >
                                     {item.name}
                                   </AppText>
+                                  {item.id && item.source === 'PLANNED_PAYMENT' && (
+                                    <AppIcon
+                                      name="chevronRight"
+                                      size={8}
+                                      color={theme.textSecondary}
+                                      style={{ opacity: 0.4 }}
+                                    />
+                                  )}
                                   {item.isPostIncome && (
                                     <AppText
                                       style={{ fontSize: 8.5, color: theme.primary }}
@@ -203,7 +231,7 @@ export const SafeToSpendLedger = ({
                                     </AppText>
                                   )}
                                 </View>
-                              </View>
+                              </TouchableOpacity>
                               <AppText
                                 variant="caption"
                                 color="secondary"

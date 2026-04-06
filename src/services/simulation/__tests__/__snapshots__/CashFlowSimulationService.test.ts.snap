@@ -14,6 +14,7 @@ exports[`CashFlowSimulationService buffers future outflows with income only if i
         "topInflows": [
           {
             "amount": 1000,
+            "id": "pp-income",
             "isPostIncome": true,
             "name": "Salary",
             "source": "PLANNED_PAYMENT",
@@ -22,6 +23,7 @@ exports[`CashFlowSimulationService buffers future outflows with income only if i
         "topOutflows": [
           {
             "amount": 800,
+            "id": "pp-expense",
             "isPostIncome": false,
             "name": "Rent",
             "source": "PLANNED_PAYMENT",
@@ -397,6 +399,7 @@ exports[`CashFlowSimulationService correctly commits statement balance when toda
         "topOutflows": [
           {
             "amount": 600,
+            "id": undefined,
             "isPostIncome": false,
             "name": "Primary Card",
             "source": "LIABILITY",
@@ -791,12 +794,14 @@ exports[`CashFlowSimulationService does not double count planned outflows covere
         "topOutflows": [
           {
             "amount": 960,
+            "id": undefined,
             "isPostIncome": false,
             "name": "Monthly Budget Burn",
             "source": "BUDGET",
           },
           {
             "amount": 15,
+            "id": "pp-util",
             "isPostIncome": false,
             "name": "Electric Bill",
             "source": "PLANNED_PAYMENT",
@@ -1172,6 +1177,7 @@ exports[`CashFlowSimulationService does not include future income in safe-to-spe
         "topInflows": [
           {
             "amount": 1000,
+            "id": "pp-income",
             "isPostIncome": true,
             "name": "Salary",
             "source": "PLANNED_PAYMENT",
@@ -1180,6 +1186,7 @@ exports[`CashFlowSimulationService does not include future income in safe-to-spe
         "topOutflows": [
           {
             "amount": 800,
+            "id": "pp-expense",
             "isPostIncome": true,
             "name": "Rent",
             "source": "PLANNED_PAYMENT",
@@ -1555,6 +1562,7 @@ exports[`CashFlowSimulationService implements smoothed budget burn over 30 days 
         "topOutflows": [
           {
             "amount": 660,
+            "id": undefined,
             "isPostIncome": false,
             "name": "Monthly Budget Burn",
             "source": "BUDGET",
@@ -2570,6 +2578,7 @@ exports[`CashFlowSimulationService uses only the credit card statement due in th
         "topOutflows": [
           {
             "amount": 250,
+            "id": undefined,
             "isPostIncome": false,
             "name": "Primary Card",
             "source": "LIABILITY",

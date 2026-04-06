@@ -6,19 +6,37 @@ import React, { useCallback, useMemo } from 'react';
 
 export interface SafeToSpendViewProps extends SafeToSpendResult {
   isLoading?: boolean;
+  uiState?: {
+    isInfoVisible?: boolean;
+    setInfoVisible?: (v: boolean) => void;
+    expandedSection?: 'assets' | 'income' | 'committed' | 'debts' | null;
+    setExpandedSection?: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => void;
+    selectedLegendItem?: 'safe' | 'committed' | 'debts' | null;
+    setSelectedLegendItem?: (i: 'safe' | 'committed' | 'debts' | null) => void;
+  };
 }
 
 export function useSafeToSpendView(props: SafeToSpendViewProps) {
   const { summary, currencyCode, isLoading, totalLiquidAssets, breakdowns } = props;
 
   const { isPrivacyMode } = useUI();
-  const [isInfoVisible, setInfoVisible] = React.useState(false);
-  const [expandedSection, setExpandedSection] = React.useState<
+
+  // Use external state if provided (for root-level rendering), otherwise fall back to internal
+  const [internalInfoVisible, setInternalInfoVisible] = React.useState(false);
+  const [internalExpandedSection, setInternalExpandedSection] = React.useState<
     'assets' | 'income' | 'committed' | 'debts' | null
   >(null);
-  const [selectedLegendItem, setSelectedLegendItem] = React.useState<
+  const [internalSelectedLegendItem, setInternalSelectedLegendItem] = React.useState<
     'safe' | 'committed' | 'debts' | null
   >(null);
+
+  const isInfoVisible = props.uiState?.isInfoVisible ?? internalInfoVisible;
+  const setInfoVisible = props.uiState?.setInfoVisible ?? setInternalInfoVisible;
+  const expandedSection = props.uiState?.expandedSection ?? internalExpandedSection;
+  const setExpandedSection = props.uiState?.setExpandedSection ?? setInternalExpandedSection;
+  const selectedLegendItem = props.uiState?.selectedLegendItem ?? internalSelectedLegendItem;
+  const setSelectedLegendItem =
+    props.uiState?.setSelectedLegendItem ?? setInternalSelectedLegendItem;
 
   const safeToSpend = summary?.safeToSpend ?? 0;
   const shortfall = summary?.shortfall ?? 0;
