@@ -3,6 +3,7 @@ import { AppConfig, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { useUI } from '@/src/contexts/UIContext';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
@@ -10,10 +11,17 @@ import { mapJournalToCardProps } from '../utils/journalUiUtils';
 export interface PlannedPaymentsSectionProps {
   items: EnrichedJournal[];
   onItemPress?: (item: EnrichedJournal) => void;
+  isPrivacyMode?: boolean;
 }
 
-export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSectionProps) {
+export function PlannedPaymentsSection({
+  items,
+  onItemPress,
+  isPrivacyMode: isPrivacyModeOverride,
+}: PlannedPaymentsSectionProps) {
   const { theme } = useTheme();
+  const { isPrivacyMode: globalPrivacyMode } = useUI();
+  const isPrivacyMode = isPrivacyModeOverride ?? globalPrivacyMode;
   const [isExpanded, setIsExpanded] = useState(false);
 
   const sortedItems = useMemo(() => {
@@ -49,10 +57,12 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
               month: 'short',
               day: 'numeric',
             });
-            const amountStr = CurrencyFormatter.format(mapped.amount, mapped.currencyCode, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0,
-            });
+            const amountStr = isPrivacyMode
+              ? '••••'
+              : CurrencyFormatter.format(mapped.amount, mapped.currencyCode, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                });
             const typeColor = theme[mapped.presentation.typeColor as keyof typeof theme] as
               | string
               | undefined;

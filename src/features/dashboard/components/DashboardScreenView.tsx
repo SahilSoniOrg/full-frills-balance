@@ -23,6 +23,7 @@ export function DashboardScreenView({
   listRef,
   explanationModalState,
   legendModalState,
+  isPrivacyMode,
 }: DashboardViewModel & { listRef?: React.RefObject<any> }) {
   const safeToSpendViewProps = useSafeToSpendView({
     ...(safeToSpendData || {}),
@@ -33,6 +34,7 @@ export function DashboardScreenView({
       setExpandedSection: explanationModalState.setExpandedSection,
       selectedLegendItem: legendModalState.selectedItem,
       setSelectedLegendItem: legendModalState.setSelectedItem,
+      isPrivacyMode,
     },
   } as any);
 
@@ -67,6 +69,7 @@ export function DashboardScreenView({
         {...listViewProps}
         ref={listRef}
         showBack={false}
+        isPrivacyMode={isPrivacyMode}
         listHeader={
           <View style={{ zIndex: 10 }}>
             <DashboardHeader {...headerProps} />
@@ -75,6 +78,7 @@ export function DashboardScreenView({
                 <SafeToSpendCard
                   {...safeToSpendData}
                   isLoading={!isInitialized}
+                  isPrivacyMode={isPrivacyMode}
                   onInfoPress={() => explanationModalState.setVisible(true)}
                   onLegendPress={legendModalState.setSelectedItem}
                 />
@@ -84,6 +88,7 @@ export function DashboardScreenView({
               <PlannedPaymentsSection
                 items={listViewProps.plannedJournals || []}
                 onItemPress={listViewProps.onPlannedJournalPress}
+                isPrivacyMode={isPrivacyMode}
               />
             </View>
             <ScreenSectionHeader

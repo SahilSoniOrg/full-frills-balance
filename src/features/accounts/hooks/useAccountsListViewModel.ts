@@ -1,231 +1,240 @@
-import { AppConfig } from '@/src/constants/app-config'
-import { useUI } from '@/src/contexts/UIContext'
-import { IconName } from '@/src/components/core/AppIcon'
-import Account from '@/src/data/models/Account'
-import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts'
-import { useTheme } from '@/src/hooks/use-theme'
-import { useObservable } from '@/src/hooks/useObservable'
-import { reactiveDataService } from '@/src/services/ReactiveDataService'
-import { AppNavigation } from '@/src/utils/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { AppConfig } from '@/src/constants/app-config';
+import { useUI } from '@/src/contexts/UIContext';
+import { IconName } from '@/src/components/core/AppIcon';
+import Account from '@/src/data/models/Account';
+import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts';
+import { useTheme } from '@/src/hooks/use-theme';
+import { useObservable } from '@/src/hooks/useObservable';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export interface AccountCardViewModel {
-    id: string
-    name: string
-    icon: IconName | null
-    accentColor: string
-    textColor: string
-    balanceText: string
-    monthlyIncomeText: string
-    monthlyExpenseText: string
-    showMonthlyStats: boolean
-    currencyCode: string
-    depth: number
-    hasChildren: boolean
-    isExpanded: boolean
+  id: string;
+  name: string;
+  icon: IconName | null;
+  accentColor: string;
+  textColor: string;
+  balanceText: string;
+  monthlyIncomeText: string;
+  monthlyExpenseText: string;
+  showMonthlyStats: boolean;
+  currencyCode: string;
+  depth: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
 }
 
 export interface AccountSectionViewModel {
-    title: string
-    count: number
-    totalDisplay: string
-    totalColor: string
-    isCollapsed: boolean
-    data: AccountCardViewModel[]
+  title: string;
+  count: number;
+  totalDisplay: string;
+  totalColor: string;
+  isCollapsed: boolean;
+  data: AccountCardViewModel[];
 }
 
 export interface AccountsListViewModel {
-    sections: AccountSectionViewModel[]
-    isRefreshing: boolean
-    onRefresh: () => void
-    onToggleSection: (title: string) => void
-    onAccountPress: (accountId: string) => void
-    onCollapseAccount: (accountId: string) => void
-    onCreateAccount: () => void
-    onReorderPress: () => void
-    onManageHierarchy: () => void
-    onTogglePrivacy: () => void
-    isPrivacyMode: boolean
-    isLoading: boolean
-    version: number
-    netWorth: number
-    totalAssets: number
-    totalLiabilities: number
-    // Search
-    searchQuery: string
-    isSearching: boolean
-    onSearchChange: (query: string) => void
-    setIsSearching: (isSearching: boolean) => void
+  sections: AccountSectionViewModel[];
+  isRefreshing: boolean;
+  onRefresh: () => void;
+  onToggleSection: (title: string) => void;
+  onAccountPress: (accountId: string) => void;
+  onCollapseAccount: (accountId: string) => void;
+  onCreateAccount: () => void;
+  onReorderPress: () => void;
+  onManageHierarchy: () => void;
+  onTogglePrivacy: () => void;
+  isPrivacyMode: boolean;
+  isLoading: boolean;
+  version: number;
+  netWorth: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  // Search
+  searchQuery: string;
+  isSearching: boolean;
+  onSearchChange: (query: string) => void;
+  setIsSearching: (isSearching: boolean) => void;
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
-    const { theme } = useTheme()
-    const { defaultCurrency, showAccountMonthlyStats, isPrivacyMode, setPrivacyMode } = useUI()
+  const { theme } = useTheme();
+  const { defaultCurrency, showAccountMonthlyStats, isPrivacyMode } = useUI();
 
-    const targetCurrency = defaultCurrency || AppConfig.defaultCurrency
+  const [isLocalPrivacyMode, setIsLocalPrivacyMode] = useState(isPrivacyMode);
 
-    const { data: dashboardData, isLoading, version } = useObservable(
-        () => reactiveDataService.observeOptimizedAccountList(targetCurrency),
-        [targetCurrency],
-        {
-            accounts: [],
-            balances: [],
-            wealthSummary: {
-                netWorth: 0,
-                totalAssets: 0,
-                totalLiabilities: 0,
-                totalEquity: 0,
-                totalIncome: 0,
-                totalExpense: 0,
-            },
-        }
-    )
+  // Sync with global privacy mode when it changes (e.g. from settings)
+  useEffect(() => {
+    setIsLocalPrivacyMode(isPrivacyMode);
+  }, [isPrivacyMode]);
 
-    const accounts = dashboardData.accounts
+  const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
 
-    const balancesByAccountId = useMemo(() =>
-        new Map(dashboardData.balances.map(b => [b.accountId, b])),
-        [dashboardData.balances])
+  const {
+    data: dashboardData,
+    isLoading,
+    version,
+  } = useObservable(
+    () => reactiveDataService.observeOptimizedAccountList(targetCurrency),
+    [targetCurrency],
+    {
+      accounts: [],
+      balances: [],
+      wealthSummary: {
+        netWorth: 0,
+        totalAssets: 0,
+        totalLiabilities: 0,
+        totalEquity: 0,
+        totalIncome: 0,
+        totalExpense: 0,
+      },
+    },
+  );
 
-    const {
-        netWorth,
-        totalAssets,
-        totalLiabilities,
-        totalEquity,
-        totalIncome,
-        totalExpense,
-    } = dashboardData.wealthSummary
+  const accounts = dashboardData.accounts;
 
-    const togglePrivacyMode = useCallback(() => setPrivacyMode(!isPrivacyMode), [isPrivacyMode, setPrivacyMode])
+  const balancesByAccountId = useMemo(
+    () => new Map(dashboardData.balances.map(b => [b.accountId, b])),
+    [dashboardData.balances],
+  );
 
-    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']))
-    const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set())
-    const [searchQuery, setSearchQuery] = useState('')
-    const [isSearching, setIsSearching] = useState(false)
+  const { netWorth, totalAssets, totalLiabilities, totalEquity, totalIncome, totalExpense } =
+    dashboardData.wealthSummary;
 
-    const onToggleSection = useCallback((title: string) => {
-        setCollapsedSections(prev => {
-            const next = new Set(prev)
-            if (next.has(title)) next.delete(title)
-            else next.add(title)
-            return next
-        })
-    }, [])
+  const togglePrivacyMode = useCallback(() => setIsLocalPrivacyMode(prev => !prev), []);
 
-    const onAccountPress = useCallback((accountId: string) => {
-        const account = accounts.find((a: Account) => a.id === accountId)
-        if (!account) return
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']));
+  const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
-        const hasChildren = accounts.some((a: Account) => a.parentAccountId === accountId)
-        const isExpanded = expandedAccountIds.has(accountId)
+  const onToggleSection = useCallback((title: string) => {
+    setCollapsedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  }, []);
 
-        if (hasChildren && !isExpanded) {
-            setExpandedAccountIds(prev => {
-                const next = new Set(prev)
-                next.add(accountId)
-                return next
-            })
-        } else {
-            const balance = balancesByAccountId.get(accountId)
-            AppNavigation.toAccountDetails(accountId, {
-                preview: {
-                    name: account.name,
-                    balance: balance?.balance,
-                    currency: balance?.currencyCode || account.currencyCode,
-                    icon: account.icon || 'wallet',
-                    type: account.accountType,
-                }
-            })
-        }
-    }, [accounts, expandedAccountIds, balancesByAccountId])
+  const onAccountPress = useCallback(
+    (accountId: string) => {
+      const account = accounts.find((a: Account) => a.id === accountId);
+      if (!account) return;
 
-    const onCollapseAccount = useCallback((accountId: string) => {
+      const hasChildren = accounts.some((a: Account) => a.parentAccountId === accountId);
+      const isExpanded = expandedAccountIds.has(accountId);
+
+      if (hasChildren && !isExpanded) {
         setExpandedAccountIds(prev => {
-            const next = new Set(prev)
-            next.delete(accountId)
-            return next
-        })
-    }, [])
+          const next = new Set(prev);
+          next.add(accountId);
+          return next;
+        });
+      } else {
+        const balance = balancesByAccountId.get(accountId);
+        AppNavigation.toAccountDetails(accountId, {
+          preview: {
+            name: account.name,
+            balance: balance?.balance,
+            currency: balance?.currencyCode || account.currencyCode,
+            icon: account.icon || 'wallet',
+            type: account.accountType,
+          },
+        });
+      }
+    },
+    [accounts, expandedAccountIds, balancesByAccountId],
+  );
 
-    const onCreateAccount = useCallback(() => {
-        AppNavigation.toAccountCreation()
-    }, [])
+  const onCollapseAccount = useCallback((accountId: string) => {
+    setExpandedAccountIds(prev => {
+      const next = new Set(prev);
+      next.delete(accountId);
+      return next;
+    });
+  }, []);
 
-    const onReorderPress = useCallback(() => {
-        AppNavigation.toAccountReorder()
-    }, [])
+  const onCreateAccount = useCallback(() => {
+    AppNavigation.toAccountCreation();
+  }, []);
 
-    const onTogglePrivacy = useCallback(() => {
-        togglePrivacyMode()
-    }, [togglePrivacyMode])
+  const onReorderPress = useCallback(() => {
+    AppNavigation.toAccountReorder();
+  }, []);
 
-    const onManageHierarchy = useCallback(() => {
-        AppNavigation.toManageHierarchy()
-    }, [])
+  const onTogglePrivacy = useCallback(() => {
+    togglePrivacyMode();
+  }, [togglePrivacyMode]);
 
-    const onRefresh = useCallback(() => {
-        // Refresh is handled reactively by observables
-    }, [])
+  const onManageHierarchy = useCallback(() => {
+    AppNavigation.toManageHierarchy();
+  }, []);
 
-    const filteredAccounts = useMemo(() => {
-        if (!searchQuery) return accounts
-        const lowercaseQuery = searchQuery.toLowerCase()
-        return accounts.filter((a: Account) => a.name.toLowerCase().includes(lowercaseQuery))
-    }, [accounts, searchQuery])
+  const onRefresh = useCallback(() => {
+    // Refresh is handled reactively by observables
+  }, []);
 
-    const sections = useMemo(() => {
-        return transformAccountsToSections(filteredAccounts, {
-            balancesByAccountId,
-            defaultCurrency,
-            showAccountMonthlyStats,
-            isPrivacyMode,
-            isLoading,
-            collapsedSections,
-            expandedAccountIds,
-            theme,
-            totalAssets,
-            totalLiabilities,
-            totalEquity,
-            totalIncome,
-            totalExpense,
-        })
-    }, [
-        filteredAccounts,
-        balancesByAccountId,
-        defaultCurrency,
-        showAccountMonthlyStats,
-        isPrivacyMode,
-        isLoading,
-        collapsedSections,
-        expandedAccountIds,
-        theme,
-        totalAssets,
-        totalLiabilities,
-        totalEquity,
-        totalIncome,
-        totalExpense,
-    ])
+  const filteredAccounts = useMemo(() => {
+    if (!searchQuery) return accounts;
+    const lowercaseQuery = searchQuery.toLowerCase();
+    return accounts.filter((a: Account) => a.name.toLowerCase().includes(lowercaseQuery));
+  }, [accounts, searchQuery]);
 
-    return {
-        sections,
-        isRefreshing: isLoading,
-        onRefresh,
-        onToggleSection,
-        onAccountPress,
-        onCollapseAccount,
-        onCreateAccount,
-        onReorderPress,
-        onManageHierarchy,
-        onTogglePrivacy,
-        isPrivacyMode,
-        isLoading,
-        version,
-        netWorth,
-        totalAssets,
-        totalLiabilities,
-        searchQuery,
-        isSearching,
-        onSearchChange: setSearchQuery,
-        setIsSearching,
-    }
+  const sections = useMemo(() => {
+    return transformAccountsToSections(filteredAccounts, {
+      balancesByAccountId,
+      defaultCurrency,
+      showAccountMonthlyStats,
+      isPrivacyMode: isLocalPrivacyMode,
+      isLoading,
+      collapsedSections,
+      expandedAccountIds,
+      theme,
+      totalAssets,
+      totalLiabilities,
+      totalEquity,
+      totalIncome,
+      totalExpense,
+    });
+  }, [
+    filteredAccounts,
+    balancesByAccountId,
+    defaultCurrency,
+    showAccountMonthlyStats,
+    isLocalPrivacyMode,
+    isLoading,
+    collapsedSections,
+    expandedAccountIds,
+    theme,
+    totalAssets,
+    totalLiabilities,
+    totalEquity,
+    totalIncome,
+    totalExpense,
+  ]);
+
+  return {
+    sections,
+    isRefreshing: isLoading,
+    onRefresh,
+    onToggleSection,
+    onAccountPress,
+    onCollapseAccount,
+    onCreateAccount,
+    onReorderPress,
+    onManageHierarchy,
+    onTogglePrivacy,
+    isPrivacyMode: isLocalPrivacyMode,
+    isLoading,
+    version,
+    netWorth,
+    totalAssets,
+    totalLiabilities,
+    searchQuery,
+    isSearching,
+    onSearchChange: setSearchQuery,
+    setIsSearching,
+  };
 }

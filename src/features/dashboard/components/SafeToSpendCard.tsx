@@ -10,6 +10,7 @@ export interface SafeToSpendCardProps extends SafeToSpendResult {
   isLoading?: boolean;
   onInfoPress: () => void;
   onLegendPress: (i: 'safe' | 'committed' | 'debts' | null) => void;
+  isPrivacyMode?: boolean;
 }
 
 export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
@@ -23,7 +24,12 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     safeToSpend,
     shortfall,
     committedLiabilities,
-  } = useSafeToSpendView(props);
+  } = useSafeToSpendView({
+    ...props,
+    uiState: {
+      isPrivacyMode: props.isPrivacyMode,
+    },
+  } as any);
 
   const { projection, isLoading } = props;
 
@@ -55,7 +61,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
           projection={projection}
           safeToSpend={safeToSpend}
           isOverCommitted={isOverCommitted}
-          isPrivacyMode={false} // Card-level chart doesn't need privacy mode check here, hook handles formatting
+          isPrivacyMode={props.isPrivacyMode || false}
           formatValue={format}
         />
         <Box style={{ marginBottom: Spacing.md }}>

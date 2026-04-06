@@ -22,6 +22,7 @@ interface TransactionListViewProps {
   contentContainerStyle?: any;
   plannedJournals?: EnrichedJournal[];
   onPlannedJournalPress?: (item: EnrichedJournal) => void;
+  isPrivacyMode?: boolean;
 }
 
 export const TransactionListView = React.forwardRef<any, TransactionListViewProps>((props, ref) => {
@@ -35,6 +36,7 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
     ListHeaderComponent,
     onEndReached,
     contentContainerStyle,
+    isPrivacyMode,
   } = props;
   const listEmpty =
     isLoading && items.length === 0 ? (
@@ -72,11 +74,15 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
             count={item.count}
             netAmount={item.netAmount}
             currencyCode={item.currencyCode}
-            isReconciledMarker={item.isReconciledMarker}
             reconciledAt={item.reconciledAt}
+            isPrivacyMode={isPrivacyMode}
           />
         ) : (
-          <TransactionCard {...item.cardProps!} onPress={item.onPress!} />
+          <TransactionCard
+            {...item.cardProps!}
+            onPress={item.onPress!}
+            isPrivacyMode={isPrivacyMode}
+          />
         )
       }
       keyExtractor={(item: TransactionListItem) => item.id}

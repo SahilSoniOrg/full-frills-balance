@@ -13,13 +13,15 @@ export interface SafeToSpendViewProps extends SafeToSpendResult {
     setExpandedSection?: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => void;
     selectedLegendItem?: 'safe' | 'committed' | 'debts' | null;
     setSelectedLegendItem?: (i: 'safe' | 'committed' | 'debts' | null) => void;
+    isPrivacyMode?: boolean;
   };
 }
 
 export function useSafeToSpendView(props: SafeToSpendViewProps) {
   const { summary, currencyCode, isLoading, totalLiquidAssets, breakdowns } = props;
 
-  const { isPrivacyMode } = useUI();
+  const { isPrivacyMode: globalPrivacyMode } = useUI();
+  const isPrivacyMode = props.uiState?.isPrivacyMode ?? globalPrivacyMode;
 
   // Use external state if provided (for root-level rendering), otherwise fall back to internal
   const [internalInfoVisible, setInternalInfoVisible] = React.useState(false);

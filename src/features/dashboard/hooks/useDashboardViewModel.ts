@@ -20,6 +20,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export interface DashboardViewModel {
   isInitialized: boolean;
   hasCompletedOnboarding: boolean;
+  isPrivacyMode: boolean;
   listViewProps: Omit<JournalListViewProps, 'screenTitle' | 'showBack' | 'listHeader' | 'fab'>;
   headerProps: {
     greeting: string;
@@ -52,12 +53,18 @@ export interface DashboardViewModel {
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
-  const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, setPrivacyMode } =
-    useUI();
+  const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode } = useUI();
+
+  const [isLocalPrivacyMode, setIsLocalPrivacyMode] = React.useState(isPrivacyMode);
+
+  // Sync with global privacy mode when it changes (e.g. from settings)
+  React.useEffect(() => {
+    setIsLocalPrivacyMode(isPrivacyMode);
+  }, [isPrivacyMode]);
 
   const onTogglePrivacy = useCallback(() => {
-    setPrivacyMode(!isPrivacyMode);
-  }, [isPrivacyMode, setPrivacyMode]);
+    setIsLocalPrivacyMode(prev => !prev);
+  }, []);
 
   const { data: safeToSpendData } = useObservable(
     () => notificationService.observeSafeToSpend(),
@@ -112,14 +119,14 @@ export function useDashboardViewModel(): DashboardViewModel {
     () => ({
       greeting,
       notificationCount: totalNotifications,
-      isPrivacyMode,
+      isPrivacyMode: isLocalPrivacyMode,
       onTogglePrivacy,
       onNotificationsPress: AppNavigation.toHub,
       unreadSmsCount: unreadSmsCount || 0,
       onSmsPress: Platform.OS === 'android' ? AppNavigation.toSmsInbox : undefined,
       onSearchPress: AppNavigation.toJournalSearch,
     }),
-    [greeting, totalNotifications, isPrivacyMode, onTogglePrivacy, unreadSmsCount],
+    [greeting, totalNotifications, isLocalPrivacyMode, onTogglePrivacy, unreadSmsCount],
   );
 
   // Memoize fab object to prevent re-renders
@@ -133,6 +140,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   return {
     isInitialized,
     hasCompletedOnboarding,
+    isPrivacyMode: isLocalPrivacyMode,
     listViewProps,
     headerProps,
     transactionSectionTitle: sectionTitle,

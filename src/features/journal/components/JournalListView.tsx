@@ -39,6 +39,7 @@ export interface JournalListViewProps {
   };
   plannedJournals?: EnrichedJournal[];
   onPlannedJournalPress?: (item: EnrichedJournal) => void;
+  isPrivacyMode?: boolean;
   isSearchActive?: boolean;
   alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];
 }
@@ -65,6 +66,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
     plannedJournals,
     onPlannedJournalPress,
     isSearchActive,
+    isPrivacyMode,
     alignTitle,
   } = props;
   return (
@@ -91,6 +93,7 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           contentContainerStyle={[styles.listContent, listContentStyle]}
           plannedJournals={plannedJournals}
           onPlannedJournalPress={onPlannedJournalPress}
+          isPrivacyMode={isPrivacyMode}
         />
 
         {fab && (

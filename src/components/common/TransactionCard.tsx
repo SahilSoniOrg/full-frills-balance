@@ -5,6 +5,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
+import { useUI } from '@/src/contexts/UIContext';
 import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -29,6 +30,7 @@ export interface TransactionCardProps {
   };
   badges: TransactionBadge[];
   notes?: string;
+  isPrivacyMode?: boolean;
   onPress?: () => void;
 }
 
@@ -43,11 +45,15 @@ export const TransactionCard = ({
   presentation,
   badges = [],
   notes,
+  isPrivacyMode: isPrivacyModeOverride,
   onPress,
 }: TransactionCardProps) => {
   const { theme, themeMode } = useTheme();
+  const { isPrivacyMode: globalPrivacyMode } = useUI();
+  const isPrivacyMode = isPrivacyModeOverride ?? globalPrivacyMode;
+
   const formattedDate = formatDate(transactionDate, { includeTime: true });
-  const formattedAmount = CurrencyFormatter.format(amount, currencyCode);
+  const formattedAmount = isPrivacyMode ? '••••' : CurrencyFormatter.format(amount, currencyCode);
 
   const content = (
     <Stack gap="lg">
