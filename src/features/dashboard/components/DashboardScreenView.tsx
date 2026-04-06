@@ -79,8 +79,8 @@ export function DashboardScreenView({
                   {...safeToSpendData}
                   isLoading={!isInitialized}
                   isPrivacyMode={isPrivacyMode}
-                  onInfoPress={() => explanationModalState.setVisible(true)}
-                  onLegendPress={legendModalState.setSelectedItem}
+                  onInfoPress={() => safeToSpendViewProps.setInfoVisible(true)}
+                  onLegendPress={safeToSpendViewProps.setSelectedLegendItem}
                 />
               </View>
             )}
@@ -104,7 +104,7 @@ export function DashboardScreenView({
         <>
           <SafeToSpendExplanationModal
             visible={explanationModalState.visible}
-            onClose={() => explanationModalState.setVisible(false)}
+            onClose={() => safeToSpendViewProps.setInfoVisible(false)}
             info={safeToSpendViewProps.info}
             labels={safeToSpendViewProps.labels}
             formatValue={safeToSpendViewProps.format}
@@ -122,12 +122,12 @@ export function DashboardScreenView({
             firstMajorInflowDay={safeToSpendData.summary?.firstMajorInflowDay}
             totalLiabilities={safeToSpendData.breakdowns?.liabilities?.total}
             expandedSection={explanationModalState.expandedSection}
-            setExpandedSection={explanationModalState.setExpandedSection}
+            setExpandedSection={safeToSpendViewProps.setExpandedSection}
           />
 
           <SafeToSpendLegendModal
             visible={!!legendModalState.selectedItem}
-            onClose={() => legendModalState.setSelectedItem(null)}
+            onClose={() => safeToSpendViewProps.setSelectedLegendItem(null)}
             type={legendModalState.selectedItem}
             labels={safeToSpendViewProps.labels}
             formatValue={safeToSpendViewProps.format}

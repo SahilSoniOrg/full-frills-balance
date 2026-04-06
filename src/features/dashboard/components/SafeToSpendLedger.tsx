@@ -5,6 +5,7 @@ import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
 import { AppNavigation } from '@/src/utils/navigation';
+import { analytics } from '@/src/services/analytics-service';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -103,7 +104,12 @@ export const SafeToSpendLedger = ({
                   >
                     <TouchableOpacity
                       style={{ flex: 1 }}
-                      onPress={() => AppNavigation.toAccountDetails(acc.accountId)}
+                      onPress={() => {
+                        analytics.trackFeatureUsage('safe_to_spend', 'account_viewed', {
+                          id: acc.accountId,
+                        });
+                        AppNavigation.toAccountDetails(acc.accountId);
+                      }}
                       activeOpacity={0.7}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -189,6 +195,14 @@ export const SafeToSpendLedger = ({
                                 }}
                                 onPress={() => {
                                   if (item.id && item.source === 'PLANNED_PAYMENT') {
+                                    analytics.trackFeatureUsage(
+                                      'safe_to_spend',
+                                      'planned_payment_viewed',
+                                      {
+                                        id: item.id,
+                                        source: 'ledger_usage',
+                                      },
+                                    );
                                     AppNavigation.toPlannedPaymentDetails(item.id);
                                   }
                                 }}

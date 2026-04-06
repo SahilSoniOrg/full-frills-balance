@@ -4,6 +4,7 @@ import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/co
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
+import { analytics } from '@/src/services/analytics-service';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
@@ -280,6 +281,10 @@ export const SafeToSpendExplanationModal = ({
                       }}
                       onPress={() => {
                         if (inc.type === 'PLANNED_PAYMENT') {
+                          analytics.trackFeatureUsage('safe_to_spend', 'planned_payment_viewed', {
+                            id: inc.id,
+                            source: 'income_breakdown',
+                          });
                           AppNavigation.toPlannedPaymentDetails(inc.id);
                         }
                       }}
@@ -404,6 +409,14 @@ export const SafeToSpendExplanationModal = ({
                               }}
                               onPress={() => {
                                 if (det.type === 'PLANNED_PAYMENT') {
+                                  analytics.trackFeatureUsage(
+                                    'safe_to_spend',
+                                    'planned_payment_viewed',
+                                    {
+                                      id: det.id,
+                                      source: 'committed_breakdown',
+                                    },
+                                  );
                                   AppNavigation.toPlannedPaymentDetails(det.id);
                                 }
                               }}

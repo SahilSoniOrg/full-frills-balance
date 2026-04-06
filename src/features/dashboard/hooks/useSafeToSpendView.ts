@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { analytics } from '@/src/services/analytics-service';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo } from 'react';
@@ -72,6 +73,38 @@ export function useSafeToSpendView(props: SafeToSpendViewProps) {
   const isPositiveSafeToSpend = safeToSpend > 0;
   const committedTotal = committedPlanned + committedBudget;
 
+  const handleSetInfoVisible = useCallback(
+    (v: boolean) => {
+      setInfoVisible(v);
+      if (v) {
+        analytics.trackFeatureUsage('safe_to_spend', 'opened', { isOverCommitted });
+      } else {
+        analytics.trackFeatureUsage('safe_to_spend', 'closed');
+      }
+    },
+    [setInfoVisible, isOverCommitted],
+  );
+
+  const handleSetExpandedSection = useCallback(
+    (s: 'assets' | 'income' | 'committed' | 'debts' | null) => {
+      setExpandedSection(s);
+      if (s) {
+        analytics.trackFeatureUsage('safe_to_spend', 'section_expanded', { section: s });
+      }
+    },
+    [setExpandedSection],
+  );
+
+  const handleSetSelectedLegendItem = useCallback(
+    (i: 'safe' | 'committed' | 'debts' | null) => {
+      setSelectedLegendItem(i);
+      if (i) {
+        analytics.trackFeatureUsage('safe_to_spend', 'legend_pressed', { item: i });
+      }
+    },
+    [setSelectedLegendItem],
+  );
+
   const effectiveTotal = useMemo(
     () => Math.max(totalLiquidAssets || 0, committedTotal + committedLiabilities + safeToSpend),
     [totalLiquidAssets, committedTotal, committedLiabilities, safeToSpend],
@@ -83,11 +116,11 @@ export function useSafeToSpendView(props: SafeToSpendViewProps) {
   return {
     isPrivacyMode,
     isInfoVisible,
-    setInfoVisible,
+    setInfoVisible: handleSetInfoVisible,
     expandedSection,
-    setExpandedSection,
+    setExpandedSection: handleSetExpandedSection,
     selectedLegendItem,
-    setSelectedLegendItem,
+    setSelectedLegendItem: handleSetSelectedLegendItem,
     format,
     isOverCommitted,
     isPositiveSafeToSpend,

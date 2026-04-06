@@ -3,6 +3,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { analytics } from '@/src/services/analytics-service';
 import {
   SafeToSpendDataPoint,
   SafeToSpendProjection,
@@ -139,6 +140,17 @@ export const SafeToSpendChart = ({
           hideLabels={isPrivacyMode}
           extraHorizontalLines={extraHorizontalLines}
           avoidPointVertical={true}
+          onPress={index => {
+            if (index === -1) return;
+            const point = data[index];
+            if (!point) return;
+
+            analytics.trackFeatureUsage('safe_to_spend', 'chart_point_selected', {
+              dayOffset: dayjs(point.x).diff(dayjs().startOf('day'), 'day'),
+              isHistory: point.isHistory,
+              hasDetails: (point as any).details?.length > 0,
+            });
+          }}
           renderTooltipContent={point => (
             // <ChartTooltip style={{ minWidth: 100 }}>
             <Stack gap="xs">
