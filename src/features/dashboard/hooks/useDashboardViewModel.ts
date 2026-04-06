@@ -29,6 +29,7 @@ export interface DashboardViewModel {
     onNotificationsPress: () => void;
     unreadSmsCount?: number;
     onSmsPress?: () => void;
+    onSearchPress?: () => void;
   };
   transactionSectionTitle: string;
   fab: {
@@ -116,6 +117,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       onNotificationsPress: AppNavigation.toHub,
       unreadSmsCount: unreadSmsCount || 0,
       onSmsPress: Platform.OS === 'android' ? AppNavigation.toSmsInbox : undefined,
+      onSearchPress: AppNavigation.toJournalSearch,
     }),
     [greeting, totalNotifications, isPrivacyMode, onTogglePrivacy, unreadSmsCount],
   );

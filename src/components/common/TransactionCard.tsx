@@ -123,7 +123,7 @@ export const TransactionCard = ({
             />
           </Box>
           <AppText
-            variant="subheading"
+            variant="xl"
             weight="bold"
             tabular
             style={{ color: theme[presentation.typeColor as keyof typeof theme] as string }}
