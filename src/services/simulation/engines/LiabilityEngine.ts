@@ -12,6 +12,7 @@ import {
   LiabilityResult,
 } from '../types';
 import { CurrencyConverter } from './BudgetEngine';
+import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
 
 export class LiabilityEngine {
   private readonly time: TimeContext;
@@ -31,10 +32,11 @@ export class LiabilityEngine {
     statementBalances: Map<string, number>,
     liquidAccountIds: Set<string>,
     orderedLiquidAccountIds: string[],
+    plannedFlows: Flow[],
+    preSettledAmounts: Map<string, number> = new Map(),
   ): Promise<LiabilityResult> {
     const simulationDays = this.time.getSimulationDays();
     const startOfToday = this.time.getStartOfToday();
-    const todayDay = startOfToday.date();
 
     const flows: Flow[] = [];
     const commitmentsMap = new Map<string, AccountCommitment>();
@@ -125,17 +127,27 @@ export class LiabilityEngine {
 
       const EPSILON = AppConfig.insights.liabilityCommitmentTolerance || 0.01;
 
+      // Project the balance at due dates by considering planned inflows/outflows to this liability
+      const accFlows = plannedFlows.filter(f => f.accountId === acc.id);
+
       if (acc.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
-        let d1Date = startOfToday.date(dueDay).startOf('day');
-        if (d1Date.isBefore(startOfToday, 'day')) d1Date = d1Date.add(1, 'month');
+        const d1Date = getNextDueDate(startOfToday, dueDay);
+        const d1DayOffset = d1Date.diff(startOfToday, 'day');
+        const netFlowToD1 = accFlows
+          .filter(f => f.dayOffset <= d1DayOffset)
+          .reduce((sum, f) => sum + f.amount, 0);
 
-        let s1Date = d1Date.date(statementDay).startOf('day');
-        if (dueDay <= statementDay) s1Date = s1Date.subtract(1, 'month');
+        // projectedBalance = Current Balance - Net Inflow (Payments reduce balance)
+        const projectedBalanceAtD1 = Math.max(0, balanceInResultCurrency - netFlowToD1);
 
-        let amountDueAtD1 = balanceInResultCurrency;
+        const s1Date = getCorrespondingStatementDate(d1Date, statementDay, dueDay);
+
+        let amountDueAtD1 = 0;
         let amountDueAtD2 = 0;
+        const isBillAvailable =
+          startOfToday.isAfter(s1Date, 'day') || startOfToday.isSame(s1Date, 'day');
 
-        if (startOfToday.isAfter(s1Date, 'day') || startOfToday.isSame(s1Date, 'day')) {
+        if (isBillAvailable) {
           const statementBalanceRaw = statementBalances.get(acc.id) || 0;
           const convStatement = await this.converter.convert(
             Math.abs(statementBalanceRaw),
@@ -143,8 +155,18 @@ export class LiabilityEngine {
             this.resultCurrency,
           );
 
-          amountDueAtD1 = Math.min(balanceInResultCurrency, convStatement);
-          amountDueAtD2 = Math.max(0, balanceInResultCurrency - amountDueAtD1);
+          const preSettled = preSettledAmounts.get(acc.id) || 0;
+          const remainingStatement = Math.max(0, convStatement - preSettled);
+
+          // Capped Bill amount for D1
+          amountDueAtD1 = Math.min(projectedBalanceAtD1, remainingStatement);
+          // Any remaining balance after satisfying the immediate bill statement is pushed to the NEXT cycle D2
+          amountDueAtD2 = Math.max(0, projectedBalanceAtD1 - amountDueAtD1);
+        } else {
+          // Statement hasn't occurred yet.
+          // ALL spending exists but isn't officially 'billed' for money-out-the-door planning until the next cycle.
+          amountDueAtD1 = 0;
+          amountDueAtD2 = projectedBalanceAtD1;
         }
 
         const coverageForD1 = Math.min(coverageAmount, amountDueAtD1);
@@ -153,8 +175,13 @@ export class LiabilityEngine {
         if (amountDueAtD1 > EPSILON) {
           const unsettled = Math.max(0, amountDueAtD1 - coverageForD1);
           if (unsettled > EPSILON) {
-            const dayOffset = d1Date.diff(startOfToday, 'day');
-            addLiabilityFlow(acc, unsettled, dayOffset, 'Current bill', metadata?.payFromAccountId);
+            addLiabilityFlow(
+              acc,
+              unsettled,
+              d1DayOffset,
+              'Current bill',
+              metadata?.payFromAccountId,
+            );
             result.committed += unsettled;
             result.committedCreditCard += unsettled;
           }
@@ -164,31 +191,45 @@ export class LiabilityEngine {
           const unsettled = Math.max(0, amountDueAtD2 - coverageForD2);
           if (unsettled > EPSILON) {
             const d2Date = d1Date.add(1, 'month');
-            const dayOffset = d2Date.diff(startOfToday, 'day');
-            if (dayOffset < simulationDays) {
+            const d2DayOffset = d2Date.diff(startOfToday, 'day');
+
+            // Recalculate projected balance for D2
+            const netFlowToD2 = accFlows
+              .filter(f => f.dayOffset <= d2DayOffset)
+              .reduce((sum, f) => sum + f.amount, 0);
+            const projectedBalanceAtD2 = Math.max(0, balanceInResultCurrency - netFlowToD2);
+
+            // Adjust unsettled by what's actually remaining at D2 (excluding D1 portion)
+            const remainingActuallyAtD2 = Math.max(0, projectedBalanceAtD2 - amountDueAtD1);
+            const effectiveUnsettled = Math.min(unsettled, remainingActuallyAtD2);
+
+            if (d2DayOffset < simulationDays && effectiveUnsettled > EPSILON) {
               addLiabilityFlow(
                 acc,
-                unsettled,
-                dayOffset,
-                'Future spending',
+                effectiveUnsettled,
+                d2DayOffset,
+                'Unbilled spending', // Changed from 'Future spending' to be more descriptive
                 metadata?.payFromAccountId,
               );
-              result.committed += unsettled;
-              result.committedCreditCard += unsettled;
+              result.committed += effectiveUnsettled;
+              result.committedCreditCard += effectiveUnsettled;
             }
           }
         }
       } else {
-        const unsettledAmount = Math.max(0, balanceInResultCurrency - coverageAmount);
-        if (unsettledAmount > EPSILON) {
-          let deductionDay =
-            metadata?.dueDay ||
-            metadata?.emiDay ||
-            AppConfig.insights.liabilityFallbackDeductionDay;
-          let targetDate = startOfToday.date(deductionDay);
-          if (deductionDay <= todayDay) targetDate = targetDate.add(1, 'month');
+        const deductionDay =
+          metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
+        const targetDate = getNextDueDate(startOfToday, deductionDay);
+        const dayOffset = targetDate.diff(startOfToday, 'day');
 
-          const dayOffset = targetDate.startOf('day').diff(startOfToday, 'day');
+        const netFlowToTarget = accFlows
+          .filter(f => f.dayOffset <= dayOffset)
+          .reduce((sum, f) => sum + f.amount, 0);
+
+        const projectedBalanceAtTarget = Math.max(0, balanceInResultCurrency - netFlowToTarget);
+        const unsettledAmount = Math.max(0, projectedBalanceAtTarget - coverageAmount);
+
+        if (unsettledAmount > EPSILON) {
           if (dayOffset < simulationDays) {
             addLiabilityFlow(
               acc,

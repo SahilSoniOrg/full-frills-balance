@@ -35,6 +35,7 @@ export class PlannedFlowEngine {
     liabilityAccountIds: Set<string>,
     accountMap: Map<string, Account>,
     journalTransactionsMap: Map<string, any[]>,
+    liabilityInitialBalances: Map<string, number>,
   ): Promise<PlannedFlowResult> {
     const coverageMap = new Map<string, number>();
     const flows: Flow[] = [];
@@ -43,6 +44,8 @@ export class PlannedFlowEngine {
     const income: IncomeEntry[] = [];
     let organicInflow = 0;
     let organicOutflow = 0;
+
+    const currentLiabilityBalances = new Map<string, number>(liabilityInitialBalances);
 
     const addFlow = (flow: Flow) => {
       flows.push(flow);
@@ -82,57 +85,54 @@ export class PlannedFlowEngine {
       const isLiquidTo =
         liquidAccountIds.has(pp.toAccountId) || liabilityAccountIds.has(pp.toAccountId);
 
-      if (!isLiquidFrom && !isLiquidTo) continue;
-
-      const isInternalTransfer = isLiquidFrom && isLiquidTo;
       const isDebtPayment = liabilityAccountIds.has(pp.toAccountId);
 
       let curr = pp.nextOccurrence;
       while (curr <= this.time.getEndMs()) {
         if (this.time.isFuture(curr)) {
-          const amountInDefault = await this.converter.convert(
+          const rawAmount = await this.converter.convert(
             pp.amount,
             pp.currencyCode || this.resultCurrency,
             this.resultCurrency,
           );
           const dayOffset = this.time.getDayOffset(curr);
 
-          // 1. Build Coverage Map for LiabilityEngine
-          if (isDebtPayment) {
+          let amountInDefault = rawAmount;
+
+          // 1. Capping for Debt Payments (Internal Transfers only)
+          if (isDebtPayment && isLiquidFrom) {
+            const remaining = currentLiabilityBalances.get(pp.toAccountId) || 0;
+            // Cap the payment to the remaining debt balance
+            amountInDefault = Math.max(0, Math.min(rawAmount, remaining));
+            currentLiabilityBalances.set(pp.toAccountId, remaining - amountInDefault);
+
+            // Build Coverage Map for LiabilityEngine
             coverageMap.set(
               pp.toAccountId,
               (coverageMap.get(pp.toAccountId) || 0) + amountInDefault,
             );
+          } else if (isDebtPayment) {
+            // External income to a debt account - reduces balance but doesn't cap the flow
+            const remaining = currentLiabilityBalances.get(pp.toAccountId) || 0;
+            currentLiabilityBalances.set(pp.toAccountId, remaining - rawAmount);
           }
 
-          // 2. Add Flows and Commitments
-          if (isInternalTransfer) {
-            if (isDebtPayment) {
-              addCommitment(
-                pp.toAccountId,
-                accountMap.get(pp.toAccountId),
-                pp.name,
-                amountInDefault,
+          if (amountInDefault > 0) {
+            // 2. Add Flows for both sides if tracked
+            if (isLiquidFrom) {
+              addFlow({
                 dayOffset,
-                pp.id,
-                DebtType.PLANNED_PAYMENT,
-              );
-            }
-          } else {
-            const impact = isLiquidTo ? amountInDefault : -amountInDefault;
-            const accountIdForFlow = impact < 0 ? pp.fromAccountId : pp.toAccountId;
+                amount: -amountInDefault,
+                source: FlowSource.PLANNED_PAYMENT,
+                type: FlowType.OUTFLOW,
+                name: pp.name || 'Planned Payment',
+                accountId: pp.fromAccountId,
+                sourceAccountId: pp.fromAccountId,
+                targetAccountId: pp.toAccountId,
+                id: pp.id,
+              });
 
-            addFlow({
-              dayOffset,
-              amount: impact,
-              source: FlowSource.PLANNED_PAYMENT,
-              type: impact > 0 ? FlowType.INFLOW : FlowType.OUTFLOW,
-              name: pp.name || 'Planned Payment',
-              accountId: accountIdForFlow,
-              id: pp.id,
-            });
-
-            if (impact < 0) {
+              // Add to commitments and track as planned outflow for budget reconciliation
               addCommitment(
                 pp.toAccountId,
                 accountMap.get(pp.toAccountId),
@@ -144,17 +144,33 @@ export class PlannedFlowEngine {
               );
               plannedOutflows.push({
                 dayOffset,
-                accountId: pp.toAccountId, // Use the destination mapped account for Budget constraints!
-                amount: impact,
+                accountId: pp.toAccountId,
+                amount: -amountInDefault,
               });
-            } else {
-              income.push({
-                id: pp.id,
-                name: pp.name || 'Planned Payment',
-                amount: amountInDefault,
+            }
+
+            if (isLiquidTo) {
+              addFlow({
                 dayOffset,
-                type: FlowSource.PLANNED_PAYMENT,
+                amount: amountInDefault,
+                source: FlowSource.PLANNED_PAYMENT,
+                type: FlowType.INFLOW,
+                name: pp.name || 'Planned Payment',
+                accountId: pp.toAccountId,
+                sourceAccountId: pp.fromAccountId,
+                targetAccountId: pp.toAccountId,
+                id: pp.id,
               });
+
+              if (!isLiquidFrom) {
+                income.push({
+                  id: pp.id,
+                  name: pp.name || 'Planned Payment',
+                  amount: amountInDefault,
+                  dayOffset,
+                  type: FlowSource.PLANNED_PAYMENT,
+                });
+              }
             }
           }
         }
@@ -165,9 +181,6 @@ export class PlannedFlowEngine {
     // Process Planned Journals
     for (const journal of plannedJournals) {
       const journalTxs = journalTransactionsMap.get(journal.id) || [];
-      const isInternalTransfer = journalTxs.every(
-        tx => liquidAccountIds.has(tx.accountId) || liabilityAccountIds.has(tx.accountId),
-      );
 
       for (const tx of journalTxs) {
         const isLiquid =
@@ -177,52 +190,54 @@ export class PlannedFlowEngine {
         const occurrenceMs = journal.journalDate;
         if (!this.time.isWithinSimulation(occurrenceMs)) continue;
 
-        const amountInDefault = await this.converter.convert(
+        const rawAmount = await this.converter.convert(
           tx.amount,
           tx.currencyCode || this.resultCurrency,
           this.resultCurrency,
         );
         const dayOffset = this.time.getDayOffset(occurrenceMs);
 
-        // 1. Coverage Map
-        if (liabilityAccountIds.has(tx.accountId) && tx.transactionType === TransactionType.DEBIT) {
-          coverageMap.set(tx.accountId, (coverageMap.get(tx.accountId) || 0) + amountInDefault);
+        let amountInDefault = rawAmount;
+        const isLiability = liabilityAccountIds.has(tx.accountId);
+
+        // 1. Liability Balance Tracking & Capping
+        if (isLiability) {
+          const remaining = currentLiabilityBalances.get(tx.accountId) || 0;
+          if (tx.transactionType === TransactionType.DEBIT) {
+            // Debt Payment (Inflow to CC)
+            amountInDefault = Math.max(0, Math.min(rawAmount, remaining));
+            currentLiabilityBalances.set(tx.accountId, remaining - amountInDefault);
+            coverageMap.set(tx.accountId, (coverageMap.get(tx.accountId) || 0) + amountInDefault);
+          } else {
+            // Debt Spending (Outflow from CC)
+            currentLiabilityBalances.set(tx.accountId, remaining + rawAmount);
+          }
         }
 
+        if (amountInDefault === 0 && rawAmount > 0) continue;
+
         // 2. Flows and Commitments
-        if (isInternalTransfer) {
-          const isDebtPayment =
-            liabilityAccountIds.has(tx.accountId) && tx.transactionType === TransactionType.DEBIT;
-          if (isDebtPayment) {
-            addCommitment(
-              tx.accountId,
-              accountMap.get(tx.accountId),
-              journal.description || 'Planned Journal',
-              amountInDefault,
-              dayOffset,
-              journal.id,
-              DebtType.PLANNED_JOURNAL,
-            );
-          }
-        } else {
-          const acc = accountMap.get(tx.accountId);
-          const impact = acc
-            ? getLiquidNetWorthDelta(amountInDefault, acc.accountType, tx.transactionType)
-            : tx.transactionType === TransactionType.DEBIT
-              ? amountInDefault
-              : -amountInDefault;
+        const acc = accountMap.get(tx.accountId);
+        const impact = acc
+          ? getLiquidNetWorthDelta(amountInDefault, acc.accountType, tx.transactionType)
+          : tx.transactionType === TransactionType.DEBIT
+            ? amountInDefault
+            : -amountInDefault;
 
-          addFlow({
-            dayOffset,
-            amount: impact,
-            source: FlowSource.PLANNED_JOURNAL,
-            type: impact > 0 ? FlowType.INFLOW : FlowType.OUTFLOW,
-            name: journal.description || 'Planned Journal',
-            accountId: tx.accountId,
-            id: journal.id,
-          });
+        addFlow({
+          dayOffset,
+          amount: impact,
+          source: FlowSource.PLANNED_JOURNAL,
+          type: impact > 0 ? FlowType.INFLOW : FlowType.OUTFLOW,
+          name: journal.description || 'Planned Journal',
+          accountId: tx.accountId,
+          sourceAccountId: impact < 0 ? tx.accountId : undefined,
+          targetAccountId: impact > 0 ? tx.accountId : undefined,
+          id: journal.id,
+        });
 
-          if (impact < 0 && tx.transactionType === TransactionType.CREDIT) {
+        if (impact < 0) {
+          if (tx.transactionType === TransactionType.CREDIT) {
             addCommitment(
               tx.accountId,
               acc,
@@ -233,13 +248,22 @@ export class PlannedFlowEngine {
               DebtType.PLANNED_JOURNAL,
             );
           }
-          if (impact < 0) {
-            plannedOutflows.push({
-              dayOffset,
-              accountId: tx.accountId, // Ensure budget mapping uses the target account correctly
-              amount: impact,
-            });
-          } else if (impact > 0) {
+          plannedOutflows.push({
+            dayOffset,
+            accountId: tx.accountId,
+            amount: impact,
+          });
+        } else if (impact > 0) {
+          // If it's a debt payment, it might have come from somewhere else.
+          // For simplicity, we only track it as "Income" in the UI if it's NOT a debt payment or if it's from an external source.
+          // But PlannedFlowResult.income is mostly used for the "Income" list in the UI.
+          const isInternalTransfer = journalTxs.some(
+            otherTx =>
+              otherTx.id !== tx.id &&
+              (liquidAccountIds.has(otherTx.accountId) ||
+                liabilityAccountIds.has(otherTx.accountId)),
+          );
+          if (!isInternalTransfer || !isLiability) {
             income.push({
               id: journal.id,
               name: journal.description || 'Planned Journal',

@@ -26,6 +26,8 @@ export interface Flow {
   source: FlowSource;
   type: FlowType;
   accountId?: string;
+  sourceAccountId?: string;
+  targetAccountId?: string;
   name: string;
   id?: string;
   context?: string;

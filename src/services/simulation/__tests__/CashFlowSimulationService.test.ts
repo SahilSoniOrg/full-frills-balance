@@ -158,7 +158,7 @@ describe('CashFlowSimulationService', () => {
         }),
       ]),
     );
-    expect(result.summary.safeToSpend).toBe(1000); // 1000 - 0 (internal transfer)
+    expect(result.summary.safeToSpend).toBe(700); // 1000 - 300 (internal transfer)
     expect(result).toMatchSnapshot();
   });
 

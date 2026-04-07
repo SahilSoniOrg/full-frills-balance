@@ -12,6 +12,7 @@ import { TimeContext } from './TimeContext';
 import { BudgetEngine, CurrencyConverter } from './engines/BudgetEngine';
 import { LiabilityEngine } from './engines/LiabilityEngine';
 import { PlannedFlowEngine } from './engines/PlannedFlowEngine';
+import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 import { FlowType, SimulationResult } from './types';
 
 export class CashFlowSimulationService {
@@ -29,6 +30,7 @@ export class CashFlowSimulationService {
     scopeGroups: any[][],
     allAccounts: Account[],
     resultCurrency: string,
+    settledAmountsSinceStatement: Map<string, number> = new Map(),
   ): Promise<SimulationResult> {
     const simulationDays = AppConfig.defaults.safeToSpendDays;
     const time = new TimeContext(dayjs(), simulationDays);
@@ -71,11 +73,9 @@ export class CashFlowSimulationService {
           const metadata = metadataMap.get(lb.account.id);
           if (metadata?.statementDay) {
             const dueDay = (metadata as any).dueDay || AppConfig.insights.liabilityDefaultDueDay;
-            const d1Date = time.getStartOfToday().date(dueDay).startOf('day');
-            const s1Date = d1Date
-              .date(metadata.statementDay)
-              .startOf('day')
-              .subtract((metadata as any).dueDay <= metadata.statementDay ? 1 : 0, 'month');
+            const now = time.getStartOfToday();
+            const d1Date = getNextDueDate(now, dueDay);
+            const s1Date = getCorrespondingStatementDate(d1Date, metadata.statementDay, dueDay);
             const balances = await transactionRawRepository.getLatestBalancesRaw(
               [lb.account.id],
               s1Date.valueOf(),
@@ -94,6 +94,10 @@ export class CashFlowSimulationService {
     const budgetEngine = new BudgetEngine(time, converter, resultCurrency);
     const budgetResults = await budgetEngine.run(budgets, usages, scopeGroups, liquidAssetIds);
 
+    const liabilityInitialBalancesMap = new Map(
+      liabilityAccountBalances.map(lb => [lb.account.id, lb.balance]),
+    );
+
     const plannedEngine = new PlannedFlowEngine(time, converter, resultCurrency);
     const plannedResults = await plannedEngine.run(
       plannedPayments,
@@ -102,6 +106,7 @@ export class CashFlowSimulationService {
       liabilityAccountIdsSet,
       accountMap,
       journalTxsMap,
+      liabilityInitialBalancesMap,
     );
 
     const liabilityEngine = new LiabilityEngine(time, converter, resultCurrency);
@@ -112,6 +117,8 @@ export class CashFlowSimulationService {
       statementBalances,
       liquidAccountIdsSet,
       liquidAssetIds, // Passing ordered liquid asset IDs for fallback flow attribution
+      plannedResults.flows,
+      settledAmountsSinceStatement,
     );
 
     // 3. Orchestration & Aggregation
@@ -144,14 +151,32 @@ export class CashFlowSimulationService {
 
       if (isSimulationFlow) {
         // Accumulate net flow (Global)
-        const current = flowByDayOffset.get(dayOffset) || 0;
-        flowByDayOffset.set(dayOffset, current + amount);
+        // IMPORTANT: Global balance only reflects flows into/out of LIQUID asset accounts.
+        // Internal transfers between liquid accounts net to 0.
+        // Transfers to liabilities correctly show up as deductions from the liquid side.
+        const isLiquidAccount = accountId && liquidAccountIdsSet.has(accountId);
+        const isLiabilityInflow = accountId && liabilityAccountIdsSet.has(accountId) && amount > 0;
+        const isInternalTransferToLiability =
+          isLiabilityInflow &&
+          flow.sourceAccountId &&
+          liquidAccountIdsSet.has(flow.sourceAccountId);
 
-        // Accumulate net flow (Per Account)
+        if (isLiquidAccount || (isLiabilityInflow && !isInternalTransferToLiability)) {
+          const current = flowByDayOffset.get(dayOffset) || 0;
+          flowByDayOffset.set(dayOffset, current + amount);
+        }
+
         if (accountId) {
           const dayAccountMap = flowByDayAndAccount.get(dayOffset) || new Map<string, number>();
           dayAccountMap.set(accountId, (dayAccountMap.get(accountId) || 0) + amount);
           flowByDayAndAccount.set(dayOffset, dayAccountMap);
+        }
+
+        // Add to details with boundary
+        const detailsArray = detailsByDayOffset.get(dayOffset) || [];
+        if (detailsArray.length < 20) {
+          detailsArray.push({ name, amount: Math.abs(amount), type, context });
+          detailsByDayOffset.set(dayOffset, detailsArray);
         }
       }
 
@@ -162,13 +187,6 @@ export class CashFlowSimulationService {
             firstMajorInflowDay = dayOffset;
           }
         }
-      }
-
-      // Add to details with boundary
-      const detailsArray = detailsByDayOffset.get(dayOffset) || [];
-      if (detailsArray.length < 20) {
-        detailsArray.push({ name, amount: Math.abs(amount), type, context });
-        detailsByDayOffset.set(dayOffset, detailsArray);
       }
     }
 

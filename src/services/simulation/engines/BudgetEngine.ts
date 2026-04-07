@@ -177,16 +177,18 @@ export class BudgetEngine {
 
     const budgetFlows: any[] = [];
     for (const [assetId, assetBurns] of dailyAssetAccountBurns) {
-      const totalAccountBurn = assetBurns.reduce((a, b) => a + b, 0);
-      if (totalAccountBurn > 0) {
-        budgetFlows.push({
-          dayOffset: 0, // Used for summary totals, specific day less critical for usageDetails
-          amount: -totalAccountBurn,
-          name: 'Monthly Budget Burn',
-          source: 'BUDGET',
-          type: 'OUTFLOW',
-          accountId: assetId,
-        });
+      for (let i = 0; i < simulationDays; i++) {
+        const dailyAmt = assetBurns[i] || 0;
+        if (dailyAmt > 0) {
+          budgetFlows.push({
+            dayOffset: i,
+            amount: -dailyAmt,
+            name: 'Budget Burn',
+            source: 'BUDGET',
+            type: 'OUTFLOW',
+            accountId: assetId,
+          });
+        }
       }
     }
 

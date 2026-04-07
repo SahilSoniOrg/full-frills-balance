@@ -30,6 +30,7 @@ import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 
 import { FlowType, SimulationResult } from '../simulation/types';
+import { getCorrespondingStatementDate, getNextDueDate } from '../simulation/utils/liabilityUtils';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -368,17 +369,60 @@ export class NotificationService {
               }),
             );
 
+            const settledAmountsSinceStatement = new Map<string, number>();
+            await Promise.all(
+              liabilityAccountBalances.map(async lb => {
+                const metadata = (await lb.account.metadataRecords.fetch())[0];
+                if (metadata?.statementDay) {
+                  const dueDay =
+                    (metadata as any).dueDay || AppConfig.insights.liabilityDefaultDueDay;
+                  const now = dayjs().startOf('day');
+                  const d1Date = getNextDueDate(now, dueDay);
+                  const s1Date = getCorrespondingStatementDate(
+                    d1Date,
+                    metadata.statementDay,
+                    dueDay,
+                  );
+
+                  if (now.isAfter(s1Date, 'day') || now.isSame(s1Date, 'day')) {
+                    const metrics = await transactionRawRepository.getAccountPeriodMetricsRaw(
+                      lb.account.id,
+                      s1Date.valueOf(),
+                      now.endOf('day').valueOf(),
+                      false,
+                    );
+
+                    // For liabilities (isAssetOrExpense=false):
+                    //   totalIncrease = CREDIT txns = new spending (adding debt)
+                    //   totalDecrease = DEBIT txns  = payments (reducing debt)
+                    // We want the payments made since the statement date.
+                    let settled = metrics.totalDecrease;
+                    if (lb.account.currencyCode && lb.account.currencyCode !== resultCurrency) {
+                      const { convertedAmount } = await exchangeRateService.convert(
+                        settled,
+                        lb.account.currencyCode,
+                        resultCurrency,
+                      );
+                      settled = convertedAmount;
+                    }
+                    settledAmountsSinceStatement.set(lb.account.id, settled);
+                  }
+                }
+              }),
+            );
+
             const simulationResults = await cashFlowSimulationService.simulateSafeToSpend(
               startingBalances,
               plannedPayments,
               plannedJournals,
-              [...liquidAssetIds, ...liquidLiabilityIds],
+              liquidAssetIds, // Fixed: Pass ONLY liquid asset IDs, excluding liabilities to prevent double-counting debt in global balance
               liabilityAccountBalances,
               budgets,
               usages,
               budgetScopeGroups,
               allAccounts,
               resultCurrency,
+              settledAmountsSinceStatement,
             );
 
             // Calculate History Points
