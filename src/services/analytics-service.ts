@@ -13,34 +13,31 @@ import { Platform } from 'react-native';
  * Powered by PostHog.
  */
 
-// PostHog configuration — evaluated at module load so the client is ready immediately
 const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
 const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 const BUILD_TYPE = process.env.APP_VARIANT || 'development'; // 'development', 'preview', 'production'
 
-/**
- * Singleton PostHog client shared by both PostHogProvider (in RootLayout)
- * and AnalyticsService (for service-layer tracking).
- * Exported so RootLayout can pass it via `client={posthogClient}`.
- */
-export const posthogClient = POSTHOG_API_KEY
-  ? new PostHog(POSTHOG_API_KEY, {
-      host: POSTHOG_HOST,
-    })
-  : null;
-
 export class AnalyticsService {
+  public readonly posthog: PostHog | null;
   private sessionStartTime: number = Date.now();
   private sessionTimeoutTimer: NodeJS.Timeout | null = null;
 
+  constructor() {
+    this.posthog = POSTHOG_API_KEY
+      ? new PostHog(POSTHOG_API_KEY, {
+          host: POSTHOG_HOST,
+          disabled: __DEV__,
+        })
+      : null;
+  }
+
   /**
-   * Initialize analytics provider. No-op since the client is created eagerly;
-   * kept for call-site compatibility.
+   * Initialize analytics provider.
    */
   initialize() {
-    if (posthogClient && __DEV__) {
+    if (this.posthog && __DEV__) {
       logger.info('[Analytics] PostHog client ready (debug mode — events disabled in __DEV__)');
-    } else if (posthogClient) {
+    } else if (this.posthog) {
       logger.info('[Analytics] PostHog client ready');
       this.startSessionTracking();
     } else {
@@ -52,7 +49,7 @@ export class AnalyticsService {
    * Track a custom event
    */
   track(eventName: string, props?: Record<string, string | number | boolean | null>) {
-    if (!posthogClient) return;
+    if (!this.posthog) return;
 
     try {
       const enrichedProps = {
@@ -69,7 +66,7 @@ export class AnalyticsService {
         is_test_build: BUILD_TYPE !== 'production',
       };
 
-      posthogClient.capture(eventName, enrichedProps);
+      this.posthog.capture(eventName, enrichedProps);
       if (__DEV__) {
         logger.debug(`[Analytics] Tracked: ${eventName}`, enrichedProps);
       }
@@ -82,7 +79,7 @@ export class AnalyticsService {
    * Identify the user/device with enhanced properties
    */
   identify(distinctId: string, properties?: Record<string, string | number | boolean>) {
-    if (!posthogClient) return;
+    if (!this.posthog) return;
 
     try {
       const enhancedProperties = {
@@ -101,7 +98,7 @@ export class AnalyticsService {
         is_test_build: BUILD_TYPE !== 'production',
       };
 
-      posthogClient.identify(distinctId, enhancedProperties);
+      this.posthog.identify(distinctId, enhancedProperties);
       if (__DEV__) {
         logger.debug(`[Analytics] Identified: ${distinctId}`, enhancedProperties);
       }
@@ -114,10 +111,10 @@ export class AnalyticsService {
    * Track a screen view
    */
   screen(screenName: string, props?: Record<string, string | number | boolean>) {
-    if (!posthogClient) return;
+    if (!this.posthog) return;
 
     try {
-      posthogClient.screen(screenName, props);
+      this.posthog.screen(screenName, props);
       if (__DEV__) {
         logger.debug(`[Analytics] Screen: ${screenName}`, props);
       }
@@ -256,10 +253,10 @@ export class AnalyticsService {
    * Update user properties for better segmentation
    */
   updateUserProperties(properties: Record<string, any>) {
-    if (!posthogClient) return;
+    if (!this.posthog) return;
 
     try {
-      posthogClient.setPersonProperties(properties);
+      this.posthog.setPersonProperties(properties);
       if (__DEV__) {
         logger.debug('[Analytics] Updated user properties', properties);
       }

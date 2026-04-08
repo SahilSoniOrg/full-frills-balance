@@ -1,6 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
@@ -203,22 +203,25 @@ export const SafeToSpendChart = ({
                   {point.details
                     ?.slice(0, AppConfig.defaults.maxTooltipDetails)
                     .map((detail, idx) => {
-                      const isTotalInflow = detail.type === 'INFLOW';
-                      const isTotalOutflow = detail.type === 'OUTFLOW';
+                      const isInflow = detail.type === 'INFLOW';
                       const isCcDate = detail.type === 'CC_DATE';
 
+                      // Map context/type to consistent icons
                       let iconName: any = 'receipt';
-                      let color = theme.textSecondary;
-                      if (isTotalInflow) {
-                        iconName = 'trendingUp';
-                        color = theme.success;
-                      } else if (isTotalOutflow) {
-                        iconName = 'trendingDown';
-                        color = theme.error;
-                      } else if (isCcDate) {
+                      if (detail.context === 'BUDGET') iconName = 'pieChart';
+                      else if (detail.context === 'PLANNED' || detail.context === 'RESOLVED')
                         iconName = 'calendar';
-                        color = theme.warning;
-                      }
+                      else if (detail.context === 'LIABILITY') iconName = 'creditCard';
+                      else if (detail.context === 'TRANSFER') iconName = 'refresh';
+                      else if (isCcDate) iconName = 'calendar';
+
+                      const color = isInflow
+                        ? theme.success
+                        : detail.context === 'LIABILITY' ||
+                            detail.context === 'BUDGET' ||
+                            detail.context === 'RESOLVED'
+                          ? theme.error
+                          : theme.textSecondary;
 
                       return (
                         <Inline
@@ -227,7 +230,7 @@ export const SafeToSpendChart = ({
                           justifyContent="space-between"
                           alignItems="center"
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <AppIcon name={iconName} size={10} color={color} />
                             <AppText
                               variant="caption"
@@ -237,36 +240,16 @@ export const SafeToSpendChart = ({
                             >
                               {detail.name}
                             </AppText>
-                            {detail.context && (
-                              <View
-                                style={{
-                                  backgroundColor: withOpacity(color, Opacity.hover),
-                                  paddingHorizontal: 4,
-                                  paddingVertical: 1,
-                                  borderRadius: 3,
-                                }}
-                              >
-                                <AppText
-                                  variant="caption"
-                                  style={{ fontSize: 8, color, opacity: 0.9 }}
-                                  weight="bold"
-                                >
-                                  {detail.context}
-                                </AppText>
-                              </View>
-                            )}
                           </View>
                           {detail.amount !== 0 && (
                             <AppText
                               variant="caption"
                               weight="bold"
-                              color={
-                                isTotalInflow ? 'success' : isTotalOutflow ? 'error' : 'primary'
-                              }
+                              color={isInflow ? 'success' : 'error'}
                               style={{ fontSize: 10 }}
                             >
-                              {isTotalOutflow ? '-' : isTotalInflow ? '+' : ''}
-                              {formatValue(detail.amount)}
+                              {isInflow ? '+' : '-'}
+                              {formatValue(Math.abs(detail.amount))}
                             </AppText>
                           )}
                         </Inline>

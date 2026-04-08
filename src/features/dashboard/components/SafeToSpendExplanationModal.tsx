@@ -371,7 +371,7 @@ export const SafeToSpendExplanationModal = ({
         {expandedSection === 'committed' && (
           <View style={styles.expandedContentRow}>
             <View style={{ gap: Spacing.md }}>
-              {committedBreakdown
+              {(committedBreakdown || [])
                 .filter(acc => acc.amount !== 0)
                 .sort((a, b) => b.amount - a.amount)
                 .map((acc, i) => (
@@ -563,7 +563,7 @@ export const SafeToSpendExplanationModal = ({
             </AppText>
 
             <View style={{ gap: Spacing.md }}>
-              {debtBreakdown
+              {(debtBreakdown || [])
                 .filter(acc => acc.amount !== 0)
                 .map((acc, i) => (
                   <View

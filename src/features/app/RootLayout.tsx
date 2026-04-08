@@ -7,7 +7,7 @@ import { AppLockInterceptor } from '@/src/features/app/components/AppLockInterce
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
-import { analytics, posthogClient } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics-service';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, usePathname, useSegments } from 'expo-router';
@@ -111,7 +111,7 @@ export default function RootLayout() {
             <DatabaseProvider database={database}>
               <UIProvider>
                 <FontManager>
-                  <PostHogProvider client={posthogClient ?? undefined} debug={__DEV__}>
+                  <PostHogProvider client={analytics.posthog ?? undefined} debug={__DEV__}>
                     <PostHogScreenTracker />
                     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                       <AppLockInterceptor>
