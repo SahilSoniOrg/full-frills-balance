@@ -381,10 +381,62 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
     }
   });
 
-  it.skip('TODO(v2): applies explicit liability payments only to the liability they target', async () => {
-    // Desired behavior:
-    // A planned payment to card A should reduce card A's generated obligation only.
-    // It must not reduce card B or loan obligations through a broad LIABILITY_PAYMENT tag match.
+  it('applies explicit liability payments only to the liability they target', async () => {
+    const cash = makeAsset('cash', 'Checking');
+    const cardA = makeCreditCard('cc-a', {
+      name: 'Card A',
+      statementDay: 1,
+      dueDay: 15,
+      payFromAccountId: 'cash',
+    });
+    const cardB = makeCreditCard('cc-b', {
+      name: 'Card B',
+      statementDay: 1,
+      dueDay: 15,
+      payFromAccountId: 'cash',
+    });
+
+    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockImplementation(
+      (ids: string[]) => Promise.resolve(new Map([[ids[0], 400]])),
+    );
+
+    const result = await simulate({
+      0: new Map([['cash', 1000]]),
+      1: [
+        {
+          id: 'pp-card-a',
+          name: 'Card A payment',
+          fromAccountId: 'cash',
+          toAccountId: 'cc-a',
+          amount: 250,
+          nextOccurrence: new Date('2026-04-05T12:00:00Z').valueOf(),
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+          currencyCode: 'USD',
+        },
+      ],
+      4: [
+        { account: cardA, balance: 400 },
+        { account: cardB, balance: 400 },
+      ],
+      7: [cash, cardA, cardB],
+    } as any);
+
+    const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
+    expect(liabilityFlows).toHaveLength(2);
+    expect(liabilityFlows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          meta: expect.objectContaining({ referenceId: 'cc-a' }),
+          amount: 150,
+        }),
+        expect.objectContaining({
+          meta: expect.objectContaining({ referenceId: 'cc-b' }),
+          amount: 400,
+        }),
+      ]),
+    );
+    expect(result.summary.safeToSpend).toBe(200);
   });
 
   it.skip('TODO(v2): converts statement balances for foreign-currency credit cards before obligation math', async () => {

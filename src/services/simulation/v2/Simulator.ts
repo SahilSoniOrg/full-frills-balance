@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { Flow, SimulationResultV2 } from './types';
 
 export class Simulator {
@@ -26,7 +27,7 @@ export class Simulator {
     let globalMinBalance = this.calculateGlobalBalance(currentBalances, liquidAccountIds);
 
     // 1. Identify first major inflow day
-    const majorInflowThreshold = 1000; // Hardcoded or passed from config
+    const majorInflowThreshold = AppConfig.defaults.majorInflowThreshold || 1000;
     let firstMajorInflowDay: number | null = null;
     for (const flow of flows) {
       if (flow.kind === 'INFLOW' && flow.amount >= majorInflowThreshold) {

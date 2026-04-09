@@ -3,6 +3,7 @@ export type FlowMeta = {
   originalSource?: 'BUDGET' | 'PLANNED';
   referenceId?: string;
   categoryId?: string;
+  categoryIds?: string[];
   label: string;
   tags?: string[];
 };

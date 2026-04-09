@@ -35,6 +35,10 @@ export class LiabilityFlowGenerator {
         continue;
       }
 
+      const spendingFlows = previousFlows.filter(
+        f => f.kind === 'OUTFLOW' && f.accountId === acc.id,
+      );
+
       const obligations = this.generateObligations(
         acc,
         lb.balance,
@@ -43,6 +47,7 @@ export class LiabilityFlowGenerator {
         settledSinceStatement.get(acc.id) || 0,
         startOfToday,
         simulationDays,
+        spendingFlows,
       );
 
       // Reduce obligations by matching with incoming flows to this liability account
@@ -51,8 +56,7 @@ export class LiabilityFlowGenerator {
         .filter(
           f =>
             (f.kind === 'TRANSFER' && f.toAccountId === acc.id) ||
-            (f.kind === 'INFLOW' && f.accountId === acc.id) ||
-            f.meta?.tags?.includes('LIABILITY_PAYMENT'),
+            (f.kind === 'INFLOW' && f.accountId === acc.id),
         )
         .sort((a, b) => a.dayOffset - b.dayOffset);
 
@@ -108,70 +112,105 @@ export class LiabilityFlowGenerator {
     settledSinceStatement: number,
     startOfToday: dayjs.Dayjs,
     simulationDays: number,
+    spendingFlows: Flow[] = [],
   ): Obligation[] {
     const obligations: Obligation[] = [];
     const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
     const statementDay = metadata?.statementDay;
 
     if (acc.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
-      const d1Date = getNextDueDate(startOfToday, dueDay);
-      const d1DayOffset = d1Date.diff(startOfToday, 'day');
-      const s1Date = getCorrespondingStatementDate(d1Date, statementDay, dueDay);
+      const cycles: { sDate: dayjs.Dayjs; dDate: dayjs.Dayjs; amount: number }[] = [];
 
+      let currDDate = getNextDueDate(startOfToday, dueDay);
+      let currSDate = getCorrespondingStatementDate(currDDate, statementDay, dueDay);
+
+      // Generate cycles until the due date is well past the simulation window
+      while (currDDate.diff(startOfToday, 'day') < simulationDays + 31) {
+        cycles.push({
+          sDate: currSDate,
+          dDate: currDDate,
+          amount: 0,
+        });
+        currDDate = currDDate.add(1, 'month');
+        currSDate = getCorrespondingStatementDate(currDDate, statementDay, dueDay);
+      }
+
+      const firstCycle = cycles[0];
       const isBillAvailable =
-        startOfToday.isAfter(s1Date, 'day') || startOfToday.isSame(s1Date, 'day');
+        startOfToday.isAfter(firstCycle.sDate, 'day') ||
+        startOfToday.isSame(firstCycle.sDate, 'day');
 
       if (isBillAvailable) {
-        // Current bill (Remaining Statement Balance)
-        // We subtract already-settled payments from the statement balance
+        // 1. Current bill (Remaining Statement Balance)
         const remainingStatement = Math.max(0, statementBalance - settledSinceStatement);
         const amountDueAtD1 = Math.min(currentBalance, remainingStatement);
-        if (amountDueAtD1 > 0.01) {
-          obligations.push({
-            liabilityId: acc.id,
-            amount: amountDueAtD1,
-            dueDayOffset: d1DayOffset,
-            label: `Current bill: ${acc.name}`,
-          });
-        }
+        firstCycle.amount = amountDueAtD1;
 
-        // Remaining spending -> Next cycle
-        const amountDueAtD2 = Math.max(0, currentBalance - amountDueAtD1);
-        if (amountDueAtD2 > 0.01) {
-          const d2Date = d1Date.add(1, 'month');
-          const d2DayOffset = d2Date.diff(startOfToday, 'day');
-          if (d2DayOffset < simulationDays) {
+        // 2. Remaining current balance goes to next cycle
+        if (cycles.length > 1) {
+          cycles[1].amount = Math.max(0, currentBalance - amountDueAtD1);
+        }
+      } else {
+        // All current balance belongs to the first (not yet generated) bill
+        firstCycle.amount = currentBalance;
+      }
+
+      // 3. Distribute spending flows into relevant statement cycles
+      for (const f of spendingFlows) {
+        const fDate = startOfToday.add(f.dayOffset, 'day');
+        // Find the first cycle whose statement date is AFTER or ON the spending date
+        const cycle = cycles.find(
+          c => fDate.isBefore(c.sDate, 'day') || fDate.isSame(c.sDate, 'day'),
+        );
+        if (cycle) {
+          cycle.amount += f.amount;
+        }
+      }
+
+      // 4. Emit obligations for all cycles within simulation window
+      for (let i = 0; i < cycles.length; i++) {
+        const c = cycles[i];
+        if (c.amount > 0.01) {
+          const roundedAmount = Math.round(c.amount * 100) / 100;
+          const dueDayOffset = c.dDate.diff(startOfToday, 'day');
+          if (dueDayOffset < simulationDays && roundedAmount > 0) {
             obligations.push({
               liabilityId: acc.id,
-              amount: amountDueAtD2,
-              dueDayOffset: d2DayOffset,
-              label: `Unbilled spending: ${acc.name}`,
+              amount: roundedAmount,
+              dueDayOffset,
+              label: `${i === 0 ? 'Current bill' : 'Bill ' + (i + 1)}: ${acc.name}`,
             });
           }
         }
-      } else {
-        // All spending -> Next cycle
-        const d1DayOffset = d1Date.diff(startOfToday, 'day');
-        obligations.push({
-          liabilityId: acc.id,
-          amount: currentBalance,
-          dueDayOffset: d1DayOffset,
-          label: `Unbilled spending: ${acc.name}`,
-        });
       }
     } else {
-      // Non-CC liability: Simply push full balance at next due date
+      // Non-CC liability: Generate monthly obligations until balance is cleared or window ends
       const deductionDay =
         metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
-      const targetDate = getNextDueDate(startOfToday, deductionDay);
-      const dayOffset = targetDate.diff(startOfToday, 'day');
-      if (dayOffset < simulationDays && currentBalance > 0.01) {
+      let currDDate = getNextDueDate(startOfToday, deductionDay);
+
+      let remainingBalance = currentBalance;
+      for (const f of spendingFlows) {
+        remainingBalance += f.amount;
+      }
+
+      // EMI Fallback: If no emiAmount is set, we use 1/24th of the balance as a sensible monthly default
+      // This avoids "cliffs" where the entire balance is projected in month 1.
+      const rawEmiAmount = metadata?.emiAmount;
+      const emiAmount = rawEmiAmount || Math.ceil(remainingBalance / 24);
+
+      while (currDDate.diff(startOfToday, 'day') < simulationDays && remainingBalance > 0.01) {
+        const amountToPay = Math.round(Math.min(remainingBalance, emiAmount) * 100) / 100;
+
         obligations.push({
           liabilityId: acc.id,
-          amount: currentBalance,
-          dueDayOffset: dayOffset,
+          amount: amountToPay,
+          dueDayOffset: currDDate.diff(startOfToday, 'day'),
           label: `Unsettled: ${acc.name}`,
         });
+
+        remainingBalance -= amountToPay;
+        currDDate = currDDate.add(1, 'month');
       }
     }
 

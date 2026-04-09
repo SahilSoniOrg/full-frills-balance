@@ -79,6 +79,7 @@ export class BudgetFlowGenerator {
                 label: budget.name,
                 referenceId: budget.id,
                 categoryId: representativeCategoryId,
+                categoryIds: budgetCategories,
               },
             });
           }

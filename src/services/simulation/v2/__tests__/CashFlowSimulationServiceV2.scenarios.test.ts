@@ -1,7 +1,9 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
 import dayjs from 'dayjs';
 
@@ -433,23 +435,338 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
     expect(result.summary.safeToSpend).toBe(300);
   });
 
-  it.skip('TODO(v2): reconciles a planned spend against every category covered by a multi-category budget', async () => {
-    // Desired behavior:
-    // A $100/day budget scoped to groceries + dining and an $80 dining payment on the same day
-    // should count as $100 total for that day, not $180. The current implementation only stores
-    // one representative category on budget flows, so planned spend in the non-representative
-    // category is not reconciled.
+  it('reconciles a planned spend against every category covered by a multi-category budget', async () => {
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([
+      { account: groceries },
+      { account: dining },
+    ]);
+
+    const result = await simulate({
+      0: new Map([['cash', 1000]]),
+      1: [
+        {
+          id: 'pp-dining-shared',
+          name: 'Shared dining spend',
+          fromAccountId: 'cash',
+          toAccountId: 'exp-dining',
+          amount: 80,
+          nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+          currencyCode: 'USD',
+        },
+      ],
+      5: [
+        {
+          id: 'b-food-shared',
+          name: 'Food Budget',
+          amount: 300,
+          assetAccountIds: 'cash',
+          currencyCode: 'USD',
+        },
+      ],
+      6: [{ remaining: 300 }],
+      7: [cash, groceries, dining],
+    } as any);
+
+    const resolved = result.allFlows.find(flow => flow.meta?.source === 'RESOLVED');
+    expect(resolved?.amount).toBe(80);
+    expect(result.allFlows.filter(flow => flow.meta?.source === 'BUDGET')).toHaveLength(29);
+    expect(result.summary.safeToSpend).toBe(630);
   });
 
-  it.skip('TODO(v2): applies liability payments only to the target liability account', async () => {
-    // Desired behavior:
-    // A transfer to card A should reduce card A's generated obligation, but it must not reduce
-    // card B's bill just because the flow has the LIABILITY_PAYMENT tag.
+  it('reconciles multiple planned spends in different covered categories against a single budget', async () => {
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([
+      { account: groceries },
+      { account: dining },
+    ]);
+
+    const result = await simulate({
+      0: new Map([['cash', 1000]]),
+      1: [
+        {
+          id: 'pp-dining',
+          name: 'Dining spend',
+          fromAccountId: 'cash',
+          toAccountId: 'exp-dining',
+          amount: 50,
+          nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+          currencyCode: 'USD',
+        },
+        {
+          id: 'pp-groceries',
+          name: 'Groceries spend',
+          fromAccountId: 'cash',
+          toAccountId: 'exp-groceries',
+          amount: 60,
+          nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+          currencyCode: 'USD',
+        },
+      ],
+      5: [
+        {
+          id: 'b-food',
+          name: 'Food Budget',
+          amount: 300,
+          assetAccountIds: 'cash',
+          currencyCode: 'USD',
+        },
+      ],
+      6: [{ remaining: 300 }],
+      7: [cash, groceries, dining],
+    } as any);
+
+    // Sum of planned: 50 + 60 = 110
+    // Daily budget burn: 300 / 30 = 10
+    // Effective resolve should be 110.
+    const resolved = result.allFlows.find(flow => flow.meta?.source === 'RESOLVED');
+    expect(resolved?.amount).toBe(110);
+    expect(result.summary.safeToSpend).toBe(600); // 1000 - (29 * 10) - 110 = 1000 - 290 - 110 = 600
   });
 
-  it.skip('TODO(v2): rolls future credit-card planned spending into a future cash obligation', async () => {
-    // Desired behavior:
-    // A future planned outflow from a liability account should not disappear from global cash
-    // pressure. It should increase a later card obligation based on the statement/due cycle.
+  it('handles cross-currency reconciliation with proper normalization', async () => {
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([{ account: dining }]);
+    (exchangeRateService.convert as jest.Mock).mockImplementation((amount, from) => {
+      if (from === 'EUR') return Promise.resolve({ convertedAmount: amount * 1.1 });
+      return Promise.resolve({ convertedAmount: amount });
+    });
+
+    const result = await simulate({
+      0: new Map([['cash', 1000]]),
+      1: [
+        {
+          id: 'pp-dining-eur',
+          name: 'European Dinner',
+          fromAccountId: 'cash',
+          toAccountId: 'exp-dining',
+          amount: 20, // 20 EUR -> 22 USD
+          currencyCode: 'EUR',
+          nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+        },
+      ],
+      5: [
+        {
+          id: 'b-dining',
+          name: 'Dining Budget',
+          amount: 300, // 10 USD/day
+          assetAccountIds: 'cash',
+          currencyCode: 'USD',
+        },
+      ],
+      6: [{ remaining: 300 }],
+      7: [cash, dining],
+    } as any);
+
+    const resolved = result.allFlows.find(flow => flow.meta?.source === 'RESOLVED');
+    // Resolved should be 22 USD (max of 10 USD limit vs 22 USD actual)
+    expect(resolved?.amount).toBe(22);
+  });
+
+  it('supports nested category reconciliation through ancestral budget scopes', async () => {
+    const food = { id: 'exp-food', name: 'Food', accountType: AccountType.EXPENSE } as any;
+    const snacks = {
+      id: 'exp-snacks',
+      name: 'Snacks',
+      accountType: AccountType.EXPENSE,
+      parentAccountId: 'exp-food',
+    } as any;
+
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([{ account: food }]);
+
+    const result = await simulate({
+      0: new Map([['cash', 1000]]),
+      1: [
+        {
+          id: 'pp-snacks',
+          name: 'Snack run',
+          fromAccountId: 'cash',
+          toAccountId: 'exp-snacks',
+          amount: 50,
+          nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+          currencyCode: 'USD',
+        },
+      ],
+      5: [
+        {
+          id: 'b-food-parent',
+          name: 'Food Parent Budget',
+          amount: 300,
+          assetAccountIds: 'cash',
+          currencyCode: 'USD',
+        },
+      ],
+      6: [{ remaining: 300 }],
+      7: [cash, food, snacks],
+    } as any);
+
+    const resolved = result.allFlows.find(flow => flow.meta?.source === 'RESOLVED');
+    expect(resolved?.amount).toBe(50);
+  });
+
+  it('generates no flows for overspent budgets in current month but preserves future months', async () => {
+    const originalMode = AppConfig.defaults.budgetMode;
+    (AppConfig.defaults as any).budgetMode = 'ACTUAL';
+
+    try {
+      // Set time to late in the month so next month is within the 30-day window
+      jest.setSystemTime(new Date('2026-04-25T00:00:00Z'));
+      (budgetRepository.getScopes as jest.Mock).mockResolvedValue([{ account: groceries }]);
+
+      const result = await simulate({
+        0: new Map([['cash', 1000]]),
+        5: [
+          {
+            id: 'b-overspent',
+            name: 'Overspent Budget',
+            amount: 300,
+            assetAccountIds: 'cash',
+            currencyCode: 'USD',
+          },
+        ],
+        6: [{ remaining: -50 }],
+        7: [cash, groceries],
+      } as any);
+
+      const budgetFlows = result.allFlows.filter(flow => flow.meta?.source === 'BUDGET');
+      // On April 25, daysLeftInMonth is 6 (25, 26, 27, 28, 29, 30).
+      // So currentMonthDailyRate (0) applies for dayOffset 0..5.
+      // Next month flows start at dayOffset 6.
+      expect(budgetFlows.every(f => f.dayOffset >= 6)).toBe(true);
+      expect(budgetFlows.length).toBeGreaterThan(0);
+    } finally {
+      (AppConfig.defaults as any).budgetMode = originalMode;
+    }
+  });
+
+  it('resolves cleanly when planned spend is exactly equal to budget burn', async () => {
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([{ account: dining }]);
+
+    const result = await simulate({
+      0: new Map([['cash', 1000]]),
+      1: [
+        {
+          id: 'pp-dining-exact',
+          name: 'Exact Dinner',
+          fromAccountId: 'cash',
+          toAccountId: 'exp-dining',
+          amount: 10, // Matches 300/30
+          nextOccurrence: dayjs('2026-04-01T12:00:00Z').valueOf(),
+          intervalType: 'DAILY',
+          intervalN: 1,
+          currencyCode: 'USD',
+        },
+      ],
+      5: [
+        {
+          id: 'b-dining-exact',
+          name: 'Dining Budget',
+          amount: 300,
+          assetAccountIds: 'cash',
+          currencyCode: 'USD',
+        },
+      ],
+      6: [{ remaining: 300 }],
+      7: [cash, dining],
+    } as any);
+
+    const resolved = result.allFlows.find(flow => flow.meta?.source === 'RESOLVED');
+    expect(resolved?.amount).toBe(10);
+    expect(resolved?.meta?.originalSource).toBe('PLANNED'); // plannedTotal >= budgetTotal
+  });
+
+  it('reconciles correctly in SMOOTHED budget burn mode', async () => {
+    const originalMode = AppConfig.defaults.budgetMode;
+    (AppConfig.defaults as any).budgetMode = 'SMOOTHED';
+
+    try {
+      (budgetRepository.getScopes as jest.Mock).mockResolvedValue([{ account: groceries }]);
+
+      const result = await simulate({
+        0: new Map([['cash', 1000]]),
+        1: [
+          {
+            id: 'pp-groceries',
+            name: 'Groceries',
+            fromAccountId: 'cash',
+            toAccountId: 'exp-groceries',
+            amount: 50,
+            nextOccurrence: dayjs('2026-04-15T12:00:00Z').valueOf(),
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            currencyCode: 'USD',
+          },
+        ],
+        5: [
+          {
+            id: 'b-smoothed',
+            name: 'Smoothed Budget',
+            amount: 300,
+            assetAccountIds: 'cash',
+            currencyCode: 'USD',
+          },
+        ],
+        6: [{ remaining: 150 }], // 150 left in April
+        7: [cash, groceries],
+      } as any);
+
+      // Simulation window is 60 days.
+      // Smoothed Daily = (Remaining + Next Month Budget) / 60
+      // = (150 + 300) / 60 = 450 / 60 = 7.5 per day.
+      // Planned spend 50 > 7.5, so resolved should be 50.
+      const resolved = result.allFlows.find(flow => flow.meta?.source === 'RESOLVED');
+      expect(resolved?.amount).toBe(50);
+    } finally {
+      (AppConfig.defaults as any).budgetMode = originalMode;
+    }
+  });
+
+  it('rolls future credit-card planned spending into a future liability obligation', async () => {
+    // CC: Statement 1st, Due 15th.
+    // Today is April 1st.
+    // April 1st spending -> May 1st Statement -> May 15th Due.
+
+    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+      new Map([['cc', 0]]),
+    );
+
+    const result = await simulate({
+      0: new Map([['cash', 1000]]),
+      1: [
+        {
+          id: 'pp-cc-spending',
+          name: 'Credit card spending',
+          fromAccountId: 'cc',
+          toAccountId: 'exp-dining',
+          amount: 200,
+          nextOccurrence: dayjs('2026-04-05T12:00:00Z').valueOf(),
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+          currencyCode: 'USD',
+        },
+      ],
+      4: [{ account: cc, balance: 0 }],
+      7: [cash, cc, dining],
+    } as any);
+
+    const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
+
+    // We expect an obligation on May 15th (dayOffset approx 44) for $200
+    const mayBill = liabilityFlows.find(f => f.dayOffset > 40);
+    expect(mayBill).toMatchObject({
+      amount: 200,
+      accountId: 'cash',
+    });
+
+    // Safe to spend should consider this future obligation
+    // 1000 - 200 = 800
+    expect(result.summary.safeToSpend).toBe(800);
   });
 });

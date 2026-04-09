@@ -64,7 +64,8 @@ export class CashFlowSimulationServiceV2 {
       }),
     );
 
-    const convert = (amount: number, from: string) => amount * (rateMap.get(from) || 1);
+    const convert = (amount: number, from: string) =>
+      Math.round(amount * (rateMap.get(from) || 1) * 100) / 100;
 
     // Currency Normalization using explicit mapping (avoiding class spread)
     const normalizedBudgets = budgets.map(b => ({

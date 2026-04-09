@@ -1,6 +1,9 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
 import dayjs from 'dayjs';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {
@@ -12,6 +15,12 @@ jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
 jest.mock('@/src/data/repositories/TransactionRepository', () => ({
   transactionRepository: {
     findByJournals: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+jest.mock('@/src/data/repositories/BudgetRepository', () => ({
+  budgetRepository: {
+    getScopes: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -195,9 +204,6 @@ describe('CashFlowSimulationServiceV2', () => {
     } as any;
 
     // Mock repository: Statement Balance = 500
-    const {
-      transactionRawRepository,
-    } = require('@/src/data/repositories/TransactionRawRepository');
     transactionRawRepository.getLatestBalancesRaw = jest
       .fn()
       .mockResolvedValue(new Map([[ccId, 500]]));
@@ -259,7 +265,6 @@ describe('CashFlowSimulationServiceV2', () => {
     } as any;
 
     // Mock budget repository to return the expense scope
-    const { budgetRepository } = require('@/src/data/repositories/BudgetRepository');
     budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
 
     const result = await cashFlowSimulationServiceV2.simulate(
@@ -327,9 +332,6 @@ describe('CashFlowSimulationServiceV2', () => {
     // Mock repository:
     // Statement Balance = 500
     // Settled = 0
-    const {
-      transactionRawRepository,
-    } = require('@/src/data/repositories/TransactionRawRepository');
     transactionRawRepository.getLatestBalancesRaw = jest
       .fn()
       .mockResolvedValue(new Map([[ccId, 500]]));
@@ -381,9 +383,6 @@ describe('CashFlowSimulationServiceV2', () => {
     // Mock repository:
     // 1. Statement Balance = 500
     // 2. Already settled since statement date = 200
-    const {
-      transactionRawRepository,
-    } = require('@/src/data/repositories/TransactionRawRepository');
     transactionRawRepository.getLatestBalancesRaw = jest
       .fn()
       .mockResolvedValue(new Map([[ccId, 500]]));
@@ -449,7 +448,6 @@ describe('CashFlowSimulationServiceV2', () => {
     ];
 
     // Mock journal transactions
-    const { transactionRepository } = require('@/src/data/repositories/TransactionRepository');
     transactionRepository.findByJournals = jest
       .fn()
       .mockResolvedValue(journalTxs.map(tx => ({ ...tx, journalId: journal.id })));
