@@ -27,10 +27,9 @@ import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
-import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
+import { simulationProvider } from '../simulation/SimulationProvider';
 
 import { FlowType, SimulationResult } from '../simulation/types';
-import { getCorrespondingStatementDate, getNextDueDate } from '../simulation/utils/liabilityUtils';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -310,19 +309,14 @@ export class NotificationService {
         }
 
         const budgetUsageObservables = budgets.map(b => budgetReadService.observeBudgetUsage(b));
-        const budgetScopeObservables = budgets.map(b => budgetRepository.observeScopes(b.id));
 
         const budgetUsage$ =
           budgetUsageObservables.length > 0
             ? combineLatest(budgetUsageObservables)
             : of([] as BudgetUsage[]);
-        const budgetScopes$ =
-          budgetScopeObservables.length > 0
-            ? combineLatest(budgetScopeObservables)
-            : of([] as any[][]);
 
-        return combineLatest([budgetUsage$, budgetScopes$, history$]).pipe(
-          switchMap(async ([usages, budgetScopeGroups, rawDeltas]) => {
+        return combineLatest([budgetUsage$, history$]).pipe(
+          switchMap(async ([usages, rawDeltas]) => {
             const accountBalances = await balanceService.getAccountBalances();
 
             const startingBalances = new Map<string, number>();
@@ -369,63 +363,22 @@ export class NotificationService {
               }),
             );
 
-            const settledAmountsSinceStatement = new Map<string, number>();
-            await Promise.all(
-              liabilityAccountBalances.map(async lb => {
-                const metadata = (await lb.account.metadataRecords.fetch())[0];
-                if (metadata?.statementDay) {
-                  const dueDay =
-                    (metadata as any).dueDay || AppConfig.insights.liabilityDefaultDueDay;
-                  const now = dayjs().startOf('day');
-                  const d1Date = getNextDueDate(now, dueDay);
-                  const s1Date = getCorrespondingStatementDate(
-                    d1Date,
-                    metadata.statementDay,
-                    dueDay,
-                  );
+            // Call the simulation engine (standardized)
+            const simulationResults = await simulationProvider
+              .getService()
+              .simulate(
+                startingBalances,
+                plannedPayments,
+                plannedJournals,
+                liquidAssetIds,
+                liabilityAccountBalances,
+                budgets,
+                usages,
+                allAccounts,
+                resultCurrency,
+              );
 
-                  if (now.isAfter(s1Date, 'day') || now.isSame(s1Date, 'day')) {
-                    const metrics = await transactionRawRepository.getAccountPeriodMetricsRaw(
-                      lb.account.id,
-                      s1Date.valueOf(),
-                      now.endOf('day').valueOf(),
-                      false,
-                    );
-
-                    // For liabilities (isAssetOrExpense=false):
-                    //   totalIncrease = CREDIT txns = new spending (adding debt)
-                    //   totalDecrease = DEBIT txns  = payments (reducing debt)
-                    // We want the payments made since the statement date.
-                    let settled = metrics.totalDecrease;
-                    if (lb.account.currencyCode && lb.account.currencyCode !== resultCurrency) {
-                      const { convertedAmount } = await exchangeRateService.convert(
-                        settled,
-                        lb.account.currencyCode,
-                        resultCurrency,
-                      );
-                      settled = convertedAmount;
-                    }
-                    settledAmountsSinceStatement.set(lb.account.id, settled);
-                  }
-                }
-              }),
-            );
-
-            const simulationResults = await cashFlowSimulationService.simulateSafeToSpend(
-              startingBalances,
-              plannedPayments,
-              plannedJournals,
-              liquidAssetIds, // Fixed: Pass ONLY liquid asset IDs, excluding liabilities to prevent double-counting debt in global balance
-              liabilityAccountBalances,
-              budgets,
-              usages,
-              budgetScopeGroups,
-              allAccounts,
-              resultCurrency,
-              settledAmountsSinceStatement,
-            );
-
-            // Calculate History Points
+            // Calculate History Points (UI concern)
             const netCashFlowByDay = new Map<number, number>();
             const deltas = rawDeltas || [];
             for (const delta of deltas) {
@@ -469,13 +422,6 @@ export class NotificationService {
             }
             historyPoints.reverse();
 
-            const projection: SafeToSpendProjection = {
-              history: historyPoints,
-              projection: simulationResults.projections.points,
-              safeDaysCount: simulationResults.summary.safeDaysCount,
-              safeToSpend: simulationResults.summary.safeToSpend,
-            };
-
             return {
               ...simulationResults,
               totalLiquidAssets: totalLiquidMoney.amount,
@@ -485,10 +431,13 @@ export class NotificationService {
               liquidLiabilityAccounts,
               liquidAssetAccountIds: liquidAssetIds,
               liquidLiabilityAccountIds: liquidLiabilityIds,
-              dailyBudgetBurn:
-                simulationResults.breakdowns.budget.currentMonthRemaining /
-                Math.max(1, AppConfig.defaults.safeToSpendDays), // Rough estimate
-              projection,
+              dailyBudgetBurn: simulationResults.summary.totalCommittedPlanned / 30,
+              projection: {
+                history: historyPoints,
+                projection: simulationResults.projections.points,
+                safeDaysCount: simulationResults.summary.safeDaysCount,
+                safeToSpend: simulationResults.summary.safeToSpend,
+              },
             };
           }),
         );

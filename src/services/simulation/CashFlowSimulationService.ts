@@ -3,23 +3,24 @@ import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import dayjs from 'dayjs';
-import { TimeContext } from './TimeContext';
 import { BudgetEngine, CurrencyConverter } from './engines/BudgetEngine';
 import { LiabilityEngine } from './engines/LiabilityEngine';
 import { PlannedFlowEngine } from './engines/PlannedFlowEngine';
+import { TimeContext } from './TimeContext';
+import { FlowType, ISimulationService, SimulationResult } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
-import { FlowType, SimulationResult } from './types';
 
-export class CashFlowSimulationService {
+export class CashFlowSimulationService implements ISimulationService {
   /**
-   * Configured-day cash flow simulation for Safe to Spend.
+   * Configured-day cash flow simulation for Safe to Spend (V1).
    */
-  async simulateSafeToSpend(
+  async simulate(
     startingBalances: Map<string, number>,
     plannedPayments: PlannedPayment[],
     plannedJournals: Journal[],
@@ -27,13 +28,50 @@ export class CashFlowSimulationService {
     liabilityAccountBalances: { account: Account; balance: number }[],
     budgets: Budget[],
     usages: BudgetUsage[],
-    scopeGroups: any[][],
     allAccounts: Account[],
     resultCurrency: string,
-    settledAmountsSinceStatement: Map<string, number> = new Map(),
   ): Promise<SimulationResult> {
     const simulationDays = AppConfig.defaults.safeToSpendDays;
     const time = new TimeContext(dayjs(), simulationDays);
+
+    // 0. Data Preparation (Implementation specifics for V1)
+    const scopeGroups = await Promise.all(budgets.map(b => budgetRepository.getScopes(b.id)));
+
+    const settledAmountsSinceStatement = new Map<string, number>();
+    const ccAccounts = liabilityAccountBalances.filter(
+      lb => lb.account.accountSubtype === 'CREDIT_CARD',
+    );
+
+    await Promise.all(
+      ccAccounts.map(async lb => {
+        const metadataRecords = await lb.account.metadataRecords.fetch();
+        const metadata = metadataRecords[0];
+        if (metadata?.statementDay) {
+          const dueDay = (metadata as any).dueDay || AppConfig.insights.liabilityDefaultDueDay;
+          const now = time.getStartOfToday();
+          const d1Date = getNextDueDate(now, dueDay);
+          const s1Date = getCorrespondingStatementDate(d1Date, metadata.statementDay, dueDay);
+
+          const metrics = await transactionRawRepository.getAccountPeriodMetricsRaw(
+            lb.account.id,
+            s1Date.valueOf(),
+            now.endOf('day').valueOf(),
+            false,
+          );
+
+          let settled = metrics.totalDecrease;
+          if (lb.account.currencyCode && lb.account.currencyCode !== resultCurrency) {
+            const { convertedAmount } = await exchangeRateService.convert(
+              settled,
+              lb.account.currencyCode,
+              resultCurrency,
+            );
+            settled = convertedAmount;
+          }
+          settledAmountsSinceStatement.set(lb.account.id, settled);
+        }
+      }),
+    );
 
     const converter: CurrencyConverter = {
       convert: async (amount, from, to) => {
@@ -64,12 +102,12 @@ export class CashFlowSimulationService {
 
     // Credits card statement balances
     const statementBalances = new Map<string, number>();
-    const ccAccounts = liabilityAccountBalances.filter(
+    const ccAccountsInner = liabilityAccountBalances.filter(
       lb => lb.account.accountSubtype === 'CREDIT_CARD',
     );
-    if (ccAccounts.length > 0) {
+    if (ccAccountsInner.length > 0) {
       await Promise.all(
-        ccAccounts.map(async lb => {
+        ccAccountsInner.map(async lb => {
           const metadata = metadataMap.get(lb.account.id);
           if (metadata?.statementDay) {
             const dueDay = (metadata as any).dueDay || AppConfig.insights.liabilityDefaultDueDay;

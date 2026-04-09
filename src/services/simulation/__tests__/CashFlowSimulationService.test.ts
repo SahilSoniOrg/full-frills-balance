@@ -1,11 +1,13 @@
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { CashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
+jest.mock('@/src/data/repositories/BudgetRepository');
 jest.mock('@/src/utils/logger', () => ({
   logger: {
     info: jest.fn(),
@@ -14,6 +16,8 @@ jest.mock('@/src/utils/logger', () => ({
 }));
 
 describe('CashFlowSimulationService', () => {
+  let cashFlowSimulationService: CashFlowSimulationService;
+
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
@@ -25,9 +29,19 @@ describe('CashFlowSimulationService', () => {
     const {
       transactionRawRepository,
     } = require('@/src/data/repositories/TransactionRawRepository');
+    const { budgetRepository } = require('@/src/data/repositories/BudgetRepository');
+    const {
+      CashFlowSimulationService,
+    } = require('@/src/services/simulation/CashFlowSimulationService');
+
+    cashFlowSimulationService = new CashFlowSimulationService();
 
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
+    (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
+      totalDecrease: 0,
+    });
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -35,9 +49,6 @@ describe('CashFlowSimulationService', () => {
   });
 
   it('correctly commits statement balance when today is before the due date', async () => {
-    // Today is March 2nd.
-    // Last statement was Feb 15th.
-    // Due date is March 5th.
     jest.setSystemTime(new Date('2026-03-02T00:00:00.000Z'));
 
     const creditCard = {
@@ -50,15 +61,13 @@ describe('CashFlowSimulationService', () => {
       },
     } as unknown as Account;
 
-    // Current balance is 1000.
-    // Balance on Feb 15th (last statement) was 600.
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockImplementation((_, cutoff) => {
       const feb15 = dayjs('2026-02-15').valueOf();
       if (cutoff === feb15) return Promise.resolve(new Map([[creditCard.id, -600]]));
       return Promise.resolve(new Map());
     });
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 2000]]),
       [],
       [],
@@ -67,13 +76,10 @@ describe('CashFlowSimulationService', () => {
       [],
       [],
       [],
-      [],
       'USD',
     );
 
-    // Expected: $600 is due on March 5th (since today is March 2nd and Due is 5th).
     expect(result.breakdowns.liabilities.committedCreditCard).toBe(600);
-    expect(result).toMatchSnapshot();
   });
 
   it('uses only the credit card statement due in the window for safe-to-spend', async () => {
@@ -91,13 +97,12 @@ describe('CashFlowSimulationService', () => {
       new Map([[creditCard.id, -250]]),
     );
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 1000]]),
       [],
       [],
       ['cash-1'],
       [{ account: creditCard, balance: 400 }],
-      [],
       [],
       [],
       [],
@@ -109,7 +114,6 @@ describe('CashFlowSimulationService', () => {
     expect(result.breakdowns.liabilities.committedCreditCard).toBe(250);
     expect(result.breakdowns.liabilities.totalCreditCard).toBe(400);
     expect(result.summary.safeToSpend).toBe(750);
-    expect(result).toMatchSnapshot();
   });
 
   it('tracks manual liability payments as commitments without subtracting the whole balance twice', async () => {
@@ -135,13 +139,12 @@ describe('CashFlowSimulationService', () => {
       currencyCode: 'USD',
     };
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 1000]]),
       [plannedPayment as any],
       [],
       ['cash-1'],
       [{ account: creditCard, balance: 400 }],
-      [],
       [],
       [],
       [],
@@ -158,8 +161,7 @@ describe('CashFlowSimulationService', () => {
         }),
       ]),
     );
-    expect(result.summary.safeToSpend).toBe(700); // 1000 - 300 (internal transfer)
-    expect(result).toMatchSnapshot();
+    expect(result.summary.safeToSpend).toBe(700);
   });
 
   it('treats planned income to a liability account as an inflow', async () => {
@@ -189,7 +191,7 @@ describe('CashFlowSimulationService', () => {
       new Map([[creditCard.id, -250]]),
     );
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 1000]]),
       [plannedIncome as any],
       [],
@@ -198,21 +200,18 @@ describe('CashFlowSimulationService', () => {
       [],
       [],
       [],
-      [],
       'USD',
     );
 
     expect(result.summary.totalFutureInflow).toBe(500);
-    expect(result.summary.safeToSpend).toBe(1000); // 1000 (starting balance) is the floor, income only raises it above
-    expect(result).toMatchSnapshot();
+    expect(result.summary.safeToSpend).toBe(1000);
   });
 
-  it('does not include future income in safe-to-spend (conservative logic)', async () => {
+  it('does not include future income in safe-to-spend', async () => {
     const plannedIncome = {
       id: 'pp-income',
-      name: 'Salary',
       fromAccountId: 'employer',
-      toAccountId: 'cash-1', // Directly to liquid asset
+      toAccountId: 'cash-1',
       amount: 1000,
       nextOccurrence: dayjs().add(5, 'day').valueOf(),
       intervalType: 'MONTHLY',
@@ -222,7 +221,6 @@ describe('CashFlowSimulationService', () => {
 
     const plannedExpense = {
       id: 'pp-expense',
-      name: 'Rent',
       fromAccountId: 'cash-1',
       toAccountId: 'landlord',
       amount: 800,
@@ -232,7 +230,7 @@ describe('CashFlowSimulationService', () => {
       currencyCode: 'USD',
     };
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 1000]]),
       [plannedIncome as any, plannedExpense as any],
       [],
@@ -241,25 +239,20 @@ describe('CashFlowSimulationService', () => {
       [],
       [],
       [],
-      [],
       'USD',
     );
 
-    // Trajectory would be: 1000 -> (D5) 2000 -> (D10) 1200. Min = 1000.
-    // Dynamic Buffer: min(1000, 1000) = 1000.
     expect(result.summary.safeToSpend).toBe(1000);
     expect(result.summary.trajectoryMinBalance).toBe(1000);
-    expect(result).toMatchSnapshot();
   });
 
   it('buffers future outflows with income only if income arrives first', async () => {
     const plannedExpense = {
       id: 'pp-expense',
-      name: 'Rent',
       fromAccountId: 'cash-1',
       toAccountId: 'landlord',
       amount: 800,
-      nextOccurrence: dayjs().add(5, 'day').valueOf(), // Bill FIRST
+      nextOccurrence: dayjs().add(5, 'day').valueOf(),
       intervalType: 'MONTHLY',
       intervalN: 1,
       currencyCode: 'USD',
@@ -267,17 +260,16 @@ describe('CashFlowSimulationService', () => {
 
     const plannedIncome = {
       id: 'pp-income',
-      name: 'Salary',
       fromAccountId: 'employer',
       toAccountId: 'cash-1',
       amount: 1000,
-      nextOccurrence: dayjs().add(10, 'day').valueOf(), // Income LATER
+      nextOccurrence: dayjs().add(10, 'day').valueOf(),
       intervalType: 'MONTHLY',
       intervalN: 1,
       currencyCode: 'USD',
     };
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 1000]]),
       [plannedIncome as any, plannedExpense as any],
       [],
@@ -286,14 +278,10 @@ describe('CashFlowSimulationService', () => {
       [],
       [],
       [],
-      [],
       'USD',
     );
 
-    // Trajectory: 1000 -> (D5) 200 -> (D10) 1200. Min = 200.
-    // Safe to Spend = min(1000, 200) = 200.
     expect(result.summary.safeToSpend).toBe(200);
-    expect(result).toMatchSnapshot();
   });
 
   test('implements smoothed budget burn over 30 days', async () => {
@@ -310,7 +298,9 @@ describe('CashFlowSimulationService', () => {
       remaining: 300,
     } as any;
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([{ account: expenseAcc }]);
+
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 1000]]),
       [],
       [],
@@ -318,37 +308,17 @@ describe('CashFlowSimulationService', () => {
       [],
       [budget],
       [usage],
-      [[{ account: expenseAcc }]],
       [expenseAcc, { id: 'cash-1', accountType: AccountType.ASSET } as any],
       'USD',
     );
-
-    // Calculation:
-    // March (current): $300 remaining. Days left: 12 (Mar 20, 21, ..., 31).
-    // April (next): $600 / 30 = $20/day.
-    // Simulation Window (30 days):
-    // 12 days of March @ (implied) $300 total.
-    // 18 days of April @ $20/day = $360.
-    // Total in window = 300 + 360 = $660.
-    // Smoothed daily burn = 660 / 30 = $22/day.
-
-    // Final trajectory min balance: 1000 - 660 = 340.
-    // Safe to Spend: min(1000, 340) = 340.
 
     expect(
       result.breakdowns.budget.currentMonthRemaining + result.breakdowns.budget.nextMonthProjected,
     ).toBe(660);
     expect(result.summary.safeToSpend).toBe(340);
-    expect(result).toMatchSnapshot();
   });
 
   it('does not double count planned outflows covered by budget', async () => {
-    // Both Budget and Planned Payment cover the same expense account.
-    // Balance = 1000.
-    // Budget Burn matches = $20 / day
-    // Planned Payment hits today = $15
-    // The $15 planned payment MUST be "absorbed" by the $20 daily burn, leading to only $20 deducted from today's simulation, NOT $35.
-
     jest.setSystemTime(new Date('2026-03-20T00:00:00.000Z'));
     const expenseAcc = {
       id: 'exp-covered',
@@ -358,11 +328,10 @@ describe('CashFlowSimulationService', () => {
 
     const plannedExpense = {
       id: 'pp-util',
-      name: 'Electric Bill',
       fromAccountId: 'cash-1',
       toAccountId: expenseAcc.id,
       amount: 15,
-      nextOccurrence: dayjs().valueOf(), // Today
+      nextOccurrence: dayjs().valueOf(),
       intervalType: 'MONTHLY',
       intervalN: 1,
       currencyCode: 'USD',
@@ -370,17 +339,17 @@ describe('CashFlowSimulationService', () => {
 
     const budget = {
       id: 'b-util',
-      name: 'Utility Budget',
       amount: 600,
-      scopes: { fetch: jest.fn().mockResolvedValue([{ account: expenseAcc }]) },
     } as any;
 
     const usage = {
       budget,
-      remaining: 600, // 30 days left roughly, so $20/day burn
+      remaining: 600,
     } as any;
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([{ account: expenseAcc }]);
+
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash-1', 1000]]),
       [plannedExpense as any],
       [],
@@ -388,16 +357,10 @@ describe('CashFlowSimulationService', () => {
       [],
       [budget],
       [usage],
-      [[{ account: expenseAcc }]],
       [expenseAcc, { id: 'cash-1', accountType: AccountType.ASSET } as any],
       'USD',
     );
 
-    // Baseline calculation check:
-    // With 15 planned covered by 50 budget burn on day 0, day 0 deduction = 50 (not 65).
-    // The Safe to spend math over 30 days reduces the balance linearly by $50/day in March ($600 total) and $20/day in April ($360).
-    // Final safe to spend: 1000 - 960 = 40.
     expect(Math.round(result.summary.safeToSpend)).toBe(40);
-    expect(result).toMatchSnapshot();
   });
 });

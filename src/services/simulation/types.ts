@@ -1,4 +1,8 @@
-import { AccountSubtype } from '@/src/data/models/Account';
+import Account, { AccountSubtype } from '@/src/data/models/Account';
+import Budget from '@/src/data/models/Budget';
+import Journal from '@/src/data/models/Journal';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 
 export enum FlowSource {
   BUDGET = 'BUDGET',
@@ -182,4 +186,18 @@ export interface LiabilityResult {
   committed: number;
   committedCreditCard: number;
   committedOther: number;
+}
+
+export interface ISimulationService {
+  simulate(
+    startingBalances: Map<string, number>,
+    plannedPayments: PlannedPayment[],
+    plannedJournals: Journal[],
+    liquidAssetIds: string[],
+    liabilityAccountBalances: { account: Account; balance: number }[],
+    budgets: Budget[],
+    usages: BudgetUsage[],
+    allAccounts: Account[],
+    resultCurrency: string,
+  ): Promise<SimulationResult>;
 }
