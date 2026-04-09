@@ -1,3 +1,5 @@
+import Account from '@/src/data/models/Account';
+
 export type FlowMeta = {
   source: 'BUDGET' | 'PLANNED' | 'LIABILITY' | 'TRANSFER' | 'RESOLVED';
   originalSource?: 'BUDGET' | 'PLANNED';
@@ -7,6 +9,24 @@ export type FlowMeta = {
   label: string;
   tags?: string[];
 };
+
+export type FlowKind = 'INFLOW' | 'OUTFLOW' | 'TRANSFER';
+
+export interface SimulationContext {
+  simulationStartMs: number;
+  simulationDays: number;
+  simulationEndMs: number;
+  resultCurrency: string;
+  liquidAccountIds: Set<string>;
+  orderedLiquidAccountIds: string[];
+  liabilityAccountIds: Set<string>;
+  accountMap: Map<string, Account>; // Account model is often complex, using any for now but should be Account
+  convert: (amount: number, from: string) => number;
+}
+
+export interface ISimulationEngine {
+  generate(context: SimulationContext, previousFlows: Flow[]): Flow[];
+}
 
 export type Flow =
   | {

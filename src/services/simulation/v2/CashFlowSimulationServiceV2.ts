@@ -16,7 +16,7 @@ import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
 import { FlowResolver } from './FlowResolver';
 import { Simulator } from './Simulator';
-import { AccountSimulationSummary, SimulationResultV2 } from './types';
+import { AccountSimulationSummary, SimulationContext, SimulationResultV2 } from './types';
 
 export class CashFlowSimulationServiceV2 {
   /**
@@ -68,13 +68,16 @@ export class CashFlowSimulationServiceV2 {
       Math.round(amount * (rateMap.get(from) || 1) * 100) / 100;
 
     // Currency Normalization using explicit mapping (avoiding class spread)
-    const normalizedBudgets = budgets.map(b => ({
-      id: b.id,
-      name: b.name,
-      amount: convert(b.amount, b.currencyCode || resultCurrency),
-      currencyCode: resultCurrency,
-      assetAccountIds: b.assetAccountIds,
-    }));
+    const normalizedBudgets = budgets.map(
+      b =>
+        ({
+          id: b.id,
+          name: b.name,
+          amount: convert(b.amount, b.currencyCode || resultCurrency),
+          currencyCode: resultCurrency,
+          assetAccountIds: b.assetAccountIds,
+        }) as Budget,
+    );
 
     const normalizedUsages = usages.map((u, i) => ({
       ...u,
@@ -114,43 +117,47 @@ export class CashFlowSimulationServiceV2 {
       allAccounts.filter(a => a.accountType === AccountType.EXPENSE).map(a => a.id),
     );
 
-    // 2. PHASE: GENERATE FLOWS
+    // 2. PHASE: BUILD CONTEXT
+    const context: SimulationContext = {
+      simulationStartMs,
+      simulationDays,
+      simulationEndMs,
+      resultCurrency,
+      liquidAccountIds: liquidAccountIdsSet,
+      orderedLiquidAccountIds: liquidAssetIds,
+      liabilityAccountIds: liabilityAccountIdsSet,
+      accountMap,
+      convert,
+    };
+
+    // 3. PHASE: GENERATE FLOWS
     const { flows: plannedFlows } = PlannedFlowGenerator.generate(
+      context,
       normalizedPlannedPayments,
       plannedJournals,
-      liquidAccountIdsSet,
-      liabilityAccountIdsSet,
       expenseAccountIds,
       journalTxsMap,
-      simulationStartMs,
-      simulationEndMs,
     );
 
     const budgetFlows = BudgetFlowGenerator.generate(
+      context,
       normalizedBudgets,
       normalizedUsages,
-      liquidAssetIds,
-      simulationDays,
       time.daysLeftInMonth(),
       time.nextMonthDays(),
       budgetCategoryMap,
     );
 
-    // 3. PHASE: RESOLVE CONFLICTS (e.g., Budget vs Planned)
-    // We resolve these before liability engine because payments might be 'Planed'
+    // Resolve conflicts (e.g., Budget vs Planned)
     const resolvedSpendingFlows = FlowResolver.resolveConflicts([...budgetFlows, ...plannedFlows]);
 
-    // Liability engine depends on previous transfers (payments) to reduce obligations
     const liabilityFlows = LiabilityFlowGenerator.generate(
-      normalizedLiabilityBalances,
+      context,
+      resolvedSpendingFlows,
+      normalizedLiabilityBalances as any,
       metadataMap,
       statementBalances,
       settledSinceStatement,
-      liquidAccountIdsSet,
-      liquidAssetIds, // Ordered for fallback
-      resolvedSpendingFlows,
-      simulationStartMs,
-      simulationDays,
     );
 
     // SORTING SAFETY: Ensure all flows are globally sorted by dayOffset

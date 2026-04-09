@@ -21,6 +21,8 @@ export default class AccountMetadata extends Model {
   @field('autopay_enabled') autopayEnabled?: boolean;
   @field('grace_period_days') gracePeriodDays?: number;
   @field('pay_from_account_id') payFromAccountId?: string;
+  @field('min_payment_only') minPaymentOnly?: boolean;
+  @field('minimum_payment_percent') minimumPaymentPercent?: number;
   @field('notes') notes?: string;
 
   @date('created_at') createdAt!: Date;

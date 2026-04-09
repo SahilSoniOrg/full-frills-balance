@@ -302,5 +302,17 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 17,
+      steps: [
+        addColumns({
+          table: 'account_metadata',
+          columns: [
+            { name: 'min_payment_only', type: 'boolean', isOptional: true },
+            { name: 'minimum_payment_percent', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

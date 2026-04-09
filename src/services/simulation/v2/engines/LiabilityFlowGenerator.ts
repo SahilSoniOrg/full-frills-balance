@@ -1,6 +1,6 @@
 import Account, { AccountSubtype } from '@/src/data/models/Account';
 import { AppConfig } from '@/src/constants/app-config';
-import { Flow, Obligation } from '../types';
+import { Flow, Obligation, SimulationContext } from '../types';
 import { getCorrespondingStatementDate, getNextDueDate } from '../../utils/liabilityUtils';
 import dayjs from 'dayjs';
 
@@ -12,26 +12,22 @@ export class LiabilityFlowGenerator {
    * 3. Emit remaining obligations as OUTFLOW from liquid accounts.
    */
   static generate(
+    context: SimulationContext,
+    previousFlows: Flow[],
     liabilityBalances: { account: Account; balance: number }[],
     metadataMap: Map<string, any>,
     statementBalances: Map<string, number>,
     settledSinceStatement: Map<string, number>,
-    liquidAccountIds: Set<string>,
-    orderedLiquidAccountIds: string[],
-    previousFlows: Flow[], // Transfers already generated (e.g. Planned Payments)
-    simulationStartMs: number,
-    simulationDays: number,
-    // Note: Currency resolved by orchestrator
   ): Flow[] {
     const flows: Flow[] = [];
-    const startOfToday = dayjs(simulationStartMs);
+    const startOfToday = dayjs(context.simulationStartMs);
 
     for (const lb of liabilityBalances) {
       const acc = lb.account;
       const metadata = metadataMap.get(acc.id);
 
       // If payment is from untracked account, it doesn't affect our simulation
-      if (metadata?.payFromAccountId && !liquidAccountIds.has(metadata.payFromAccountId)) {
+      if (metadata?.payFromAccountId && !context.liquidAccountIds.has(metadata.payFromAccountId)) {
         continue;
       }
 
@@ -46,12 +42,11 @@ export class LiabilityFlowGenerator {
         statementBalances.get(acc.id) || 0,
         settledSinceStatement.get(acc.id) || 0,
         startOfToday,
-        simulationDays,
+        context.simulationDays,
         spendingFlows,
       );
 
       // Reduce obligations by matching with incoming flows to this liability account
-      // SORT: Ensure flows are processed chronologically
       const incomingFlowsToThisLiability = previousFlows
         .filter(
           f =>
@@ -60,16 +55,12 @@ export class LiabilityFlowGenerator {
         )
         .sort((a, b) => a.dayOffset - b.dayOffset);
 
-      // Sort obligations by due date
       const sortedObligations = [...obligations].sort((a, b) => a.dueDayOffset - b.dueDayOffset);
-
-      // Keep track of how much of each transfer we've 'applied' to obligations
       const usedTransferAmounts = new Map<Flow, number>();
 
       for (const obligation of sortedObligations) {
         let remainingAmount = obligation.amount;
 
-        // Greedy matching with incoming flows occurring on or before the due date
         for (const incomingFlow of incomingFlowsToThisLiability) {
           const alreadyUsed = usedTransferAmounts.get(incomingFlow) || 0;
           const available = incomingFlow.amount - alreadyUsed;
@@ -83,9 +74,13 @@ export class LiabilityFlowGenerator {
 
         if (remainingAmount > 0.01) {
           // Emit OUTFLOW from the preferred liquid account
+          // NEW LOGIC: Just pick the first liquid account if none specified
           const payFromId =
             metadata?.payFromAccountId ||
-            (orderedLiquidAccountIds.length > 0 ? orderedLiquidAccountIds[0] : acc.id);
+            (context.orderedLiquidAccountIds.length > 0
+              ? context.orderedLiquidAccountIds[0]
+              : acc.id);
+
           flows.push({
             kind: 'OUTFLOW',
             accountId: payFromId,
@@ -118,13 +113,15 @@ export class LiabilityFlowGenerator {
     const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
     const statementDay = metadata?.statementDay;
 
+    // Use metadata.paymentMode or fallback to configured defaults
+    const paymentMode = metadata?.paymentMode || 'FULL';
+
     if (acc.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
       const cycles: { sDate: dayjs.Dayjs; dDate: dayjs.Dayjs; amount: number }[] = [];
 
       let currDDate = getNextDueDate(startOfToday, dueDay);
       let currSDate = getCorrespondingStatementDate(currDDate, statementDay, dueDay);
 
-      // Generate cycles until the due date is well past the simulation window
       while (currDDate.diff(startOfToday, 'day') < simulationDays + 31) {
         cycles.push({
           sDate: currSDate,
@@ -143,7 +140,21 @@ export class LiabilityFlowGenerator {
       if (isBillAvailable) {
         // 1. Current bill (Remaining Statement Balance)
         const remainingStatement = Math.max(0, statementBalance - settledSinceStatement);
-        const amountDueAtD1 = Math.min(currentBalance, remainingStatement);
+
+        // Handle MIN payment mode for the first bill
+        let amountDueAtD1 = remainingStatement;
+        if (metadata?.minPaymentOnly) {
+          const absoluteMin = metadata?.minimumPaymentAmount || 0;
+          const percentMin = metadata?.minimumPaymentPercent
+            ? (currentBalance * metadata.minimumPaymentPercent) / 100
+            : 0;
+          const calculatedMin = Math.max(absoluteMin, percentMin);
+
+          // If we've already paid more than min, we don't owe anything more for min
+          amountDueAtD1 = Math.max(0, calculatedMin - settledSinceStatement);
+        }
+
+        amountDueAtD1 = Math.min(currentBalance, amountDueAtD1);
         firstCycle.amount = amountDueAtD1;
 
         // 2. Remaining current balance goes to next cycle
@@ -156,9 +167,12 @@ export class LiabilityFlowGenerator {
       }
 
       // 3. Distribute spending flows into relevant statement cycles
+      // Note: If minPaymentOnly is true, future spending might only incur interest/future min payments.
+      // For simplicity in Safe-to-Spend, we still project the full spending flow into the next bill
+      // UNLESS we want to be very precise about future statement min-payments.
+      // Fixed for now: all spending in a cycle is added to that cycle's obligation.
       for (const f of spendingFlows) {
         const fDate = startOfToday.add(f.dayOffset, 'day');
-        // Find the first cycle whose statement date is AFTER or ON the spending date
         const cycle = cycles.find(
           c => fDate.isBefore(c.sDate, 'day') || fDate.isSame(c.sDate, 'day'),
         );
@@ -167,24 +181,37 @@ export class LiabilityFlowGenerator {
         }
       }
 
-      // 4. Emit obligations for all cycles within simulation window
+      // 4. Emit obligations
       for (let i = 0; i < cycles.length; i++) {
         const c = cycles[i];
         if (c.amount > 0.01) {
-          const roundedAmount = Math.round(c.amount * 100) / 100;
+          let finalAmount = c.amount;
+
+          // Apply MIN payment logic to future cycles too if applicable
+          if (metadata?.minPaymentOnly && i > 0) {
+            const absoluteMin = metadata?.minimumPaymentAmount || 0;
+            const percentMin = metadata?.minimumPaymentPercent
+              ? (c.amount * metadata.minimumPaymentPercent) / 100
+              : 0;
+            const calculatedMin = Math.max(absoluteMin, percentMin);
+
+            finalAmount = Math.min(c.amount, calculatedMin);
+          }
+
+          const roundedAmount = Math.round(finalAmount * 100) / 100;
           const dueDayOffset = c.dDate.diff(startOfToday, 'day');
           if (dueDayOffset < simulationDays && roundedAmount > 0) {
             obligations.push({
               liabilityId: acc.id,
               amount: roundedAmount,
               dueDayOffset,
-              label: `${i === 0 ? 'Current bill' : 'Bill ' + (i + 1)}: ${acc.name}`,
+              label: `${i === 0 ? 'Current bill' : 'Bill ' + (i + 1)}: ${acc.name}${paymentMode === 'MIN' ? ' (Min)' : ''}`,
             });
           }
         }
       }
     } else {
-      // Non-CC liability: Generate monthly obligations until balance is cleared or window ends
+      // Non-CC liability (EMI)
       const deductionDay =
         metadata?.dueDay || metadata?.emiDay || AppConfig.insights.liabilityFallbackDeductionDay;
       let currDDate = getNextDueDate(startOfToday, deductionDay);
@@ -194,8 +221,6 @@ export class LiabilityFlowGenerator {
         remainingBalance += f.amount;
       }
 
-      // EMI Fallback: If no emiAmount is set, we use 1/24th of the balance as a sensible monthly default
-      // This avoids "cliffs" where the entire balance is projected in month 1.
       const rawEmiAmount = metadata?.emiAmount;
       const emiAmount = rawEmiAmount || Math.ceil(remainingBalance / 24);
 

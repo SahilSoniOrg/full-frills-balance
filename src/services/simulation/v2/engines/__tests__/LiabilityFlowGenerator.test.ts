@@ -158,5 +158,100 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
 
       expect(obligations[0].amount).toBe(100.01);
     });
+
+    it('respects MIN payment mode for credit cards', () => {
+      const cc = mockAcc('cc-min', AccountSubtype.CREDIT_CARD, 'Min CC');
+      const metadata = {
+        statementDay: 1,
+        dueDay: 15,
+        minPaymentOnly: true,
+        minimumPaymentAmount: 50,
+      };
+
+      // Current bill has 200 remaining statement balance
+      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+        cc,
+        1000, // current balance
+        metadata,
+        200, // statement balance
+        0, // settled since statement
+        startOfToday,
+        simulationDays,
+        [],
+      );
+
+      // Should only owe 50 (the min payment), not 200 (the full statement)
+      expect(obligations[0]).toMatchObject({
+        amount: 50,
+        label: 'Current bill: Min CC (Min)',
+      });
+      // The rest (950) should roll to the next bill
+      expect(obligations[1]).toMatchObject({
+        amount: 50, // Projected min for next bill too
+        label: 'Bill 2: Min CC (Min)',
+      });
+    });
+
+    it('calculates MIN payment as max of amount and percentage', () => {
+      const cc = mockAcc('cc-percent', AccountSubtype.CREDIT_CARD, 'Percent CC');
+      const metadata = {
+        statementDay: 1,
+        dueDay: 15,
+        minPaymentOnly: true,
+        minimumPaymentAmount: 20,
+        minimumPaymentPercent: 5,
+      };
+
+      const obligationsHighPercent = (LiabilityFlowGenerator as any).generateObligations(
+        cc,
+        1000,
+        metadata,
+        500,
+        0,
+        startOfToday,
+        simulationDays,
+        [],
+      );
+      expect(obligationsHighPercent[0].amount).toBe(50);
+
+      const obligationsHighAbsolute = (LiabilityFlowGenerator as any).generateObligations(
+        cc,
+        100,
+        metadata,
+        100,
+        0,
+        startOfToday,
+        simulationDays,
+        [],
+      );
+      expect(obligationsHighAbsolute[0].amount).toBe(20);
+    });
+  });
+
+  describe('Pay-From Logic', () => {
+    it('uses the first liquid account if payFromAccountId is missing', () => {
+      const context = {
+        simulationStartMs: startOfToday.valueOf(),
+        simulationDays: 30,
+        liquidAccountIds: new Set(['main-checking']),
+        orderedLiquidAccountIds: ['main-checking'],
+        liabilityAccountIds: new Set(['cc-1']),
+        accountMap: new Map(),
+      } as any;
+
+      const flows = LiabilityFlowGenerator.generate(
+        context,
+        [],
+        [{ account: mockAcc('cc-1', AccountSubtype.CREDIT_CARD, 'Visa'), balance: 100 }],
+        new Map([['cc-1', { dueDay: 15 }]]),
+        new Map(),
+        new Map(),
+      );
+
+      expect(flows[0]).toMatchObject({
+        kind: 'OUTFLOW',
+        accountId: 'main-checking',
+      });
+    });
   });
 });

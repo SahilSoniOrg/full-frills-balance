@@ -1,17 +1,16 @@
+import { AppConfig } from '@/src/constants/app-config';
 import Budget from '@/src/data/models/Budget';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
-import { Flow } from '../types';
-import { AppConfig } from '@/src/constants/app-config';
+import { Flow, SimulationContext } from '../types';
 
 export class BudgetFlowGenerator {
   /**
    * Generates budget-related OUTFLOWs from liquid asset accounts.
    */
   static generate(
-    budgets: any[],
+    context: SimulationContext,
+    budgets: Budget[],
     usages: BudgetUsage[],
-    liquidAssetIds: string[],
-    simulationDays: number,
     daysLeftInMonth: number,
     nextMonthDays: number,
     budgetCategoryMap: Map<string, Set<string>>,
@@ -20,10 +19,10 @@ export class BudgetFlowGenerator {
 
     const getTargetAssetAccountIds = (budget: Budget): string[] => {
       if (budget.assetAccountIds) {
-        const ids = budget.assetAccountIds.split(',').filter(id => id.trim().length > 0);
+        const ids = budget.assetAccountIds.split(',').filter((id: string) => id.trim().length > 0);
         if (ids.length > 0) return ids;
       }
-      return liquidAssetIds.length > 0 ? [liquidAssetIds[0]] : [];
+      return context.orderedLiquidAccountIds.length > 0 ? [context.orderedLiquidAccountIds[0]] : [];
     };
 
     for (let i = 0; i < budgets.length; i++) {
@@ -36,15 +35,15 @@ export class BudgetFlowGenerator {
       const targetAssetIds = getTargetAssetAccountIds(budget);
       if (targetAssetIds.length === 0) continue;
 
+      const burns = new Array(context.simulationDays).fill(0);
       const isSmoothed = AppConfig.defaults.budgetMode === 'SMOOTHED';
-      const burns = new Array(simulationDays).fill(0);
 
       if (isSmoothed) {
         const totalInWindow =
           remaining +
-          Math.max(0, simulationDays - daysLeftInMonth) *
+          Math.max(0, context.simulationDays - daysLeftInMonth) *
             (budget.amount / Math.max(1, nextMonthDays));
-        const smoothedDaily = totalInWindow / simulationDays;
+        const smoothedDaily = totalInWindow / context.simulationDays;
         burns.fill(smoothedDaily);
       } else {
         const useConstant30 = AppConfig.insights.useConstant30DayBurn ?? true;
@@ -54,21 +53,25 @@ export class BudgetFlowGenerator {
           remaining /
           (useConstant30 ? Math.max(daysLeftInMonth, minDays) : Math.max(1, daysLeftInMonth));
 
-        for (let d = 0; d < simulationDays; d++) {
+        for (let d = 0; d < context.simulationDays; d++) {
           burns[d] = d < daysLeftInMonth ? currentMonthDailyRate : nextMonthDailyRate;
         }
       }
 
-      // Emit OUTFLOWs
+      // Support for RESERVE mode (hypothetical future-proofing or per-budget flag)
+      // If we want to support "keeping a balance", we can subtract the reserve from the available liquid balance in the simulator,
+      // or emit a "RESERVE" flow that doesn't actually spend but reduces safe-to-spend.
+      // For now, these are all OUTFLOWs.
+
       const shareOfBurn = 1 / targetAssetIds.length;
       const budgetCategories = Array.from(budgetCategoryMap.get(budget.id) || []);
       const representativeCategoryId =
         budgetCategories.length > 0 ? budgetCategories[0] : undefined;
 
       for (const assetId of targetAssetIds) {
-        for (let d = 0; d < simulationDays; d++) {
+        for (let d = 0; d < context.simulationDays; d++) {
           const dailyAmt = burns[d] * shareOfBurn;
-          if (dailyAmt > 0) {
+          if (dailyAmt > 0.01) {
             flows.push({
               kind: 'OUTFLOW',
               accountId: assetId,

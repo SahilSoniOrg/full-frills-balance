@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 16,
+  version: 17,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -142,6 +142,8 @@ export const schema = appSchema({
         { name: 'autopay_enabled', type: 'boolean', isOptional: true },
         { name: 'grace_period_days', type: 'number', isOptional: true },
         { name: 'pay_from_account_id', type: 'string', isOptional: true },
+        { name: 'min_payment_only', type: 'boolean', isOptional: true },
+        { name: 'minimum_payment_percent', type: 'number', isOptional: true },
         { name: 'notes', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },

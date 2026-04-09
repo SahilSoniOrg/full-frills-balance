@@ -1,4 +1,5 @@
 import { AppInput, AppText, IvyIcon } from '@/src/components/core';
+import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -17,6 +18,12 @@ interface CreditCardMetadataFieldsProps {
   payFromAccountName: string;
   setPayFromAccountId: (value: string) => void;
   setIsPayFromPickerVisible: (visible: boolean) => void;
+  isMinPaymentOnly: boolean;
+  setIsMinPaymentOnly: (value: boolean) => void;
+  minimumPaymentAmount: string;
+  setMinimumPaymentAmount: (value: string) => void;
+  minimumPaymentPercent: string;
+  setMinimumPaymentPercent: (value: string) => void;
 }
 
 export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> = ({
@@ -31,6 +38,12 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
   payFromAccountName,
   setPayFromAccountId,
   setIsPayFromPickerVisible,
+  isMinPaymentOnly,
+  setIsMinPaymentOnly,
+  minimumPaymentAmount,
+  setMinimumPaymentAmount,
+  minimumPaymentPercent,
+  setMinimumPaymentPercent,
 }) => {
   const { theme } = useTheme();
 
@@ -78,6 +91,60 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
           />
         </View>
       </View>
+
+      <View style={styles.simulationHeader}>
+        <AppText variant="body" weight="semibold" color="secondary" style={styles.simulationTitle}>
+          SIMULATION SETTINGS
+        </AppText>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <AppText variant="body" weight="medium" style={styles.label}>
+          Repayment Simulation
+        </AppText>
+        <AppSegmentedControl
+          flex
+          options={[
+            { id: 'FULL', label: 'Full Statement' },
+            { id: 'MIN', label: 'Minimum Payment' },
+          ]}
+          value={isMinPaymentOnly ? 'MIN' : 'FULL'}
+          onChange={id => setIsMinPaymentOnly(id === 'MIN')}
+        />
+        <AppText variant="caption" color="secondary" style={styles.helpText}>
+          Controls how much outflow is projected per cycle.
+        </AppText>
+      </View>
+
+      {isMinPaymentOnly && (
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <AppInput
+              label="Min Amount"
+              value={minimumPaymentAmount}
+              onChangeText={setMinimumPaymentAmount}
+              placeholder="e.g. 500"
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppInput
+              label="Min Percent (%)"
+              value={minimumPaymentPercent}
+              onChangeText={setMinimumPaymentPercent}
+              placeholder="e.g. 5"
+              keyboardType="decimal-pad"
+            />
+          </View>
+        </View>
+      )}
+
+      {isMinPaymentOnly && (
+        <AppText variant="caption" color="secondary" style={styles.infoBox}>
+          Simulation will use the higher of the absolute amount or percentage.
+        </AppText>
+      )}
+
       <View>
         <AppText variant="body" weight="medium" style={styles.label}>
           {AppConfig.strings.accounts.form.payDebtFrom}
@@ -151,5 +218,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Shape.radius.xs,
+  },
+  simulationHeader: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.xs,
+  },
+  simulationTitle: {
+    fontSize: 11,
+    letterSpacing: 1.2,
+  },
+  fieldGroup: {
+    marginBottom: Spacing.md,
+  },
+  helpText: {
+    marginTop: Spacing.xs,
+  },
+  infoBox: {
+    marginTop: -Spacing.xs,
+    marginBottom: Spacing.md,
+    fontStyle: 'italic',
   },
 });

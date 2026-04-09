@@ -74,6 +74,10 @@ export function AccountFormView(vm: AccountFormViewModel) {
     setIsPayFromPickerVisible,
     notes,
     setNotes,
+    isMinPaymentOnly,
+    setIsMinPaymentOnly,
+    minimumPaymentPercent,
+    setMinimumPaymentPercent,
   } = vm;
 
   return (
@@ -262,6 +266,10 @@ export function AccountFormView(vm: AccountFormViewModel) {
           setApr={setApr}
           notes={notes}
           setNotes={setNotes}
+          isMinPaymentOnly={isMinPaymentOnly}
+          setIsMinPaymentOnly={setIsMinPaymentOnly}
+          minimumPaymentPercent={minimumPaymentPercent}
+          setMinimumPaymentPercent={setMinimumPaymentPercent}
         />
       </Inset>
 

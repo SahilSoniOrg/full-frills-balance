@@ -86,6 +86,10 @@ export interface AccountFormViewModel {
   setIsPayFromPickerVisible: (visible: boolean) => void;
   notes: string;
   setNotes: (value: string) => void;
+  isMinPaymentOnly: boolean;
+  setIsMinPaymentOnly: (value: boolean) => void;
+  minimumPaymentPercent: string;
+  setMinimumPaymentPercent: (value: string) => void;
   isLoading: boolean;
 }
 
@@ -166,6 +170,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [emiDay, setEmiDay] = useState('');
   const [loanTenureMonths, setLoanTenureMonths] = useState('');
   const [minimumPaymentAmount, setMinimumPaymentAmount] = useState('');
+  const [minimumPaymentPercent, setMinimumPaymentPercent] = useState('');
+  const [isMinPaymentOnly, setIsMinPaymentOnly] = useState(false);
   const [notes, setNotes] = useState('');
 
   const [localFormError, setLocalFormError] = useState<string | null>(null);
@@ -196,6 +202,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         setEmiDay(existingMetadata.emiDay?.toString() || '');
         setLoanTenureMonths(existingMetadata.loanTenureMonths?.toString() || '');
         setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
+        setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
+        setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
         setPayFromAccountId(existingMetadata.payFromAccountId || '');
         setNotes(existingMetadata.notes || '');
       }
@@ -256,6 +264,14 @@ export function useAccountFormViewModel(): AccountFormViewModel {
           return;
         }
       }
+
+      if (minimumPaymentPercent) {
+        const percent = parseFloat(minimumPaymentPercent);
+        if (isNaN(percent) || percent < 0 || percent > 100) {
+          setLocalFormError('Minimum payment percent must be between 0 and 100');
+          return;
+        }
+      }
     }
 
     const metadata: any = {};
@@ -266,6 +282,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     if (emiDay) metadata.emiDay = parseInt(emiDay, 10);
     if (loanTenureMonths) metadata.loanTenureMonths = parseInt(loanTenureMonths, 10);
     if (minimumPaymentAmount) metadata.minimumPaymentAmount = parseFloat(minimumPaymentAmount);
+    if (minimumPaymentPercent) metadata.minimumPaymentPercent = parseFloat(minimumPaymentPercent);
+    metadata.minPaymentOnly = isMinPaymentOnly;
     if (payFromAccountId) metadata.payFromAccountId = payFromAccountId;
     if (notes) metadata.notes = notes;
     try {
@@ -398,6 +416,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setIsPayFromPickerVisible,
     notes,
     setNotes,
+    isMinPaymentOnly,
+    setIsMinPaymentOnly,
+    minimumPaymentPercent,
+    setMinimumPaymentPercent,
     isLoading: isAccountLoading || isBalanceLoading,
   };
 }

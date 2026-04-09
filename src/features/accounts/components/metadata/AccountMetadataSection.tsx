@@ -26,6 +26,10 @@ interface AccountMetadataSectionProps {
   setLoanTenureMonths: (value: string) => void;
   minimumPaymentAmount: string;
   setMinimumPaymentAmount: (value: string) => void;
+  minimumPaymentPercent: string;
+  setMinimumPaymentPercent: (value: string) => void;
+  isMinPaymentOnly: boolean;
+  setIsMinPaymentOnly: (value: boolean) => void;
   payFromAccountId: string;
   payFromAccountName: string;
   setPayFromAccountId: (value: string) => void;
@@ -61,6 +65,12 @@ export const AccountMetadataSection: React.FC<AccountMetadataSectionProps> = pro
               setCreditLimitAmount={props.setCreditLimitAmount}
               apr={props.apr}
               setApr={props.setApr}
+              isMinPaymentOnly={props.isMinPaymentOnly}
+              setIsMinPaymentOnly={props.setIsMinPaymentOnly}
+              minimumPaymentAmount={props.minimumPaymentAmount}
+              setMinimumPaymentAmount={props.setMinimumPaymentAmount}
+              minimumPaymentPercent={props.minimumPaymentPercent}
+              setMinimumPaymentPercent={props.setMinimumPaymentPercent}
               payFromAccountName={props.payFromAccountName}
               setPayFromAccountId={props.setPayFromAccountId}
               setIsPayFromPickerVisible={props.setIsPayFromPickerVisible}
