@@ -222,7 +222,7 @@ export class LiabilityFlowGenerator {
       }
 
       const rawEmiAmount = metadata?.emiAmount;
-      const emiAmount = rawEmiAmount || Math.ceil(remainingBalance / 24);
+      const emiAmount = rawEmiAmount || remainingBalance;
 
       while (currDDate.diff(startOfToday, 'day') < simulationDays && remainingBalance > 0.01) {
         const amountToPay = Math.round(Math.min(remainingBalance, emiAmount) * 100) / 100;

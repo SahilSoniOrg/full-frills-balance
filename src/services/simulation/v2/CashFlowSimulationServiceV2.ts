@@ -32,8 +32,8 @@ export class CashFlowSimulationServiceV2 {
     usages: BudgetUsage[],
     allAccounts: Account[],
     resultCurrency: string,
+    simulationDays: number = AppConfig.defaults.safeToSpendDays,
   ): Promise<SimulationResultV2> {
-    const simulationDays = AppConfig.defaults.safeToSpendDays;
     const time = new TimeContext(dayjs(), simulationDays);
     const simulationStartMs = time.getStartOfToday().valueOf();
     const simulationEndMs = time.getEndMs();
@@ -294,7 +294,9 @@ export class CashFlowSimulationServiceV2 {
   // --- Normalization Helpers ---
 
   private async fetchMetadata(lbs: { account: Account }[]) {
-    const records = await Promise.all(lbs.map(lb => lb.account.metadataRecords.fetch()));
+    const records = await Promise.all(
+      lbs.map(lb => lb.account.metadataRecords?.fetch?.() || Promise.resolve([])),
+    );
     return new Map(lbs.map((lb, i) => [lb.account.id, records[i][0]]));
   }
 
@@ -322,7 +324,16 @@ export class CashFlowSimulationServiceV2 {
             [lb.account.id],
             s1Date.valueOf(),
           );
-          balances.set(lb.account.id, Math.abs(latestBalances.get(lb.account.id) || 0));
+          let statementBal = Math.abs(latestBalances.get(lb.account.id) || 0);
+          if (lb.account.currencyCode && lb.account.currencyCode !== toCurrency) {
+            const { convertedAmount } = await exchangeRateService.convert(
+              statementBal,
+              lb.account.currencyCode,
+              toCurrency,
+            );
+            statementBal = convertedAmount;
+          }
+          balances.set(lb.account.id, statementBal);
 
           // 2. Fetch settled payments made between s1Date and now
           // For liabilities, a payment is a DEBIT (money into account)
