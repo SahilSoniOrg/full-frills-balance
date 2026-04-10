@@ -30,6 +30,8 @@ import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationServiceV2 } from '../simulation/v2/CashFlowSimulationServiceV2';
 
 import { FlowType, SimulationResult } from '../simulation/types';
+import { V2SimulationRunResult } from '../simulation/v2/CashFlowSimulationServiceV2';
+import { LegacySimulationPresenter } from '../simulation/v2/presenters/LegacySimulationPresenter';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -49,7 +51,14 @@ export interface SafeToSpendProjection {
   safeToSpend: number;
 }
 
-export interface SafeToSpendResult extends SimulationResult {
+export interface SafeToSpendResult {
+  // Pure V2 Context
+  summary: SimulationResult['summary'];
+  accountSummaries: SimulationResult['accountSummaries'];
+  breakdowns: SimulationResult['breakdowns'] | null;
+  metadata: SimulationResult['metadata'];
+
+  // Liquid Asset Context
   totalLiquidAssets: number;
   currencyCode: string;
   liquidAssetSubtypes: AccountSubtype[];
@@ -57,8 +66,13 @@ export interface SafeToSpendResult extends SimulationResult {
   liquidLiabilityAccounts: { name: string; amount: number }[];
   liquidAssetAccountIds: string[];
   liquidLiabilityAccountIds: string[];
+
+  // Projections
   dailyBudgetBurn: number;
   projection: SafeToSpendProjection;
+
+  // Raw V2 data (for V2-native components)
+  allFlows: V2SimulationRunResult['allFlows'];
 }
 
 export class NotificationService {
@@ -258,53 +272,49 @@ export class NotificationService {
         const resultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
         if (liquidAssets.length === 0) {
-          const empty: SafeToSpendResult = {
-            summary: {
-              safeToSpend: 0,
-              shortfall: 0,
-              trajectoryMinBalance: 0,
-              safeDaysCount: null,
-              totalFutureInflow: 0,
-              totalOrganicInflow: 0,
-              totalOrganicOutflow: 0,
-              totalCommittedPlanned: 0,
-              firstMajorInflowDay: null,
-            },
-            breakdowns: {
-              committed: [],
-              debt: [],
-              income: [],
-              budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 0 },
-              liabilities: {
-                total: 0,
-                totalCreditCard: 0,
-                totalOther: 0,
-                committed: 0,
-                committedCreditCard: 0,
-                committedOther: 0,
+            const empty: SafeToSpendResult = {
+              summary: {
+                safeToSpend: 0,
+                shortfall: 0,
+                trajectoryMinBalance: 0,
+                safeDaysCount: null,
+                totalFutureInflow: 0,
+                totalOrganicInflow: 0,
+                totalOrganicOutflow: 0,
+                totalCommittedPlanned: 0,
+                firstMajorInflowDay: null,
               },
-            },
-            projections: {
-              points: [],
-              dailyBudgetBurns: [],
-              flowByDayOffset: new Map(),
-              safeToSpendDailyBreakdown: new Map(),
-            },
-            metadata: {
-              firstMajorInflowDay: null,
-              committedSubtypes: [],
-              debtSubtypes: [],
-            },
-            totalLiquidAssets: 0,
-            currencyCode: resultCurrency,
-            liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-            liquidAssetAccounts: [],
-            liquidLiabilityAccounts: [],
-            liquidAssetAccountIds: [],
-            liquidLiabilityAccountIds: [],
-            dailyBudgetBurn: 0,
-            projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
-          };
+              breakdowns: {
+                committed: [],
+                debt: [],
+                income: [],
+                budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 0 },
+                liabilities: {
+                  total: 0,
+                  totalCreditCard: 0,
+                  totalOther: 0,
+                  committed: 0,
+                  committedCreditCard: 0,
+                  committedOther: 0,
+                },
+              },
+              metadata: {
+                firstMajorInflowDay: null,
+                committedSubtypes: [],
+                debtSubtypes: [],
+              },
+              accountSummaries: [],
+              totalLiquidAssets: 0,
+              currencyCode: resultCurrency,
+              liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
+              liquidAssetAccounts: [],
+              liquidLiabilityAccounts: [],
+              liquidAssetAccountIds: [],
+              liquidLiabilityAccountIds: [],
+              dailyBudgetBurn: 0,
+              projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
+              allFlows: [],
+            };
           return of(empty);
         }
 
@@ -363,8 +373,8 @@ export class NotificationService {
               }),
             );
 
-            // Call the simulation engine (standardized)
-            const simulationResults = await cashFlowSimulationServiceV2.simulate(
+            // Call the simulation engine (standardized V2)
+            const runResult = await cashFlowSimulationServiceV2.simulateV2(
               startingBalances,
               plannedPayments,
               plannedJournals,
@@ -375,6 +385,9 @@ export class NotificationService {
               allAccounts,
               resultCurrency,
             );
+
+            // Derive legacy structures via presenter (Temporary bridge)
+            const legacyResults = LegacySimulationPresenter.buildLegacySimulationResult(runResult);
 
             // Calculate History Points (UI concern)
             const netCashFlowByDay = new Map<number, number>();
@@ -421,7 +434,10 @@ export class NotificationService {
             historyPoints.reverse();
 
             return {
-              ...simulationResults,
+              summary: legacyResults.summary,
+              accountSummaries: legacyResults.accountSummaries,
+              breakdowns: legacyResults.breakdowns,
+              metadata: legacyResults.metadata,
               totalLiquidAssets: totalLiquidMoney.amount,
               currencyCode: resultCurrency,
               liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
@@ -429,13 +445,14 @@ export class NotificationService {
               liquidLiabilityAccounts,
               liquidAssetAccountIds: liquidAssetIds,
               liquidLiabilityAccountIds: liquidLiabilityIds,
-              dailyBudgetBurn: simulationResults.summary.totalCommittedPlanned / 30,
+              dailyBudgetBurn: legacyResults.summary.totalCommittedPlanned / 30,
               projection: {
                 history: historyPoints,
-                projection: simulationResults.projections.points,
-                safeDaysCount: simulationResults.summary.safeDaysCount,
-                safeToSpend: simulationResults.summary.safeToSpend,
+                projection: legacyResults.projections.points,
+                safeDaysCount: legacyResults.summary.safeDaysCount,
+                safeToSpend: legacyResults.summary.safeToSpend,
               },
+              allFlows: runResult.allFlows,
             };
           }),
         );
