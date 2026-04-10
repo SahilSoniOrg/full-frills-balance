@@ -9,18 +9,18 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import dayjs from 'dayjs';
-import { TimeContext } from '../TimeContext';
-import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
 import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
 import { FlowResolver } from './FlowResolver';
 import { Simulator } from './Simulator';
-import { AccountSimulationSummary, SimulationContext, V2SimulationRunResult } from './types';
+import { TimeContext } from './TimeContext';
+import { AccountSimulationSummary, SimulationContext, SimulationRunResult } from './types';
+import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 
-export class CashFlowSimulationServiceV2 {
+export class CashFlowSimulationService {
   /**
-   * WIP V2 Simulation following the "Generate truth -> simulate once" architecture.
+   * Cash flow simulation following the "Generate truth -> simulate once" architecture.
    */
   async simulate(
     startingBalances: Map<string, number>,
@@ -33,7 +33,7 @@ export class CashFlowSimulationServiceV2 {
     allAccounts: Account[],
     resultCurrency: string,
     simulationDays: number = AppConfig.defaults.safeToSpendDays,
-  ): Promise<V2SimulationRunResult> {
+  ): Promise<SimulationRunResult> {
     const time = new TimeContext(dayjs(), simulationDays);
     const simulationStartMs = time.getStartOfToday().valueOf();
     const simulationEndMs = time.getEndMs();
@@ -440,4 +440,4 @@ export class CashFlowSimulationServiceV2 {
   }
 }
 
-export const cashFlowSimulationServiceV2 = new CashFlowSimulationServiceV2();
+export const cashFlowSimulationService = new CashFlowSimulationService();

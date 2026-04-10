@@ -4,7 +4,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
@@ -39,7 +39,7 @@ jest.mock('@/src/utils/logger', () => ({
   },
 }));
 
-describe('CashFlowSimulationServiceV2 scenario coverage', () => {
+describe('CashFlowSimulationService scenario coverage', () => {
   const cash = {
     id: 'cash',
     name: 'Checking',
@@ -94,10 +94,8 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
     },
   } as any;
 
-  const simulate = (
-    overrides?: Partial<Parameters<typeof cashFlowSimulationServiceV2.simulate>>,
-  ) => {
-    const args: Parameters<typeof cashFlowSimulationServiceV2.simulate> = [
+  const simulate = (overrides?: Partial<Parameters<typeof cashFlowSimulationService.simulate>>) => {
+    const args: Parameters<typeof cashFlowSimulationService.simulate> = [
       new Map([['cash', 1000]]),
       [],
       [],
@@ -113,7 +111,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       args[Number(index)] = value as never;
     }
 
-    return cashFlowSimulationServiceV2.simulate(...args);
+    return cashFlowSimulationService.simulate(...args);
   };
 
   beforeEach(() => {

@@ -1,5 +1,5 @@
-import { FlowResolver } from '@/src/services/simulation/v2/FlowResolver';
-import { Flow } from '@/src/services/simulation/v2/types';
+import { FlowResolver } from '@/src/services/simulation/FlowResolver';
+import { Flow } from '@/src/services/simulation/types';
 
 describe('FlowResolver', () => {
   it('reconciles budget burns against planned spend when category metadata is an iterable', () => {

@@ -1,5 +1,5 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
@@ -53,11 +53,11 @@ const creditCardAccount = {
   },
 } as any;
 
-type SimulateArgs = Parameters<typeof cashFlowSimulationServiceV2.simulate>;
+type SimulateArgs = Parameters<typeof cashFlowSimulationService.simulate>;
 type OverrideMap = Partial<{ [K in keyof SimulateArgs]: SimulateArgs[K] }>;
 
 const simulate = (overrides: OverrideMap = {} as any, planned: SimulateArgs[1] = []) => {
-  const defaultArgs: Parameters<typeof cashFlowSimulationServiceV2.simulate> = [
+  const defaultArgs: Parameters<typeof cashFlowSimulationService.simulate> = [
     new Map([['checking-1', 2000]]),
     planned,
     [],
@@ -73,7 +73,7 @@ const simulate = (overrides: OverrideMap = {} as any, planned: SimulateArgs[1] =
     (defaultArgs as any)[Number(index)] = value;
   });
 
-  return cashFlowSimulationServiceV2.simulate(...defaultArgs);
+  return cashFlowSimulationService.simulate(...defaultArgs);
 };
 
 describe('Liability payment coverage', () => {

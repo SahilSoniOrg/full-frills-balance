@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { Flow, SimulationResultV2 } from './types';
+import { Flow, SimulationEngineResult } from './types';
 
 export class Simulator {
   /**
@@ -13,7 +13,7 @@ export class Simulator {
     liquidAccountIds: Set<string>,
     orderedLiquidAccountIds: string[] = [],
     startDayOffset: number = 0,
-  ): SimulationResultV2 {
+  ): SimulationEngineResult {
     const currentBalances = new Map(startingBalances);
     const flowByDay = new Map<number, Flow[]>();
 
@@ -24,7 +24,7 @@ export class Simulator {
       flowByDay.set(day, dayFlows);
     }
 
-    const projections: SimulationResultV2['projections'] = [];
+    const projections: SimulationEngineResult['projections'] = [];
     let globalMinBalance = this.calculateGlobalBalance(currentBalances, liquidAccountIds);
 
     // 1. Identify first major inflow day

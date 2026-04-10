@@ -1,7 +1,7 @@
 import Account, { AccountSubtype } from '@/src/data/models/Account';
 import { AppConfig } from '@/src/constants/app-config';
 import { Flow, Obligation, SimulationContext } from '../types';
-import { getCorrespondingStatementDate, getNextDueDate } from '../../utils/liabilityUtils';
+import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
 import dayjs from 'dayjs';
 
 export class LiabilityFlowGenerator {

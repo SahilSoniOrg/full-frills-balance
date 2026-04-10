@@ -67,7 +67,6 @@ export const AppConfig = {
     enableAnalytics: true, // Analytics collection
     enableDebugMode: false, // Debug logging
     enableExperimentalFeatures: false,
-    enableSimulationV2: true, // Toggle between V1 and V2 simulation engines
     debug: {
       safeToSpendLogs: false,
     },

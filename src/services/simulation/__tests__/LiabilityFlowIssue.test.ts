@@ -1,6 +1,6 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
@@ -73,7 +73,7 @@ describe('liability flow issue', () => {
       },
     ] as PlannedPayment[];
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash', 1200]]),
       plannedPayments,
       [],

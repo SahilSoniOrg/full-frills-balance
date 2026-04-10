@@ -2,7 +2,7 @@ import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
@@ -37,7 +37,7 @@ jest.mock('@/src/utils/logger', () => ({
   },
 }));
 
-describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
+describe('CashFlowSimulationService heavy scenario coverage', () => {
   const start = dayjs('2026-04-01T00:00:00Z');
   const atDay = (dayOffset: number) => start.add(dayOffset, 'day').hour(12).valueOf();
 
@@ -216,7 +216,7 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
         }),
     );
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([
         ['cash', 2500],
         ['savings', 1200],
@@ -316,7 +316,7 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       ]),
     );
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash', 2000]]),
       plannedPayments,
       plannedJournals,
@@ -355,7 +355,7 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       currencyCode: 'USD',
     })) as any[];
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([['cash', 500]]),
       plannedPayments,
       [],

@@ -4,7 +4,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo } from 'react';
-import { V2UiPresenter } from '../utils/V2UiPresenter';
+import { SimulationUiPresenter } from '../utils/SimulationUiPresenter';
 
 export interface SafeToSpendViewProps extends SafeToSpendResult {
   isLoading?: boolean;
@@ -34,7 +34,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps) {
   const breakdowns = useMemo(() => {
     if (!allFlows || !simulationResult || !allAccounts) return null;
     const accountMap = new Map(allAccounts.map(a => [a.id, a]));
-    return V2UiPresenter.deriveBreakdowns(
+    return SimulationUiPresenter.deriveBreakdowns(
       allFlows,
       simulationResult,
       accountMap,

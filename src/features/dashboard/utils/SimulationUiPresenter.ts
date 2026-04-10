@@ -1,9 +1,9 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import dayjs from 'dayjs';
-import { Flow, SimulationResultV2 } from '@/src/services/simulation/v2/types';
+import { Flow, SimulationEngineResult } from '@/src/services/simulation/types';
 
-export interface V2UiIncomeEntry {
+export interface SimulationIncomeEntry {
   id: string;
   name: string;
   amount: number;
@@ -11,7 +11,7 @@ export interface V2UiIncomeEntry {
   type: 'PLANNED_PAYMENT' | 'TRANSFER' | 'BUDGET';
 }
 
-export interface V2UiCommitmentDetail {
+export interface SimulationCommitmentDetail {
   id: string;
   name: string;
   amount: number;
@@ -19,24 +19,24 @@ export interface V2UiCommitmentDetail {
   dayOffset?: number;
 }
 
-export interface V2UiAccountCommitment {
+export interface SimulationAccountCommitment {
   accountId: string;
   accountName: string;
   amount: number;
-  details: V2UiCommitmentDetail[];
+  details: SimulationCommitmentDetail[];
 }
 
-export interface V2UiDebtEntry {
+export interface SimulationDebtEntry {
   accountId: string;
   accountName: string;
   amount: number;
   dayOffset: number;
 }
 
-export interface V2UiBreakdowns {
-  income: V2UiIncomeEntry[];
-  committed: V2UiAccountCommitment[];
-  debt: V2UiDebtEntry[];
+export interface SimulationBreakdowns {
+  income: SimulationIncomeEntry[];
+  committed: SimulationAccountCommitment[];
+  debt: SimulationDebtEntry[];
   budget: {
     currentMonthRemaining: number;
     nextMonthProjected: number;
@@ -52,17 +52,17 @@ export interface V2UiBreakdowns {
   };
 }
 
-export class V2UiPresenter {
+export class SimulationUiPresenter {
   static deriveBreakdowns(
     allFlows: Flow[],
-    simulationResult: SimulationResultV2,
+    simulationResult: SimulationEngineResult,
     accountMap: Map<string, Account>,
     liabilityAccountBalances: { account: Account; balance: number }[],
-  ): V2UiBreakdowns {
+  ): SimulationBreakdowns {
     const firstMajorInflowDay = simulationResult.summary?.firstMajorInflowDay ?? null;
 
     // 1. Income Breakdown
-    const income: V2UiIncomeEntry[] = allFlows
+    const income: SimulationIncomeEntry[] = allFlows
       .filter(flow => flow.dayOffset >= 0 && flow.kind === 'INFLOW')
       .map(flow => ({
         id: flow.meta?.referenceId || 'income',
@@ -73,12 +73,12 @@ export class V2UiPresenter {
       }));
 
     // 2. Committed Breakdown (Bills & Budgets)
-    const committedMap = new Map<string, V2UiAccountCommitment>();
+    const committedMap = new Map<string, SimulationAccountCommitment>();
     allFlows
       .filter(flow => flow.dayOffset >= 0 && this.isCommitmentFlow(flow))
       .forEach(flow => {
         const target = this.resolveCommitmentTarget(flow, accountMap);
-        const entry: V2UiAccountCommitment = committedMap.get(target.accountId) || {
+        const entry: SimulationAccountCommitment = committedMap.get(target.accountId) || {
           accountId: target.accountId,
           accountName: target.accountName,
           amount: 0,
@@ -118,7 +118,7 @@ export class V2UiPresenter {
       });
 
     // 3. Debt Breakdown
-    const debtMap = new Map<string, V2UiDebtEntry>();
+    const debtMap = new Map<string, SimulationDebtEntry>();
     allFlows
       .filter(
         flow => flow.dayOffset >= 0 && flow.kind === 'OUTFLOW' && flow.meta?.source === 'LIABILITY',

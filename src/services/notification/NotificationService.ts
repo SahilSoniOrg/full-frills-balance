@@ -27,10 +27,8 @@ import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
-import { cashFlowSimulationServiceV2 } from '../simulation/v2/CashFlowSimulationServiceV2';
-import { V2SimulationRunResult } from '../simulation/v2/types';
-
-import { FlowType, SimulationResult } from '../simulation/types';
+import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
+import { SimulationRunResult, FlowType, SimulationResult } from '../simulation/types';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -51,12 +49,12 @@ export interface SafeToSpendProjection {
 }
 
 export interface SafeToSpendResult {
-  // Pure V2 Context
+  // Simulation Context
   summary: SimulationResult['summary'];
   accountSummaries: SimulationResult['accountSummaries'];
   metadata: SimulationResult['metadata'];
-  allFlows: V2SimulationRunResult['allFlows'];
-  simulationResult: V2SimulationRunResult['simulationResult'];
+  allFlows: SimulationRunResult['allFlows'];
+  simulationResult: SimulationRunResult['simulationResult'];
   liabilityAccountBalances: { account: Account; balance: number }[];
   allAccounts: Account[];
 
@@ -373,8 +371,8 @@ export class NotificationService {
               }),
             );
 
-            // Call the simulation engine (native V2)
-            const runResult = await cashFlowSimulationServiceV2.simulate(
+            // Call the simulation engine
+            const runResult = await cashFlowSimulationService.simulate(
               startingBalances,
               plannedPayments,
               plannedJournals,

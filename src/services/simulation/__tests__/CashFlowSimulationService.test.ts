@@ -3,7 +3,7 @@ import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
@@ -40,7 +40,7 @@ jest.mock('@/src/utils/logger', () => ({
   },
 }));
 
-describe('CashFlowSimulationServiceV2', () => {
+describe('CashFlowSimulationService', () => {
   const liquidAccountId = 'cash-1';
   const liquidAccount = {
     id: liquidAccountId,
@@ -66,7 +66,7 @@ describe('CashFlowSimulationServiceV2', () => {
   });
 
   it('runs a basic simulation with starting balance and no flows', async () => {
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [],
       [],
@@ -96,7 +96,7 @@ describe('CashFlowSimulationServiceV2', () => {
       currencyCode: 'USD',
     } as any;
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [plannedPayment],
       [],
@@ -135,7 +135,7 @@ describe('CashFlowSimulationServiceV2', () => {
       currencyCode: 'USD',
     } as any;
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([
         [liquidAccountId, 1000],
         [otherAccountId, 0],
@@ -179,7 +179,7 @@ describe('CashFlowSimulationServiceV2', () => {
 
     budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [],
       [],
@@ -217,7 +217,7 @@ describe('CashFlowSimulationServiceV2', () => {
       journalDate: dayjs('2026-04-03T12:00:00Z').valueOf(),
     } as any;
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [],
       [plannedJournal],
@@ -260,7 +260,7 @@ describe('CashFlowSimulationServiceV2', () => {
       .fn()
       .mockResolvedValue(new Map([[ccId, 500]]));
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [plannedPayment],
       [],
@@ -319,7 +319,7 @@ describe('CashFlowSimulationServiceV2', () => {
     // Mock budget repository to return the expense scope
     budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 2000]]),
       [plannedPayment],
       [],
@@ -391,7 +391,7 @@ describe('CashFlowSimulationServiceV2', () => {
       .fn()
       .mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 });
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [plannedInflow],
       [],
@@ -443,7 +443,7 @@ describe('CashFlowSimulationServiceV2', () => {
       .fn()
       .mockResolvedValue({ totalDecrease: 200, totalIncrease: 0 });
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [],
       [],
@@ -506,7 +506,7 @@ describe('CashFlowSimulationServiceV2', () => {
       .fn()
       .mockResolvedValue(journalTxs.map(tx => ({ ...tx, journalId: journal.id })));
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 5000]]),
       [plannedPayment],
       [journal],
@@ -551,7 +551,7 @@ describe('CashFlowSimulationServiceV2', () => {
       status: 'ACTIVE',
     } as any;
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [plannedPayment],
       [],
@@ -592,7 +592,7 @@ describe('CashFlowSimulationServiceV2', () => {
       status: 'ACTIVE',
     } as any;
 
-    const result = await cashFlowSimulationServiceV2.simulate(
+    const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
       [plannedPayment],
       [],

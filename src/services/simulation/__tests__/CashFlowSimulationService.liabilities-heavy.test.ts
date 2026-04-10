@@ -3,7 +3,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
@@ -37,7 +37,7 @@ jest.mock('@/src/utils/logger', () => ({
   },
 }));
 
-describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
+describe('CashFlowSimulationService liability-heavy coverage', () => {
   const makeAsset = (id: string, name = id, currencyCode = 'USD') =>
     ({
       id,
@@ -94,11 +94,9 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       },
     }) as any;
 
-  const simulate = (
-    overrides?: Partial<Parameters<typeof cashFlowSimulationServiceV2.simulate>>,
-  ) => {
+  const simulate = (overrides?: Partial<Parameters<typeof cashFlowSimulationService.simulate>>) => {
     const cash = makeAsset('cash', 'Checking');
-    const args: Parameters<typeof cashFlowSimulationServiceV2.simulate> = [
+    const args: Parameters<typeof cashFlowSimulationService.simulate> = [
       new Map([['cash', 1000]]),
       [],
       [],
@@ -114,7 +112,7 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       args[Number(index)] = value as never;
     }
 
-    return cashFlowSimulationServiceV2.simulate(...args);
+    return cashFlowSimulationService.simulate(...args);
   };
 
   beforeEach(() => {
@@ -444,7 +442,7 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
     expect(result.simulationResult.summary.safeToSpend).toBe(200);
   });
 
-  it.skip('TODO(v2): converts statement balances for foreign-currency credit cards before obligation math', async () => {
+  it.skip('TODO: converts statement balances for foreign-currency credit cards before obligation math', async () => {
     // Desired behavior:
     // For a EUR card simulated in USD, both current balance and statement balance should be normalized
     // before remaining-statement comparison. Today only the settled amount is converted.
