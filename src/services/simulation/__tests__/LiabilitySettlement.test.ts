@@ -1,7 +1,15 @@
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import dayjs from 'dayjs';
 import { cashFlowSimulationService } from '../CashFlowSimulationService';
 
-import dayjs from 'dayjs';
+jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
+  transactionRawRepository: {
+    getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()),
+    getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
+  },
+}));
+
+const { transactionRawRepository } = require('@/src/data/repositories/TransactionRawRepository');
 
 describe('LiabilitySettlement', () => {
   it('should reduce the current bill when settledAmountsSinceStatement is provided', async () => {
@@ -33,18 +41,17 @@ describe('LiabilitySettlement', () => {
     } as unknown as Account;
 
     // Mock statement balance fetching to return 1000
-    const {
-      transactionRawRepository,
-    } = require('@/src/data/repositories/TransactionRawRepository');
-    transactionRawRepository.getLatestBalancesRaw = jest
-      .fn()
-      .mockResolvedValue(new Map([['cc', 1000]]));
+    transactionRawRepository.getLatestBalancesRaw.mockResolvedValue(new Map([['cc', 1000]]));
+    transactionRawRepository.getAccountPeriodMetricsRaw.mockResolvedValue({
+      totalDecrease: 0,
+      totalIncrease: 0,
+    });
 
     const startingBalances = new Map([['checking', 5000]]);
     const liabilityBalances = [{ account: creditCard, balance: 1000 }];
 
     // Scenario 1: No pre-settled amount
-    const result1 = await cashFlowSimulationService.simulateSafeToSpend(
+    const result1 = await cashFlowSimulationService.simulate(
       startingBalances,
       [],
       [],
@@ -52,10 +59,8 @@ describe('LiabilitySettlement', () => {
       liabilityBalances,
       [],
       [],
-      [],
       [liquidAccount, creditCard],
       'INR',
-      new Map(), // Empty pre-settled
     );
 
     // Bill should be 1000
@@ -63,41 +68,41 @@ describe('LiabilitySettlement', () => {
     expect(ccBill1).toBe(1000);
 
     // Scenario 2: With pre-settled amount of 800
-    const settledAmounts = new Map([['cc', 800]]);
-    const result2 = await cashFlowSimulationService.simulateSafeToSpend(
+    // (In V1, these are fetched internally via transactionRawRepository.getAccountPeriodMetricsRaw)
+    (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
+      totalDecrease: 800,
+      totalIncrease: 0,
+    });
+    const result2 = await cashFlowSimulationService.simulate(
       startingBalances,
       [],
       [],
       ['checking'],
-      [{ account: creditCard, balance: 200 }], // Balance already dropped to 200 after 800 payment
-      [],
+      [{ account: creditCard, balance: 200 }],
       [],
       [],
       [liquidAccount, creditCard],
       'INR',
-      settledAmounts,
     );
 
     // Bill should be min(CurrentBalance 200, Statement 1000 - PreSettled 800) = 200
-    // Wait, Statement 1000 - 800 = 200. Original debt was 1000. Balance was 1000.
-    // If I paid 800, balance is 200.
-    // Resulting bill = 200.
     expect(result2.breakdowns.liabilities.committed).toBe(200);
 
     // Scenario 3: Full settlement
-    const settledAmountsFull = new Map([['cc', 1000]]);
-    const result3 = await cashFlowSimulationService.simulateSafeToSpend(
+    (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
+      totalDecrease: 1000,
+      totalIncrease: 0,
+    });
+    const result3 = await cashFlowSimulationService.simulate(
       startingBalances,
       [],
       [],
       ['checking'],
-      [{ account: creditCard, balance: 0 }], // Fully paid
-      [],
+      [{ account: creditCard, balance: 0 }],
       [],
       [],
       [liquidAccount, creditCard],
       'INR',
-      settledAmountsFull,
     );
 
     expect(result3.breakdowns.liabilities.committed).toBe(0);

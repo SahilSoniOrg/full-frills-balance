@@ -343,6 +343,8 @@ export class CashFlowSimulationService implements ISimulationService {
         isProjected: true,
         details: detailsByDayOffset.get(d),
         dailyBurn: globalAdjustedBurn,
+        accountBalances: new Map(accountCurrentBalances),
+        dayOffset: dayOffset,
       });
 
       if (globalBalance < 0 && safeDaysCount === null) safeDaysCount = dayOffset;

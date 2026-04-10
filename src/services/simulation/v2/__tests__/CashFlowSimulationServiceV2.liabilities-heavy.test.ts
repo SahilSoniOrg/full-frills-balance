@@ -180,7 +180,7 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       7: [cash, savings, ccPrimary, ccBackup, loan],
     } as any);
 
-    const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
     expect(liabilityFlows).toHaveLength(3);
     expect(liabilityFlows).toEqual(
       expect.arrayContaining([
@@ -192,11 +192,11 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
     expect(result.summary.safeToSpend).toBe(1050);
     expect(result.summary.shortfall).toBe(0);
     expect(
-      result.accountSummaries.find(summary => summary.accountId === 'cash')?.usageDetails
+      result.accountSummaries!.find(summary => summary.accountId === 'cash')?.usageDetails!
         .totalOutflow,
     ).toBe(1000);
     expect(
-      result.accountSummaries.find(summary => summary.accountId === 'savings')?.usageDetails
+      result.accountSummaries!.find(summary => summary.accountId === 'savings')?.usageDetails!
         .totalOutflow,
     ).toBe(250);
   });
@@ -227,9 +227,9 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
     expect(result.summary.safeToSpend).toBe(0);
     expect(result.summary.shortfall).toBe(250);
     expect(result.summary.trajectoryMinBalance).toBe(-250);
-    expect(result.projections[result.projections.length - 1].accountBalances.get('cash')).toBe(
-      -350,
-    );
+    expect(
+      result.projections.points[result.projections.points.length - 1].accountBalances!.get('cash'),
+    ).toBe(-350);
   });
 
   it('skips liabilities whose configured pay-from account is outside the tracked liquid set', async () => {
@@ -254,7 +254,8 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       7: [cash, externalCard, trackedLoan],
     } as any);
 
-    const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0]).toEqual(
       expect.objectContaining({
@@ -294,7 +295,8 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       7: [cash, euroSavings, euroLoan],
     } as any);
 
-    const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0]).toEqual(
       expect.objectContaining({
@@ -366,9 +368,9 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       7: allAccounts,
     } as any);
 
-    const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
     expect(liabilityFlows).toHaveLength(liabilityBalances.length);
-    expect(result.projections).toHaveLength(30);
+    expect(result.projections.points).toHaveLength(30);
     expect(result.summary.safeToSpend).toBeGreaterThanOrEqual(0);
     expect(result.summary.safeToSpend).toBeLessThanOrEqual(8350);
     expect(result.summary.trajectoryMinBalance).toBeLessThanOrEqual(8350);
@@ -422,7 +424,8 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       7: [cash, cardA, cardB],
     } as any);
 
-    const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+
     expect(liabilityFlows).toHaveLength(2);
     expect(liabilityFlows).toEqual(
       expect.arrayContaining([

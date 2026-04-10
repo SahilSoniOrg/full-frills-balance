@@ -21,6 +21,10 @@ describe('Safe to Spend Reproduction', () => {
 
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
+    (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
+      totalDecrease: 0,
+      totalIncrease: 0,
+    });
   });
 
   afterEach(() => {
@@ -52,7 +56,7 @@ describe('Safe to Spend Reproduction', () => {
 
     // Case 1: Checking has 2000, CC has 1000 balance. Planned payment 1000.
     // Safe to Spend should be 1000 (2000 - 1000 payment).
-    const result1 = await cashFlowSimulationService.simulateSafeToSpend(
+    const result1 = await cashFlowSimulationService.simulate(
       new Map([['checking-1', 2000]]),
       [plannedPayment as any],
       [],
@@ -60,8 +64,7 @@ describe('Safe to Spend Reproduction', () => {
       [{ account: creditCard, balance: 1000 }],
       [],
       [],
-      [],
-      [],
+      [creditCard],
       'USD',
     );
 
@@ -72,7 +75,7 @@ describe('Safe to Spend Reproduction', () => {
     // Case 2: User pays 400 to the card.
     // Checking has 1600, CC has 600 balance. Planned payment still 1000.
     // Safe to Spend should be 1000 (1600 - 600 remaining payment).
-    const result2 = await cashFlowSimulationService.simulateSafeToSpend(
+    const result2 = await cashFlowSimulationService.simulate(
       new Map([['checking-1', 1600]]),
       [plannedPayment as any],
       [],
@@ -80,8 +83,7 @@ describe('Safe to Spend Reproduction', () => {
       [{ account: creditCard, balance: 600 }],
       [],
       [],
-      [],
-      [],
+      [creditCard],
       'USD',
     );
 

@@ -1,16 +1,19 @@
+import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import dayjs from 'dayjs';
 import { cashFlowSimulationService } from '../CashFlowSimulationService';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { AppConfig } from '@/src/constants/app-config';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {
     getLatestBalancesRaw: jest.fn(),
+    getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
   },
 }));
 
 describe('LiabilityPrecise', () => {
+  const checkingAccount = { id: 'checking' } as Account;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
@@ -47,20 +50,22 @@ describe('LiabilityPrecise', () => {
     // S1 (Statement date for May 7) = Apr 15.
     // Since today is Apr 8, the May 7 bill shouldn't be 'Available' yet.
 
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
-      new Map([['cc', 1000]]),
-    );
+    transactionRawRepository.getLatestBalancesRaw = jest
+      .fn()
+      .mockResolvedValue(new Map([['cc', 1000]]));
+    transactionRawRepository.getAccountPeriodMetricsRaw = jest
+      .fn()
+      .mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 });
 
     const startingBalances = new Map([['checking', 10000]]);
     const liabilityBalances = [{ account: creditCard, balance: 2912 }];
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       startingBalances,
       [],
       [],
       ['checking'],
       liabilityBalances,
-      [],
       [],
       [],
       [creditCard],
@@ -73,7 +78,7 @@ describe('LiabilityPrecise', () => {
     // If we move the date to Apr 16 (after statement)
     jest.setSystemTime(dayjs('2026-04-16').toDate());
 
-    const resultAfterStatement = await cashFlowSimulationService.simulateSafeToSpend(
+    const resultAfterStatement = await cashFlowSimulationService.simulate(
       startingBalances,
       [],
       [],
@@ -81,8 +86,7 @@ describe('LiabilityPrecise', () => {
       liabilityBalances,
       [],
       [],
-      [],
-      [creditCard],
+      [checkingAccount, creditCard],
       'INR',
     );
 
@@ -121,7 +125,7 @@ describe('LiabilityPrecise', () => {
     const startingBalances = new Map([['checking', 10000]]);
     const liabilityBalances = [{ account: creditCard, balance: 2912 }];
 
-    const result = await cashFlowSimulationService.simulateSafeToSpend(
+    const result = await cashFlowSimulationService.simulate(
       startingBalances,
       [],
       [],
@@ -129,8 +133,7 @@ describe('LiabilityPrecise', () => {
       liabilityBalances,
       [],
       [],
-      [],
-      [creditCard],
+      [checkingAccount, creditCard],
       'INR',
     );
 
@@ -140,7 +143,7 @@ describe('LiabilityPrecise', () => {
     const originalDays = AppConfig.defaults.safeToSpendDays;
     (AppConfig.defaults as any).safeToSpendDays = 90;
 
-    const resultLong = await cashFlowSimulationService.simulateSafeToSpend(
+    const resultLong = await cashFlowSimulationService.simulate(
       startingBalances,
       [],
       [],
@@ -148,8 +151,7 @@ describe('LiabilityPrecise', () => {
       liabilityBalances,
       [],
       [],
-      [],
-      [creditCard],
+      [checkingAccount, creditCard],
       'INR',
     );
 

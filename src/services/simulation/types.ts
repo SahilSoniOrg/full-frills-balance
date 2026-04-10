@@ -80,6 +80,8 @@ export interface ProjectionPoint {
   isProjected: boolean;
   details?: { name: string; amount: number; type: FlowType; context?: string }[];
   dailyBurn?: number;
+  accountBalances?: Map<string, number>;
+  dayOffset?: number;
 }
 
 export interface AccountSimulationSummary {
@@ -149,6 +151,7 @@ export interface SimulationResult {
       { name: string; amount: number; type: FlowType; context?: string }[]
     >;
   };
+  allFlows?: any[];
   metadata: {
     firstMajorInflowDay: number | null;
     committedSubtypes: AccountSubtype[];

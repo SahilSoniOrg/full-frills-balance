@@ -80,7 +80,7 @@ describe('CashFlowSimulationServiceV2', () => {
 
     expect(result.summary.safeToSpend).toBe(1000);
     expect(result.summary.trajectoryMinBalance).toBe(1000);
-    expect(result.projections[0].globalBalance).toBe(1000);
+    expect(result.projections.points[0].value).toBe(1000);
   });
 
   it('handles simple OUTFLOW correctly', async () => {
@@ -155,9 +155,9 @@ describe('CashFlowSimulationServiceV2', () => {
     expect(result.summary.trajectoryMinBalance).toBe(1000);
 
     // Check internal per-account state at end of simulation
-    const lastDay = result.projections[result.projections.length - 1];
-    expect(lastDay.accountBalances.get(liquidAccountId)).toBe(500);
-    expect(lastDay.accountBalances.get(otherAccountId)).toBe(500);
+    const lastDay = result.projections.points[result.projections.points.length - 1];
+    expect(lastDay.accountBalances?.get(liquidAccountId)).toBe(500);
+    expect(lastDay.accountBalances?.get(otherAccountId)).toBe(500);
   });
 
   it('handles Budget burns as OUTFLOWs', async () => {
@@ -336,9 +336,9 @@ describe('CashFlowSimulationServiceV2', () => {
     // The Resolver will take max(33.33, 400) = 400 for D10.
 
     // Check flows
-    const budgetFlows = result.allFlows.filter((f: any) => f.meta?.source === 'BUDGET');
-    const plannedFlows = result.allFlows.filter((f: any) => f.meta?.source === 'PLANNED');
-    const resolvedFlows = result.allFlows.filter((f: any) => f.meta?.source === 'RESOLVED');
+    const budgetFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'BUDGET');
+    const plannedFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'PLANNED');
+    const resolvedFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'RESOLVED');
 
     // Should have 29 budget flows (non-conflicting days)
     expect(budgetFlows.length).toBe(29);
@@ -415,7 +415,8 @@ describe('CashFlowSimulationServiceV2', () => {
     expect(result.summary.safeToSpend).toBe(600);
 
     // Verify exactly one output flow (the liability settlement)
-    const liabilityFlows = result.allFlows.filter((f: any) => f.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'LIABILITY');
+
     expect(liabilityFlows.length).toBe(1);
     expect(liabilityFlows[0].amount).toBe(400);
   });
@@ -462,7 +463,8 @@ describe('CashFlowSimulationServiceV2', () => {
     // Bill 2 (Due D45 - outside window) = max(0, 800 - 300) = 500.
 
     // Result flows: exactly one LIABILITY flow of 300 on D15.
-    const liabilityFlows = result.allFlows.filter((f: any) => f.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'LIABILITY');
+
     expect(liabilityFlows.length).toBe(1);
     expect(liabilityFlows[0].amount).toBe(300);
     expect(result.summary.safeToSpend).toBe(700); // 1000 - 300
@@ -523,7 +525,8 @@ describe('CashFlowSimulationServiceV2', () => {
     // Safe to spend: 4000.
     expect(result.summary.safeToSpend).toBe(4000);
 
-    const allPlannedFlows = result.allFlows.filter((f: any) => f.meta?.source === 'PLANNED');
+    const allPlannedFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'PLANNED');
+
     // Exactly 1 flow total for this PP
     expect(allPlannedFlows.length).toBe(1);
     expect(allPlannedFlows[0].meta?.label).toBe('Monthly Rent (April)'); // From Journal
@@ -560,7 +563,8 @@ describe('CashFlowSimulationServiceV2', () => {
     );
 
     // Should generate a flow for "today" (offset 0) even though it was due in the past
-    const plannedFlows = result.allFlows.filter((f: any) => f.meta?.referenceId === 'pp-overdue');
+    const plannedFlows = result.allFlows!.filter((f: any) => f.meta?.referenceId === 'pp-overdue');
+
     // It should have two flows in the 30 day window:
     // 1. Overdue (now due April 1)
     // 2. Next occurrence (April 25)
@@ -601,7 +605,8 @@ describe('CashFlowSimulationServiceV2', () => {
 
     // Should project for 5th, 6th, 7th, 8th, 9th, 10th.
     // Total 6 flows.
-    const plannedFlows = result.allFlows.filter((f: any) => f.meta?.referenceId === 'pp-ending');
+    const plannedFlows = result.allFlows!.filter((f: any) => f.meta?.referenceId === 'pp-ending');
+
     expect(plannedFlows.length).toBe(6);
     expect(plannedFlows[plannedFlows.length - 1].dayOffset).toBe(9); // April 10th
   });

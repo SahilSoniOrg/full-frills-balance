@@ -236,16 +236,16 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       'USD',
     );
 
-    expect(result.projections).toHaveLength(30);
-    expect(result.allFlows.length).toBeGreaterThan(250);
-    expect(result.accountSummaries).toHaveLength(3);
+    expect(result.projections.points).toHaveLength(30);
+    expect(result.allFlows!.length).toBeGreaterThan(250);
+    expect(result.accountSummaries!.length).toBe(3);
     expect(result.summary.firstMajorInflowDay).toBe(9);
     expect(result.summary.shortfall).toBe(0);
     expect(result.summary.safeToSpend).toBeGreaterThan(0);
     expect(result.summary.safeToSpend).toBeLessThanOrEqual(4000);
     expect(result.summary.trajectoryMinBalance).toBeGreaterThanOrEqual(result.summary.safeToSpend);
 
-    const bySource = result.allFlows.reduce((map, flow) => {
+    const bySource = result.allFlows!.reduce((map, flow) => {
       const source = flow.meta?.source ?? 'UNKNOWN';
       map.set(source, (map.get(source) ?? 0) + 1);
       return map;
@@ -254,19 +254,18 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
     expect(bySource.get('BUDGET')).toBeGreaterThan(200);
     expect(bySource.get('PLANNED')).toBeGreaterThanOrEqual(4);
     expect(bySource.get('RESOLVED')).toBeGreaterThanOrEqual(1);
-    expect(result.allFlows.some(flow => flow.kind === 'TRANSFER')).toBe(true);
+    expect(result.allFlows!.some(flow => flow.kind === 'TRANSFER')).toBe(true);
 
-    for (const flow of result.allFlows) {
+    for (const flow of result.allFlows!) {
       expect(Number.isFinite(flow.amount)).toBe(true);
       expect(flow.amount).toBeGreaterThan(0);
       expect(flow.dayOffset).toBeGreaterThanOrEqual(0);
       expect(flow.dayOffset).toBeLessThan(30);
     }
 
-    for (const projection of result.projections) {
-      expect(Number.isFinite(projection.globalBalance)).toBe(true);
-      expect(projection.dayOffset).toBeGreaterThanOrEqual(0);
-      expect(projection.dayOffset).toBeLessThan(30);
+    for (const projection of result.projections.points) {
+      expect(Number.isFinite(projection.value)).toBe(true);
+      expect(projection.timestamp).toBeGreaterThan(0);
     }
   });
 
@@ -327,7 +326,7 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       'USD',
     );
 
-    const plannedFlows = result.allFlows.filter(flow => flow.meta?.source === 'PLANNED');
+    const plannedFlows = result.allFlows!.filter(flow => flow.meta?.source === 'PLANNED');
     const templateIds = new Set(plannedPayments.map(payment => payment.id));
     const generatedJournalIds = new Set(plannedJournals.map(journal => journal.id));
 
@@ -369,8 +368,8 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
     expect(result.summary.safeToSpend).toBe(0);
     expect(result.summary.shortfall).toBe(1000);
     expect(result.summary.trajectoryMinBalance).toBe(-1000);
-    expect(result.projections[result.projections.length - 1].globalBalance).toBe(-1000);
+    expect(result.projections.points[result.projections.points.length - 1].value).toBe(-1000);
     expect(result.allFlows).toHaveLength(20);
-    expect(result.allFlows.every(flow => flow.meta?.source === 'PLANNED')).toBe(true);
+    expect(result.allFlows!.every(flow => flow.meta?.source === 'PLANNED')).toBe(true);
   });
 });

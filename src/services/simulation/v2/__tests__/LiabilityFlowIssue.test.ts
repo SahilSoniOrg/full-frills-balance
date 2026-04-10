@@ -87,9 +87,10 @@ describe('liability flow issue', () => {
 
     console.log(
       'liability flows',
-      result.allFlows.filter(f => f.meta?.source === 'LIABILITY'),
+      result.allFlows!.filter(f => f.meta?.source === 'LIABILITY'),
     );
-    console.log('account summaries', result.accountSummaries);
+    console.log('account summaries', result.accountSummaries!);
+
     console.log('summary', result.summary);
     expect(result.summary.safeToSpend).toBeDefined();
   });

@@ -609,10 +609,12 @@ export class CashFlowSimulationServiceV2 implements ISimulationService {
 
     const projectionPoints: ProjectionPoint[] = simulationResult.projections.map(point => ({
       timestamp: point.timestamp,
+      dayOffset: point.dayOffset,
       value: point.globalBalance,
       isProjected: true,
       details: safeToSpendDailyBreakdown.get(point.dayOffset),
       dailyBurn: dailyBudgetBurns[point.dayOffset],
+      accountBalances: point.accountBalances,
     }));
 
     return {
@@ -641,6 +643,7 @@ export class CashFlowSimulationServiceV2 implements ISimulationService {
         flowByDayOffset,
         safeToSpendDailyBreakdown,
       },
+      allFlows,
       metadata: {
         firstMajorInflowDay,
         committedSubtypes,
