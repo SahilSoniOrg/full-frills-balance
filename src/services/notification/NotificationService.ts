@@ -27,7 +27,7 @@ import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
-import { simulationProvider } from '../simulation/SimulationProvider';
+import { cashFlowSimulationServiceV2 } from '../simulation/v2/CashFlowSimulationServiceV2';
 
 import { FlowType, SimulationResult } from '../simulation/types';
 
@@ -364,19 +364,17 @@ export class NotificationService {
             );
 
             // Call the simulation engine (standardized)
-            const simulationResults = await simulationProvider
-              .getService()
-              .simulate(
-                startingBalances,
-                plannedPayments,
-                plannedJournals,
-                liquidAssetIds,
-                liabilityAccountBalances,
-                budgets,
-                usages,
-                allAccounts,
-                resultCurrency,
-              );
+            const simulationResults = await cashFlowSimulationServiceV2.simulate(
+              startingBalances,
+              plannedPayments,
+              plannedJournals,
+              liquidAssetIds,
+              liabilityAccountBalances,
+              budgets,
+              usages,
+              allAccounts,
+              resultCurrency,
+            );
 
             // Calculate History Points (UI concern)
             const netCashFlowByDay = new Map<number, number>();

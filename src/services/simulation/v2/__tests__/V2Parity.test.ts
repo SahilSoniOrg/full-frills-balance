@@ -1,7 +1,7 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
-import { simulationV2Adapter } from '@/src/services/simulation/v2/SimulationV2Adapter';
+import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
@@ -93,7 +93,7 @@ describe('Simulation V2 parity against V1', () => {
       'USD',
     );
 
-    const v2Result = await simulationV2Adapter.simulate(
+    const v2Result = await cashFlowSimulationServiceV2.simulate(
       new Map([['checking-1', 2000]]),
       [plannedPayment],
       [],
@@ -161,7 +161,7 @@ describe('Simulation V2 parity against V1', () => {
       'USD',
     );
 
-    const v2Result = await simulationV2Adapter.simulate(
+    const v2Result = await cashFlowSimulationServiceV2.simulate(
       new Map([['checking-1', 500]]),
       [plannedGroceries],
       [],

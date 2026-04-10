@@ -1,6 +1,6 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
-import { simulationV2Adapter } from '@/src/services/simulation/v2/SimulationV2Adapter';
+import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
@@ -100,7 +100,7 @@ describe('liability parity finder', () => {
             [{ ...baseCashAccount, name: 'Cash' }, ccA, ccB],
             'USD',
           ),
-          simulationV2Adapter.simulate(
+          cashFlowSimulationServiceV2.simulate(
             new Map([['cash', 1000]]),
             [plannedPayment],
             [],

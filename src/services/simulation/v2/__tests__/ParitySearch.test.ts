@@ -1,7 +1,7 @@
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
-import { simulationV2Adapter } from '@/src/services/simulation/v2/SimulationV2Adapter';
+import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
@@ -105,7 +105,7 @@ describe('parity search', () => {
         allAccounts,
         'USD',
       ),
-      simulationV2Adapter.simulate(
+      cashFlowSimulationServiceV2.simulate(
         startingBalances,
         plannedPayments,
         [],
