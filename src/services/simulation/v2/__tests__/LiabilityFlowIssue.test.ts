@@ -91,7 +91,7 @@ describe('liability flow issue', () => {
     );
     console.log('account summaries', result.accountSummaries!);
 
-    console.log('summary', result.summary);
-    expect(result.summary.safeToSpend).toBeDefined();
+    console.log('summary', result.simulationResult.summary);
+    expect(result.simulationResult.summary.safeToSpend).toBeDefined();
   });
 });

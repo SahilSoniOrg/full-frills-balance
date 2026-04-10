@@ -102,6 +102,6 @@ describe('Liability payment coverage', () => {
 
     const result = await simulate({ 1: [plannedPayment] }, [plannedPayment as any]);
 
-    expect(result.summary.safeToSpend).toBe(1000);
+    expect(result.simulationResult.summary.safeToSpend).toBe(1000);
   });
 });

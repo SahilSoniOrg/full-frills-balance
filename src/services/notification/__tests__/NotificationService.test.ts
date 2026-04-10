@@ -95,7 +95,6 @@ describe('NotificationService', () => {
         // Liquid Liabilities = l1 (1000)
         // Net Cash = 5000 - 1000 = 4000
         expect(result.totalLiquidAssets).toBe(5000);
-        expect(result.breakdowns.liabilities.total).toBe(1000);
         expect(result.summary.safeToSpend).toBe(4000);
         done();
       });

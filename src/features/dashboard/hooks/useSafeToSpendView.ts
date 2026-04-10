@@ -4,6 +4,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo } from 'react';
+import { V2UiPresenter } from '../utils/V2UiPresenter';
 
 export interface SafeToSpendViewProps extends SafeToSpendResult {
   isLoading?: boolean;
@@ -19,7 +20,27 @@ export interface SafeToSpendViewProps extends SafeToSpendResult {
 }
 
 export function useSafeToSpendView(props: SafeToSpendViewProps) {
-  const { summary, currencyCode, isLoading, totalLiquidAssets, breakdowns } = props;
+  const {
+    summary,
+    currencyCode,
+    isLoading,
+    totalLiquidAssets,
+    allFlows,
+    simulationResult,
+    allAccounts,
+    liabilityAccountBalances,
+  } = props;
+
+  const breakdowns = useMemo(() => {
+    if (!allFlows || !simulationResult || !allAccounts) return null;
+    const accountMap = new Map(allAccounts.map(a => [a.id, a]));
+    return V2UiPresenter.deriveBreakdowns(
+      allFlows,
+      simulationResult,
+      accountMap,
+      liabilityAccountBalances,
+    );
+  }, [allFlows, simulationResult, allAccounts, liabilityAccountBalances]);
 
   const { isPrivacyMode: globalPrivacyMode } = useUI();
   const isPrivacyMode = props.uiState?.isPrivacyMode ?? globalPrivacyMode;
@@ -113,6 +134,11 @@ export function useSafeToSpendView(props: SafeToSpendViewProps) {
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
   const info = AppConfig.strings.dashboard.safeToSpendExplanation;
 
+  const totalFutureInflow = useMemo(
+    () => allFlows?.filter(f => f.kind === 'INFLOW').reduce((sum, f) => sum + f.amount, 0) ?? 0,
+    [allFlows],
+  );
+
   return {
     isPrivacyMode,
     isInfoVisible,
@@ -134,5 +160,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps) {
     committedBudget,
     committedPlanned,
     committedLiabilities,
+    totalFutureInflow,
+    breakdowns,
   };
 }

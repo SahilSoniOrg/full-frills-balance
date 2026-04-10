@@ -94,3 +94,13 @@ export interface Obligation {
   dueDayOffset: number;
   label: string;
 }
+
+export interface V2SimulationRunResult {
+  simulationResult: SimulationResultV2;
+  accountSummaries: AccountSimulationSummary[];
+  allFlows: Flow[];
+  startingBalances: Map<string, number>;
+  liquidAccountIdsSet: Set<string>;
+  liabilityAccountBalances: { account: Account; balance: number }[];
+  accountMap: Map<string, Account>;
+}

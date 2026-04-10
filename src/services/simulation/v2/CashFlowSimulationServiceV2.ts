@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
@@ -10,73 +10,19 @@ import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import dayjs from 'dayjs';
 import { TimeContext } from '../TimeContext';
-import {
-  AccountCommitment,
-  AccountSimulationSummary,
-  DebtEntry,
-  DebtType,
-  FlowSource,
-  FlowType,
-  IncomeEntry,
-  ISimulationService,
-  ProjectionPoint,
-  SimulationResult,
-} from '../types';
 import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
 import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
 import { FlowResolver } from './FlowResolver';
 import { Simulator } from './Simulator';
-import { Flow, FlowMeta, SimulationContext, SimulationResultV2 } from './types';
-import { LegacySimulationPresenter } from './presenters/LegacySimulationPresenter';
+import { AccountSimulationSummary, SimulationContext, V2SimulationRunResult } from './types';
 
-export interface V2SimulationRunResult {
-  simulationResult: SimulationResultV2;
-  accountSummaries: AccountSimulationSummary[];
-  allFlows: Flow[];
-  startingBalances: Map<string, number>;
-  liquidAccountIdsSet: Set<string>;
-  liabilityAccountBalances: { account: Account; balance: number }[];
-  accountMap: Map<string, Account>;
-}
-
-export class CashFlowSimulationServiceV2 implements ISimulationService {
+export class CashFlowSimulationServiceV2 {
   /**
    * WIP V2 Simulation following the "Generate truth -> simulate once" architecture.
    */
   async simulate(
-    startingBalances: Map<string, number>,
-    plannedPayments: PlannedPayment[],
-    plannedJournals: Journal[],
-    liquidAssetIds: string[],
-    liabilityAccountBalances: { account: Account; balance: number }[],
-    budgets: Budget[],
-    usages: BudgetUsage[],
-    allAccounts: Account[],
-    resultCurrency: string,
-    simulationDays: number = AppConfig.defaults.safeToSpendDays,
-  ): Promise<SimulationResult> {
-    const runResult = await this.simulateV2(
-      startingBalances,
-      plannedPayments,
-      plannedJournals,
-      liquidAssetIds,
-      liabilityAccountBalances,
-      budgets,
-      usages,
-      allAccounts,
-      resultCurrency,
-      simulationDays,
-    );
-
-    return LegacySimulationPresenter.buildLegacySimulationResult(runResult);
-  }
-
-  /**
-   * Pure V2 simulation that returns the raw flows and summaries.
-   */
-  async simulateV2(
     startingBalances: Map<string, number>,
     plannedPayments: PlannedPayment[],
     plannedJournals: Journal[],
@@ -339,7 +285,7 @@ export class CashFlowSimulationServiceV2 implements ISimulationService {
           .sort((a, b) => b.amount - a.amount)
           .slice(0, 3);
 
-        return {
+        const summaryResult: AccountSimulationSummary = {
           accountId,
           accountName: acc?.name || 'Unknown',
           startingBalance: startingBal,
@@ -353,6 +299,7 @@ export class CashFlowSimulationServiceV2 implements ISimulationService {
             topOutflows,
           },
         };
+        return summaryResult;
       },
     );
 
@@ -491,16 +438,6 @@ export class CashFlowSimulationServiceV2 implements ISimulationService {
 
     return map;
   }
-
-  // Legacy support removed/moved to LegacySimulationPresenter
 }
-
-type AccountImpact = {
-  accountId: string;
-  amount: number;
-  dayOffset: number;
-  sourceAccountId?: string;
-  meta?: FlowMeta;
-};
 
 export const cashFlowSimulationServiceV2 = new CashFlowSimulationServiceV2();

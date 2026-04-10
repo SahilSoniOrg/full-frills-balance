@@ -1,30 +1,30 @@
-import { NavigationBar, type NavigationBarProps } from '@/src/components/layout/NavigationBar'
-import { Spacing } from '@/src/constants'
-import { useTheme } from '@/src/hooks/use-theme'
-import { Page } from '@/src/design-system'
-import React from 'react'
-import { ScrollViewProps, StyleSheet, View, type ViewProps } from 'react-native'
-import { type Edge } from 'react-native-safe-area-context'
+import { NavigationBar, type NavigationBarProps } from '@/src/components/layout/NavigationBar';
+import { Spacing } from '@/src/constants';
+import { useTheme } from '@/src/hooks/use-theme';
+import { Page } from '@/src/design-system';
+import React from 'react';
+import { ScrollViewProps, StyleSheet, View, type ViewProps } from 'react-native';
+import { type Edge } from 'react-native-safe-area-context';
 
 export type ScreenProps = ViewProps & {
-  children: React.ReactNode
+  children: React.ReactNode;
   // Navigation
-  title?: string
-  subtitle?: string
-  onBack?: () => void
-  showBack?: boolean
-  backIcon?: NavigationBarProps['backIcon']
-  headerActions?: React.ReactNode
-  isSearchActive?: boolean
-  alignTitle?: NavigationBarProps['alignTitle']
+  title?: string;
+  subtitle?: string;
+  onBack?: () => void;
+  showBack?: boolean;
+  backIcon?: NavigationBarProps['backIcon'];
+  headerActions?: React.ReactNode;
+  isSearchActive?: boolean;
+  alignTitle?: NavigationBarProps['alignTitle'];
   // Layout
-  scrollable?: boolean
-  withPadding?: boolean
-  edges?: Edge[]
-  keyboardAvoiding?: boolean
-  footer?: React.ReactNode
-  scrollViewProps?: ScrollViewProps
-}
+  scrollable?: boolean;
+  withPadding?: boolean;
+  edges?: Edge[];
+  keyboardAvoiding?: boolean;
+  footer?: React.ReactNode;
+  scrollViewProps?: ScrollViewProps;
+};
 
 export function Screen({
   children,
@@ -45,21 +45,14 @@ export function Screen({
   style,
   ...rest
 }: ScreenProps) {
-  const { themeMode } = useTheme()
+  const { themeMode } = useTheme();
 
   // Clean props for SafeAreaView to avoid Web DOM warnings
   // @ts-ignore
-  const { scrollable: _s, withPadding: _w, ...safeAreaProps } = rest;
 
   const content = (
-    <View style={[
-      styles.content,
-      withPadding && styles.padded,
-      style
-    ]}>
-      {children}
-    </View>
-  )
+    <View style={[styles.content, withPadding && styles.padded, style]}>{children}</View>
+  );
 
   return (
     <Page
@@ -86,7 +79,7 @@ export function Screen({
       )}
       {content}
     </Page>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -105,4 +98,4 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-})
+});

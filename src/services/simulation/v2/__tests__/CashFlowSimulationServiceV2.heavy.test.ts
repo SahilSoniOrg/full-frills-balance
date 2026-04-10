@@ -236,14 +236,16 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       'USD',
     );
 
-    expect(result.projections.points).toHaveLength(30);
+    expect(result.simulationResult.projections).toHaveLength(30);
     expect(result.allFlows!.length).toBeGreaterThan(250);
     expect(result.accountSummaries!.length).toBe(3);
-    expect(result.summary.firstMajorInflowDay).toBe(9);
-    expect(result.summary.shortfall).toBe(0);
-    expect(result.summary.safeToSpend).toBeGreaterThan(0);
-    expect(result.summary.safeToSpend).toBeLessThanOrEqual(4000);
-    expect(result.summary.trajectoryMinBalance).toBeGreaterThanOrEqual(result.summary.safeToSpend);
+    expect(result.simulationResult.summary.firstMajorInflowDay).toBe(9);
+    expect(result.simulationResult.summary.shortfall).toBe(0);
+    expect(result.simulationResult.summary.safeToSpend).toBeGreaterThan(0);
+    expect(result.simulationResult.summary.safeToSpend).toBeLessThanOrEqual(4000);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBeGreaterThanOrEqual(
+      result.simulationResult.summary.safeToSpend,
+    );
 
     const bySource = result.allFlows!.reduce((map, flow) => {
       const source = flow.meta?.source ?? 'UNKNOWN';
@@ -263,8 +265,8 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       expect(flow.dayOffset).toBeLessThan(30);
     }
 
-    for (const projection of result.projections.points) {
-      expect(Number.isFinite(projection.value)).toBe(true);
+    for (const projection of result.simulationResult.projections) {
+      expect(Number.isFinite(projection.globalBalance)).toBe(true);
       expect(projection.timestamp).toBeGreaterThan(0);
     }
   });
@@ -335,8 +337,8 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       true,
     );
     expect(plannedFlows.some(flow => templateIds.has(flow.meta?.referenceId ?? ''))).toBe(false);
-    expect(result.summary.safeToSpend).toBe(1334);
-    expect(result.summary.shortfall).toBe(0);
+    expect(result.simulationResult.summary.safeToSpend).toBe(1334);
+    expect(result.simulationResult.summary.shortfall).toBe(0);
   });
 
   it('handles a large negative-cash scenario and reports coherent shortfall', async () => {
@@ -365,10 +367,13 @@ describe('CashFlowSimulationServiceV2 heavy scenario coverage', () => {
       'USD',
     );
 
-    expect(result.summary.safeToSpend).toBe(0);
-    expect(result.summary.shortfall).toBe(1000);
-    expect(result.summary.trajectoryMinBalance).toBe(-1000);
-    expect(result.projections.points[result.projections.points.length - 1].value).toBe(-1000);
+    expect(result.simulationResult.summary.safeToSpend).toBe(0);
+    expect(result.simulationResult.summary.shortfall).toBe(1000);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(-1000);
+    expect(
+      result.simulationResult.projections[result.simulationResult.projections.length - 1]
+        .globalBalance,
+    ).toBe(-1000);
     expect(result.allFlows).toHaveLength(20);
     expect(result.allFlows!.every(flow => flow.meta?.source === 'PLANNED')).toBe(true);
   });

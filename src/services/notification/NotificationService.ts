@@ -28,10 +28,9 @@ import { combineLatest, from, Observable, of } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationServiceV2 } from '../simulation/v2/CashFlowSimulationServiceV2';
+import { V2SimulationRunResult } from '../simulation/v2/types';
 
 import { FlowType, SimulationResult } from '../simulation/types';
-import { V2SimulationRunResult } from '../simulation/v2/CashFlowSimulationServiceV2';
-import { LegacySimulationPresenter } from '../simulation/v2/presenters/LegacySimulationPresenter';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -55,8 +54,11 @@ export interface SafeToSpendResult {
   // Pure V2 Context
   summary: SimulationResult['summary'];
   accountSummaries: SimulationResult['accountSummaries'];
-  breakdowns: SimulationResult['breakdowns'] | null;
   metadata: SimulationResult['metadata'];
+  allFlows: V2SimulationRunResult['allFlows'];
+  simulationResult: V2SimulationRunResult['simulationResult'];
+  liabilityAccountBalances: { account: Account; balance: number }[];
+  allAccounts: Account[];
 
   // Liquid Asset Context
   totalLiquidAssets: number;
@@ -70,9 +72,6 @@ export interface SafeToSpendResult {
   // Projections
   dailyBudgetBurn: number;
   projection: SafeToSpendProjection;
-
-  // Raw V2 data (for V2-native components)
-  allFlows: V2SimulationRunResult['allFlows'];
 }
 
 export class NotificationService {
@@ -272,49 +271,50 @@ export class NotificationService {
         const resultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
         if (liquidAssets.length === 0) {
-            const empty: SafeToSpendResult = {
+          const empty: SafeToSpendResult = {
+            summary: {
+              safeToSpend: 0,
+              shortfall: 0,
+              trajectoryMinBalance: 0,
+              safeDaysCount: null,
+              totalFutureInflow: 0,
+              totalOrganicInflow: 0,
+              totalOrganicOutflow: 0,
+              totalCommittedPlanned: 0,
+              firstMajorInflowDay: null,
+            },
+            metadata: {
+              firstMajorInflowDay: null,
+              committedSubtypes: [],
+              debtSubtypes: [],
+            },
+            accountSummaries: [],
+            totalLiquidAssets: 0,
+            currencyCode: resultCurrency,
+            liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
+            liquidAssetAccounts: [],
+            liquidLiabilityAccounts: [],
+            liquidAssetAccountIds: [],
+            liquidLiabilityAccountIds: [],
+            dailyBudgetBurn: 0,
+            projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
+            allFlows: [],
+            simulationResult: {
               summary: {
                 safeToSpend: 0,
                 shortfall: 0,
                 trajectoryMinBalance: 0,
-                safeDaysCount: null,
-                totalFutureInflow: 0,
-                totalOrganicInflow: 0,
-                totalOrganicOutflow: 0,
-                totalCommittedPlanned: 0,
+                accountMinBalances: new Map(),
+                accountMinBalancesBeforeIncome: new Map(),
                 firstMajorInflowDay: null,
-              },
-              breakdowns: {
-                committed: [],
-                debt: [],
-                income: [],
-                budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 0 },
-                liabilities: {
-                  total: 0,
-                  totalCreditCard: 0,
-                  totalOther: 0,
-                  committed: 0,
-                  committedCreditCard: 0,
-                  committedOther: 0,
-                },
-              },
-              metadata: {
-                firstMajorInflowDay: null,
-                committedSubtypes: [],
-                debtSubtypes: [],
               },
               accountSummaries: [],
-              totalLiquidAssets: 0,
-              currencyCode: resultCurrency,
-              liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-              liquidAssetAccounts: [],
-              liquidLiabilityAccounts: [],
-              liquidAssetAccountIds: [],
-              liquidLiabilityAccountIds: [],
-              dailyBudgetBurn: 0,
-              projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
+              projections: [],
               allFlows: [],
-            };
+            },
+            liabilityAccountBalances: [],
+            allAccounts: [],
+          };
           return of(empty);
         }
 
@@ -373,8 +373,8 @@ export class NotificationService {
               }),
             );
 
-            // Call the simulation engine (standardized V2)
-            const runResult = await cashFlowSimulationServiceV2.simulateV2(
+            // Call the simulation engine (native V2)
+            const runResult = await cashFlowSimulationServiceV2.simulate(
               startingBalances,
               plannedPayments,
               plannedJournals,
@@ -385,9 +385,6 @@ export class NotificationService {
               allAccounts,
               resultCurrency,
             );
-
-            // Derive legacy structures via presenter (Temporary bridge)
-            const legacyResults = LegacySimulationPresenter.buildLegacySimulationResult(runResult);
 
             // Calculate History Points (UI concern)
             const netCashFlowByDay = new Map<number, number>();
@@ -433,11 +430,85 @@ export class NotificationService {
             }
             historyPoints.reverse();
 
+            const points = runResult.simulationResult.projections.map(p => {
+              const details = p.flows.map(f => ({
+                name: f.meta?.label || 'Transaction',
+                amount: f.amount,
+                type: f.kind === 'INFLOW' ? FlowType.INFLOW : FlowType.OUTFLOW,
+                context: f.meta?.source,
+              }));
+
+              const dailyBurn = p.flows
+                .filter(f => {
+                  const isBudget =
+                    f.meta?.source === 'BUDGET' ||
+                    (f.meta?.source === 'RESOLVED' && f.meta.originalSource === 'BUDGET');
+                  return isBudget && f.kind === 'OUTFLOW';
+                })
+                .reduce((sum, f) => sum + f.amount, 0);
+
+              return {
+                timestamp: p.timestamp,
+                dayOffset: p.dayOffset,
+                value: p.globalBalance,
+                isProjected: true,
+                accountBalances: p.accountBalances,
+                details,
+                dailyBurn: dailyBurn > 0 ? dailyBurn : undefined,
+              };
+            });
+
+            const safeDaysCount = (function () {
+              const liquidIds = new Set(liquidAssetIds);
+              let startingGlobal = 0;
+              for (const [accountId, balance] of startingBalances.entries()) {
+                if (liquidIds.has(accountId)) startingGlobal += balance;
+              }
+              if (startingGlobal < 0) return 0;
+              const firstNeg = runResult.simulationResult.projections.find(
+                p => p.globalBalance < 0,
+              );
+              return firstNeg ? firstNeg.dayOffset + 1 : null;
+            })();
+
             return {
-              summary: legacyResults.summary,
-              accountSummaries: legacyResults.accountSummaries,
-              breakdowns: legacyResults.breakdowns,
-              metadata: legacyResults.metadata,
+              summary: {
+                ...runResult.simulationResult.summary,
+                safeDaysCount,
+                totalFutureInflow: runResult.allFlows
+                  .filter(f => f.dayOffset >= 0 && f.kind === 'INFLOW')
+                  .reduce((sum, f) => sum + f.amount, 0),
+                totalOrganicInflow: runResult.allFlows
+                  .filter(
+                    f =>
+                      f.dayOffset >= 0 &&
+                      (f.meta?.source === 'PLANNED' || f.meta?.originalSource === 'PLANNED') &&
+                      f.kind === 'INFLOW',
+                  )
+                  .reduce((sum, f) => sum + f.amount, 0),
+                totalOrganicOutflow: runResult.allFlows
+                  .filter(
+                    f =>
+                      f.dayOffset >= 0 &&
+                      (f.meta?.source === 'PLANNED' || f.meta?.originalSource === 'PLANNED') &&
+                      f.kind === 'OUTFLOW',
+                  )
+                  .reduce((sum, f) => sum + f.amount, 0),
+                totalCommittedPlanned: runResult.allFlows
+                  .filter(
+                    f =>
+                      f.dayOffset >= 0 &&
+                      (f.meta?.source === 'PLANNED' || f.meta?.originalSource === 'PLANNED') &&
+                      f.kind !== 'INFLOW',
+                  )
+                  .reduce((sum, f) => sum + f.amount, 0),
+              },
+              accountSummaries: runResult.accountSummaries,
+              metadata: {
+                firstMajorInflowDay: runResult.simulationResult.summary.firstMajorInflowDay,
+                committedSubtypes: [], // UI derives these now
+                debtSubtypes: [],
+              },
               totalLiquidAssets: totalLiquidMoney.amount,
               currencyCode: resultCurrency,
               liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
@@ -445,14 +516,20 @@ export class NotificationService {
               liquidLiabilityAccounts,
               liquidAssetAccountIds: liquidAssetIds,
               liquidLiabilityAccountIds: liquidLiabilityIds,
-              dailyBudgetBurn: legacyResults.summary.totalCommittedPlanned / 30,
+              dailyBudgetBurn:
+                runResult.allFlows
+                  .filter(f => f.dayOffset >= 0 && f.meta?.source === 'BUDGET')
+                  .reduce((sum, f) => sum + f.amount, 0) / safeToSpendDays,
               projection: {
                 history: historyPoints,
-                projection: legacyResults.projections.points,
-                safeDaysCount: legacyResults.summary.safeDaysCount,
-                safeToSpend: legacyResults.summary.safeToSpend,
+                projection: points as any,
+                safeDaysCount,
+                safeToSpend: runResult.simulationResult.summary.safeToSpend,
               },
               allFlows: runResult.allFlows,
+              simulationResult: runResult.simulationResult,
+              liabilityAccountBalances: liabilityAccountBalances,
+              allAccounts: allAccounts,
             };
           }),
         );

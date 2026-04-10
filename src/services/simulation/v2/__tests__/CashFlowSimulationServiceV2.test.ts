@@ -78,9 +78,9 @@ describe('CashFlowSimulationServiceV2', () => {
       'USD',
     );
 
-    expect(result.summary.safeToSpend).toBe(1000);
-    expect(result.summary.trajectoryMinBalance).toBe(1000);
-    expect(result.projections.points[0].value).toBe(1000);
+    expect(result.simulationResult.summary.safeToSpend).toBe(1000);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(1000);
+    expect(result.simulationResult.projections[0].globalBalance).toBe(1000);
   });
 
   it('handles simple OUTFLOW correctly', async () => {
@@ -110,8 +110,8 @@ describe('CashFlowSimulationServiceV2', () => {
 
     // Initial 1000, Day 5 (offset 4) - 400 = 600
     // Simulation window is 30 days
-    expect(result.summary.safeToSpend).toBe(600);
-    expect(result.summary.trajectoryMinBalance).toBe(600);
+    expect(result.simulationResult.summary.safeToSpend).toBe(600);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(600);
   });
 
   it('handles TRANSFER between liquid accounts correctly (net zero)', async () => {
@@ -151,11 +151,12 @@ describe('CashFlowSimulationServiceV2', () => {
     );
 
     // Global balance should remain 1000
-    expect(result.summary.safeToSpend).toBe(1000);
-    expect(result.summary.trajectoryMinBalance).toBe(1000);
+    expect(result.simulationResult.summary.safeToSpend).toBe(1000);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(1000);
 
     // Check internal per-account state at end of simulation
-    const lastDay = result.projections.points[result.projections.points.length - 1];
+    const lastDay =
+      result.simulationResult.projections[result.simulationResult.projections.length - 1];
     expect(lastDay.accountBalances?.get(liquidAccountId)).toBe(500);
     expect(lastDay.accountBalances?.get(otherAccountId)).toBe(500);
   });
@@ -193,7 +194,7 @@ describe('CashFlowSimulationServiceV2', () => {
     // 300 over 30 days = 10/day.
     // Total burn in 30 days window = 300.
     // Safe to spend = 1000 - 300 = 700.
-    expect(result.summary.safeToSpend).toBe(700);
+    expect(result.simulationResult.summary.safeToSpend).toBe(700);
   });
 
   it('normalizes planned journal transactions from other currencies before charging the flow', async () => {
@@ -228,7 +229,7 @@ describe('CashFlowSimulationServiceV2', () => {
       'USD',
     );
 
-    expect(result.summary.safeToSpend).toBe(800);
+    expect(result.simulationResult.summary.safeToSpend).toBe(800);
   });
 
   it('handles Credit Card obligations with manual payments', async () => {
@@ -281,7 +282,7 @@ describe('CashFlowSimulationServiceV2', () => {
     // D20: -300 (Remaining Obligation payment)
     // Total = -500.
     // Safe to spend = 1000 - 500 = 500.
-    expect(result.summary.safeToSpend).toBe(500);
+    expect(result.simulationResult.summary.safeToSpend).toBe(500);
   });
 
   it('Planned payment overrides Budget burn for its category (Option A)', async () => {
@@ -353,7 +354,7 @@ describe('CashFlowSimulationServiceV2', () => {
     // Budget burn (29 days): 29 * 33.33... = 966.66...
     // Resolved burn (D10): 400
     // Total: 2000 - 966.66 - 400 = 633.33
-    expect(result.summary.safeToSpend).toBeCloseTo(633.33, 1);
+    expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(633.33, 1);
   });
 
   it('handles INFLOW to liability accounts correctly (external payment)', async () => {
@@ -412,7 +413,7 @@ describe('CashFlowSimulationServiceV2', () => {
     // (The INFLOW was from 'external', so it didn't hit 'liquidAccountId')
 
     // Safe to spend = 1000 - 400 = 600.
-    expect(result.summary.safeToSpend).toBe(600);
+    expect(result.simulationResult.summary.safeToSpend).toBe(600);
 
     // Verify exactly one output flow (the liability settlement)
     const liabilityFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'LIABILITY');
@@ -467,7 +468,7 @@ describe('CashFlowSimulationServiceV2', () => {
 
     expect(liabilityFlows.length).toBe(1);
     expect(liabilityFlows[0].amount).toBe(300);
-    expect(result.summary.safeToSpend).toBe(700); // 1000 - 300
+    expect(result.simulationResult.summary.safeToSpend).toBe(700); // 1000 - 300
   });
 
   it('deduplicates PlannedPayment template against existing Journals', async () => {
@@ -523,7 +524,7 @@ describe('CashFlowSimulationServiceV2', () => {
 
     // Total impact: -1000.
     // Safe to spend: 4000.
-    expect(result.summary.safeToSpend).toBe(4000);
+    expect(result.simulationResult.summary.safeToSpend).toBe(4000);
 
     const allPlannedFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'PLANNED');
 

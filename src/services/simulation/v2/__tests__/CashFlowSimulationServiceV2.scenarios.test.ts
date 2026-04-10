@@ -147,10 +147,10 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       7: [cash, savings],
     } as any);
 
-    expect(result.summary.safeToSpend).toBe(3500);
-    expect(result.summary.shortfall).toBe(0);
-    expect(result.summary.trajectoryMinBalance).toBe(3500);
-    expect(result.projections.points[0].value).toBe(3500);
+    expect(result.simulationResult.summary.safeToSpend).toBe(3500);
+    expect(result.simulationResult.summary.shortfall).toBe(0);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(3500);
+    expect(result.simulationResult.projections[0].globalBalance).toBe(3500);
 
     expect(result.accountSummaries!.map(summary => summary.accountId).sort()).toEqual([
       'cash',
@@ -176,10 +176,12 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       ],
     } as any);
 
-    expect(result.summary.safeToSpend).toBe(0);
-    expect(result.summary.shortfall).toBe(200);
-    expect(result.summary.trajectoryMinBalance).toBe(-200);
-    expect(result.projections.points.find(p => p.dayOffset === 4)?.value).toBe(-200);
+    expect(result.simulationResult.summary.safeToSpend).toBe(0);
+    expect(result.simulationResult.summary.shortfall).toBe(200);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(-200);
+    expect(result.simulationResult.projections.find(p => p.dayOffset === 4)?.globalBalance).toBe(
+      -200,
+    );
   });
 
   it('applies income, planned spending, and budget burn together without raising safe-to-spend above starting cash', async () => {
@@ -224,9 +226,9 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       7: [cash, groceries],
     } as any);
 
-    expect(result.summary.firstMajorInflowDay).toBe(2);
-    expect(result.summary.safeToSpend).toBe(480);
-    expect(result.summary.shortfall).toBe(0);
+    expect(result.simulationResult.summary.firstMajorInflowDay).toBe(2);
+    expect(result.simulationResult.summary.safeToSpend).toBe(480);
+    expect(result.simulationResult.summary.shortfall).toBe(0);
     expect(
       result.allFlows!.some(flow => flow.meta?.source === 'RESOLVED' && flow.amount === 120),
     ).toBe(true);
@@ -267,7 +269,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
     expect(resolved?.amount).toBe(80);
     expect(result.allFlows!.filter(flow => flow.meta?.source === 'BUDGET')).toHaveLength(29);
 
-    expect(result.summary.safeToSpend).toBe(630);
+    expect(result.simulationResult.summary.safeToSpend).toBe(630);
   });
 
   it('splits budget burn across multiple asset accounts while preserving global safe-to-spend', async () => {
@@ -292,7 +294,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       7: [cash, savings, groceries],
     } as any);
 
-    expect(result.summary.safeToSpend).toBe(700);
+    expect(result.simulationResult.summary.safeToSpend).toBe(700);
     expect(
       result.accountSummaries!.find(summary => summary.accountId === 'cash')?.usageDetails!
         .totalOutflow,
@@ -326,8 +328,9 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       7: [cash, savings],
     } as any);
 
-    const lastProjection = result.projections.points[result.projections.points.length - 1];
-    expect(result.summary.safeToSpend).toBe(1000);
+    const lastProjection =
+      result.simulationResult.projections[result.simulationResult.projections.length - 1];
+    expect(result.simulationResult.summary.safeToSpend).toBe(1000);
     expect(lastProjection.accountBalances!.get('cash')).toBe(750);
     expect(lastProjection.accountBalances!.get('savings')).toBe(250);
   });
@@ -356,11 +359,13 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       7: [cash, cc],
     } as any);
 
-    expect(result.summary.safeToSpend).toBe(0);
-    expect(result.summary.shortfall).toBe(0);
+    expect(result.simulationResult.summary.safeToSpend).toBe(0);
+    expect(result.simulationResult.summary.shortfall).toBe(0);
     expect(result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY')).toHaveLength(0);
     expect(
-      result.projections.points[result.projections.points.length - 1].accountBalances!.get('cash'),
+      result.simulationResult.projections[
+        result.simulationResult.projections.length - 1
+      ].accountBalances!.get('cash'),
     ).toBe(0);
   });
 
@@ -383,7 +388,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
 
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0].amount).toBe(300);
-    expect(result.summary.safeToSpend).toBe(700);
+    expect(result.simulationResult.summary.safeToSpend).toBe(700);
   });
 
   it('models non-credit-card liabilities as a due-date cash obligation', async () => {
@@ -398,7 +403,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0].amount).toBe(350);
     expect(liabilityFlows[0].dayOffset).toBe(19);
-    expect(result.summary.safeToSpend).toBe(650);
+    expect(result.simulationResult.summary.safeToSpend).toBe(650);
   });
 
   it('deduplicates a planned payment template when a generated journal exists on the same date', async () => {
@@ -439,7 +444,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
 
     expect(plannedFlows).toHaveLength(1);
     expect(plannedFlows[0].meta?.referenceId).toBe('j-rent');
-    expect(result.summary.safeToSpend).toBe(300);
+    expect(result.simulationResult.summary.safeToSpend).toBe(300);
   });
 
   it('reconciles a planned spend against every category covered by a multi-category budget', async () => {
@@ -480,7 +485,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
     expect(resolved?.amount).toBe(80);
     expect(result.allFlows!.filter(flow => flow.meta?.source === 'BUDGET')).toHaveLength(29);
 
-    expect(result.summary.safeToSpend).toBe(630);
+    expect(result.simulationResult.summary.safeToSpend).toBe(630);
   });
 
   it('reconciles multiple planned spends in different covered categories against a single budget', async () => {
@@ -534,7 +539,7 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
     const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
 
     expect(resolved?.amount).toBe(110);
-    expect(result.summary.safeToSpend).toBe(600); // 1000 - (29 * 10) - 110 = 1000 - 290 - 110 = 600
+    expect(result.simulationResult.summary.safeToSpend).toBe(600); // 1000 - (29 * 10) - 110 = 1000 - 290 - 110 = 600
   });
 
   it('handles cross-currency reconciliation with proper normalization', async () => {
@@ -783,6 +788,6 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
 
     // Safe to spend should consider this future obligation
     // 1000 - 200 = 800
-    expect(result.summary.safeToSpend).toBe(800);
+    expect(result.simulationResult.summary.safeToSpend).toBe(800);
   });
 });

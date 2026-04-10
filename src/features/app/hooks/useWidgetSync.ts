@@ -105,6 +105,7 @@ export function useWidgetSync() {
     }
 
     // Lazy load the module to avoid issues during bootstrap
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const expoWidgetsModule = require('@/modules/expo-widgets').default;
 
     const isShortfall = (safeToSpendData?.summary?.shortfall ?? 0) > 0;
@@ -155,8 +156,8 @@ export function useWidgetSync() {
     themeId,
     themeMode,
     isWidgetPrivacyEnabled,
-    safeToSpendData?.currencyCode,
-    safeToSpendData?.summary?.safeToSpend,
-    safeToSpendData?.summary?.shortfall,
+    isAppCurrentlyLocked,
+    safeToSpendData,
+    theme,
   ]);
 }

@@ -1,6 +1,6 @@
-import InsightDetailsScreen from '@/src/features/hub/screens/InsightDetailsScreen';
+import { InsightDetailsScreen } from '@/src/features/hub';
 import React from 'react';
 
 export default function InsightDetailsRoute() {
-    return <InsightDetailsScreen />;
+  return <InsightDetailsScreen />;
 }

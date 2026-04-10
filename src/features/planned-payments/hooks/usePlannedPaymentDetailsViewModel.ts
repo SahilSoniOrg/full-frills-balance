@@ -11,184 +11,226 @@ import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 
 export function usePlannedPaymentDetailsViewModel(id: string) {
-    const { theme } = useTheme();
-    const params = useLocalSearchParams();
+  const { theme } = useTheme();
+  const params = useLocalSearchParams();
 
-    // Initial Data Injection: Extract preview data from params
-    const pDesc = params.pDesc as string;
-    const pAmount = params.pAmount as string;
-    const pCurrency = params.pCurrency as string;
-    const pDate = params.pDate as string;
+  // Initial Data Injection: Extract preview data from params
+  const pDesc = params.pDesc as string;
+  const pAmount = params.pAmount as string;
+  const pCurrency = params.pCurrency as string;
+  const pDate = params.pDate as string;
 
-    const {
-        item,
-        history,
-        isLoading,
-        handleEdit,
-        handleDelete,
-        handleToggleStatus,
-        handlePostNow,
-        handleSkip,
-    } = usePlannedPaymentDetails(id);
+  const {
+    item,
+    history,
+    isLoading,
+    handleEdit,
+    handleDelete,
+    handleToggleStatus,
+    handlePostNow,
+    handleSkip,
+  } = usePlannedPaymentDetails(id);
 
-    const { account: fromAccount } = useAccount(item?.fromAccountId || null);
-    const { account: toAccount } = useAccount(item?.toAccountId || null);
+  const { account: fromAccount } = useAccount(item?.fromAccountId || null);
+  const { account: toAccount } = useAccount(item?.toAccountId || null);
 
-    const isMissing = !isLoading && !item;
+  const isMissing = !isLoading && !item;
 
-    // Build a preview-based skeleton if DB record is still loading
-    const isLoadingVisible = isLoading && !pDesc;
+  // Build a preview-based skeleton if DB record is still loading
+  const isLoadingVisible = isLoading && !pDesc;
 
-    return useMemo(() => {
-        if (!item) {
-            // Show preview skeleton while loading
-            if (pDesc && isLoading) {
-                return {
-                    theme,
-                    isLoading: isLoadingVisible,
-                    isMissing: false,
-                    onBack: () => AppNavigation.back(),
-                    title: AppConfig.strings.plannedPayments.details.screenTitle,
-                    amountText: pAmount ? CurrencyFormatter.format(parseFloat(pAmount), pCurrency) : '...',
-                    nameText: pDesc,
-                    statusLabel: '',
-                    typeLabel: '',
-                    typeColorKey: 'primary',
-                    iconName: 'document',
-                    nextOccurrenceText: pDate ? new Date(parseInt(pDate)).toLocaleDateString() : '...',
-                    isAutoPost: false,
-                    fromAccount: null,
-                    toAccount: null,
-                    history: [],
-                    rawAmount: pAmount ? parseFloat(pAmount) : 0,
-                    rawName: pDesc,
-                    headerActions: { onEdit: handleEdit, onDelete: () => {} },
-                    onPost: () => {},
-                    onSkip: () => {},
-                    onToggleStatus: handleToggleStatus,
-                } as any;
-            }
-            return {
-                theme,
-                isLoading,
-                isMissing: true,
-                onBack: () => AppNavigation.back(),
-            } as any;
-        }
-
-        const isIncome = item.amount > 0 && fromAccount?.accountType === 'INCOME';
-        const isTransfer = !!item.toAccountId && toAccount?.accountType !== 'EXPENSE' && toAccount?.accountType !== 'INCOME';
-        const displayType = isTransfer ? JournalDisplayType.TRANSFER : (isIncome ? JournalDisplayType.INCOME : JournalDisplayType.EXPENSE);
-
-        const presentation = journalPresenter.getPresentation(displayType);
-        const typeColorKey = presentation.colorKey as string;
-        const typeLabel = presentation.label;
-
-        // Interval label
-        const n = item.intervalN;
-        const type = item.intervalType;
-
-        let baseLabel = '';
-        if (n === 1) {
-            switch (type) {
-                case 'DAILY': baseLabel = AppConfig.strings.plannedPayments.everyDay; break;
-                case 'WEEKLY': baseLabel = AppConfig.strings.plannedPayments.everyWeek; break;
-                case 'MONTHLY': baseLabel = AppConfig.strings.plannedPayments.everyMonth; break;
-                case 'YEARLY': baseLabel = AppConfig.strings.plannedPayments.everyYear; break;
-            }
-        } else {
-            baseLabel = AppConfig.strings.plannedPayments.everyN(n, type.toLowerCase());
-        }
-
-        let detailLabel = '';
-        if (type === 'WEEKLY' && item.recurrenceDay !== undefined && item.recurrenceDay !== null) {
-            const days = AppConfig.strings.plannedPayments.dayNames;
-            detailLabel = ` on ${days[item.recurrenceDay]}`;
-        } else if (type === 'MONTHLY' && item.recurrenceDay !== undefined && item.recurrenceDay !== null) {
-            detailLabel = ` on day ${item.recurrenceDay}`;
-        } else if (type === 'YEARLY') {
-            const months = AppConfig.strings.plannedPayments.monthNames;
-            const monthStr = item.recurrenceMonth ? months[item.recurrenceMonth - 1] : '';
-            const dayStr = item.recurrenceDay ? ` day ${item.recurrenceDay}` : '';
-            if (monthStr || dayStr) {
-                detailLabel = ` on ${monthStr}${dayStr}`;
-            }
-        }
-
-        const intervalLabel = `${baseLabel}${detailLabel}`;
-
-        const headerActions = {
-            onEdit: handleEdit,
-            onDelete: () => {
-                confirm.show({
-                    title: AppConfig.strings.plannedPayments.details.deleteConfirmTitle,
-                    message: AppConfig.strings.plannedPayments.details.deleteConfirmMessage,
-                    destructive: true,
-                    confirmText: AppConfig.strings.common.delete,
-                    onConfirm: handleDelete,
-                });
-            },
-        };
-
-        const onPost = () => {
-            confirm.show({
-                title: AppConfig.strings.plannedPayments.details.postNowTitle,
-                message: `This will post the upcoming instance for ${CurrencyFormatter.format(item.amount, item.currencyCode)} and advance the schedule to the next occurrence.`,
-                onConfirm: handlePostNow,
-            });
-        };
-
-        const onSkip = () => {
-            confirm.show({
-                title: AppConfig.strings.plannedPayments.details.skipTitle,
-                message: `This will skip the upcoming instance on ${new Date(item.nextOccurrence).toLocaleDateString()} and advance the schedule without creating a transaction.`,
-                confirmText: AppConfig.strings.plannedPayments.details.skipConfirm,
-                destructive: true,
-                onConfirm: handleSkip,
-            });
-        };
-
-        const onToggleStatus = handleToggleStatus;
-
+  return useMemo(() => {
+    if (!item) {
+      // Show preview skeleton while loading
+      if (pDesc && isLoading) {
         return {
-            theme,
-            isLoading,
-            isMissing,
-            onBack: () => AppNavigation.back(),
+          theme,
+          isLoading: isLoadingVisible,
+          isMissing: false,
+          onBack: () => AppNavigation.back(),
+          title: AppConfig.strings.plannedPayments.details.screenTitle,
+          amountText: pAmount ? CurrencyFormatter.format(parseFloat(pAmount), pCurrency) : '...',
+          nameText: pDesc,
+          statusLabel: '',
+          typeLabel: '',
+          typeColorKey: 'primary',
+          iconName: 'document',
+          nextOccurrenceText: pDate ? new Date(parseInt(pDate)).toLocaleDateString() : '...',
+          isAutoPost: false,
+          fromAccount: null,
+          toAccount: null,
+          history: [],
+          rawAmount: pAmount ? parseFloat(pAmount) : 0,
+          rawName: pDesc,
+          headerActions: { onEdit: handleEdit, onDelete: () => {} },
+          onPost: () => {},
+          onSkip: () => {},
+          onToggleStatus: handleToggleStatus,
+        } as any;
+      }
+      return {
+        theme,
+        isLoading,
+        isMissing: true,
+        onBack: () => AppNavigation.back(),
+      } as any;
+    }
 
-            // Core Details
-            title: AppConfig.strings.plannedPayments.details.screenTitle,
-            amountText: CurrencyFormatter.format(item.amount, item.currencyCode),
-            nameText: item.name,
-            statusLabel: item.status,
-            statusVariant: item.status === 'ACTIVE' ? 'success' : 'default',
-            typeLabel,
-            typeColorKey,
-            iconName: displayType === JournalDisplayType.INCOME ? 'arrowUp' : (displayType === JournalDisplayType.EXPENSE ? 'arrowDown' : 'swapHorizontal'),
-            displayType,
+    const isIncome = item.amount > 0 && fromAccount?.accountType === 'INCOME';
+    const isTransfer =
+      !!item.toAccountId &&
+      toAccount?.accountType !== 'EXPENSE' &&
+      toAccount?.accountType !== 'INCOME';
+    const displayType = isTransfer
+      ? JournalDisplayType.TRANSFER
+      : isIncome
+        ? JournalDisplayType.INCOME
+        : JournalDisplayType.EXPENSE;
 
-            // Recurrence Details
-            intervalLabel,
-            nextOccurrenceText: new Date(item.nextOccurrence).toLocaleDateString(),
-            isAutoPost: item.isAutoPost,
+    const presentation = journalPresenter.getPresentation(displayType);
+    const typeColorKey = presentation.colorKey as string;
+    const typeLabel = presentation.label;
 
-            // Account Flow
-            fromAccount,
-            toAccount,
+    // Interval label
+    const n = item.intervalN;
+    const type = item.intervalType;
 
-            // History
-            history,
+    let baseLabel = '';
+    if (n === 1) {
+      switch (type) {
+        case 'DAILY':
+          baseLabel = AppConfig.strings.plannedPayments.everyDay;
+          break;
+        case 'WEEKLY':
+          baseLabel = AppConfig.strings.plannedPayments.everyWeek;
+          break;
+        case 'MONTHLY':
+          baseLabel = AppConfig.strings.plannedPayments.everyMonth;
+          break;
+        case 'YEARLY':
+          baseLabel = AppConfig.strings.plannedPayments.everyYear;
+          break;
+      }
+    } else {
+      baseLabel = AppConfig.strings.plannedPayments.everyN(n, type.toLowerCase());
+    }
 
-            rawAmount: item.amount,
-            rawName: item.name,
+    let detailLabel = '';
+    if (type === 'WEEKLY' && item.recurrenceDay !== undefined && item.recurrenceDay !== null) {
+      const days = AppConfig.strings.plannedPayments.dayNames;
+      detailLabel = ` on ${days[item.recurrenceDay]}`;
+    } else if (
+      type === 'MONTHLY' &&
+      item.recurrenceDay !== undefined &&
+      item.recurrenceDay !== null
+    ) {
+      detailLabel = ` on day ${item.recurrenceDay}`;
+    } else if (type === 'YEARLY') {
+      const months = AppConfig.strings.plannedPayments.monthNames;
+      const monthStr = item.recurrenceMonth ? months[item.recurrenceMonth - 1] : '';
+      const dayStr = item.recurrenceDay ? ` day ${item.recurrenceDay}` : '';
+      if (monthStr || dayStr) {
+        detailLabel = ` on ${monthStr}${dayStr}`;
+      }
+    }
 
-            // Actions
-            headerActions,
-            onPost,
-            onSkip,
-            onToggleStatus,
-        };
-    }, [item, history, isLoading, theme, fromAccount, toAccount, handleEdit, handleDelete, handleToggleStatus, handlePostNow, handleSkip, isMissing]);
+    const intervalLabel = `${baseLabel}${detailLabel}`;
+
+    const headerActions = {
+      onEdit: handleEdit,
+      onDelete: () => {
+        confirm.show({
+          title: AppConfig.strings.plannedPayments.details.deleteConfirmTitle,
+          message: AppConfig.strings.plannedPayments.details.deleteConfirmMessage,
+          destructive: true,
+          confirmText: AppConfig.strings.common.delete,
+          onConfirm: handleDelete,
+        });
+      },
+    };
+
+    const onPost = () => {
+      confirm.show({
+        title: AppConfig.strings.plannedPayments.details.postNowTitle,
+        message: `This will post the upcoming instance for ${CurrencyFormatter.format(item.amount, item.currencyCode)} and advance the schedule to the next occurrence.`,
+        onConfirm: handlePostNow,
+      });
+    };
+
+    const onSkip = () => {
+      confirm.show({
+        title: AppConfig.strings.plannedPayments.details.skipTitle,
+        message: `This will skip the upcoming instance on ${new Date(item.nextOccurrence).toLocaleDateString()} and advance the schedule without creating a transaction.`,
+        confirmText: AppConfig.strings.plannedPayments.details.skipConfirm,
+        destructive: true,
+        onConfirm: handleSkip,
+      });
+    };
+
+    const onToggleStatus = handleToggleStatus;
+
+    return {
+      theme,
+      isLoading,
+      isMissing,
+      onBack: () => AppNavigation.back(),
+
+      // Core Details
+      title: AppConfig.strings.plannedPayments.details.screenTitle,
+      amountText: CurrencyFormatter.format(item.amount, item.currencyCode),
+      nameText: item.name,
+      statusLabel: item.status,
+      statusVariant: item.status === 'ACTIVE' ? 'success' : 'default',
+      typeLabel,
+      typeColorKey,
+      iconName:
+        displayType === JournalDisplayType.INCOME
+          ? 'arrowUp'
+          : displayType === JournalDisplayType.EXPENSE
+            ? 'arrowDown'
+            : 'swapHorizontal',
+      displayType,
+
+      // Recurrence Details
+      intervalLabel,
+      nextOccurrenceText: new Date(item.nextOccurrence).toLocaleDateString(),
+      isAutoPost: item.isAutoPost,
+
+      // Account Flow
+      fromAccount,
+      toAccount,
+
+      // History
+      history,
+
+      rawAmount: item.amount,
+      rawName: item.name,
+
+      // Actions
+      headerActions,
+      onPost,
+      onSkip,
+      onToggleStatus,
+    };
+  }, [
+    item,
+    history,
+    isLoading,
+    theme,
+    fromAccount,
+    toAccount,
+    handleEdit,
+    handleDelete,
+    handleToggleStatus,
+    handlePostNow,
+    handleSkip,
+    isMissing,
+    pDesc,
+    pAmount,
+    pCurrency,
+    pDate,
+    isLoadingVisible,
+  ]);
 }
 
 export type PlannedPaymentDetailsViewModel = ReturnType<typeof usePlannedPaymentDetailsViewModel>;

@@ -83,14 +83,18 @@ export class FlowResolver {
         matchingPlanned.forEach(flow => matchedPlanned.add(flow));
       }
 
-      // Pass 2: Broad Fallback
+      // Pass 2: Broad Fallback (Match remaining capacity)
       const broadFallbackPlanned = plannedFlows.filter(flow => {
         if (matchedPlanned.has(flow)) return false;
         const categoryId = flow.meta?.categoryId;
         return !!categoryId && allBudgetCategoryIds.has(categoryId);
       });
       broadFallbackPlanned.forEach(flow => matchedPlanned.add(flow));
-      let remainingFallback = broadFallbackPlanned.reduce((sum, f) => sum + f.amount, 0);
+
+      const fallbackTracking = broadFallbackPlanned.map(f => ({
+        original: f,
+        remaining: f.amount,
+      }));
 
       // Resolution Phase
       for (const group of groupedBudgets.values()) {
@@ -98,11 +102,18 @@ export class FlowResolver {
         let budgetTotal = group.flows.reduce((sum, flow) => sum + flow.amount, 0);
         let plannedTotal = matchingPlanned.reduce((sum, flow) => sum + flow.amount, 0);
 
-        if (remainingFallback > 0.01 && budgetTotal > plannedTotal) {
-          const capacity = budgetTotal - plannedTotal;
-          const usedFallback = Math.min(capacity, remainingFallback);
-          plannedTotal += usedFallback;
-          remainingFallback -= usedFallback;
+        // Consume fallback capacity if needed
+        if (budgetTotal > plannedTotal) {
+          let capacity = budgetTotal - plannedTotal;
+          for (const tracking of fallbackTracking) {
+            if (capacity <= 0.01) break;
+            if (tracking.remaining <= 0) continue;
+
+            const consumed = Math.min(capacity, tracking.remaining);
+            tracking.remaining -= consumed;
+            plannedTotal += consumed;
+            capacity -= consumed;
+          }
         }
 
         if (plannedTotal === 0 && matchingPlanned.length === 0) {
@@ -111,7 +122,7 @@ export class FlowResolver {
         }
 
         const isPlannedHigher = plannedTotal >= budgetTotal;
-        const template = isPlannedHigher ? matchingPlanned[0] : group.flows[0];
+        const template = isPlannedHigher ? matchingPlanned[0] || group.flows[0] : group.flows[0];
         const effectiveAmount = Math.max(budgetTotal, plannedTotal);
 
         const resolvedFlow: Flow = {
@@ -130,7 +141,22 @@ export class FlowResolver {
         resolved.push(resolvedFlow);
       }
 
-      broadFallbackPlanned.forEach(flow => resolved.push(flow));
+      // Add residual fallback flows that weren't fully consumed by budget groups
+      for (const tracking of fallbackTracking) {
+        if (tracking.remaining > 0.01) {
+          const originalMeta = tracking.original.meta;
+          if (!originalMeta) continue; // Safety check
+
+          resolved.push({
+            ...tracking.original,
+            amount: tracking.remaining,
+            meta: {
+              ...originalMeta,
+              tags: [...(originalMeta.tags || []), 'RECONCILED_FALLBACK'],
+            },
+          });
+        }
+      }
 
       plannedFlows
         .filter(flow => !matchedPlanned.has(flow))

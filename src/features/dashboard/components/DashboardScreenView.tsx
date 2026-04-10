@@ -109,18 +109,18 @@ export function DashboardScreenView({
             labels={safeToSpendViewProps.labels}
             formatValue={safeToSpendViewProps.format}
             totalLiquidAssets={safeToSpendData.totalLiquidAssets}
-            totalFutureInflow={safeToSpendData.summary?.totalFutureInflow}
+            totalFutureInflow={safeToSpendViewProps.totalFutureInflow}
             committedBudget={safeToSpendViewProps.committedBudget}
             committedPlanned={safeToSpendViewProps.committedPlanned}
             committedLiabilities={safeToSpendViewProps.committedLiabilities}
             safeToSpend={safeToSpendViewProps.safeToSpend}
             liquidAssetSubtypes={safeToSpendData.liquidAssetSubtypes}
             accountSummaries={safeToSpendData.accountSummaries}
-            incomeBreakdown={safeToSpendData.breakdowns?.income}
-            committedBreakdown={safeToSpendData.breakdowns?.committed}
-            debtBreakdown={safeToSpendData.breakdowns?.debt}
-            firstMajorInflowDay={safeToSpendData.summary?.firstMajorInflowDay}
-            totalLiabilities={safeToSpendData.breakdowns?.liabilities?.total}
+            incomeBreakdown={safeToSpendViewProps.breakdowns?.income || []}
+            committedBreakdown={safeToSpendViewProps.breakdowns?.committed || []}
+            debtBreakdown={safeToSpendViewProps.breakdowns?.debt || []}
+            firstMajorInflowDay={safeToSpendData.summary?.firstMajorInflowDay ?? null}
+            totalLiabilities={safeToSpendViewProps.breakdowns?.liabilities?.total ?? 0}
             expandedSection={explanationModalState.expandedSection}
             setExpandedSection={safeToSpendViewProps.setExpandedSection}
           />
@@ -132,18 +132,22 @@ export function DashboardScreenView({
             labels={safeToSpendViewProps.labels}
             formatValue={safeToSpendViewProps.format}
             totalLiquidAssets={safeToSpendData.totalLiquidAssets}
-            totalFutureInflow={safeToSpendData.summary?.totalFutureInflow}
+            totalFutureInflow={safeToSpendViewProps.totalFutureInflow}
             committedBudget={safeToSpendViewProps.committedBudget}
             committedPlanned={safeToSpendViewProps.committedPlanned}
             committedLiabilities={safeToSpendViewProps.committedLiabilities}
             safeToSpend={safeToSpendViewProps.safeToSpend}
-            incomeBreakdown={safeToSpendData.breakdowns?.income}
-            committedBreakdown={safeToSpendData.breakdowns?.committed}
-            debtBreakdown={safeToSpendData.breakdowns?.debt}
-            firstMajorInflowDay={safeToSpendData.summary?.firstMajorInflowDay}
-            totalLiabilities={safeToSpendData.breakdowns?.liabilities?.total}
-            committedLiabilitiesCC={safeToSpendData.breakdowns?.liabilities?.committedCreditCard}
-            committedLiabilitiesOther={safeToSpendData.breakdowns?.liabilities?.committedOther}
+            incomeBreakdown={safeToSpendViewProps.breakdowns?.income || []}
+            committedBreakdown={safeToSpendViewProps.breakdowns?.committed || []}
+            debtBreakdown={safeToSpendViewProps.breakdowns?.debt || []}
+            firstMajorInflowDay={safeToSpendData.summary?.firstMajorInflowDay ?? null}
+            totalLiabilities={safeToSpendViewProps.breakdowns?.liabilities?.total ?? 0}
+            committedLiabilitiesCC={
+              safeToSpendViewProps.breakdowns?.liabilities?.committedCreditCard ?? 0
+            }
+            committedLiabilitiesOther={
+              safeToSpendViewProps.breakdowns?.liabilities?.committedOther ?? 0
+            }
             committedTotal={safeToSpendViewProps.committedTotal}
           />
         </>

@@ -189,8 +189,8 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
         expect.objectContaining({ accountId: 'cash', amount: 600, dayOffset: 19 }),
       ]),
     );
-    expect(result.summary.safeToSpend).toBe(1050);
-    expect(result.summary.shortfall).toBe(0);
+    expect(result.simulationResult.summary.safeToSpend).toBe(1050);
+    expect(result.simulationResult.summary.shortfall).toBe(0);
     expect(
       result.accountSummaries!.find(summary => summary.accountId === 'cash')?.usageDetails!
         .totalOutflow,
@@ -224,11 +224,13 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
       7: [cash, savings, cc, loan],
     } as any);
 
-    expect(result.summary.safeToSpend).toBe(0);
-    expect(result.summary.shortfall).toBe(250);
-    expect(result.summary.trajectoryMinBalance).toBe(-250);
+    expect(result.simulationResult.summary.safeToSpend).toBe(0);
+    expect(result.simulationResult.summary.shortfall).toBe(250);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(-250);
     expect(
-      result.projections.points[result.projections.points.length - 1].accountBalances!.get('cash'),
+      result.simulationResult.projections[
+        result.simulationResult.projections.length - 1
+      ].accountBalances!.get('cash'),
     ).toBe(-350);
   });
 
@@ -264,7 +266,7 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
         dayOffset: 19,
       }),
     );
-    expect(result.summary.safeToSpend).toBe(800);
+    expect(result.simulationResult.summary.safeToSpend).toBe(800);
   });
 
   it('normalizes mixed-currency liquid balances and non-credit liabilities into the result currency', async () => {
@@ -305,8 +307,8 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
         dayOffset: 9,
       }),
     );
-    expect(result.summary.safeToSpend).toBe(1100);
-    expect(result.summary.shortfall).toBe(0);
+    expect(result.simulationResult.summary.safeToSpend).toBe(1100);
+    expect(result.simulationResult.summary.shortfall).toBe(0);
   });
 
   it('handles a larger liability portfolio while preserving flow and projection invariants', async () => {
@@ -370,10 +372,10 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
     expect(liabilityFlows).toHaveLength(liabilityBalances.length);
-    expect(result.projections.points).toHaveLength(30);
-    expect(result.summary.safeToSpend).toBeGreaterThanOrEqual(0);
-    expect(result.summary.safeToSpend).toBeLessThanOrEqual(8350);
-    expect(result.summary.trajectoryMinBalance).toBeLessThanOrEqual(8350);
+    expect(result.simulationResult.projections).toHaveLength(30);
+    expect(result.simulationResult.summary.safeToSpend).toBeGreaterThanOrEqual(0);
+    expect(result.simulationResult.summary.safeToSpend).toBeLessThanOrEqual(8350);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBeLessThanOrEqual(8350);
 
     for (const flow of liabilityFlows) {
       expect(flow.amount).toBeGreaterThan(0);
@@ -439,7 +441,7 @@ describe('CashFlowSimulationServiceV2 liability-heavy coverage', () => {
         }),
       ]),
     );
-    expect(result.summary.safeToSpend).toBe(200);
+    expect(result.simulationResult.summary.safeToSpend).toBe(200);
   });
 
   it.skip('TODO(v2): converts statement balances for foreign-currency credit cards before obligation math', async () => {
