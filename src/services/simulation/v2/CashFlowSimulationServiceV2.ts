@@ -43,6 +43,9 @@ export class CashFlowSimulationServiceV2 {
     const liabilityAccountIdsSet = new Set(liabilityAccountBalances.map(lb => lb.account.id));
     const accountMap = new Map(allAccounts.map(a => [a.id, a]));
 
+    // Fetch journal transactions early to identify all required currencies
+    const journalTxsMap = await this.fetchJournalTransactions(plannedJournals);
+
     // Build unique currency list for pre-loading rates
     const currencies = new Set<string>();
     currencies.add(resultCurrency);
@@ -54,6 +57,13 @@ export class CashFlowSimulationServiceV2 {
     });
     plannedPayments.forEach(pp => {
       if (pp.currencyCode) currencies.add(pp.currencyCode);
+    });
+
+    // Also include currencies from journal transactions
+    journalTxsMap.forEach(txs => {
+      txs.forEach(tx => {
+        if (tx.currencyCode) currencies.add(tx.currencyCode);
+      });
     });
 
     const rateMap = new Map<string, number>();
@@ -111,7 +121,6 @@ export class CashFlowSimulationServiceV2 {
       time,
       resultCurrency,
     );
-    const journalTxsMap = await this.fetchJournalTransactions(plannedJournals);
     const budgetCategoryMap = await this.fetchBudgetCategoryMap(budgets, allAccounts);
     const expenseAccountIds = new Set(
       allAccounts.filter(a => a.accountType === AccountType.EXPENSE).map(a => a.id),
@@ -139,10 +148,23 @@ export class CashFlowSimulationServiceV2 {
       journalTxsMap,
     );
 
+    const budgetEntries = normalizedBudgets.map((budget, index) => ({
+      budget,
+      usage: normalizedUsages[index] || { remaining: 0 },
+      categories: budgetCategoryMap.get(budget.id),
+    }));
+
+    const budgetEntriesWithCategories = budgetEntries.filter(
+      entry => entry.categories && entry.categories.size > 0,
+    );
+
+    const filteredBudgets = budgetEntriesWithCategories.map(entry => entry.budget);
+    const filteredUsages = budgetEntriesWithCategories.map(entry => entry.usage);
+
     const budgetFlows = BudgetFlowGenerator.generate(
       context,
-      normalizedBudgets,
-      normalizedUsages,
+      filteredBudgets,
+      filteredUsages,
       time.daysLeftInMonth(),
       time.nextMonthDays(),
       budgetCategoryMap,

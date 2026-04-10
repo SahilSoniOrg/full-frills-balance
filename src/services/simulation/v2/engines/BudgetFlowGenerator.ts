@@ -35,6 +35,8 @@ export class BudgetFlowGenerator {
       const targetAssetIds = getTargetAssetAccountIds(budget);
       if (targetAssetIds.length === 0) continue;
 
+      const budgetCategories = budgetCategoryMap.get(budget.id) || new Set<string>();
+
       const burns = new Array(context.simulationDays).fill(0);
       const isSmoothed = AppConfig.defaults.budgetMode === 'SMOOTHED';
 
@@ -64,9 +66,8 @@ export class BudgetFlowGenerator {
       // For now, these are all OUTFLOWs.
 
       const shareOfBurn = 1 / targetAssetIds.length;
-      const budgetCategories = Array.from(budgetCategoryMap.get(budget.id) || []);
-      const representativeCategoryId =
-        budgetCategories.length > 0 ? budgetCategories[0] : undefined;
+      const budgetCategoryIds = Array.from(budgetCategories);
+      const representativeCategoryId = budgetCategoryIds[0];
 
       for (const assetId of targetAssetIds) {
         for (let d = 0; d < context.simulationDays; d++) {
@@ -82,7 +83,7 @@ export class BudgetFlowGenerator {
                 label: budget.name,
                 referenceId: budget.id,
                 categoryId: representativeCategoryId,
-                categoryIds: budgetCategories,
+                categoryIds: budgetCategoryIds,
               },
             });
           }

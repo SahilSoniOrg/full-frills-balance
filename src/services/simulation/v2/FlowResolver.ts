@@ -51,11 +51,18 @@ export class FlowResolver {
         };
         group.flows.push(budgetFlow);
 
-        const cats = budgetFlow.meta?.categoryIds?.length
-          ? budgetFlow.meta.categoryIds
-          : budgetFlow.meta?.categoryId
-            ? [budgetFlow.meta.categoryId]
-            : [];
+        const categoryIdsMeta = budgetFlow.meta?.categoryIds;
+        const normalizedCategoryIds = categoryIdsMeta
+          ? Array.isArray(categoryIdsMeta)
+            ? categoryIdsMeta
+            : Array.from(categoryIdsMeta as Iterable<string>)
+          : [];
+        const cats =
+          normalizedCategoryIds.length > 0
+            ? normalizedCategoryIds
+            : budgetFlow.meta?.categoryId
+              ? [budgetFlow.meta.categoryId]
+              : [];
 
         cats.forEach(c => {
           group.categoryIds.add(c);

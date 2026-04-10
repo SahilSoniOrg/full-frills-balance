@@ -1,9 +1,10 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
-import dayjs from 'dayjs';
+import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {
@@ -26,7 +27,9 @@ jest.mock('@/src/data/repositories/BudgetRepository', () => ({
 
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
-    convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
+    convert: jest.fn((amount: number, from?: string) =>
+      Promise.resolve({ convertedAmount: from === 'EUR' ? amount * 2 : amount }),
+    ),
   },
 }));
 
@@ -43,6 +46,12 @@ describe('CashFlowSimulationServiceV2', () => {
     id: liquidAccountId,
     name: 'Main Savings',
     accountType: AccountType.ASSET,
+    currencyCode: 'USD',
+  } as any;
+  const expenseAccount = {
+    id: 'exp-eating',
+    name: 'Eating Out Expense',
+    accountType: AccountType.EXPENSE,
     currencyCode: 'USD',
   } as any;
 
@@ -161,6 +170,13 @@ describe('CashFlowSimulationServiceV2', () => {
     const usage = {
       remaining: 300,
     } as any;
+    const expenseAccount = {
+      id: 'exp-eating',
+      accountType: AccountType.EXPENSE,
+    } as any;
+    budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
+
+    budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
 
     const result = await cashFlowSimulationServiceV2.simulate(
       new Map([[liquidAccountId, 1000]]),
@@ -178,6 +194,41 @@ describe('CashFlowSimulationServiceV2', () => {
     // Total burn in 30 days window = 300.
     // Safe to spend = 1000 - 300 = 700.
     expect(result.summary.safeToSpend).toBe(700);
+  });
+
+  it('normalizes planned journal transactions from other currencies before charging the flow', async () => {
+    const journalTx = {
+      id: 'tx-eur',
+      journalId: 'pj-eur',
+      accountId: liquidAccountId,
+      amount: 100,
+      currencyCode: 'EUR',
+      transactionType: TransactionType.CREDIT,
+    } as Transaction;
+    const findByJournalsMock = transactionRepository.findByJournals as jest.MockedFunction<
+      typeof transactionRepository.findByJournals
+    >;
+    findByJournalsMock.mockResolvedValueOnce([journalTx]);
+
+    const plannedJournal = {
+      id: 'pj-eur',
+      description: 'Euro payment',
+      journalDate: dayjs('2026-04-03T12:00:00Z').valueOf(),
+    } as any;
+
+    const result = await cashFlowSimulationServiceV2.simulate(
+      new Map([[liquidAccountId, 1000]]),
+      [],
+      [plannedJournal],
+      [liquidAccountId],
+      [],
+      [],
+      [],
+      [liquidAccount, expenseAccount],
+      'USD',
+    );
+
+    expect(result.summary.safeToSpend).toBe(800);
   });
 
   it('handles Credit Card obligations with manual payments', async () => {

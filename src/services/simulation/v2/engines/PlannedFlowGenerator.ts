@@ -58,6 +58,7 @@ export class PlannedFlowGenerator {
 
           if (dayOffset >= context.simulationDays) break;
 
+          const normalizedAmount = context.convert(pp.amount, pp.currencyCode);
           const meta: FlowMeta = {
             source: 'PLANNED',
             label: pp.name || 'Planned Payment',
@@ -70,7 +71,7 @@ export class PlannedFlowGenerator {
               kind: 'TRANSFER',
               fromAccountId: pp.fromAccountId,
               toAccountId: pp.toAccountId,
-              amount: pp.amount,
+              amount: normalizedAmount,
               dayOffset,
               meta: { ...meta, categoryId: pp.toAccountId },
             });
@@ -78,7 +79,7 @@ export class PlannedFlowGenerator {
             flows.push({
               kind: 'OUTFLOW',
               accountId: pp.fromAccountId,
-              amount: pp.amount,
+              amount: normalizedAmount,
               dayOffset,
               meta: { ...meta, categoryId: pp.toAccountId },
             });
@@ -86,7 +87,7 @@ export class PlannedFlowGenerator {
             flows.push({
               kind: 'INFLOW',
               accountId: pp.toAccountId,
-              amount: pp.amount,
+              amount: normalizedAmount,
               dayOffset,
               meta: { ...meta, categoryId: pp.fromAccountId },
             });
@@ -138,7 +139,7 @@ export class PlannedFlowGenerator {
             kind: 'TRANSFER',
             fromAccountId: creditTx.accountId,
             toAccountId: debitTx.accountId,
-            amount: debitTx.amount,
+            amount: context.convert(debitTx.amount, debitTx.currencyCode),
             dayOffset,
             meta: {
               ...meta,
@@ -151,13 +152,15 @@ export class PlannedFlowGenerator {
       }
 
       for (const tx of liquidTxs) {
-        const impact = tx.transactionType === TransactionType.DEBIT ? tx.amount : -tx.amount;
+        const normalizedAmount = context.convert(tx.amount, tx.currencyCode);
+        const impact =
+          tx.transactionType === TransactionType.DEBIT ? normalizedAmount : -normalizedAmount;
 
         if (impact > 0) {
           flows.push({
             kind: 'INFLOW',
             accountId: tx.accountId,
-            amount: tx.amount,
+            amount: normalizedAmount,
             dayOffset,
             meta: { ...meta, categoryId },
           });
@@ -165,7 +168,7 @@ export class PlannedFlowGenerator {
           flows.push({
             kind: 'OUTFLOW',
             accountId: tx.accountId,
-            amount: tx.amount,
+            amount: normalizedAmount,
             dayOffset,
             meta: { ...meta, categoryId },
           });

@@ -1,0 +1,107 @@
+import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { cashFlowSimulationServiceV2 } from '@/src/services/simulation/v2/CashFlowSimulationServiceV2';
+import dayjs from 'dayjs';
+
+jest.mock('@/src/data/repositories/BudgetRepository', () => ({
+  budgetRepository: {
+    getScopes: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
+  transactionRawRepository: {
+    getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()),
+    getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
+  },
+}));
+
+jest.mock('@/src/data/repositories/TransactionRepository', () => ({
+  transactionRepository: {
+    findByJournals: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+jest.mock('@/src/services/exchange-rate-service', () => ({
+  exchangeRateService: {
+    convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
+  },
+}));
+
+jest.mock('@/src/utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
+const checkingAccount = {
+  id: 'checking-1',
+  name: 'Checking',
+  accountType: AccountType.ASSET,
+  accountSubtype: AccountSubtype.BANK_CHECKING,
+  currencyCode: 'USD',
+} as const;
+
+const creditCardAccount = {
+  id: 'cc-1',
+  name: 'Credit Card',
+  accountType: AccountType.LIABILITY,
+  accountSubtype: AccountSubtype.CREDIT_CARD,
+  currencyCode: 'USD',
+  metadataRecords: {
+    fetch: jest.fn().mockResolvedValue([{ statementDay: 1, dueDay: 15 }]),
+  },
+} as any;
+
+type SimulateArgs = Parameters<typeof cashFlowSimulationServiceV2.simulate>;
+type OverrideMap = Partial<{ [K in keyof SimulateArgs]: SimulateArgs[K] }>;
+
+const simulate = (overrides: OverrideMap = {} as any, planned: SimulateArgs[1] = []) => {
+  const defaultArgs: Parameters<typeof cashFlowSimulationServiceV2.simulate> = [
+    new Map([['checking-1', 2000]]),
+    planned,
+    [],
+    ['checking-1'],
+    [{ account: creditCardAccount, balance: 1000 }],
+    [],
+    [],
+    [checkingAccount, creditCardAccount],
+    'USD',
+  ];
+
+  Object.entries(overrides).forEach(([index, value]) => {
+    (defaultArgs as any)[Number(index)] = value;
+  });
+
+  return cashFlowSimulationServiceV2.simulate(...defaultArgs);
+};
+
+describe('Liability payment coverage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('deducts a planned credit card payment from safe-to-spend', async () => {
+    const plannedPayment = {
+      id: 'pp-cc-payment',
+      name: 'CC Payment',
+      fromAccountId: 'checking-1',
+      toAccountId: creditCardAccount.id,
+      amount: 1000,
+      nextOccurrence: dayjs('2026-04-05T12:00:00Z').valueOf(),
+      intervalType: 'MONTHLY',
+      intervalN: 1,
+      currencyCode: 'USD',
+    } as any;
+
+    const result = await simulate({ 1: [plannedPayment] }, [plannedPayment as any]);
+
+    expect(result.summary.safeToSpend).toBe(1000);
+  });
+});
