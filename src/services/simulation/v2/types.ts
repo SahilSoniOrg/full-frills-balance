@@ -8,6 +8,7 @@ export type FlowMeta = {
   categoryIds?: string[];
   label: string;
   tags?: string[];
+  allowCascade?: boolean;
 };
 
 export type FlowKind = 'INFLOW' | 'OUTFLOW' | 'TRANSFER';

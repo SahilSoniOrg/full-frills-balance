@@ -25,14 +25,21 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
     };
 
     const result = PlannedFlowGenerator.generate(
+      {
+        simulationStartMs,
+        simulationDays: 30,
+        simulationEndMs,
+        resultCurrency: 'USD',
+        liquidAccountIds,
+        orderedLiquidAccountIds: Array.from(liquidAccountIds),
+        liabilityAccountIds,
+        accountMap: new Map(),
+        convert: (amount: number) => amount,
+      } as any,
       [overduePP],
       [], // No journals
-      liquidAccountIds,
-      liabilityAccountIds,
       expenseAccountIds,
       new Map(),
-      simulationStartMs,
-      simulationEndMs,
     );
 
     // We expect TWO flows:
@@ -62,14 +69,21 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
     };
 
     const result = PlannedFlowGenerator.generate(
+      {
+        simulationStartMs,
+        simulationDays: 30,
+        simulationEndMs,
+        resultCurrency: 'USD',
+        liquidAccountIds,
+        orderedLiquidAccountIds: Array.from(liquidAccountIds),
+        liabilityAccountIds,
+        accountMap: new Map(),
+        convert: (amount: number) => amount,
+      } as any,
       [futurePP],
       [],
-      liquidAccountIds,
-      liabilityAccountIds,
       expenseAccountIds,
       new Map(),
-      simulationStartMs,
-      simulationEndMs,
     );
 
     const may5Flow = result.flows.find(f => f.dayOffset === 27);

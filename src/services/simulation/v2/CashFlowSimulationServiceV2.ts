@@ -178,6 +178,7 @@ export class CashFlowSimulationServiceV2 {
       allFlows,
       simulationDays,
       liquidAccountIdsSet,
+      liquidAssetIds,
     );
 
     // 4. PHASE: POST-PROCESS SUMMARIES

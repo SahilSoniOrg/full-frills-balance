@@ -11,7 +11,7 @@ const mockAcc = (id: string, subtype: AccountSubtype, name: string) =>
   }) as any;
 
 describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
-  const startOfToday = dayjs('2026-04-01T00:00:00Z');
+  const startOfToday = dayjs('2026-04-01').startOf('day');
   const simulationDays = 60;
 
   describe('Credit Cards', () => {
@@ -31,7 +31,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         0, // statementBalance
         0, // settledSinceStatement
         startOfToday,
-        90, // Increased to 90 to capture June 15th
+        90,
         spendingFlows,
       );
 
@@ -120,7 +120,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       expect(obligations[1].amount).toBe(100);
     });
 
-    it('uses 1/24th fallback if emiAmount is missing to avoid a cliff', () => {
+    it('treats the entire balance as due if emiAmount is missing (legacy behavior)', () => {
       const loanNoEmi = mockAcc('loan-2', AccountSubtype.LOAN, 'Large Loan');
       const obligations = (LiabilityFlowGenerator as any).generateObligations(
         loanNoEmi,
@@ -133,10 +133,9 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         [],
       );
 
-      // 24000 / 24 = 1000 per month
-      expect(obligations).toHaveLength(2);
-      expect(obligations[0].amount).toBe(1000);
-      expect(obligations[1].amount).toBe(1000);
+      // Should project the full balance on the next due date
+      expect(obligations).toHaveLength(1);
+      expect(obligations[0].amount).toBe(24000);
     });
 
     it('rounds obligation amounts to 2 decimal places', () => {

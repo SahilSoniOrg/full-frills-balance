@@ -20,7 +20,7 @@ export class LiabilityFlowGenerator {
     settledSinceStatement: Map<string, number>,
   ): Flow[] {
     const flows: Flow[] = [];
-    const startOfToday = dayjs(context.simulationStartMs);
+    const startOfToday = dayjs(context.simulationStartMs).startOf('day');
 
     for (const lb of liabilityBalances) {
       const acc = lb.account;
@@ -90,6 +90,7 @@ export class LiabilityFlowGenerator {
               source: 'LIABILITY',
               label: obligation.label,
               referenceId: acc.id,
+              allowCascade: !metadata?.payFromAccountId,
             },
           });
         }
@@ -114,7 +115,8 @@ export class LiabilityFlowGenerator {
     const statementDay = metadata?.statementDay;
 
     // Use metadata.paymentMode or fallback to configured defaults
-    const paymentMode = metadata?.paymentMode || 'FULL';
+    const isMinMode = metadata?.minPaymentOnly || metadata?.paymentMode === 'MIN';
+    const paymentModeLabel = isMinMode ? ' (Min)' : '';
 
     if (acc.accountSubtype === AccountSubtype.CREDIT_CARD && statementDay) {
       const cycles: { sDate: dayjs.Dayjs; dDate: dayjs.Dayjs; amount: number }[] = [];
@@ -130,6 +132,10 @@ export class LiabilityFlowGenerator {
         });
         currDDate = currDDate.add(1, 'month');
         currSDate = getCorrespondingStatementDate(currDDate, statementDay, dueDay);
+      }
+
+      if (cycles.length === 0) {
+        return obligations;
       }
 
       const firstCycle = cycles[0];
@@ -188,7 +194,7 @@ export class LiabilityFlowGenerator {
           let finalAmount = c.amount;
 
           // Apply MIN payment logic to future cycles too if applicable
-          if (metadata?.minPaymentOnly && i > 0) {
+          if (isMinMode && i > 0) {
             const absoluteMin = metadata?.minimumPaymentAmount || 0;
             const percentMin = metadata?.minimumPaymentPercent
               ? (c.amount * metadata.minimumPaymentPercent) / 100
@@ -205,7 +211,7 @@ export class LiabilityFlowGenerator {
               liabilityId: acc.id,
               amount: roundedAmount,
               dueDayOffset,
-              label: `${i === 0 ? 'Current bill' : 'Bill ' + (i + 1)}: ${acc.name}${paymentMode === 'MIN' ? ' (Min)' : ''}`,
+              label: `${i === 0 ? 'Current bill' : 'Bill ' + (i + 1)}: ${acc.name}${paymentModeLabel}`,
             });
           }
         }
@@ -222,6 +228,8 @@ export class LiabilityFlowGenerator {
       }
 
       const rawEmiAmount = metadata?.emiAmount;
+      // If no explicit EMI amount is provided, we treat the entire remaining balance as a single obligation
+      // on the next due date, matching legacy behavior.
       const emiAmount = rawEmiAmount || remainingBalance;
 
       while (currDDate.diff(startOfToday, 'day') < simulationDays && remainingBalance > 0.01) {

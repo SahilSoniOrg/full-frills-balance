@@ -754,12 +754,14 @@ describe('CashFlowSimulationServiceV2 scenario coverage', () => {
       ],
       4: [{ account: cc, balance: 0 }],
       7: [cash, cc, dining],
+      9: 60, // simulationDays must be large enough to catch the May 15th bill (44 days out)
     } as any);
 
     const liabilityFlows = result.allFlows.filter(flow => flow.meta?.source === 'LIABILITY');
 
     // We expect an obligation on May 15th (dayOffset approx 44) for $200
     const mayBill = liabilityFlows.find(f => f.dayOffset > 40);
+
     expect(mayBill).toMatchObject({
       amount: 200,
       accountId: 'cash',

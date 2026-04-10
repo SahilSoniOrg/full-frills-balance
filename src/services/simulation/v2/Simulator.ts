@@ -11,6 +11,7 @@ export class Simulator {
     flows: Flow[],
     days: number,
     liquidAccountIds: Set<string>,
+    orderedLiquidAccountIds: string[] = [],
     startDayOffset: number = 0,
   ): SimulationResultV2 {
     const currentBalances = new Map(startingBalances);
@@ -49,7 +50,7 @@ export class Simulator {
       const todayOffset = startDayOffset + d;
       const todayFlows = flowByDay.get(todayOffset) || [];
 
-      todayFlows.forEach(f => this.applyFlow(currentBalances, f));
+      todayFlows.forEach(f => this.applyFlow(currentBalances, f, orderedLiquidAccountIds));
 
       // Update minimums
       for (const [id, bal] of currentBalances.entries()) {
@@ -91,7 +92,11 @@ export class Simulator {
     };
   }
 
-  private static applyFlow(balances: Map<string, number>, flow: Flow) {
+  private static applyFlow(
+    balances: Map<string, number>,
+    flow: Flow,
+    orderedLiquidAccountIds: string[],
+  ) {
     if (flow.amount < 0) {
       throw new Error(`Negative flow amount detected for ${flow.meta?.label || 'unlabeled flow'}`);
     }
@@ -104,7 +109,35 @@ export class Simulator {
       }
       case 'OUTFLOW': {
         const current = balances.get(flow.accountId) || 0;
-        balances.set(flow.accountId, current - flow.amount);
+
+        if (flow.meta?.allowCascade && current < flow.amount) {
+          // Consume what we can from the primary account (down to 0, not below)
+          const primaryDeduction = Math.min(Math.max(0, current), flow.amount);
+          balances.set(flow.accountId, current - primaryDeduction);
+
+          let remainingAmount = flow.amount - primaryDeduction;
+
+          // Cascade through ordered liquid accounts
+          for (const fallbackId of orderedLiquidAccountIds) {
+            if (remainingAmount <= 0.01) break;
+            if (fallbackId === flow.accountId) continue;
+
+            const fallbackBalance = balances.get(fallbackId) || 0;
+            if (fallbackBalance > 0) {
+              const deduction = Math.min(fallbackBalance, remainingAmount);
+              balances.set(fallbackId, fallbackBalance - deduction);
+              remainingAmount -= deduction;
+            }
+          }
+
+          // If still remaining, force it on the primary account to take it negative
+          if (remainingAmount > 0.01) {
+            const finalPrimaryBalance = balances.get(flow.accountId) || 0;
+            balances.set(flow.accountId, finalPrimaryBalance - remainingAmount);
+          }
+        } else {
+          balances.set(flow.accountId, current - flow.amount);
+        }
         break;
       }
       case 'TRANSFER': {

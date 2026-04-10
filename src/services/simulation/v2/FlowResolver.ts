@@ -32,41 +32,79 @@ export class FlowResolver {
       );
 
       const matchedPlanned = new Set<Flow>();
-      const budgetsByReference = new Map<string, Extract<Flow, { kind: 'OUTFLOW' }>[]>();
+      const allBudgetCategoryIds = new Set<string>();
+      const groupedBudgets = new Map<
+        string,
+        {
+          flows: Extract<Flow, { kind: 'OUTFLOW' }>[];
+          categoryIds: Set<string>;
+          plannedMatches: Flow[];
+        }
+      >();
 
       for (const budgetFlow of budgetFlows) {
         const budgetId = budgetFlow.meta?.referenceId || `${budgetFlow.dayOffset}-budget`;
-        const group = budgetsByReference.get(budgetId) || [];
-        group.push(budgetFlow);
-        budgetsByReference.set(budgetId, group);
+        const group = groupedBudgets.get(budgetId) || {
+          flows: [],
+          categoryIds: new Set(),
+          plannedMatches: [],
+        };
+        group.flows.push(budgetFlow);
+
+        const cats = budgetFlow.meta?.categoryIds?.length
+          ? budgetFlow.meta.categoryIds
+          : budgetFlow.meta?.categoryId
+            ? [budgetFlow.meta.categoryId]
+            : [];
+
+        cats.forEach(c => {
+          group.categoryIds.add(c);
+          allBudgetCategoryIds.add(c);
+        });
+
+        groupedBudgets.set(budgetId, group);
       }
 
-      for (const budgetGroup of budgetsByReference.values()) {
-        const categoryIds = new Set(
-          budgetGroup.flatMap(flow =>
-            flow.meta?.categoryIds?.length
-              ? flow.meta.categoryIds
-              : flow.meta?.categoryId
-                ? [flow.meta.categoryId]
-                : [],
-          ),
-        );
-
+      // Pass 1: Strict Category Match
+      for (const group of groupedBudgets.values()) {
         const matchingPlanned = plannedFlows.filter(flow => {
           if (matchedPlanned.has(flow)) return false;
           const categoryId = flow.meta?.categoryId;
-          return !!categoryId && categoryIds.has(categoryId);
+          return !!categoryId && group.categoryIds.has(categoryId);
         });
+        group.plannedMatches = matchingPlanned;
+        matchingPlanned.forEach(flow => matchedPlanned.add(flow));
+      }
 
-        if (matchingPlanned.length === 0) {
-          resolved.push(...budgetGroup);
+      // Pass 2: Broad Fallback
+      const broadFallbackPlanned = plannedFlows.filter(flow => {
+        if (matchedPlanned.has(flow)) return false;
+        const categoryId = flow.meta?.categoryId;
+        return !!categoryId && allBudgetCategoryIds.has(categoryId);
+      });
+      broadFallbackPlanned.forEach(flow => matchedPlanned.add(flow));
+      let remainingFallback = broadFallbackPlanned.reduce((sum, f) => sum + f.amount, 0);
+
+      // Resolution Phase
+      for (const group of groupedBudgets.values()) {
+        const matchingPlanned = group.plannedMatches;
+        let budgetTotal = group.flows.reduce((sum, flow) => sum + flow.amount, 0);
+        let plannedTotal = matchingPlanned.reduce((sum, flow) => sum + flow.amount, 0);
+
+        if (remainingFallback > 0.01 && budgetTotal > plannedTotal) {
+          const capacity = budgetTotal - plannedTotal;
+          const usedFallback = Math.min(capacity, remainingFallback);
+          plannedTotal += usedFallback;
+          remainingFallback -= usedFallback;
+        }
+
+        if (plannedTotal === 0 && matchingPlanned.length === 0) {
+          resolved.push(...group.flows);
           continue;
         }
 
-        const budgetTotal = budgetGroup.reduce((sum, flow) => sum + flow.amount, 0);
-        const plannedTotal = matchingPlanned.reduce((sum, flow) => sum + flow.amount, 0);
         const isPlannedHigher = plannedTotal >= budgetTotal;
-        const template = isPlannedHigher ? matchingPlanned[0] : budgetGroup[0];
+        const template = isPlannedHigher ? matchingPlanned[0] : group.flows[0];
         const effectiveAmount = Math.max(budgetTotal, plannedTotal);
 
         const resolvedFlow: Flow = {
@@ -83,8 +121,9 @@ export class FlowResolver {
         } as Flow;
 
         resolved.push(resolvedFlow);
-        matchingPlanned.forEach(flow => matchedPlanned.add(flow));
       }
+
+      broadFallbackPlanned.forEach(flow => resolved.push(flow));
 
       plannedFlows
         .filter(flow => !matchedPlanned.has(flow))
