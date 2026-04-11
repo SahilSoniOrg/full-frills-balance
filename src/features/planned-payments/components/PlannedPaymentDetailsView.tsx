@@ -1,6 +1,14 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { AppButton, AppCard, AppIcon, AppText, Badge, IconName, IvyIcon } from '@/src/components/core';
+import {
+  AppButton,
+  AppCard,
+  AppIcon,
+  AppText,
+  Badge,
+  IconName,
+  IvyIcon,
+} from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
@@ -12,361 +20,403 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
-    const {
-        theme,
-        isLoading,
-        isMissing,
-        onBack,
-        title,
-        amountText,
-        nameText,
-        statusLabel,
-        statusVariant,
-        typeLabel,
-        typeColorKey,
-        iconName,
-        intervalLabel,
-        nextOccurrenceText,
-        isAutoPost,
-        fromAccount,
-        toAccount,
-        history,
-        headerActions,
-        onPost,
-        onSkip,
-        onToggleStatus,
-    } = vm;
+  const {
+    theme,
+    isLoading,
+    isMissing,
+    onBack,
+    title,
+    amountText,
+    nameText,
+    statusLabel,
+    statusVariant,
+    typeLabel,
+    typeColorKey,
+    iconName,
+    intervalLabel,
+    nextOccurrenceText,
+    isAutoPost,
+    fromAccount,
+    toAccount,
+    history,
+    headerActions,
+    onPost,
+    onSkip,
+    onToggleStatus,
+  } = vm;
 
-    if (isLoading) {
-        return (
-            <Screen title="Details">
-                <View style={styles.center}><AppText variant="body">{AppConfig.strings.common.loading}</AppText></View>
-            </Screen>
-        );
-    }
-
-    if (isMissing) {
-        return (
-            <Screen title="Details">
-                <View style={styles.center}>
-                    <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
-                    <AppText variant="subheading" style={{ marginTop: Spacing.md }}>Planned Payment not found</AppText>
-                    <AppButton
-                        variant="ghost"
-                        onPress={onBack}
-                        style={{ marginTop: Spacing.lg }}
-                    >
-                        Go Back
-                    </AppButton>
-                </View>
-            </Screen>
-        );
-    }
-
-    const headerActionsNode = (
-        <ScreenHeaderActions
-            actions={[
-                {
-                    name: 'edit',
-                    onPress: headerActions?.onEdit,
-                    iconColor: theme.text,
-                    size: Typography.sizes.xl,
-                    testID: 'edit-button',
-                },
-                {
-                    name: 'delete',
-                    onPress: headerActions?.onDelete,
-                    iconColor: theme.error,
-                    size: Typography.sizes.xl,
-                    testID: 'delete-button',
-                },
-            ]}
-        />
-    );
-
-    const accentColor = theme[typeColorKey as keyof typeof theme] as string;
-
+  if (isLoading) {
     return (
-        <Screen
-            title={title}
-            showBack={true}
-            headerActions={headerActionsNode}
-            scrollable
-            withPadding
-        >
-            <View style={styles.content}>
-                <AppCard elevation="md" radius="r2" padding="lg" style={styles.detailsCard}>
-                    <View style={styles.accountHeader}>
-                        <View style={[styles.bigIcon, { backgroundColor: withOpacity(accentColor, Opacity.soft) }]}>
-                            <AppIcon name={iconName as IconName} size={32} color={accentColor} />
-                        </View>
-                        <View style={styles.titleInfo}>
-                            <AppText variant="title" style={{ fontSize: Typography.sizes.xl, marginBottom: Spacing.xs }}>
-                                {nameText}
-                            </AppText>
-                            <View style={styles.badgesRow}>
-                                <Badge variant={statusVariant as any} size="sm">
-                                    {statusLabel}
-                                </Badge>
-                                <Badge variant="default" size="sm">
-                                    {typeLabel}
-                                </Badge>
-                                {isAutoPost && (
-                                    <Badge variant="success" size="sm">
-                                        AUTO-POST
-                                    </Badge>
-                                )}
-                            </View>
-                        </View>
-                    </View>
-
-                    <View style={styles.accountStats}>
-                        <View style={styles.statItem}>
-                            <AppText variant="caption" color="secondary">
-                                Amount Next
-                            </AppText>
-                            <AppText variant="heading">
-                                {amountText}
-                            </AppText>
-                        </View>
-                        <View style={styles.statItem}>
-                            <AppText variant="caption" color="secondary">
-                                Date Next
-                            </AppText>
-                            <AppText variant="subheading">
-                                {nextOccurrenceText}
-                            </AppText>
-                        </View>
-                    </View>
-
-                    <View style={[styles.accountStats, { paddingTop: 0 }]}>
-                        <View style={styles.statItem}>
-                            <AppText variant="caption" color="secondary">
-                                Recurrence
-                            </AppText>
-                            <AppText variant="subheading">
-                                {intervalLabel}
-                            </AppText>
-                        </View>
-                    </View>
-
-                    <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-
-                    <View style={styles.flowSection}>
-                        <AppText variant="caption" color="secondary" style={styles.flowTitle}>
-                            ACCOUNT FLOW
-                        </AppText>
-                        <View style={styles.accountRow}>
-                            <View style={styles.accountInfo}>
-                                <IvyIcon
-                                    name={fromAccount?.icon}
-                                    fallbackIcon="wallet"
-                                    label={fromAccount?.name}
-                                    color={theme[getAccountTypeVariant(fromAccount?.accountType) as keyof typeof theme] as string || theme.text}
-                                    size={Size.avatarMd}
-                                    shape="circle"
-                                />
-                                <AppText variant="body" weight="bold" numberOfLines={1} style={styles.accountNameLeft}>
-                                    {fromAccount?.name || AppConfig.strings.common.loading}
-                                </AppText>
-                            </View>
-                            <View style={styles.arrowContainer}>
-                                <Ionicons name="arrow-forward" size={16} color={theme.textTertiary} />
-                            </View>
-                            <View style={[styles.accountInfo, { justifyContent: 'flex-end' }]}>
-                                <AppText variant="body" weight="bold" align="right" numberOfLines={1} style={styles.accountNameRight}>
-                                    {toAccount?.name || AppConfig.strings.common.loading}
-                                </AppText>
-                                <IvyIcon
-                                    name={toAccount?.icon}
-                                    fallbackIcon="wallet"
-                                    label={toAccount?.name}
-                                    color={theme[getAccountTypeVariant(toAccount?.accountType) as keyof typeof theme] as string || theme.text}
-                                    size={Size.avatarMd}
-                                    shape="circle"
-                                />
-                            </View>
-                        </View>
-                    </View>
-                </AppCard>
-
-                <View style={styles.actionsContainer}>
-                    <AppButton
-                        variant="primary"
-                        onPress={onPost}
-                        style={{ width: '100%', marginBottom: Spacing.md }}
-                    >
-                        <View style={styles.buttonInner}>
-                            <AppIcon name="check" size={18} color={theme.onPrimary} />
-                            <AppText variant="body" weight="bold" style={{ marginLeft: Spacing.sm, color: theme.onPrimary }}>
-                                Post Next Occurrence
-                            </AppText>
-                        </View>
-                    </AppButton>
-
-                    <View style={styles.actionsRow}>
-                        <AppButton
-                            variant="outline"
-                            onPress={onSkip}
-                            style={{ flex: 1 }}
-                        >
-                            <View style={styles.buttonInner}>
-                                <AppIcon name="close" size={18} color={theme.text} />
-                                <AppText variant="body" weight="bold" style={{ marginLeft: Spacing.sm }}>
-                                    Skip Next
-                                </AppText>
-                            </View>
-                        </AppButton>
-
-                        <View style={{ width: Spacing.md }} />
-
-                        <AppButton
-                            variant="secondary"
-                            onPress={onToggleStatus}
-                            style={{ flex: 1 }}
-                        >
-                            <View style={styles.buttonInner}>
-                                <AppIcon name={statusLabel === 'ACTIVE' ? 'pause' : 'play'} size={16} color={theme.text} />
-                                <AppText variant="body" weight="semibold" style={{ marginLeft: Spacing.sm }}>
-                                    {statusLabel === 'ACTIVE' ? 'Pause' : 'Resume'}
-                                </AppText>
-                            </View>
-                        </AppButton>
-                    </View>
-                </View>
-
-                <ScreenSectionHeader title="History" style={styles.sectionTitle} />
-                {history?.length === 0 ? (
-                    <AppCard padding="lg" style={styles.emptyHistory} radius="r2">
-                        <AppText color="secondary" style={{ textAlign: 'center' }}>No transactions generated yet.</AppText>
-                    </AppCard>
-                ) : (
-                    <View style={styles.historyList}>
-                        {history?.map((journal: any) => (
-                            <PlannedPaymentHistoryCard
-                                key={journal.id}
-                                journalId={journal.id}
-                                journalTitle={journal.description || 'Transaction'}
-                                journalAmount={journal.totalAmount}
-                                currencyCode={journal.currencyCode}
-                                journalDate={journal.journalDate}
-                                plannedAmount={vm.rawAmount ?? 0}
-                                plannedTitle={vm.rawName ?? ''}
-                                presentation={{
-                                    label: journal.status === 'PLANNED' ? 'Scheduled' : (journal.status === 'SKIPPED' ? 'Skipped' : 'Posted'),
-                                    typeIcon: journal.displayType === 'INCOME' ? 'arrowUp' : (journal.displayType === 'EXPENSE' ? 'arrowDown' : 'swapHorizontal'),
-                                    typeColor: (journal.status === 'PLANNED' || journal.status === 'SKIPPED') ? 'textSecondary' : (journal.displayType === 'INCOME' ? 'income' : (journal.displayType === 'EXPENSE' ? 'expense' : 'transfer')),
-                                }}
-                                onPress={() => AppNavigation.toTransactionDetails(journal.id)}
-                            />
-                        ))}
-                    </View>
-                )}
-            </View>
-        </Screen>
+      <Screen title="Details">
+        <View style={styles.center}>
+          <AppText variant="body">{AppConfig.strings.common.loading}</AppText>
+        </View>
+      </Screen>
     );
+  }
+
+  if (isMissing) {
+    return (
+      <Screen title="Details">
+        <View style={styles.center}>
+          <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
+          <AppText variant="subheading" style={{ marginTop: Spacing.md }}>
+            Planned Payment not found
+          </AppText>
+          <AppButton variant="ghost" onPress={onBack} style={{ marginTop: Spacing.lg }}>
+            Go Back
+          </AppButton>
+        </View>
+      </Screen>
+    );
+  }
+
+  const headerActionsNode = (
+    <ScreenHeaderActions
+      actions={[
+        {
+          name: 'edit',
+          onPress: headerActions?.onEdit,
+          iconColor: theme.text,
+          size: Typography.sizes.xl,
+          testID: 'edit-button',
+        },
+        {
+          name: 'delete',
+          onPress: headerActions?.onDelete,
+          iconColor: theme.error,
+          size: Typography.sizes.xl,
+          testID: 'delete-button',
+        },
+      ]}
+    />
+  );
+
+  const accentColor = theme[typeColorKey as keyof typeof theme] as string;
+
+  return (
+    <Screen title={title} showBack={true} headerActions={headerActionsNode} scrollable withPadding>
+      <View style={styles.content}>
+        <AppCard elevation="md" radius="r2" padding="lg" style={styles.detailsCard}>
+          <View style={styles.accountHeader}>
+            <View
+              style={[styles.bigIcon, { backgroundColor: withOpacity(accentColor, Opacity.soft) }]}
+            >
+              <AppIcon name={iconName as IconName} size={32} color={accentColor} />
+            </View>
+            <View style={styles.titleInfo}>
+              <AppText
+                variant="title"
+                style={{ fontSize: Typography.sizes.xl, marginBottom: Spacing.xs }}
+              >
+                {nameText}
+              </AppText>
+              <View style={styles.badgesRow}>
+                <Badge variant={statusVariant as any} size="sm">
+                  {statusLabel}
+                </Badge>
+                <Badge variant="default" size="sm">
+                  {typeLabel}
+                </Badge>
+                {isAutoPost && (
+                  <Badge variant="success" size="sm">
+                    AUTO-POST
+                  </Badge>
+                )}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.accountStats}>
+            <View style={styles.statItem}>
+              <AppText variant="caption" color="secondary">
+                Amount Next
+              </AppText>
+              <AppText variant="heading">{amountText}</AppText>
+            </View>
+            <View style={styles.statItem}>
+              <AppText variant="caption" color="secondary">
+                Date Next
+              </AppText>
+              <AppText variant="subheading">{nextOccurrenceText}</AppText>
+            </View>
+          </View>
+
+          <View style={[styles.accountStats, { paddingTop: 0 }]}>
+            <View style={styles.statItem}>
+              <AppText variant="caption" color="secondary">
+                Recurrence
+              </AppText>
+              <AppText variant="subheading">{intervalLabel}</AppText>
+            </View>
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+
+          <View style={styles.flowSection}>
+            <AppText variant="caption" color="secondary" style={styles.flowTitle}>
+              ACCOUNT FLOW
+            </AppText>
+            <View style={styles.accountRow}>
+              <View style={styles.accountInfo}>
+                <IvyIcon
+                  name={fromAccount?.icon}
+                  fallbackIcon="wallet"
+                  label={fromAccount?.name}
+                  color={
+                    (theme[
+                      getAccountTypeVariant(fromAccount?.accountType) as keyof typeof theme
+                    ] as string) || theme.text
+                  }
+                  size={Size.avatarMd}
+                  shape="circle"
+                />
+                <AppText
+                  variant="body"
+                  weight="bold"
+                  numberOfLines={1}
+                  style={styles.accountNameLeft}
+                >
+                  {fromAccount?.name || AppConfig.strings.common.loading}
+                </AppText>
+              </View>
+              <View style={styles.arrowContainer}>
+                <Ionicons name="arrow-forward" size={16} color={theme.textTertiary} />
+              </View>
+              <View style={[styles.accountInfo, { justifyContent: 'flex-end' }]}>
+                <AppText
+                  variant="body"
+                  weight="bold"
+                  align="right"
+                  numberOfLines={1}
+                  style={styles.accountNameRight}
+                >
+                  {toAccount?.name || AppConfig.strings.common.loading}
+                </AppText>
+                <IvyIcon
+                  name={toAccount?.icon}
+                  fallbackIcon="wallet"
+                  label={toAccount?.name}
+                  color={
+                    (theme[
+                      getAccountTypeVariant(toAccount?.accountType) as keyof typeof theme
+                    ] as string) || theme.text
+                  }
+                  size={Size.avatarMd}
+                  shape="circle"
+                />
+              </View>
+            </View>
+          </View>
+        </AppCard>
+
+        <View style={styles.actionsContainer}>
+          <AppButton
+            variant="primary"
+            onPress={onPost}
+            style={{ width: '100%', marginBottom: Spacing.md }}
+          >
+            <View style={styles.buttonInner}>
+              <AppIcon name="check" size={18} color={theme.onPrimary} />
+              <AppText
+                variant="body"
+                weight="bold"
+                style={{ marginLeft: Spacing.sm, color: theme.onPrimary }}
+              >
+                Post Next Occurrence
+              </AppText>
+            </View>
+          </AppButton>
+
+          <View style={styles.actionsRow}>
+            <AppButton variant="outline" onPress={onSkip} style={{ flex: 1 }}>
+              <View style={styles.buttonInner}>
+                <AppIcon name="close" size={18} color={theme.text} />
+                <AppText variant="body" weight="bold" style={{ marginLeft: Spacing.sm }}>
+                  Skip Next
+                </AppText>
+              </View>
+            </AppButton>
+
+            <View style={{ width: Spacing.md }} />
+
+            <AppButton variant="secondary" onPress={onToggleStatus} style={{ flex: 1 }}>
+              <View style={styles.buttonInner}>
+                <AppIcon
+                  name={statusLabel === 'ACTIVE' ? 'pause' : 'play'}
+                  size={16}
+                  color={theme.text}
+                />
+                <AppText variant="body" weight="semibold" style={{ marginLeft: Spacing.sm }}>
+                  {statusLabel === 'ACTIVE' ? 'Pause' : 'Resume'}
+                </AppText>
+              </View>
+            </AppButton>
+          </View>
+        </View>
+
+        <ScreenSectionHeader title="History" style={styles.sectionTitle} />
+        {history?.length === 0 ? (
+          <AppCard padding="lg" style={styles.emptyHistory} radius="r2">
+            <AppText color="secondary" style={{ textAlign: 'center' }}>
+              No transactions generated yet.
+            </AppText>
+          </AppCard>
+        ) : (
+          <View style={styles.historyList}>
+            {history?.map((journal: any) => {
+              const isOverdue =
+                journal.status === 'PLANNED' &&
+                new Date(journal.journalDate).setHours(0, 0, 0, 0) <
+                  new Date().setHours(0, 0, 0, 0);
+
+              let label = 'Posted';
+              if (journal.status === 'PLANNED') label = 'Scheduled';
+              if (journal.status === 'SKIPPED') label = 'Skipped';
+
+              let typeColor = 'textSecondary';
+              if (journal.status === 'PLANNED') typeColor = isOverdue ? 'error' : 'textSecondary';
+              else if (journal.status === 'SKIPPED') typeColor = 'textSecondary';
+              else
+                typeColor =
+                  journal.displayType === 'INCOME'
+                    ? 'income'
+                    : journal.displayType === 'EXPENSE'
+                      ? 'expense'
+                      : 'transfer';
+
+              return (
+                <PlannedPaymentHistoryCard
+                  key={journal.id}
+                  journalId={journal.id}
+                  journalTitle={journal.description || 'Transaction'}
+                  journalAmount={journal.totalAmount}
+                  currencyCode={journal.currencyCode}
+                  journalDate={journal.journalDate}
+                  plannedAmount={vm.rawAmount ?? 0}
+                  plannedTitle={vm.rawName ?? ''}
+                  presentation={{
+                    label,
+                    typeIcon:
+                      journal.displayType === 'INCOME'
+                        ? 'arrowUp'
+                        : journal.displayType === 'EXPENSE'
+                          ? 'arrowDown'
+                          : 'swapHorizontal',
+                    typeColor,
+                  }}
+                  isOverdue={isOverdue}
+                  onPress={() => AppNavigation.toTransactionDetails(journal.id)}
+                />
+              );
+            })}
+          </View>
+        )}
+      </View>
+    </Screen>
+  );
 }
 
 const styles = StyleSheet.create({
-    center: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    content: {
-        paddingVertical: Spacing.lg,
-    },
-    detailsCard: {
-        width: '100%',
-        padding: Spacing.lg,
-        marginBottom: Spacing.lg,
-    },
-    accountHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: Spacing.md,
-    },
-    bigIcon: {
-        width: Size.avatarLg,
-        height: Size.avatarLg,
-        borderRadius: Shape.radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    titleInfo: {
-        marginLeft: Spacing.md,
-        flex: 1,
-    },
-    badgesRow: {
-        flexDirection: 'row',
-        gap: Spacing.xs,
-        alignItems: 'center',
-        flexWrap: 'wrap',
-    },
-    accountStats: {
-        flexDirection: 'row',
-        gap: Spacing.xl,
-        paddingVertical: Spacing.sm,
-    },
-    statItem: {
-        flex: 1,
-    },
-    divider: {
-        height: 1,
-        marginVertical: Spacing.md,
-    },
-    flowTitle: {
-        marginBottom: Spacing.md,
-    },
-    flowSection: {
-        marginTop: Spacing.xs,
-    },
-    accountRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    accountInfo: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-    },
-    accountNameLeft: {
-        flex: 1,
-        marginLeft: Spacing.xs,
-    },
-    accountNameRight: {
-        flex: 1,
-        marginRight: Spacing.xs,
-    },
-    arrowContainer: {
-        paddingHorizontal: Spacing.xs,
-    },
-    actionsContainer: {
-        marginBottom: Spacing.xl,
-        paddingHorizontal: Spacing.sm,
-    },
-    actionsRow: {
-        flexDirection: 'row',
-        gap: Spacing.md,
-    },
-    buttonInner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    sectionTitle: {
-        marginHorizontal: Spacing.sm,
-        marginBottom: Spacing.md,
-    },
-    historyList: {
-        marginBottom: Spacing.lg,
-    },
-    emptyHistory: {
-        marginBottom: Spacing.lg,
-        borderStyle: 'dashed',
-        borderWidth: 1,
-        borderColor: withOpacity('#000', 0.1),
-    },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    paddingVertical: Spacing.lg,
+  },
+  detailsCard: {
+    width: '100%',
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  accountHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  bigIcon: {
+    width: Size.avatarLg,
+    height: Size.avatarLg,
+    borderRadius: Shape.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleInfo: {
+    marginLeft: Spacing.md,
+    flex: 1,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  accountStats: {
+    flexDirection: 'row',
+    gap: Spacing.xl,
+    paddingVertical: Spacing.sm,
+  },
+  statItem: {
+    flex: 1,
+  },
+  divider: {
+    height: 1,
+    marginVertical: Spacing.md,
+  },
+  flowTitle: {
+    marginBottom: Spacing.md,
+  },
+  flowSection: {
+    marginTop: Spacing.xs,
+  },
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  accountInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  accountNameLeft: {
+    flex: 1,
+    marginLeft: Spacing.xs,
+  },
+  accountNameRight: {
+    flex: 1,
+    marginRight: Spacing.xs,
+  },
+  arrowContainer: {
+    paddingHorizontal: Spacing.xs,
+  },
+  actionsContainer: {
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.sm,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  buttonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    marginHorizontal: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  historyList: {
+    marginBottom: Spacing.lg,
+  },
+  emptyHistory: {
+    marginBottom: Spacing.lg,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: withOpacity('#000', 0.1),
+  },
 });

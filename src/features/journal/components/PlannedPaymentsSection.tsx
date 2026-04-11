@@ -57,6 +57,10 @@ export function PlannedPaymentsSection({
               month: 'short',
               day: 'numeric',
             });
+            const isOverdue =
+              new Date(mapped.transactionDate).setHours(0, 0, 0, 0) <
+              new Date().setHours(0, 0, 0, 0);
+
             const amountStr = isPrivacyMode
               ? '••••'
               : CurrencyFormatter.format(mapped.amount, mapped.currencyCode, {
@@ -75,7 +79,10 @@ export function PlannedPaymentsSection({
                 activeOpacity={0.7}
               >
                 <View style={styles.left}>
-                  <AppText variant="body" color="secondary">
+                  <AppText
+                    variant="body"
+                    style={{ color: isOverdue ? theme.error : theme.textSecondary }}
+                  >
                     {dateStr} — {mapped.title}
                   </AppText>
                 </View>
