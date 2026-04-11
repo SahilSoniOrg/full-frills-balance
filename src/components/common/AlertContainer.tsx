@@ -87,6 +87,7 @@ export function AlertContainer() {
           variant: payload.destructive ? 'destructive' : 'primary',
         }}
         message={<AppText>{payload.message}</AppText>}
+        requiredConfirmationValue={payload.requiredConfirmationValue}
         useNativeModal={false}
       />
     );

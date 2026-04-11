@@ -368,14 +368,16 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     onOpenSmsInbox: smsInfo?.inboxRecordId ? AppNavigation.toSmsInbox : undefined,
     onPost: journalInfo?.status === 'PLANNED' ? handlePost : undefined,
     onRevertToScheduled:
-      journalInfo?.status === 'POSTED' || journalInfo?.status === 'SKIPPED'
+      (journalInfo?.status === 'POSTED' || journalInfo?.status === 'SKIPPED') &&
+      !!journalInfo?.plannedPaymentId
         ? handleRevertToScheduled
         : undefined,
     revertButtonLabel:
       journalInfo?.status === 'SKIPPED'
         ? 'Unskip (Revert to Scheduled)'
         : 'Unpost (Revert to Scheduled)',
-    onSkip: journalInfo?.status === 'PLANNED' ? handleSkip : undefined,
+    onSkip:
+      journalInfo?.status === 'PLANNED' && !!journalInfo?.plannedPaymentId ? handleSkip : undefined,
     splitItems,
     isExpense,
     displayIcon: (paramTypeIcon as IconName) || (isExpense ? 'receipt' : 'receiptLong'),

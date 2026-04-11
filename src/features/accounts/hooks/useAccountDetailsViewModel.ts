@@ -15,7 +15,7 @@ import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { AccountBalance, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
+import { confirm, showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -350,16 +350,35 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       ? `This account has ${transactionCount} transaction(s). Deleting it will orphan these transactions. Are you sure?`
       : 'Are you sure you want to delete this account? This action cannot be undone.';
 
-    showConfirmationAlert('Delete Account', message, async () => {
-      try {
-        await deleteAccount(account);
-        toast.success('Account has been deleted.');
-        AppNavigation.toAccounts();
-      } catch (error) {
-        logger.error('Failed to delete account:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        showErrorAlert(`Could not delete account: ${errorMessage}`);
-      }
+    confirm.show({
+      title: 'Delete Account',
+      message,
+      destructive: true,
+      requiredConfirmationValue: account.name,
+      onConfirm: async () => {
+        try {
+          await deleteAccount(account);
+          toast.success('Account has been deleted.', {
+            action: {
+              label: 'Undo',
+              onPress: async () => {
+                try {
+                  await recoverAction(accountId);
+                  toast.success('Account restored.');
+                } catch (err) {
+                  logger.error('Failed to undo deletion:', err);
+                  showErrorAlert('Could not restore account');
+                }
+              },
+            },
+          });
+          AppNavigation.toAccounts();
+        } catch (error) {
+          logger.error('Failed to delete account:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          showErrorAlert(`Could not delete account: ${errorMessage}`);
+        }
+      },
     });
   }, [account, deleteAccount, transactionCount]);
 

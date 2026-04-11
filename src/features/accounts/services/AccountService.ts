@@ -255,7 +255,7 @@ export class AccountService {
   }
 
   async recoverAccount(accountId: string): Promise<void> {
-    const account = await accountRepository.find(accountId);
+    const account = await accountRepository.findWithDeleted(accountId);
     if (!account) return;
 
     await accountRepository.update(account, { deletedAt: undefined } as any);

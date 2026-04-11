@@ -150,6 +150,14 @@ export class AccountRepository {
     }
   }
 
+  async findWithDeleted(id: string): Promise<Account | null> {
+    try {
+      return await this.accounts.find(id);
+    } catch {
+      return null;
+    }
+  }
+
   async findMetadata(accountId: string): Promise<AccountMetadata | null> {
     try {
       const records = await this.metadata.query(Q.where('account_id', accountId)).fetch();

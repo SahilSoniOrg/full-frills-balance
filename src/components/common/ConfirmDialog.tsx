@@ -1,5 +1,5 @@
-import { AppButton, AppText } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { AppButton, AppInput, AppText } from '@/src/components/core';
+import { Spacing } from '@/src/constants';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ModalSurface } from './ModalSurface';
@@ -20,6 +20,7 @@ interface ConfirmDialogProps {
   secondaryAction?: ConfirmDialogAction;
   accessibilityCloseLabel?: string;
   useNativeModal?: boolean;
+  requiredConfirmationValue?: string;
 }
 
 export function ConfirmDialog({
@@ -32,7 +33,30 @@ export function ConfirmDialog({
   secondaryAction,
   accessibilityCloseLabel,
   useNativeModal = true,
+  requiredConfirmationValue,
 }: ConfirmDialogProps) {
+  const [inputValue, setInputValue] = React.useState('');
+  const [error, setError] = React.useState<string | undefined>();
+
+  const isConfirmed =
+    !requiredConfirmationValue || inputValue.trim() === requiredConfirmationValue.trim();
+
+  // Reset input when visibility changes
+  React.useEffect(() => {
+    if (!visible) {
+      setInputValue('');
+      setError(undefined);
+    }
+  }, [visible]);
+
+  const handleConfirm = () => {
+    if (requiredConfirmationValue && inputValue.trim() !== requiredConfirmationValue.trim()) {
+      setError(`Please type exactly: ${requiredConfirmationValue}`);
+      return;
+    }
+    primaryAction.onPress();
+  };
+
   return (
     <ModalSurface
       visible={visible}
@@ -55,31 +79,66 @@ export function ConfirmDialog({
           ) : null}
           <AppButton
             variant={primaryAction.variant || 'primary'}
-            onPress={primaryAction.onPress}
+            onPress={handleConfirm}
             style={styles.actionButton}
+            disabled={!isConfirmed}
           >
             {primaryAction.label}
           </AppButton>
         </View>
       }
     >
-      {typeof message === 'string' ? <AppText>{message}</AppText> : message}
-      {children}
+      <View style={styles.content}>
+        {typeof message === 'string' ? <AppText>{message}</AppText> : message}
+
+        {requiredConfirmationValue && (
+          <View style={styles.confirmationContainer}>
+            <AppText variant="caption" color="secondary" style={styles.confirmationInstruction}>
+              Please type{' '}
+              <AppText variant="caption" weight="bold" color="text">
+                &quot;{requiredConfirmationValue}&quot;
+              </AppText>{' '}
+              to confirm.
+            </AppText>
+            <AppInput
+              value={inputValue}
+              onChangeText={text => {
+                setInputValue(text);
+                if (error) setError(undefined);
+              }}
+              placeholder={requiredConfirmationValue}
+              error={error}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        )}
+
+        {children}
+      </View>
     </ModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    gap: Spacing.md,
+  },
   footer: {
-    marginTop: Spacing.md,
     paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'transparent',
+    borderTopWidth: 0,
     flexDirection: 'row',
     gap: Spacing.sm,
   },
   actionButton: {
     flex: 1,
-    borderRadius: Shape.radius.full,
+  },
+  confirmationContainer: {
+    marginTop: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  confirmationInstruction: {
+    marginBottom: Spacing.xs,
   },
 });
