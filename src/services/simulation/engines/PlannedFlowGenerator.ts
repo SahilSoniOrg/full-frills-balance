@@ -126,13 +126,13 @@ export class PlannedFlowGenerator {
     for (const journal of plannedJournals) {
       const journalTxs = journalTransactionsMap.get(journal.id) || [];
       const occurrenceMs = journal.journalDate;
-      if (occurrenceMs < context.simulationStartMs || occurrenceMs > context.simulationEndMs + 1000)
-        continue;
+      const effectiveMs = Math.max(occurrenceMs, context.simulationStartMs);
+      if (effectiveMs > context.simulationEndMs + 1000) continue;
 
       const dayOffset = Math.floor(
-        (occurrenceMs - context.simulationStartMs) / (24 * 60 * 60 * 1000),
+        (effectiveMs - context.simulationStartMs) / (24 * 60 * 60 * 1000),
       );
-      if (dayOffset < 0 || dayOffset >= context.simulationDays) continue;
+      if (dayOffset >= context.simulationDays) continue;
 
       const liquidTxs = journalTxs.filter(
         tx =>
