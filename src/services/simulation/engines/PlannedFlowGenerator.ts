@@ -1,8 +1,10 @@
+import { AppConfig } from '@/src/constants/app-config';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { TransactionType } from '@/src/data/models/Transaction';
 import dayjs from 'dayjs';
-import { Flow, FlowMeta, SimulationContext } from '../types';
+import { Flow, FlowCategory, FlowSource, SimulationContext } from '../types';
+import { assertValidFlow } from '../utils/FlowInvariants';
 
 export class PlannedFlowGenerator {
   /**
@@ -39,8 +41,10 @@ export class PlannedFlowGenerator {
       let curr = pp.nextOccurrence;
       const endDate = pp.endDate || Infinity;
 
-      const simulationBufferMs = 1000 * 60 * 60; // 1-hour buffer for edge cases
-      while (curr <= context.simulationEndMs + simulationBufferMs && curr <= endDate) {
+      while (
+        curr <= context.simulationEndMs + AppConfig.defaults.simulation.edgeCaseBufferMs &&
+        curr <= endDate
+      ) {
         // Skip zero amount payments
         if (pp.amount <= 0) {
           curr = this.getNextOccurrence(curr, pp);
@@ -59,8 +63,7 @@ export class PlannedFlowGenerator {
           if (dayOffset >= context.simulationDays) break;
 
           const normalizedAmount = context.convert(pp.amount, pp.currencyCode);
-          const meta: FlowMeta = {
-            source: 'PLANNED',
+          const meta = {
             label: pp.name || 'Planned Payment',
             referenceId: pp.id,
             tags: isLiquidTo && !isLiquidFrom ? ['LIABILITY_PAYMENT'] : [],
@@ -73,7 +76,13 @@ export class PlannedFlowGenerator {
               toAccountId: pp.toAccountId,
               amount: normalizedAmount,
               dayOffset,
-              meta: { ...meta, categoryId: pp.toAccountId },
+              category: FlowCategory.TRANSFER,
+              timeframe: 'FUTURE',
+              label: pp.name || 'Planned Payment',
+              origin: FlowSource.PLANNED_PAYMENT,
+              referenceId: pp.id,
+              categoryId: pp.toAccountId,
+              meta: { tags: meta.tags },
             });
           } else if (isLiquidFrom) {
             flows.push({
@@ -81,7 +90,15 @@ export class PlannedFlowGenerator {
               accountId: pp.fromAccountId,
               amount: normalizedAmount,
               dayOffset,
-              meta: { ...meta, categoryId: pp.toAccountId },
+              category: meta.tags?.includes('LIABILITY_PAYMENT')
+                ? FlowCategory.DEBT
+                : FlowCategory.PLANNED_EXPENSE,
+              timeframe: 'FUTURE',
+              label: pp.name || 'Planned Payment',
+              origin: FlowSource.PLANNED_PAYMENT,
+              referenceId: pp.id,
+              categoryId: pp.toAccountId,
+              meta: { tags: meta.tags },
             });
           } else if (isLiquidTo) {
             flows.push({
@@ -89,7 +106,13 @@ export class PlannedFlowGenerator {
               accountId: pp.toAccountId,
               amount: normalizedAmount,
               dayOffset,
-              meta: { ...meta, categoryId: pp.fromAccountId },
+              category: FlowCategory.INCOME,
+              timeframe: 'FUTURE',
+              label: pp.name || 'Planned Payment',
+              origin: FlowSource.PLANNED_PAYMENT,
+              referenceId: pp.id,
+              categoryId: pp.fromAccountId,
+              meta: { tags: meta.tags },
             });
           }
         }
@@ -110,12 +133,6 @@ export class PlannedFlowGenerator {
         (occurrenceMs - context.simulationStartMs) / (24 * 60 * 60 * 1000),
       );
       if (dayOffset < 0 || dayOffset >= context.simulationDays) continue;
-
-      const meta: FlowMeta = {
-        source: 'PLANNED',
-        label: journal.description || 'Planned Journal',
-        referenceId: journal.id,
-      };
 
       const liquidTxs = journalTxs.filter(
         tx =>
@@ -141,11 +158,13 @@ export class PlannedFlowGenerator {
             toAccountId: debitTx.accountId,
             amount: context.convert(debitTx.amount, debitTx.currencyCode),
             dayOffset,
-            meta: {
-              ...meta,
-              categoryId: categoryId || debitTx.accountId,
-              tags: isLiabilityPayment ? ['LIABILITY_PAYMENT'] : [],
-            },
+            category: FlowCategory.TRANSFER,
+            timeframe: 'FUTURE',
+            label: journal.description || 'Planned Journal',
+            origin: FlowSource.PLANNED_JOURNAL,
+            referenceId: journal.id,
+            categoryId: categoryId || debitTx.accountId,
+            meta: { tags: isLiabilityPayment ? ['LIABILITY_PAYMENT'] : [] },
           });
           continue;
         }
@@ -162,7 +181,12 @@ export class PlannedFlowGenerator {
             accountId: tx.accountId,
             amount: normalizedAmount,
             dayOffset,
-            meta: { ...meta, categoryId },
+            category: FlowCategory.INCOME,
+            timeframe: 'FUTURE',
+            label: journal.description || 'Planned Journal',
+            origin: FlowSource.PLANNED_JOURNAL,
+            referenceId: journal.id,
+            categoryId: categoryId || undefined,
           });
         } else if (impact < 0) {
           flows.push({
@@ -170,12 +194,18 @@ export class PlannedFlowGenerator {
             accountId: tx.accountId,
             amount: normalizedAmount,
             dayOffset,
-            meta: { ...meta, categoryId },
+            category: FlowCategory.EXPENSE, // Generic journal outflows
+            timeframe: 'FUTURE',
+            label: journal.description || 'Planned Journal',
+            origin: FlowSource.PLANNED_JOURNAL,
+            referenceId: journal.id,
+            categoryId: categoryId || undefined,
           });
         }
       }
     }
 
+    flows.forEach(assertValidFlow);
     return { flows };
   }
 

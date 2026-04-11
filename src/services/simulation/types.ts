@@ -1,10 +1,22 @@
 import Account, { AccountSubtype } from '@/src/data/models/Account';
 
+export enum FlowCategory {
+  INCOME = 'INCOME',
+  BUDGET = 'BUDGET',
+  DEBT = 'DEBT',
+  TRANSFER = 'TRANSFER',
+  EXPENSE = 'EXPENSE',
+  PLANNED_EXPENSE = 'PLANNED_EXPENSE',
+}
+
+export type FlowTimeframe = 'PAST' | 'FUTURE';
+
 export enum FlowSource {
   BUDGET = 'BUDGET',
   PLANNED_PAYMENT = 'PLANNED_PAYMENT',
   PLANNED_JOURNAL = 'PLANNED_JOURNAL',
   LIABILITY = 'LIABILITY',
+  MANUAL = 'MANUAL',
 }
 
 export enum FlowType {
@@ -23,17 +35,48 @@ export enum DebtType {
 // --- Engine Internal Types ---
 
 export type FlowMeta = {
-  source: 'BUDGET' | 'PLANNED' | 'LIABILITY' | 'TRANSFER' | 'RESOLVED';
-  originalSource?: 'BUDGET' | 'PLANNED';
-  referenceId?: string;
-  categoryId?: string;
-  categoryIds?: string[];
-  label: string;
   tags?: string[];
   allowCascade?: boolean;
 };
 
 export type FlowKind = 'INFLOW' | 'OUTFLOW' | 'TRANSFER';
+
+export interface FlowBase {
+  amount: number;
+  dayOffset: number;
+  category: FlowCategory;
+  timeframe: FlowTimeframe;
+  label: string;
+  origin: FlowSource;
+  /**
+   * Uniquely identifies a logical financial obligation or event.
+   * Multiple flows can share the same referenceId if they represent different facets of the
+   * same event (e.g., a transfer with two sides, or a budget burn split across accounts).
+   * Uniqueness is enforced via: category + referenceId + dayOffset + kind + targetIdentity.
+   */
+  referenceId: string;
+  categoryId?: string;
+  resolvedFrom?: FlowSource;
+  meta?: FlowMeta;
+}
+
+export interface Inflow extends FlowBase {
+  kind: 'INFLOW';
+  accountId: string;
+}
+
+export interface Outflow extends FlowBase {
+  kind: 'OUTFLOW';
+  accountId: string;
+}
+
+export interface Transfer extends FlowBase {
+  kind: 'TRANSFER';
+  fromAccountId: string;
+  toAccountId: string;
+}
+
+export type Flow = Inflow | Outflow | Transfer;
 
 export interface SimulationContext {
   simulationStartMs: number;
@@ -50,30 +93,6 @@ export interface SimulationContext {
 export interface ISimulationEngine {
   generate(context: SimulationContext, previousFlows: Flow[]): Flow[];
 }
-
-export type Flow =
-  | {
-      kind: 'INFLOW';
-      accountId: string;
-      amount: number;
-      dayOffset: number;
-      meta?: FlowMeta;
-    }
-  | {
-      kind: 'OUTFLOW';
-      accountId: string;
-      amount: number;
-      dayOffset: number;
-      meta?: FlowMeta;
-    }
-  | {
-      kind: 'TRANSFER';
-      fromAccountId: string;
-      toAccountId: string;
-      amount: number;
-      dayOffset: number;
-      meta?: FlowMeta;
-    };
 
 export interface SimulationEngineResult {
   summary: {
@@ -164,9 +183,7 @@ export interface SimulationReport {
     totalPlannedOutflow: number;
     totalCommittedPlanned: number;
   };
-  income: IncomeEntry[];
-  committed: AccountCommitment[];
-  debt: DebtEntry[];
+  allFlows: Flow[];
   budget: {
     currentMonthRemaining: number;
     nextMonthProjected: number;

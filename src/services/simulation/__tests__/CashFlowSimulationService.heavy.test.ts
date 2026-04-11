@@ -3,6 +3,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
@@ -248,13 +249,13 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     );
 
     const bySource = result.allFlows!.reduce((map, flow) => {
-      const source = flow.meta?.source ?? 'UNKNOWN';
+      const source = flow.origin ?? 'UNKNOWN';
       map.set(source, (map.get(source) ?? 0) + 1);
       return map;
     }, new Map<string, number>());
 
-    expect(bySource.get('BUDGET')).toBeGreaterThan(200);
-    expect(bySource.get('PLANNED')).toBeGreaterThanOrEqual(4);
+    expect(bySource.get(FlowSource.BUDGET)).toBeGreaterThan(200);
+    expect(bySource.get(FlowSource.PLANNED_PAYMENT)).toBeGreaterThanOrEqual(4);
     expect(bySource.get('RESOLVED')).toBeGreaterThanOrEqual(1);
     expect(result.allFlows!.some(flow => flow.kind === 'TRANSFER')).toBe(true);
 
@@ -328,15 +329,15 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       'USD',
     );
 
-    const plannedFlows = result.allFlows!.filter(flow => flow.meta?.source === 'PLANNED');
+    const plannedFlows = result.allFlows!.filter(
+      flow => flow.origin === FlowSource.PLANNED_PAYMENT,
+    );
     const templateIds = new Set(plannedPayments.map(payment => payment.id));
     const generatedJournalIds = new Set(plannedJournals.map(journal => journal.id));
 
     expect(plannedFlows).toHaveLength(plannedJournals.length);
-    expect(plannedFlows.every(flow => generatedJournalIds.has(flow.meta?.referenceId ?? ''))).toBe(
-      true,
-    );
-    expect(plannedFlows.some(flow => templateIds.has(flow.meta?.referenceId ?? ''))).toBe(false);
+    expect(plannedFlows.every(flow => generatedJournalIds.has(flow.referenceId ?? ''))).toBe(true);
+    expect(plannedFlows.some(flow => templateIds.has(flow.referenceId ?? ''))).toBe(false);
     expect(result.simulationResult.summary.safeToSpend).toBe(1334);
     expect(result.simulationResult.summary.shortfall).toBe(0);
   });
@@ -375,6 +376,6 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
         .globalBalance,
     ).toBe(-1000);
     expect(result.allFlows).toHaveLength(20);
-    expect(result.allFlows!.every(flow => flow.meta?.source === 'PLANNED')).toBe(true);
+    expect(result.allFlows!.every(flow => flow.origin === FlowSource.PLANNED_PAYMENT)).toBe(true);
   });
 });

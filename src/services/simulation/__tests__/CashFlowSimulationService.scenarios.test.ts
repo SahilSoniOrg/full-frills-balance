@@ -5,6 +5,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
@@ -228,7 +229,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
     expect(result.simulationResult.summary.safeToSpend).toBe(480);
     expect(result.simulationResult.summary.shortfall).toBe(0);
     expect(
-      result.allFlows!.some(flow => flow.meta?.source === 'RESOLVED' && flow.amount === 120),
+      result.allFlows!.some(flow => flow.resolvedFrom !== undefined && flow.amount === 120),
     ).toBe(true);
   });
 
@@ -263,9 +264,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, dining],
     } as any);
 
-    const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
+    const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
     expect(resolved?.amount).toBe(80);
-    expect(result.allFlows!.filter(flow => flow.meta?.source === 'BUDGET')).toHaveLength(29);
+    expect(result.allFlows!.filter(flow => flow.origin === FlowSource.BUDGET)).toHaveLength(29);
 
     expect(result.simulationResult.summary.safeToSpend).toBe(630);
   });
@@ -359,7 +360,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);
     expect(result.simulationResult.summary.shortfall).toBe(0);
-    expect(result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY')).toHaveLength(0);
+    expect(result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY)).toHaveLength(0);
     expect(
       result.simulationResult.projections[
         result.simulationResult.projections.length - 1
@@ -382,7 +383,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, cc],
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0].amount).toBe(300);
@@ -396,7 +397,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, loan],
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0].amount).toBe(350);
@@ -438,10 +439,12 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, { id: 'exp-rent', name: 'Rent', accountType: AccountType.EXPENSE }],
     } as any);
 
-    const plannedFlows = result.allFlows!.filter(flow => flow.meta?.source === 'PLANNED');
+    const plannedFlows = result.allFlows!.filter(
+      flow => flow.origin === FlowSource.PLANNED_PAYMENT,
+    );
 
     expect(plannedFlows).toHaveLength(1);
-    expect(plannedFlows[0].meta?.referenceId).toBe('j-rent');
+    expect(plannedFlows[0].referenceId).toBe('j-rent');
     expect(result.simulationResult.summary.safeToSpend).toBe(300);
   });
 
@@ -479,9 +482,9 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, groceries, dining],
     } as any);
 
-    const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
+    const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
     expect(resolved?.amount).toBe(80);
-    expect(result.allFlows!.filter(flow => flow.meta?.source === 'BUDGET')).toHaveLength(29);
+    expect(result.allFlows!.filter(flow => flow.origin === FlowSource.BUDGET)).toHaveLength(29);
 
     expect(result.simulationResult.summary.safeToSpend).toBe(630);
   });
@@ -534,7 +537,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
     // Sum of planned: 50 + 60 = 110
     // Daily budget burn: 300 / 30 = 10
     // Effective resolve should be 110.
-    const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
+    const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
     expect(resolved?.amount).toBe(110);
     expect(result.simulationResult.summary.safeToSpend).toBe(600); // 1000 - (29 * 10) - 110 = 1000 - 290 - 110 = 600
@@ -575,7 +578,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, dining],
     } as any);
 
-    const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
+    const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
     // Resolved should be 22 USD (max of 10 USD limit vs 22 USD actual)
     expect(resolved?.amount).toBe(22);
@@ -620,7 +623,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, food, snacks],
     } as any);
 
-    const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
+    const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
     expect(resolved?.amount).toBe(50);
   });
@@ -649,7 +652,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
         7: [cash, groceries],
       } as any);
 
-      const budgetFlows = result.allFlows!.filter(flow => flow.meta?.source === 'BUDGET');
+      const budgetFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.BUDGET);
 
       // On April 25, daysLeftInMonth is 6 (25, 26, 27, 28, 29, 30).
       // So currentMonthDailyRate (0) applies for dayOffset 0..5.
@@ -692,10 +695,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
       7: [cash, dining],
     } as any);
 
-    const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
+    const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
     expect(resolved?.amount).toBe(10);
-    expect(resolved?.meta?.originalSource).toBe('PLANNED'); // plannedTotal >= budgetTotal
+    expect(resolved?.resolvedFrom).toBe(FlowSource.PLANNED_PAYMENT); // plannedTotal >= budgetTotal
   });
 
   it('reconciles correctly in SMOOTHED budget burn mode', async () => {
@@ -737,7 +740,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       // Smoothed Daily = (Remaining + Next Month Budget) / 60
       // = (150 + 300) / 60 = 450 / 60 = 7.5 per day.
       // Planned spend 50 > 7.5, so resolved should be 50.
-      const resolved = result.allFlows!.find(flow => flow.meta?.source === 'RESOLVED');
+      const resolved = result.allFlows!.find(flow => flow.resolvedFrom !== undefined);
 
       expect(resolved?.amount).toBe(50);
     } finally {
@@ -774,7 +777,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       9: 60, // simulationDays must be large enough to catch the May 15th bill (44 days out)
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
     // We expect an obligation on May 15th (dayOffset approx 44) for $200
     const mayBill = liabilityFlows.find(f => f.dayOffset > 40);

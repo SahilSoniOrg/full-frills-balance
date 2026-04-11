@@ -530,7 +530,7 @@ describe('CashFlowSimulationService', () => {
 
     // Exactly 1 flow total for this PP
     expect(allPlannedFlows.length).toBe(1);
-    expect(allPlannedFlows[0].meta?.label).toBe('Monthly Rent (April)'); // From Journal
+    expect(allPlannedFlows[0].label).toBe('Monthly Rent (April)'); // From Journal
   });
 
   it('pulls forward overdue payments to the simulation start date', async () => {

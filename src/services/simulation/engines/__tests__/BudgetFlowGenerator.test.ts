@@ -39,7 +39,8 @@ describe('BudgetFlowGenerator', () => {
       accountId: 'acc-1',
       amount: 10,
       dayOffset: 0,
-      meta: expect.objectContaining({ source: 'BUDGET' }),
+      origin: 'BUDGET',
+      label: 'Groceries',
     });
   });
 

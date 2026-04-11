@@ -53,7 +53,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
     expect(may5Flow).toBeDefined();
     expect(may5Flow?.amount).toBe(1000);
     expect(may5Flow?.kind).toBe('TRANSFER');
-    expect(may5Flow?.meta?.label).toBe('Credit Card Payment');
+    expect(may5Flow?.label).toBe('Credit Card Payment');
   });
 
   it('generates May 5th correctly if nextOccurrence is May 5th', () => {

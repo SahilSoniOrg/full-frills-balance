@@ -49,7 +49,8 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
   const setSelectedLegendItem =
     props.uiState?.setSelectedLegendItem ?? setInternalSelectedLegendItem;
 
-  const { summary, totalLiquidAssets, report, accountSummaries, liquidAssetSubtypes } = props;
+  const { summary, totalLiquidAssets, report, accountSummaries, liquidAssetSubtypes, accountMap } =
+    props;
 
   const viewModel = useMemo(() => {
     if (!report) {
@@ -68,7 +69,14 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
         displayCommittedTotal: '---',
         displayCommittedLiabilities: '---',
         displayTotalFutureInflow: '---',
-        report: null as any,
+        insights: {
+          firstMajorInflowDay: null,
+          committedLiabilitiesCC: 0,
+          committedLiabilitiesOther: 0,
+        },
+        income: [],
+        committed: [],
+        debt: [],
         accountSummaries: [],
         liquidAssetSubtypes: [],
         isOverCommitted: false,
@@ -88,6 +96,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
         report,
         accountSummaries,
         liquidAssetSubtypes,
+        accountMap,
       },
       {
         isPrivacyMode,
@@ -101,6 +110,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
     report,
     accountSummaries,
     liquidAssetSubtypes,
+    accountMap,
     isPrivacyMode,
     propsIsLoading,
     currencyCode,

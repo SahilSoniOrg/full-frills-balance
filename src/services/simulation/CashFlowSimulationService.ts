@@ -208,9 +208,9 @@ export class CashFlowSimulationService {
     const firstMajorInflowDay = simulationResult.summary.firstMajorInflowDay;
     const report = SimulationReportGenerator.generate(
       allFlows,
-      simulationResult,
       accountMap,
       liabilityAccountBalances,
+      context.liquidAccountIds,
     );
 
     const accountSummaries: AccountSimulationSummary[] = Array.from(liquidAccountIdsSet).map(
@@ -251,7 +251,7 @@ export class CashFlowSimulationService {
           }
 
           if (isRelevant) {
-            const label = f.meta?.label || 'Transaction';
+            const label = f.label || 'Transaction';
             const source = (f.meta as any)?.source || 'OTHER';
             if (isDebit) {
               totalOutflow += amount;

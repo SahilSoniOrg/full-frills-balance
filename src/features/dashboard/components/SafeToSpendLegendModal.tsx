@@ -25,15 +25,13 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
     committedLiabilities,
     safeToSpend,
     totalLiabilities,
-    report,
+    insights,
+    income: incomeBreakdown,
+    committed: committedBreakdown,
+    debt: debtBreakdown,
   } = viewModel;
 
-  const incomeBreakdown = report?.income || [];
-  const committedBreakdown = report?.committed || [];
-  const debtBreakdown = report?.debt || [];
-  const firstMajorInflowDay = report?.summary?.firstMajorInflowDay ?? null;
-  const committedLiabilitiesCC = report?.liabilities?.committedCreditCard ?? 0;
-  const committedLiabilitiesOther = report?.liabilities?.committedOther ?? 0;
+  const { firstMajorInflowDay, committedLiabilitiesCC, committedLiabilitiesOther } = insights;
 
   const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;

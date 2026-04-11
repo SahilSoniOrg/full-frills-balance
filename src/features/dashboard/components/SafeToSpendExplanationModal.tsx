@@ -35,9 +35,11 @@ export const SafeToSpendExplanationModal = ({
     committedLiabilities,
     safeToSpend,
     totalLiabilities,
-    report,
     accountSummaries,
     liquidAssetSubtypes,
+    income,
+    committed,
+    debt,
   } = viewModel;
 
   const { theme } = useTheme();
@@ -254,8 +256,8 @@ export const SafeToSpendExplanationModal = ({
         {expandedSection === 'income' && (
           <View style={styles.expandedContentRow}>
             <View style={{ gap: Spacing.sm }}>
-              {report?.income?.filter(inc => inc.amount !== 0).length > 0 ? (
-                report.income
+              {income?.filter(inc => inc.amount !== 0).length > 0 ? (
+                income
                   .filter(inc => inc.amount !== 0)
                   .map((inc, i) => (
                     <TouchableOpacity
@@ -357,7 +359,7 @@ export const SafeToSpendExplanationModal = ({
         {expandedSection === 'committed' && (
           <View style={styles.expandedContentRow}>
             <View style={{ gap: Spacing.md }}>
-              {report?.committed
+              {committed
                 ?.filter(acc => acc.amount !== 0)
                 .sort((a, b) => b.amount - a.amount)
                 .map((acc, i) => (
@@ -380,7 +382,7 @@ export const SafeToSpendExplanationModal = ({
                       {acc.details
                         .filter((det: any) => det.amount !== 0)
                         .map((det: any, di: number) => {
-                          const firstMajorInflowDay = report?.summary?.firstMajorInflowDay ?? null;
+                          const firstMajorInflowDay = viewModel.insights.firstMajorInflowDay;
                           const isPostIncome =
                             firstMajorInflowDay !== null &&
                             det.dayOffset !== undefined &&
@@ -550,7 +552,7 @@ export const SafeToSpendExplanationModal = ({
             </AppText>
 
             <View style={{ gap: Spacing.md }}>
-              {report?.debt
+              {debt
                 ?.filter(acc => acc.amount !== 0)
                 .map((acc, i) => (
                   <View

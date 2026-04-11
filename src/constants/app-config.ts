@@ -761,7 +761,11 @@ export const AppConfig = {
     journalPageSize: 50,
     insightDetailsFetchLimit: 100,
     plannedJournalLimit: 10,
-    majorInflowThreshold: 1000,
+    simulation: {
+      majorInflowThreshold: 200,
+      edgeCaseBufferMs: 1 * 60 * 60 * 1000, // 1 hour
+      financialEpsilon: 0.01,
+    },
     maxTooltipDetails: 6,
     budgetMode: 'SMOOTHED' as 'SMOOTHED' | 'ACTUAL',
   },

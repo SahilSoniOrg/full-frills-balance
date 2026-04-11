@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { Flow, SimulationEngineResult } from './types';
+import { findFirstMajorInflowDay } from './utils/FlowPolicy';
 
 export class Simulator {
   /**
@@ -27,16 +28,12 @@ export class Simulator {
     const projections: SimulationEngineResult['projections'] = [];
     let globalMinBalance = this.calculateGlobalBalance(currentBalances, liquidAccountIds);
 
-    // 1. Identify first major inflow day
-    const majorInflowThreshold = AppConfig.defaults.majorInflowThreshold || 1000;
-    let firstMajorInflowDay: number | null = null;
-    for (const flow of flows) {
-      if (flow.kind === 'INFLOW' && flow.amount >= majorInflowThreshold) {
-        if (firstMajorInflowDay === null || flow.dayOffset < firstMajorInflowDay) {
-          firstMajorInflowDay = flow.dayOffset;
-        }
-      }
-    }
+    // 1. Identify first major inflow day (Income only)
+    const firstMajorInflowDay = findFirstMajorInflowDay(
+      flows,
+      liquidAccountIds,
+      AppConfig.defaults.simulation.majorInflowThreshold,
+    );
 
     // 2. Track minimums
     const accountMinBalances = new Map<string, number>();
@@ -98,7 +95,7 @@ export class Simulator {
     orderedLiquidAccountIds: string[],
   ) {
     if (flow.amount < 0) {
-      throw new Error(`Negative flow amount detected for ${flow.meta?.label || 'unlabeled flow'}`);
+      throw new Error(`Negative flow amount detected for ${flow.label || 'unlabeled flow'}`);
     }
 
     switch (flow.kind) {
@@ -119,7 +116,7 @@ export class Simulator {
 
           // Cascade through ordered liquid accounts
           for (const fallbackId of orderedLiquidAccountIds) {
-            if (remainingAmount <= 0.01) break;
+            if (remainingAmount <= AppConfig.defaults.simulation.financialEpsilon) break;
             if (fallbackId === flow.accountId) continue;
 
             const fallbackBalance = balances.get(fallbackId) || 0;
@@ -131,7 +128,7 @@ export class Simulator {
           }
 
           // If still remaining, force it on the primary account to take it negative
-          if (remainingAmount > 0.01) {
+          if (remainingAmount > AppConfig.defaults.simulation.financialEpsilon) {
             const finalPrimaryBalance = balances.get(flow.accountId) || 0;
             balances.set(flow.accountId, finalPrimaryBalance - remainingAmount);
           }

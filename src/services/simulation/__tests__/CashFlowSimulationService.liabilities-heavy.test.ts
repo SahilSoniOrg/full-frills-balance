@@ -4,6 +4,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { FlowSource } from '@/src/services/simulation/types';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
@@ -178,7 +179,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       7: [cash, savings, ccPrimary, ccBackup, loan],
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
     expect(liabilityFlows).toHaveLength(3);
     expect(liabilityFlows).toEqual(
       expect.arrayContaining([
@@ -254,7 +255,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       7: [cash, externalCard, trackedLoan],
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0]).toEqual(
@@ -295,7 +296,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       7: [cash, euroSavings, euroLoan],
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
     expect(liabilityFlows).toHaveLength(1);
     expect(liabilityFlows[0]).toEqual(
@@ -368,7 +369,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       7: allAccounts,
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
     expect(liabilityFlows).toHaveLength(liabilityBalances.length);
     expect(result.simulationResult.projections).toHaveLength(30);
     expect(result.simulationResult.summary.safeToSpend).toBeGreaterThanOrEqual(0);
@@ -424,17 +425,17 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       7: [cash, cardA, cardB],
     } as any);
 
-    const liabilityFlows = result.allFlows!.filter(flow => flow.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
 
     expect(liabilityFlows).toHaveLength(2);
     expect(liabilityFlows).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          meta: expect.objectContaining({ referenceId: 'cc-a' }),
+          referenceId: 'cc-a',
           amount: 150,
         }),
         expect.objectContaining({
-          meta: expect.objectContaining({ referenceId: 'cc-b' }),
+          referenceId: 'cc-b',
           amount: 400,
         }),
       ]),

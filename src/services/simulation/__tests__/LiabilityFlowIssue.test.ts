@@ -3,6 +3,8 @@ import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
+jest.mock('react-native', () => ({}), { virtual: true });
+
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {
     getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()),
@@ -87,7 +89,7 @@ describe('liability flow issue', () => {
 
     console.log(
       'liability flows',
-      result.allFlows!.filter(f => f.meta?.source === 'LIABILITY'),
+      result.allFlows!.filter(f => f.origin === 'LIABILITY'),
     );
     console.log('account summaries', result.accountSummaries!);
 

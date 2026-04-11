@@ -28,7 +28,7 @@ import { combineLatest, from, Observable, of } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
-import { FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
+import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -72,6 +72,7 @@ export interface SafeToSpendResult {
   // Projections (UI Helpers)
   dailyBudgetBurn: number;
   projection: SafeToSpendProjection;
+  accountMap: Map<string, Account>;
 }
 
 export class NotificationService {
@@ -283,9 +284,7 @@ export class NotificationService {
               firstMajorInflowDay: null,
             },
             report: {
-              income: [],
-              committed: [],
-              debt: [],
+              allFlows: [],
               liabilities: {
                 total: 0,
                 totalCreditCard: 0,
@@ -318,6 +317,7 @@ export class NotificationService {
               safeDaysCount: null,
               safeToSpend: 0,
             },
+            accountMap: new Map(),
           };
           return of(empty);
         }
@@ -436,17 +436,15 @@ export class NotificationService {
 
             const points = runResult.simulationResult.projections.map(p => {
               const details = p.flows.map(f => ({
-                name: f.meta?.label || 'Transaction',
+                name: f.label,
                 amount: f.amount,
                 type: f.kind === 'INFLOW' ? FlowType.INFLOW : FlowType.OUTFLOW,
-                context: f.meta?.source,
+                context: f.origin,
               }));
 
               const dailyBurn = p.flows
                 .filter(f => {
-                  const isBudget =
-                    f.meta?.source === 'BUDGET' ||
-                    (f.meta?.source === 'RESOLVED' && f.meta.originalSource === 'BUDGET');
+                  const isBudget = f.origin === FlowSource.BUDGET || f.resolvedFrom === 'BUDGET';
                   return isBudget && f.kind === 'OUTFLOW';
                 })
                 .reduce((sum, f) => sum + f.amount, 0);
@@ -493,6 +491,7 @@ export class NotificationService {
                 safeDaysCount,
                 safeToSpend: runResult.simulationResult.summary.safeToSpend,
               },
+              accountMap: runResult.accountMap,
             };
           }),
         );

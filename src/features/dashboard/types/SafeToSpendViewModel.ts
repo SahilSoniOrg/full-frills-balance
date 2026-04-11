@@ -1,4 +1,9 @@
-import { SimulationReport, AccountSimulationSummary } from '@/src/services/simulation/types';
+import {
+  AccountSimulationSummary,
+  IncomeEntry,
+  AccountCommitment,
+  DebtEntry,
+} from '@/src/services/simulation/types';
 import { AccountSubtype } from '@/src/data/models/Account';
 import React from 'react';
 
@@ -21,12 +26,21 @@ export interface SafeToSpendViewModel {
   displayCommittedLiabilities: string | React.ReactNode;
   displayTotalFutureInflow: string | React.ReactNode;
 
-  // Breakdown Collections (Directly from Service Report)
-  report: SimulationReport;
+  // Breakdown Collections (Grouped in Mapper)
+  income: IncomeEntry[];
+  committed: AccountCommitment[];
+  debt: DebtEntry[];
 
   // Summaries & Metadata
   accountSummaries: AccountSimulationSummary[];
   liquidAssetSubtypes: AccountSubtype[];
+
+  // Insights
+  insights: {
+    firstMajorInflowDay: number | null;
+    committedLiabilitiesCC: number;
+    committedLiabilitiesOther: number;
+  };
 
   // Flags
   isOverCommitted: boolean;

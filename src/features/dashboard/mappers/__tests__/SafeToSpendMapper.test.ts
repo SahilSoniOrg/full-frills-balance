@@ -1,6 +1,7 @@
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import { AppConfig } from '@/src/constants';
+import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 
 jest.mock('@/src/utils/currencyFormatter', () => ({
   CurrencyFormatter: {
@@ -29,9 +30,41 @@ describe('SafeToSpendMapper', () => {
         totalPlannedOutflow: 500,
         totalCommittedPlanned: 400,
       },
-      income: [],
-      committed: [],
-      debt: [],
+      allFlows: [
+        {
+          kind: 'INFLOW',
+          accountId: 'checking',
+          amount: 2000,
+          dayOffset: 15,
+          category: FlowCategory.INCOME,
+          timeframe: 'FUTURE',
+          label: 'Salary',
+          origin: FlowSource.PLANNED_PAYMENT,
+          referenceId: 'salary-1',
+        },
+        {
+          kind: 'OUTFLOW',
+          accountId: 'checking',
+          amount: 100,
+          dayOffset: 5,
+          category: FlowCategory.BUDGET,
+          timeframe: 'FUTURE',
+          label: 'Groceries',
+          origin: FlowSource.BUDGET,
+          referenceId: 'groceries',
+        },
+        {
+          kind: 'OUTFLOW',
+          accountId: 'checking',
+          amount: 50,
+          dayOffset: 10,
+          category: FlowCategory.DEBT,
+          timeframe: 'FUTURE',
+          label: 'CC Bill',
+          origin: FlowSource.LIABILITY,
+          referenceId: 'cc',
+        },
+      ],
       budget: { currentMonthRemaining: 100, nextMonthProjected: 200, nextMonthDays: 30 },
       liabilities: {
         total: 500,
@@ -46,6 +79,7 @@ describe('SafeToSpendMapper', () => {
     currencyCode: 'USD',
     accountSummaries: [],
     liquidAssetSubtypes: [],
+    accountMap: new Map(),
     dailyBudgetBurn: 0,
     projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
   };
@@ -55,6 +89,15 @@ describe('SafeToSpendMapper', () => {
     isLoading: false,
     currencyCode: 'USD',
   };
+
+  const mapToVM = (res = mockResult, opt = mockOptions) =>
+    SafeToSpendMapper.mapToViewModel(
+      {
+        ...res,
+        accountMap: res.accountMap || new Map(),
+      } as any,
+      opt,
+    );
 
   it('throws error if report is missing', () => {
     expect(() => SafeToSpendMapper.mapToViewModel({} as any, mockOptions)).toThrow(
@@ -68,7 +111,7 @@ describe('SafeToSpendMapper', () => {
     // Safe: 1000
     // Total sum: 500 + 1000 = 1500
     // effectiveTotal should be 1500
-    const vm = SafeToSpendMapper.mapToViewModel(mockResult, mockOptions);
+    const vm = mapToVM();
     expect(vm.effectiveTotal).toBe(1500);
   });
 
@@ -77,14 +120,22 @@ describe('SafeToSpendMapper', () => {
       ...mockResult,
       totalLiquidAssets: 2000, // 500 buffer above safe + commitments
     };
-    const vm = SafeToSpendMapper.mapToViewModel(bufferedResult as any, mockOptions);
+    const vm = mapToVM(bufferedResult as any);
     expect(vm.effectiveTotal).toBe(2000);
   });
 
-  it('handles privacy mode correctly', () => {
+  it('handles privacy mode correctly by masking display values and raw list amounts', () => {
     const privacyOptions = { ...mockOptions, isPrivacyMode: true };
-    const vm = SafeToSpendMapper.mapToViewModel(mockResult, privacyOptions);
+    const vm = mapToVM(mockResult, privacyOptions);
+
+    // Masked display values
     expect(vm.displaySafeToSpend).toBe(AppConfig.privacyMask);
+    expect(vm.displayTotalLiquidAssets).toBe(AppConfig.privacyMask);
+
+    // Masked raw list amounts
+    expect(vm.income[0].amount).toBe(0);
+    expect(vm.committed[0]?.amount).toBe(0);
+    expect(vm.debt[0]?.amount).toBe(0);
   });
 
   it('handles small values with "< $1" formatting', () => {
@@ -92,7 +143,7 @@ describe('SafeToSpendMapper', () => {
       ...mockResult,
       summary: { ...mockResult.summary, safeToSpend: 0.2 },
     };
-    const vm = SafeToSpendMapper.mapToViewModel(smallResult as any, mockOptions);
+    const vm = mapToVM(smallResult as any);
     expect(vm.displaySafeToSpend).toBe('< $1');
   });
 });

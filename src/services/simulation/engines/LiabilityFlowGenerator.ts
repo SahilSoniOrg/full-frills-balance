@@ -1,8 +1,9 @@
-import Account, { AccountSubtype } from '@/src/data/models/Account';
 import { AppConfig } from '@/src/constants/app-config';
-import { Flow, Obligation, SimulationContext } from '../types';
-import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
+import Account, { AccountSubtype } from '@/src/data/models/Account';
 import dayjs from 'dayjs';
+import { Flow, FlowCategory, FlowSource, Obligation, SimulationContext } from '../types';
+import { assertValidFlow } from '../utils/FlowInvariants';
+import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
 
 export class LiabilityFlowGenerator {
   /**
@@ -72,7 +73,7 @@ export class LiabilityFlowGenerator {
           }
         }
 
-        if (remainingAmount > 0.01) {
+        if (remainingAmount > AppConfig.defaults.simulation.financialEpsilon) {
           // Emit OUTFLOW from the preferred liquid account
           // NEW LOGIC: Just pick the first liquid account if none specified
           const payFromId =
@@ -86,10 +87,12 @@ export class LiabilityFlowGenerator {
             accountId: payFromId,
             amount: remainingAmount,
             dayOffset: obligation.dueDayOffset,
+            category: FlowCategory.DEBT,
+            timeframe: 'FUTURE',
+            label: obligation.label,
+            origin: FlowSource.LIABILITY,
+            referenceId: acc.id,
             meta: {
-              source: 'LIABILITY',
-              label: obligation.label,
-              referenceId: acc.id,
               allowCascade: !metadata?.payFromAccountId,
             },
           });
@@ -97,6 +100,7 @@ export class LiabilityFlowGenerator {
       }
     }
 
+    flows.forEach(assertValidFlow);
     return flows;
   }
 
@@ -190,7 +194,7 @@ export class LiabilityFlowGenerator {
       // 4. Emit obligations
       for (let i = 0; i < cycles.length; i++) {
         const c = cycles[i];
-        if (c.amount > 0.01) {
+        if (c.amount > AppConfig.defaults.simulation.financialEpsilon) {
           let finalAmount = c.amount;
 
           // Apply MIN payment logic to future cycles too if applicable
@@ -232,7 +236,10 @@ export class LiabilityFlowGenerator {
       // on the next due date, matching legacy behavior.
       const emiAmount = rawEmiAmount || remainingBalance;
 
-      while (currDDate.diff(startOfToday, 'day') < simulationDays && remainingBalance > 0.01) {
+      while (
+        currDDate.diff(startOfToday, 'day') < simulationDays &&
+        remainingBalance > AppConfig.defaults.simulation.financialEpsilon
+      ) {
         const amountToPay = Math.round(Math.min(remainingBalance, emiAmount) * 100) / 100;
 
         obligations.push({

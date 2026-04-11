@@ -2,6 +2,10 @@ import { AppConfig } from '@/src/constants';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
+import Account from '@/src/data/models/Account';
+import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
+import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
+import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
 
 export interface MapperOptions {
   isPrivacyMode: boolean;
@@ -15,6 +19,7 @@ export interface SafeToSpendMapperInput {
   totalLiquidAssets: number;
   accountSummaries: SafeToSpendResult['accountSummaries'];
   liquidAssetSubtypes: SafeToSpendResult['liquidAssetSubtypes'];
+  accountMap: Map<string, Account>;
 }
 
 export class SafeToSpendMapper {
@@ -30,7 +35,14 @@ export class SafeToSpendMapper {
       throw new Error('SafeToSpendMapper: Simulation report is missing. UI cannot be rendered.');
     }
 
-    const { summary, report, totalLiquidAssets, accountSummaries, liquidAssetSubtypes } = result;
+    const {
+      summary,
+      report,
+      totalLiquidAssets,
+      accountSummaries,
+      liquidAssetSubtypes,
+      accountMap,
+    } = result;
     const { isPrivacyMode, isLoading, currencyCode } = options;
 
     const safeToSpend = summary?.safeToSpend ?? 0;
@@ -61,6 +73,7 @@ export class SafeToSpendMapper {
     const committedLiabilities = report.liabilities.committed || 0;
     const totalLiabilities = report.liabilities.total || 0;
     const totalFutureInflow = report.summary.totalFutureInflow ?? 0;
+    const firstMajorInflowDay = report.summary.firstMajorInflowDay;
 
     /**
      * Financial Logic: Effective Total
@@ -94,7 +107,12 @@ export class SafeToSpendMapper {
       displayCommittedLiabilities: formatValue(committedLiabilities),
       displayTotalFutureInflow: formatValue(totalFutureInflow),
 
-      report,
+      insights: {
+        firstMajorInflowDay,
+        committedLiabilitiesCC: report.liabilities.committedCreditCard || 0,
+        committedLiabilitiesOther: report.liabilities.committedOther || 0,
+      },
+
       isOverCommitted,
       isPositiveSafeToSpend,
       isPrivacyMode,
@@ -102,6 +120,23 @@ export class SafeToSpendMapper {
       formatValue,
       labels: AppConfig.strings.dashboard.safeToSpendUi,
       info: AppConfig.strings.dashboard.safeToSpendExplanation,
+
+      // Derived UI Groupings (Extracted to Selectors)
+      income: selectIncomeEntries(report.allFlows).map(e => ({
+        ...e,
+        amount: isPrivacyMode ? 0 : e.amount,
+      })),
+      committed: selectCommittedEntries(report.allFlows, accountMap, firstMajorInflowDay).map(
+        c => ({
+          ...c,
+          amount: isPrivacyMode ? 0 : c.amount,
+          details: c.details.map(d => ({ ...d, amount: isPrivacyMode ? 0 : d.amount })),
+        }),
+      ),
+      debt: selectDebtEntries(report.allFlows, accountMap).map(e => ({
+        ...e,
+        amount: isPrivacyMode ? 0 : e.amount,
+      })),
     };
   }
 }

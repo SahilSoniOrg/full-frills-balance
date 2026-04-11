@@ -66,11 +66,10 @@ export const AreaChart: React.FC<AreaChartProps> = ({
     return () => sub.remove();
   }, [activeIndex, onPress]);
 
-  const { paths, gradients, getX, getY, PLOT_WIDTH } = useMemo(() => {
+  const { paths, getX, getY, PLOT_WIDTH } = useMemo(() => {
     if (series.length === 0 || series[0].length === 0) {
       return {
         paths: [],
-        gradients: [],
         getX: (_px: number) => 0,
         getY: (_py: number) => 0,
         PLOT_WIDTH: CHART_WIDTH,
@@ -130,12 +129,17 @@ export const AreaChart: React.FC<AreaChartProps> = ({
 
         return { linePath, areaPath };
       }),
-      gradients: series.map((_, i) => ({
+    };
+  }, [series, height, CHART_WIDTH, PADDING_H, PADDING_V]);
+
+  const gradients = useMemo(
+    () =>
+      series.map((_, i) => ({
         id: `grad-${i}`,
         color: colors?.[i] || (i === 0 ? theme.primary : theme.error),
       })),
-    };
-  }, [series, height, CHART_WIDTH, colors, theme, PADDING_H, PADDING_V]);
+    [series, colors, theme.primary, theme.error],
+  );
 
   const handleGesture = (x: number, isStart: boolean) => {
     if (series.length === 0 || series[0].length === 0) return;

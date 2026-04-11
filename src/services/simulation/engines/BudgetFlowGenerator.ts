@@ -1,7 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Budget from '@/src/data/models/Budget';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
-import { Flow, SimulationContext } from '../types';
+import { Flow, FlowCategory, FlowSource, SimulationContext } from '../types';
+import { assertValidFlow } from '../utils/FlowInvariants';
 
 export class BudgetFlowGenerator {
   /**
@@ -72,25 +73,25 @@ export class BudgetFlowGenerator {
       for (const assetId of targetAssetIds) {
         for (let d = 0; d < context.simulationDays; d++) {
           const dailyAmt = burns[d] * shareOfBurn;
-          if (dailyAmt > 0.01) {
+          if (dailyAmt > AppConfig.defaults.simulation.financialEpsilon) {
             flows.push({
               kind: 'OUTFLOW',
               accountId: assetId,
               amount: dailyAmt,
               dayOffset: d,
-              meta: {
-                source: 'BUDGET',
-                label: budget.name,
-                referenceId: budget.id,
-                categoryId: representativeCategoryId,
-                categoryIds: budgetCategoryIds,
-              },
+              category: FlowCategory.BUDGET,
+              timeframe: 'FUTURE',
+              label: budget.name,
+              origin: FlowSource.BUDGET,
+              categoryId: representativeCategoryId,
+              referenceId: budget.id,
             });
           }
         }
       }
     }
 
+    flows.forEach(assertValidFlow);
     return flows;
   }
 }

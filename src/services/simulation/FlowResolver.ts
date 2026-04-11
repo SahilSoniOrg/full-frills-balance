@@ -1,4 +1,5 @@
-import { Flow } from './types';
+import { AppConfig } from '@/src/constants/app-config';
+import { Flow, FlowCategory, FlowSource } from './types';
 
 export class FlowResolver {
   /**
@@ -13,7 +14,12 @@ export class FlowResolver {
     const flowsByDay = new Map<number, Flow[]>();
 
     for (const flow of flows) {
-      if (flow.meta?.source === 'BUDGET' || flow.meta?.source === 'PLANNED') {
+      if (
+        flow.category === FlowCategory.BUDGET ||
+        flow.category === FlowCategory.EXPENSE ||
+        flow.category === FlowCategory.PLANNED_EXPENSE ||
+        flow.category === FlowCategory.INCOME
+      ) {
         const dayFlows = flowsByDay.get(flow.dayOffset) || [];
         dayFlows.push(flow);
         flowsByDay.set(flow.dayOffset, dayFlows);
@@ -22,14 +28,26 @@ export class FlowResolver {
       }
     }
 
-    for (const dayFlows of flowsByDay.values()) {
-      const plannedFlows = dayFlows.filter(
-        (flow): flow is Extract<Flow, { kind: 'INFLOW' | 'OUTFLOW' | 'TRANSFER' }> =>
-          flow.meta?.source === 'PLANNED',
+    for (const [_dayOffset, dayFlows] of flowsByDay.entries()) {
+      // Planned outflows that can be reconciled against budget
+      const plannedOutflows = dayFlows.filter(
+        (flow): flow is Extract<Flow, { kind: 'OUTFLOW' | 'TRANSFER' }> =>
+          (flow.category === FlowCategory.EXPENSE ||
+            flow.category === FlowCategory.PLANNED_EXPENSE) &&
+          (flow.kind === 'OUTFLOW' || flow.kind === 'TRANSFER'),
       );
+
       const budgetFlows = dayFlows.filter(
-        (flow): flow is Extract<Flow, { kind: 'OUTFLOW' }> => flow.meta?.source === 'BUDGET',
+        (flow): flow is Extract<Flow, { kind: 'OUTFLOW' }> => flow.category === FlowCategory.BUDGET,
       );
+
+      // Income and other flows are passed through after grouping
+      const incomeFlows = dayFlows.filter(flow => flow.category === FlowCategory.INCOME);
+
+      if (budgetFlows.length === 0) {
+        resolved.push(...dayFlows);
+        continue;
+      }
 
       const matchedPlanned = new Set<Flow>();
       const allBudgetCategoryIds = new Set<string>();
@@ -43,7 +61,7 @@ export class FlowResolver {
       >();
 
       for (const budgetFlow of budgetFlows) {
-        const budgetId = budgetFlow.meta?.referenceId || `${budgetFlow.dayOffset}-budget`;
+        const budgetId = budgetFlow.referenceId;
         const group = groupedBudgets.get(budgetId) || {
           flows: [],
           categoryIds: new Set(),
@@ -51,43 +69,28 @@ export class FlowResolver {
         };
         group.flows.push(budgetFlow);
 
-        const categoryIdsMeta = budgetFlow.meta?.categoryIds;
-        const normalizedCategoryIds = categoryIdsMeta
-          ? Array.isArray(categoryIdsMeta)
-            ? categoryIdsMeta
-            : Array.from(categoryIdsMeta as Iterable<string>)
-          : [];
-        const cats =
-          normalizedCategoryIds.length > 0
-            ? normalizedCategoryIds
-            : budgetFlow.meta?.categoryId
-              ? [budgetFlow.meta.categoryId]
-              : [];
-
-        cats.forEach(c => {
-          group.categoryIds.add(c);
-          allBudgetCategoryIds.add(c);
-        });
+        if (budgetFlow.categoryId) {
+          group.categoryIds.add(budgetFlow.categoryId);
+          allBudgetCategoryIds.add(budgetFlow.categoryId);
+        }
 
         groupedBudgets.set(budgetId, group);
       }
 
       // Pass 1: Strict Category Match
       for (const group of groupedBudgets.values()) {
-        const matchingPlanned = plannedFlows.filter(flow => {
+        const matchingPlanned = plannedOutflows.filter(flow => {
           if (matchedPlanned.has(flow)) return false;
-          const categoryId = flow.meta?.categoryId;
-          return !!categoryId && group.categoryIds.has(categoryId);
+          return !!flow.categoryId && group.categoryIds.has(flow.categoryId);
         });
         group.plannedMatches = matchingPlanned;
         matchingPlanned.forEach(flow => matchedPlanned.add(flow));
       }
 
       // Pass 2: Broad Fallback (Match remaining capacity)
-      const broadFallbackPlanned = plannedFlows.filter(flow => {
+      const broadFallbackPlanned = plannedOutflows.filter(flow => {
         if (matchedPlanned.has(flow)) return false;
-        const categoryId = flow.meta?.categoryId;
-        return !!categoryId && allBudgetCategoryIds.has(categoryId);
+        return !!flow.categoryId && allBudgetCategoryIds.has(flow.categoryId);
       });
       broadFallbackPlanned.forEach(flow => matchedPlanned.add(flow));
 
@@ -106,7 +109,7 @@ export class FlowResolver {
         if (budgetTotal > plannedTotal) {
           let capacity = budgetTotal - plannedTotal;
           for (const tracking of fallbackTracking) {
-            if (capacity <= 0.01) break;
+            if (capacity <= AppConfig.defaults.simulation.financialEpsilon) break;
             if (tracking.remaining <= 0) continue;
 
             const consumed = Math.min(capacity, tracking.remaining);
@@ -125,15 +128,15 @@ export class FlowResolver {
         const template = isPlannedHigher ? matchingPlanned[0] || group.flows[0] : group.flows[0];
         const effectiveAmount = Math.max(budgetTotal, plannedTotal);
 
+        // Resolved flow MAINTAINS its semantic category, but sets resolvedFrom
         const resolvedFlow: Flow = {
           ...template,
           amount: effectiveAmount,
+          category: template.category, // Keep original (BUDGET vs EXPENSE/PLANNED_EXPENSE)
+          timeframe: template.timeframe,
+          resolvedFrom: isPlannedHigher ? FlowSource.PLANNED_PAYMENT : FlowSource.BUDGET,
           meta: {
             ...template.meta,
-            source: 'RESOLVED',
-            originalSource: isPlannedHigher ? 'PLANNED' : 'BUDGET',
-            label:
-              template.meta?.label || (isPlannedHigher ? 'Planned Spending' : 'Budget Spending'),
             tags: [...(template.meta?.tags || []), 'RESOLVED_CONFLICT'],
           },
         } as Flow;
@@ -143,22 +146,21 @@ export class FlowResolver {
 
       // Add residual fallback flows that weren't fully consumed by budget groups
       for (const tracking of fallbackTracking) {
-        if (tracking.remaining > 0.01) {
-          const originalMeta = tracking.original.meta;
-          if (!originalMeta) continue; // Safety check
-
+        if (tracking.remaining > AppConfig.defaults.simulation.financialEpsilon) {
           resolved.push({
             ...tracking.original,
             amount: tracking.remaining,
             meta: {
-              ...originalMeta,
-              tags: [...(originalMeta.tags || []), 'RECONCILED_FALLBACK'],
+              ...(tracking.original.meta || {}),
+              tags: [...(tracking.original.meta?.tags || []), 'RECONCILED_FALLBACK'],
             },
           });
         }
       }
 
-      plannedFlows
+      // Add income and unmatched planned outflows
+      resolved.push(...incomeFlows);
+      plannedOutflows
         .filter(flow => !matchedPlanned.has(flow))
         .forEach(flow => {
           resolved.push(flow);

@@ -99,6 +99,16 @@ export function useWidgetSync() {
     null,
   );
 
+  const safeToSpend = safeToSpendData?.summary.safeToSpend;
+  const shortfall = safeToSpendData?.summary.shortfall;
+  const trajectoryMinBalance = safeToSpendData?.summary.trajectoryMinBalance;
+  const firstMajorInflowDayFromData = safeToSpendData?.summary.firstMajorInflowDay;
+  const rawCurrencyCode = safeToSpendData?.currencyCode;
+
+  // Bulletproof data presence check: ensure both summary and currency exist
+  const isDataPresent = !!safeToSpendData?.summary && !!rawCurrencyCode;
+  const currencyCode = rawCurrencyCode || AppConfig.defaultCurrency;
+
   React.useEffect(() => {
     if (Platform.OS === 'web' || isAppCurrentlyLocked) {
       return;
@@ -108,17 +118,15 @@ export function useWidgetSync() {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const expoWidgetsModule = require('@/modules/expo-widgets').default;
 
-    const isShortfall = (safeToSpendData?.summary?.shortfall ?? 0) > 0;
-    const displayAmount = isShortfall
-      ? (safeToSpendData?.summary?.shortfall ?? 0)
-      : (safeToSpendData?.summary?.safeToSpend ?? 0);
+    const isShortfall = (shortfall ?? 0) > 0;
+    const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);
 
     const snapshot: WidgetDataSnapshot = {
-      safeToSpend: safeToSpendData
+      safeToSpend: isDataPresent
         ? {
             amount: displayAmount,
-            currencyCode: safeToSpendData.currencyCode,
-            formattedAmount: CurrencyFormatter.format(displayAmount, safeToSpendData.currencyCode, {
+            currencyCode,
+            formattedAmount: CurrencyFormatter.format(displayAmount, currencyCode, {
               minimumFractionDigits: 0,
               maximumFractionDigits: 0,
             }),
@@ -144,6 +152,7 @@ export function useWidgetSync() {
 
     return () => clearTimeout(timeoutId);
   }, [
+    theme,
     theme.expense,
     theme.income,
     theme.primary,
@@ -157,7 +166,11 @@ export function useWidgetSync() {
     themeMode,
     isWidgetPrivacyEnabled,
     isAppCurrentlyLocked,
-    safeToSpendData,
-    theme,
+    safeToSpend,
+    shortfall,
+    trajectoryMinBalance,
+    firstMajorInflowDayFromData,
+    currencyCode,
+    isDataPresent,
   ]);
 }
