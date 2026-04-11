@@ -77,7 +77,10 @@ export class TransactionService {
     return combineLatest([transactions$, journal$, accounts$]).pipe(
       map(([transactions, journal, accounts]) => {
         const accountMap = new Map(accounts.map(a => [a.id, a]));
-        return transactions.map(tx => {
+        const isJournalDeleted = !!(journal && journal.deletedAt);
+        const validTransactions = transactions.filter(tx => isJournalDeleted || !tx.deletedAt);
+
+        return validTransactions.map(tx => {
           const account = accountMap.get(tx.accountId);
           return {
             id: tx.id,
@@ -121,7 +124,12 @@ export class TransactionService {
     return combineLatest([transactions$, journal$, accounts$]).pipe(
       map(([transactions, journal, accounts]) => {
         const accountMap = new Map(accounts.map(a => [a.id, a]));
-        return transactions.map(tx => this.mapToEnriched(tx, transactions, accountMap, journal));
+        const isJournalDeleted = !!(journal && journal.deletedAt);
+        const validTransactions = transactions.filter(tx => isJournalDeleted || !tx.deletedAt);
+
+        return validTransactions.map(tx =>
+          this.mapToEnriched(tx, validTransactions, accountMap, journal),
+        );
       }),
     );
   }
