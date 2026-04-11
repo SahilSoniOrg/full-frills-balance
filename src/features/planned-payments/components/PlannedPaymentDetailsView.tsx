@@ -265,18 +265,28 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
         ) : (
           <View style={styles.historyList}>
             {history?.map((journal: any) => {
-              const isOverdue =
-                journal.status === 'PLANNED' &&
-                new Date(journal.journalDate).setHours(0, 0, 0, 0) <
-                  new Date().setHours(0, 0, 0, 0);
+              const dateValue = new Date(journal.journalDate).setHours(0, 0, 0, 0);
+              const today = new Date().setHours(0, 0, 0, 0);
+              const tomorrow = new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
+
+              const isOverdue = journal.status === 'PLANNED' && dateValue < today;
+              const isDueSoon =
+                journal.status === 'PLANNED' && (dateValue === today || dateValue === tomorrow);
 
               let label = 'Posted';
-              if (journal.status === 'PLANNED') label = 'Scheduled';
+              if (journal.status === 'PLANNED') {
+                if (dateValue === today) label = 'Due Today';
+                else if (dateValue === tomorrow) label = 'Due Tomorrow';
+                else label = 'Scheduled';
+              }
               if (journal.status === 'SKIPPED') label = 'Skipped';
 
               let typeColor = 'textSecondary';
-              if (journal.status === 'PLANNED') typeColor = isOverdue ? 'error' : 'textSecondary';
-              else if (journal.status === 'SKIPPED') typeColor = 'textSecondary';
+              if (journal.status === 'PLANNED') {
+                if (isOverdue) typeColor = 'error';
+                else if (isDueSoon) typeColor = 'warning';
+                else typeColor = 'textSecondary';
+              } else if (journal.status === 'SKIPPED') typeColor = 'textSecondary';
               else
                 typeColor =
                   journal.displayType === 'INCOME'

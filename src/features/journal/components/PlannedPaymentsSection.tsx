@@ -28,6 +28,11 @@ export function PlannedPaymentsSection({
     return [...items].sort((a, b) => a.journalDate - b.journalDate);
   }, [items]);
 
+  const hasOverdue = useMemo(() => {
+    const today = new Date().setHours(0, 0, 0, 0);
+    return sortedItems.some(item => new Date(item.journalDate).setHours(0, 0, 0, 0) < today);
+  }, [sortedItems]);
+
   if (items.length === 0) return null;
 
   return (
@@ -37,9 +42,26 @@ export function PlannedPaymentsSection({
         onPress={() => setIsExpanded(!isExpanded)}
         activeOpacity={0.7}
       >
-        <AppText variant="subheading" color="secondary" style={styles.title}>
-          {AppConfig.strings.journal.upcoming}
-        </AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+          <AppText
+            variant="subheading"
+            color={hasOverdue ? 'error' : 'secondary'}
+            style={styles.title}
+          >
+            {AppConfig.strings.journal.upcoming}
+          </AppText>
+          {hasOverdue && !isExpanded && (
+            <View
+              style={{
+                backgroundColor: theme.error,
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                marginTop: 2,
+              }}
+            />
+          )}
+        </View>
         <AppIcon
           name={isExpanded ? 'chevronUp' : 'chevronDown'}
           size={20}
@@ -57,9 +79,26 @@ export function PlannedPaymentsSection({
               month: 'short',
               day: 'numeric',
             });
+            const isToday =
+              new Date(mapped.transactionDate).setHours(0, 0, 0, 0) ===
+              new Date().setHours(0, 0, 0, 0);
+
+            const isTomorrow =
+              new Date(mapped.transactionDate).setHours(0, 0, 0, 0) ===
+              new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
+
             const isOverdue =
               new Date(mapped.transactionDate).setHours(0, 0, 0, 0) <
               new Date().setHours(0, 0, 0, 0);
+
+            let displayDate = dateStr;
+            if (isToday) displayDate = 'Today';
+            if (isTomorrow) displayDate = 'Tomorrow';
+
+            const isDueSoon = isToday || isTomorrow;
+            let dateColor = theme.textSecondary;
+            if (isOverdue) dateColor = theme.error;
+            else if (isDueSoon) dateColor = theme.warning;
 
             const amountStr = isPrivacyMode
               ? '••••'
@@ -79,11 +118,8 @@ export function PlannedPaymentsSection({
                 activeOpacity={0.7}
               >
                 <View style={styles.left}>
-                  <AppText
-                    variant="body"
-                    style={{ color: isOverdue ? theme.error : theme.textSecondary }}
-                  >
-                    {dateStr} — {mapped.title}
+                  <AppText variant="body" style={{ color: dateColor }}>
+                    {displayDate} — {mapped.title}
                   </AppText>
                 </View>
                 <AppText variant="body" weight="medium" style={{ color: typeColor || theme.text }}>

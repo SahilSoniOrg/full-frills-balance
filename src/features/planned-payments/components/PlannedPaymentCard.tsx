@@ -36,17 +36,25 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
     return AppConfig.strings.plannedPayments.everyN(n, type);
   };
 
-  const isOverdue =
-    item.status === PlannedPaymentStatus.ACTIVE &&
-    new Date(item.nextOccurrence).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
-  const dateColor = isOverdue ? theme.error : theme.textSecondary;
+  const dateValue = new Date(item.nextOccurrence).setHours(0, 0, 0, 0);
+  const today = new Date().setHours(0, 0, 0, 0);
+  const tomorrow = new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
+  const isActive = item.status === PlannedPaymentStatus.ACTIVE;
+
+  const isOverdue = isActive && dateValue < today;
+  const isDueSoon = isActive && (dateValue === today || dateValue === tomorrow);
+
+  let dateColor = theme.textSecondary;
+  if (isOverdue) dateColor = theme.error;
+  else if (isDueSoon) dateColor = theme.warning;
+
+  let borderColor = theme.border;
+  if (isOverdue) borderColor = theme.error;
+  else if (isDueSoon) borderColor = theme.warning;
 
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        { backgroundColor: theme.surface, borderColor: isOverdue ? theme.error : theme.border },
-      ]}
+      style={[styles.container, { backgroundColor: theme.surface, borderColor }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -71,7 +79,9 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
       <View style={styles.footer}>
         <View style={styles.infoRow}>
           <Ionicons
-            name={isOverdue ? 'alert-circle-outline' : 'calendar-outline'}
+            name={
+              isOverdue ? 'alert-circle-outline' : isDueSoon ? 'time-outline' : 'calendar-outline'
+            }
             size={14}
             color={dateColor}
           />
