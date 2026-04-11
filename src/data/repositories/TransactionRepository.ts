@@ -181,17 +181,24 @@ export class TransactionRepository {
       ]);
   }
 
-  observeByJournal(journalId: string) {
-    return this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('journal_id', journalId),
-        Q.where('deleted_at', Q.eq(null)),
+  observeByJournal(journalId: string, includeDeleted: boolean = false) {
+    const clauses: any[] = [
+      Q.experimentalJoinTables(['journals']),
+      Q.where('journal_id', journalId),
+    ];
+
+    if (!includeDeleted) {
+      clauses.push(Q.where('deleted_at', Q.eq(null)));
+      clauses.push(
         Q.on('journals', [
           Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES, 'PLANNED'])),
           Q.where('deleted_at', Q.eq(null)),
         ]),
-      )
+      );
+    }
+
+    return this.transactions
+      .query(...clauses)
       .extend(Q.sortBy('transaction_date', Q.asc))
       .extend(Q.sortBy('created_at', Q.asc))
       .observeWithColumns([

@@ -98,8 +98,11 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
   const { theme } = useTheme();
   const { deleteJournal, findJournal, duplicateJournal, postJournal, revertToPlanned } =
     useJournalActions();
-  const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(journalId);
-  const { journal, isLoading: isLoadingJournal } = useJournal(journalId);
+  const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(
+    journalId,
+    true,
+  );
+  const { journal, isLoading: isLoadingJournal } = useJournal(journalId, true);
 
   const { data: smsInfo } = useObservable(
     () => {

@@ -92,13 +92,17 @@ export class AccountService {
       entityId: account.id,
       action: AuditAction.CREATE,
       changes: {
-        name: account.name,
-        accountType: account.accountType,
-        accountSubtype: account.accountSubtype,
-        currencyCode: account.currencyCode,
-        initialBalance: data.initialBalance
-          ? roundToPrecision(data.initialBalance, precision)
-          : undefined,
+        after: {
+          name: account.name,
+          accountType: account.accountType,
+          accountSubtype: account.accountSubtype,
+          currencyCode: account.currencyCode,
+          description: account.description,
+          icon: account.icon,
+          orderNum: account.orderNum,
+          parentAccountId: account.parentAccountId,
+          initialBalance: data.initialBalance,
+        },
       },
     });
 
@@ -215,7 +219,19 @@ export class AccountService {
       entityType: 'account',
       entityId: accountId,
       action: AuditAction.UPDATE,
-      changes: { before: beforeState, after: updates },
+      changes: {
+        before: {
+          name: beforeState.name,
+          accountType: beforeState.accountType,
+          accountSubtype: beforeState.accountSubtype,
+          currencyCode: beforeState.currencyCode,
+          description: beforeState.description,
+          icon: account.icon,
+          parentAccountId: account.parentAccountId,
+          metadata: await accountRepository.findMetadata(accountId),
+        },
+        after: updates,
+      },
     });
 
     // Track Analytics
@@ -264,7 +280,10 @@ export class AccountService {
       entityType: 'account',
       entityId: accountId,
       action: AuditAction.UPDATE,
-      changes: { action: 'RECOVERED' },
+      changes: {
+        before: { deletedAt: account.deletedAt },
+        after: { action: 'RECOVERED', deletedAt: undefined },
+      },
     });
 
     // Track Analytics
@@ -280,18 +299,33 @@ export class AccountService {
       entityType: 'account',
       entityId: account.id,
       action: AuditAction.UPDATE,
-      changes: { orderNum: newOrder },
+      changes: {
+        before: { orderNum: account.orderNum },
+        after: { orderNum: newOrder },
+      },
     });
   }
 
-  async deleteAccount(account: Account): Promise<void> {
+  async deleteAccount(accountOrId: Account | string): Promise<void> {
+    const account =
+      typeof accountOrId === 'string' ? await accountRepository.find(accountOrId) : accountOrId;
+    if (!account) return;
+
     await accountRepository.delete(account);
 
     await auditService.log({
       entityType: 'account',
       entityId: account.id,
       action: AuditAction.DELETE,
-      changes: { name: account.name },
+      changes: {
+        before: {
+          name: account.name,
+          deletedAt: account.deletedAt,
+        },
+        after: {
+          deletedAt: new Date(),
+        },
+      },
     });
 
     // Track Analytics

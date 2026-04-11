@@ -204,6 +204,24 @@ export class AccountRepository {
     return this.accounts.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
   }
 
+  observeByIdsWithDeleted(accountIds: string[]) {
+    if (accountIds.length === 0) {
+      return of([] as Account[]);
+    }
+
+    return this.accounts
+      .query(Q.where('id', Q.oneOf(accountIds)))
+      .observeWithColumns([
+        'name',
+        'account_type',
+        'account_subtype',
+        'currency_code',
+        'reconciled_at',
+        'parent_account_id',
+        'deleted_at',
+      ]);
+  }
+
   async seedDefaults(defaults: AccountPersistenceInput[]): Promise<void> {
     const normalizedDefaults = defaults.map(entry => ({
       ...entry,

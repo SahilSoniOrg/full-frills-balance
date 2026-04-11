@@ -635,13 +635,29 @@ export const AppConfig = {
       editHistory: 'History',
       emptyLogs: 'No audit records yet',
       viewDetails: 'Details',
+      viewCta: 'View',
+      revertCta: 'Undo',
+      revertConfirmTitle: 'Undo Change?',
+      revertConfirmMessage:
+        'This will attempt to revert the record to its previous state. Continue?',
+      revertSuccess: 'Change undone successfully',
       idLabel: (id: string) => `ID: ${id}`,
       typeChanged: '(type changed)',
       transactionsLabel: 'entries:',
+      accountPrefix: 'Account ',
+      entityLabels: {
+        account: 'Account',
+        journal: 'Journal',
+        transaction: 'Entry',
+      } as Record<string, string>,
       tables: ['journals', 'transactions', 'accounts'],
       errors: {
         notFound: (id: string) => `No audit record found for ${id}`,
         loadFailed: 'The audit trail could not be loaded.',
+        revertFailed: 'Failed to undo change',
+        journalDeleteRevertNotSupported:
+          'Restoring deleted journals is not yet supported via audit logs. Please use a backup.',
+        revertTypeNotSupported: (type: string) => `Reverting ${type} is not supported yet`,
       },
     },
     formats: {

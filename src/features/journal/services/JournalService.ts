@@ -59,11 +59,28 @@ export class JournalService {
       metadata: data.metadata, // Ensure metadata is passed for persistence
     });
 
+    const mappedBeforeTransactions = originalTransactions.map(t => this.mapTransactionToAudit(t));
+    const mappedAfterTransactions = data.transactions.map(t => this.mapTransactionToAudit(t));
+
     await auditService.log({
       entityType: 'journal',
       entityId: journalId,
       action: AuditAction.UPDATE,
-      changes: { description: data.description },
+      changes: {
+        before: {
+          description: originalJournal.description,
+          journalDate: originalJournal.journalDate,
+          currencyCode: originalJournal.currencyCode,
+          status: originalJournal.status,
+          totalAmount: originalJournal.totalAmount,
+          transactions: mappedBeforeTransactions,
+        },
+        after: {
+          description: data.description,
+          journalDate: data.journalDate,
+          transactions: mappedAfterTransactions,
+        },
+      },
     });
 
     const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
@@ -89,11 +106,40 @@ export class JournalService {
       entityType: 'journal',
       entityId: journalId,
       action: AuditAction.DELETE,
-      changes: { description: journal.description },
+      changes: {
+        before: {
+          description: journal.description,
+          totalAmount: journal.totalAmount,
+          currencyCode: journal.currencyCode,
+          transactions: transactions.map(t => this.mapTransactionToAudit(t)),
+        },
+        after: { deletedAt: new Date() },
+      },
     });
 
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
     rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
+  }
+
+  async recoverJournal(journalId: string): Promise<Journal> {
+    const journalBefore = await journalRepository.find(journalId);
+    const journal = await journalRepository.recoverJournal(journalId);
+    const transactions = await transactionRepository.findByJournal(journalId);
+
+    await auditService.log({
+      entityType: 'journal',
+      entityId: journalId,
+      action: AuditAction.UPDATE,
+      changes: {
+        before: { deletedAt: journalBefore?.deletedAt },
+        after: { restoredAt: new Date() },
+      },
+    });
+
+    const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
+    rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
+
+    return journal;
   }
 
   async duplicateJournal(journalId: string): Promise<Journal> {
@@ -191,7 +237,10 @@ export class JournalService {
       entityType: 'journal',
       entityId: journalId,
       action: AuditAction.UPDATE,
-      changes: { status: JournalStatus.POSTED, journalDate: postTime },
+      changes: {
+        before: { status: JournalStatus.PLANNED, journalDate: originalDate },
+        after: { status: JournalStatus.POSTED, journalDate: postTime },
+      },
     });
 
     // 3. Rebuild balances for the accounts involved in this journal
@@ -260,7 +309,10 @@ export class JournalService {
       entityType: 'journal',
       entityId: journalId,
       action: AuditAction.UPDATE,
-      changes: { status: JournalStatus.PLANNED, journalDate: revertTime },
+      changes: {
+        before: { status: JournalStatus.POSTED, journalDate: currentJournalDate },
+        after: { status: JournalStatus.PLANNED, journalDate: revertTime },
+      },
     });
 
     // 3. Rebuild balances for the accounts involved (for both old and new dates)
@@ -610,6 +662,17 @@ export class JournalService {
         return true;
       }),
     );
+  }
+
+  private mapTransactionToAudit(t: any) {
+    return {
+      accountId: t.accountId,
+      amount: t.amount,
+      transactionType: t.transactionType,
+      notes: t.notes || undefined,
+      exchangeRate: t.exchangeRate || undefined,
+      currencyCode: t.currencyCode || undefined,
+    };
   }
 }
 export const journalService = new JournalService();

@@ -10,7 +10,17 @@ import { StyleSheet, View } from 'react-native';
 
 export function AuditLogView(vm: AuditLogViewModel) {
   const { theme } = useTheme();
-  const { logs, accountMap, isLoading, isFiltered, expandedIds, onToggleExpanded } = vm;
+  const {
+    logs,
+    accountMap,
+    entityStatusMap,
+    isLoading,
+    isFiltered,
+    expandedIds,
+    onToggleExpanded,
+    onView,
+    onRevert,
+  } = vm;
 
   return (
     <Screen
@@ -35,7 +45,10 @@ export function AuditLogView(vm: AuditLogViewModel) {
                 item={item}
                 isExpanded={expandedIds.has(item.id)}
                 onToggle={() => onToggleExpanded(item.id)}
+                onView={onView}
+                onRevert={onRevert}
                 accountMap={accountMap}
+                entityStatusMap={entityStatusMap}
               />
             )}
             keyExtractor={item => item.id}

@@ -1,12 +1,16 @@
-import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { useObservable } from '@/src/hooks/useObservable'
-import { of } from 'rxjs'
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { useObservable } from '@/src/hooks/useObservable';
+import { of } from 'rxjs';
 
-export function useJournal(journalId: string | null) {
-  const { data: journal, isLoading, version } = useObservable(
-    () => journalId ? journalRepository.observeById(journalId) : of(null),
-    [journalId],
-    null
-  )
-  return { journal, isLoading, version }
+export function useJournal(journalId: string | null, includeDeleted: boolean = false) {
+  const {
+    data: journal,
+    isLoading,
+    version,
+  } = useObservable(
+    () => (journalId ? journalRepository.observeById(journalId, includeDeleted) : of(null)),
+    [journalId, includeDeleted],
+    null,
+  );
+  return { journal, isLoading, version };
 }
