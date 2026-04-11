@@ -13,6 +13,7 @@ import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
 import { FlowResolver } from './FlowResolver';
+import { SimulationReportGenerator } from './SimulationReportGenerator';
 import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
 import { AccountSimulationSummary, SimulationContext, SimulationRunResult } from './types';
@@ -205,6 +206,13 @@ export class CashFlowSimulationService {
 
     // 4. PHASE: POST-PROCESS SUMMARIES
     const firstMajorInflowDay = simulationResult.summary.firstMajorInflowDay;
+    const report = SimulationReportGenerator.generate(
+      allFlows,
+      simulationResult,
+      accountMap,
+      liabilityAccountBalances,
+    );
+
     const accountSummaries: AccountSimulationSummary[] = Array.from(liquidAccountIdsSet).map(
       accountId => {
         const acc = accountMap.get(accountId);
@@ -310,6 +318,7 @@ export class CashFlowSimulationService {
 
     return {
       simulationResult,
+      report,
       accountSummaries,
       allFlows,
       startingBalances: normalizedStartingBalances,

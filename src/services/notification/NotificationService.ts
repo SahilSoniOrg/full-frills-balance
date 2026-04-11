@@ -28,7 +28,7 @@ import { combineLatest, from, Observable, of } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
-import { SimulationRunResult, FlowType, SimulationResult } from '../simulation/types';
+import { FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -49,25 +49,27 @@ export interface SafeToSpendProjection {
 }
 
 export interface SafeToSpendResult {
-  // Simulation Context
+  /**
+   * UI AGGREGATOR SUMMARY
+   * Unified source of truth for high-level metrics (Safe-to-Spend, Shortfall, etc).
+   * Merges core simulation results with derived organic reporting.
+   */
   summary: SimulationResult['summary'];
-  accountSummaries: SimulationResult['accountSummaries'];
-  metadata: SimulationResult['metadata'];
-  allFlows: SimulationRunResult['allFlows'];
-  simulationResult: SimulationRunResult['simulationResult'];
-  liabilityAccountBalances: { account: Account; balance: number }[];
-  allAccounts: Account[];
+
+  /**
+   * DETAILED REPORT
+   * Breakdown of income, committed spend, debts, and liabilities.
+   */
+  report: SimulationRunResult['report'];
+
+  accountSummaries: SimulationRunResult['accountSummaries'];
 
   // Liquid Asset Context
   totalLiquidAssets: number;
   currencyCode: string;
   liquidAssetSubtypes: AccountSubtype[];
-  liquidAssetAccounts: { name: string; amount: number }[];
-  liquidLiabilityAccounts: { name: string; amount: number }[];
-  liquidAssetAccountIds: string[];
-  liquidLiabilityAccountIds: string[];
 
-  // Projections
+  // Projections (UI Helpers)
   dailyBudgetBurn: number;
   projection: SafeToSpendProjection;
 }
@@ -255,7 +257,6 @@ export class NotificationService {
         );
 
         const liquidAssetIds = liquidAssets.map(a => a.id);
-        const liquidLiabilityIds = liquidLiabilities.map(l => l.id);
 
         // Fetch historical deltas as part of the simulation flow
         const history$ = from(
@@ -276,42 +277,47 @@ export class NotificationService {
               trajectoryMinBalance: 0,
               safeDaysCount: null,
               totalFutureInflow: 0,
-              totalOrganicInflow: 0,
-              totalOrganicOutflow: 0,
+              totalPlannedInflow: 0,
+              totalPlannedOutflow: 0,
               totalCommittedPlanned: 0,
               firstMajorInflowDay: null,
             },
-            metadata: {
-              firstMajorInflowDay: null,
-              committedSubtypes: [],
-              debtSubtypes: [],
+            report: {
+              income: [],
+              committed: [],
+              debt: [],
+              liabilities: {
+                total: 0,
+                totalCreditCard: 0,
+                totalOther: 0,
+                committed: 0,
+                committedCreditCard: 0,
+                committedOther: 0,
+              },
+              budget: {
+                currentMonthRemaining: 0,
+                nextMonthProjected: 0,
+                nextMonthDays: 0,
+              },
+              summary: {
+                firstMajorInflowDay: null,
+                totalFutureInflow: 0,
+                totalPlannedInflow: 0,
+                totalPlannedOutflow: 0,
+                totalCommittedPlanned: 0,
+              },
             },
             accountSummaries: [],
             totalLiquidAssets: 0,
             currencyCode: resultCurrency,
             liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-            liquidAssetAccounts: [],
-            liquidLiabilityAccounts: [],
-            liquidAssetAccountIds: [],
-            liquidLiabilityAccountIds: [],
             dailyBudgetBurn: 0,
-            projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
-            allFlows: [],
-            simulationResult: {
-              summary: {
-                safeToSpend: 0,
-                shortfall: 0,
-                trajectoryMinBalance: 0,
-                accountMinBalances: new Map(),
-                accountMinBalancesBeforeIncome: new Map(),
-                firstMajorInflowDay: null,
-              },
-              accountSummaries: [],
-              projections: [],
-              allFlows: [],
+            projection: {
+              history: [],
+              projection: [],
+              safeDaysCount: null,
+              safeToSpend: 0,
             },
-            liabilityAccountBalances: [],
-            allAccounts: [],
           };
           return of(empty);
         }
@@ -472,62 +478,21 @@ export class NotificationService {
             return {
               summary: {
                 ...runResult.simulationResult.summary,
+                ...runResult.report.summary,
                 safeDaysCount,
-                totalFutureInflow: runResult.allFlows
-                  .filter(f => f.dayOffset >= 0 && f.kind === 'INFLOW')
-                  .reduce((sum, f) => sum + f.amount, 0),
-                totalOrganicInflow: runResult.allFlows
-                  .filter(
-                    f =>
-                      f.dayOffset >= 0 &&
-                      (f.meta?.source === 'PLANNED' || f.meta?.originalSource === 'PLANNED') &&
-                      f.kind === 'INFLOW',
-                  )
-                  .reduce((sum, f) => sum + f.amount, 0),
-                totalOrganicOutflow: runResult.allFlows
-                  .filter(
-                    f =>
-                      f.dayOffset >= 0 &&
-                      (f.meta?.source === 'PLANNED' || f.meta?.originalSource === 'PLANNED') &&
-                      f.kind === 'OUTFLOW',
-                  )
-                  .reduce((sum, f) => sum + f.amount, 0),
-                totalCommittedPlanned: runResult.allFlows
-                  .filter(
-                    f =>
-                      f.dayOffset >= 0 &&
-                      (f.meta?.source === 'PLANNED' || f.meta?.originalSource === 'PLANNED') &&
-                      f.kind !== 'INFLOW',
-                  )
-                  .reduce((sum, f) => sum + f.amount, 0),
               },
+              report: runResult.report,
               accountSummaries: runResult.accountSummaries,
-              metadata: {
-                firstMajorInflowDay: runResult.simulationResult.summary.firstMajorInflowDay,
-                committedSubtypes: [], // UI derives these now
-                debtSubtypes: [],
-              },
               totalLiquidAssets: totalLiquidMoney.amount,
               currencyCode: resultCurrency,
               liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-              liquidAssetAccounts,
-              liquidLiabilityAccounts,
-              liquidAssetAccountIds: liquidAssetIds,
-              liquidLiabilityAccountIds: liquidLiabilityIds,
-              dailyBudgetBurn:
-                runResult.allFlows
-                  .filter(f => f.dayOffset >= 0 && f.meta?.source === 'BUDGET')
-                  .reduce((sum, f) => sum + f.amount, 0) / safeToSpendDays,
+              dailyBudgetBurn: runResult.report.budget.currentMonthRemaining / safeToSpendDays,
               projection: {
                 history: historyPoints,
                 projection: points as any,
                 safeDaysCount,
                 safeToSpend: runResult.simulationResult.summary.safeToSpend,
               },
-              allFlows: runResult.allFlows,
-              simulationResult: runResult.simulationResult,
-              liabilityAccountBalances: liabilityAccountBalances,
-              allAccounts: allAccounts,
             };
           }),
         );

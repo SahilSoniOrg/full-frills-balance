@@ -14,6 +14,9 @@ export const AppConfig = {
   // Default locale for formatting
   defaultLocale: 'en-IN',
 
+  // Privacy masking
+  privacyMask: '\u2022\u2022\u2022\u2022',
+
   // Versioning
   appVersion: '1.0.0',
 

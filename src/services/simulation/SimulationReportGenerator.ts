@@ -1,84 +1,100 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import dayjs from 'dayjs';
-import { Flow, SimulationEngineResult } from '@/src/services/simulation/types';
+import {
+  AccountCommitment,
+  DebtEntry,
+  DebtType,
+  Flow,
+  FlowSource,
+  IncomeEntry,
+  SimulationEngineResult,
+  SimulationReport,
+} from './types';
 
-export interface SimulationIncomeEntry {
-  id: string;
-  name: string;
-  amount: number;
-  dayOffset: number;
-  type: 'PLANNED_PAYMENT' | 'TRANSFER' | 'BUDGET';
-}
-
-export interface SimulationCommitmentDetail {
-  id: string;
-  name: string;
-  amount: number;
-  type: 'BUDGET' | 'PLANNED_PAYMENT' | 'FALLBACK';
-  dayOffset?: number;
-}
-
-export interface SimulationAccountCommitment {
-  accountId: string;
-  accountName: string;
-  amount: number;
-  details: SimulationCommitmentDetail[];
-}
-
-export interface SimulationDebtEntry {
-  accountId: string;
-  accountName: string;
-  amount: number;
-  dayOffset: number;
-}
-
-export interface SimulationBreakdowns {
-  income: SimulationIncomeEntry[];
-  committed: SimulationAccountCommitment[];
-  debt: SimulationDebtEntry[];
-  budget: {
-    currentMonthRemaining: number;
-    nextMonthProjected: number;
-    nextMonthDays: number;
-  };
-  liabilities: {
-    total: number;
-    totalCreditCard: number;
-    totalOther: number;
-    committed: number;
-    committedCreditCard: number;
-    committedOther: number;
-  };
-}
-
-export class SimulationUiPresenter {
-  static deriveBreakdowns(
+export class SimulationReportGenerator {
+  static generate(
     allFlows: Flow[],
     simulationResult: SimulationEngineResult,
     accountMap: Map<string, Account>,
     liabilityAccountBalances: { account: Account; balance: number }[],
-  ): SimulationBreakdowns {
+  ): SimulationReport {
+    const now = dayjs().startOf('day');
     const firstMajorInflowDay = simulationResult.summary?.firstMajorInflowDay ?? null;
 
-    // 1. Income Breakdown
-    const income: SimulationIncomeEntry[] = allFlows
+    const income = this.generateIncome(allFlows);
+    const committed = this.generateCommitted(allFlows, accountMap, firstMajorInflowDay);
+    const debt = this.generateDebt(allFlows, accountMap);
+    const budget = this.generateBudgetSummary(allFlows, now);
+    const liabilities = this.generateLiabilities(allFlows, accountMap, liabilityAccountBalances);
+
+    return {
+      summary: this.generateSummary(income, allFlows, firstMajorInflowDay, committed),
+      income,
+      committed,
+      debt,
+      budget,
+      liabilities,
+    };
+  }
+
+  private static generateSummary(
+    income: IncomeEntry[],
+    allFlows: Flow[],
+    firstMajorInflowDay: number | null,
+    committed: AccountCommitment[],
+  ) {
+    const totalFutureInflow = income.reduce((sum, f) => sum + f.amount, 0);
+    const totalPlannedInflow = income
+      .filter(f => f.type === FlowSource.PLANNED_PAYMENT)
+      .reduce((sum, f) => sum + f.amount, 0);
+    /**
+     * SUMMARY CALCULATION
+     * This is the primary location where raw flows are interpreted to derive
+     * high-level organic metrics (Inflow/Outflow).
+     */
+    const totalPlannedOutflow = allFlows
+      .filter(
+        f =>
+          f.dayOffset >= 0 &&
+          f.kind === 'OUTFLOW' &&
+          (f.meta?.source === 'PLANNED' || f.meta?.originalSource === 'PLANNED'),
+      )
+      .reduce((sum, f) => sum + f.amount, 0);
+    const totalCommittedPlanned = committed.reduce((sum, acc) => sum + acc.amount, 0);
+
+    return {
+      firstMajorInflowDay,
+      totalFutureInflow,
+      totalPlannedInflow,
+      totalPlannedOutflow,
+      totalCommittedPlanned,
+    };
+  }
+
+  private static generateIncome(allFlows: Flow[]): IncomeEntry[] {
+    return allFlows
       .filter(flow => flow.dayOffset >= 0 && flow.kind === 'INFLOW')
       .map(flow => ({
         id: flow.meta?.referenceId || 'income',
         name: flow.meta?.label || 'Income',
         amount: flow.amount,
         dayOffset: flow.dayOffset,
-        type: (flow.meta?.source === 'BUDGET' ? 'BUDGET' : 'PLANNED_PAYMENT') as any,
+        type: flow.meta?.source === 'BUDGET' ? FlowSource.BUDGET : FlowSource.PLANNED_PAYMENT,
       }));
+  }
 
-    // 2. Committed Breakdown (Bills & Budgets)
-    const committedMap = new Map<string, SimulationAccountCommitment>();
+  private static generateCommitted(
+    allFlows: Flow[],
+    accountMap: Map<string, Account>,
+    firstMajorInflowDay: number | null,
+  ): AccountCommitment[] {
+    const committedMap = new Map<string, AccountCommitment>();
     allFlows
       .filter(flow => flow.dayOffset >= 0 && this.isCommitmentFlow(flow))
       .forEach(flow => {
         const target = this.resolveCommitmentTarget(flow, accountMap);
-        const entry: SimulationAccountCommitment = committedMap.get(target.accountId) || {
+        const entry: AccountCommitment = committedMap.get(target.accountId) || {
           accountId: target.accountId,
           accountName: target.accountName,
           amount: 0,
@@ -86,7 +102,7 @@ export class SimulationUiPresenter {
         };
         entry.amount += flow.amount;
 
-        if (target.detailType === 'BUDGET') {
+        if (target.detailType === DebtType.BUDGET) {
           const isPostIncome =
             firstMajorInflowDay !== null && flow.dayOffset >= firstMajorInflowDay;
           const suffix = isPostIncome ? '_post' : '_pre';
@@ -101,7 +117,7 @@ export class SimulationUiPresenter {
               name: flow.meta?.label || 'Budget Burn',
               amount: flow.amount,
               dayOffset: isPostIncome ? firstMajorInflowDay || 0 : 0,
-              type: 'BUDGET',
+              type: DebtType.BUDGET,
             });
           }
         } else {
@@ -110,34 +126,42 @@ export class SimulationUiPresenter {
             name: flow.meta?.label || target.accountName || 'Spending',
             amount: flow.amount,
             dayOffset: flow.dayOffset,
-            type: target.detailType === 'PLANNED_PAYMENT' ? 'PLANNED_PAYMENT' : 'FALLBACK',
+            type:
+              target.detailType === DebtType.PLANNED_PAYMENT
+                ? DebtType.PLANNED_PAYMENT
+                : DebtType.FALLBACK,
           });
         }
 
         committedMap.set(target.accountId, entry);
       });
 
-    // 3. Debt Breakdown
-    const debtMap = new Map<string, SimulationDebtEntry>();
+    return Array.from(committedMap.values());
+  }
+
+  private static generateDebt(allFlows: Flow[], accountMap: Map<string, Account>): DebtEntry[] {
+    const debtMap = new Map<string, DebtEntry>();
     allFlows
       .filter(
         flow => flow.dayOffset >= 0 && flow.kind === 'OUTFLOW' && flow.meta?.source === 'LIABILITY',
       )
       .forEach(flow => {
-        const accId = flow.meta?.referenceId || (flow as any).accountId;
+        const accId = flow.meta?.referenceId || this.getFlowAccountId(flow);
         const acc = accountMap.get(accId);
         const entry = debtMap.get(accId) || {
           accountId: accId,
           accountName: acc?.name || 'Liability',
           amount: 0,
           dayOffset: flow.dayOffset,
+          type: DebtType.FALLBACK,
         };
         entry.amount += flow.amount;
         debtMap.set(accId, entry);
       });
+    return Array.from(debtMap.values());
+  }
 
-    // 4. Budget Summary
-    const now = dayjs().startOf('day');
+  private static generateBudgetSummary(allFlows: Flow[], now: dayjs.Dayjs) {
     const daysLeftInMonth = now.daysInMonth() - now.date() + 1;
     let currentMonthRemaining = 0;
     let nextMonthProjected = 0;
@@ -156,11 +180,22 @@ export class SimulationUiPresenter {
       }
     });
 
-    // 5. Liabilities Summary
+    return {
+      currentMonthRemaining,
+      nextMonthProjected,
+      nextMonthDays: Math.max(0, AppConfig.defaults.safeToSpendDays - daysLeftInMonth),
+    };
+  }
+
+  private static generateLiabilities(
+    allFlows: Flow[],
+    accountMap: Map<string, Account>,
+    liabilityAccountBalances: { account: Account; balance: number }[],
+  ) {
     const totalLiabilities = liabilityAccountBalances.reduce((sum, lb) => sum + lb.balance, 0);
     const CC_SUBTYPE = 'CREDIT_CARD';
 
-    const liabilities = {
+    return {
       total: totalLiabilities,
       totalCreditCard: liabilityAccountBalances
         .filter(lb => lb.account.accountSubtype === CC_SUBTYPE)
@@ -188,24 +223,11 @@ export class SimulationUiPresenter {
         )
         .reduce((sum, flow) => sum + flow.amount, 0),
     };
-
-    return {
-      income,
-      committed: Array.from(committedMap.values()),
-      debt: Array.from(debtMap.values()),
-      budget: {
-        currentMonthRemaining,
-        nextMonthProjected,
-        nextMonthDays: Math.max(0, AppConfig.defaults.safeToSpendDays - daysLeftInMonth),
-      },
-      liabilities,
-    };
   }
 
   private static isCommitmentFlow(flow: Flow): boolean {
     const effectiveSource =
       flow.meta?.source === 'RESOLVED' ? flow.meta.originalSource : flow.meta?.source;
-    if (flow.meta?.source === 'LIABILITY') return flow.kind === 'OUTFLOW';
     if (effectiveSource === 'BUDGET') return flow.kind === 'OUTFLOW';
     if (effectiveSource === 'PLANNED') return flow.kind === 'OUTFLOW' || flow.kind === 'TRANSFER';
     return false;
@@ -214,13 +236,12 @@ export class SimulationUiPresenter {
   private static resolveCommitmentTarget(flow: Flow, accountMap: Map<string, Account>) {
     if (flow.meta?.source === 'LIABILITY') {
       const accountId =
-        flow.meta?.referenceId ||
-        (flow.kind === 'TRANSFER' ? flow.toAccountId : (flow as any).accountId);
+        flow.meta?.referenceId || (flow.kind === 'TRANSFER' ? flow.toAccountId : flow.accountId);
       const acc = accountMap.get(accountId);
       return {
         accountId,
         accountName: acc?.name || flow.meta?.label || 'Liability',
-        detailType: 'FALLBACK' as const,
+        detailType: DebtType.FALLBACK,
       };
     }
 
@@ -228,14 +249,21 @@ export class SimulationUiPresenter {
       flow.meta?.source === 'RESOLVED' ? flow.meta.originalSource : flow.meta?.source;
     const accountId =
       flow.meta?.categoryId ||
-      (flow.kind === 'TRANSFER' ? flow.toAccountId : (flow as any).accountId) ||
+      (flow.kind === 'TRANSFER' ? flow.toAccountId : flow.accountId) ||
       'other';
     const acc = accountMap.get(accountId);
 
     return {
       accountId,
       accountName: acc?.name || flow.meta?.label || 'Other',
-      detailType: effectiveSource === 'BUDGET' ? ('BUDGET' as const) : ('PLANNED_PAYMENT' as const),
+      detailType: effectiveSource === 'BUDGET' ? DebtType.BUDGET : DebtType.PLANNED_PAYMENT,
     };
+  }
+
+  private static getFlowAccountId(flow: Flow): string {
+    if (flow.kind === 'TRANSFER') {
+      return flow.fromAccountId;
+    }
+    return flow.accountId;
   }
 }

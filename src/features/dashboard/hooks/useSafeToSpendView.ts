@@ -2,9 +2,9 @@ import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo } from 'react';
-import { SimulationUiPresenter } from '../utils/SimulationUiPresenter';
+import { SafeToSpendMapper } from '../mappers/SafeToSpendMapper';
+import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 export interface SafeToSpendViewProps extends SafeToSpendResult {
   isLoading?: boolean;
@@ -19,33 +19,20 @@ export interface SafeToSpendViewProps extends SafeToSpendResult {
   };
 }
 
-export function useSafeToSpendView(props: SafeToSpendViewProps) {
-  const {
-    summary,
-    currencyCode,
-    isLoading,
-    totalLiquidAssets,
-    allFlows,
-    simulationResult,
-    allAccounts,
-    liabilityAccountBalances,
-  } = props;
-
-  const breakdowns = useMemo(() => {
-    if (!allFlows || !simulationResult || !allAccounts) return null;
-    const accountMap = new Map(allAccounts.map(a => [a.id, a]));
-    return SimulationUiPresenter.deriveBreakdowns(
-      allFlows,
-      simulationResult,
-      accountMap,
-      liabilityAccountBalances,
-    );
-  }, [allFlows, simulationResult, allAccounts, liabilityAccountBalances]);
+export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendViewModel & {
+  isInfoVisible: boolean;
+  setInfoVisible: (v: boolean) => void;
+  expandedSection: 'assets' | 'income' | 'committed' | 'debts' | null;
+  setExpandedSection: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => void;
+  selectedLegendItem: 'safe' | 'committed' | 'debts' | null;
+  setSelectedLegendItem: (i: 'safe' | 'committed' | 'debts' | null) => void;
+} {
+  const { currencyCode, isLoading: propsIsLoading } = props;
 
   const { isPrivacyMode: globalPrivacyMode } = useUI();
   const isPrivacyMode = props.uiState?.isPrivacyMode ?? globalPrivacyMode;
 
-  // Use external state if provided (for root-level rendering), otherwise fall back to internal
+  // UI State management
   const [internalInfoVisible, setInternalInfoVisible] = React.useState(false);
   const [internalExpandedSection, setInternalExpandedSection] = React.useState<
     'assets' | 'income' | 'committed' | 'debts' | null
@@ -62,48 +49,75 @@ export function useSafeToSpendView(props: SafeToSpendViewProps) {
   const setSelectedLegendItem =
     props.uiState?.setSelectedLegendItem ?? setInternalSelectedLegendItem;
 
-  const safeToSpend = summary?.safeToSpend ?? 0;
-  const shortfall = summary?.shortfall ?? 0;
-  const committedBudget = breakdowns?.budget?.currentMonthRemaining ?? 0;
-  const committedPlanned = summary?.totalCommittedPlanned ?? 0;
-  const committedLiabilities = breakdowns?.liabilities?.committed ?? 0;
+  const { summary, totalLiquidAssets, report, accountSummaries, liquidAssetSubtypes } = props;
 
-  const format = useCallback(
-    (val: number) => {
-      if (isLoading) return null; // Let component handle skeleton
-      if (isPrivacyMode) return '••••';
+  const viewModel = useMemo(() => {
+    if (!report) {
+      return {
+        safeToSpend: 0,
+        shortfall: 0,
+        totalLiquidAssets: totalLiquidAssets || 0,
+        committedTotal: 0,
+        committedLiabilities: 0,
+        effectiveTotal: totalLiquidAssets || 0,
+        totalFutureInflow: 0,
+        totalLiabilities: 0,
+        displaySafeToSpend: '---',
+        displayShortfall: '---',
+        displayTotalLiquidAssets: '---',
+        displayCommittedTotal: '---',
+        displayCommittedLiabilities: '---',
+        displayTotalFutureInflow: '---',
+        report: null as any,
+        accountSummaries: [],
+        liquidAssetSubtypes: [],
+        isOverCommitted: false,
+        isPositiveSafeToSpend: false,
+        isPrivacyMode,
+        isLoading: true,
+        formatValue: (_v: number): string => '---',
+        labels: AppConfig.strings.dashboard.safeToSpendUi,
+        info: AppConfig.strings.dashboard.safeToSpendExplanation,
+      };
+    }
 
-      const isVerySmall = Math.abs(val) > 0 && Math.abs(val) < 0.5;
-      if (isVerySmall) {
-        const oneFormatted = CurrencyFormatter.format(1, currencyCode, {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        });
-        return val > 0 ? `< ${oneFormatted}` : `> -${oneFormatted}`;
-      }
-
-      return CurrencyFormatter.format(val, currencyCode, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
-    },
-    [isLoading, isPrivacyMode, currencyCode],
-  );
-
-  const isOverCommitted = shortfall > 0;
-  const isPositiveSafeToSpend = safeToSpend > 0;
-  const committedTotal = committedPlanned + committedBudget;
+    return SafeToSpendMapper.mapToViewModel(
+      {
+        summary,
+        totalLiquidAssets,
+        report,
+        accountSummaries,
+        liquidAssetSubtypes,
+      },
+      {
+        isPrivacyMode,
+        isLoading: !!propsIsLoading,
+        currencyCode,
+      },
+    );
+  }, [
+    summary,
+    totalLiquidAssets,
+    report,
+    accountSummaries,
+    liquidAssetSubtypes,
+    isPrivacyMode,
+    propsIsLoading,
+    currencyCode,
+  ]);
 
   const handleSetInfoVisible = useCallback(
     (v: boolean) => {
       setInfoVisible(v);
       if (v) {
-        analytics.trackFeatureUsage('safe_to_spend', 'opened', { isOverCommitted });
+        analytics.trackFeatureUsage('safe_to_spend', 'opened', {
+          isOverCommitted: viewModel.isOverCommitted,
+        });
       } else {
         analytics.trackFeatureUsage('safe_to_spend', 'closed');
       }
     },
-    [setInfoVisible, isOverCommitted],
+    [setInfoVisible, viewModel.isOverCommitted],
   );
 
   const handleSetExpandedSection = useCallback(
@@ -126,41 +140,15 @@ export function useSafeToSpendView(props: SafeToSpendViewProps) {
     [setSelectedLegendItem],
   );
 
-  const effectiveTotal = useMemo(
-    () => Math.max(totalLiquidAssets || 0, committedTotal + committedLiabilities + safeToSpend),
-    [totalLiquidAssets, committedTotal, committedLiabilities, safeToSpend],
-  );
-
-  const labels = AppConfig.strings.dashboard.safeToSpendUi;
-  const info = AppConfig.strings.dashboard.safeToSpendExplanation;
-
-  const totalFutureInflow = useMemo(
-    () => allFlows?.filter(f => f.kind === 'INFLOW').reduce((sum, f) => sum + f.amount, 0) ?? 0,
-    [allFlows],
-  );
-
   return {
-    isPrivacyMode,
+    ...viewModel,
+
+    // UI Orchestration
     isInfoVisible,
     setInfoVisible: handleSetInfoVisible,
     expandedSection,
     setExpandedSection: handleSetExpandedSection,
     selectedLegendItem,
     setSelectedLegendItem: handleSetSelectedLegendItem,
-    format,
-    isOverCommitted,
-    isPositiveSafeToSpend,
-    committedTotal,
-    effectiveTotal,
-    labels,
-    info,
-    // Helper derived values for easier destructuring in components
-    safeToSpend,
-    shortfall,
-    committedBudget,
-    committedPlanned,
-    committedLiabilities,
-    totalFutureInflow,
-    breakdowns,
   };
 }

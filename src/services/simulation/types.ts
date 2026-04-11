@@ -104,6 +104,7 @@ export interface Obligation {
 
 export interface SimulationRunResult {
   simulationResult: SimulationEngineResult;
+  report: SimulationReport;
   accountSummaries: AccountSimulationSummary[];
   allFlows: Flow[];
   startingBalances: Map<string, number>;
@@ -155,6 +156,32 @@ export interface ProjectionPoint {
   dayOffset?: number;
 }
 
+export interface SimulationReport {
+  summary: {
+    firstMajorInflowDay: number | null;
+    totalFutureInflow: number;
+    totalPlannedInflow: number;
+    totalPlannedOutflow: number;
+    totalCommittedPlanned: number;
+  };
+  income: IncomeEntry[];
+  committed: AccountCommitment[];
+  debt: DebtEntry[];
+  budget: {
+    currentMonthRemaining: number;
+    nextMonthProjected: number;
+    nextMonthDays: number;
+  };
+  liabilities: {
+    total: number;
+    totalCreditCard: number;
+    totalOther: number;
+    committed: number;
+    committedCreditCard: number;
+    committedOther: number;
+  };
+}
+
 export interface AccountSimulationSummary {
   accountId: string;
   accountName: string;
@@ -189,8 +216,8 @@ export interface SimulationResult {
     trajectoryMinBalance: number;
     safeDaysCount: number | null;
     totalFutureInflow: number;
-    totalOrganicOutflow: number;
-    totalOrganicInflow: number;
+    totalPlannedOutflow: number;
+    totalPlannedInflow: number;
     totalCommittedPlanned: number;
     firstMajorInflowDay: number | null;
   };

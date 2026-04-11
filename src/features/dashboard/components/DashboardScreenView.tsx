@@ -7,8 +7,8 @@ import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal'
 import { Inset, Page, Skeleton, Stack } from '@/src/design-system';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import { SafeToSpendCard } from './SafeToSpendCard';
+import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
@@ -25,8 +25,8 @@ export function DashboardScreenView({
   legendModalState,
   isPrivacyMode,
 }: DashboardViewModel & { listRef?: React.RefObject<any> }) {
-  const safeToSpendViewProps = useSafeToSpendView({
-    ...(safeToSpendData || {}),
+  const safeToSpendViewModel = useSafeToSpendView({
+    ...(safeToSpendData || ({} as any)),
     uiState: {
       isInfoVisible: explanationModalState.visible,
       setInfoVisible: explanationModalState.setVisible,
@@ -36,8 +36,8 @@ export function DashboardScreenView({
       setSelectedLegendItem: legendModalState.setSelectedItem,
       isPrivacyMode,
     },
-  } as any);
-
+    isLoading: !isInitialized,
+  });
   if (!isInitialized) {
     return (
       <Page edges={['top']}>
@@ -77,10 +77,11 @@ export function DashboardScreenView({
               <View style={{ zIndex: 10 }}>
                 <SafeToSpendCard
                   {...safeToSpendData}
+                  viewModel={safeToSpendViewModel}
+                  onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
+                  onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
                   isLoading={!isInitialized}
                   isPrivacyMode={isPrivacyMode}
-                  onInfoPress={() => safeToSpendViewProps.setInfoVisible(true)}
-                  onLegendPress={safeToSpendViewProps.setSelectedLegendItem}
                 />
               </View>
             )}
@@ -99,59 +100,20 @@ export function DashboardScreenView({
         }
         fab={fab}
       />
+      <SafeToSpendExplanationModal
+        visible={explanationModalState.visible}
+        onClose={() => explanationModalState.setVisible(false)}
+        viewModel={safeToSpendViewModel}
+        expandedSection={explanationModalState.expandedSection}
+        setExpandedSection={explanationModalState.setExpandedSection}
+      />
 
-      {safeToSpendData && (
-        <>
-          <SafeToSpendExplanationModal
-            visible={explanationModalState.visible}
-            onClose={() => safeToSpendViewProps.setInfoVisible(false)}
-            info={safeToSpendViewProps.info}
-            labels={safeToSpendViewProps.labels}
-            formatValue={safeToSpendViewProps.format}
-            totalLiquidAssets={safeToSpendData.totalLiquidAssets}
-            totalFutureInflow={safeToSpendViewProps.totalFutureInflow}
-            committedBudget={safeToSpendViewProps.committedBudget}
-            committedPlanned={safeToSpendViewProps.committedPlanned}
-            committedLiabilities={safeToSpendViewProps.committedLiabilities}
-            safeToSpend={safeToSpendViewProps.safeToSpend}
-            liquidAssetSubtypes={safeToSpendData.liquidAssetSubtypes}
-            accountSummaries={safeToSpendData.accountSummaries}
-            incomeBreakdown={safeToSpendViewProps.breakdowns?.income || []}
-            committedBreakdown={safeToSpendViewProps.breakdowns?.committed || []}
-            debtBreakdown={safeToSpendViewProps.breakdowns?.debt || []}
-            firstMajorInflowDay={safeToSpendData.summary?.firstMajorInflowDay ?? null}
-            totalLiabilities={safeToSpendViewProps.breakdowns?.liabilities?.total ?? 0}
-            expandedSection={explanationModalState.expandedSection}
-            setExpandedSection={safeToSpendViewProps.setExpandedSection}
-          />
-
-          <SafeToSpendLegendModal
-            visible={!!legendModalState.selectedItem}
-            onClose={() => safeToSpendViewProps.setSelectedLegendItem(null)}
-            type={legendModalState.selectedItem}
-            labels={safeToSpendViewProps.labels}
-            formatValue={safeToSpendViewProps.format}
-            totalLiquidAssets={safeToSpendData.totalLiquidAssets}
-            totalFutureInflow={safeToSpendViewProps.totalFutureInflow}
-            committedBudget={safeToSpendViewProps.committedBudget}
-            committedPlanned={safeToSpendViewProps.committedPlanned}
-            committedLiabilities={safeToSpendViewProps.committedLiabilities}
-            safeToSpend={safeToSpendViewProps.safeToSpend}
-            incomeBreakdown={safeToSpendViewProps.breakdowns?.income || []}
-            committedBreakdown={safeToSpendViewProps.breakdowns?.committed || []}
-            debtBreakdown={safeToSpendViewProps.breakdowns?.debt || []}
-            firstMajorInflowDay={safeToSpendData.summary?.firstMajorInflowDay ?? null}
-            totalLiabilities={safeToSpendViewProps.breakdowns?.liabilities?.total ?? 0}
-            committedLiabilitiesCC={
-              safeToSpendViewProps.breakdowns?.liabilities?.committedCreditCard ?? 0
-            }
-            committedLiabilitiesOther={
-              safeToSpendViewProps.breakdowns?.liabilities?.committedOther ?? 0
-            }
-            committedTotal={safeToSpendViewProps.committedTotal}
-          />
-        </>
-      )}
+      <SafeToSpendLegendModal
+        visible={!!legendModalState.selectedItem}
+        onClose={() => legendModalState.setSelectedItem(null)}
+        type={legendModalState.selectedItem}
+        viewModel={safeToSpendViewModel}
+      />
     </>
   );
 }

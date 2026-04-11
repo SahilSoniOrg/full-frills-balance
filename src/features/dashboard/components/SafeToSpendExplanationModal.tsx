@@ -8,26 +8,12 @@ import { analytics } from '@/src/services/analytics-service';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
+import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 interface SafeToSpendExplanationModalProps {
   visible: boolean;
   onClose: () => void;
-  info: any;
-  labels: any;
-  formatValue: (val: number) => string | React.ReactNode;
-  totalLiquidAssets: number;
-  totalFutureInflow: number;
-  committedBudget: number;
-  committedPlanned: number;
-  committedLiabilities: number;
-  safeToSpend: number;
-  liquidAssetSubtypes: any[];
-  accountSummaries?: any[];
-  incomeBreakdown: any[];
-  committedBreakdown: any[];
-  debtBreakdown: any[];
-  firstMajorInflowDay: number | null;
-  totalLiabilities: number;
+  viewModel: SafeToSpendViewModel;
   expandedSection: 'assets' | 'income' | 'committed' | 'debts' | null;
   setExpandedSection: (section: 'assets' | 'income' | 'committed' | 'debts' | null) => void;
 }
@@ -35,25 +21,25 @@ interface SafeToSpendExplanationModalProps {
 export const SafeToSpendExplanationModal = ({
   visible,
   onClose,
-  info,
-  labels,
-  formatValue,
-  totalLiquidAssets,
-  totalFutureInflow,
-  committedBudget,
-  committedPlanned,
-  committedLiabilities,
-  safeToSpend,
-  liquidAssetSubtypes,
-  accountSummaries,
-  incomeBreakdown,
-  committedBreakdown,
-  debtBreakdown,
-  firstMajorInflowDay,
-  totalLiabilities,
+  viewModel,
   expandedSection,
   setExpandedSection,
 }: SafeToSpendExplanationModalProps) => {
+  const {
+    info,
+    labels,
+    formatValue,
+    totalLiquidAssets,
+    totalFutureInflow,
+    committedTotal,
+    committedLiabilities,
+    safeToSpend,
+    totalLiabilities,
+    report,
+    accountSummaries,
+    liquidAssetSubtypes,
+  } = viewModel;
+
   const { theme } = useTheme();
   const styles = React.useMemo(
     () =>
@@ -268,8 +254,8 @@ export const SafeToSpendExplanationModal = ({
         {expandedSection === 'income' && (
           <View style={styles.expandedContentRow}>
             <View style={{ gap: Spacing.sm }}>
-              {incomeBreakdown.filter(inc => inc.amount !== 0).length > 0 ? (
-                incomeBreakdown
+              {report?.income?.filter(inc => inc.amount !== 0).length > 0 ? (
+                report.income
                   .filter(inc => inc.amount !== 0)
                   .map((inc, i) => (
                     <TouchableOpacity
@@ -363,7 +349,7 @@ export const SafeToSpendExplanationModal = ({
                 tabular
                 style={{ fontFamily: Typography.fonts.heading }}
               >
-                –{formatValue(committedBudget + committedPlanned)}
+                –{formatValue(committedTotal)}
               </AppText>
             </View>
           </View>
@@ -371,8 +357,8 @@ export const SafeToSpendExplanationModal = ({
         {expandedSection === 'committed' && (
           <View style={styles.expandedContentRow}>
             <View style={{ gap: Spacing.md }}>
-              {(committedBreakdown || [])
-                .filter(acc => acc.amount !== 0)
+              {report?.committed
+                ?.filter(acc => acc.amount !== 0)
                 .sort((a, b) => b.amount - a.amount)
                 .map((acc, i) => (
                   <View key={i} style={{ gap: Spacing.xs }}>
@@ -394,6 +380,7 @@ export const SafeToSpendExplanationModal = ({
                       {acc.details
                         .filter((det: any) => det.amount !== 0)
                         .map((det: any, di: number) => {
+                          const firstMajorInflowDay = report?.summary?.firstMajorInflowDay ?? null;
                           const isPostIncome =
                             firstMajorInflowDay !== null &&
                             det.dayOffset !== undefined &&
@@ -563,8 +550,8 @@ export const SafeToSpendExplanationModal = ({
             </AppText>
 
             <View style={{ gap: Spacing.md }}>
-              {(debtBreakdown || [])
-                .filter(acc => acc.amount !== 0)
+              {report?.debt
+                ?.filter(acc => acc.amount !== 0)
                 .map((acc, i) => (
                   <View
                     key={i}

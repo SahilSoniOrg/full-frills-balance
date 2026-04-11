@@ -5,51 +5,35 @@ import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 interface SafeToSpendLegendModalProps {
   visible: boolean;
   onClose: () => void;
   type: 'safe' | 'committed' | 'debts' | null;
-  labels: any;
-  formatValue: (val: number) => string | React.ReactNode;
-  totalLiquidAssets: number;
-  totalFutureInflow: number;
-  committedBudget: number;
-  committedPlanned: number;
-  committedLiabilities: number;
-  safeToSpend: number;
-  incomeBreakdown: any[];
-  committedBreakdown: any[];
-  debtBreakdown: any[];
-  firstMajorInflowDay: number | null;
-  totalLiabilities: number;
-  committedLiabilitiesCC: number;
-  committedLiabilitiesOther: number;
-  committedTotal: number;
+  viewModel: SafeToSpendViewModel;
 }
 
 export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
+  const { visible, onClose, type, viewModel } = props;
   const {
-    visible,
-    onClose,
-    type,
     labels,
     formatValue,
     totalLiquidAssets,
     totalFutureInflow,
-    committedBudget,
-    committedPlanned,
+    committedTotal,
     committedLiabilities,
     safeToSpend,
-    incomeBreakdown,
-    committedBreakdown,
-    debtBreakdown,
-    firstMajorInflowDay,
     totalLiabilities,
-    committedLiabilitiesCC,
-    committedLiabilitiesOther,
-    committedTotal,
-  } = props;
+    report,
+  } = viewModel;
+
+  const incomeBreakdown = report?.income || [];
+  const committedBreakdown = report?.committed || [];
+  const debtBreakdown = report?.debt || [];
+  const firstMajorInflowDay = report?.summary?.firstMajorInflowDay ?? null;
+  const committedLiabilitiesCC = report?.liabilities?.committedCreditCard ?? 0;
+  const committedLiabilitiesOther = report?.liabilities?.committedOther ?? 0;
 
   const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;
@@ -129,7 +113,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                   Committed Items
                 </AppText>
                 <AppText variant="body" weight="bold" color="warning">
-                  -{formatValue(committedBudget + committedPlanned)}
+                  -{formatValue(committedTotal)}
                 </AppText>
               </View>
               <View style={styles.breakdownRow}>
