@@ -1,5 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
+import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -41,71 +42,75 @@ export function BudgetListView() {
         activeOpacity={0.8}
       >
         <AppCard elevation="md" padding="lg" radius="r2">
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderLeft}>
-              <View style={[styles.iconContainer, { backgroundColor: theme.surfaceSecondary }]}>
-                <AppIcon name="pieChart" color={stripColor} size={20} />
-              </View>
-              <View>
-                <AppText variant="heading">{budget.name}</AppText>
-                {item.previousUsage && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                    <AppIcon
-                      name={item.previousUsage.remaining < 0 ? 'error' : 'checkCircle'}
-                      size={12}
-                      color={item.previousUsage.remaining < 0 ? theme.error : theme.success}
-                      style={{ marginRight: 4 }}
-                    />
-                    <AppText
-                      variant="caption"
-                      color={item.previousUsage.remaining < 0 ? 'error' : 'success'}
-                    >
-                      Last mo: {item.previousUsage.remaining < 0 ? 'Over budget' : 'Under budget'}
-                    </AppText>
-                  </View>
-                )}
-              </View>
-            </View>
-            <AppText variant="title">
-              {CurrencyFormatter.format(budget.amount, budget.currencyCode, {
-                maximumFractionDigits: 0,
-              })}
-            </AppText>
-          </View>
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statColumn}>
-              <AppText variant="caption" color="secondary">
-                Spent
-              </AppText>
-              <AppText variant="body" style={{ marginTop: 4 }}>
-                {CurrencyFormatter.format(usage.spent, budget.currencyCode, {
+          <Stack gap="lg">
+            <Inline justify="space-between" align="center">
+              <Inline gap="md" align="center">
+                <Box
+                  width={Size.xl}
+                  height={Size.xl}
+                  borderRadius="md"
+                  alignItems="center"
+                  justifyContent="center"
+                  background="surfaceSecondary"
+                >
+                  <AppIcon name="pieChart" color={stripColor} size={20} />
+                </Box>
+                <Stack>
+                  <AppText variant="heading">{budget.name}</AppText>
+                  {item.previousUsage && (
+                    <Inline align="center" gap="xs">
+                      <AppIcon
+                        name={item.previousUsage.remaining < 0 ? 'error' : 'checkCircle'}
+                        size={12}
+                        color={item.previousUsage.remaining < 0 ? theme.error : theme.success}
+                      />
+                      <AppText
+                        variant="caption"
+                        color={item.previousUsage.remaining < 0 ? 'error' : 'success'}
+                      >
+                        Last mo: {item.previousUsage.remaining < 0 ? 'Over budget' : 'Under budget'}
+                      </AppText>
+                    </Inline>
+                  )}
+                </Stack>
+              </Inline>
+              <AppText variant="title">
+                {CurrencyFormatter.format(budget.amount, budget.currencyCode, {
                   maximumFractionDigits: 0,
                 })}
               </AppText>
-            </View>
-            <View style={[styles.statColumn, { alignItems: 'flex-end' }]}>
-              <AppText variant="caption" color="secondary">
-                {isOver ? 'Over Limit' : 'Left'}
-              </AppText>
-              <View style={styles.remainingRow}>
-                {isOver && (
-                  <AppIcon name="alert" size={14} color={theme.error} style={{ marginRight: 4 }} />
-                )}
-                <AppText variant="body" color={isOver ? 'error' : 'success'}>
-                  {CurrencyFormatter.format(Math.abs(usage.remaining), budget.currencyCode, {
+            </Inline>
+
+            <Inline justify="space-between" align="center">
+              <Stack gap="xs">
+                <AppText variant="caption" color="secondary">
+                  Spent
+                </AppText>
+                <AppText variant="body">
+                  {CurrencyFormatter.format(usage.spent, budget.currencyCode, {
                     maximumFractionDigits: 0,
                   })}
                 </AppText>
-              </View>
-            </View>
-          </View>
+              </Stack>
+              <Stack gap="xs" align="flex-end">
+                <AppText variant="caption" color="secondary">
+                  {isOver ? 'Over Limit' : 'Left'}
+                </AppText>
+                <Inline align="center" gap="xs">
+                  {isOver && <AppIcon name="alert" size={14} color={theme.error} />}
+                  <AppText variant="body" color={isOver ? 'error' : 'success'}>
+                    {CurrencyFormatter.format(Math.abs(usage.remaining), budget.currencyCode, {
+                      maximumFractionDigits: 0,
+                    })}
+                  </AppText>
+                </Inline>
+              </Stack>
+            </Inline>
 
-          <View style={[styles.progressTrack, { backgroundColor: theme.border }]}>
-            <View
-              style={[styles.progressFill, { width: `${progress}%`, backgroundColor: stripColor }]}
-            />
-          </View>
+            <Box height={6} background="border" borderRadius="sm" overflow="hidden">
+              <Box height="100%" width={`${progress}%`} background={stripColor} />
+            </Box>
+          </Stack>
         </AppCard>
       </TouchableOpacity>
     );

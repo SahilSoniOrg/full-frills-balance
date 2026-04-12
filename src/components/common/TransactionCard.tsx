@@ -150,7 +150,7 @@ export const TransactionCard = ({
     <AppCard
       elevation="sm"
       padding="none"
-      radius="r3"
+      radius="r2"
       style={[styles.container, { backgroundColor: theme.surface }]}
     >
       <Inset space="lg">

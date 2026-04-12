@@ -1,5 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Box, Inline, Stack } from '@/src/design-system';
 import {
   AuditLogEntry,
   EntityStatus,
@@ -7,7 +8,7 @@ import {
 } from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 
 interface AuditLogItemProps {
   item: AuditLogEntry;
@@ -42,23 +43,26 @@ export const AuditLogItem = ({
   } = useAuditLogDiffViewModel({ item, accountMap, entityStatusMap });
 
   return (
-    <AppCard style={styles.card} padding="md" elevation="sm">
+    <AppCard padding="md" elevation="sm" radius="r2" style={styles.card}>
       <TouchableOpacity
         onPress={onToggle}
         accessibilityLabel={AppConfig.strings.audit.viewDetails}
         accessibilityRole="button"
+        activeOpacity={0.7}
       >
-        <View style={styles.row}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: withOpacity(actionColor, Opacity.soft) },
-            ]}
+        <Inline gap="md" align="center">
+          <Box
+            width={Size.xl}
+            height={Size.xl}
+            borderRadius="full"
+            alignItems="center"
+            justifyContent="center"
+            background={withOpacity(actionColor, Opacity.soft)}
           >
             <AppIcon name={actionIcon} size={Size.sm} color={actionColor} />
-          </View>
-          <View style={styles.content}>
-            <View style={styles.headerRow}>
+          </Box>
+          <Stack flex={1} gap="xs">
+            <Inline justify="space-between" align="baseline" gap="sm">
               <AppText variant="body" weight="semibold">
                 {entityLabel}
                 {entityDisplayName ? `: ${entityDisplayName}` : ''}
@@ -66,27 +70,27 @@ export const AuditLogItem = ({
               <AppText variant="caption" style={{ color: actionColor }}>
                 {item.action}
               </AppText>
-            </View>
+            </Inline>
             <AppText variant="caption" color="secondary">
               {timestampLabel}
             </AppText>
             <AppText variant="caption" color="secondary" numberOfLines={1}>
               {entityIdLabel}
             </AppText>
-          </View>
+          </Stack>
           <AppIcon
             name={isExpanded ? 'chevronUp' : 'chevronDown'}
             size={Size.sm}
             color={theme.textSecondary}
           />
-        </View>
+        </Inline>
       </TouchableOpacity>
 
       {isExpanded && parsedChanges && (
-        <View style={styles.expandedContent}>
+        <Stack gap="md" style={styles.expandedContent}>
           {renderChanges(parsedChanges)}
 
-          <View style={styles.actions}>
+          <Inline justify="flex-end" gap="sm">
             {onView && (
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: theme.surfaceSecondary }]}
@@ -114,8 +118,8 @@ export const AuditLogItem = ({
                 </AppText>
               </TouchableOpacity>
             )}
-          </View>
-        </View>
+          </Inline>
+        </Stack>
       )}
     </AppCard>
   );
@@ -123,38 +127,10 @@ export const AuditLogItem = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: Spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  iconContainer: {
-    width: Size.xl,
-    height: Size.xl,
-    borderRadius: Shape.radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-    gap: Spacing.xs / 2,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    gap: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   expandedContent: {
     marginTop: Spacing.sm,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
   },
   actionButton: {
     flexDirection: 'row',
