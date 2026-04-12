@@ -187,6 +187,7 @@ export const ThemeIds = {
   DEEP_SPACE: 'deep-space',
   IVY: 'ivy',
   EDITORIAL: 'editorial',
+  GOLD_OBSIDIAN: 'gold-obsidian',
 } as const;
 
 export type ThemeId = (typeof ThemeIds)[keyof typeof ThemeIds];
@@ -438,6 +439,38 @@ export const EditorialPalette = {
   transparent: 'transparent',
 } as const;
 
+// === GOLD OBSIDIAN PALETTE ===
+export const GoldObsidianPalette = {
+  // Neutrals (Obsidian)
+  background: '#0A0C10',
+  surface: '#16181D',
+  surfaceHighlight: '#24272E',
+
+  // Text (Bone/Paper)
+  textPrimary: '#F0EDE8',
+  textSecondary: '#8E8B86',
+  textTertiary: '#5C5A56',
+
+  // Brand (Gold)
+  gold: '#D4AF37', // Polished Satin Gold (was #C5A050)
+  goldDim: '#3D341F',
+
+  // Semantic (Warm Precious Metals & Gems)
+  red: '#991B1B', // Blood Garnet (was #B91C1C)
+  redDim: '#450A0A',
+  green: '#10B981', // Vibrant Emerald (was #059669)
+  greenDim: '#064E3B',
+  blue: '#3B82F6', // Blue Sapphire (was #A16207)
+  blueDim: '#1E3A8A',
+  orange: '#B45309', // Warm Bronze (was #94A3B8)
+  purple: '#721C24', // Wine Garnet
+
+  // Standard
+  white: '#FFFFFF',
+  black: '#000000',
+  transparent: 'transparent',
+} as const;
+
 // === THEME TYPES ===
 export interface Theme {
   primary: string;
@@ -661,11 +694,75 @@ const EditorialTheme: { light: Theme; dark: Theme } = {
   },
 };
 
+const GoldObsidianTheme: { light: Theme; dark: Theme } = {
+  light: {
+    primary: GoldObsidianPalette.gold,
+    primaryLight: '#F7F2E8',
+    success: GoldObsidianPalette.gold,
+    successLight: '#F7F2E8',
+    warning: GoldObsidianPalette.orange,
+    warningLight: '#FFF5E5',
+    error: GoldObsidianPalette.red,
+    errorLight: '#FFE5E5',
+    asset: GoldObsidianPalette.blue,
+    assetLight: '#FDF7E8',
+    liability: GoldObsidianPalette.orange,
+    equity: GoldObsidianPalette.gold,
+    income: GoldObsidianPalette.green,
+    expense: GoldObsidianPalette.red,
+    transfer: GoldObsidianPalette.purple,
+    background: '#FDFBF7', // Warm paper
+    surface: '#FFFFFF',
+    surfaceSecondary: '#F5F2ED',
+    border: '#E8E4DE',
+    text: '#1C1917', // Obsidian text
+    textSecondary: '#6B6864',
+    textTertiary: '#9E9B97',
+    icon: '#6B6864',
+    overlay: 'rgba(10, 12, 16, 0.5)',
+    divider: '#E8E4DE',
+    pure: '#FFFFFF',
+    pureInverse: '#000000',
+    onPrimary: '#0A0C10',
+  },
+  dark: {
+    primary: GoldObsidianPalette.gold,
+    primaryLight: GoldObsidianPalette.goldDim,
+    success: GoldObsidianPalette.gold,
+    successLight: GoldObsidianPalette.goldDim,
+    warning: GoldObsidianPalette.orange,
+    warningLight: '#3D2A1A',
+    error: GoldObsidianPalette.red,
+    errorLight: '#3D1A1A',
+    asset: GoldObsidianPalette.blue,
+    assetLight: GoldObsidianPalette.blueDim,
+    liability: GoldObsidianPalette.orange,
+    equity: GoldObsidianPalette.gold,
+    income: GoldObsidianPalette.green,
+    expense: GoldObsidianPalette.red,
+    transfer: GoldObsidianPalette.purple,
+    background: GoldObsidianPalette.background,
+    surface: GoldObsidianPalette.surface,
+    surfaceSecondary: GoldObsidianPalette.surfaceHighlight,
+    border: GoldObsidianPalette.surfaceHighlight,
+    text: GoldObsidianPalette.textPrimary,
+    textSecondary: GoldObsidianPalette.textSecondary,
+    textTertiary: GoldObsidianPalette.textTertiary,
+    icon: GoldObsidianPalette.textSecondary,
+    overlay: 'rgba(0, 0, 0, 0.8)',
+    divider: GoldObsidianPalette.surfaceHighlight,
+    pure: '#000000',
+    pureInverse: '#FFFFFF',
+    onPrimary: '#0A0C10',
+  },
+};
+
 // === THEME REGISTRY ===
 export const ThemeSchemes: Record<ThemeId, { light: Theme; dark: Theme }> = {
   [ThemeIds.DEEP_SPACE]: DeepSpaceTheme,
   [ThemeIds.IVY]: IvyTheme,
   [ThemeIds.EDITORIAL]: EditorialTheme,
+  [ThemeIds.GOLD_OBSIDIAN]: GoldObsidianTheme,
 };
 
 // Default export for backwards compatibility

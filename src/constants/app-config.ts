@@ -365,6 +365,10 @@ export const AppConfig = {
           label: 'Editorial',
           desc: 'Slate, warm, professional',
         },
+        goldObsidian: {
+          label: 'Gold Obsidian',
+          desc: 'Deep gold and obsidian',
+        },
         serifSans: {
           label: 'Serif & Sans',
           desc: 'DM Serif Display + Instrument Sans',

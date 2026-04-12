@@ -99,6 +99,46 @@ const MOCK_SAFE_TO_SPEND_PROPS: any = {
   ],
   firstMajorInflowDay: 15,
   isLoading: false,
+  viewModel: {
+    safeToSpend: 2400,
+    shortfall: 0,
+    totalLiquidAssets: 4000,
+    committedTotal: 800,
+    committedLiabilities: 100,
+    effectiveTotal: 3300,
+    totalFutureInflow: 3000,
+    totalLiabilities: 1000,
+    displaySafeToSpend: '₹2,400',
+    displayShortfall: '₹0',
+    displayTotalLiquidAssets: '₹4,000',
+    displayCommittedTotal: '₹800',
+    displayCommittedLiabilities: '₹100',
+    displayTotalFutureInflow: '₹3,000',
+    income: [],
+    committed: [],
+    debt: [],
+    accountSummaries: [],
+    liquidAssetSubtypes: [],
+    insights: {
+      firstMajorInflowDay: 15,
+      committedLiabilitiesCC: 50,
+      committedLiabilitiesOther: 50,
+    },
+    isOverCommitted: false,
+    isPositiveSafeToSpend: true,
+    isPrivacyMode: false,
+    isLoading: false,
+    formatValue: (val: number) => {
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: AppConfig.defaultCurrency || 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(val);
+    },
+    labels: AppConfig.strings.dashboard.safeToSpendUi,
+    info: AppConfig.strings.dashboard.safeToSpendExplanation,
+  },
 };
 
 export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
@@ -118,7 +158,12 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   const strings = AppConfig.strings.onboarding.appearance;
   const settingsStrings = AppConfig.strings.settings.appearance;
 
-  const THEME_ORDER = [ThemeIds.DEEP_SPACE, ThemeIds.IVY, ThemeIds.EDITORIAL];
+  const THEME_ORDER = [
+    ThemeIds.DEEP_SPACE,
+    ThemeIds.GOLD_OBSIDIAN,
+    ThemeIds.IVY,
+    ThemeIds.EDITORIAL,
+  ];
 
   const themeIdRef = useRef(ui.themeId);
   themeIdRef.current = ui.themeId;
@@ -173,6 +218,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
 
   const THEME_LABELS: Record<ThemeId, string> = {
     [ThemeIds.DEEP_SPACE]: settingsStrings.deepSpace.label,
+    [ThemeIds.GOLD_OBSIDIAN]: settingsStrings.goldObsidian.label,
     [ThemeIds.IVY]: settingsStrings.ivy.label,
     [ThemeIds.EDITORIAL]: settingsStrings.editorial.label,
   };
