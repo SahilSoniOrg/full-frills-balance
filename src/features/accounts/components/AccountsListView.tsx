@@ -1,232 +1,248 @@
-import { AppText, ExpandableSearchButton, FloatingActionButton, IconButton } from '@/src/components/core';
+import {
+  AppText,
+  ExpandableSearchButton,
+  FloatingActionButton,
+  IconButton,
+} from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
-import { AccountCardViewModel, AccountSectionViewModel } from '@/src/features/accounts/utils/transformAccounts';
+import {
+  AccountCardViewModel,
+  AccountSectionViewModel,
+} from '@/src/features/accounts/utils/transformAccounts';
 import { NetWorthCard } from '@/src/features/dashboard';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export function AccountsListView({
-    sections,
-    isRefreshing,
-    onRefresh,
-    onToggleSection,
-    onAccountPress,
-    onCollapseAccount,
-    onCreateAccount,
-    onReorderPress,
-    onManageHierarchy,
-    onTogglePrivacy,
-    isPrivacyMode,
-    isLoading,
-    netWorth,
-    totalAssets,
-    totalLiabilities,
-    searchQuery,
-    isSearching,
-    onSearchChange,
-    setIsSearching,
+  sections,
+  isRefreshing,
+  onRefresh,
+  onToggleSection,
+  onAccountPress,
+  onCollapseAccount,
+  onCreateAccount,
+  onReorderPress,
+  onManageHierarchy,
+  onTogglePrivacy,
+  isPrivacyMode,
+  isLoading,
+  netWorth,
+  totalAssets,
+  totalLiabilities,
+  searchQuery,
+  isSearching,
+  onSearchChange,
+  setIsSearching,
 }: AccountsListViewModel) {
-    const { theme } = useTheme();
+  const { theme } = useTheme();
 
-    const headerActions = (
-        <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
-            {!isSearching ? (
-                <>
-                    <IconButton
-                        name={isPrivacyMode ? 'eyeOff' : 'eye'}
-                        size={Size.iconSm}
-                        variant="surface"
-                        onPress={onTogglePrivacy}
-                        accessibilityLabel={isPrivacyMode ? 'Show balances' : 'Hide balances'}
-                    />
-                    <IconButton
-                        name="reorder"
-                        size={Size.iconSm}
-                        variant="surface"
-                        onPress={onReorderPress}
-                        accessibilityLabel="Reorder accounts"
-                    />
-                    <IconButton
-                        name="hierarchy"
-                        size={Size.iconSm}
-                        variant="surface"
-                        onPress={onManageHierarchy}
-                        accessibilityLabel="Manage hierarchy"
-                    />
-                </>
-            ) : null}
-            <ExpandableSearchButton
-                value={searchQuery}
-                onChangeText={onSearchChange}
-                onExpandChange={setIsSearching}
-                placeholder="Search accounts..."
-            />
-        </View>
-    );
+  const headerActions = (
+    <View style={[styles.headerActions, isSearching && styles.headerActionsSearchActive]}>
+      {!isSearching ? (
+        <>
+          <IconButton
+            name={isPrivacyMode ? 'eyeOff' : 'eye'}
+            size={Size.iconSm}
+            variant="surface"
+            onPress={onTogglePrivacy}
+            accessibilityLabel={isPrivacyMode ? 'Show balances' : 'Hide balances'}
+          />
+          <IconButton
+            name="reorder"
+            size={Size.iconSm}
+            variant="surface"
+            onPress={onReorderPress}
+            accessibilityLabel="Reorder accounts"
+          />
+          <IconButton
+            name="hierarchy"
+            size={Size.iconSm}
+            variant="surface"
+            onPress={onManageHierarchy}
+            accessibilityLabel="Manage hierarchy"
+          />
+        </>
+      ) : null}
+      <ExpandableSearchButton
+        value={searchQuery}
+        onChangeText={onSearchChange}
+        onExpandChange={setIsSearching}
+        placeholder="Search accounts..."
+      />
+    </View>
+  );
 
-    return (
-        <Screen
-            title="Accounts"
-            showBack={false}
-            alignTitle="left"
-            isSearchActive={isSearching}
-            headerActions={headerActions}
-        >
-            <View style={styles.container}>
-                <SectionList
-                    sections={sections}
-                    refreshing={isRefreshing}
-                    onRefresh={onRefresh}
-                    keyExtractor={(item: AccountCardViewModel) => item.id}
-                    renderSectionHeader={({ section }: { section: AccountSectionViewModel }) => (
-                        <TouchableOpacity
-                            onPress={() => onToggleSection(section.title)}
-                            activeOpacity={0.7}
-                            style={styles.sectionHeaderContainer}
-                            accessibilityLabel={`${section.title} section, ${section.count} accounts`}
-                            accessibilityRole="button"
-                        >
-                            <View style={[styles.summaryRow, { flex: 1 }]}>
-                                <View style={styles.flexRowGapSm}>
-                                    <AppText
-                                        variant="subheading"
-                                        weight="bold"
-                                        color="secondary"
-                                    >
-                                        {section.title}
-                                    </AppText>
-                                    <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
-                                        <AppText variant="caption" weight="bold" color="tertiary">
-                                            {section.count}
-                                        </AppText>
-                                    </View>
-                                </View>
-                                <View style={styles.flexRowGapMd}>
-                                    <AppText variant="body" weight="bold" style={{ color: section.totalColor }}>
-                                        {section.totalDisplay}
-                                    </AppText>
-                                    <IconButton
-                                        name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
-                                        size={Size.iconSm}
-                                        variant="clear"
-                                        iconColor={theme.textSecondary}
-                                        onPress={() => onToggleSection(section.title)}
-                                    />
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    )}
-                    renderItem={({ item, section }: { item: AccountCardViewModel; section: AccountSectionViewModel }) => {
-                        if (section.isCollapsed) return null;
-                        return (
-                            <AccountCard
-                                account={item}
-                                onPress={() => onAccountPress(item.id)}
-                                onCollapse={() => onCollapseAccount(item.id)}
-                                dividerColor={theme.divider}
-                                surfaceColor={theme.surface}
-                            />
-                        );
-                    }}
-                    ListHeaderComponent={
-                        <View style={styles.header}>
-                            <NetWorthCard
-                                netWorth={netWorth}
-                                totalAssets={totalAssets}
-                                totalLiabilities={totalLiabilities}
-                                isLoading={isLoading}
-                                hidden={isPrivacyMode}
-                                onToggleHidden={onTogglePrivacy}
-                            />
-                        </View>
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            {isLoading ? (
-                                <ActivityIndicator size="small" color={theme.primary} />
-                            ) : (
-                                <View style={styles.emptyStateContent}>
-                                    <AppText variant="body" color="secondary">
-                                        No accounts yet. Create your first account to get started!
-                                    </AppText>
-                                </View>
-                            )}
-                        </View>
-                    }
-                    contentContainerStyle={styles.listContainer}
-                    stickySectionHeadersEnabled={false}
-                />
-
-                {!isSearching ? (
-                    <FloatingActionButton
-                        onPress={onCreateAccount}
-                        label="New Account"
-                        placement="end"
-                        accessibilityLabel="Create a new account"
+  return (
+    <Screen
+      title="Accounts"
+      showBack={false}
+      alignTitle="left"
+      isSearchActive={isSearching}
+      headerActions={headerActions}
+    >
+      <View style={styles.container}>
+        <SectionList
+          sections={sections}
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          keyExtractor={(item: AccountCardViewModel) => item.id}
+          renderSectionHeader={({ section }: { section: AccountSectionViewModel }) => {
+            const isStartOfGroup =
+              section.title === 'Expenses' ||
+              section.title === 'Liabilities' ||
+              section.title === 'Equity';
+            return (
+              <TouchableOpacity
+                onPress={() => onToggleSection(section.title)}
+                activeOpacity={0.7}
+                style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}
+                accessibilityLabel={`${section.title} section, ${section.count} accounts`}
+                accessibilityRole="button"
+              >
+                <View style={[styles.summaryRow, { flex: 1 }]}>
+                  <View style={styles.flexRowGapSm}>
+                    <AppText variant="subheading" weight="bold" color="secondary">
+                      {section.title}
+                    </AppText>
+                    <View style={[styles.countBadge, { backgroundColor: theme.surfaceSecondary }]}>
+                      <AppText variant="caption" weight="bold" color="tertiary">
+                        {section.count}
+                      </AppText>
+                    </View>
+                  </View>
+                  <View style={styles.flexRowGapMd}>
+                    <AppText variant="body" weight="bold" style={{ color: section.totalColor }}>
+                      {section.totalDisplay}
+                    </AppText>
+                    <IconButton
+                      name={section.isCollapsed ? 'chevronRight' : 'chevronDown'}
+                      size={Size.iconSm}
+                      variant="clear"
+                      iconColor={theme.textSecondary}
+                      onPress={() => onToggleSection(section.title)}
                     />
-                ) : null}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          renderItem={({
+            item,
+            section,
+          }: {
+            item: AccountCardViewModel;
+            section: AccountSectionViewModel;
+          }) => {
+            if (section.isCollapsed) return null;
+            return (
+              <AccountCard
+                account={item}
+                onPress={() => onAccountPress(item.id)}
+                onCollapse={() => onCollapseAccount(item.id)}
+                dividerColor={theme.divider}
+                surfaceColor={theme.surface}
+              />
+            );
+          }}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <NetWorthCard
+                netWorth={netWorth}
+                totalAssets={totalAssets}
+                totalLiabilities={totalLiabilities}
+                isLoading={isLoading}
+                hidden={isPrivacyMode}
+                onToggleHidden={onTogglePrivacy}
+              />
             </View>
-        </Screen>
-    );
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <View style={styles.emptyStateContent}>
+                  <AppText variant="body" color="secondary">
+                    No accounts yet. Create your first account to get started!
+                  </AppText>
+                </View>
+              )}
+            </View>
+          }
+          contentContainerStyle={styles.listContainer}
+          stickySectionHeadersEnabled={false}
+        />
+
+        {!isSearching ? (
+          <FloatingActionButton
+            onPress={onCreateAccount}
+            label="New Account"
+            placement="end"
+            accessibilityLabel="Create a new account"
+          />
+        ) : null}
+      </View>
+    </Screen>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    listContainer: {
-        paddingHorizontal: Spacing.lg,
-        paddingBottom: Spacing.xxxl,
-    },
-    header: {
-        paddingTop: Spacing.lg,
-        paddingBottom: Spacing.lg,
-    },
-    summaryRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    flexRowGapSm: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.sm,
-    },
-    flexRowGapMd: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.md,
-    },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: Spacing.xs,
-    },
-    headerActionsSearchActive: {
-        flex: 1,
-    },
-    sectionHeaderContainer: {
-        marginTop: Spacing.xl,
-        marginBottom: Spacing.sm,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    countBadge: {
-        paddingHorizontal: Spacing.xs,
-        paddingVertical: Spacing.xs / 2,
-        borderRadius: Shape.radius.sm,
-        minWidth: Size.iconSm,
-        alignItems: 'center',
-    },
-    emptyState: {
-        marginTop: Spacing.xxl,
-        alignItems: 'center',
-    },
-    emptyStateContent: {
-        alignItems: 'center',
-    },
+  container: {
+    flex: 1,
+  },
+  listContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+  },
+  header: {
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  flexRowGapSm: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  flexRowGapMd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  headerActionsSearchActive: {
+    flex: 1,
+  },
+  sectionHeaderContainer: {
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  countBadge: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: Spacing.xs / 2,
+    borderRadius: Shape.radius.sm,
+    minWidth: Size.iconSm,
+    alignItems: 'center',
+  },
+  emptyState: {
+    marginTop: Spacing.xxl,
+    alignItems: 'center',
+  },
+  emptyStateContent: {
+    alignItems: 'center',
+  },
 });
