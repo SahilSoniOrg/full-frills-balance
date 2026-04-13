@@ -25,14 +25,12 @@ export class SimulationReportGenerator {
   }
 
   private static generateSummary(allFlows: Flow[], liquidAccountIdsSet: Set<string>) {
-    // 1. First Major Inflow Day
     const firstMajorInflowDay = findFirstMajorInflowDay(
       allFlows,
       liquidAccountIdsSet,
       AppConfig.defaults.simulation.majorInflowThreshold,
     );
 
-    // 2. Aggregate Summaries based on Liquid Impact
     let totalFutureInflow = 0;
     let totalPlannedOutflow = 0;
     let totalCommittedPlanned = 0;
@@ -43,7 +41,6 @@ export class SimulationReportGenerator {
       const impact = getLiquidImpact(f, liquidAccountIdsSet);
       if (impact.direction === 'NONE') continue;
 
-      // 1. Boundary Pressures (System Inflow/Outflow)
       if (impact.direction === 'INFLOW') {
         if (f.category === FlowCategory.INCOME) {
           totalFutureInflow += impact.amount;
@@ -54,9 +51,6 @@ export class SimulationReportGenerator {
         }
       }
 
-      // 2. Commitments (Spoken-for Liquidity)
-      // We include OUTFLOW and INTERNAL moves that are obligations.
-      // Inward transfers (External -> Liquid) are NEVER commitments here.
       if (
         isCommitmentFlow(f) &&
         (impact.direction === 'OUTFLOW' || impact.direction === 'INTERNAL')
@@ -79,8 +73,8 @@ export class SimulationReportGenerator {
     let currentMonthRemaining = 0;
     let nextMonthProjected = 0;
 
-    allFlows.forEach(flow => {
-      if (flow.timeframe === 'PAST') return;
+    for (const flow of allFlows) {
+      if (flow.timeframe === 'PAST') continue;
       if (flow.category === FlowCategory.BUDGET && flow.kind === 'OUTFLOW') {
         if (flow.dayOffset < daysLeftInMonth) {
           currentMonthRemaining += flow.amount;
@@ -88,7 +82,7 @@ export class SimulationReportGenerator {
           nextMonthProjected += flow.amount;
         }
       }
-    });
+    }
 
     return {
       currentMonthRemaining,
@@ -102,34 +96,43 @@ export class SimulationReportGenerator {
     accountMap: Map<string, Account>,
     liabilityAccountBalances: { account: Account; balance: number }[],
   ) {
-    const totalLiabilities = liabilityAccountBalances.reduce((sum, lb) => sum + lb.balance, 0);
+    let totalLiabilities = 0;
+    let totalCreditCard = 0;
+    let totalOther = 0;
+
+    for (const lb of liabilityAccountBalances) {
+      totalLiabilities += lb.balance;
+      if (lb.account.accountSubtype === AccountSubtype.CREDIT_CARD) {
+        totalCreditCard += lb.balance;
+      } else {
+        totalOther += lb.balance;
+      }
+    }
+
+    let committed = 0;
+    let committedCreditCard = 0;
+    let committedOther = 0;
+
+    for (const flow of allFlows) {
+      if (flow.timeframe === 'FUTURE' && flow.category === FlowCategory.DEBT) {
+        committed += flow.amount;
+
+        const acc = accountMap.get(flow.referenceId || '');
+        if (acc?.accountSubtype === AccountSubtype.CREDIT_CARD) {
+          committedCreditCard += flow.amount;
+        } else {
+          committedOther += flow.amount;
+        }
+      }
+    }
+
     return {
       total: totalLiabilities,
-      totalCreditCard: liabilityAccountBalances
-        .filter(lb => lb.account.accountSubtype === AccountSubtype.CREDIT_CARD)
-        .reduce((sum, lb) => sum + lb.balance, 0),
-      totalOther: liabilityAccountBalances
-        .filter(lb => lb.account.accountSubtype !== AccountSubtype.CREDIT_CARD)
-        .reduce((sum, lb) => sum + lb.balance, 0),
-      committed: allFlows
-        .filter(flow => flow.timeframe === 'FUTURE' && flow.category === FlowCategory.DEBT)
-        .reduce((sum, flow) => sum + flow.amount, 0),
-      committedCreditCard: allFlows
-        .filter(
-          flow =>
-            flow.timeframe === 'FUTURE' &&
-            flow.category === FlowCategory.DEBT &&
-            accountMap.get(flow.referenceId || '')?.accountSubtype === AccountSubtype.CREDIT_CARD,
-        )
-        .reduce((sum, flow) => sum + flow.amount, 0),
-      committedOther: allFlows
-        .filter(
-          flow =>
-            flow.timeframe === 'FUTURE' &&
-            flow.category === FlowCategory.DEBT &&
-            accountMap.get(flow.referenceId || '')?.accountSubtype !== AccountSubtype.CREDIT_CARD,
-        )
-        .reduce((sum, flow) => sum + flow.amount, 0),
+      totalCreditCard,
+      totalOther,
+      committed,
+      committedCreditCard,
+      committedOther,
     };
   }
 }

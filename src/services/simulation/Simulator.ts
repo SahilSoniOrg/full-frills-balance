@@ -51,6 +51,8 @@ export class Simulator {
       accountMinBalancesBeforeIncome.set(id, b);
     }
 
+    let lastAccountBalancesMap = new Map(currentBalances);
+
     for (let d = 0; d < days; d++) {
       const todayOffset = startDayOffset + d;
       const todayFlows = flowByDay.get(todayOffset) || [];
@@ -58,26 +60,31 @@ export class Simulator {
       // Tracking which accounts changed to avoid O(N) minimum checks
       const changedAccountIds = new Set<string>();
 
-      for (const f of todayFlows) {
-        globalBalance += this.applyFlow(
-          currentBalances,
-          f,
-          orderedLiquidAccountIds,
-          changedAccountIds,
-          liquidAccountIds,
-        );
-      }
-
-      // Update minimums ONLY for changed accounts
-      for (const id of changedAccountIds) {
-        const bal = currentBalances.get(id) ?? 0;
-        const min = accountMinBalances.get(id) ?? Infinity;
-        accountMinBalances.set(id, Math.min(min, bal));
-
-        if (firstMajorInflowDay === null || todayOffset < firstMajorInflowDay) {
-          const preMin = accountMinBalancesBeforeIncome.get(id) ?? Infinity;
-          accountMinBalancesBeforeIncome.set(id, Math.min(preMin, bal));
+      if (todayFlows.length > 0) {
+        for (const f of todayFlows) {
+          globalBalance += this.applyFlow(
+            currentBalances,
+            f,
+            orderedLiquidAccountIds,
+            changedAccountIds,
+            liquidAccountIds,
+          );
         }
+
+        // Update minimums ONLY for changed accounts
+        for (const id of changedAccountIds) {
+          const bal = currentBalances.get(id) ?? 0;
+          const min = accountMinBalances.get(id) ?? Infinity;
+          accountMinBalances.set(id, Math.min(min, bal));
+
+          if (firstMajorInflowDay === null || todayOffset < firstMajorInflowDay) {
+            const preMin = accountMinBalancesBeforeIncome.get(id) ?? Infinity;
+            accountMinBalancesBeforeIncome.set(id, Math.min(preMin, bal));
+          }
+        }
+
+        // Only create a new Map if there were changes
+        lastAccountBalancesMap = new Map(currentBalances);
       }
 
       globalMinBalance = Math.min(globalMinBalance, globalBalance);
@@ -86,7 +93,7 @@ export class Simulator {
         dayOffset: todayOffset,
         timestamp: 0,
         globalBalance,
-        accountBalances: new Map(currentBalances),
+        accountBalances: lastAccountBalancesMap,
         flows: todayFlows,
       });
     }

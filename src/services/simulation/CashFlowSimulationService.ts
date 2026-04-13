@@ -48,8 +48,11 @@ export class CashFlowSimulationService {
     const liabilityAccountIdsSet = new Set(liabilityAccountBalances.map(lb => lb.account.id));
     const accountMap = new Map(allAccounts.map(a => [a.id, a]));
 
-    // Fetch journal transactions early to identify all required currencies
-    const journalTxsMap = await this.fetchJournalTransactions(plannedJournals);
+    // Execute independent fetches in parallel
+    const [journalTxsMap, metadataMap] = await Promise.all([
+      this.fetchJournalTransactions(plannedJournals),
+      this.fetchMetadata(liabilityAccountBalances),
+    ]);
 
     // Build unique currency list for pre-loading rates
     const currencies = new Set<string>();
@@ -81,6 +84,18 @@ export class CashFlowSimulationService {
 
     const convert = (amount: number, from: string) =>
       Math.round(amount * (rateMap.get(from) || 1) * 100) / 100;
+
+    // Normalize and Fetch remaining dependent data in parallel
+    const [{ statementBalances, settledSinceStatement }, budgetCategoryMap] = await Promise.all([
+      this.fetchStatementValues(
+        liabilityAccountBalances,
+        metadataMap,
+        time,
+        resultCurrency,
+        rateMap, // Pass rateMap to avoid extra fetches
+      ),
+      this.fetchBudgetCategoryMap(budgets, allAccounts),
+    ]);
 
     // Currency Normalization using explicit mapping (avoiding class spread)
     const normalizedBudgets = budgets.map(
@@ -118,15 +133,6 @@ export class CashFlowSimulationService {
       balance: convert(lb.balance, lb.account.currencyCode || resultCurrency),
     }));
 
-    // Metadata & Statements
-    const metadataMap = await this.fetchMetadata(liabilityAccountBalances);
-    const { statementBalances, settledSinceStatement } = await this.fetchStatementValues(
-      liabilityAccountBalances,
-      metadataMap,
-      time,
-      resultCurrency,
-    );
-    const budgetCategoryMap = await this.fetchBudgetCategoryMap(budgets, allAccounts);
     const expenseAccountIds = new Set(
       allAccounts.filter(a => a.accountType === AccountType.EXPENSE).map(a => a.id),
     );
@@ -248,8 +254,14 @@ export class CashFlowSimulationService {
         // Usage Details
         let totalInflow = 0;
         let totalOutflow = 0;
-        const inflowMap = new Map<string, { amount: number; source: string; minDay: number }>();
-        const outflowMap = new Map<string, { amount: number; source: string; minDay: number }>();
+        const inflowMap = new Map<
+          string,
+          { name: string; amount: number; source: string; minDay: number }
+        >();
+        const outflowMap = new Map<
+          string,
+          { name: string; amount: number; source: string; minDay: number }
+        >();
 
         const accFlows = flowsByAccount.get(accountId) || [];
         accFlows.forEach(f => {
@@ -280,6 +292,7 @@ export class CashFlowSimulationService {
               totalOutflow += amount;
               const existing = outflowMap.get(label);
               outflowMap.set(label, {
+                name: label,
                 amount: (existing?.amount || 0) + amount,
                 source,
                 minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
@@ -288,6 +301,7 @@ export class CashFlowSimulationService {
               totalInflow += amount;
               const existing = inflowMap.get(label);
               inflowMap.set(label, {
+                name: label,
                 amount: (existing?.amount || 0) + amount,
                 source,
                 minDay: Math.min(existing?.minDay ?? f.dayOffset, f.dayOffset),
@@ -296,25 +310,25 @@ export class CashFlowSimulationService {
           }
         });
 
-        const topInflows = Array.from(inflowMap.entries())
-          .map(([name, d]) => ({
-            name,
+        const topInflows = Array.from(inflowMap.values())
+          .sort((a, b) => b.amount - a.amount)
+          .slice(0, 3)
+          .map(d => ({
+            name: d.name,
             amount: d.amount,
             source: d.source,
             isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
-          }))
-          .sort((a, b) => b.amount - a.amount)
-          .slice(0, 3);
+          }));
 
-        const topOutflows = Array.from(outflowMap.entries())
-          .map(([name, d]) => ({
-            name,
+        const topOutflows = Array.from(outflowMap.values())
+          .sort((a, b) => b.amount - a.amount)
+          .slice(0, 3)
+          .map(d => ({
+            name: d.name,
             amount: d.amount,
             source: d.source,
             isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
-          }))
-          .sort((a, b) => b.amount - a.amount)
-          .slice(0, 3);
+          }));
 
         return {
           accountId,
@@ -374,13 +388,15 @@ export class CashFlowSimulationService {
     metadataMap: Map<string, AccountMetadata>,
     time: TimeContext,
     toCurrency: string,
+    rateMap: Map<string, number>,
   ) {
     const balances = new Map<string, number>();
     const settledAmounts = new Map<string, number>();
     const ccAccounts = lbs.filter(lb => lb.account.accountSubtype === 'CREDIT_CARD');
 
-    // Group accounts by their statement dates to batch queries if possible
-    // Even if they are different, we perform them in parallel which is better than sequential await
+    const convert = (amount: number, from: string) =>
+      Math.round(amount * (rateMap.get(from) || 1) * 100) / 100;
+
     await Promise.all(
       ccAccounts.map(async lb => {
         const metadata = metadataMap.get(lb.account.id);
@@ -396,30 +412,16 @@ export class CashFlowSimulationService {
               lb.account.id,
               s1Date.valueOf(),
               now.endOf('day').valueOf(),
-              false, // isAssetOrExpense = false for Liability
+              false,
             ),
           ]);
 
-          let statementBal = Math.abs(latestBalances.get(lb.account.id) || 0);
-          if (lb.account.currencyCode && lb.account.currencyCode !== toCurrency) {
-            const { convertedAmount } = await exchangeRateService.convert(
-              statementBal,
-              lb.account.currencyCode,
-              toCurrency,
-            );
-            statementBal = convertedAmount;
-          }
+          const rawBal = Math.abs(latestBalances.get(lb.account.id) || 0);
+          const statementBal = convert(rawBal, lb.account.currencyCode || toCurrency);
           balances.set(lb.account.id, statementBal);
 
-          let settled = metrics.totalDecrease; // metrics.totalDecrease for liability = DEBIT (payments)
-          if (lb.account.currencyCode && lb.account.currencyCode !== toCurrency) {
-            const { convertedAmount } = await exchangeRateService.convert(
-              settled,
-              lb.account.currencyCode,
-              toCurrency,
-            );
-            settled = convertedAmount;
-          }
+          const rawSettled = metrics.totalDecrease;
+          const settled = convert(rawSettled, lb.account.currencyCode || toCurrency);
           settledAmounts.set(lb.account.id, settled);
         }
       }),
@@ -441,9 +443,11 @@ export class CashFlowSimulationService {
 
   private async fetchBudgetCategoryMap(budgets: Budget[], allAccounts: Account[]) {
     const map = new Map<string, Set<string>>();
+    if (budgets.length === 0) return map;
+
     const expenses = allAccounts.filter(a => a.accountType === AccountType.EXPENSE);
 
-    // Build tree for descendant resolution
+    // Build child map once for ALL accounts
     const childrenMap = new Map<string, string[]>();
     expenses.forEach(acc => {
       if (acc.parentAccountId) {
@@ -453,20 +457,26 @@ export class CashFlowSimulationService {
       }
     });
 
-    const getDescendants = (id: string, result: Set<string>) => {
+    // Cache to avoid re-traversing subtrees
+    const descendantCache = new Map<string, Set<string>>();
+
+    const getDescendants = (id: string): Set<string> => {
+      if (descendantCache.has(id)) return descendantCache.get(id)!;
+
+      const result = new Set<string>();
       const children = childrenMap.get(id) || [];
       for (const childId of children) {
         result.add(childId);
-        getDescendants(childId, result);
+        const childDescendants = getDescendants(childId);
+        childDescendants.forEach(d => result.add(d));
       }
+
+      descendantCache.set(id, result);
+      return result;
     };
 
-    // Batch all scopes for all budgets in ONE query via Repository
-    const budgetIds = budgets.map(b => b.id);
-    if (budgetIds.length === 0) return map;
-
-    const allScopes = await budgetRepository.getScopesByBudgetIds(budgetIds);
-
+    // Batch fetch all scopes
+    const allScopes = await budgetRepository.getScopesByBudgetIds(budgets.map(b => b.id));
     const scopesByBudget = new Map<string, BudgetScope[]>();
     allScopes.forEach(s => {
       const list = scopesByBudget.get(s.budgetId) || [];
@@ -478,9 +488,8 @@ export class CashFlowSimulationService {
       const scopes = scopesByBudget.get(budget.id) || [];
       const leafIds = new Set<string>();
       for (const scope of scopes) {
-        const accId = scope.accountId;
-        leafIds.add(accId);
-        getDescendants(accId, leafIds);
+        leafIds.add(scope.accountId);
+        getDescendants(scope.accountId).forEach(id => leafIds.add(id));
       }
       map.set(budget.id, leafIds);
     });

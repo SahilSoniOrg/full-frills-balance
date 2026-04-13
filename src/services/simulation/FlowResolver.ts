@@ -29,20 +29,23 @@ export class FlowResolver {
     }
 
     for (const dayFlows of flowsByDay.values()) {
-      // Planned outflows that can be reconciled against budget
-      const plannedOutflows = dayFlows.filter(
-        (flow): flow is Extract<Flow, { kind: 'OUTFLOW' | 'TRANSFER' }> =>
+      const plannedOutflows: Extract<Flow, { kind: 'OUTFLOW' | 'TRANSFER' }>[] = [];
+      const budgetFlows: Extract<Flow, { kind: 'OUTFLOW' }>[] = [];
+      const incomeFlows: Flow[] = [];
+
+      for (const flow of dayFlows) {
+        if (
           (flow.category === FlowCategory.EXPENSE ||
             flow.category === FlowCategory.PLANNED_EXPENSE) &&
-          (flow.kind === 'OUTFLOW' || flow.kind === 'TRANSFER'),
-      );
-
-      const budgetFlows = dayFlows.filter(
-        (flow): flow is Extract<Flow, { kind: 'OUTFLOW' }> => flow.category === FlowCategory.BUDGET,
-      );
-
-      // Income and other flows are passed through after grouping
-      const incomeFlows = dayFlows.filter(flow => flow.category === FlowCategory.INCOME);
+          (flow.kind === 'OUTFLOW' || flow.kind === 'TRANSFER')
+        ) {
+          plannedOutflows.push(flow as Extract<Flow, { kind: 'OUTFLOW' | 'TRANSFER' }>);
+        } else if (flow.category === FlowCategory.BUDGET && flow.kind === 'OUTFLOW') {
+          budgetFlows.push(flow as Extract<Flow, { kind: 'OUTFLOW' }>);
+        } else if (flow.category === FlowCategory.INCOME) {
+          incomeFlows.push(flow);
+        }
+      }
 
       if (budgetFlows.length === 0) {
         resolved.push(...dayFlows);

@@ -25,12 +25,15 @@ export class PlannedFlowGenerator {
   ): { flows: Flow[] } {
     const flows: Flow[] = [];
 
+    // Day offset helper for efficient date-key matching without dayjs formatting
+    const getDayKey = (ms: number) => Math.floor(ms / (24 * 60 * 60 * 1000));
+
     // Track journals by date to fill gaps correctly
     const journalDatesByPP = new Set<string>();
     for (const journal of plannedJournals) {
       if (journal.plannedPaymentId) {
-        const dateKey = dayjs(journal.journalDate).format('YYYY-MM-DD');
-        journalDatesByPP.add(`${journal.plannedPaymentId}:${dateKey}`);
+        const dayKey = getDayKey(journal.journalDate);
+        journalDatesByPP.add(`${journal.plannedPaymentId}:${dayKey}`);
       }
     }
 
@@ -56,8 +59,8 @@ export class PlannedFlowGenerator {
           continue;
         }
 
-        const dateKey = dayjs(curr).format('YYYY-MM-DD');
-        const isAlreadyCovered = journalDatesByPP.has(`${pp.id}:${dateKey}`);
+        const dayKey = getDayKey(curr);
+        const isAlreadyCovered = journalDatesByPP.has(`${pp.id}:${dayKey}`);
 
         if (!isAlreadyCovered) {
           const effectiveDate = Math.max(curr, context.simulationStartMs);
