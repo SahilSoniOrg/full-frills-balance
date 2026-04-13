@@ -1,12 +1,12 @@
 import { database } from '@/src/data/database/Database';
-import { getAccountBalanceDelta, isBalanceIncrease } from '@/src/utils/accountingHelpers';
+import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { from, map, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { getRawAdapter } from '../database/DatabaseUtils';
-import Account, { AccountType } from '../models/Account';
+import Account from '../models/Account';
 import Transaction, { TransactionType } from '../models/Transaction';
 import { transactionRepository } from './TransactionRepository';
 import { AccountDelta, DailyDelta, RebuildTransaction, RecurringPattern } from './TransactionTypes';
@@ -722,71 +722,78 @@ class TransactionRawRepository {
     endDate: number,
     isAssetOrExpense: boolean = true,
   ): Promise<{ totalIncrease: number; totalDecrease: number }> {
+    const results = await this.getBulkAccountPeriodMetricsRaw(
+      [{ accountId, isAssetOrExpense }],
+      startDate,
+      endDate,
+    );
+    return (
+      results.get(accountId) || {
+        totalIncrease: 0,
+        totalDecrease: 0,
+      }
+    );
+  }
+
+  /**
+   * Bulk version of getAccountPeriodMetricsRaw.
+   */
+  async getBulkAccountPeriodMetricsRaw(
+    accountConfigs: { accountId: string; isAssetOrExpense: boolean }[],
+    startDate: number,
+    endDate: number,
+  ): Promise<Map<string, { totalIncrease: number; totalDecrease: number }>> {
+    if (accountConfigs.length === 0) return new Map();
+
+    const accountIds = accountConfigs.map(c => c.accountId);
+    const placeholders = accountIds.map(() => '?').join(',');
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
-    // In SQL, we sum amounts grouped by debit/credit to get total increase and decrease.
-    const increaseSql = isAssetOrExpense
-      ? `SUM(CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END)`
-      : `SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END)`;
-
-    const decreaseSql = isAssetOrExpense
-      ? `SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END)`
-      : `SUM(CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END)`;
-
-    let sql = `
-      SELECT ${increaseSql} as total_increase, ${decreaseSql} as total_decrease
+    const sql = `
+      SELECT 
+        t.account_id as accountId,
+        SUM(CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END) as totalDebit,
+        SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END) as totalCredit
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id = ?
+      WHERE t.account_id IN (${placeholders})
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${activeStatusesStr})
+      GROUP BY t.account_id
     `;
-    const args = [accountId, startDate, endDate];
 
+    const results = new Map<string, { totalIncrease: number; totalDecrease: number }>();
     try {
       const raws = await this.queryRaw<{
-        total_increase: number | null;
-        total_decrease: number | null;
-      }>(sql, args);
-      if (raws.length > 0) {
-        return {
-          totalIncrease: raws[0]?.total_increase || 0,
-          totalDecrease: raws[0]?.total_decrease || 0,
-        };
+        accountId: string;
+        totalDebit: number;
+        totalCredit: number;
+      }>(sql, [...accountIds, startDate, endDate]);
+
+      const configMap = new Map(accountConfigs.map(c => [c.accountId, c.isAssetOrExpense]));
+
+      for (const row of raws) {
+        const isAssetOrExpense = configMap.get(row.accountId) ?? true;
+        results.set(row.accountId, {
+          totalIncrease: isAssetOrExpense ? row.totalDebit : row.totalCredit,
+          totalDecrease: isAssetOrExpense ? row.totalCredit : row.totalDebit,
+        });
       }
     } catch (error) {
-      logger.error('Error fetching getAccountPeriodMetricsRaw', error);
+      logger.error('Error in getBulkAccountPeriodMetricsRaw', error);
     }
 
-    // Fallback for LokiJS/Test
-    const txs = await database.collections
-      .get<Transaction>('transactions')
-      .query(
-        Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.on('journals', 'deleted_at', Q.eq(null)),
-        Q.where('account_id', accountId),
-        Q.where('transaction_date', Q.gte(startDate)),
-        Q.where('transaction_date', Q.lte(endDate)),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-
-    let totalIncrease = 0;
-    let totalDecrease = 0;
-
-    for (const tx of txs) {
-      const type = isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY;
-      if (isBalanceIncrease(type, tx.transactionType)) {
-        totalIncrease += tx.amount;
-      } else {
-        totalDecrease += tx.amount;
+    // Ensure all requested accounts have an entry
+    for (const config of accountConfigs) {
+      if (!results.has(config.accountId)) {
+        results.set(config.accountId, { totalIncrease: 0, totalDecrease: 0 });
       }
     }
 
-    return { totalIncrease, totalDecrease };
+    return results;
   }
 
   /**

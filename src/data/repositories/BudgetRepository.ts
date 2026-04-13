@@ -39,6 +39,11 @@ export class BudgetRepository {
     return await this.budgetScopes.query(Q.where('budget_id', budgetId)).fetch();
   }
 
+  async getScopesByBudgetIds(budgetIds: string[]): Promise<BudgetScope[]> {
+    if (budgetIds.length === 0) return [];
+    return await this.budgetScopes.query(Q.where('budget_id', Q.oneOf(budgetIds))).fetch();
+  }
+
   observeById(id: string) {
     return this.budgets.findAndObserve(id);
   }

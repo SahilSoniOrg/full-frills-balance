@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountSubtype } from '@/src/data/models/Account';
 import dayjs from 'dayjs';
+import { isLoanSubtype } from '../../../utils/accountSubtypeUtils';
 import { Flow, FlowCategory, FlowSource, Obligation, SimulationContext } from '../types';
 import { assertValidFlow } from '../utils/FlowInvariants';
 import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
@@ -23,6 +24,29 @@ export class LiabilityFlowGenerator {
     const flows: Flow[] = [];
     const startOfToday = dayjs(context.simulationStartMs).startOf('day');
 
+    // Pre-group flows by account to avoid O(N*M) lookups inside the loop
+    const spendingFlowsMap = new Map<string, Flow[]>();
+    const incomingFlowsMap = new Map<string, Flow[]>();
+
+    for (const f of previousFlows) {
+      if (f.kind === 'OUTFLOW') {
+        const list = spendingFlowsMap.get(f.accountId) || [];
+        list.push(f);
+        spendingFlowsMap.set(f.accountId, list);
+      } else if (f.kind === 'TRANSFER') {
+        const toList = incomingFlowsMap.get(f.toAccountId) || [];
+        toList.push(f);
+        incomingFlowsMap.set(f.toAccountId, toList);
+      } else if (f.kind === 'INFLOW') {
+        const list = incomingFlowsMap.get(f.accountId) || [];
+        list.push(f);
+        incomingFlowsMap.set(f.accountId, list);
+      }
+    }
+
+    // Pre-sort grouped flows once to avoid sorting inside the main account loop
+    incomingFlowsMap.forEach(flows => flows.sort((a, b) => a.dayOffset - b.dayOffset));
+
     for (const lb of liabilityBalances) {
       const acc = lb.account;
       const metadata = metadataMap.get(acc.id);
@@ -32,9 +56,7 @@ export class LiabilityFlowGenerator {
         continue;
       }
 
-      const spendingFlows = previousFlows.filter(
-        f => f.kind === 'OUTFLOW' && f.accountId === acc.id,
-      );
+      const spendingFlows = spendingFlowsMap.get(acc.id) || [];
 
       const obligations = this.generateObligations(
         acc,
@@ -48,13 +70,7 @@ export class LiabilityFlowGenerator {
       );
 
       // Reduce obligations by matching with incoming flows to this liability account
-      const incomingFlowsToThisLiability = previousFlows
-        .filter(
-          f =>
-            (f.kind === 'TRANSFER' && f.toAccountId === acc.id) ||
-            (f.kind === 'INFLOW' && f.accountId === acc.id),
-        )
-        .sort((a, b) => a.dayOffset - b.dayOffset);
+      const incomingFlowsToThisLiability = incomingFlowsMap.get(acc.id) || [];
 
       const sortedObligations = [...obligations].sort((a, b) => a.dueDayOffset - b.dueDayOffset);
       const usedTransferAmounts = new Map<Flow, number>();
@@ -232,6 +248,13 @@ export class LiabilityFlowGenerator {
       }
 
       const rawEmiAmount = metadata?.emiAmount;
+
+      // If it's a loan (Mortgage, etc) and no EMI is defined, skip automatic generation.
+      // We don't want to project the full principal payoff unless specified.
+      if (isLoanSubtype(acc.accountSubtype) && !rawEmiAmount) {
+        return obligations;
+      }
+
       // If no explicit EMI amount is provided, we treat the entire remaining balance as a single obligation
       // on the next due date, matching legacy behavior.
       const emiAmount = rawEmiAmount || remainingBalance;

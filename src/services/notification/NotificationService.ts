@@ -12,11 +12,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import {
-  isLiquidAssetSubtype,
-  isLiquidLiabilitySubtype,
-  LIQUID_ASSET_SUBTYPES,
-} from '@/src/utils/accountSubtypeUtils';
+import { isLiquidAssetSubtype, LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
@@ -25,7 +21,7 @@ import { Platform } from 'react-native';
 
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
-import { debounceTime, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
@@ -226,7 +222,7 @@ export class NotificationService {
       plannedPaymentRepository.observeActive(),
       accountRepository.observeAll(),
       journalRepository.observePlannedInRange(
-        dayjs().startOf('day').valueOf(),
+        dayjs().subtract(AppConfig.defaults.safeToSpendDays, 'day').startOf('day').valueOf(),
         dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
       ),
       transactionRepository.observeActiveWithColumns(['running_balance']),
@@ -254,7 +250,7 @@ export class NotificationService {
           a => isLiquidAssetSubtype(a.accountSubtype) && !parentIds.has(a.id),
         );
         const liquidLiabilities = liabilities.filter(
-          l => isLiquidLiabilitySubtype(l.accountSubtype) && !parentIds.has(l.id),
+          l => l.accountType === AccountType.LIABILITY && !parentIds.has(l.id),
         );
 
         const liquidAssetIds = liquidAssets.map(a => a.id);
@@ -477,6 +473,7 @@ export class NotificationService {
               summary: {
                 ...runResult.simulationResult.summary,
                 ...runResult.report.summary,
+                safeCurrentBalance: totalLiquidMoney.amount, // Added for UI validation
                 safeDaysCount,
               },
               report: runResult.report,
@@ -494,9 +491,69 @@ export class NotificationService {
               accountMap: runResult.accountMap,
             };
           }),
+          catchError(err => {
+            logger.error('[SafeToSpend] Error in simulation pipeline:', err);
+            // Return an empty/fallback result instead of letting the observable die
+            return of(this.getEmptySafeToSpendResult(resultCurrency));
+          }),
         );
       }),
+      catchError(err => {
+        logger.error('[SafeToSpend] Outer pipeline error:', err);
+        return of(this.getEmptySafeToSpendResult(AppConfig.defaultCurrency));
+      }),
     );
+  }
+
+  private getEmptySafeToSpendResult(resultCurrency: string): SafeToSpendResult {
+    return {
+      summary: {
+        safeToSpend: 0,
+        shortfall: 0,
+        trajectoryMinBalance: 0,
+        safeDaysCount: null,
+        totalFutureInflow: 0,
+        totalPlannedInflow: 0,
+        totalPlannedOutflow: 0,
+        totalCommittedPlanned: 0,
+        firstMajorInflowDay: null,
+      },
+      report: {
+        allFlows: [],
+        liabilities: {
+          total: 0,
+          totalCreditCard: 0,
+          totalOther: 0,
+          committed: 0,
+          committedCreditCard: 0,
+          committedOther: 0,
+        },
+        budget: {
+          currentMonthRemaining: 0,
+          nextMonthProjected: 0,
+          nextMonthDays: 0,
+        },
+        summary: {
+          firstMajorInflowDay: null,
+          totalFutureInflow: 0,
+          totalPlannedInflow: 0,
+          totalPlannedOutflow: 0,
+          totalCommittedPlanned: 0,
+        },
+      },
+      accountSummaries: [],
+      totalLiquidAssets: 0,
+      currencyCode: resultCurrency,
+      liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
+      dailyBudgetBurn: 0,
+      projection: {
+        history: [],
+        projection: [],
+        safeDaysCount: null,
+        safeToSpend: 0,
+      },
+      accountMap: new Map(),
+    };
   }
 }
 

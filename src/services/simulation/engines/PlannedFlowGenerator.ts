@@ -1,9 +1,14 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Journal from '@/src/data/models/Journal';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import dayjs from 'dayjs';
-import { Flow, FlowCategory, FlowSource, SimulationContext } from '../types';
+import {
+  Flow,
+  FlowCategory,
+  FlowSource,
+  SimulationContext,
+  SimulationPlannedPayment,
+} from '../types';
 import { assertValidFlow } from '../utils/FlowInvariants';
 
 export class PlannedFlowGenerator {
@@ -13,10 +18,10 @@ export class PlannedFlowGenerator {
    */
   static generate(
     context: SimulationContext,
-    plannedPayments: any[],
+    plannedPayments: SimulationPlannedPayment[],
     plannedJournals: Journal[],
     expenseAccountIds: Set<string>,
-    journalTransactionsMap: Map<string, any[]>,
+    journalTransactionsMap: Map<string, Transaction[]>,
   ): { flows: Flow[] } {
     const flows: Flow[] = [];
 
@@ -66,7 +71,7 @@ export class PlannedFlowGenerator {
           const meta = {
             label: pp.name || 'Planned Payment',
             referenceId: pp.id,
-            tags: isLiquidTo && !isLiquidFrom ? ['LIABILITY_PAYMENT'] : [],
+            tags: isLiquidTo && isLiquidFrom ? ['LIABILITY_PAYMENT'] : [],
           };
 
           if (isLiquidFrom && isLiquidTo) {
@@ -209,7 +214,7 @@ export class PlannedFlowGenerator {
     return { flows };
   }
 
-  private static getNextOccurrence(curr: number, pp: PlannedPayment): number {
+  private static getNextOccurrence(curr: number, pp: SimulationPlannedPayment): number {
     const intervalN = pp.intervalN || 1;
     let next = dayjs(curr);
 

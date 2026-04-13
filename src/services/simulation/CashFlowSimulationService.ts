@@ -1,11 +1,15 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountType } from '@/src/data/models/Account';
+import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Budget from '@/src/data/models/Budget';
+import BudgetScope from '@/src/data/models/BudgetScope';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import Transaction from '@/src/data/models/Transaction';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import dayjs from 'dayjs';
@@ -16,7 +20,7 @@ import { FlowResolver } from './FlowResolver';
 import { SimulationReportGenerator } from './SimulationReportGenerator';
 import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
-import { AccountSimulationSummary, SimulationContext, SimulationRunResult } from './types';
+import { AccountSimulationSummary, Flow, SimulationContext, SimulationRunResult } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 
 export class CashFlowSimulationService {
@@ -169,6 +173,7 @@ export class CashFlowSimulationService {
       time.daysLeftInMonth(),
       time.nextMonthDays(),
       budgetCategoryMap,
+      plannedFlows,
     );
 
     // Resolve conflicts (e.g., Budget vs Planned)
@@ -177,7 +182,7 @@ export class CashFlowSimulationService {
     const liabilityFlows = LiabilityFlowGenerator.generate(
       context,
       resolvedSpendingFlows,
-      normalizedLiabilityBalances as any,
+      normalizedLiabilityBalances,
       metadataMap,
       statementBalances,
       settledSinceStatement,
@@ -213,6 +218,24 @@ export class CashFlowSimulationService {
       context.liquidAccountIds,
     );
 
+    // Pre-group all flows by account for O(1) inside account loop
+    const flowsByAccount = new Map<string, Flow[]>();
+    allFlows.forEach(f => {
+      if (f.kind === 'TRANSFER') {
+        const fromList = flowsByAccount.get(f.fromAccountId) || [];
+        fromList.push(f);
+        flowsByAccount.set(f.fromAccountId, fromList);
+
+        const toList = flowsByAccount.get(f.toAccountId) || [];
+        toList.push(f);
+        flowsByAccount.set(f.toAccountId, toList);
+      } else {
+        const list = flowsByAccount.get(f.accountId) || [];
+        list.push(f);
+        flowsByAccount.set(f.accountId, list);
+      }
+    });
+
     const accountSummaries: AccountSimulationSummary[] = Array.from(liquidAccountIdsSet).map(
       accountId => {
         const acc = accountMap.get(accountId);
@@ -228,31 +251,31 @@ export class CashFlowSimulationService {
         const inflowMap = new Map<string, { amount: number; source: string; minDay: number }>();
         const outflowMap = new Map<string, { amount: number; source: string; minDay: number }>();
 
-        allFlows.forEach(f => {
-          // Handle Inflows / Outflows / Transfers
-          let isRelevant = false;
+        const accFlows = flowsByAccount.get(accountId) || [];
+        accFlows.forEach(f => {
           let amount = f.amount;
           let isDebit = false;
+          let isRelevant = true;
 
           if (f.kind === 'INFLOW' && f.accountId === accountId) {
-            isRelevant = true;
             isDebit = false;
           } else if (f.kind === 'OUTFLOW' && f.accountId === accountId) {
-            isRelevant = true;
             isDebit = true;
           } else if (f.kind === 'TRANSFER') {
             if (f.fromAccountId === accountId) {
-              isRelevant = true;
               isDebit = true;
             } else if (f.toAccountId === accountId) {
-              isRelevant = true;
               isDebit = false;
+            } else {
+              isRelevant = false;
             }
+          } else {
+            isRelevant = false;
           }
 
           if (isRelevant) {
             const label = f.label || 'Transaction';
-            const source = (f.meta as any)?.source || 'OTHER';
+            const source = f.origin;
             if (isDebit) {
               totalOutflow += amount;
               const existing = outflowMap.get(label);
@@ -293,7 +316,7 @@ export class CashFlowSimulationService {
           .sort((a, b) => b.amount - a.amount)
           .slice(0, 3);
 
-        const summaryResult: AccountSimulationSummary = {
+        return {
           accountId,
           accountName: acc?.name || 'Unknown',
           startingBalance: startingBal,
@@ -306,8 +329,7 @@ export class CashFlowSimulationService {
             topInflows,
             topOutflows,
           },
-        };
-        return summaryResult;
+        } as AccountSimulationSummary;
       },
     );
 
@@ -331,15 +353,25 @@ export class CashFlowSimulationService {
   // --- Normalization Helpers ---
 
   private async fetchMetadata(lbs: { account: Account }[]) {
-    const records = await Promise.all(
-      lbs.map(lb => lb.account.metadataRecords?.fetch?.() || Promise.resolve([])),
-    );
-    return new Map(lbs.map((lb, i) => [lb.account.id, records[i][0]]));
+    const ids = lbs.map(lb => lb.account.id);
+    if (ids.length === 0) return new Map();
+
+    const records = await accountRepository.findMetadataByAccountIds(ids);
+
+    const map = new Map<string, AccountMetadata>();
+    records.forEach(r => {
+      // Keep only the first record for each account if multiple exist
+      if (!map.has(r.accountId)) {
+        map.set(r.accountId, r);
+      }
+    });
+
+    return map;
   }
 
   private async fetchStatementValues(
     lbs: { account: Account }[],
-    metadataMap: Map<string, any>,
+    metadataMap: Map<string, AccountMetadata>,
     time: TimeContext,
     toCurrency: string,
   ) {
@@ -347,6 +379,8 @@ export class CashFlowSimulationService {
     const settledAmounts = new Map<string, number>();
     const ccAccounts = lbs.filter(lb => lb.account.accountSubtype === 'CREDIT_CARD');
 
+    // Group accounts by their statement dates to batch queries if possible
+    // Even if they are different, we perform them in parallel which is better than sequential await
     await Promise.all(
       ccAccounts.map(async lb => {
         const metadata = metadataMap.get(lb.account.id);
@@ -356,11 +390,16 @@ export class CashFlowSimulationService {
           const d1Date = getNextDueDate(now, dueDay);
           const s1Date = getCorrespondingStatementDate(d1Date, metadata.statementDay, dueDay);
 
-          // 1. Fetch balance at statement date
-          const latestBalances = await transactionRawRepository.getLatestBalancesRaw(
-            [lb.account.id],
-            s1Date.valueOf(),
-          );
+          const [latestBalances, metrics] = await Promise.all([
+            transactionRawRepository.getLatestBalancesRaw([lb.account.id], s1Date.valueOf()),
+            transactionRawRepository.getAccountPeriodMetricsRaw(
+              lb.account.id,
+              s1Date.valueOf(),
+              now.endOf('day').valueOf(),
+              false, // isAssetOrExpense = false for Liability
+            ),
+          ]);
+
           let statementBal = Math.abs(latestBalances.get(lb.account.id) || 0);
           if (lb.account.currencyCode && lb.account.currencyCode !== toCurrency) {
             const { convertedAmount } = await exchangeRateService.convert(
@@ -372,17 +411,7 @@ export class CashFlowSimulationService {
           }
           balances.set(lb.account.id, statementBal);
 
-          // 2. Fetch settled payments made between s1Date and now
-          // For liabilities, a payment is a DEBIT (money into account)
-          const metrics = await transactionRawRepository.getAccountPeriodMetricsRaw(
-            lb.account.id,
-            s1Date.valueOf(),
-            now.endOf('day').valueOf(),
-            false, // isAssetOrExpense = false for Liability
-          );
-
-          // metrics.totalDecrease for liability = DEBIT (payments)
-          let settled = metrics.totalDecrease;
+          let settled = metrics.totalDecrease; // metrics.totalDecrease for liability = DEBIT (payments)
           if (lb.account.currencyCode && lb.account.currencyCode !== toCurrency) {
             const { convertedAmount } = await exchangeRateService.convert(
               settled,
@@ -401,7 +430,7 @@ export class CashFlowSimulationService {
   private async fetchJournalTransactions(journals: Journal[]) {
     const ids = journals.map(j => j.id);
     const txs = ids.length > 0 ? await transactionRepository.findByJournals(ids) : [];
-    const map = new Map<string, any[]>();
+    const map = new Map<string, Transaction[]>();
     for (const tx of txs) {
       const list = map.get(tx.journalId) || [];
       list.push(tx);
@@ -432,18 +461,29 @@ export class CashFlowSimulationService {
       }
     };
 
-    await Promise.all(
-      budgets.map(async budget => {
-        const scopes = await budgetRepository.getScopes(budget.id);
-        const leafIds = new Set<string>();
-        for (const scope of scopes) {
-          const accId = scope.account.id;
-          leafIds.add(accId);
-          getDescendants(accId, leafIds);
-        }
-        map.set(budget.id, leafIds);
-      }),
-    );
+    // Batch all scopes for all budgets in ONE query via Repository
+    const budgetIds = budgets.map(b => b.id);
+    if (budgetIds.length === 0) return map;
+
+    const allScopes = await budgetRepository.getScopesByBudgetIds(budgetIds);
+
+    const scopesByBudget = new Map<string, BudgetScope[]>();
+    allScopes.forEach(s => {
+      const list = scopesByBudget.get(s.budgetId) || [];
+      list.push(s);
+      scopesByBudget.set(s.budgetId, list);
+    });
+
+    budgets.forEach(budget => {
+      const scopes = scopesByBudget.get(budget.id) || [];
+      const leafIds = new Set<string>();
+      for (const scope of scopes) {
+        const accId = scope.accountId;
+        leafIds.add(accId);
+        getDescendants(accId, leafIds);
+      }
+      map.set(budget.id, leafIds);
+    });
 
     return map;
   }

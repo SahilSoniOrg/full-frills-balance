@@ -31,8 +31,43 @@ export class SafeToSpendMapper {
     result: SafeToSpendMapperInput,
     options: MapperOptions,
   ): SafeToSpendViewModel {
+    const { isPrivacyMode, isLoading, currencyCode } = options;
+
     if (!result.report) {
-      throw new Error('SafeToSpendMapper: Simulation report is missing. UI cannot be rendered.');
+      // Fallback for missing report (prevents component crash)
+      return {
+        safeToSpend: 0,
+        shortfall: 0,
+        totalLiquidAssets: result.totalLiquidAssets || 0,
+        committedTotal: 0,
+        committedLiabilities: 0,
+        effectiveTotal: result.totalLiquidAssets || 0,
+        totalFutureInflow: 0,
+        totalLiabilities: 0,
+        displaySafeToSpend: '---',
+        displayShortfall: '---',
+        displayTotalLiquidAssets: '---',
+        displayCommittedTotal: '---',
+        displayCommittedLiabilities: '---',
+        displayTotalFutureInflow: '---',
+        insights: {
+          firstMajorInflowDay: null,
+          committedLiabilitiesCC: 0,
+          committedLiabilitiesOther: 0,
+        },
+        income: [],
+        committed: [],
+        debt: [],
+        accountSummaries: result.accountSummaries || [],
+        liquidAssetSubtypes: result.liquidAssetSubtypes || [],
+        isOverCommitted: false,
+        isPositiveSafeToSpend: false,
+        isPrivacyMode,
+        isLoading: true,
+        formatValue: (_v: number): string => '---',
+        labels: AppConfig.strings.dashboard.safeToSpendUi,
+        info: AppConfig.strings.dashboard.safeToSpendExplanation,
+      };
     }
 
     const {
@@ -43,7 +78,6 @@ export class SafeToSpendMapper {
       liquidAssetSubtypes,
       accountMap,
     } = result;
-    const { isPrivacyMode, isLoading, currencyCode } = options;
 
     const safeToSpend = summary?.safeToSpend ?? 0;
     const shortfall = summary?.shortfall ?? 0;

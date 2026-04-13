@@ -28,7 +28,7 @@ export class FlowResolver {
       }
     }
 
-    for (const [_dayOffset, dayFlows] of flowsByDay.entries()) {
+    for (const dayFlows of flowsByDay.values()) {
       // Planned outflows that can be reconciled against budget
       const plannedOutflows = dayFlows.filter(
         (flow): flow is Extract<Flow, { kind: 'OUTFLOW' | 'TRANSFER' }> =>

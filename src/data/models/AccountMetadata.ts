@@ -9,6 +9,7 @@ export default class AccountMetadata extends Model {
   } as const;
 
   @relation('accounts', 'account_id') account!: Relation<Account>;
+  @field('account_id') accountId!: string;
 
   @field('statement_day') statementDay?: number;
   @field('due_day') dueDay?: number;

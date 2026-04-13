@@ -380,7 +380,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         }
       },
     });
-  }, [account, deleteAccount, transactionCount]);
+  }, [account, deleteAccount, transactionCount, accountId, recoverAction]);
 
   const onRecover = useCallback(() => {
     showConfirmationAlert(

@@ -810,6 +810,7 @@ export const AppConfig = {
     liabilityErrorFallbackOffsetDays: 15,
     liabilityCommitmentTolerance: 0.01,
     useConstant30DayBurn: true,
+    constantDaysInMonth: 30,
     burnRateLookbackMinDays: 7,
   },
   dateTimePicker: {

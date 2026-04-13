@@ -90,6 +90,20 @@ export interface SimulationContext {
   convert: (amount: number, from: string) => number;
 }
 
+export interface SimulationPlannedPayment {
+  id: string;
+  name: string;
+  amount: number;
+  currencyCode: string;
+  fromAccountId: string;
+  toAccountId: string;
+  nextOccurrence: number;
+  intervalType: string;
+  intervalN: number;
+  recurrenceDay?: number;
+  endDate?: number;
+}
+
 export interface ISimulationEngine {
   generate(context: SimulationContext, previousFlows: Flow[]): Flow[];
 }

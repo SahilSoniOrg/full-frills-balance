@@ -1,9 +1,11 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
@@ -22,6 +24,13 @@ jest.mock('@/src/data/repositories/TransactionRepository', () => ({
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
     getScopes: jest.fn().mockResolvedValue([]),
+    getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+jest.mock('@/src/data/repositories/AccountRepository', () => ({
+  accountRepository: {
+    findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -175,9 +184,10 @@ describe('CashFlowSimulationService', () => {
       id: 'exp-eating',
       accountType: AccountType.EXPENSE,
     } as any;
-    budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
-
-    budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
+    const budgetId = budget.id;
+    (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([
+      { budgetId, accountId: expenseAccount.id, account: expenseAccount },
+    ]);
 
     const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 1000]]),
@@ -239,9 +249,12 @@ describe('CashFlowSimulationService', () => {
       name: 'CC',
       accountType: AccountType.LIABILITY,
       accountSubtype: AccountSubtype.CREDIT_CARD,
-      currencyCode: 'USD',
-      metadataRecords: { fetch: jest.fn().mockResolvedValue([{ statementDay: 5, dueDay: 20 }]) },
+      metadataRecords: { fetch: jest.fn().mockResolvedValue([{ statementDay: 5, dueDay: 20 }]) }, // Still used for legacy/internal purposes
     } as any;
+
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
+      { accountId: ccId, statementDay: 5, dueDay: 20 },
+    ]);
 
     const plannedPayment = {
       id: 'pp-cc',
@@ -317,7 +330,9 @@ describe('CashFlowSimulationService', () => {
     } as any;
 
     // Mock budget repository to return the expense scope
-    budgetRepository.getScopes = jest.fn().mockResolvedValue([{ account: expenseAccount }]);
+    (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([
+      { budgetId: budget.id, accountId: expenseAccount.id, account: expenseAccount },
+    ]);
 
     const result = await cashFlowSimulationService.simulate(
       new Map([[liquidAccountId, 2000]]),
@@ -337,9 +352,16 @@ describe('CashFlowSimulationService', () => {
     // The Resolver will take max(33.33, 400) = 400 for D10.
 
     // Check flows
-    const budgetFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'BUDGET');
-    const plannedFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'PLANNED');
-    const resolvedFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'RESOLVED');
+    // Check flows
+    const budgetFlows = result.allFlows!.filter(
+      (f: any) => f.origin === FlowSource.BUDGET && f.resolvedFrom === undefined,
+    );
+    const plannedFlows = result.allFlows!.filter(
+      (f: any) =>
+        (f.origin === FlowSource.PLANNED_PAYMENT || f.origin === FlowSource.PLANNED_JOURNAL) &&
+        f.resolvedFrom === undefined,
+    );
+    const resolvedFlows = result.allFlows!.filter((f: any) => f.resolvedFrom !== undefined);
 
     // Should have 29 budget flows (non-conflicting days)
     expect(budgetFlows.length).toBe(29);
@@ -351,10 +373,13 @@ describe('CashFlowSimulationService', () => {
 
     // Safe to spend calculation:
     // Starting 2000
-    // Budget burn (29 days): 29 * 33.33... = 966.66...
-    // Resolved burn (D10): 400
-    // Total: 2000 - 966.66 - 400 = 633.33
-    expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(633.33, 1);
+    // Total budget amount: 1000. Planned payment: 400.
+    // BudgetFlowGenerator deducts the 400 from 1000 for the burn calculation.
+    // Daily burn: (1000 - 400) / 30 = 20.
+    // D10 has a resolved flow of max(20, 400) = 400.
+    // Total Outflow: 29 * 20 (budget days) + 400 (D10) = 580 + 400 = 980.
+    // Safe to spend: 2000 - 980 = 1020.
+    expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(1020, 1);
   });
 
   it('handles INFLOW to liability accounts correctly (external payment)', async () => {
@@ -364,9 +389,12 @@ describe('CashFlowSimulationService', () => {
       name: 'CC Ext',
       accountType: AccountType.LIABILITY,
       accountSubtype: AccountSubtype.CREDIT_CARD,
-      currencyCode: 'USD',
       metadataRecords: { fetch: jest.fn().mockResolvedValue([{ statementDay: 1, dueDay: 15 }]) },
     } as any;
+
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
+      { accountId: ccId, statementDay: 1, dueDay: 15 },
+    ]);
 
     // Planned INFLOW to the CC (e.g. refund or payment from untracked account)
     const plannedInflow = {
@@ -416,7 +444,7 @@ describe('CashFlowSimulationService', () => {
     expect(result.simulationResult.summary.safeToSpend).toBe(600);
 
     // Verify exactly one output flow (the liability settlement)
-    const liabilityFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter((f: any) => f.origin === FlowSource.LIABILITY);
 
     expect(liabilityFlows.length).toBe(1);
     expect(liabilityFlows[0].amount).toBe(400);
@@ -429,9 +457,12 @@ describe('CashFlowSimulationService', () => {
       name: 'CC Settled',
       accountType: AccountType.LIABILITY,
       accountSubtype: AccountSubtype.CREDIT_CARD,
-      currencyCode: 'USD',
       metadataRecords: { fetch: jest.fn().mockResolvedValue([{ statementDay: 1, dueDay: 15 }]) },
     } as any;
+
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
+      { accountId: ccId, statementDay: 1, dueDay: 15 },
+    ]);
 
     // Mock repository:
     // 1. Statement Balance = 500
@@ -464,7 +495,7 @@ describe('CashFlowSimulationService', () => {
     // Bill 2 (Due D45 - outside window) = max(0, 800 - 300) = 500.
 
     // Result flows: exactly one LIABILITY flow of 300 on D15.
-    const liabilityFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'LIABILITY');
+    const liabilityFlows = result.allFlows!.filter((f: any) => f.origin === FlowSource.LIABILITY);
 
     expect(liabilityFlows.length).toBe(1);
     expect(liabilityFlows[0].amount).toBe(300);
@@ -526,7 +557,10 @@ describe('CashFlowSimulationService', () => {
     // Safe to spend: 4000.
     expect(result.simulationResult.summary.safeToSpend).toBe(4000);
 
-    const allPlannedFlows = result.allFlows!.filter((f: any) => f.meta?.source === 'PLANNED');
+    const allPlannedFlows = result.allFlows!.filter(
+      (f: any) =>
+        f.origin === FlowSource.PLANNED_PAYMENT || f.origin === FlowSource.PLANNED_JOURNAL,
+    );
 
     // Exactly 1 flow total for this PP
     expect(allPlannedFlows.length).toBe(1);
@@ -564,7 +598,7 @@ describe('CashFlowSimulationService', () => {
     );
 
     // Should generate a flow for "today" (offset 0) even though it was due in the past
-    const plannedFlows = result.allFlows!.filter((f: any) => f.meta?.referenceId === 'pp-overdue');
+    const plannedFlows = result.allFlows!.filter((f: any) => f.referenceId === 'pp-overdue');
 
     // It should have two flows in the 30 day window:
     // 1. Overdue (now due April 1)
@@ -605,10 +639,12 @@ describe('CashFlowSimulationService', () => {
     );
 
     // Should project for 5th, 6th, 7th, 8th, 9th, 10th.
-    // Total 6 flows.
-    const plannedFlows = result.allFlows!.filter((f: any) => f.meta?.referenceId === 'pp-ending');
-
-    expect(plannedFlows.length).toBe(6);
-    expect(plannedFlows[plannedFlows.length - 1].dayOffset).toBe(9); // April 10th
+    // 5 occurrences (April 5, 6, 7, 8, 9, 10)
+    // Actually April 5th to April 10th inclusive = 6 days.
+    const flows = result.allFlows!.filter(
+      (f: any) => f.referenceId === 'pp-ending' || f.meta?.referenceId === 'pp-ending',
+    );
+    expect(flows.length).toBe(6);
+    expect(flows[flows.length - 1].dayOffset).toBe(9); // April 10th
   });
 });

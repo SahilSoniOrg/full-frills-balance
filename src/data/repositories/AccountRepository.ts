@@ -167,6 +167,11 @@ export class AccountRepository {
     }
   }
 
+  async findMetadataByAccountIds(accountIds: string[]): Promise<AccountMetadata[]> {
+    if (accountIds.length === 0) return [];
+    return await this.metadata.query(Q.where('account_id', Q.oneOf(accountIds))).fetch();
+  }
+
   async findAllByIds(ids: string[]): Promise<Account[]> {
     if (ids.length === 0) return [];
     return this.accounts.query(Q.where('id', Q.oneOf(ids))).fetch();
