@@ -60,7 +60,8 @@ export class PlannedFlowGenerator {
         }
 
         const dayKey = getDayKey(curr);
-        const isAlreadyCovered = journalDatesByPP.has(`${pp.id}:${dayKey}`);
+        const key = `${pp.id}:${dayKey}`;
+        const isAlreadyCovered = journalDatesByPP.has(key);
 
         if (!isAlreadyCovered) {
           const effectiveDate = Math.max(curr, context.simulationStartMs);

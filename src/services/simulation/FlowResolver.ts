@@ -8,7 +8,7 @@ export class FlowResolver {
    * covered by that budget on the same day, and the effective pressure is
    * the higher of the two totals.
    */
-  static resolveConflicts(flows: Flow[]): Flow[] {
+  static resolveConflicts(flows: Flow[], budgetCategoryMap?: Map<string, Set<string>>): Flow[] {
     const resolved: Flow[] = [];
     const otherFlows: Flow[] = [];
     const flowsByDay = new Map<number, Flow[]>();
@@ -18,7 +18,8 @@ export class FlowResolver {
         flow.category === FlowCategory.BUDGET ||
         flow.category === FlowCategory.EXPENSE ||
         flow.category === FlowCategory.PLANNED_EXPENSE ||
-        flow.category === FlowCategory.INCOME
+        flow.category === FlowCategory.INCOME ||
+        flow.category === FlowCategory.TRANSFER
       ) {
         const dayFlows = flowsByDay.get(flow.dayOffset) || [];
         dayFlows.push(flow);
@@ -36,7 +37,8 @@ export class FlowResolver {
       for (const flow of dayFlows) {
         if (
           (flow.category === FlowCategory.EXPENSE ||
-            flow.category === FlowCategory.PLANNED_EXPENSE) &&
+            flow.category === FlowCategory.PLANNED_EXPENSE ||
+            flow.category === FlowCategory.TRANSFER) &&
           (flow.kind === 'OUTFLOW' || flow.kind === 'TRANSFER')
         ) {
           plannedOutflows.push(flow as Extract<Flow, { kind: 'OUTFLOW' | 'TRANSFER' }>);
@@ -64,19 +66,19 @@ export class FlowResolver {
       >();
 
       for (const budgetFlow of budgetFlows) {
-        const budgetId = budgetFlow.referenceId;
+        const budgetId = budgetFlow.referenceId || '';
         const group = groupedBudgets.get(budgetId) || {
           flows: [],
-          categoryIds: new Set(),
+          categoryIds: budgetCategoryMap?.get(budgetId) || new Set(),
           plannedMatches: [],
         };
         group.flows.push(budgetFlow);
 
         if (budgetFlow.categoryId) {
           group.categoryIds.add(budgetFlow.categoryId);
-          allBudgetCategoryIds.add(budgetFlow.categoryId);
         }
 
+        group.categoryIds.forEach(id => allBudgetCategoryIds.add(id));
         groupedBudgets.set(budgetId, group);
       }
 
@@ -135,7 +137,9 @@ export class FlowResolver {
         const resolvedFlow: Flow = {
           ...template,
           amount: effectiveAmount,
-          category: template.category, // Keep original (BUDGET vs EXPENSE/PLANNED_EXPENSE)
+          origin: template.origin,
+          resolution: 'MERGED',
+          category: template.category,
           timeframe: template.timeframe,
           resolvedFrom: isPlannedHigher ? FlowSource.PLANNED_PAYMENT : FlowSource.BUDGET,
           meta: {

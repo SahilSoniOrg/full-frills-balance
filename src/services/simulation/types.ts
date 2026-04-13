@@ -56,6 +56,7 @@ export interface FlowBase {
    */
   referenceId: string;
   categoryId?: string;
+  resolution?: 'NONE' | 'MERGED' | 'OVERRIDDEN';
   resolvedFrom?: FlowSource;
   meta?: FlowMeta;
 }

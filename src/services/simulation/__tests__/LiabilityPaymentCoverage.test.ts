@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
     getScopes: jest.fn().mockResolvedValue([]),
+    getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -24,6 +25,8 @@ jest.mock('@/src/data/repositories/TransactionRepository', () => ({
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
     convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
+    fetchRatesForBase: jest.fn().mockResolvedValue({}),
+    getRateSafe: jest.fn().mockReturnValue(1),
   },
 }));
 

@@ -5,6 +5,8 @@ import { Flow } from '../types';
  * These rules check for logical consistency across multiple flows (e.g., double-counting).
  */
 export function assertGlobalIntegrity(flows: Flow[]): void {
+  if (!__DEV__) return;
+
   const seenIds = new Set<string>();
 
   for (const flow of flows) {

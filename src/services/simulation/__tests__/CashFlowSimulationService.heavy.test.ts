@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
     getScopes: jest.fn().mockResolvedValue([]),
+    getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -25,9 +26,17 @@ jest.mock('@/src/data/repositories/TransactionRepository', () => ({
   },
 }));
 
+jest.mock('@/src/data/repositories/AccountRepository', () => ({
+  accountRepository: {
+    findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
+  },
+}));
+
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
     convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
+    fetchRatesForBase: jest.fn().mockResolvedValue({}),
+    getRateSafe: jest.fn().mockReturnValue(1),
   },
 }));
 
@@ -79,7 +88,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       accountSubtype: AccountSubtype.LOAN,
       currencyCode: 'USD',
       metadataRecords: {
-        fetch: jest.fn().mockResolvedValue([{ emiDay, payFromAccountId: 'cash' }]),
+        fetch: jest.fn().mockResolvedValue([{ emiDay, payFromAccountId: 'cash', emiAmount: 600 }]),
       },
     }) as any;
 
@@ -87,13 +96,17 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
-    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([]);
+    (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([]);
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
     (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
       totalDecrease: 0,
       totalIncrease: 0,
     });
+    (
+      require('@/src/data/repositories/AccountRepository').accountRepository
+        .findMetadataByAccountIds as jest.Mock
+    ).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -127,12 +140,14 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
         }) as any,
     );
     const usages = budgets.map(budget => ({ remaining: budget.amount }) as any);
-    const budgetScopeById = new Map(
-      budgets.map((budget, index) => [budget.id, [{ account: expenseAccounts[index] }]]),
-    );
-    (budgetRepository.getScopes as jest.Mock).mockImplementation((budgetId: string) =>
-      Promise.resolve(budgetScopeById.get(budgetId) ?? []),
-    );
+    const allScopes = budgets.flatMap((budget, index) => [
+      {
+        budgetId: budget.id,
+        accountId: expenseAccounts[index].id,
+        account: expenseAccounts[index],
+      },
+    ]);
+    (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue(allScopes);
 
     const plannedPayments = [
       {
@@ -217,6 +232,23 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
         }),
     );
 
+    // Mock metadata for batch fetch
+    const liabilityAccountBalances = [
+      { account: creditCards[0], balance: 900 },
+      { account: creditCards[1], balance: 300 },
+      { account: loan, balance: 500 },
+    ];
+    const metadataList = await Promise.all(
+      liabilityAccountBalances.map(async lb => ({
+        accountId: lb.account.id,
+        ...(await lb.account.metadataRecords.fetch())[0],
+      })),
+    );
+    (
+      require('@/src/data/repositories/AccountRepository').accountRepository
+        .findMetadataByAccountIds as jest.Mock
+    ).mockResolvedValue(metadataList);
+
     const result = await cashFlowSimulationService.simulate(
       new Map([
         ['cash', 2500],
@@ -226,11 +258,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       plannedPayments,
       [],
       ['cash', 'savings', 'wallet'],
-      [
-        { account: creditCards[0], balance: 900 },
-        { account: creditCards[1], balance: 300 },
-        { account: loan, balance: 500 },
-      ],
+      liabilityAccountBalances,
       budgets,
       usages,
       allAccounts,
@@ -256,7 +284,8 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
 
     expect(bySource.get(FlowSource.BUDGET)).toBeGreaterThan(200);
     expect(bySource.get(FlowSource.PLANNED_PAYMENT)).toBeGreaterThanOrEqual(4);
-    expect(bySource.get('RESOLVED')).toBeGreaterThanOrEqual(1);
+    const resolvedCount = result.allFlows!.filter(f => f.resolution === 'MERGED').length;
+    expect(resolvedCount).toBeGreaterThanOrEqual(1);
     expect(result.allFlows!.some(flow => flow.kind === 'TRANSFER')).toBe(true);
 
     for (const flow of result.allFlows!) {
@@ -330,7 +359,8 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     );
 
     const plannedFlows = result.allFlows!.filter(
-      flow => flow.origin === FlowSource.PLANNED_PAYMENT,
+      flow =>
+        flow.origin === FlowSource.PLANNED_PAYMENT || flow.origin === FlowSource.PLANNED_JOURNAL,
     );
     const templateIds = new Set(plannedPayments.map(payment => payment.id));
     const generatedJournalIds = new Set(plannedJournals.map(journal => journal.id));

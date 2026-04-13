@@ -5,13 +5,14 @@ import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import Transaction from '@/src/data/models/Transaction';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import dayjs from 'dayjs';
 import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
@@ -54,36 +55,37 @@ export class CashFlowSimulationService {
       this.fetchMetadata(liabilityAccountBalances),
     ]);
 
-    // Build unique currency list for pre-loading rates
-    const currencies = new Set<string>();
-    currencies.add(resultCurrency);
+    // P1 Perf: Pre-warm rates per unique base currency, then read sync
+    // Replaces N separate convert(1, from, to) calls that each hit DB
+    const baseCurrencies = new Set<string>();
+    baseCurrencies.add(resultCurrency);
     allAccounts.forEach(a => {
-      if (a.currencyCode) currencies.add(a.currencyCode);
+      if (a.currencyCode) baseCurrencies.add(a.currencyCode);
     });
     budgets.forEach(b => {
-      if (b.currencyCode) currencies.add(b.currencyCode);
+      if (b.currencyCode) baseCurrencies.add(b.currencyCode);
     });
     plannedPayments.forEach(pp => {
-      if (pp.currencyCode) currencies.add(pp.currencyCode);
+      if (pp.currencyCode) baseCurrencies.add(pp.currencyCode);
     });
-
-    // Also include currencies from journal transactions
     journalTxsMap.forEach(txs => {
       txs.forEach(tx => {
-        if (tx.currencyCode) currencies.add(tx.currencyCode);
+        if (tx.currencyCode) baseCurrencies.add(tx.currencyCode);
       });
     });
 
-    const rateMap = new Map<string, number>();
     await Promise.all(
-      Array.from(currencies).map(async from => {
-        const { convertedAmount } = await exchangeRateService.convert(1, from, resultCurrency);
-        rateMap.set(from, convertedAmount);
-      }),
+      Array.from(baseCurrencies).map(base =>
+        exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
+      ),
     );
 
-    const convert = (amount: number, from: string) =>
-      Math.round(amount * (rateMap.get(from) || 1) * 100) / 100;
+    const rateMap = new Map<string, number>();
+    for (const from of baseCurrencies) {
+      rateMap.set(from, exchangeRateService.getRateSafe(from, resultCurrency));
+    }
+
+    const convert = (amount: number, from: string) => amount * (rateMap.get(from) || 1);
 
     // Normalize and Fetch remaining dependent data in parallel
     const [{ statementBalances, settledSinceStatement }, budgetCategoryMap] = await Promise.all([
@@ -182,8 +184,10 @@ export class CashFlowSimulationService {
       plannedFlows,
     );
 
-    // Resolve conflicts (e.g., Budget vs Planned)
-    const resolvedSpendingFlows = FlowResolver.resolveConflicts([...budgetFlows, ...plannedFlows]);
+    const resolvedSpendingFlows = FlowResolver.resolveConflicts(
+      [...budgetFlows, ...plannedFlows],
+      budgetCategoryMap,
+    );
 
     const liabilityFlows = LiabilityFlowGenerator.generate(
       context,
@@ -367,17 +371,14 @@ export class CashFlowSimulationService {
   // --- Normalization Helpers ---
 
   private async fetchMetadata(lbs: { account: Account }[]) {
+    const map = new Map<string, any>();
+    if (lbs.length === 0) return map;
+
     const ids = lbs.map(lb => lb.account.id);
-    if (ids.length === 0) return new Map();
+    const metadataRecords = await accountRepository.findMetadataByAccountIds(ids);
 
-    const records = await accountRepository.findMetadataByAccountIds(ids);
-
-    const map = new Map<string, AccountMetadata>();
-    records.forEach(r => {
-      // Keep only the first record for each account if multiple exist
-      if (!map.has(r.accountId)) {
-        map.set(r.accountId, r);
-      }
+    metadataRecords.forEach(meta => {
+      map.set(meta.accountId, meta);
     });
 
     return map;

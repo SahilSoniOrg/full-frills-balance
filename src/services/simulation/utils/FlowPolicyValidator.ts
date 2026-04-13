@@ -20,6 +20,7 @@ export function assertPolicyInvariants(
   if (flow.origin === FlowSource.PLANNED_PAYMENT) {
     const validPlanned = [
       FlowCategory.PLANNED_EXPENSE,
+      FlowCategory.EXPENSE, // Added to support unified journal/template origin
       FlowCategory.DEBT,
       FlowCategory.INCOME,
       FlowCategory.TRANSFER,

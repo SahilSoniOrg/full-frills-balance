@@ -13,6 +13,15 @@ const mockAcc = (id: string, subtype: AccountSubtype, name: string) =>
 describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
   const startOfToday = dayjs('2026-04-01').startOf('day');
   const simulationDays = 60;
+  const mockContext = {
+    simulationStartMs: startOfToday.valueOf(),
+    simulationEndMs: startOfToday.add(simulationDays, 'day').valueOf(),
+    simulationDays,
+    convert: (amount: number) => amount,
+    resultCurrency: 'USD',
+    liquidAccountIds: new Set(['cash', 'savings']),
+    liabilityAccountIds: new Set(['cc-1', 'loan-1']),
+  } as any;
 
   describe('Credit Cards', () => {
     const cc = mockAcc('cc-1', AccountSubtype.CREDIT_CARD, 'Visa');
@@ -33,6 +42,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         90,
         spendingFlows,
+        mockContext,
       );
 
       // April 6 spending is after April 1 statement, so it goes to May 1st statement -> May 15th due.
@@ -68,6 +78,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         spendingFlows,
+        mockContext,
       );
 
       expect(obligations).toHaveLength(2);
@@ -92,6 +103,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         [],
+        mockContext,
       );
 
       // April 5th (Day 4) -> 500
@@ -113,6 +125,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         [],
+        mockContext,
       );
 
       expect(obligations).toHaveLength(2);
@@ -131,11 +144,15 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         [],
+        mockContext,
       );
 
-      // Should project the full balance on the next due date
-      expect(obligations).toHaveLength(1);
-      expect(obligations[0].amount).toBe(24000);
+      // Should project heuristic EMIs if emiAmount is missing for a loam
+      expect(obligations).toHaveLength(2); // Two months @ 200/mo (24000/120)
+      expect(obligations[0]).toMatchObject({
+        amount: 200,
+        label: 'Unsettled: Large Loan (Est. EMI)',
+      });
     });
 
     it('rounds obligation amounts to 2 decimal places', () => {
@@ -153,9 +170,11 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         spendingFlows,
+        mockContext,
       );
 
-      expect(obligations[0].amount).toBe(100.01);
+      // Should now be the raw, non-rounded internal value
+      expect(obligations[0].amount).toBe(100.005);
     });
 
     it('respects MIN payment mode for credit cards', () => {
@@ -177,6 +196,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         [],
+        mockContext,
       );
 
       // Should only owe 50 (the min payment), not 200 (the full statement)
@@ -210,6 +230,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         [],
+        mockContext,
       );
       expect(obligationsHighPercent[0].amount).toBe(50);
 
@@ -222,6 +243,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         startOfToday,
         simulationDays,
         [],
+        mockContext,
       );
       expect(obligationsHighAbsolute[0].amount).toBe(20);
     });

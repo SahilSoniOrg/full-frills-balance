@@ -15,11 +15,22 @@ jest.mock('@/src/data/repositories/TransactionRepository', () => ({
   transactionRepository: { findByJournals: jest.fn().mockResolvedValue([]) },
 }));
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
-  budgetRepository: { getScopes: jest.fn().mockResolvedValue([]) },
+  budgetRepository: {
+    getScopes: jest.fn().mockResolvedValue([]),
+    getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
+  },
 }));
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
     convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
+    fetchRatesForBase: jest.fn().mockResolvedValue({}),
+    getRateSafe: jest.fn().mockReturnValue(1),
+  },
+}));
+
+jest.mock('@/src/data/repositories/AccountRepository', () => ({
+  accountRepository: {
+    findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -46,6 +57,10 @@ describe('liability flow issue', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
+    (
+      require('@/src/data/repositories/AccountRepository').accountRepository
+        .findMetadataByAccountIds as jest.Mock
+    ).mockResolvedValue([]);
   });
   afterEach(() => {
     jest.useRealTimers();
@@ -74,6 +89,13 @@ describe('liability flow issue', () => {
         currencyCode: 'USD',
       },
     ] as PlannedPayment[];
+
+    (
+      require('@/src/data/repositories/AccountRepository').accountRepository
+        .findMetadataByAccountIds as jest.Mock
+    ).mockResolvedValue([
+      { accountId: 'cc', statementDay: 1, dueDay: 15, payFromAccountId: 'cash' },
+    ]);
 
     const result = await cashFlowSimulationService.simulate(
       new Map([['cash', 1200]]),

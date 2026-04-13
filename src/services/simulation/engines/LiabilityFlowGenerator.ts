@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountSubtype } from '@/src/data/models/Account';
+import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import dayjs from 'dayjs';
-import { isLoanSubtype } from '../../../utils/accountSubtypeUtils';
 import { Flow, FlowCategory, FlowSource, Obligation, SimulationContext } from '../types';
 import { assertValidFlow } from '../utils/FlowInvariants';
 import { getCorrespondingStatementDate, getNextDueDate } from '../utils/liabilityUtils';
@@ -58,7 +58,7 @@ export class LiabilityFlowGenerator {
 
       const spendingFlows = spendingFlowsMap.get(acc.id) || [];
 
-      const obligations = this.generateObligations(
+      const obligations = LiabilityFlowGenerator.generateObligations(
         acc,
         lb.balance,
         metadata,
@@ -67,6 +67,7 @@ export class LiabilityFlowGenerator {
         startOfToday,
         context.simulationDays,
         spendingFlows,
+        context,
       );
 
       // Reduce obligations by matching with incoming flows to this liability account
@@ -129,6 +130,7 @@ export class LiabilityFlowGenerator {
     startOfToday: dayjs.Dayjs,
     simulationDays: number,
     spendingFlows: Flow[] = [],
+    context: SimulationContext,
   ): Obligation[] {
     const obligations: Obligation[] = [];
     const dueDay = metadata?.dueDay || AppConfig.insights.liabilityDefaultDueDay;
@@ -224,12 +226,11 @@ export class LiabilityFlowGenerator {
             finalAmount = Math.min(c.amount, calculatedMin);
           }
 
-          const roundedAmount = Math.round(finalAmount * 100) / 100;
           const dueDayOffset = c.dDate.diff(startOfToday, 'day');
-          if (dueDayOffset < simulationDays && roundedAmount > 0) {
+          if (dueDayOffset < simulationDays && finalAmount > 0) {
             obligations.push({
               liabilityId: acc.id,
-              amount: roundedAmount,
+              amount: finalAmount,
               dueDayOffset,
               label: `${i === 0 ? 'Current bill' : 'Bill ' + (i + 1)}: ${acc.name}${paymentModeLabel}`,
             });
@@ -249,27 +250,35 @@ export class LiabilityFlowGenerator {
 
       const rawEmiAmount = metadata?.emiAmount;
 
-      // If it's a loan (Mortgage, etc) and no EMI is defined, skip automatic generation.
-      // We don't want to project the full principal payoff unless specified.
-      if (isLoanSubtype(acc.accountSubtype) && !rawEmiAmount) {
-        return obligations;
-      }
+      // 3-state EMI Logic:
+      // 1. Known EMI -> use it
+      // 2. Unknown EMI -> heuristic estimate (mortgage/loan)
+      // 3. Fallback -> full balance (safety)
+      let emiAmount: number;
+      let labelSuffix = '';
 
-      // If no explicit EMI amount is provided, we treat the entire remaining balance as a single obligation
-      // on the next due date, matching legacy behavior.
-      const emiAmount = rawEmiAmount || remainingBalance;
+      if (rawEmiAmount !== undefined) {
+        emiAmount = context.convert(rawEmiAmount, acc.currencyCode || context.resultCurrency);
+      } else if (isLoanSubtype(acc.accountSubtype)) {
+        // Conservative heuristic: 10-year amort
+        emiAmount = currentBalance / AppConfig.defaults.simulation.loanHeuristicTermMonths;
+        labelSuffix = AppConfig.defaults.simulation.loanHeuristicLabelSuffix;
+      } else {
+        // Non-loan, non-EMI: treat as "full balance due now" for safety (legacy-ish)
+        emiAmount = remainingBalance;
+      }
 
       while (
         currDDate.diff(startOfToday, 'day') < simulationDays &&
         remainingBalance > AppConfig.defaults.simulation.financialEpsilon
       ) {
-        const amountToPay = Math.round(Math.min(remainingBalance, emiAmount) * 100) / 100;
+        const amountToPay = Math.min(remainingBalance, emiAmount);
 
         obligations.push({
           liabilityId: acc.id,
           amount: amountToPay,
           dueDayOffset: currDDate.diff(startOfToday, 'day'),
-          label: `Unsettled: ${acc.name}`,
+          label: `Unsettled: ${acc.name}${labelSuffix}`,
         });
 
         remainingBalance -= amountToPay;

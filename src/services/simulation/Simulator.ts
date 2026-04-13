@@ -89,11 +89,16 @@ export class Simulator {
 
       globalMinBalance = Math.min(globalMinBalance, globalBalance);
 
+      const roundedAccountBalances = new Map<string, number>();
+      for (const [id, bal] of lastAccountBalancesMap.entries()) {
+        roundedAccountBalances.set(id, Math.round((bal ?? 0) * 100) / 100);
+      }
+
       projections.push({
         dayOffset: todayOffset,
         timestamp: 0,
-        globalBalance,
-        accountBalances: lastAccountBalancesMap,
+        globalBalance: Math.round(globalBalance * 100) / 100,
+        accountBalances: roundedAccountBalances,
         flows: todayFlows,
       });
     }
@@ -107,19 +112,27 @@ export class Simulator {
 
     const safeToSpend = Math.max(0, Math.min(totalStartingBalance, globalMinBalance));
 
-    return {
+    const res = {
       summary: {
-        safeToSpend,
-        shortfall: globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0,
-        trajectoryMinBalance: globalMinBalance,
-        accountMinBalances,
-        accountMinBalancesBeforeIncome,
+        safeToSpend: Math.round(safeToSpend * 100) / 100,
+        shortfall: Math.round((globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0) * 100) / 100,
+        trajectoryMinBalance: Math.round(globalMinBalance * 100) / 100,
+        accountMinBalances: new Map(
+          Array.from(accountMinBalances).map(([id, b]) => [id, Math.round(b * 100) / 100]),
+        ),
+        accountMinBalancesBeforeIncome: new Map(
+          Array.from(accountMinBalancesBeforeIncome).map(([id, b]) => [
+            id,
+            Math.round(b * 100) / 100,
+          ]),
+        ),
         firstMajorInflowDay,
       },
       accountSummaries: [], // Will be populated by the orchestrator
       projections,
       allFlows: flows,
     };
+    return res;
   }
 
   /**

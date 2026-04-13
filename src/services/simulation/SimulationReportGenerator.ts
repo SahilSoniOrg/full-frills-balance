@@ -14,13 +14,18 @@ export class SimulationReportGenerator {
   ): SimulationReport {
     assertGlobalIntegrity(allFlows);
 
+    const roundedFlows = allFlows.map(f => ({
+      ...f,
+      amount: Math.round(f.amount * 100) / 100,
+    }));
+
     const now = dayjs().startOf('day');
 
     return {
-      summary: this.generateSummary(allFlows, liquidAccountIdsSet),
-      allFlows,
-      budget: this.generateBudgetSummary(allFlows, now),
-      liabilities: this.generateLiabilities(allFlows, accountMap, liabilityAccountBalances),
+      summary: this.generateSummary(roundedFlows, liquidAccountIdsSet),
+      allFlows: roundedFlows,
+      budget: this.generateBudgetSummary(roundedFlows, now),
+      liabilities: this.generateLiabilities(roundedFlows, accountMap, liabilityAccountBalances),
     };
   }
 
@@ -61,10 +66,10 @@ export class SimulationReportGenerator {
 
     return {
       firstMajorInflowDay,
-      totalFutureInflow,
-      totalPlannedInflow: totalFutureInflow,
-      totalPlannedOutflow,
-      totalCommittedPlanned,
+      totalFutureInflow: Math.round(totalFutureInflow * 100) / 100,
+      totalPlannedInflow: Math.round(totalFutureInflow * 100) / 100,
+      totalPlannedOutflow: Math.round(totalPlannedOutflow * 100) / 100,
+      totalCommittedPlanned: Math.round(totalCommittedPlanned * 100) / 100,
     };
   }
 
@@ -85,8 +90,8 @@ export class SimulationReportGenerator {
     }
 
     return {
-      currentMonthRemaining,
-      nextMonthProjected,
+      currentMonthRemaining: Math.round(currentMonthRemaining * 100) / 100,
+      nextMonthProjected: Math.round(nextMonthProjected * 100) / 100,
       nextMonthDays: Math.max(0, AppConfig.defaults.safeToSpendDays - daysLeftInMonth),
     };
   }
@@ -127,12 +132,12 @@ export class SimulationReportGenerator {
     }
 
     return {
-      total: totalLiabilities,
-      totalCreditCard,
-      totalOther,
-      committed,
-      committedCreditCard,
-      committedOther,
+      total: Math.round(totalLiabilities * 100) / 100,
+      totalCreditCard: Math.round(totalCreditCard * 100) / 100,
+      totalOther: Math.round(totalOther * 100) / 100,
+      committed: Math.round(committed * 100) / 100,
+      committedCreditCard: Math.round(committedCreditCard * 100) / 100,
+      committedOther: Math.round(committedOther * 100) / 100,
     };
   }
 }

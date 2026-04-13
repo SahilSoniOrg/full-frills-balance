@@ -39,6 +39,8 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
     convert: jest.fn((amount: number, from?: string) =>
       Promise.resolve({ convertedAmount: from === 'EUR' ? amount * 2 : amount }),
     ),
+    fetchRatesForBase: jest.fn().mockResolvedValue({}),
+    getRateSafe: jest.fn((from?: string) => (from === 'EUR' ? 2 : 1)),
   },
 }));
 

@@ -5,7 +5,7 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { balanceService } from '@/src/services/BalanceService';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { of } from 'rxjs';
 
@@ -16,7 +16,7 @@ jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/JournalRepository');
-jest.mock('@/src/services/BalanceService');
+jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
@@ -46,7 +46,9 @@ describe('NotificationService', () => {
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
-    (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
+    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
+    (exchangeRateService.fetchRatesForBase as jest.Mock).mockResolvedValue({});
+    (exchangeRateService.getRateSafe as jest.Mock).mockReturnValue(1);
   });
 
   describe('observeSafeToSpend', () => {
@@ -65,29 +67,17 @@ describe('NotificationService', () => {
         { id: 'l2', accountType: AccountType.LIABILITY, accountSubtype: AccountSubtype.MORTGAGE }, // Not liquid liability
       ];
 
-      const mockBalances = [
-        { accountId: 'a1', balance: 5000, accountType: AccountType.ASSET, currencyCode: 'USD' },
-        { accountId: 'a2', balance: 100000, accountType: AccountType.ASSET, currencyCode: 'USD' },
-        {
-          accountId: 'l1',
-          balance: -1000,
-          accountType: AccountType.LIABILITY,
-          currencyCode: 'USD',
-        },
-        {
-          accountId: 'l2',
-          balance: -200000,
-          accountType: AccountType.LIABILITY,
-          currencyCode: 'USD',
-        },
-      ];
-
       (accountRepository.observeByType as jest.Mock).mockImplementation(type => {
         if (type === AccountType.ASSET) return of(mockAssets);
         if (type === AccountType.LIABILITY) return of(mockLiabilities);
         return of([]);
       });
-      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
+      (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+        new Map([
+          ['a1', 5000],
+          ['l1', -1000],
+        ]),
+      );
 
       notificationService.observeSafeToSpend().subscribe(result => {
         // Expected:

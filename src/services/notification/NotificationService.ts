@@ -9,12 +9,11 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { balanceService } from '@/src/services/BalanceService';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { isLiquidAssetSubtype, LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
-import { Money } from '@/src/utils/money';
+import { Money, roundToPrecision } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
@@ -23,6 +22,7 @@ import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
+import { balanceService } from '../BalanceService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
 
@@ -327,51 +327,55 @@ export class NotificationService {
 
         return combineLatest([budgetUsage$, history$]).pipe(
           switchMap(async ([usages, rawDeltas]) => {
-            const accountBalances = await balanceService.getAccountBalances();
+            // Phase 1: Normalized balance fetch (includes hierarchy rollups and exclusions)
+            const allBalances = await balanceService.getAccountBalances(
+              now.valueOf(),
+              resultCurrency,
+            );
+            const balancesMapByAccountId = new Map(allBalances.map(b => [b.accountId, b.balance]));
+
+            // P0 Perf: Pre-warm exchange rates once, then use sync getRateSafe()
+            // Replaces N sequential await convert() calls across RN bridge
+            const uniqueBaseCurrencies = new Set<string>();
+            uniqueBaseCurrencies.add(resultCurrency);
+            for (const a of liquidAssets) {
+              if (a.currencyCode && a.currencyCode !== resultCurrency) {
+                uniqueBaseCurrencies.add(a.currencyCode);
+              }
+            }
+            for (const l of liquidLiabilities) {
+              if (l.currencyCode && l.currencyCode !== resultCurrency) {
+                uniqueBaseCurrencies.add(l.currencyCode);
+              }
+            }
+            await Promise.all(
+              Array.from(uniqueBaseCurrencies).map(base =>
+                exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
+              ),
+            );
 
             const startingBalances = new Map<string, number>();
-            const targetMoney = Money.from(0, resultCurrency);
-            let totalLiquidMoney = targetMoney;
+            let totalLiquidAssetsAmount = 0;
 
             const liquidAssetAccounts: { name: string; amount: number }[] = [];
             for (const a of liquidAssets) {
-              const b = accountBalances.find(bal => bal.accountId === a.id);
-              if (b) {
-                let amount = b.balance;
-                if (b.currencyCode !== resultCurrency) {
-                  const { convertedAmount } = await exchangeRateService.convert(
-                    b.balance,
-                    b.currencyCode,
-                    resultCurrency,
-                  );
-                  amount = convertedAmount;
-                }
-                totalLiquidMoney = totalLiquidMoney.add(Money.from(amount, resultCurrency));
-                liquidAssetAccounts.push({ name: a.name, amount });
-                startingBalances.set(a.id, amount);
-              }
+              const balance = balancesMapByAccountId.get(a.id) || 0;
+              totalLiquidAssetsAmount += balance;
+              liquidAssetAccounts.push({ name: a.name, amount: balance });
+              startingBalances.set(a.id, balance);
             }
 
+            const totalLiquidMoney = Money.from(totalLiquidAssetsAmount, resultCurrency);
+
             const liquidLiabilityAccounts: { name: string; amount: number }[] = [];
-            const liabilityAccountBalances = await Promise.all(
-              liquidLiabilities.map(async l => {
-                const b = accountBalances.find(bal => bal.accountId === l.id);
-                let balance = Math.abs(b?.balance || 0);
-                if (b && b.currencyCode !== resultCurrency) {
-                  const { convertedAmount } = await exchangeRateService.convert(
-                    balance,
-                    b.currencyCode,
-                    resultCurrency,
-                  );
-                  balance = convertedAmount;
-                }
-                liquidLiabilityAccounts.push({ name: l.name, amount: balance });
-                return {
-                  account: l,
-                  balance,
-                };
-              }),
-            );
+            const liabilityAccountBalances = liquidLiabilities.map(l => {
+              const balance = Math.abs(balancesMapByAccountId.get(l.id) || 0);
+              liquidLiabilityAccounts.push({ name: l.name, amount: balance });
+              return {
+                account: l,
+                balance,
+              };
+            });
 
             // Call the simulation engine
             const runResult = await cashFlowSimulationService.simulate(
@@ -387,18 +391,15 @@ export class NotificationService {
             );
 
             // Calculate History Points (UI concern)
+            // P1 Perf: Use sync getRateSafe() — rates already pre-warmed above
             const netCashFlowByDay = new Map<number, number>();
             const deltas = rawDeltas || [];
             for (const delta of deltas) {
               let amount = delta.delta;
               if (delta.currencyCode !== resultCurrency) {
                 try {
-                  const { convertedAmount } = await exchangeRateService.convert(
-                    amount,
-                    delta.currencyCode,
-                    resultCurrency,
-                  );
-                  amount = convertedAmount;
+                  const rate = exchangeRateService.getRateSafe(delta.currencyCode, resultCurrency);
+                  amount = roundToPrecision(amount * rate, 2);
                 } catch (e) {
                   logger.error('Failed to convert delta for history projection', e);
                 }

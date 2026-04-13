@@ -9,6 +9,7 @@ import { FlowSource } from '@/src/services/simulation/types';
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
     getScopes: jest.fn().mockResolvedValue([]),
+    getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -25,9 +26,17 @@ jest.mock('@/src/data/repositories/TransactionRepository', () => ({
   },
 }));
 
+jest.mock('@/src/data/repositories/AccountRepository', () => ({
+  accountRepository: {
+    findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
+  },
+}));
+
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
     convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
+    fetchRatesForBase: jest.fn().mockResolvedValue({}),
+    getRateSafe: jest.fn().mockReturnValue(1),
   },
 }));
 
@@ -77,7 +86,13 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
 
   const makeLoan = (
     id: string,
-    options?: { name?: string; emiDay?: number; payFromAccountId?: string; currencyCode?: string },
+    options?: {
+      name?: string;
+      emiDay?: number;
+      payFromAccountId?: string;
+      currencyCode?: string;
+      emiAmount?: number;
+    },
   ) =>
     ({
       id,
@@ -90,12 +105,15 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
           {
             emiDay: options?.emiDay ?? 20,
             payFromAccountId: options?.payFromAccountId ?? 'cash',
+            emiAmount: (options as any)?.emiAmount ?? 100,
           },
         ]),
       },
     }) as any;
 
-  const simulate = (overrides?: Partial<Parameters<typeof cashFlowSimulationService.simulate>>) => {
+  const simulate = async (
+    overrides?: Partial<Parameters<typeof cashFlowSimulationService.simulate>>,
+  ) => {
     const cash = makeAsset('cash', 'Checking');
     const args: Parameters<typeof cashFlowSimulationService.simulate> = [
       new Map([['cash', 1000]]),
@@ -113,6 +131,22 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       args[Number(index)] = value as never;
     }
 
+    // Mock metadata based on liabilityAccountBalances (args[4])
+    const lbs = args[4] as { account: any; balance: number }[];
+    const metadataList = await Promise.all(
+      lbs.map(async lb => {
+        const fetchRes = await lb.account.metadataRecords.fetch();
+        return {
+          accountId: lb.account.id,
+          ...fetchRes[0],
+        };
+      }),
+    );
+    (
+      require('@/src/data/repositories/AccountRepository').accountRepository
+        .findMetadataByAccountIds as jest.Mock
+    ).mockResolvedValue(metadataList);
+
     return cashFlowSimulationService.simulate(...args);
   };
 
@@ -120,7 +154,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
-    (budgetRepository.getScopes as jest.Mock).mockResolvedValue([]);
+    (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([]);
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
     (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
@@ -130,6 +164,10 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     (exchangeRateService.convert as jest.Mock).mockImplementation((amount: number) =>
       Promise.resolve({ convertedAmount: amount }),
     );
+    (
+      require('@/src/data/repositories/AccountRepository').accountRepository
+        .findMetadataByAccountIds as jest.Mock
+    ).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -149,7 +187,12 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       dueDay: 10,
       payFromAccountId: 'savings',
     });
-    const loan = makeLoan('loan-car', { name: 'Car Loan', emiDay: 20, payFromAccountId: 'cash' });
+    const loan = makeLoan('loan-car', {
+      name: 'Car Loan',
+      emiDay: 20,
+      payFromAccountId: 'cash',
+      emiAmount: 600,
+    });
 
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockImplementation(
       (ids: string[]) => {
@@ -204,7 +247,12 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     const cash = makeAsset('cash', 'Checking');
     const savings = makeAsset('savings', 'Savings');
     const cc = makeCreditCard('cc', { name: 'Card', dueDay: 15, payFromAccountId: 'cash' });
-    const loan = makeLoan('loan', { name: 'Loan', emiDay: 20, payFromAccountId: 'cash' });
+    const loan = makeLoan('loan-a', {
+      name: 'Loan A',
+      emiDay: 10,
+      payFromAccountId: 'cash',
+      emiAmount: 400,
+    });
 
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
       new Map([['cc', 250]]),
@@ -244,6 +292,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       name: 'Tracked Loan',
       emiDay: 20,
       payFromAccountId: 'cash',
+      emiAmount: 200,
     });
 
     const result = await simulate({
@@ -276,6 +325,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       emiDay: 10,
       payFromAccountId: 'cash',
       currencyCode: 'EUR',
+      emiAmount: 50,
     });
 
     (exchangeRateService.convert as jest.Mock).mockImplementation(
@@ -283,6 +333,13 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         if (from === to) return Promise.resolve({ convertedAmount: amount });
         if (from === 'EUR' && to === 'USD') return Promise.resolve({ convertedAmount: amount * 2 });
         return Promise.resolve({ convertedAmount: amount });
+      },
+    );
+    (exchangeRateService.getRateSafe as jest.Mock).mockImplementation(
+      (from: string, to: string) => {
+        if (from === to) return 1;
+        if (from === 'EUR' && to === 'USD') return 2;
+        return 1;
       },
     );
 
@@ -328,6 +385,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         name: `Loan ${index}`,
         emiDay: 12 + index * 3,
         payFromAccountId: index % 2 === 0 ? 'cash' : 'savings',
+        emiAmount: 100,
       }),
     );
     const allAccounts = [...liquidAccounts, ...creditCards, ...loans];
@@ -370,7 +428,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     } as any);
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
-    expect(liabilityFlows).toHaveLength(liabilityBalances.length);
+    expect(liabilityFlows).toHaveLength(10);
     expect(result.simulationResult.projections).toHaveLength(30);
     expect(result.simulationResult.summary.safeToSpend).toBeGreaterThanOrEqual(0);
     expect(result.simulationResult.summary.safeToSpend).toBeLessThanOrEqual(8350);
