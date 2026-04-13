@@ -6,11 +6,19 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { reportService } from '@/src/services/report-service';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
 import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { combineLatest, debounceTime, Observable, shareReplay, switchMap } from 'rxjs';
+import {
+  combineLatest,
+  debounceTime,
+  distinctUntilChanged,
+  Observable,
+  shareReplay,
+  switchMap,
+} from 'rxjs';
 
 /**
  * Consolidated reactive data for dashboard widgets.
@@ -166,8 +174,18 @@ class ReactiveDataService {
       transactionRepository.observeActiveCount(), // Efficient trigger for balance changes
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
+      // Optimization: Only re-calculate if the underlying data actually changed.
+      distinctUntilChanged((prev, curr) => {
+        return (
+          prev[0] === curr[0] && // Account reference same (Watermelon handles this)
+          prev[1] === curr[1] && // Journal meta same
+          prev[2] === curr[2] // Active count same
+        );
+      }),
       switchMap(async ([accounts]) => {
         try {
+          // 0. Pre-warm the exchange rate cache for startup speed
+          await exchangeRateService.preWarmCache();
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
           const endOfMonth = new Date(
@@ -184,6 +202,7 @@ class ReactiveDataService {
           const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
             startOfMonth,
             endOfMonth,
+            false, // includeTotalCount: false for list view
           );
 
           let finalBalances: AccountBalance[] = [];
@@ -224,12 +243,12 @@ class ReactiveDataService {
             finalBalances = Array.from(balancesMap.values());
           }
 
-          // 4. Calculate wealth summary
+          // 4. Calculate wealth summary (Synchronous path using warmed cache)
           const parentIds = new Set(
             accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
           );
           const leafBalances = finalBalances.filter(b => !parentIds.has(b.accountId));
-          const wealthSummary = await wealthService.calculateSummary(leafBalances, targetCurrency);
+          const wealthSummary = wealthService.calculateSummarySync(leafBalances, targetCurrency);
 
           return {
             accounts,
@@ -275,6 +294,9 @@ class ReactiveDataService {
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
       switchMap(async ([accounts]) => {
+        // 0. Pre-warm exchange rate cache for speed
+        await exchangeRateService.preWarmCache();
+
         const targetAccount = accounts.find(a => a.id === accountId);
         if (!targetAccount) {
           // If not found in active, try to find in deleted (one-shot find for efficiency)
@@ -305,7 +327,8 @@ class ReactiveDataService {
           const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
             startOfMonth,
             endOfMonth,
-            true,
+            true, // includeTotalCount: true for detail view
+            true, // includeDeleted: true
           );
 
           let finalBalances: AccountBalance[] = [];
@@ -372,26 +395,14 @@ class ReactiveDataService {
   }
 
   private mapRawToBalance(item: any, now: number): AccountBalance {
-    const getProp = (obj: any, ...keys: string[]) => {
-      for (const key of keys) {
-        if (obj[key] !== undefined) return obj[key];
-        if (obj[key.toLowerCase()] !== undefined) return obj[key.toLowerCase()];
-        if (obj[key.toUpperCase()] !== undefined) return obj[key.toUpperCase()];
-        const snake = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-        if (obj[snake] !== undefined) return obj[snake];
-      }
-      return undefined;
-    };
-
-    const accountId = getProp(item, 'id', 'accountId', 'account_id');
-    const balance = Number(getProp(item, 'direct_balance', 'directBalance') || 0);
-    const currencyCode = getProp(item, 'currency_code', 'currencyCode') || 'USD';
-    const accountType = getProp(item, 'account_type', 'accountType');
-    const income = Number(getProp(item, 'monthly_income', 'monthlyIncome') || 0);
-    const expenses = Number(getProp(item, 'monthly_expenses', 'monthlyExpenses') || 0);
-    const txCount = Number(
-      getProp(item, 'direct_transaction_count', 'directTransactionCount') || 0,
-    );
+    // Optimization: Direct access for known SQL aliases instead of expensive regex loop
+    const accountId = item.id || item.accountId || item.account_id;
+    const balance = Number(item.direct_balance || item.directBalance || 0);
+    const currencyCode = item.currency_code || item.currencyCode || 'USD';
+    const accountType = item.account_type || item.accountType;
+    const income = Number(item.monthly_income || item.monthlyIncome || 0);
+    const expenses = Number(item.monthly_expenses || item.monthlyExpenses || 0);
+    const txCount = Number(item.direct_transaction_count || item.directTransactionCount || 0);
 
     return {
       accountId: String(accountId),

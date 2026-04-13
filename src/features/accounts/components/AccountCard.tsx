@@ -15,7 +15,7 @@ interface AccountCardProps {
   surfaceColor: string;
 }
 
-export function AccountCard({
+export function AccountCardBase({
   account,
   onPress,
   onCollapse,
@@ -175,6 +175,19 @@ export function AccountCard({
     </AppCard>
   );
 }
+
+// Standard memoization with custom comparison for standard performance
+export const AccountCard = React.memo(
+  AccountCardBase,
+  (prev, next) =>
+    prev.account.id === next.account.id &&
+    prev.account.balanceText === next.account.balanceText &&
+    prev.account.isExpanded === next.account.isExpanded &&
+    prev.account.monthlyIncomeText === next.account.monthlyIncomeText &&
+    prev.account.monthlyExpenseText === next.account.monthlyExpenseText &&
+    prev.surfaceColor === next.surfaceColor &&
+    prev.dividerColor === next.dividerColor,
+);
 
 const styles = StyleSheet.create({
   cardContainer: {

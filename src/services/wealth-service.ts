@@ -81,6 +81,40 @@ export const wealthService = {
   },
 
   /**
+   * Synchronous version of calculateSummary for lag-free UI updates.
+   * REQUIRES pre-warmed exchange rate cache.
+   */
+  calculateSummarySync(balances: AccountBalance[], targetCurrency: string): WealthSummary {
+    let assets = Money.from(0, targetCurrency);
+    let liabilities = Money.from(0, targetCurrency);
+    let equity = Money.from(0, targetCurrency);
+    let income = Money.from(0, targetCurrency);
+    let expense = Money.from(0, targetCurrency);
+
+    for (const b of balances) {
+      const balanceCurrency = b.currencyCode || targetCurrency;
+      // FAST: getRateSafe hits memory cache pre-warmed by preWarmCache()
+      const rate = exchangeRateService.getRateSafe(balanceCurrency, targetCurrency);
+      const money = Money.from(b.balance * rate, targetCurrency);
+
+      if (b.accountType === AccountType.ASSET) assets = assets.add(money);
+      else if (b.accountType === AccountType.LIABILITY) liabilities = liabilities.add(money);
+      else if (b.accountType === AccountType.EQUITY) equity = equity.add(money);
+      else if (b.accountType === AccountType.INCOME) income = income.add(money);
+      else if (b.accountType === AccountType.EXPENSE) expense = expense.add(money);
+    }
+
+    return {
+      totalAssets: assets.amount,
+      totalLiabilities: liabilities.amount,
+      totalEquity: equity.amount,
+      totalIncome: income.amount,
+      totalExpense: expense.amount,
+      netWorth: assets.subtract(liabilities).amount,
+    };
+  },
+
+  /**
    * Calculates Net Worth history for the specified date range.
    *
    * ALGORITHM: "Rewind"

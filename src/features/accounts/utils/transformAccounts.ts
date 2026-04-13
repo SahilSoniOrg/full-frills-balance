@@ -1,177 +1,216 @@
-import { IconName } from '@/src/components/core/AppIcon'
-import { AppConfig, Palette } from '@/src/constants'
-import { Theme } from '@/src/constants/design-tokens'
-import Account from '@/src/data/models/Account'
-import { getAccountAccentColor, getAccountSections, getSectionColor } from '@/src/utils/accountCategory'
-import { getContrastColor } from '@/src/utils/colorUtils'
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
+import { IconName } from '@/src/components/core/AppIcon';
+import { AppConfig, Palette } from '@/src/constants';
+import { Theme } from '@/src/constants/design-tokens';
+import Account from '@/src/data/models/Account';
+import {
+  getAccountAccentColor,
+  getAccountSections,
+  getSectionColor,
+} from '@/src/utils/accountCategory';
+import { getContrastColor } from '@/src/utils/colorUtils';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 
 export interface AccountCardViewModel {
-    id: string
-    name: string
-    icon: IconName | null
-    accentColor: string
-    textColor: string
-    balanceText: string
-    monthlyIncomeText: string
-    monthlyExpenseText: string
-    showMonthlyStats: boolean
-    currencyCode: string
-    depth: number
-    hasChildren: boolean
-    isExpanded: boolean
-    reconciledAt?: Date
+  id: string;
+  name: string;
+  icon: IconName | null;
+  accentColor: string;
+  textColor: string;
+  balanceText: string;
+  monthlyIncomeText: string;
+  monthlyExpenseText: string;
+  showMonthlyStats: boolean;
+  currencyCode: string;
+  depth: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
+  reconciledAt?: Date;
 }
 
 export interface AccountSectionViewModel {
-    title: string
-    count: number
-    totalDisplay: string
-    totalColor: string
-    isCollapsed: boolean
-    data: AccountCardViewModel[]
+  title: string;
+  count: number;
+  totalDisplay: string;
+  totalColor: string;
+  isCollapsed: boolean;
+  data: AccountCardViewModel[];
 }
 
 interface BalancesByAccountId {
-    balance: number
-    monthlyIncome: number
-    monthlyExpenses: number
-    currencyCode?: string
+  balance: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  currencyCode?: string;
 }
 
 interface TransformOptions {
-    balancesByAccountId: Map<string, BalancesByAccountId | null>
-    defaultCurrency: string | null
-    showAccountMonthlyStats: boolean
-    isPrivacyMode: boolean
-    isLoading: boolean
-    collapsedSections: Set<string>
-    theme: Theme
-    totalAssets: number
-    totalLiabilities: number
-    totalEquity: number
-    totalIncome: number
-    totalExpense: number
-    expandedAccountIds: Set<string>
+  balancesByAccountId: Map<string, BalancesByAccountId | null>;
+  defaultCurrency: string | null;
+  showAccountMonthlyStats: boolean;
+  isPrivacyMode: boolean;
+  isLoading: boolean;
+  collapsedSections: Set<string>;
+  theme: Theme;
+  totalAssets: number;
+  totalLiabilities: number;
+  totalEquity: number;
+  totalIncome: number;
+  totalExpense: number;
+  expandedAccountIds: Set<string>;
 }
 
+// Optimization: Maintain a persistent cache of view models to preserve object identities.
+// This ensures that React.memo(AccountCard) works perfectly even when the parent list updates.
+const VM_CACHE = new Map<string, AccountCardViewModel>();
+
 export function transformAccountsToSections(
-    accounts: Account[],
-    options: TransformOptions
+  accounts: Account[],
+  options: TransformOptions,
 ): AccountSectionViewModel[] {
-    if (!accounts.length) return []
+  if (!accounts.length) return [];
 
-    const {
-        balancesByAccountId,
-        defaultCurrency,
-        showAccountMonthlyStats,
-        isPrivacyMode,
-        isLoading,
-        collapsedSections,
-        theme,
-        totalAssets,
-        totalLiabilities,
-        totalEquity,
-        totalIncome,
-        totalExpense,
-        expandedAccountIds,
-    } = options
+  const {
+    balancesByAccountId,
+    defaultCurrency,
+    showAccountMonthlyStats,
+    isPrivacyMode,
+    isLoading,
+    collapsedSections,
+    theme,
+    totalAssets,
+    totalLiabilities,
+    totalEquity,
+    totalIncome,
+    totalExpense,
+    expandedAccountIds,
+  } = options;
 
-    const rawSections = getAccountSections(accounts)
+  const rawSections = getAccountSections(accounts);
 
-    return rawSections.map((section) => {
-        const sectionColor = getSectionColor(section.title, {
-            asset: theme.asset,
-            liability: theme.liability,
-            equity: theme.equity,
-            income: theme.income,
-            expense: theme.expense,
-            text: theme.text,
-        })
+  return rawSections.map(section => {
+    const sectionColor = getSectionColor(section.title, {
+      asset: theme.asset,
+      liability: theme.liability,
+      equity: theme.equity,
+      income: theme.income,
+      expense: theme.expense,
+      text: theme.text,
+    });
 
-        let sectionTotal = 0
-        if (section.title === 'Assets') sectionTotal = totalAssets
-        else if (section.title === 'Liabilities') sectionTotal = totalLiabilities
-        else if (section.title === 'Equity') sectionTotal = totalEquity
-        else if (section.title === 'Income') sectionTotal = totalIncome
-        else if (section.title === 'Expenses') sectionTotal = totalExpense
+    let sectionTotal = 0;
+    if (section.title === 'Assets') sectionTotal = totalAssets;
+    else if (section.title === 'Liabilities') sectionTotal = totalLiabilities;
+    else if (section.title === 'Equity') sectionTotal = totalEquity;
+    else if (section.title === 'Income') sectionTotal = totalIncome;
+    else if (section.title === 'Expenses') sectionTotal = totalExpense;
 
-        const totalDisplay = isPrivacyMode
-            ? '••••'
-            : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency || AppConfig.defaultCurrency)
+    const totalDisplay = isPrivacyMode
+      ? '••••'
+      : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency || AppConfig.defaultCurrency);
 
-        const typeAccounts = section.data
-        const accountsByParent = new Map<string, Account[]>()
-        typeAccounts.forEach(a => {
-            if (a.parentAccountId) {
-                const children = accountsByParent.get(a.parentAccountId) || []
-                children.push(a)
-                accountsByParent.set(a.parentAccountId, children)
-            }
-        })
+    const typeAccounts = section.data;
+    const accountsByParent = new Map<string, Account[]>();
+    typeAccounts.forEach(a => {
+      if (a.parentAccountId) {
+        const children = accountsByParent.get(a.parentAccountId) || [];
+        children.push(a);
+        accountsByParent.set(a.parentAccountId, children);
+      }
+    });
 
-        const rootAccounts = typeAccounts.filter(a => !a.parentAccountId || !typeAccounts.find(p => p.id === a.parentAccountId))
-        const flattenedData: AccountCardViewModel[] = []
+    const rootAccounts = typeAccounts.filter(
+      a => !a.parentAccountId || !typeAccounts.find(p => p.id === a.parentAccountId),
+    );
+    const flattenedData: AccountCardViewModel[] = [];
 
-        const flatten = (account: Account, depth: number) => {
-            const accentColor = getAccountAccentColor(account.accountType, {
-                asset: theme.asset,
-                liability: theme.liability,
-                equity: theme.equity,
-                income: theme.income,
-                expense: theme.expense,
-                text: theme.text,
-            })
+    const flatten = (account: Account, depth: number) => {
+      const balanceData = balancesByAccountId.get(account.id) || null;
+      const balance = balanceData?.balance || 0;
+      const monthlyIncome = balanceData?.monthlyIncome || 0;
+      const monthlyExpenses = balanceData?.monthlyExpenses || 0;
+      const isExpanded = expandedAccountIds.has(account.id);
+      const children = accountsByParent.get(account.id) || [];
 
-            const contrastColor = getContrastColor(accentColor)
-            const textColor = contrastColor === 'white' ? Palette.white : Palette.black
+      // CACHE KEY: Detect if THIS account's UI parameters have changed
+      const cacheKey = `${account.id}:${balance}:${monthlyIncome}:${monthlyExpenses}:${isPrivacyMode}:${isExpanded}:${theme.asset}:${isLoading}`;
+      const cached = VM_CACHE.get(cacheKey);
 
-            const balanceData = balancesByAccountId.get(account.id) || null
-            const balance = balanceData?.balance || 0
-            const monthlyIncome = balanceData?.monthlyIncome || 0
-            const monthlyExpenses = balanceData?.monthlyExpenses || 0
-
-            const currencyCode = balanceData?.currencyCode || account.currencyCode
-            const mask = '••••'
-
-            const balanceText = isLoading ? '...' : (isPrivacyMode ? mask : CurrencyFormatter.format(balance, currencyCode))
-            const monthlyIncomeText = isLoading ? '...' : (isPrivacyMode ? mask : CurrencyFormatter.format(monthlyIncome, currencyCode))
-            const monthlyExpenseText = isLoading ? '...' : (isPrivacyMode ? mask : CurrencyFormatter.format(monthlyExpenses, currencyCode))
-
-            const isExpanded = expandedAccountIds.has(account.id)
-            const children = accountsByParent.get(account.id) || []
-
-            flattenedData.push({
-                id: account.id,
-                name: account.name,
-                icon: account.icon || null,
-                accentColor,
-                textColor,
-                balanceText,
-                monthlyIncomeText,
-                monthlyExpenseText,
-                showMonthlyStats: showAccountMonthlyStats,
-                currencyCode: account.currencyCode,
-                depth,
-                hasChildren: children.length > 0,
-                isExpanded,
-                reconciledAt: account.reconciledAt,
-            })
-
-            if (isExpanded) {
-                children.forEach(child => flatten(child, depth + 1))
-            }
+      if (cached) {
+        flattenedData.push(cached);
+        if (isExpanded) {
+          children.forEach(child => flatten(child, depth + 1));
         }
+        return;
+      }
 
-        rootAccounts.forEach(root => flatten(root, 0))
+      const accentColor = getAccountAccentColor(account.accountType, {
+        asset: theme.asset,
+        liability: theme.liability,
+        equity: theme.equity,
+        income: theme.income,
+        expense: theme.expense,
+        text: theme.text,
+      });
 
-        return {
-            title: section.title,
-            count: typeAccounts.length,
-            totalDisplay,
-            totalColor: sectionColor,
-            isCollapsed: collapsedSections.has(section.title),
-            data: flattenedData,
-        }
-    })
+      const contrastColor = getContrastColor(accentColor);
+      const textColor = contrastColor === 'white' ? Palette.white : Palette.black;
+
+      const currencyCode = balanceData?.currencyCode || account.currencyCode;
+      const mask = '••••';
+
+      const balanceText = isLoading
+        ? '...'
+        : isPrivacyMode
+          ? mask
+          : CurrencyFormatter.format(balance, currencyCode);
+      const monthlyIncomeText = isLoading
+        ? '...'
+        : isPrivacyMode
+          ? mask
+          : CurrencyFormatter.format(monthlyIncome, currencyCode);
+      const monthlyExpenseText = isLoading
+        ? '...'
+        : isPrivacyMode
+          ? mask
+          : CurrencyFormatter.format(monthlyExpenses, currencyCode);
+
+      const viewModel: AccountCardViewModel = {
+        id: account.id,
+        name: account.name,
+        icon: account.icon || null,
+        accentColor,
+        textColor,
+        balanceText,
+        monthlyIncomeText,
+        monthlyExpenseText,
+        showMonthlyStats: showAccountMonthlyStats,
+        currencyCode: account.currencyCode,
+        depth,
+        hasChildren: children.length > 0,
+        isExpanded,
+        reconciledAt: account.reconciledAt,
+      };
+
+      // Limit cache size
+      if (VM_CACHE.size > 2000) VM_CACHE.clear();
+      VM_CACHE.set(cacheKey, viewModel);
+
+      flattenedData.push(viewModel);
+
+      if (isExpanded) {
+        children.forEach(child => flatten(child, depth + 1));
+      }
+    };
+
+    rootAccounts.forEach(root => flatten(root, 0));
+
+    return {
+      title: section.title,
+      count: typeAccounts.length,
+      totalDisplay,
+      totalColor: sectionColor,
+      isCollapsed: collapsedSections.has(section.title),
+      data: flattenedData,
+    };
+  });
 }

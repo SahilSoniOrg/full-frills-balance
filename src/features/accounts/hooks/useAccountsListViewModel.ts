@@ -182,8 +182,10 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     return accounts.filter((a: Account) => a.name.toLowerCase().includes(lowercaseQuery));
   }, [accounts, searchQuery]);
 
-  const sections = useMemo(() => {
-    return transformAccountsToSections(filteredAccounts, {
+  // M-5 fix: Memoize transform options to prevent redundant re-transformations
+  // when unrelated UI state (like filters or privacy mode) haven't changed.
+  const transformOptions = useMemo(
+    () => ({
       balancesByAccountId,
       defaultCurrency,
       showAccountMonthlyStats,
@@ -197,23 +199,27 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       totalEquity,
       totalIncome,
       totalExpense,
-    });
-  }, [
-    filteredAccounts,
-    balancesByAccountId,
-    defaultCurrency,
-    showAccountMonthlyStats,
-    isLocalPrivacyMode,
-    isLoading,
-    collapsedSections,
-    expandedAccountIds,
-    theme,
-    totalAssets,
-    totalLiabilities,
-    totalEquity,
-    totalIncome,
-    totalExpense,
-  ]);
+    }),
+    [
+      balancesByAccountId,
+      defaultCurrency,
+      showAccountMonthlyStats,
+      isLocalPrivacyMode,
+      isLoading,
+      collapsedSections,
+      expandedAccountIds,
+      theme,
+      totalAssets,
+      totalLiabilities,
+      totalEquity,
+      totalIncome,
+      totalExpense,
+    ],
+  );
+
+  const sections = useMemo(() => {
+    return transformAccountsToSections(filteredAccounts, transformOptions);
+  }, [filteredAccounts, transformOptions]);
 
   return {
     sections,

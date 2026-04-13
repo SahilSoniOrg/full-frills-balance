@@ -450,14 +450,17 @@ export class AccountRepository {
   async getAccountListItemsRaw(
     startOfMonth: number,
     endOfMonth: number,
+    includeTotalCount: boolean = false,
     includeDeleted: boolean = false,
   ): Promise<any[] | null> {
     if (!supportsRawSql(this.db)) return null;
 
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
-    // We use left joins and group by instead of correlated subqueries.
-    // For direct_balance we use a joined subquery that finds the latest transaction per account.
+    // We split the query into parts to avoid scanning the entire transactions table multiple times.
+    // 1. LatestTrans/LatestBalance: Finds current balance (fast with indices).
+    // 2. AggregatedStats: Calculates monthly totals (fast with date filter).
+    // 3. TotalCount (Optional): Full scan only if requested.
     const sql = `
       WITH LatestTrans AS (
         SELECT t.account_id, MAX(t.transaction_date) as max_date, MAX(t.created_at) as max_created
@@ -471,40 +474,51 @@ export class AccountRepository {
         FROM transactions t
         JOIN LatestTrans lt ON t.account_id = lt.account_id AND t.transaction_date = lt.max_date AND t.created_at = lt.max_created
       ),
-      AggregatedStats AS (
+      MonthlyAggregates AS (
         SELECT 
           t.account_id,
-          COUNT(*) as direct_transaction_count,
           SUM(
-            CASE WHEN (t.transaction_date >= ? AND t.transaction_date <= ?) THEN
-              CASE 
-                WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'CREDIT') THEN t.amount
-                WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'DEBIT') THEN -t.amount
-                WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'CREDIT') THEN -t.amount
-                WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'DEBIT') THEN t.amount
-                WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'DEBIT') THEN t.amount
-                WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'CREDIT') THEN -t.amount
-                WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'CREDIT') THEN t.amount
-                WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'DEBIT') THEN -t.amount
-                ELSE 0 
-              END
-            ELSE 0 END
+            CASE 
+              WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'CREDIT') THEN t.amount
+              WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'DEBIT') THEN -t.amount
+              WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'CREDIT') THEN -t.amount
+              WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'DEBIT') THEN t.amount
+              WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'DEBIT') THEN t.amount
+              WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'CREDIT') THEN -t.amount
+              WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'CREDIT') THEN t.amount
+              WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'DEBIT') THEN -t.amount
+              ELSE 0 
+            END
           ) as monthly_income,
           SUM(
-            CASE WHEN (t.transaction_date >= ? AND t.transaction_date <= ?) THEN
-              CASE 
-                WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'DEBIT' THEN t.amount
-                WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'CREDIT' THEN -t.amount
-                ELSE 0 
-              END
-            ELSE 0 END
+            CASE 
+              WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'DEBIT' THEN t.amount
+              WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'CREDIT' THEN -t.amount
+              ELSE 0 
+            END
           ) as monthly_expenses
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
         JOIN accounts a ON t.account_id = a.id
+        WHERE t.deleted_at IS NULL 
+          AND j.deleted_at IS NULL 
+          AND j.status IN (${activeStatusesStr})
+          AND t.transaction_date >= ? AND t.transaction_date <= ?
+        GROUP BY t.account_id
+      )${
+        includeTotalCount
+          ? `,
+      TotalCounts AS (
+        SELECT 
+          t.account_id,
+          COUNT(*) as direct_transaction_count
+        FROM transactions t
+        JOIN journals j ON t.journal_id = j.id
         WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${activeStatusesStr})
         GROUP BY t.account_id
-      )
+      )`
+          : ``
+      }
       SELECT 
         a.id as id, 
         a.name as name, 
@@ -514,22 +528,18 @@ export class AccountRepository {
         a.icon as icon, 
         a.parent_account_id as parent_account_id,
         lb.running_balance as direct_balance,
-        IFNULL(agg.direct_transaction_count, 0) as direct_transaction_count,
-        IFNULL(agg.monthly_income, 0) as monthly_income,
-        IFNULL(agg.monthly_expenses, 0) as monthly_expenses
+        ${includeTotalCount ? 'IFNULL(tc.direct_transaction_count, 0)' : '0'} as direct_transaction_count,
+        IFNULL(ma.monthly_income, 0) as monthly_income,
+        IFNULL(ma.monthly_expenses, 0) as monthly_expenses
       FROM accounts a
       LEFT JOIN LatestBalance lb ON a.id = lb.account_id
-      LEFT JOIN AggregatedStats agg ON a.id = agg.account_id
+      LEFT JOIN MonthlyAggregates ma ON a.id = ma.account_id
+      ${includeTotalCount ? 'LEFT JOIN TotalCounts tc ON a.id = tc.account_id' : ''}
       WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'}
       ORDER BY a.order_num ASC
     `;
 
-    return await transactionRawRepository.queryRaw(sql, [
-      startOfMonth,
-      endOfMonth,
-      startOfMonth,
-      endOfMonth,
-    ]);
+    return await transactionRawRepository.queryRaw(sql, [startOfMonth, endOfMonth]);
   }
 }
 

@@ -1,215 +1,249 @@
 /**
  * Exchange Rate Service
- * 
+ *
  * Handles currency conversion with caching and API integration.
  * Uses exchangerate-api.com free tier (1500 requests/month).
- * 
+ *
  * All database operations are delegated to ExchangeRateRepository.
  */
 
-import { AppConfig } from '@/src/constants'
-import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository'
-import { logger } from '@/src/utils/logger'
+import { AppConfig } from '@/src/constants';
+import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
+import { logger } from '@/src/utils/logger';
 
 export interface ExchangeRateData {
-    fromCurrency: string
-    toCurrency: string
-    rate: number
-    effectiveDate: number
-    source: string
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  effectiveDate: number;
+  source: string;
 }
 
-const CACHE_DURATION_MS = AppConfig.time.msPerDay // 24 hours
+const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
 
 export class ExchangeRateService {
-    private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> = new Map()
-    private inFlightRequests: Map<string, Promise<Record<string, number>>> = new Map()
+  private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> =
+    new Map();
+  private inFlightRequests: Map<string, Promise<Record<string, number>>> = new Map();
 
-    /**
-     * Get exchange rate, using cache if available and recent
-     */
-    async getRate(fromCurrency: string, toCurrency: string): Promise<number> {
-        // Same currency = rate of 1
-        if (fromCurrency === toCurrency) {
-            return 1.0
-        }
-
-        // Validate currency codes
-        if (!fromCurrency || !toCurrency) {
-            logger.warn(`Invalid currency codes: from=${fromCurrency}, to=${toCurrency}. Defaulting to 1.0`)
-            return 1.0
-        }
-
-        try {
-            // 1. Check Memory Cache
-            const memCached = this.memoryCache.get(fromCurrency)
-            if (memCached && Date.now() - memCached.timestamp < CACHE_DURATION_MS) {
-                if (memCached.rates[toCurrency]) {
-                    return memCached.rates[toCurrency]
-                }
-            }
-
-            // 2. Check DB Cache via repository
-            const cached = await exchangeRateRepository.getCachedRate(fromCurrency, toCurrency)
-            if (cached && this.isRateFresh(cached.effectiveDate)) {
-                // Update memory cache for this base while we're at it
-                this.updateMemoryCache(fromCurrency, toCurrency, cached.rate)
-                return cached.rate
-            }
-
-            // 3. Fetch fresh rates for the entire base
-            const rates = await this.fetchRatesForBase(fromCurrency)
-
-            if (!rates[toCurrency]) {
-                logger.warn(`No rate found for ${fromCurrency} to ${toCurrency}. Defaulting to 1.0`)
-                return 1.0
-            }
-
-            // 4. Persist this specific rate to DB for offline use via repository
-            await exchangeRateRepository.cacheRate({
-                fromCurrency,
-                toCurrency,
-                rate: rates[toCurrency],
-            })
-
-            return rates[toCurrency]
-        } catch (error) {
-            logger.error(`Exchange rate failure (${fromCurrency} -> ${toCurrency}):`, error)
-            return 1.0 // Graceful fallback
-        }
+  /**
+   * Get exchange rate, using cache if available and recent
+   */
+  async getRate(fromCurrency: string, toCurrency: string): Promise<number> {
+    // Same currency = rate of 1
+    if (fromCurrency === toCurrency) {
+      return 1.0;
     }
 
-    /**
-     * Non-blocking rate lookup.
-     * Returns cached rate immediately if available, or returns 1.0 and triggers
-     * a background fetch if not.
-     */
-    getRateSafe(fromCurrency: string, toCurrency: string): number {
-        if (fromCurrency === toCurrency) return 1.0
-        if (!fromCurrency || !toCurrency) return 1.0
-
-        // 1. Check memory cache first (instant)
-        const memCached = this.memoryCache.get(fromCurrency)
-        if (memCached && memCached.rates[toCurrency]) {
-            return memCached.rates[toCurrency]
-        }
-
-        // 2. Trigger background check/fetch (async, non-blocking)
-        this.getRate(fromCurrency, toCurrency).catch(err => {
-            logger.error(`Background rate fetch failed (${fromCurrency} -> ${toCurrency}):`, err)
-        })
-
-        // 3. Return 1.0 immediately while fetch happens in background
-        return 1.0
+    // Validate currency codes
+    if (!fromCurrency || !toCurrency) {
+      logger.warn(
+        `Invalid currency codes: from=${fromCurrency}, to=${toCurrency}. Defaulting to 1.0`,
+      );
+      return 1.0;
     }
 
-    private updateMemoryCache(base: string, target: string, rate: number) {
-        const entry = this.memoryCache.get(base) || { rates: {}, timestamp: Date.now() }
-        entry.rates[target] = rate
-        this.memoryCache.set(base, entry)
+    try {
+      // 1. Check Memory Cache
+      const memCached = this.memoryCache.get(fromCurrency);
+      if (memCached && Date.now() - memCached.timestamp < CACHE_DURATION_MS) {
+        if (memCached.rates[toCurrency]) {
+          return memCached.rates[toCurrency];
+        }
+      }
+
+      // 2. Check DB Cache via repository
+      const cached = await exchangeRateRepository.getCachedRate(fromCurrency, toCurrency);
+      if (cached && this.isRateFresh(cached.effectiveDate)) {
+        // Update memory cache for this base while we're at it
+        this.updateMemoryCache(fromCurrency, toCurrency, cached.rate);
+        return cached.rate;
+      }
+
+      // 3. Fetch fresh rates for the entire base
+      const rates = await this.fetchRatesForBase(fromCurrency);
+
+      if (!rates[toCurrency]) {
+        logger.warn(`No rate found for ${fromCurrency} to ${toCurrency}. Defaulting to 1.0`);
+        return 1.0;
+      }
+
+      // 4. Persist this specific rate to DB for offline use via repository
+      await exchangeRateRepository.cacheRate({
+        fromCurrency,
+        toCurrency,
+        rate: rates[toCurrency],
+      });
+
+      return rates[toCurrency];
+    } catch (error) {
+      logger.error(`Exchange rate failure (${fromCurrency} -> ${toCurrency}):`, error);
+      return 1.0; // Graceful fallback
+    }
+  }
+
+  /**
+   * Non-blocking rate lookup.
+   * Returns cached rate immediately if available, or returns 1.0 and triggers
+   * a background fetch if not.
+   */
+  getRateSafe(fromCurrency: string, toCurrency: string): number {
+    if (fromCurrency === toCurrency) return 1.0;
+    if (!fromCurrency || !toCurrency) return 1.0;
+
+    // 1. Check memory cache first (instant)
+    const memCached = this.memoryCache.get(fromCurrency);
+    if (memCached && memCached.rates[toCurrency]) {
+      return memCached.rates[toCurrency];
     }
 
-    /**
-     * Check if cached rate is still fresh  
-     */
-    private isRateFresh(effectiveDate: number): boolean {
-        const age = Date.now() - effectiveDate
-        return age < CACHE_DURATION_MS
+    // 2. Trigger background check/fetch (async, non-blocking)
+    this.getRate(fromCurrency, toCurrency).catch(err => {
+      logger.error(`Background rate fetch failed (${fromCurrency} -> ${toCurrency}):`, err);
+    });
+
+    // 3. Return 1.0 immediately while fetch happens in background
+    return 1.0;
+  }
+
+  private updateMemoryCache(base: string, target: string, rate: number) {
+    const entry = this.memoryCache.get(base) || { rates: {}, timestamp: Date.now() };
+    entry.rates[target] = rate;
+    this.memoryCache.set(base, entry);
+  }
+
+  /**
+   * Check if cached rate is still fresh
+   */
+  private isRateFresh(effectiveDate: number): boolean {
+    const age = Date.now() - effectiveDate;
+    return age < CACHE_DURATION_MS;
+  }
+
+  /**
+   * Fetch all rates for a base currency and cache them
+   * Prevents "thundering herd" by deduplicating concurrent requests for the same base.
+   */
+  async fetchRatesForBase(fromCurrency: string): Promise<Record<string, number>> {
+    if (!fromCurrency) {
+      throw new Error('Base currency is required for fetching rates');
     }
 
-    /**
-     * Fetch all rates for a base currency and cache them
-     * Prevents "thundering herd" by deduplicating concurrent requests for the same base.
-     */
-    async fetchRatesForBase(fromCurrency: string): Promise<Record<string, number>> {
-        if (!fromCurrency) {
-            throw new Error('Base currency is required for fetching rates')
-        }
-
-        // 1. Check for existing in-flight request
-        const existingRequest = this.inFlightRequests.get(fromCurrency)
-        if (existingRequest) {
-            return existingRequest
-        }
-
-        // 2. Start new request and track it
-        const requestPromise = (async () => {
-            try {
-                const url = `${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`
-                const response = await fetch(url)
-
-                if (!response.ok) {
-                    const errorBody = await response.text().catch(() => 'No body')
-                    throw new Error(`Exchange rate API error (${response.status}): ${response.statusText}. Body: ${errorBody.substring(0, 100)}`)
-                }
-
-                // Verify content type before parsing
-                const contentType = response.headers.get('content-type')
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text()
-                    throw new Error(`Expected JSON response but got ${contentType || 'unknown'}. First 100 chars: ${text.substring(0, 100)}`)
-                }
-
-                const data = await response.json()
-                const rates = data.rates as Record<string, number>
-
-                if (!rates) {
-                    throw new Error(`Malformed API response: 'rates' field missing for base ${fromCurrency}`)
-                }
-
-                // Update memory cache
-                this.memoryCache.set(fromCurrency, {
-                    rates,
-                    timestamp: Date.now()
-                })
-
-                return rates
-            } finally {
-                // Clear from in-flight regardless of outcome
-                this.inFlightRequests.delete(fromCurrency)
-            }
-        })()
-
-        this.inFlightRequests.set(fromCurrency, requestPromise)
-
-        try {
-            return await requestPromise
-        } catch (error) {
-            logger.error('Failed to fetch exchange rates:', error)
-
-            // Fallback: try to get any cached rate from DB if API fails
-            const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency)
-
-            if (cachedRecords.length > 0) {
-                logger.warn(`Using stale exchange rates from DB for ${fromCurrency}`)
-                const staleRates: Record<string, number> = {}
-                cachedRecords.forEach(r => {
-                    staleRates[r.toCurrency] = r.rate
-                })
-                return staleRates
-            }
-
-            throw error
-        }
+    // 1. Check for existing in-flight request
+    const existingRequest = this.inFlightRequests.get(fromCurrency);
+    if (existingRequest) {
+      return existingRequest;
     }
 
-    /**
-     * Convert amount between currencies
-     */
-    async convert(
-        amount: number,
-        fromCurrency: string,
-        toCurrency: string
-    ): Promise<{ convertedAmount: number; rate: number }> {
-        const rate = await this.getRate(fromCurrency, toCurrency)
-        const convertedAmount = amount * rate
+    // 2. Start new request and track it
+    const requestPromise = (async () => {
+      try {
+        const url = `${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`;
+        const response = await fetch(url);
 
-        return {
-            convertedAmount,
-            rate,
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => 'No body');
+          throw new Error(
+            `Exchange rate API error (${response.status}): ${response.statusText}. Body: ${errorBody.substring(0, 100)}`,
+          );
         }
+
+        // Verify content type before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          throw new Error(
+            `Expected JSON response but got ${contentType || 'unknown'}. First 100 chars: ${text.substring(0, 100)}`,
+          );
+        }
+
+        const data = await response.json();
+        const rates = data.rates as Record<string, number>;
+
+        if (!rates) {
+          throw new Error(`Malformed API response: 'rates' field missing for base ${fromCurrency}`);
+        }
+
+        // Update memory cache
+        this.memoryCache.set(fromCurrency, {
+          rates,
+          timestamp: Date.now(),
+        });
+
+        return rates;
+      } finally {
+        // Clear from in-flight regardless of outcome
+        this.inFlightRequests.delete(fromCurrency);
+      }
+    })();
+
+    this.inFlightRequests.set(fromCurrency, requestPromise);
+
+    try {
+      return await requestPromise;
+    } catch (error) {
+      logger.error('Failed to fetch exchange rates:', error);
+
+      // Fallback: try to get any cached rate from DB if API fails
+      const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
+
+      if (cachedRecords.length > 0) {
+        logger.warn(`Using stale exchange rates from DB for ${fromCurrency}`);
+        const staleRates: Record<string, number> = {};
+        cachedRecords.forEach(r => {
+          staleRates[r.toCurrency] = r.rate;
+        });
+        return staleRates;
+      }
+
+      throw error;
     }
+  }
+
+  /**
+   * Convert amount between currencies
+   */
+  async convert(
+    amount: number,
+    fromCurrency: string,
+    toCurrency: string,
+  ): Promise<{ convertedAmount: number; rate: number }> {
+    const rate = await this.getRate(fromCurrency, toCurrency);
+    const convertedAmount = amount * rate;
+
+    return {
+      convertedAmount,
+      rate,
+    };
+  }
+
+  /**
+   * Pre-warms the memory cache by fetching all recent rates from the database.
+   * Prevents sequential "per-pair" async database lookups during initial load.
+   */
+  async preWarmCache(): Promise<void> {
+    try {
+      // Get all rates from the last 24 hours
+      const cutoff = Date.now() - CACHE_DURATION_MS;
+      const recentRates = await exchangeRateRepository.getAllRecentRates(cutoff);
+
+      if (recentRates.length === 0) return;
+
+      // Group by base currency
+      recentRates.forEach(r => {
+        const entry = this.memoryCache.get(r.fromCurrency) || { rates: {}, timestamp: Date.now() };
+        entry.rates[r.toCurrency] = r.rate;
+        // Ensure the entry timestamp reflects the newest rate we found
+        if (r.effectiveDate > entry.timestamp) entry.timestamp = r.effectiveDate;
+        this.memoryCache.set(r.fromCurrency, entry);
+      });
+
+      logger.info(`[ExchangeRateService] Pre-warmed cache with ${recentRates.length} rates`);
+    } catch (error) {
+      logger.error('[ExchangeRateService] Failed to pre-warm cache:', error);
+    }
+  }
 }
 
 // Export singleton instance
-export const exchangeRateService = new ExchangeRateService()
+export const exchangeRateService = new ExchangeRateService();
