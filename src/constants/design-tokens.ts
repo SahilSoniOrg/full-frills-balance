@@ -100,6 +100,8 @@
  * ========================================
  */
 
+import { withOpacity } from '@/src/utils/color-math';
+
 // === SPACING SCALE ===
 // Based on 4px grid system for consistency
 export const Spacing = {
@@ -501,6 +503,8 @@ export interface Theme {
   pure: string;
   pureInverse: string;
   onPrimary: string;
+  onHighContrastSurface: string;
+  onLowContrastSurface: string;
 }
 
 // === SEMANTIC THEME DEFINITIONS ===
@@ -535,6 +539,8 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     pure: '#FFFFFF',
     pureInverse: '#000000',
     onPrimary: '#0A0A0C',
+    onHighContrastSurface: '#FAFAFA',
+    onLowContrastSurface: '#111114',
   },
   dark: {
     primary: DeepSpacePalette.mint,
@@ -565,6 +571,8 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     pure: '#000000',
     pureInverse: '#FFFFFF',
     onPrimary: '#0A0A0C',
+    onHighContrastSurface: '#FAFAFA',
+    onLowContrastSurface: '#111114',
   },
 };
 
@@ -598,6 +606,8 @@ const IvyTheme: { light: Theme; dark: Theme } = {
     pure: '#FFFFFF',
     pureInverse: '#000000',
     onPrimary: '#FFFFFF',
+    onHighContrastSurface: '#FAFAFC',
+    onLowContrastSurface: '#1C1C1F',
   },
   dark: {
     primary: IvyPalette.purple,
@@ -628,6 +638,8 @@ const IvyTheme: { light: Theme; dark: Theme } = {
     pure: '#000000',
     pureInverse: '#FFFFFF',
     onPrimary: '#FFFFFF',
+    onHighContrastSurface: '#FAFAFC',
+    onLowContrastSurface: '#1C1C1F',
   },
 };
 
@@ -661,6 +673,8 @@ const EditorialTheme: { light: Theme; dark: Theme } = {
     pure: '#FFFFFF',
     pureInverse: '#000000',
     onPrimary: '#FFFFFF',
+    onHighContrastSurface: '#ECF0F1',
+    onLowContrastSurface: '#1C2833',
   },
   dark: {
     primary: '#6B8FBF', // Lighter slate blue for dark bg
@@ -691,6 +705,8 @@ const EditorialTheme: { light: Theme; dark: Theme } = {
     pure: '#000000',
     pureInverse: '#FFFFFF',
     onPrimary: '#ECF0F1',
+    onHighContrastSurface: '#ECF0F1',
+    onLowContrastSurface: '#1C2833',
   },
 };
 
@@ -724,6 +740,8 @@ const GoldObsidianTheme: { light: Theme; dark: Theme } = {
     pure: '#FFFFFF',
     pureInverse: '#000000',
     onPrimary: '#0A0C10',
+    onHighContrastSurface: '#F0EDE8',
+    onLowContrastSurface: '#1C1917',
   },
   dark: {
     primary: GoldObsidianPalette.gold,
@@ -754,6 +772,8 @@ const GoldObsidianTheme: { light: Theme; dark: Theme } = {
     pure: '#000000',
     pureInverse: '#FFFFFF',
     onPrimary: '#0A0C10',
+    onHighContrastSurface: '#F0EDE8',
+    onLowContrastSurface: '#1C1917',
   },
 };
 
@@ -764,9 +784,6 @@ export const ThemeSchemes: Record<ThemeId, { light: Theme; dark: Theme }> = {
   [ThemeIds.EDITORIAL]: EditorialTheme,
   [ThemeIds.GOLD_OBSIDIAN]: GoldObsidianTheme,
 };
-
-// Default export for backwards compatibility
-export const Colors = DeepSpaceTheme;
 
 // Helper to resolve theme colors
 export const getThemeColors = (themeId: ThemeId, mode: ThemeMode): Theme => {
@@ -811,21 +828,7 @@ export const getContextualTokens = (theme: Theme): ContextualTokens => ({
   },
 });
 
-// === UTILITIES ===
-/**
- * Apply opacity to a hex color
- * @param color - Hex color string (e.g., '#6B4DFF')
- * @param opacity - Opacity value from 0 to 1
- * @returns RGBA color string
- */
-export function withOpacity(color: string, opacity: number): string {
-  // Handle both 3 and 6 character hex codes
-  const hex = color.replace('#', '');
-  const r = parseInt(hex.length === 3 ? hex[0] + hex[0] : hex.substring(0, 2), 16);
-  const g = parseInt(hex.length === 3 ? hex[1] + hex[1] : hex.substring(2, 4), 16);
-  const b = parseInt(hex.length === 3 ? hex[2] + hex[2] : hex.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
+export { withOpacity } from '@/src/utils/color-math';
 
 // === LAYOUT CONSTANTS ===
 // Interaction areas and component-specific dimensions

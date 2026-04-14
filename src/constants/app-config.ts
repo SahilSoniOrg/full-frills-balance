@@ -72,6 +72,7 @@ export const AppConfig = {
     enableExperimentalFeatures: false,
     debug: {
       safeToSpendLogs: false,
+      tracePerformance: true,
     },
   },
 
@@ -79,6 +80,7 @@ export const AppConfig = {
   performance: {
     maxConcurrentOperations: 5,
     cacheTimeoutMs: 300000, // 5 minutes
+    slowTraceThresholdMs: 200,
     rebuild: {
       checkpointInterval: 1000,
       batchSize: 500,

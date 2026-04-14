@@ -3,8 +3,8 @@
  * Provides access to design tokens with proper TypeScript support
  */
 
-import { Colors, FontTheme, Shape, Spacing, Theme, ThemeMode } from '@/src/constants/design-tokens';
-import { useColorScheme } from 'react-native';
+import { FontTheme, Shape, Spacing, Theme } from '@/src/constants/design-tokens';
+import { useTheme } from '@/src/hooks/use-theme';
 
 /**
  * Common styles for react-native-ui-datepicker to ensure consistent appearance
@@ -26,7 +26,7 @@ export const getDatePickerStyles = (theme: Theme, fonts: FontTheme) => ({
     backgroundColor: theme.surfaceSecondary,
     borderRadius: Shape.radius.md,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: Spacing.xs / 2, // Avoid magic numbers
     borderWidth: 1,
     borderColor: theme.border,
     alignItems: 'center' as const,
@@ -39,75 +39,20 @@ export const getDatePickerStyles = (theme: Theme, fonts: FontTheme) => ({
   },
 });
 
-// Enhanced theme colors with semantic naming
-export const useThemeColors = (mode?: ThemeMode | 'system') => {
-  const systemColorScheme = useColorScheme()
+/**
+ * Helper hook to get color by semantic name.
+ * Now strictly follows the application theme without mode overrides.
+ */
+export const useSemanticColor = (colorName: keyof Theme) => {
+  const { theme } = useTheme();
+  return theme[colorName] || theme.text;
+};
 
-  // Resolve theme: explicit mode -> system preference -> fallback to light
-  let resolvedMode = mode === 'system' ? systemColorScheme : mode
-  if (!resolvedMode || (resolvedMode !== 'light' && resolvedMode !== 'dark')) {
-    resolvedMode = systemColorScheme === 'dark' ? 'dark' : 'light'
-  }
-
-  return Colors[resolvedMode as 'light' | 'dark']
-}
-
-// Helper hook to get color by semantic name
-export const useSemanticColor = (colorName: string, mode?: ThemeMode) => {
-  const colors = useThemeColors(mode)
-  return colors[colorName as keyof typeof colors] || colors.text
-}
-
-// Theme-aware style helpers
-export const createThemedStyle = <T extends Record<string, any>>(
-  lightStyles: T,
-  darkStyles?: Partial<T>
-) => {
-  const useThemedStyles = (mode?: ThemeMode) => {
-    const theme = mode || 'light'
-    return theme === 'dark' ? { ...lightStyles, ...darkStyles } : lightStyles
-  }
-
-  return useThemedStyles
-}
+export { useTheme };
 
 // === LUMINANCE & CONTRAST HELPERS ===
 
 /**
- * Calculate relative luminance of a hex color
- * Formula: 0.2126 * R + 0.7152 * G + 0.0722 * B
- * where R, G, B are linear values
+ * Re-exporting core math primitives from the central utility.
  */
-export const getLuminance = (hex: string): number => {
-  const cleanHex = hex.replace('#', '');
-  const rIdx = cleanHex.length === 3 ? 0 : 0;
-  const gIdx = cleanHex.length === 3 ? 1 : 2;
-  const bIdx = cleanHex.length === 3 ? 2 : 4;
-  const length = cleanHex.length === 3 ? 1 : 2;
-
-  const extract = (start: number) => {
-    const part = cleanHex.substring(start, start + length);
-    const val = parseInt(length === 1 ? part + part : part, 16);
-    const srgb = val / 255;
-    return srgb <= 0.03928 ? srgb / 12.92 : Math.pow((srgb + 0.055) / 1.055, 2.4);
-  };
-
-  const r = extract(rIdx);
-  const g = extract(gIdx);
-  const b = extract(bIdx);
-
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-/**
- * Get contrast color (White or Black) for a given background color
- */
-export const getContrastColor = (backgroundColor: string): string => {
-  const luminance = getLuminance(backgroundColor);
-  // Ivy Wallet uses 0.5 as threshold
-  // Ensure contrast with high-visibility backgrounds
-  const contrastDark = '#111114';
-  const contrastLight = '#FAFAFA';
-
-  return luminance > 0.5 ? contrastDark : contrastLight;
-};
+export { getLuminance } from '@/src/utils/color-math';

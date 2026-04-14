@@ -1,22 +1,21 @@
-import { AppText } from '@/src/components/core/AppText'
-import { Opacity, Shape, Size, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
-import { useThemedComponent } from '@/src/hooks/useThemedComponent'
-import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
-import React, { useMemo } from 'react'
+import { AppText } from '@/src/components/core/AppText';
+import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { useTheme } from '@/src/hooks/use-theme';
+import { ComponentVariant } from '@/src/utils/style-helpers';
+import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  type TouchableOpacityProps
-} from 'react-native'
+  type TouchableOpacityProps,
+} from 'react-native';
 
 export type AppButtonProps = TouchableOpacityProps & {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive'
-  size?: 'sm' | 'md' | 'lg'
-  loading?: boolean
-  children: React.ReactNode
-  themeMode?: ThemeMode
-}
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
+  children: React.ReactNode;
+};
 
 export function AppButton({
   variant = 'primary',
@@ -26,91 +25,92 @@ export function AppButton({
   disabled,
   style,
   onPress,
-  themeMode,
   ...props
 }: AppButtonProps) {
-  const { theme, fonts } = useThemedComponent(themeMode)
+  const { theme, fonts, getVariantColors } = useTheme();
 
   const { buttonCombinedStyle, textCombinedStyle, finalTextColor } = useMemo(() => {
-    const helperVariant: ComponentVariant = (variant === 'secondary')
-      ? 'default'
-      : (variant === 'destructive') ? 'error' : 'primary'
-    const variantColors = getVariantColors(theme, helperVariant)
+    const helperVariant: ComponentVariant =
+      variant === 'secondary' ? 'default' : variant === 'destructive' ? 'error' : 'primary';
+    const variantColors = getVariantColors(helperVariant);
 
-    const baseStyles = styles.buttonBase
-    let variantStyle = {}
-    let textColor = theme.text
+    const baseStyles = styles.buttonBase;
+    let variantStyle = {};
+    let textColor = theme.text;
 
     switch (variant) {
       case 'primary':
         variantStyle = {
           backgroundColor: disabled ? theme.textTertiary : variantColors.main,
-        }
-        textColor = variantColors.contrast
-        break
+        };
+        textColor = variantColors.contrast;
+        break;
       case 'destructive':
         variantStyle = {
           backgroundColor: disabled ? theme.textTertiary : variantColors.main,
-        }
-        textColor = variantColors.contrast
-        break
+        };
+        textColor = variantColors.contrast;
+        break;
       case 'secondary':
         variantStyle = {
           backgroundColor: disabled ? theme.surfaceSecondary : theme.surface,
           borderWidth: 1,
           borderColor: disabled ? theme.textTertiary : theme.border,
-        }
-        textColor = disabled ? theme.textTertiary : theme.text
-        break
+        };
+        textColor = disabled ? theme.textTertiary : theme.text;
+        break;
       case 'outline':
         variantStyle = {
           backgroundColor: 'transparent',
           borderWidth: 1,
           borderColor: disabled ? theme.textTertiary : theme.primary,
-        }
-        textColor = disabled ? theme.textTertiary : theme.primary
-        break
+        };
+        textColor = disabled ? theme.textTertiary : theme.primary;
+        break;
       case 'ghost':
         variantStyle = {
           backgroundColor: 'transparent',
-        }
-        textColor = disabled ? theme.textTertiary : theme.primary
-        break
+        };
+        textColor = disabled ? theme.textTertiary : theme.primary;
+        break;
     }
 
     const sizeStyles = (() => {
       switch (size) {
-        case 'sm': return styles.sizeSm
-        case 'md': return styles.sizeMd
-        case 'lg': return styles.sizeLg
-        default: return styles.sizeMd
+        case 'sm':
+          return styles.sizeSm;
+        case 'md':
+          return styles.sizeMd;
+        case 'lg':
+          return styles.sizeLg;
+        default:
+          return styles.sizeMd;
       }
-    })()
+    })();
 
     const textTypography = (() => {
       switch (size) {
-        case 'sm': return styles.textSm
-        case 'md': return styles.textMd
-        case 'lg': return styles.textLg
-        default: return styles.textMd
+        case 'sm':
+          return styles.textSm;
+        case 'md':
+          return styles.textMd;
+        case 'lg':
+          return styles.textLg;
+        default:
+          return styles.textMd;
       }
-    })()
+    })();
 
     return {
-      buttonCombinedStyle: [
-        baseStyles,
-        variantStyle,
-        sizeStyles,
-        style
-      ],
+      buttonCombinedStyle: [baseStyles, variantStyle, sizeStyles, style],
       textCombinedStyle: [
         styles.textBase,
         textTypography,
-        { color: textColor, fontFamily: fonts.semibold }
+        { color: textColor, fontFamily: fonts.semibold },
       ],
-      finalTextColor: textColor
-    }
-  }, [theme, variant, size, disabled, style, fonts])
+      finalTextColor: textColor,
+    };
+  }, [theme, variant, size, disabled, style, fonts, getVariantColors]);
 
   return (
     <TouchableOpacity
@@ -121,19 +121,14 @@ export function AppButton({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={finalTextColor}
-        />
+        <ActivityIndicator size="small" color={finalTextColor} />
+      ) : typeof children === 'string' ? (
+        <AppText style={textCombinedStyle}>{children}</AppText>
       ) : (
-        typeof children === 'string' ? (
-          <AppText style={textCombinedStyle}>
-            {children}
-          </AppText>
-        ) : children
+        children
       )}
     </TouchableOpacity>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -163,14 +158,11 @@ const styles = StyleSheet.create({
   },
   textSm: {
     fontSize: Typography.sizes.sm,
-    // dynamic font
   },
   textMd: {
     fontSize: Typography.sizes.base,
-    // dynamic font
   },
   textLg: {
     fontSize: Typography.sizes.lg,
-    // dynamic font
   },
-})
+});

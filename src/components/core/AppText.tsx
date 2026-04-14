@@ -1,6 +1,6 @@
-import { ThemeMode, Typography } from '@/src/constants/design-tokens';
-import { useThemedComponent } from '@/src/hooks/useThemedComponent';
-import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
+import { Typography } from '@/src/constants/design-tokens';
+import { useTheme } from '@/src/hooks/use-theme';
+import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useMemo } from 'react';
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
@@ -11,7 +11,6 @@ export type AppTextProps = TextProps & {
   weight?: 'regular' | 'medium' | 'semibold' | 'bold';
   italic?: boolean;
   tabular?: boolean;
-  themeMode?: ThemeMode;
 };
 
 export function AppText({
@@ -21,11 +20,10 @@ export function AppText({
   weight = 'regular',
   italic = false,
   tabular = false,
-  themeMode,
   style,
   ...props
 }: AppTextProps) {
-  const { theme, fonts } = useThemedComponent(themeMode);
+  const { fonts, getVariantColors } = useTheme();
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
@@ -62,7 +60,7 @@ export function AppText({
       return fonts[weight] || fonts.regular;
     })();
 
-    const variantColors = getVariantColors(theme, color);
+    const variantColors = getVariantColors(color);
 
     return [
       // Base styles (fontSize, lineHeight) - we intentionally override fontFamily below
@@ -79,7 +77,7 @@ export function AppText({
       },
       style,
     ];
-  }, [variant, weight, color, theme, fonts, align, italic, tabular, style]);
+  }, [variant, weight, color, getVariantColors, fonts, align, italic, tabular, style]);
 
   return <Text style={textStyle} {...props} />;
 }

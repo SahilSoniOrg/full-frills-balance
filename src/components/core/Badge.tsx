@@ -1,22 +1,21 @@
-import { AppIcon, IconName } from '@/src/components/core/AppIcon'
-import { AppText } from '@/src/components/core/AppText'
-import { Shape, Spacing, ThemeMode, Typography } from '@/src/constants/design-tokens'
-import { useThemedComponent } from '@/src/hooks/useThemedComponent'
-import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers'
-import { useMemo } from 'react'
-import { StyleSheet, View, type ViewProps } from 'react-native'
+import { AppIcon, IconName } from '@/src/components/core/AppIcon';
+import { AppText } from '@/src/components/core/AppText';
+import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
+import { useTheme } from '@/src/hooks/use-theme';
+import { ComponentVariant } from '@/src/utils/style-helpers';
+import { useMemo } from 'react';
+import { StyleSheet, View, type ViewProps } from 'react-native';
 
 export type BadgeProps = ViewProps & {
-  children: React.ReactNode
-  variant?: ComponentVariant
-  size?: 'sm' | 'md'
-  solid?: boolean
-  themeMode?: ThemeMode
-  icon?: IconName | string | null
-  fallbackIcon?: IconName
-  backgroundColor?: string
-  textColor?: string
-}
+  children: React.ReactNode;
+  variant?: ComponentVariant;
+  size?: 'sm' | 'md';
+  solid?: boolean;
+  icon?: IconName | string | null;
+  fallbackIcon?: IconName;
+  backgroundColor?: string;
+  textColor?: string;
+};
 
 export function Badge({
   children,
@@ -27,39 +26,33 @@ export function Badge({
   fallbackIcon,
   backgroundColor: customBg,
   textColor: customText,
-  themeMode,
   style,
   ...props
 }: BadgeProps) {
-  const { theme, fonts } = useThemedComponent(themeMode)
+  const { theme, fonts, getVariantColors } = useTheme();
 
   const { badgeStyle, textStyle, iconSize, finalTextColor } = useMemo(() => {
-    const variantColors = getVariantColors(theme, variant)
-    const backgroundColor = customBg || (solid ? variantColors.main : variantColors.light)
-    const textColor = customText || (solid ? variantColors.contrast : variantColors.main)
+    const variantColors = getVariantColors(variant);
+    const backgroundColor = customBg || (solid ? variantColors.main : variantColors.light);
+    const textColor = customText || (solid ? variantColors.contrast : variantColors.main);
 
-    const sizeStyles = size === 'sm' ? styles.sizeSm : styles.sizeMd
-    const textTypography = size === 'sm' ? styles.textSm : styles.textMd
-    const currentIconSize = size === 'sm' ? Typography.sizes.xs : Typography.sizes.sm
+    const sizeStyles = size === 'sm' ? styles.sizeSm : styles.sizeMd;
+    const textTypography = size === 'sm' ? styles.textSm : styles.textMd;
+    const currentIconSize = size === 'sm' ? Typography.sizes.xs : Typography.sizes.sm;
 
     return {
-      badgeStyle: [
-        styles.badge,
-        sizeStyles,
-        { backgroundColor },
-        style,
-      ],
+      badgeStyle: [styles.badge, sizeStyles, { backgroundColor }, style],
       textStyle: [
         textTypography,
         {
           color: textColor,
-          fontFamily: fonts.semibold
-        }
+          fontFamily: fonts.semibold,
+        },
       ],
       iconSize: currentIconSize,
-      finalTextColor: textColor
-    }
-  }, [theme, fonts, variant, size, solid, customBg, customText, style])
+      finalTextColor: textColor,
+    };
+  }, [getVariantColors, fonts, variant, size, solid, customBg, customText, style]);
 
   return (
     <View style={badgeStyle} {...props}>
@@ -73,15 +66,12 @@ export function Badge({
             style={styles.icon}
           />
         )}
-        <AppText
-          variant="caption"
-          style={textStyle}
-        >
+        <AppText variant="caption" style={textStyle}>
           {children}
         </AppText>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -117,4 +107,4 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: Spacing.xs,
   },
-})
+});
