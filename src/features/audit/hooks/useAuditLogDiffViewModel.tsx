@@ -1,5 +1,5 @@
 import { AppIcon, AppText, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, ColorKey, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -47,18 +47,18 @@ export function useAuditLogDiffViewModel({
 }: UseAuditLogDiffViewModelParams) {
   const { theme } = useTheme();
 
-  const actionColor = useMemo(() => {
+  const actionColor = useMemo((): ColorKey => {
     switch (item.action) {
       case AuditAction.CREATE:
-        return theme.income;
+        return 'income';
       case AuditAction.UPDATE:
-        return theme.transfer;
+        return 'transfer';
       case AuditAction.DELETE:
-        return theme.expense;
+        return 'expense';
       default:
-        return theme.text;
+        return 'text';
     }
-  }, [item.action, theme]);
+  }, [item.action]);
 
   const actionIcon = useMemo<IconName>(() => {
     switch (item.action) {

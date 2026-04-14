@@ -912,6 +912,7 @@ export const ZIndex = {
 
 export type ThemeMode = 'light' | 'dark';
 export type ColorKey = keyof Theme;
+export type OpacityKey = keyof typeof Opacity;
 export type SpacingKey = keyof typeof Spacing;
 export type TypographySize = keyof typeof Typography.sizes;
 export type RadiusKey = keyof typeof Shape.radius;

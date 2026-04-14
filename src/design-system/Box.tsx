@@ -1,4 +1,11 @@
-import { ElevationKey, RadiusKey, Shape, SpacingKey } from '@/src/constants/design-tokens';
+import {
+  ColorKey,
+  ElevationKey,
+  OpacityKey,
+  RadiusKey,
+  Shape,
+  SpacingKey,
+} from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { forwardRef, useMemo } from 'react';
 import { View, type ViewProps, type ViewStyle } from 'react-native';
@@ -28,7 +35,9 @@ export type BoxProps = ViewProps & {
   borderBottomLeftRadius?: RadiusKey | number;
   borderBottomRightRadius?: RadiusKey | number;
 
-  background?: keyof ReturnType<typeof useTheme>['theme'] | string;
+  background?: ColorKey;
+  backgroundOpacity?: OpacityKey | number;
+  unsafe_backgroundRaw?: string;
   shadow?: ElevationKey;
 
   flex?: number;
@@ -83,6 +92,8 @@ export const Box = forwardRef<View, BoxProps>(
       borderBottomLeftRadius,
       borderBottomRightRadius,
       background,
+      backgroundOpacity,
+      unsafe_backgroundRaw,
       shadow,
       flex,
       flexDirection,
@@ -139,7 +150,9 @@ export const Box = forwardRef<View, BoxProps>(
         borderBottomLeftRadius: resolveRadius(borderBottomLeftRadius),
         borderBottomRightRadius: resolveRadius(borderBottomRightRadius),
 
-        backgroundColor: resolveThemeColor(theme, background),
+        backgroundColor: unsafe_backgroundRaw
+          ? resolveThemeColor(theme, unsafe_backgroundRaw, backgroundOpacity)
+          : resolveThemeColor(theme, background, backgroundOpacity),
 
         flex,
         flexDirection,
@@ -197,6 +210,8 @@ export const Box = forwardRef<View, BoxProps>(
       borderBottomLeftRadius,
       borderBottomRightRadius,
       background,
+      backgroundOpacity,
+      unsafe_backgroundRaw,
       shadow,
       flex,
       flexDirection,

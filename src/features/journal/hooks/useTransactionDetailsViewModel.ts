@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core';
-import { Opacity, withOpacity } from '@/src/constants';
+import { ColorKey } from '@/src/constants';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
@@ -26,11 +26,11 @@ export interface TransactionSplitItemViewModel {
   accountName: string;
   transactionType: string;
   amountText: string;
-  amountColor: string;
+  amountColor: ColorKey;
   iconName: IconName | string | null;
   fallbackIcon?: IconName;
-  iconColor: string;
-  iconBackground: string;
+  iconColor: ColorKey;
+  iconBackground: ColorKey;
   onPress: () => void;
 }
 
@@ -47,7 +47,7 @@ export interface TransactionDetailsViewModel {
   };
   onBack: () => void;
   amountText: string;
-  amountColor: string;
+  amountColor: ColorKey;
   descriptionText: string;
   statusLabel: string;
   statusVariant: 'income' | 'expense';
@@ -179,11 +179,10 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
   const isIncome = journalDisplayType === JournalDisplayType.INCOME;
   const isExpense = journalDisplayType === JournalDisplayType.EXPENSE;
 
-  const amountColor = useMemo(() => {
-    if (paramTypeColor && !journal)
-      return (theme[paramTypeColor as keyof typeof theme] as string) || theme.primary;
-    return isIncome ? theme.income : isExpense ? theme.error : theme.primary;
-  }, [isIncome, isExpense, theme, paramTypeColor, journal]);
+  const amountColor = useMemo((): ColorKey => {
+    if (paramTypeColor && !journal) return (paramTypeColor as ColorKey) || 'primary';
+    return isIncome ? 'income' : isExpense ? 'error' : 'primary';
+  }, [isIncome, isExpense, paramTypeColor, journal]);
 
   const amountPrefix = isIncome ? '+' : isExpense ? '-' : '';
   const amountText = journalInfo
@@ -325,7 +324,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
       // Credit (-) is an Outflow/Departure -> Red
       // This ensures + is always Green and - is always Red, creating a clear "From -> To" flow.
       const isPositiveSentiment = isDebit;
-      const color = isPositiveSentiment ? theme.income : theme.error;
+      const color: ColorKey = isPositiveSentiment ? 'income' : 'error';
       const flowLabel = isDebit ? 'To' : 'From';
 
       return {
@@ -340,7 +339,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         iconName: item.icon || null,
         fallbackIcon: (isDebit ? 'wallet' : 'wallet') as IconName, // Use wallet as general fallback for accounts
         iconColor: color,
-        iconBackground: withOpacity(color, Opacity.soft),
+        iconBackground: color,
         onPress: () => AppNavigation.toAccountDetails(item.accountId),
       };
     });

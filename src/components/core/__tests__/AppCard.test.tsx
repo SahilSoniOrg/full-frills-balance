@@ -8,7 +8,7 @@ describe('AppCard', () => {
     render(
       <AppCard>
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -18,7 +18,7 @@ describe('AppCard', () => {
     render(
       <AppCard>
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     const card = screen.getByTestId('test-child').parent;
@@ -29,7 +29,7 @@ describe('AppCard', () => {
     render(
       <AppCard elevation="lg">
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -39,7 +39,7 @@ describe('AppCard', () => {
     render(
       <AppCard elevation="none">
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -49,7 +49,7 @@ describe('AppCard', () => {
     render(
       <AppCard padding="lg">
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -59,7 +59,7 @@ describe('AppCard', () => {
     render(
       <AppCard padding="none">
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -69,7 +69,7 @@ describe('AppCard', () => {
     render(
       <AppCard radius="xl">
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -79,7 +79,7 @@ describe('AppCard', () => {
     render(
       <AppCard variant="secondary">
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -89,7 +89,7 @@ describe('AppCard', () => {
     render(
       <AppCard style={{ margin: 10 }}>
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
@@ -99,19 +99,9 @@ describe('AppCard', () => {
     render(
       <AppCard testID="custom-card">
         <View testID="test-child" />
-      </AppCard>
+      </AppCard>,
     );
 
     expect(screen.getByTestId('custom-card')).toBeTruthy();
-  });
-
-  it('renders with theme mode override', () => {
-    render(
-      <AppCard themeMode="dark">
-        <View testID="test-child" />
-      </AppCard>
-    );
-
-    expect(screen.getByTestId('test-child')).toBeTruthy();
   });
 });

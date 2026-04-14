@@ -1,5 +1,5 @@
 import { AppCard, AppIcon, AppText, IvyIcon } from '@/src/components/core';
-import { Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { ColorKey, Opacity, Size, Spacing, Typography } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -11,8 +11,8 @@ interface AccountCardProps {
   account: AccountCardViewModel;
   onPress: () => void;
   onCollapse?: () => void;
-  dividerColor: string;
-  surfaceColor: string;
+  dividerColor: ColorKey;
+  surfaceColor: ColorKey;
 }
 
 export function AccountCardBase({
@@ -22,24 +22,24 @@ export function AccountCardBase({
   dividerColor,
   surfaceColor,
 }: AccountCardProps) {
-  const { theme, fonts } = useTheme();
+  const { fonts } = useTheme();
 
   return (
     <AppCard
       elevation="sm"
       padding="none"
       radius="r2"
+      background={surfaceColor}
       style={[
         styles.cardContainer,
         {
-          backgroundColor: surfaceColor,
           marginLeft: account.depth * Spacing.lg,
           opacity: account.depth > 0 ? 0.9 : 1,
         },
       ]}
     >
       <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
-        <Box background={account.accentColor}>
+        <Box unsafe_backgroundRaw={account.accentColor}>
           <Inset space="lg">
             <Stack gap="md">
               <Inline align="center" justify="space-between">
@@ -64,7 +64,8 @@ export function AccountCardBase({
                 <Inline gap="sm" align="center">
                   {account.reconciledAt && (
                     <Box
-                      background={withOpacity(theme.pureInverse, Opacity.soft)}
+                      background="pureInverse"
+                      backgroundOpacity="soft"
                       paddingHorizontal="sm"
                       paddingVertical="xs"
                       borderRadius="sm"

@@ -29,7 +29,7 @@ export function Badge({
   style,
   ...props
 }: BadgeProps) {
-  const { theme, fonts, getVariantColors } = useTheme();
+  const { fonts, getVariantColors } = useTheme();
 
   const { badgeStyle, textStyle, iconSize, finalTextColor } = useMemo(() => {
     const variantColors = getVariantColors(variant);

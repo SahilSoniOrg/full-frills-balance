@@ -1,5 +1,5 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { ColorKey, Shape, Size, Spacing } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -26,11 +26,11 @@ export function BudgetListView() {
     const { budget, usage } = item;
     const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));
 
-    let stripColor = theme.primary;
+    let stripColor: ColorKey = 'primary';
     if (usage.usagePercent >= 1) {
-      stripColor = theme.error;
+      stripColor = 'error';
     } else if (usage.usagePercent >= 0.8) {
-      stripColor = theme.warning;
+      stripColor = 'warning';
     }
 
     const isOver = usage.remaining < 0;

@@ -143,8 +143,8 @@ export function AccountsListView({
                 account={item}
                 onPress={() => onAccountPress(item.id)}
                 onCollapse={() => onCollapseAccount(item.id)}
-                dividerColor={theme.divider}
-                surfaceColor={theme.surface}
+                dividerColor="divider"
+                surfaceColor="surface"
               />
             );
           }}

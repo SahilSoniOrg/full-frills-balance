@@ -52,7 +52,7 @@ export function useTheme() {
   const onContrast = useCallback(
     (colorOrToken: string | ColorKey) => {
       // Check if value is a valid theme key
-      if (colorOrToken in theme) {
+      if (Object.prototype.hasOwnProperty.call(theme, colorOrToken)) {
         return onContrastToken(colorOrToken as ColorKey);
       }
       return onContrastRaw(colorOrToken as string);
@@ -77,8 +77,6 @@ export function useTheme() {
     fonts,
     tokens,
     onContrast,
-    onContrastRaw,
-    onContrastToken,
     getVariantColors: resolveVariantColors,
   };
 }

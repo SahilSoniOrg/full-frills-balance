@@ -3,32 +3,25 @@
  * Clean, minimal list design inspired by Ivy Wallet
  */
 
-import { AppText, type AppTextProps } from '@/src/components/core/AppText'
-import { Opacity, Spacing, ThemeMode } from '@/src/constants/design-tokens'
-import { Separator } from '@/src/design-system'
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  type TouchableOpacityProps
-} from 'react-native'
+import { AppText, type AppTextProps } from '@/src/components/core/AppText';
+import { Opacity, Spacing } from '@/src/constants/design-tokens';
+import { Separator } from '@/src/design-system';
+import { StyleSheet, TouchableOpacity, View, type TouchableOpacityProps } from 'react-native';
 
 export type ListRowProps = TouchableOpacityProps & {
   // Content areas
-  leading?: React.ReactNode
-  title: string
-  subtitle?: string
-  trailing?: React.ReactNode
+  leading?: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  trailing?: React.ReactNode;
   // Visual options
-  showSeparator?: boolean
-  padding?: 'sm' | 'md' | 'lg'
+  showSeparator?: boolean;
+  padding?: 'sm' | 'md' | 'lg';
   // Text customization
-  titleVariant?: AppTextProps['variant']
-  subtitleVariant?: AppTextProps['variant']
-  titleColor?: string
-  // Theme mode override (for design preview)
-  themeMode?: ThemeMode
-}
+  titleVariant?: AppTextProps['variant'];
+  subtitleVariant?: AppTextProps['variant'];
+  titleColor?: string;
+};
 
 export function ListRow({
   leading,
@@ -40,12 +33,10 @@ export function ListRow({
   titleVariant = 'body',
   subtitleVariant = 'caption',
   titleColor = 'primary',
-  themeMode,
   style,
   onPress,
   ...props
 }: ListRowProps) {
-
   // Get padding styles
   const getPaddingStyles = () => {
     switch (padding) {
@@ -53,24 +44,24 @@ export function ListRow({
         return {
           paddingHorizontal: Spacing.md,
           paddingVertical: Spacing.sm,
-        }
+        };
       case 'md':
         return {
           paddingHorizontal: Spacing.lg,
           paddingVertical: Spacing.md,
-        }
+        };
       case 'lg':
         return {
           paddingHorizontal: Spacing.xl,
           paddingVertical: Spacing.lg,
-        }
+        };
       default:
         return {
           paddingHorizontal: Spacing.lg,
           paddingVertical: Spacing.md,
-        }
+        };
     }
-  }
+  };
 
   const content = (
     <View style={[styles.container, getPaddingStyles(), style]}>
@@ -82,7 +73,6 @@ export function ListRow({
           color={titleColor as AppTextProps['color']}
           numberOfLines={1}
           style={styles.title}
-          themeMode={themeMode}
         >
           {title}
         </AppText>
@@ -92,7 +82,6 @@ export function ListRow({
             color="secondary"
             numberOfLines={2}
             style={styles.subtitle}
-            themeMode={themeMode}
           >
             {subtitle}
           </AppText>
@@ -102,28 +91,22 @@ export function ListRow({
       {trailing && <View style={styles.trailing}>{trailing}</View>}
 
       {showSeparator && (
-        <Separator marginLeft={padding === 'lg' ? Spacing.xl + Spacing.lg : Spacing.lg + Spacing.md} />
+        <Separator
+          marginLeft={padding === 'lg' ? Spacing.xl + Spacing.lg : Spacing.lg + Spacing.md}
+        />
       )}
     </View>
-  )
+  );
 
   if (onPress) {
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={Opacity.heavy}
-        {...props}
-      >
+      <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy} {...props}>
         {content}
       </TouchableOpacity>
-    )
+    );
   }
 
-  return (
-    <View {...props}>
-      {content}
-    </View>
-  )
+  return <View {...props}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -149,4 +132,4 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.md,
     alignItems: 'flex-end',
   },
-})
+});

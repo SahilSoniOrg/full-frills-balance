@@ -57,9 +57,10 @@ export const AuditLogItem = ({
             borderRadius="full"
             alignItems="center"
             justifyContent="center"
-            background={withOpacity(actionColor, Opacity.soft)}
+            background={actionColor}
+            backgroundOpacity="soft"
           >
-            <AppIcon name={actionIcon} size={Size.sm} color={actionColor} />
+            <AppIcon name={actionIcon} size={Size.sm} color={theme[actionColor]} />
           </Box>
           <Stack flex={1} gap="xs">
             <Inline justify="space-between" align="baseline" gap="sm">
@@ -67,7 +68,7 @@ export const AuditLogItem = ({
                 {entityLabel}
                 {entityDisplayName ? `: ${entityDisplayName}` : ''}
               </AppText>
-              <AppText variant="caption" style={{ color: actionColor }}>
+              <AppText variant="caption" style={{ color: theme[actionColor] }}>
                 {item.action}
               </AppText>
             </Inline>
