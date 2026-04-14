@@ -343,7 +343,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         onPress: () => AppNavigation.toAccountDetails(item.accountId),
       };
     });
-  }, [theme.error, theme.income, transactions]);
+  }, [transactions]);
 
   return {
     theme,

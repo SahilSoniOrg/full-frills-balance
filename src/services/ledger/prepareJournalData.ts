@@ -10,74 +10,75 @@ import { journalPresenter } from '@/src/utils/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
 
 export interface PreparedJournalData {
-    transactions: CreateJournalData['transactions'];
-    totalAmount: number;
-    displayType: JournalDisplayType;
-    calculatedBalances: Map<string, number>;
-    accountsToRebuild: Set<string>;
+  transactions: CreateJournalData['transactions'];
+  totalAmount: number;
+  displayType: JournalDisplayType;
+  calculatedBalances: Map<string, number | null>;
+  accountsToRebuild: Set<string>;
 }
 
 export async function prepareJournalData(data: CreateJournalData): Promise<PreparedJournalData> {
-    const accountIds = [...new Set(data.transactions.map((t) => t.accountId))];
-    const accounts = await accountRepository.findAllByIds(accountIds);
-    const accountTypes = new Map(accounts.map((a) => [a.id, a.accountType as AccountType]));
+  const accountIds = [...new Set(data.transactions.map(t => t.accountId))];
+  const accounts = await accountRepository.findAllByIds(accountIds);
+  const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]));
 
-    const accountPrecisions = new Map<string, number>();
-    await Promise.all(
-        accounts.map(async (acc) => {
-            const precision = await currencyRepository.getPrecision(acc.currencyCode);
-            accountPrecisions.set(acc.id, precision);
-        }),
-    );
-    const journalPrecision = await currencyRepository.getPrecision(data.currencyCode);
+  const accountPrecisions = new Map<string, number>();
+  await Promise.all(
+    accounts.map(async acc => {
+      const precision = await currencyRepository.getPrecision(acc.currencyCode);
+      accountPrecisions.set(acc.id, precision);
+    }),
+  );
+  const journalPrecision = await currencyRepository.getPrecision(data.currencyCode);
 
-    const roundedTransactions = data.transactions.map((t) => ({
-        ...t,
-        amount: roundToPrecision(t.amount, accountPrecisions.get(t.accountId) ?? 2),
-    }));
+  const roundedTransactions = data.transactions.map(t => ({
+    ...t,
+    amount: roundToPrecision(t.amount, accountPrecisions.get(t.accountId) ?? 2),
+  }));
 
-    const validation = accountingService.validateJournal(
-        roundedTransactions.map((t) => ({
-            amount: t.amount,
-            type: t.transactionType,
-            exchangeRate: t.exchangeRate,
-            accountCurrency: t.currencyCode,
-        })),
-        journalPrecision,
-    );
+  const validation = accountingService.validateJournal(
+    roundedTransactions.map(t => ({
+      amount: t.amount,
+      type: t.transactionType,
+      exchangeRate: t.exchangeRate,
+      accountCurrency: t.currencyCode,
+    })),
+    journalPrecision,
+  );
 
-    if (!validation.isValid) {
-        throw new Error(`Unbalanced journal: ${validation.imbalance}`);
+  if (!validation.isValid) {
+    throw new Error(`Unbalanced journal: ${validation.imbalance}`);
+  }
+
+  const accountsToRebuild = new Set<string>(accountIds);
+  const calculatedBalances = new Map<string, number | null>();
+
+  const isInactive = data.status === JournalStatus.PLANNED || data.status === JournalStatus.SKIPPED;
+  if (!isInactive) {
+    for (const tx of roundedTransactions) {
+      const latestTx = await transactionRepository.findLatestForAccountBeforeDate(
+        tx.accountId,
+        data.journalDate,
+      );
+      const balance = accountingService.calculateNewBalance(
+        latestTx?.runningBalance || 0,
+        tx.amount,
+        accountTypes.get(tx.accountId)!,
+        tx.transactionType,
+        accountPrecisions.get(tx.accountId) ?? 2,
+      );
+      calculatedBalances.set(tx.accountId, balance);
     }
+  }
 
-    const accountsToRebuild = new Set<string>(accountIds);
-    const calculatedBalances = new Map<string, number>();
+  const totalAmount = Math.max(Math.abs(validation.totalDebits), Math.abs(validation.totalCredits));
+  const displayType = journalPresenter.getJournalDisplayType(roundedTransactions, accountTypes);
 
-    const isInactive = data.status === JournalStatus.PLANNED || data.status === JournalStatus.SKIPPED;
-    if (!isInactive) {
-        for (const tx of roundedTransactions) {
-            const latestTx = await transactionRepository.findLatestForAccountBeforeDate(tx.accountId, data.journalDate);
-            if (!accountingService.isBackdated(data.journalDate, latestTx?.transactionDate)) {
-                const balance = accountingService.calculateNewBalance(
-                    latestTx?.runningBalance || 0,
-                    tx.amount,
-                    accountTypes.get(tx.accountId)!,
-                    tx.transactionType,
-                    accountPrecisions.get(tx.accountId) ?? 2,
-                );
-                calculatedBalances.set(tx.accountId, balance);
-            }
-        }
-    }
-
-    const totalAmount = Math.max(Math.abs(validation.totalDebits), Math.abs(validation.totalCredits));
-    const displayType = journalPresenter.getJournalDisplayType(roundedTransactions, accountTypes);
-
-    return {
-        transactions: roundedTransactions,
-        totalAmount,
-        displayType,
-        calculatedBalances,
-        accountsToRebuild,
-    };
+  return {
+    transactions: roundedTransactions,
+    totalAmount,
+    displayType,
+    calculatedBalances,
+    accountsToRebuild,
+  };
 }

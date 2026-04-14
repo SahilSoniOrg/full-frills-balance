@@ -1,4 +1,5 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -103,10 +104,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       totalDecrease: 0,
       totalIncrease: 0,
     });
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue([]);
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -244,10 +242,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
         ...(await lb.account.metadataRecords.fetch())[0],
       })),
     );
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue(metadataList);
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
     const result = await cashFlowSimulationService.simulate(
       new Map([

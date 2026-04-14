@@ -1,4 +1,5 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
@@ -57,10 +58,7 @@ describe('liability flow issue', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue([]);
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
   });
   afterEach(() => {
     jest.useRealTimers();
@@ -90,10 +88,7 @@ describe('liability flow issue', () => {
       },
     ] as PlannedPayment[];
 
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue([
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
       { accountId: 'cc', statementDay: 1, dueDay: 15, payFromAccountId: 'cash' },
     ]);
 

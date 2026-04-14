@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -136,10 +137,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
         };
       }),
     );
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue(metadataList);
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
     return cashFlowSimulationService.simulate(...args);
   };
@@ -159,10 +157,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       { statementDay: 1, dueDay: 15, payFromAccountId: 'cash' },
     ]);
     loan.metadataRecords.fetch.mockResolvedValue([{ emiDay: 20, payFromAccountId: 'cash' }]);
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue([]);
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {

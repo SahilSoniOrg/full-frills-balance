@@ -1,7 +1,8 @@
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
 import { Spacing } from '@/src/constants';
-import { Separator } from '@/src/design-system';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { Separator } from '@/src/design-system';
+import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -12,37 +13,12 @@ import { NotesMetadataField } from './NotesMetadataField';
 interface AccountMetadataSectionProps {
   accountType: AccountType;
   accountSubtype: AccountSubtype;
-  // CC Fields
-  statementDay: string;
-  setStatementDay: (value: string) => void;
-  dueDay: string;
-  setDueDay: (value: string) => void;
-  creditLimitAmount: string;
-  setCreditLimitAmount: (value: string) => void;
-  // Loan Fields
-  emiDay: string;
-  setEmiDay: (value: string) => void;
-  loanTenureMonths: string;
-  setLoanTenureMonths: (value: string) => void;
-  minimumPaymentAmount: string;
-  setMinimumPaymentAmount: (value: string) => void;
-  minimumPaymentPercent: string;
-  setMinimumPaymentPercent: (value: string) => void;
-  isMinPaymentOnly: boolean;
-  setIsMinPaymentOnly: (value: boolean) => void;
-  payFromAccountId: string;
-  payFromAccountName: string;
-  setPayFromAccountId: (value: string) => void;
-  setIsPayFromPickerVisible: (visible: boolean) => void;
-  // General
-  apr: string;
-  setApr: (value: string) => void;
-  notes: string;
-  setNotes: (value: string) => void;
+  metadata: AccountMetadataFormModel;
 }
 
 export const AccountMetadataSection: React.FC<AccountMetadataSectionProps> = props => {
-  const { accountType, accountSubtype, notes, setNotes } = props;
+  const { accountType, accountSubtype, metadata } = props;
+  const { notes, setNotes } = metadata;
 
   const showLiabilityFields = accountType === AccountType.LIABILITY;
   const isCreditCard = isLiquidLiabilitySubtype(accountSubtype);
@@ -55,39 +31,8 @@ export const AccountMetadataSection: React.FC<AccountMetadataSectionProps> = pro
     <FormSectionGroup title="Additional Info" style={styles.container}>
       {hasSpecificMetadata && (
         <View style={styles.group}>
-          {isCreditCard && (
-            <CreditCardMetadataFields
-              statementDay={props.statementDay}
-              setStatementDay={props.setStatementDay}
-              dueDay={props.dueDay}
-              setDueDay={props.setDueDay}
-              creditLimitAmount={props.creditLimitAmount}
-              setCreditLimitAmount={props.setCreditLimitAmount}
-              apr={props.apr}
-              setApr={props.setApr}
-              isMinPaymentOnly={props.isMinPaymentOnly}
-              setIsMinPaymentOnly={props.setIsMinPaymentOnly}
-              minimumPaymentAmount={props.minimumPaymentAmount}
-              setMinimumPaymentAmount={props.setMinimumPaymentAmount}
-              minimumPaymentPercent={props.minimumPaymentPercent}
-              setMinimumPaymentPercent={props.setMinimumPaymentPercent}
-              payFromAccountName={props.payFromAccountName}
-              setPayFromAccountId={props.setPayFromAccountId}
-              setIsPayFromPickerVisible={props.setIsPayFromPickerVisible}
-            />
-          )}
-          {isLoan && (
-            <LoanMetadataFields
-              emiDay={props.emiDay}
-              setEmiDay={props.setEmiDay}
-              loanTenureMonths={props.loanTenureMonths}
-              setLoanTenureMonths={props.setLoanTenureMonths}
-              minimumPaymentAmount={props.minimumPaymentAmount}
-              setMinimumPaymentAmount={props.setMinimumPaymentAmount}
-              apr={props.apr}
-              setApr={props.setApr}
-            />
-          )}
+          {isCreditCard && <CreditCardMetadataFields metadata={metadata} />}
+          {isLoan && <LoanMetadataFields metadata={metadata} />}
         </View>
       )}
 

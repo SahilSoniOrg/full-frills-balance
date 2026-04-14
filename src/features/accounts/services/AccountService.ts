@@ -228,7 +228,7 @@ export class AccountService {
           description: beforeState.description,
           icon: account.icon,
           parentAccountId: account.parentAccountId,
-          metadata: await accountRepository.findMetadata(accountId),
+          metadata: await this.getPlainMetadata(accountId),
         },
         after: updates,
       },
@@ -480,6 +480,31 @@ export class AccountService {
     }
 
     return false;
+  }
+
+  /**
+   * Helper to get metadata as a plain object for auditing/UI.
+   */
+  private async getPlainMetadata(accountId: string): Promise<Record<string, any> | undefined> {
+    const meta = await accountRepository.findMetadata(accountId);
+    if (!meta) return undefined;
+
+    return {
+      statementDay: meta.statementDay,
+      dueDay: meta.dueDay,
+      minimumPaymentAmount: meta.minimumPaymentAmount,
+      minimumBalanceAmount: meta.minimumBalanceAmount,
+      creditLimitAmount: meta.creditLimitAmount,
+      aprBps: meta.aprBps,
+      emiDay: meta.emiDay,
+      loanTenureMonths: meta.loanTenureMonths,
+      autopayEnabled: meta.autopayEnabled,
+      gracePeriodDays: meta.gracePeriodDays,
+      payFromAccountId: meta.payFromAccountId,
+      minPaymentOnly: meta.minPaymentOnly,
+      minimumPaymentPercent: meta.minimumPaymentPercent,
+      notes: meta.notes,
+    };
   }
 }
 

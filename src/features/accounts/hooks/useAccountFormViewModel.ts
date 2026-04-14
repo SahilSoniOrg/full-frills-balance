@@ -1,3 +1,4 @@
+import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
 import Account, {
@@ -7,7 +8,6 @@ import Account, {
   getDefaultSubtypeForType,
 } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { IconName } from '@/src/components/core';
 import Currency from '@/src/data/models/Currency';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
@@ -26,6 +26,34 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { of } from 'rxjs';
+
+export interface AccountMetadataFormModel {
+  statementDay: string;
+  setStatementDay: (value: string) => void;
+  dueDay: string;
+  setDueDay: (value: string) => void;
+  creditLimitAmount: string;
+  setCreditLimitAmount: (value: string) => void;
+  apr: string;
+  setApr: (value: string) => void;
+  emiDay: string;
+  setEmiDay: (value: string) => void;
+  loanTenureMonths: string;
+  setLoanTenureMonths: (value: string) => void;
+  minimumPaymentAmount: string;
+  setMinimumPaymentAmount: (value: string) => void;
+  payFromAccountId: string;
+  payFromAccountName: string;
+  setPayFromAccountId: (value: string) => void;
+  isPayFromPickerVisible: boolean;
+  setIsPayFromPickerVisible: (visible: boolean) => void;
+  notes: string;
+  setNotes: (value: string) => void;
+  isMinPaymentOnly: boolean;
+  setIsMinPaymentOnly: (value: boolean) => void;
+  minimumPaymentPercent: string;
+  setMinimumPaymentPercent: (value: string) => void;
+}
 
 export interface AccountFormViewModel {
   heroTitle: string;
@@ -64,32 +92,7 @@ export interface AccountFormViewModel {
   setIsParentPickerVisible: (visible: boolean) => void;
   isParent: boolean;
   showCurrency: boolean;
-  // Metadata fields
-  statementDay: string;
-  setStatementDay: (value: string) => void;
-  dueDay: string;
-  setDueDay: (value: string) => void;
-  creditLimitAmount: string;
-  setCreditLimitAmount: (value: string) => void;
-  apr: string;
-  setApr: (value: string) => void;
-  emiDay: string;
-  setEmiDay: (value: string) => void;
-  loanTenureMonths: string;
-  setLoanTenureMonths: (value: string) => void;
-  minimumPaymentAmount: string;
-  setMinimumPaymentAmount: (value: string) => void;
-  payFromAccountId: string;
-  payFromAccountName: string;
-  setPayFromAccountId: (value: string) => void;
-  isPayFromPickerVisible: boolean;
-  setIsPayFromPickerVisible: (visible: boolean) => void;
-  notes: string;
-  setNotes: (value: string) => void;
-  isMinPaymentOnly: boolean;
-  setIsMinPaymentOnly: (value: boolean) => void;
-  minimumPaymentPercent: string;
-  setMinimumPaymentPercent: (value: string) => void;
+  metadata: AccountMetadataFormModel;
   isLoading: boolean;
 }
 
@@ -395,31 +398,33 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setIsParentPickerVisible,
     isParent: effectiveIsParent,
     showCurrency,
-    statementDay,
-    setStatementDay,
-    dueDay,
-    setDueDay,
-    creditLimitAmount,
-    setCreditLimitAmount,
-    apr,
-    setApr,
-    emiDay,
-    setEmiDay,
-    loanTenureMonths,
-    setLoanTenureMonths,
-    minimumPaymentAmount,
-    setMinimumPaymentAmount,
-    payFromAccountId,
-    payFromAccountName,
-    setPayFromAccountId,
-    isPayFromPickerVisible,
-    setIsPayFromPickerVisible,
-    notes,
-    setNotes,
-    isMinPaymentOnly,
-    setIsMinPaymentOnly,
-    minimumPaymentPercent,
-    setMinimumPaymentPercent,
+    metadata: {
+      statementDay,
+      setStatementDay,
+      dueDay,
+      setDueDay,
+      creditLimitAmount,
+      setCreditLimitAmount,
+      apr,
+      setApr,
+      emiDay,
+      setEmiDay,
+      loanTenureMonths,
+      setLoanTenureMonths,
+      minimumPaymentAmount,
+      setMinimumPaymentAmount,
+      payFromAccountId,
+      payFromAccountName,
+      setPayFromAccountId,
+      isPayFromPickerVisible,
+      setIsPayFromPickerVisible,
+      notes,
+      setNotes,
+      isMinPaymentOnly,
+      setIsMinPaymentOnly,
+      minimumPaymentPercent,
+      setMinimumPaymentPercent,
+    },
     isLoading: isAccountLoading || isBalanceLoading,
   };
 }

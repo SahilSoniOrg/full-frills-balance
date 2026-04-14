@@ -42,7 +42,14 @@ class Logger {
 
     const timestamp = new Date().toISOString();
     const contextStr = context?.traceId ? ` [TRC:${context.traceId}]` : '';
-    const detailStr = context ? ` | ${JSON.stringify(context)}` : '';
+    let detailStr = '';
+    if (context) {
+      try {
+        detailStr = ` | ${JSON.stringify(context)}`;
+      } catch (error) {
+        detailStr = ` | [Serialization Error: ${error instanceof Error ? error.message : String(error)}]`;
+      }
+    }
 
     // Don't clutter console with raw metrics in prod unless Trace feature is on
     if (level === 'metric' && !AppConfig.features.debug.tracePerformance && !this.isDevelopment) {

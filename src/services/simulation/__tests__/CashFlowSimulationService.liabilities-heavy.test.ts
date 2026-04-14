@@ -1,4 +1,5 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -142,10 +143,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         };
       }),
     );
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue(metadataList);
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
     return cashFlowSimulationService.simulate(...args);
   };
@@ -164,10 +162,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     (exchangeRateService.convert as jest.Mock).mockImplementation((amount: number) =>
       Promise.resolve({ convertedAmount: amount }),
     );
-    (
-      require('@/src/data/repositories/AccountRepository').accountRepository
-        .findMetadataByAccountIds as jest.Mock
-    ).mockResolvedValue([]);
+    (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {

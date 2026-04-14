@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog';
+import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 
 export interface AuditEntry<T = any> {
@@ -32,7 +33,18 @@ export class AuditRepository {
         record.entityType = entry.entityType.toLowerCase() as AuditEntityType;
         record.entityId = entry.entityId;
         record.action = entry.action;
-        record.changes = JSON.stringify(entry.changes);
+        try {
+          record.changes = JSON.stringify(entry.changes);
+        } catch (error) {
+          logger.warn('[AuditRepository] Failed to stringify changes (possibly circular)', {
+            entityType: entry.entityType,
+            entityId: entry.entityId,
+          });
+          record.changes = JSON.stringify({
+            error: 'Failed to serialize changes (Circular reference)',
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
         record.timestamp = Date.now();
         record.createdAt = new Date();
       });

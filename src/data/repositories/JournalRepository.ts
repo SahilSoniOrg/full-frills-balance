@@ -335,7 +335,7 @@ export class JournalRepository {
     journalData: CreateJournalData & {
       totalAmount?: number;
       displayType?: JournalDisplayType;
-      calculatedBalances?: Map<string, number>;
+      calculatedBalances?: Map<string, number | null>;
     },
   ): Promise<Journal> {
     const {
@@ -370,7 +370,7 @@ export class JournalRepository {
           tx.transactionDate = journalFields.journalDate;
           tx.notes = txData.notes;
           tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0;
+          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
           tx.createdAt = new Date();
           tx.updatedAt = new Date();
         });
@@ -408,7 +408,7 @@ export class JournalRepository {
     journalData: CreateJournalData & {
       totalAmount?: number;
       displayType?: JournalDisplayType;
-      calculatedBalances?: Map<string, number>;
+      calculatedBalances?: Map<string, number | null>;
     },
   ): Promise<Journal> {
     const {
@@ -450,7 +450,7 @@ export class JournalRepository {
           tx.transactionDate = journalFields.journalDate;
           tx.notes = txData.notes;
           tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0;
+          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
           tx.createdAt = new Date();
           tx.updatedAt = new Date();
         });
@@ -608,7 +608,7 @@ export class JournalRepository {
     replacementData: CreateJournalData & {
       totalAmount?: number;
       displayType?: JournalDisplayType;
-      calculatedBalances?: Map<string, number>;
+      calculatedBalances?: Map<string, number | null>;
     };
   }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
     const { originalJournal, originalTransactions, replacementData } = params;
@@ -686,7 +686,7 @@ export class JournalRepository {
           tx.transactionDate = journalFields.journalDate;
           tx.notes = txData.notes;
           tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? 0;
+          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
           tx.createdAt = now;
           tx.updatedAt = new Date();
         });

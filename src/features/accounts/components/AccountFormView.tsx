@@ -1,6 +1,8 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { FormSelectorField } from '@/src/components/common/FormSelectorField';
+import { IconPickerModal } from '@/src/components/common/IconPickerModal';
 import { AppInput, AppText, IconName, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
@@ -9,7 +11,6 @@ import { AccountSubtypeSelector } from '@/src/features/accounts/components/Accou
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import { IconPickerModal } from '@/src/components/common/IconPickerModal';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -52,33 +53,16 @@ export function AccountFormView(vm: AccountFormViewModel) {
     showCurrency,
     isParentPickerVisible,
     setIsParentPickerVisible,
-    statementDay,
-    setStatementDay,
-    dueDay,
-    setDueDay,
-    creditLimitAmount,
-    setCreditLimitAmount,
-    apr,
-    setApr,
-    emiDay,
-    setEmiDay,
-    loanTenureMonths,
-    setLoanTenureMonths,
-    minimumPaymentAmount,
-    setMinimumPaymentAmount,
-    payFromAccountId,
-    payFromAccountName,
-    setPayFromAccountId,
     payFromAccountOptions,
+    metadata,
+  } = vm;
+
+  const {
     isPayFromPickerVisible,
     setIsPayFromPickerVisible,
-    notes,
-    setNotes,
-    isMinPaymentOnly,
-    setIsMinPaymentOnly,
-    minimumPaymentPercent,
-    setMinimumPaymentPercent,
-  } = vm;
+    payFromAccountId,
+    setPayFromAccountId,
+  } = metadata;
 
   return (
     <EntityFormScreen
@@ -205,71 +189,19 @@ export function AccountFormView(vm: AccountFormViewModel) {
         </FormSectionGroup>
 
         <FormSectionGroup title="Hierarchy">
-          <AppText variant="body" style={[styles.label, { fontFamily: fonts.semibold }]}>
-            {AppConfig.strings.accounts.form.parentAccount}
-          </AppText>
-          <TouchableOpacity
+          <FormSelectorField
+            label={AppConfig.strings.accounts.form.parentAccount}
+            value={parentAccountId ? parentAccountName : ''}
+            placeholder={AppConfig.strings.common.none}
             onPress={() => setIsParentPickerVisible(true)}
-            style={[
-              styles.selectorButton,
-              { borderColor: theme.border, backgroundColor: theme.surface },
-            ]}
-          >
-            <AppText
-              variant="body"
-              style={{ color: parentAccountId ? theme.text : theme.textSecondary }}
-            >
-              {parentAccountName}
-            </AppText>
-            <View style={styles.selectorActions}>
-              {parentAccountId && (
-                <TouchableOpacity
-                  onPress={e => {
-                    e.stopPropagation();
-                    setParentAccountId('');
-                  }}
-                  style={[
-                    styles.clearButton,
-                    { backgroundColor: withOpacity(theme.text, Opacity.hover) },
-                  ]}
-                >
-                  <AppText variant="caption" color="secondary">
-                    {AppConfig.strings.accounts.form.clear}
-                  </AppText>
-                </TouchableOpacity>
-              )}
-              <IvyIcon name="chevronDown" size={Size.iconSm} color={theme.textSecondary} />
-            </View>
-          </TouchableOpacity>
+            onClear={parentAccountId ? () => setParentAccountId('') : undefined}
+          />
         </FormSectionGroup>
 
         <AccountMetadataSection
           accountType={accountType}
           accountSubtype={accountSubtype}
-          statementDay={statementDay}
-          setStatementDay={setStatementDay}
-          dueDay={dueDay}
-          setDueDay={setDueDay}
-          creditLimitAmount={creditLimitAmount}
-          setCreditLimitAmount={setCreditLimitAmount}
-          emiDay={emiDay}
-          setEmiDay={setEmiDay}
-          loanTenureMonths={loanTenureMonths}
-          setLoanTenureMonths={setLoanTenureMonths}
-          minimumPaymentAmount={minimumPaymentAmount}
-          setMinimumPaymentAmount={setMinimumPaymentAmount}
-          payFromAccountId={payFromAccountId}
-          payFromAccountName={payFromAccountName}
-          setPayFromAccountId={setPayFromAccountId}
-          setIsPayFromPickerVisible={setIsPayFromPickerVisible}
-          apr={apr}
-          setApr={setApr}
-          notes={notes}
-          setNotes={setNotes}
-          isMinPaymentOnly={isMinPaymentOnly}
-          setIsMinPaymentOnly={setIsMinPaymentOnly}
-          minimumPaymentPercent={minimumPaymentPercent}
-          setMinimumPaymentPercent={setMinimumPaymentPercent}
+          metadata={metadata}
         />
       </Inset>
 
@@ -338,28 +270,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-  iconButton: {
-    marginTop: Spacing.md,
-  },
-  selectorButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: Shape.radius.sm,
-    borderWidth: 1,
-    minHeight: Size.touchTarget,
-  },
-  selectorActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  clearButton: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Shape.radius.xs,
-  },
   balanceRow: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -381,5 +291,11 @@ const styles = StyleSheet.create({
   metadataRow: {
     flexDirection: 'row',
     gap: Spacing.md,
+  },
+  iconButton: {
+    padding: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
 });

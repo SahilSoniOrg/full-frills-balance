@@ -8,6 +8,7 @@
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { AppConfig } from '@/src/constants';
 import { logger } from '@/src/utils/logger';
+import { storage } from '@/src/utils/storage';
 
 interface RebuildQueueConfig {
   debounceMs: number;
@@ -25,6 +26,7 @@ const DEFAULT_CONFIG: RebuildQueueConfig = {
 };
 
 class RebuildQueueService {
+  private static readonly STORAGE_KEY = 'rebuild_queue_v1';
   private queue: Map<string, number> = new Map(); // accountId -> minFromDate
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isProcessing: boolean = false;
@@ -34,6 +36,35 @@ class RebuildQueueService {
 
   constructor(config: Partial<RebuildQueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.loadQueueFromDisk();
+  }
+
+  private loadQueueFromDisk(): void {
+    try {
+      const stored = storage.getString(RebuildQueueService.STORAGE_KEY);
+      if (stored) {
+        const entries = JSON.parse(stored);
+        if (Array.isArray(entries)) {
+          this.queue = new Map(entries);
+          logger.info(`[RebuildQueue] Loaded ${this.queue.size} items from disk`);
+          if (this.queue.size > 0) {
+            this.scheduleProcessing();
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('[RebuildQueue] Failed to load queue from disk', error);
+      this.queue = new Map();
+    }
+  }
+
+  private syncQueueToDisk(): void {
+    try {
+      const entries = Array.from(this.queue.entries());
+      storage.set(RebuildQueueService.STORAGE_KEY, JSON.stringify(entries));
+    } catch (error) {
+      logger.error('[RebuildQueue] Failed to sync queue to disk', error);
+    }
   }
 
   /**
@@ -45,6 +76,7 @@ class RebuildQueueService {
     const existingDate = this.queue.get(accountId);
     if (existingDate === undefined || fromDate < existingDate) {
       this.queue.set(accountId, fromDate);
+      this.syncQueueToDisk();
     }
     this.scheduleProcessing();
   }
@@ -95,6 +127,7 @@ class RebuildQueueService {
     }
     this.queue.clear();
     this.retryCounts.clear();
+    this.syncQueueToDisk();
   }
 
   /**
@@ -144,6 +177,7 @@ class RebuildQueueService {
         for (const item of batch) {
           this.queue.delete(item.id);
         }
+        this.syncQueueToDisk();
 
         logger.debug(`[RebuildQueue] Processing batch of ${batch.length} accounts`);
 

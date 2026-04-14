@@ -1,51 +1,36 @@
-import { AppInput, AppText, IvyIcon } from '@/src/components/core';
+import { FormSelectorField } from '@/src/components/common/FormSelectorField';
+import { AppInput, AppText } from '@/src/components/core';
 import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
-import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
-import { useTheme } from '@/src/hooks/use-theme';
+import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface CreditCardMetadataFieldsProps {
-  statementDay: string;
-  setStatementDay: (value: string) => void;
-  dueDay: string;
-  setDueDay: (value: string) => void;
-  creditLimitAmount: string;
-  setCreditLimitAmount: (value: string) => void;
-  apr: string;
-  setApr: (value: string) => void;
-  payFromAccountName: string;
-  setPayFromAccountId: (value: string) => void;
-  setIsPayFromPickerVisible: (visible: boolean) => void;
-  isMinPaymentOnly: boolean;
-  setIsMinPaymentOnly: (value: boolean) => void;
-  minimumPaymentAmount: string;
-  setMinimumPaymentAmount: (value: string) => void;
-  minimumPaymentPercent: string;
-  setMinimumPaymentPercent: (value: string) => void;
+  metadata: AccountMetadataFormModel;
 }
 
-export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> = ({
-  statementDay,
-  setStatementDay,
-  dueDay,
-  setDueDay,
-  creditLimitAmount,
-  setCreditLimitAmount,
-  apr,
-  setApr,
-  payFromAccountName,
-  setPayFromAccountId,
-  setIsPayFromPickerVisible,
-  isMinPaymentOnly,
-  setIsMinPaymentOnly,
-  minimumPaymentAmount,
-  setMinimumPaymentAmount,
-  minimumPaymentPercent,
-  setMinimumPaymentPercent,
-}) => {
-  const { theme } = useTheme();
+export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> = ({ metadata }) => {
+  const {
+    statementDay,
+    setStatementDay,
+    dueDay,
+    setDueDay,
+    creditLimitAmount,
+    setCreditLimitAmount,
+    apr,
+    setApr,
+    payFromAccountName,
+    setPayFromAccountId,
+    setIsPayFromPickerVisible,
+    isMinPaymentOnly,
+    setIsMinPaymentOnly,
+    minimumPaymentAmount,
+    setMinimumPaymentAmount,
+    minimumPaymentPercent,
+    setMinimumPaymentPercent,
+  } = metadata;
 
   return (
     <>
@@ -145,49 +130,17 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
         </AppText>
       )}
 
-      <View>
-        <AppText variant="body" weight="medium" style={styles.label}>
-          {AppConfig.strings.accounts.form.payDebtFrom}
-        </AppText>
-        <TouchableOpacity
-          onPress={() => setIsPayFromPickerVisible(true)}
-          style={[
-            styles.selectorButton,
-            { borderColor: theme.border, backgroundColor: theme.surface },
-          ]}
-        >
-          <AppText
-            variant="body"
-            style={{
-              color:
-                payFromAccountName !== AppConfig.strings.common.none
-                  ? theme.text
-                  : theme.textSecondary,
-            }}
-          >
-            {payFromAccountName}
-          </AppText>
-          <View style={styles.selectorActions}>
-            {payFromAccountName !== AppConfig.strings.common.none && (
-              <TouchableOpacity
-                onPress={e => {
-                  e.stopPropagation();
-                  setPayFromAccountId('');
-                }}
-                style={[
-                  styles.clearButton,
-                  { backgroundColor: withOpacity(theme.text, Opacity.hover) },
-                ]}
-              >
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.accounts.form.clear}
-                </AppText>
-              </TouchableOpacity>
-            )}
-            <IvyIcon name="chevronDown" size={Size.iconSm} color={theme.textSecondary} />
-          </View>
-        </TouchableOpacity>
-      </View>
+      <FormSelectorField
+        label={AppConfig.strings.accounts.form.payDebtFrom}
+        value={payFromAccountName !== AppConfig.strings.common.none ? payFromAccountName : ''}
+        placeholder={AppConfig.strings.common.none}
+        onPress={() => setIsPayFromPickerVisible(true)}
+        onClear={
+          payFromAccountName !== AppConfig.strings.common.none
+            ? () => setPayFromAccountId('')
+            : undefined
+        }
+      />
     </>
   );
 };
@@ -199,25 +152,6 @@ const styles = StyleSheet.create({
   },
   label: {
     marginBottom: Spacing.xs,
-  },
-  selectorButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: Shape.radius.sm,
-    borderWidth: 1,
-    minHeight: Size.touchTarget,
-  },
-  selectorActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  clearButton: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Shape.radius.xs,
   },
   simulationHeader: {
     marginTop: Spacing.lg,
