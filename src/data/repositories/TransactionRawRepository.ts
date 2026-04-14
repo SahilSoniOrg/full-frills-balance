@@ -46,11 +46,10 @@ class TransactionRawRepository {
       // High-performance mapping: Pre-calculate key transformations ONCE per result set
       const sampleRow = rawRows[0];
       const keys = Object.keys(sampleRow);
-      const mapping: { original: string; camel: string; lower: string }[] = keys.map(key => {
+      const mapping: { original: string; camel: string }[] = keys.map(key => {
         const lower = key.toLowerCase();
         return {
           original: key,
-          lower,
           camel: this.toCamelCase(lower),
         };
       });
@@ -61,16 +60,9 @@ class TransactionRawRepository {
           const m = mapping[i];
           const val = row[m.original];
           normalized[m.original] = val;
-          normalized[m.camel] = val;
-          normalized[m.lower] = val;
-
-          // Compatibility for specific fields that might not follow standard camelCase
-          if (m.lower === 'transactiontype') normalized.transactionType = val;
-          else if (m.lower === 'transactiondate') normalized.transactionDate = val;
-          else if (m.lower === 'runningbalance') normalized.runningBalance = val;
-          else if (m.lower === 'currencycode') normalized.currencyCode = val;
-          else if (m.lower === 'accountid') normalized.accountId = val;
-          else if (m.lower === 'accounttype') normalized.accountType = val;
+          if (m.original !== m.camel) {
+            normalized[m.camel] = val;
+          }
         }
         return normalized as T;
       });
@@ -620,68 +612,65 @@ class TransactionRawRepository {
     if (accountIdsWithBoundaries.length === 0) return new Map();
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
 
-    const accountIds = accountIdsWithBoundaries.map(a => a.accountId);
-    const placeholders = accountIds.map(() => '?').join(',');
+    // 1. Build optimized SQL query with per-account boundaries
+    // Logic: (date > D OR (date == D AND created > C) OR (date == D AND created == C AND id > I))
+    const accountConditions: string[] = [];
+    const params: (string | number)[] = [];
 
-    // Hybrid SQL/JS Approach:
-    // 1. Simple, index-backed SQL query to fetch raw boundary metadata for potential candidates.
-    // 2. High-speed JS filtering to apply exact per-account chronological boundaries.
+    for (const b of accountIdsWithBoundaries) {
+      if (!b.afterTransactionId) {
+        accountConditions.push('t.account_id = ?');
+        params.push(b.accountId);
+      } else {
+        accountConditions.push(`
+          (t.account_id = ? AND (
+            t.transaction_date > ? 
+            OR (t.transaction_date = ? AND t.created_at > ?)
+            OR (t.transaction_date = ? AND t.created_at = ? AND t.id > ?)
+          ))
+        `);
+        params.push(
+          b.accountId,
+          b.afterTransactionDate || 0,
+          b.afterTransactionDate || 0,
+          b.afterTransactionCreatedAt || 0,
+          b.afterTransactionDate || 0,
+          b.afterTransactionCreatedAt || 0,
+          b.afterTransactionId,
+        );
+      }
+    }
+
     const sql = `
-      SELECT t.account_id, t.transaction_date, t.created_at, t.id
+      SELECT t.account_id as accountId, COUNT(*) as count
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id IN (${placeholders})
-        AND t.transaction_date <= ?
-        ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
-        AND t.deleted_at IS NULL
+      WHERE t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${activeStatusesStr})
+        AND t.transaction_date <= ?
+        ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
+        AND (${accountConditions.join(' OR ')})
+      GROUP BY t.account_id
     `;
 
-    const params = [...accountIds, endDate];
-    if (minTransactionDate !== undefined) {
-      params.push(minTransactionDate);
-    }
+    const queryParams: (string | number)[] = [endDate];
+    if (minTransactionDate !== undefined) queryParams.push(minTransactionDate);
+    queryParams.push(...params);
 
-    const raws = await this.queryRaw<{
-      account_id: string;
-      transaction_date: number;
-      created_at: number;
-      id: string;
-    }>(sql, params);
+    const raws = await this.queryRaw<{ accountId: string; count: number }>(sql, queryParams);
 
-    const countsMap = new Map<string, number>();
-    const boundaryMap = new Map(accountIdsWithBoundaries.map(b => [b.accountId, b]));
+    const results = new Map<string, number>();
+    // Pre-populate with zeros for all requested accounts
+    for (const b of accountIdsWithBoundaries) results.set(b.accountId, 0);
+    // Fill with actual counts
+    for (const row of raws) results.set(row.accountId, row.count);
 
-    for (const row of raws) {
-      const boundary = boundaryMap.get(row.account_id);
-      if (!boundary) continue;
-
-      if (!boundary.afterTransactionId) {
-        countsMap.set(row.account_id, (countsMap.get(row.account_id) || 0) + 1);
-        continue;
-      }
-
-      // Precise chronological comparison: is row strictly AFTER the snapshot transaction?
-      const isAfter =
-        row.transaction_date > (boundary.afterTransactionDate || 0) ||
-        (row.transaction_date === (boundary.afterTransactionDate || 0) &&
-          row.created_at > (boundary.afterTransactionCreatedAt || 0)) ||
-        (row.transaction_date === (boundary.afterTransactionDate || 0) &&
-          row.created_at === (boundary.afterTransactionCreatedAt || 0) &&
-          row.id > (boundary.afterTransactionId || ''));
-
-      if (isAfter) {
-        countsMap.set(row.account_id, (countsMap.get(row.account_id) || 0) + 1);
-      }
-    }
-
-    if (raws.length > 0) {
-      return countsMap;
+    if (raws.length > 0 || accountIdsWithBoundaries.length === 0) {
+      return results;
     }
 
     // Fallback for LokiJS/Test
-    const results = new Map<string, number>();
     for (const item of accountIdsWithBoundaries) {
       const q = database.collections
         .get<Transaction>('transactions')

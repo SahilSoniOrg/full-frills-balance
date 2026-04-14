@@ -314,5 +314,15 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 18,
+      steps: [
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_transactions_chronological 
+          ON transactions (account_id, transaction_date, created_at, id) 
+          WHERE deleted_at IS NULL;
+        `),
+      ],
+    },
   ],
 });
