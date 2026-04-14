@@ -797,7 +797,7 @@ export const AppConfig = {
   insights: {
     lookbackDays: 90,
     refreshIntervalMs: 60 * 60 * 1000,
-    observeDebounceMs: 250,
+    observeDebounceMs: 400,
     patternDebounceMs: 500,
     minRecurringIntervalDays: 25,
     maxRecurringIntervalDays: 35,

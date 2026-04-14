@@ -611,8 +611,11 @@ class TransactionRawRepository {
       accountId: string;
       startDate: number;
       afterTransactionId?: string;
+      afterTransactionDate?: number;
+      afterTransactionCreatedAt?: number;
     }[],
     endDate: number,
+    minTransactionDate?: number,
   ): Promise<Map<string, number>> {
     if (accountIdsWithBoundaries.length === 0) return new Map();
     const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
@@ -620,57 +623,61 @@ class TransactionRawRepository {
     const accountIds = accountIdsWithBoundaries.map(a => a.accountId);
     const placeholders = accountIds.map(() => '?').join(',');
 
-    // Create a CASE statement to check boundaries per account
-    const caseClauses = accountIdsWithBoundaries
-      .map(() => {
-        // Precise chronological boundary AFTER the snapshot transaction
-        return `WHEN ? THEN (
-          t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
-          OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
-              AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?))
-          OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
-              AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
-              AND t.id > ?)
-        )`;
-      })
-      .join(' ');
-
-    const caseParams: (string | number)[] = [];
-    accountIdsWithBoundaries.forEach(item => {
-      caseParams.push(
-        item.accountId,
-        item.afterTransactionId || '',
-        item.afterTransactionId || '',
-        item.afterTransactionId || '',
-        item.afterTransactionId || '',
-        item.afterTransactionId || '',
-        item.afterTransactionId || '',
-      );
-    });
-
+    // Hybrid SQL/JS Approach:
+    // 1. Simple, index-backed SQL query to fetch raw boundary metadata for potential candidates.
+    // 2. High-speed JS filtering to apply exact per-account chronological boundaries.
     const sql = `
-      SELECT t.account_id, COUNT(*) as tx_count 
+      SELECT t.account_id, t.transaction_date, t.created_at, t.id
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
       WHERE t.account_id IN (${placeholders})
         AND t.transaction_date <= ?
-        AND (
-          CASE t.account_id 
-            ${caseClauses}
-            ELSE 0
-          END
-        )
+        ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${activeStatusesStr})
-      GROUP BY t.account_id
     `;
 
-    const params = [...accountIds, endDate, ...caseParams];
+    const params = [...accountIds, endDate];
+    if (minTransactionDate !== undefined) {
+      params.push(minTransactionDate);
+    }
 
-    const raws = await this.queryRaw<{ account_id: string; tx_count: number }>(sql, params);
+    const raws = await this.queryRaw<{
+      account_id: string;
+      transaction_date: number;
+      created_at: number;
+      id: string;
+    }>(sql, params);
+
+    const countsMap = new Map<string, number>();
+    const boundaryMap = new Map(accountIdsWithBoundaries.map(b => [b.accountId, b]));
+
+    for (const row of raws) {
+      const boundary = boundaryMap.get(row.account_id);
+      if (!boundary) continue;
+
+      if (!boundary.afterTransactionId) {
+        countsMap.set(row.account_id, (countsMap.get(row.account_id) || 0) + 1);
+        continue;
+      }
+
+      // Precise chronological comparison: is row strictly AFTER the snapshot transaction?
+      const isAfter =
+        row.transaction_date > (boundary.afterTransactionDate || 0) ||
+        (row.transaction_date === (boundary.afterTransactionDate || 0) &&
+          row.created_at > (boundary.afterTransactionCreatedAt || 0)) ||
+        (row.transaction_date === (boundary.afterTransactionDate || 0) &&
+          row.created_at === (boundary.afterTransactionCreatedAt || 0) &&
+          row.id > (boundary.afterTransactionId || ''));
+
+      if (isAfter) {
+        countsMap.set(row.account_id, (countsMap.get(row.account_id) || 0) + 1);
+      }
+    }
+
     if (raws.length > 0) {
-      return new Map(raws.map(r => [r.account_id, r.tx_count || 0]));
+      return countsMap;
     }
 
     // Fallback for LokiJS/Test

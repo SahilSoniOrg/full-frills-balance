@@ -20,7 +20,7 @@ import { Platform } from 'react-native';
 
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
-import { catchError, debounceTime, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, shareReplay, switchMap } from 'rxjs/operators';
 import { Insight, insightService } from '../insight/InsightService';
 import { balanceService } from '../BalanceService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
@@ -212,10 +212,16 @@ export class NotificationService {
   /**
    * Calculates "Safe-to-Spend" based on liquid assets minus remaining budgets for the month.
    */
+  private safeToSpend$?: Observable<SafeToSpendResult>;
+
   observeSafeToSpend(): Observable<SafeToSpendResult> {
+    if (this.safeToSpend$) {
+      return this.safeToSpend$;
+    }
+
     const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
 
-    return combineLatest([
+    this.safeToSpend$ = combineLatest([
       accountRepository.observeByType(AccountType.ASSET),
       accountRepository.observeByType(AccountType.LIABILITY),
       budgetRepository.observeAllActive(),
@@ -503,7 +509,10 @@ export class NotificationService {
         logger.error('[SafeToSpend] Outer pipeline error:', err);
         return of(this.getEmptySafeToSpendResult(AppConfig.defaultCurrency));
       }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
+
+    return this.safeToSpend$;
   }
 
   private getEmptySafeToSpendResult(resultCurrency: string): SafeToSpendResult {

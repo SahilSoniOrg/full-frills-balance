@@ -307,34 +307,41 @@ export class BalanceService {
       const cutoffDate = asOfDate ?? Number.MAX_SAFE_INTEGER;
       const accountIds = accounts.map(a => a.id);
 
-      // 1. Batch fetch latest balances from transactions
-      const latestBalancesMap = await transactionRawRepository.getLatestBalancesRaw(
-        accountIds,
-        cutoffDate,
-      );
+      // Phase 1: Metadata & Snapshots (Parallel)
+      const [latestSnapshotsMap, currencyPrecisionMap] = await Promise.all([
+        balanceSnapshotRepository.findLatestForAccountsRaw(accountIds, cutoffDate),
+        currencyRepository.getAllPrecisions(),
+      ]);
+      trace.metric('fetchMetadata');
 
-      // 2. Batch fetch latest snapshots
-      const latestSnapshotsMap = await balanceSnapshotRepository.findLatestForAccountsRaw(
-        accountIds,
-        cutoffDate,
-      );
-
-      // 3. Prepare for batch count fetching
+      // Calculate minTransactionDate pruning hint for Phase 2
+      let minSnapshotDate: number | undefined;
       const countInput = accounts.map(a => {
         const snapshot = latestSnapshotsMap.get(a.id);
+        if (snapshot) {
+          if (minSnapshotDate === undefined || snapshot.transactionDate < minSnapshotDate) {
+            minSnapshotDate = snapshot.transactionDate;
+          }
+        }
         return {
           accountId: a.id,
           startDate: snapshot?.transactionDate || 0,
           afterTransactionId: snapshot?.transactionId,
+          afterTransactionDate: snapshot?.transactionDate,
+          afterTransactionCreatedAt: snapshot?.transactionCreatedAt,
         };
       });
 
-      // 4. Batch fetch transaction counts (O(1) round-trip vs O(N))
-      const deltaCountsMap = await transactionRawRepository.getAccountTransactionCountsRaw(
-        countInput,
-        cutoffDate,
-      );
-      trace.metric('fetchCounts');
+      // Phase 2: Latest Balances & Transaction Counts (Parallel)
+      const [latestBalancesMap, deltaCountsMap] = await Promise.all([
+        transactionRawRepository.getLatestBalancesRaw(accountIds, cutoffDate),
+        transactionRawRepository.getAccountTransactionCountsRaw(
+          countInput,
+          cutoffDate,
+          minSnapshotDate,
+        ),
+      ]);
+      trace.metric('fetchData');
 
       // 5. Map results to AccountBalance objects
       const balances = accounts.map(account => {
@@ -360,8 +367,6 @@ export class BalanceService {
 
       const balancesMap = new Map(balances.map(b => [b.accountId, b]));
 
-      // Fetch currency precision for accurate rounding
-      const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
       const precisionMap = new Map<string, number>();
       for (const account of accounts) {
         const precision =
