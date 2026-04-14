@@ -52,6 +52,13 @@ class ExchangeRateRepository {
   }
 
   /**
+   * Observe all exchange rate changes
+   */
+  observeAll() {
+    return this.collection.query().observe();
+  }
+
+  /**
    * Observe the latest rates for a base currency
    */
   observeLatestRates(fromCurrency: string) {
@@ -65,7 +72,7 @@ class ExchangeRateRepository {
   }
 
   /**
-   * Cache an exchange rate in the database
+   * Cache an exchange rate in the database (deprecated - use cacheRatesBatch)
    */
   async cacheRate(data: ExchangeRateCacheData): Promise<ExchangeRate> {
     return database.write(async () => {
@@ -76,6 +83,33 @@ class ExchangeRateRepository {
         record.effectiveDate = Date.now();
         record.source = data.source || 'exchangerate-api.com';
       });
+    });
+  }
+
+  /**
+   * Batch cache multiple exchange rates for a single base currency.
+   * Significantly reduces IO overhead by performing all writes in a single transaction.
+   */
+  async cacheRatesBatch(
+    fromCurrency: string,
+    rates: { toCurrency: string; rate: number }[],
+    source: string = 'exchangerate-api.com',
+  ): Promise<void> {
+    if (rates.length === 0) return;
+
+    await database.write(async () => {
+      const now = Date.now();
+      const operations = rates.map(r =>
+        this.collection.prepareCreate(record => {
+          record.fromCurrency = fromCurrency;
+          record.toCurrency = r.toCurrency;
+          record.rate = r.rate;
+          record.effectiveDate = now;
+          record.source = source;
+        }),
+      );
+
+      await database.batch(...operations);
     });
   }
 

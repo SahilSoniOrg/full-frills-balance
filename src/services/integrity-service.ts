@@ -92,6 +92,7 @@ export class IntegrityService {
     accountId: string,
     cutoffDate: number = Date.now(),
   ): Promise<BalanceVerificationResult> {
+    const start = Date.now();
     const account = await accountRepository.find(accountId);
     if (!account) {
       throw new Error(`Account ${accountId} not found`);
@@ -131,7 +132,7 @@ export class IntegrityService {
       }
     }
 
-    return {
+    const result: BalanceVerificationResult = {
       accountId,
       accountName: account.name,
       cachedBalance,
@@ -140,6 +141,16 @@ export class IntegrityService {
       discrepancy,
       snapshotCorrupted,
     };
+
+    logger.info(
+      `[Trace] IntegrityService.verifyAccountBalance (${account.name}): ${Date.now() - start}ms`,
+      {
+        matches,
+        discrepancy,
+      },
+    );
+
+    return result;
   }
 
   /**
@@ -228,6 +239,7 @@ export class IntegrityService {
   async forceRunCheck(
     onProgress?: (message: string, progress: number) => void,
   ): Promise<IntegrityCheckResult> {
+    const totalStart = Date.now();
     logger.info('[IntegrityService] Force-running full balance verification (manual trigger)...');
 
     const accounts = await accountRepository.findAll();
@@ -302,6 +314,12 @@ export class IntegrityService {
     }
 
     onProgress?.('Finalizing...', 1);
+
+    const totalDuration = Date.now() - totalStart;
+    logger.info(`[Trace] IntegrityService.forceRunCheck: ${totalDuration}ms`, {
+      totalAccounts: results.length,
+      discrepancies: discrepancies.length,
+    });
 
     return {
       totalAccounts: results.length,

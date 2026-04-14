@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { BudgetFlowGenerator } from '../engines/BudgetFlowGenerator';
-import { FlowCategory, FlowSource, SimulationContext } from '../types';
+import { FlowCategory, SimulationContext } from '../types';
 import Budget from '@/src/data/models/Budget';
 
 describe('BudgetReconciliation', () => {

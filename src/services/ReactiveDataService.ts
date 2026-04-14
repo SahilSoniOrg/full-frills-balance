@@ -3,6 +3,7 @@ import Account from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
@@ -11,6 +12,7 @@ import { reportService } from '@/src/services/report-service';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
 import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { traceService } from '@/src/utils/TraceService';
 import {
   combineLatest,
   debounceTime,
@@ -80,8 +82,13 @@ class ReactiveDataService {
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
       switchMap(async ([accounts, transactions]) => {
+        const trace = traceService.startTrace('DashboardData');
         try {
-          const balances = await balanceService.getAccountBalances(undefined, targetCurrency);
+          const balances = await balanceService.getAccountBalances(
+            undefined,
+            targetCurrency,
+            trace,
+          );
           const parentIds = new Set(
             accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
           );
@@ -104,6 +111,8 @@ class ReactiveDataService {
               totalExpense: 0,
             },
           };
+        } finally {
+          trace.end();
         }
       }),
       shareReplay({ bufferSize: 1, refCount: true }),
@@ -169,23 +178,25 @@ class ReactiveDataService {
    */
   observeOptimizedAccountList(targetCurrency: string): Observable<DashboardSummaryData> {
     return combineLatest([
-      accountRepository.observeAll(), // Still observe for structural changes
-      journalRepository.observeStatusMeta(), // Observe for status changes (posted/reversed)
-      transactionRepository.observeActiveCount(), // Efficient trigger for balance changes
+      accountRepository.observeAll(),
+      journalRepository.observeStatusMeta(),
+      transactionRepository.observeActiveCount(),
+      exchangeRateRepository.observeAll(), // Snap to accuracy when background rates arrive
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
       // Optimization: Only re-calculate if the underlying data actually changed.
       distinctUntilChanged((prev, curr) => {
         return (
-          prev[0] === curr[0] && // Account reference same (Watermelon handles this)
-          prev[1] === curr[1] && // Journal meta same
-          prev[2] === curr[2] // Active count same
+          prev[0] === curr[0] && prev[1] === curr[1] && prev[2] === curr[2] && prev[3] === curr[3] // Exchange rates reference check
         );
       }),
       switchMap(async ([accounts]) => {
+        const trace = traceService.startTrace('OptimizedAccountList');
         try {
-          // 0. Pre-warm the exchange rate cache for startup speed
+          // 0. Pre-warm the exchange rate cache
           await exchangeRateService.preWarmCache();
+          trace.metric('preWarm');
+
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
           const endOfMonth = new Date(
@@ -198,27 +209,23 @@ class ReactiveDataService {
             999,
           ).getTime();
 
-          // 1. Fetch raw balances and stats in a single pass using the optimized SQL query
+          // 1. Fetch raw balances
           const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
             startOfMonth,
             endOfMonth,
-            false, // includeTotalCount: false for list view
+            false,
           );
+          trace.metric('fetchRaw');
 
           let finalBalances: AccountBalance[] = [];
 
           if (rawItemsResponse === null) {
-            // --- FALLBACK PATH (Web/LokiJS) ---
-            // If raw SQL is not supported, use the slower but functional ORM-based fetch
             finalBalances = await balanceService.getAccountBalances(undefined, targetCurrency);
           } else {
-            // --- OPTIMIZED PATH (Native SQLite) ---
-            // Normalize result format: some adapters return array, others return { rows: [] }
             const rawItems: any[] = Array.isArray(rawItemsResponse)
               ? rawItemsResponse
               : (rawItemsResponse as any)?.rows || [];
 
-            // Map raw items back to AccountBalance readable format
             const balances: AccountBalance[] = rawItems.map((item: any) =>
               this.mapRawToBalance(item, now.getTime()),
             );
@@ -226,7 +233,6 @@ class ReactiveDataService {
             const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
             const balancesMap = new Map(validBalances.map(b => [b.accountId, b]));
 
-            // Perform hierarchical aggregation for the optimized path
             const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
             const precisionMap = new Map<string, number>();
             for (const account of accounts) {
@@ -239,22 +245,28 @@ class ReactiveDataService {
               balancesMap,
               precisionMap,
               targetCurrency,
+              trace,
             );
+
+            trace.metric('aggregate');
+
             finalBalances = Array.from(balancesMap.values());
           }
 
-          // 4. Calculate wealth summary (Synchronous path using warmed cache)
+          // 4. Calculate wealth summary
           const parentIds = new Set(
             accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
           );
           const leafBalances = finalBalances.filter(b => !parentIds.has(b.accountId));
           const wealthSummary = wealthService.calculateSummarySync(leafBalances, targetCurrency);
 
-          return {
+          const result = {
             accounts,
             balances: finalBalances,
             wealthSummary,
           };
+
+          return result;
         } catch (error) {
           logger.error('Failed to calculate optimized account list:', error);
           return {
@@ -269,6 +281,8 @@ class ReactiveDataService {
               totalExpense: 0,
             },
           };
+        } finally {
+          trace.end();
         }
       }),
       shareReplay({ bufferSize: 1, refCount: true }),
@@ -294,6 +308,7 @@ class ReactiveDataService {
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
       switchMap(async ([accounts]) => {
+        const start = Date.now();
         // 0. Pre-warm exchange rate cache for speed
         await exchangeRateService.preWarmCache();
 
@@ -388,6 +403,10 @@ class ReactiveDataService {
         } catch (error) {
           logger.error('Failed to calculate account dashboard:', error);
           return { account: targetAccount, balance: null, subAccounts: [], allAccounts: accounts };
+        } finally {
+          logger.info(
+            `[Trace] ReactiveDataService.observeAccountDashboard (${accountId}): ${Date.now() - start}ms`,
+          );
         }
       }),
       shareReplay({ bufferSize: 1, refCount: true }),

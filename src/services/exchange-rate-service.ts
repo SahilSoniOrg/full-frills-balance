@@ -11,14 +11,6 @@ import { AppConfig } from '@/src/constants';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { logger } from '@/src/utils/logger';
 
-export interface ExchangeRateData {
-  fromCurrency: string;
-  toCurrency: string;
-  rate: number;
-  effectiveDate: number;
-  source: string;
-}
-
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
 
 export class ExchangeRateService {
@@ -44,36 +36,13 @@ export class ExchangeRateService {
     }
 
     try {
-      // 1. Check Memory Cache
-      const memCached = this.memoryCache.get(fromCurrency);
-      if (memCached && Date.now() - memCached.timestamp < CACHE_DURATION_MS) {
-        if (memCached.rates[toCurrency]) {
-          return memCached.rates[toCurrency];
-        }
-      }
-
-      // 2. Check DB Cache via repository
-      const cached = await exchangeRateRepository.getCachedRate(fromCurrency, toCurrency);
-      if (cached && this.isRateFresh(cached.effectiveDate)) {
-        // Update memory cache for this base while we're at it
-        this.updateMemoryCache(fromCurrency, toCurrency, cached.rate);
-        return cached.rate;
-      }
-
-      // 3. Fetch fresh rates for the entire base
+      // Use the unified fetcher which handles memory, DB, and network layers sequentially.
       const rates = await this.fetchRatesForBase(fromCurrency);
 
       if (!rates[toCurrency]) {
         logger.warn(`No rate found for ${fromCurrency} to ${toCurrency}. Defaulting to 1.0`);
         return 1.0;
       }
-
-      // 4. Persist this specific rate to DB for offline use via repository
-      await exchangeRateRepository.cacheRate({
-        fromCurrency,
-        toCurrency,
-        rate: rates[toCurrency],
-      });
 
       return rates[toCurrency];
     } catch (error) {
@@ -91,25 +60,16 @@ export class ExchangeRateService {
     if (fromCurrency === toCurrency) return 1.0;
     if (!fromCurrency || !toCurrency) return 1.0;
 
-    // 1. Check memory cache first (instant)
     const memCached = this.memoryCache.get(fromCurrency);
     if (memCached && memCached.rates[toCurrency]) {
       return memCached.rates[toCurrency];
     }
 
-    // 2. Trigger background check/fetch (async, non-blocking)
-    this.getRate(fromCurrency, toCurrency).catch(err => {
-      logger.error(`Background rate fetch failed (${fromCurrency} -> ${toCurrency}):`, err);
-    });
+    // 2. Trigger background check/fetch (uses cache internally)
+    void this.fetchRatesForBase(fromCurrency).catch(() => {});
 
     // 3. Return 1.0 immediately while fetch happens in background
     return 1.0;
-  }
-
-  private updateMemoryCache(base: string, target: string, rate: number) {
-    const entry = this.memoryCache.get(base) || { rates: {}, timestamp: Date.now() };
-    entry.rates[target] = rate;
-    this.memoryCache.set(base, entry);
   }
 
   /**
@@ -124,45 +84,72 @@ export class ExchangeRateService {
    * Fetch all rates for a base currency and cache them
    * Prevents "thundering herd" by deduplicating concurrent requests for the same base.
    */
-  async fetchRatesForBase(fromCurrency: string): Promise<Record<string, number>> {
+  async fetchRatesForBase(
+    fromCurrency: string,
+    forceRefresh: boolean = false,
+  ): Promise<Record<string, number>> {
     if (!fromCurrency) {
       throw new Error('Base currency is required for fetching rates');
     }
 
-    // 1. Check for existing in-flight request
+    // 1. Check Memory Cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const memCached = this.memoryCache.get(fromCurrency);
+      if (memCached && this.isRateFresh(memCached.timestamp)) {
+        return memCached.rates;
+      }
+    }
+
+    // 2. Check for existing in-flight request to prevent "thundering herd"
     const existingRequest = this.inFlightRequests.get(fromCurrency);
     if (existingRequest) {
       return existingRequest;
     }
 
-    // 2. Start new request and track it
+    // 3. Start resolution process
     const requestPromise = (async () => {
       try {
-        const url = `${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`;
-        const response = await fetch(url);
+        // A. Check DB Cache (unless forcing refresh)
+        if (!forceRefresh) {
+          const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
+          const freshRecords = cachedRecords.filter(r => this.isRateFresh(r.effectiveDate));
 
-        if (!response.ok) {
-          const errorBody = await response.text().catch(() => 'No body');
-          throw new Error(
-            `Exchange rate API error (${response.status}): ${response.statusText}. Body: ${errorBody.substring(0, 100)}`,
-          );
+          if (freshRecords.length > 0) {
+            const rates: Record<string, number> = {};
+            let latestTimestamp = 0;
+            freshRecords.forEach(r => {
+              rates[r.toCurrency] = r.rate;
+              if (r.effectiveDate > latestTimestamp) latestTimestamp = r.effectiveDate;
+            });
+
+            // Update memory cache
+            this.memoryCache.set(fromCurrency, {
+              rates,
+              timestamp: latestTimestamp,
+            });
+
+            return rates;
+          }
         }
 
-        // Verify content type before parsing
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const text = await response.text();
-          throw new Error(
-            `Expected JSON response but got ${contentType || 'unknown'}. First 100 chars: ${text.substring(0, 100)}`,
-          );
+        // B. Network Fetch (Final Fallback or Forced)
+        const url = `${AppConfig.api.exchangeRateBaseUrl}/${fromCurrency}`;
+        const fetchStart = Date.now();
+
+        const response = await fetch(url);
+        const fetchDuration = Date.now() - fetchStart;
+
+        if (!response.ok) {
+          throw new Error(`API error ${response.status}`);
         }
 
         const data = await response.json();
         const rates = data.rates as Record<string, number>;
 
-        if (!rates) {
-          throw new Error(`Malformed API response: 'rates' field missing for base ${fromCurrency}`);
-        }
+        if (!rates) throw new Error('Missing rates in response');
+
+        // Structured metric replaces fragile string logging
+        logger.metric('ExchangeRateService.fetchNetwork', fetchDuration, { base: fromCurrency });
 
         // Update memory cache
         this.memoryCache.set(fromCurrency, {
@@ -170,34 +157,38 @@ export class ExchangeRateService {
           timestamp: Date.now(),
         });
 
+        // Background persist to DB (fixed: now using batch to avoid IO inflation)
+        const rateArray = Object.entries(rates).map(([to, rate]) => ({
+          toCurrency: to,
+          rate,
+        }));
+
+        exchangeRateRepository
+          .cacheRatesBatch(fromCurrency, rateArray)
+          .catch(err => logger.error('Background DB batch persist failed:', err));
+
         return rates;
+      } catch (error) {
+        logger.warn(`[Trace] ExchangeRateService.fetchRatesForBase failed for ${fromCurrency}:`, {
+          error,
+        });
+
+        // Ultimate Fallback: Any stale rate from DB
+        const staleRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
+        if (staleRecords.length > 0) {
+          const staleRates: Record<string, number> = {};
+          staleRecords.forEach(r => (staleRates[r.toCurrency] = r.rate));
+          return staleRates;
+        }
+
+        throw error;
       } finally {
-        // Clear from in-flight regardless of outcome
         this.inFlightRequests.delete(fromCurrency);
       }
     })();
 
     this.inFlightRequests.set(fromCurrency, requestPromise);
-
-    try {
-      return await requestPromise;
-    } catch (error) {
-      logger.error('Failed to fetch exchange rates:', error);
-
-      // Fallback: try to get any cached rate from DB if API fails
-      const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
-
-      if (cachedRecords.length > 0) {
-        logger.warn(`Using stale exchange rates from DB for ${fromCurrency}`);
-        const staleRates: Record<string, number> = {};
-        cachedRecords.forEach(r => {
-          staleRates[r.toCurrency] = r.rate;
-        });
-        return staleRates;
-      }
-
-      throw error;
-    }
+    return requestPromise;
   }
 
   /**
@@ -223,22 +214,29 @@ export class ExchangeRateService {
    */
   async preWarmCache(): Promise<void> {
     try {
-      // Get all rates from the last 24 hours
-      const cutoff = Date.now() - CACHE_DURATION_MS;
-      const recentRates = await exchangeRateRepository.getAllRecentRates(cutoff);
+      const start = Date.now();
+      // Optimization: Load ALL most recent rates from DB to populate memory cache instantly.
+      // We don't filter by CACHE_DURATION_MS here because any rate is better than 1.0
+      // for the very first frame. Freshness is handled by background fetches.
+      const recentRates = await exchangeRateRepository.getAllRecentRates(0);
+      const duration = Date.now() - start;
 
       if (recentRates.length === 0) return;
 
       // Group by base currency
       recentRates.forEach(r => {
-        const entry = this.memoryCache.get(r.fromCurrency) || { rates: {}, timestamp: Date.now() };
-        entry.rates[r.toCurrency] = r.rate;
-        // Ensure the entry timestamp reflects the newest rate we found
-        if (r.effectiveDate > entry.timestamp) entry.timestamp = r.effectiveDate;
+        const entry = this.memoryCache.get(r.fromCurrency) || { rates: {}, timestamp: 0 };
+        // Only keep the newest rate for each pair if DB has duplicates
+        if (r.effectiveDate >= entry.timestamp) {
+          entry.rates[r.toCurrency] = r.rate;
+          entry.timestamp = r.effectiveDate;
+        }
         this.memoryCache.set(r.fromCurrency, entry);
       });
 
-      logger.info(`[ExchangeRateService] Pre-warmed cache with ${recentRates.length} rates`);
+      logger.info(
+        `[Trace] ExchangeRateService.preWarmCache: ${duration}ms (rates: ${recentRates.length})`,
+      );
     } catch (error) {
       logger.error('[ExchangeRateService] Failed to pre-warm cache:', error);
     }

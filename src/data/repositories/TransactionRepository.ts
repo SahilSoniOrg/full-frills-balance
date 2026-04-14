@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
 import { of } from 'rxjs';
@@ -116,7 +117,15 @@ export class TransactionRepository {
       query = query.extend(Q.take(limit));
     }
 
-    return query.fetch();
+    const start = Date.now();
+    const results = await query.fetch();
+
+    logger.info(`[Trace] TransactionRepository.findByAccount: ${Date.now() - start}ms`, {
+      accountId,
+      count: results.length,
+    });
+
+    return results;
   }
 
   observeByAccounts(
@@ -243,7 +252,18 @@ export class TransactionRepository {
       query = query.extend(Q.take(limit));
     }
 
-    return query.fetch();
+    const start = Date.now();
+    const results = await query.fetch();
+
+    logger.info(
+      `[Trace] TransactionRepository.findTransactionsByAccounts: ${Date.now() - start}ms`,
+      {
+        accountCount: accountIds.length,
+        resultCount: results.length,
+      },
+    );
+
+    return results;
   }
 
   /**
@@ -425,7 +445,8 @@ export class TransactionRepository {
     startDate: number,
     endDate: number,
   ): Promise<Transaction[]> {
-    return this.transactions
+    const start = Date.now();
+    const results = await this.transactions
       .query(
         Q.experimentalJoinTables(['journals']),
         Q.where('account_id', Q.oneOf(accountIds)),
@@ -439,6 +460,16 @@ export class TransactionRepository {
       )
       .extend(Q.sortBy('transaction_date', Q.desc))
       .fetch();
+
+    logger.info(
+      `[Trace] TransactionRepository.findByAccountsAndDateRange: ${Date.now() - start}ms`,
+      {
+        accountCount: accountIds.length,
+        resultCount: results.length,
+      },
+    );
+
+    return results;
   }
 
   /**

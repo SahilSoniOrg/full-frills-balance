@@ -1,5 +1,5 @@
 import { IconName } from '@/src/components/core/AppIcon';
-import { AppConfig, Palette } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import Account from '@/src/data/models/Account';
 import {
@@ -7,8 +7,8 @@ import {
   getAccountSections,
   getSectionColor,
 } from '@/src/utils/accountCategory';
-import { getContrastColor } from '@/src/utils/colorUtils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { logger } from '@/src/utils/logger';
 
 export interface AccountCardViewModel {
   id: string;
@@ -57,16 +57,30 @@ interface TransformOptions {
   totalIncome: number;
   totalExpense: number;
   expandedAccountIds: Set<string>;
+  onContrast: (color: string) => string;
 }
 
-// Optimization: Maintain a persistent cache of view models to preserve object identities.
-// This ensures that React.memo(AccountCard) works perfectly even when the parent list updates.
-const VM_CACHE = new Map<string, AccountCardViewModel>();
+// OPTIMIZATION: Multi-layer caching to minimize re-renders and re-computations.
+// 1. Static Metadata Cache (Name, Icons, Colors - invariant for account lifecycle)
+const STATIC_META_CACHE = new Map<
+  string,
+  { accentColor: string; textColor: string; contrastColor: string }
+>();
+
+// 2. State-Based ViewModel Cache (Financial values, UI states)
+// Using a two-generation "Bucket Cache" to provide smooth LRU-lite aging without full-wipe spikes.
+let currentBucket = new Map<string, AccountCardViewModel>();
+let oldBucket = new Map<string, AccountCardViewModel>();
+const BUCKET_LIMIT = 1000;
 
 export function transformAccountsToSections(
   accounts: Account[],
   options: TransformOptions,
 ): AccountSectionViewModel[] {
+  const startTime = Date.now();
+  let cacheHits = 0;
+  let totalAccounts = 0;
+
   if (!accounts.length) return [];
 
   const {
@@ -124,6 +138,7 @@ export function transformAccountsToSections(
     const flattenedData: AccountCardViewModel[] = [];
 
     const flatten = (account: Account, depth: number) => {
+      totalAccounts++;
       const balanceData = balancesByAccountId.get(account.id) || null;
       const balance = balanceData?.balance || 0;
       const monthlyIncome = balanceData?.monthlyIncome || 0;
@@ -131,29 +146,50 @@ export function transformAccountsToSections(
       const isExpanded = expandedAccountIds.has(account.id);
       const children = accountsByParent.get(account.id) || [];
 
-      // CACHE KEY: Detect if THIS account's UI parameters have changed
-      const cacheKey = `${account.id}:${balance}:${monthlyIncome}:${monthlyExpenses}:${isPrivacyMode}:${isExpanded}:${theme.asset}:${isLoading}`;
-      const cached = VM_CACHE.get(cacheKey);
+      // Pass contrast resolution to the transform options
+      const { onContrast } = options;
 
-      if (cached) {
-        flattenedData.push(cached);
+      // CACHE KEY: Specific to THIS instance's volatile state
+      const stateKey = `${account.id}:${balance}:${monthlyIncome}:${monthlyExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${isLoading}:${theme.asset}`;
+
+      // Try current bucket then old bucket (aging)
+      let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
+
+      if (viewModel) {
+        cacheHits++;
+        // If found in old bucket, migrate to current (promote)
+        if (!currentBucket.has(stateKey)) {
+          if (currentBucket.size >= BUCKET_LIMIT) {
+            oldBucket = currentBucket;
+            currentBucket = new Map();
+          }
+          currentBucket.set(stateKey, viewModel);
+        }
+
+        flattenedData.push(viewModel);
         if (isExpanded) {
           children.forEach(child => flatten(child, depth + 1));
         }
         return;
       }
 
-      const accentColor = getAccountAccentColor(account.accountType, {
-        asset: theme.asset,
-        liability: theme.liability,
-        equity: theme.equity,
-        income: theme.income,
-        expense: theme.expense,
-        text: theme.text,
-      });
+      // LAYER 1: Static Metadata (Colors/Icons)
+      const metaKey = `${account.id}:${account.accountType}:${account.name}:${theme.background}`; // Add theme background to key to avoid stale cache on theme switch
+      let meta = STATIC_META_CACHE.get(metaKey);
 
-      const contrastColor = getContrastColor(accentColor);
-      const textColor = contrastColor === 'white' ? Palette.white : Palette.black;
+      if (!meta) {
+        const accentColor = getAccountAccentColor(account.accountType, {
+          asset: theme.asset,
+          liability: theme.liability,
+          equity: theme.equity,
+          income: theme.income,
+          expense: theme.expense,
+          text: theme.text,
+        });
+        const textColor = onContrast(accentColor);
+        meta = { accentColor, textColor, contrastColor: textColor };
+        STATIC_META_CACHE.set(metaKey, meta);
+      }
 
       const currencyCode = balanceData?.currencyCode || account.currencyCode;
       const mask = '••••';
@@ -174,12 +210,12 @@ export function transformAccountsToSections(
           ? mask
           : CurrencyFormatter.format(monthlyExpenses, currencyCode);
 
-      const viewModel: AccountCardViewModel = {
+      viewModel = {
         id: account.id,
         name: account.name,
         icon: account.icon || null,
-        accentColor,
-        textColor,
+        accentColor: meta.accentColor,
+        textColor: meta.textColor,
         balanceText,
         monthlyIncomeText,
         monthlyExpenseText,
@@ -191,9 +227,12 @@ export function transformAccountsToSections(
         reconciledAt: account.reconciledAt,
       };
 
-      // Limit cache size
-      if (VM_CACHE.size > 2000) VM_CACHE.clear();
-      VM_CACHE.set(cacheKey, viewModel);
+      // Bucket Management (Aging)
+      if (currentBucket.size >= BUCKET_LIMIT) {
+        oldBucket = currentBucket;
+        currentBucket = new Map();
+      }
+      currentBucket.set(stateKey, viewModel);
 
       flattenedData.push(viewModel);
 
@@ -204,7 +243,7 @@ export function transformAccountsToSections(
 
     rootAccounts.forEach(root => flatten(root, 0));
 
-    return {
+    const result = {
       title: section.title,
       count: typeAccounts.length,
       totalDisplay,
@@ -212,5 +251,14 @@ export function transformAccountsToSections(
       isCollapsed: collapsedSections.has(section.title),
       data: flattenedData,
     };
+
+    const duration = Date.now() - startTime;
+    logger.info(`[Trace] transformAccountsToSections: ${duration}ms`, {
+      accounts: totalAccounts,
+      cacheHits,
+      hitRate: totalAccounts > 0 ? `${((cacheHits / totalAccounts) * 100).toFixed(1)}%` : '0%',
+    });
+
+    return result;
   });
 }

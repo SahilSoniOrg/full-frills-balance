@@ -10,6 +10,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { ValidationError } from '@/src/utils/errors';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
 import { supportsRawSql } from '../database/DatabaseUtils';
@@ -539,7 +540,15 @@ export class AccountRepository {
       ORDER BY a.order_num ASC
     `;
 
-    return await transactionRawRepository.queryRaw(sql, [startOfMonth, endOfMonth]);
+    const start = Date.now();
+    const results = await transactionRawRepository.queryRaw(sql, [startOfMonth, endOfMonth]);
+    const duration = Date.now() - start;
+
+    logger.info(`[Trace] AccountRepository.getAccountListItemsRaw: ${duration}ms`, {
+      count: results?.length || 0,
+    });
+
+    return results;
   }
 }
 

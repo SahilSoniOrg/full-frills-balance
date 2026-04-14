@@ -61,6 +61,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       id: 'pp_1',
       name: 'Credit Card Payment',
       amount: 1000,
+      currencyCode: 'USD',
       nextOccurrence: dayjs('2026-05-05').valueOf(),
       intervalType: 'MONTHLY',
       intervalN: 1,

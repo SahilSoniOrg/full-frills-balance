@@ -57,7 +57,7 @@ describe('PlannedFlowGenerator Past Handling', () => {
       [],
       [journal as any],
       new Set(),
-      journalTxsMap,
+      journalTxsMap as any,
     );
 
     // NEW BEHAVIOR: Returns 1 flow at Day 0

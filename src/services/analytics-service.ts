@@ -35,6 +35,11 @@ export class AnalyticsService {
    * Initialize analytics provider.
    */
   initialize() {
+    // Register as the performance reporter for the logger metric layer
+    logger.setPerformanceReporter((metric, value, context) => {
+      this.trackPerformance(metric, value, context);
+    });
+
     if (this.posthog && __DEV__) {
       logger.info('[Analytics] PostHog client ready (debug mode — events disabled in __DEV__)');
     } else if (this.posthog) {
@@ -268,12 +273,19 @@ export class AnalyticsService {
   /**
    * Track app performance metrics
    */
-  trackPerformance(metric: string, value: number, unit: string = 'ms') {
+  trackPerformance(
+    metric: string,
+    value: number,
+    context?: Record<string, any>,
+    unit: string = 'ms',
+  ) {
     this.track('performance', {
+      ...context,
       metric,
       value,
       unit,
       timestamp: Date.now(),
+      traceId: context?.traceId,
     });
   }
 

@@ -4,6 +4,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { JournalDisplayType } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { map, of } from 'rxjs';
@@ -208,13 +209,19 @@ export class JournalRepository {
   }
 
   async findAll(): Promise<Journal[]> {
-    return this.journals
+    const start = Date.now();
+    const results = await this.journals
       .query(
         Q.where('deleted_at', Q.eq(null)),
         Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
       )
       .extend(Q.sortBy('journal_date', 'desc'))
       .fetch();
+
+    logger.info(`[Trace] JournalRepository.findAll: ${Date.now() - start}ms`, {
+      count: results.length,
+    });
+    return results;
   }
 
   async findAllPlanned(): Promise<Journal[]> {
@@ -340,6 +347,7 @@ export class JournalRepository {
       ...journalFields
     } = journalData;
 
+    const start = Date.now();
     return await database.write(async () => {
       const journal = this.journals.prepareCreate(j => {
         Object.assign(j, journalFields);
@@ -384,6 +392,13 @@ export class JournalRepository {
 
       await database.batch(...batchOps);
 
+      logger.info(
+        `[Trace] JournalRepository.createJournalWithTransactions: ${Date.now() - start}ms`,
+        {
+          txCount: transactionData.length,
+        },
+      );
+
       return journal;
     });
   }
@@ -410,6 +425,7 @@ export class JournalRepository {
 
     const oldTransactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch();
 
+    const start = Date.now();
     // C-1 fix reverted: return database.write directly.
     // Ensure the caller delegates flush triggering to the domain service layer.
     return await database.write(async () => {
@@ -483,6 +499,14 @@ export class JournalRepository {
       }
 
       await database.batch(...batchOps);
+
+      logger.info(
+        `[Trace] JournalRepository.updateJournalWithTransactions: ${Date.now() - start}ms`,
+        {
+          newTxCount: transactionData.length,
+          oldTxCount: oldTransactions.length,
+        },
+      );
 
       return existingJournal;
     });
@@ -596,6 +620,7 @@ export class JournalRepository {
       ...journalFields
     } = replacementData;
 
+    const start = Date.now();
     return await database.write(async () => {
       const now = new Date();
       const reversalDate = originalJournal.journalDate;
@@ -674,6 +699,11 @@ export class JournalRepository {
         replacementJournal,
         ...newTransactions,
       );
+
+      logger.info(`[Trace] JournalRepository.replaceJournalWithReversal: ${Date.now() - start}ms`, {
+        newTxCount: replacementTransactions.length,
+        oldTxCount: originalTransactions.length,
+      });
 
       return { reversalJournal, replacementJournal };
     });

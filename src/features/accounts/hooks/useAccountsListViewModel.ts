@@ -6,6 +6,7 @@ import { transformAccountsToSections } from '@/src/features/accounts/utils/trans
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -59,7 +60,7 @@ export interface AccountsListViewModel {
 }
 
 export function useAccountsListViewModel(): AccountsListViewModel {
-  const { theme } = useTheme();
+  const { theme, onContrast } = useTheme();
   const { defaultCurrency, showAccountMonthlyStats, isPrivacyMode } = useUI();
 
   const [isLocalPrivacyMode, setIsLocalPrivacyMode] = useState(isPrivacyMode);
@@ -165,6 +166,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   }, []);
 
   const onTogglePrivacy = useCallback(() => {
+    traceService.startTrace('Toggle Privacy Mode');
     togglePrivacyMode();
   }, [togglePrivacyMode]);
 
@@ -173,6 +175,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   }, []);
 
   const onRefresh = useCallback(() => {
+    traceService.startTrace('Refresh Account List');
     // Refresh is handled reactively by observables
   }, []);
 
@@ -194,6 +197,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       collapsedSections,
       expandedAccountIds,
       theme,
+      onContrast,
       totalAssets,
       totalLiabilities,
       totalEquity,
@@ -209,6 +213,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       collapsedSections,
       expandedAccountIds,
       theme,
+      onContrast,
       totalAssets,
       totalLiabilities,
       totalEquity,

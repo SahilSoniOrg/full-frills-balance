@@ -1,4 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { logger } from '@/src/utils/logger';
+import { Trace, traceService } from '@/src/utils/TraceService';
 import { Flow, SimulationEngineResult } from './types';
 import { findFirstMajorInflowDay } from './utils/FlowPolicy';
 
@@ -14,125 +16,139 @@ export class Simulator {
     liquidAccountIds: Set<string>,
     orderedLiquidAccountIds: string[] = [],
     startDayOffset: number = 0,
+    startDayTimestamp: number = Date.now(),
+    parentTrace?: Trace,
   ): SimulationEngineResult {
-    const currentBalances = new Map(startingBalances);
-    const flowByDay = new Map<number, Flow[]>();
+    const trace = parentTrace || traceService.startTrace('Simulator.simulate');
+    try {
+      const currentBalances = new Map(startingBalances);
+      const flowByDay = new Map<number, Flow[]>();
 
-    for (const flow of flows) {
-      const day = flow.dayOffset;
-      const dayFlows = flowByDay.get(day) || [];
-      dayFlows.push(flow);
-      flowByDay.set(day, dayFlows);
-    }
-
-    const projections: SimulationEngineResult['projections'] = [];
-    let globalBalance = 0;
-    for (const [id, bal] of currentBalances.entries()) {
-      if (liquidAccountIds.has(id)) {
-        globalBalance += bal ?? 0;
+      for (const flow of flows) {
+        const day = flow.dayOffset;
+        const dayFlows = flowByDay.get(day) || [];
+        dayFlows.push(flow);
+        flowByDay.set(day, dayFlows);
       }
-    }
 
-    let globalMinBalance = globalBalance;
-
-    // 1. Identify first major inflow day (Income only)
-    const firstMajorInflowDay = findFirstMajorInflowDay(
-      flows,
-      liquidAccountIds,
-      AppConfig.defaults.simulation.majorInflowThreshold,
-    );
-
-    // 2. Track minimums
-    const accountMinBalances = new Map<string, number>();
-    const accountMinBalancesBeforeIncome = new Map<string, number>();
-    for (const [id, bal] of currentBalances.entries()) {
-      const b = bal ?? 0;
-      accountMinBalances.set(id, b);
-      accountMinBalancesBeforeIncome.set(id, b);
-    }
-
-    let lastAccountBalancesMap = new Map(currentBalances);
-
-    for (let d = 0; d < days; d++) {
-      const todayOffset = startDayOffset + d;
-      const todayFlows = flowByDay.get(todayOffset) || [];
-
-      // Tracking which accounts changed to avoid O(N) minimum checks
-      const changedAccountIds = new Set<string>();
-
-      if (todayFlows.length > 0) {
-        for (const f of todayFlows) {
-          globalBalance += this.applyFlow(
-            currentBalances,
-            f,
-            orderedLiquidAccountIds,
-            changedAccountIds,
-            liquidAccountIds,
-          );
+      const projections: SimulationEngineResult['projections'] = [];
+      let globalBalance = 0;
+      for (const [id, bal] of currentBalances.entries()) {
+        if (liquidAccountIds.has(id)) {
+          globalBalance += bal ?? 0;
         }
+      }
 
-        // Update minimums ONLY for changed accounts
-        for (const id of changedAccountIds) {
-          const bal = currentBalances.get(id) ?? 0;
-          const min = accountMinBalances.get(id) ?? Infinity;
-          accountMinBalances.set(id, Math.min(min, bal));
+      let globalMinBalance = globalBalance;
 
-          if (firstMajorInflowDay === null || todayOffset < firstMajorInflowDay) {
-            const preMin = accountMinBalancesBeforeIncome.get(id) ?? Infinity;
-            accountMinBalancesBeforeIncome.set(id, Math.min(preMin, bal));
+      // 1. Identify first major inflow day (Income only)
+      const firstMajorInflowDay = findFirstMajorInflowDay(
+        flows,
+        liquidAccountIds,
+        AppConfig.defaults.simulation.majorInflowThreshold,
+      );
+
+      // 2. Track minimums
+      const accountMinBalances = new Map<string, number>();
+      const accountMinBalancesBeforeIncome = new Map<string, number>();
+      for (const [id, bal] of currentBalances.entries()) {
+        const b = bal ?? 0;
+        accountMinBalances.set(id, b);
+        accountMinBalancesBeforeIncome.set(id, b);
+      }
+
+      let lastAccountBalancesMap = new Map(currentBalances);
+
+      for (let d = 0; d < days; d++) {
+        const todayOffset = startDayOffset + d;
+        const todayFlows = flowByDay.get(todayOffset) || [];
+
+        // Tracking which accounts changed to avoid O(N) minimum checks
+        const changedAccountIds = new Set<string>();
+
+        if (todayFlows.length > 0) {
+          for (const f of todayFlows) {
+            globalBalance += this.applyFlow(
+              currentBalances,
+              f,
+              orderedLiquidAccountIds,
+              changedAccountIds,
+              liquidAccountIds,
+            );
           }
+
+          // Update minimums ONLY for changed accounts
+          for (const id of changedAccountIds) {
+            const bal = currentBalances.get(id) ?? 0;
+            const min = accountMinBalances.get(id) ?? Infinity;
+            accountMinBalances.set(id, Math.min(min, bal));
+
+            if (firstMajorInflowDay === null || todayOffset < firstMajorInflowDay) {
+              const preMin = accountMinBalancesBeforeIncome.get(id) ?? Infinity;
+              accountMinBalancesBeforeIncome.set(id, Math.min(preMin, bal));
+            }
+          }
+
+          // Only create a new Map if there were changes
+          lastAccountBalancesMap = new Map(currentBalances);
         }
 
-        // Only create a new Map if there were changes
-        lastAccountBalancesMap = new Map(currentBalances);
+        globalMinBalance = Math.min(globalMinBalance, globalBalance);
+
+        const roundedAccountBalances = new Map<string, number>();
+        for (const [id, bal] of lastAccountBalancesMap.entries()) {
+          roundedAccountBalances.set(id, Math.round((bal ?? 0) * 100) / 100);
+        }
+
+        const timestamp = startDayTimestamp + todayOffset * 24 * 60 * 60 * 1000;
+
+        projections.push({
+          dayOffset: todayOffset,
+          timestamp,
+          globalBalance: Math.round(globalBalance * 100) / 100,
+          accountBalances: roundedAccountBalances,
+          flows: todayFlows,
+        });
       }
 
-      globalMinBalance = Math.min(globalMinBalance, globalBalance);
-
-      const roundedAccountBalances = new Map<string, number>();
-      for (const [id, bal] of lastAccountBalancesMap.entries()) {
-        roundedAccountBalances.set(id, Math.round((bal ?? 0) * 100) / 100);
+      let totalStartingBalance = 0;
+      for (const [id, bal] of startingBalances.entries()) {
+        if (liquidAccountIds.has(id)) {
+          totalStartingBalance += bal ?? 0;
+        }
       }
 
-      projections.push({
-        dayOffset: todayOffset,
-        timestamp: 0,
-        globalBalance: Math.round(globalBalance * 100) / 100,
-        accountBalances: roundedAccountBalances,
-        flows: todayFlows,
-      });
+      const safeToSpend = Math.max(0, Math.min(totalStartingBalance, globalMinBalance));
+
+      const res = {
+        summary: {
+          safeToSpend: Math.round(safeToSpend * 100) / 100,
+          shortfall:
+            Math.round((globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0) * 100) / 100,
+          trajectoryMinBalance: Math.round(globalMinBalance * 100) / 100,
+          accountMinBalances: new Map(
+            Array.from(accountMinBalances).map(([id, b]) => [id, Math.round(b * 100) / 100]),
+          ),
+          accountMinBalancesBeforeIncome: new Map(
+            Array.from(accountMinBalancesBeforeIncome).map(([id, b]) => [
+              id,
+              Math.round(b * 100) / 100,
+            ]),
+          ),
+          firstMajorInflowDay,
+        },
+        accountSummaries: [], // Will be populated by the orchestrator
+        projections,
+        allFlows: flows,
+      };
+
+      return res;
+    } catch (error) {
+      logger.error('Simulator failure:', error);
+      throw error;
+    } finally {
+      if (!parentTrace) trace.end();
     }
-
-    let totalStartingBalance = 0;
-    for (const [id, bal] of startingBalances.entries()) {
-      if (liquidAccountIds.has(id)) {
-        totalStartingBalance += bal ?? 0;
-      }
-    }
-
-    const safeToSpend = Math.max(0, Math.min(totalStartingBalance, globalMinBalance));
-
-    const res = {
-      summary: {
-        safeToSpend: Math.round(safeToSpend * 100) / 100,
-        shortfall: Math.round((globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0) * 100) / 100,
-        trajectoryMinBalance: Math.round(globalMinBalance * 100) / 100,
-        accountMinBalances: new Map(
-          Array.from(accountMinBalances).map(([id, b]) => [id, Math.round(b * 100) / 100]),
-        ),
-        accountMinBalancesBeforeIncome: new Map(
-          Array.from(accountMinBalancesBeforeIncome).map(([id, b]) => [
-            id,
-            Math.round(b * 100) / 100,
-          ]),
-        ),
-        firstMajorInflowDay,
-      },
-      accountSummaries: [], // Will be populated by the orchestrator
-      projections,
-      allFlows: flows,
-    };
-    return res;
   }
 
   /**

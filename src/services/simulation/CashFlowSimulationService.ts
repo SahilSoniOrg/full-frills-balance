@@ -5,14 +5,15 @@ import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-
+import Transaction from '@/src/data/models/Transaction';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import Transaction from '@/src/data/models/Transaction';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { logger } from '@/src/utils/logger';
+import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
 import { BudgetFlowGenerator } from './engines/BudgetFlowGenerator';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
@@ -39,10 +40,13 @@ export class CashFlowSimulationService {
     allAccounts: Account[],
     resultCurrency: string,
     simulationDays: number = AppConfig.defaults.safeToSpendDays,
+    trace?: Trace,
   ): Promise<SimulationRunResult> {
     const time = new TimeContext(dayjs(), simulationDays);
     const simulationStartMs = time.getStartOfToday().valueOf();
     const simulationEndMs = time.getEndMs();
+
+    const overallStart = Date.now();
 
     // 1. PHASE: NORMALIZE & PRE-FETCH
     const liquidAccountIdsSet = new Set(liquidAssetIds);
@@ -139,6 +143,11 @@ export class CashFlowSimulationService {
       allAccounts.filter(a => a.accountType === AccountType.EXPENSE).map(a => a.id),
     );
 
+    trace?.metric('normalization_and_fetch');
+    logger.info(
+      `[Trace] CashFlowSimulationService.simulate: Normalization & Pre-fetch: ${Date.now() - overallStart}ms`,
+    );
+
     // 2. PHASE: BUILD CONTEXT
     const context: SimulationContext = {
       simulationStartMs,
@@ -203,6 +212,14 @@ export class CashFlowSimulationService {
       (a, b) => a.dayOffset - b.dayOffset,
     );
 
+    trace?.metric('flow_generation');
+    logger.info(
+      `[Trace] CashFlowSimulationService.simulate: Flow Generation: ${Date.now() - overallStart}ms`,
+      {
+        totalFlows: allFlows.length,
+      },
+    );
+
     // 3. PHASE: SIMULATE
     const startingBalancesEntries = Array.from(startingBalances.entries());
     const normalizedStartingBalances = new Map(
@@ -217,7 +234,11 @@ export class CashFlowSimulationService {
       simulationDays,
       liquidAccountIdsSet,
       liquidAssetIds,
+      0,
+      simulationStartMs,
+      trace,
     );
+    trace?.metric('simulation_execution');
 
     // 4. PHASE: POST-PROCESS SUMMARIES
     const firstMajorInflowDay = simulationResult.summary.firstMajorInflowDay;
@@ -351,12 +372,7 @@ export class CashFlowSimulationService {
       },
     );
 
-    // Final Post-processing (Map timestamps back in)
-    simulationResult.projections.forEach(p => {
-      p.timestamp = time.getTimestamp(p.dayOffset);
-    });
-
-    return {
+    const result: SimulationRunResult = {
       simulationResult,
       report,
       accountSummaries,
@@ -366,6 +382,18 @@ export class CashFlowSimulationService {
       liabilityAccountBalances,
       accountMap,
     };
+
+    trace?.metric('total_duration');
+    logger.info(
+      `[Trace] CashFlowSimulationService.simulate: TOTAL: ${Date.now() - overallStart}ms`,
+      {
+        days: simulationDays,
+        accounts: allAccounts.length,
+        flows: allFlows.length,
+      },
+    );
+
+    return result;
   }
 
   // --- Normalization Helpers ---
