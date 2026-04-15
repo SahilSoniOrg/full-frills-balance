@@ -6,6 +6,7 @@ import { database } from '@/src/data/database/Database';
 import { AppLockInterceptor } from '@/src/features/app/components/AppLockInterceptor';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
+import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { analytics } from '@/src/services/analytics-service';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
@@ -13,12 +14,11 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, usePathname, useSegments } from 'expo-router';
 import { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
-import { DeviceEventEmitter, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FontManager } from './components/FontManager';
 
-import { REPORT_CHART_EVENTS } from '@/src/constants/report-constants';
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
 
 function PostHogScreenTracker() {
@@ -99,11 +99,9 @@ export default function RootLayout() {
       <View
         style={{ flex: 1 }}
         onStartShouldSetResponderCapture={e => {
-          DeviceEventEmitter.emit(REPORT_CHART_EVENTS.globalTouch, {
-            pageX: e.nativeEvent.pageX,
-            pageY: e.nativeEvent.pageY,
-          });
-          return false;
+          const { pageX, pageY } = e.nativeEvent;
+          resetAllCharts(pageX, pageY);
+          return false; // don't block children (scroll, gestures)
         }}
       >
         <SafeAreaProvider>

@@ -39,7 +39,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({
 
   const containerStyle: ViewStyle = {
     position: 'absolute',
-    pointerEvents: 'none',
+    pointerEvents: 'box-none',
     zIndex: REPORT_CHART_LAYOUT.tooltipZIndex,
     elevation: REPORT_CHART_LAYOUT.tooltipElevation,
     backgroundColor: theme.surface,

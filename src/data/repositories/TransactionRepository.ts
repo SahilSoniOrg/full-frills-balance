@@ -148,7 +148,7 @@ export class TransactionRepository {
     accountIds: string[],
     limit: number = AppConfig.pagination.dashboardPageSize,
     dateRange?: { startDate: number; endDate: number },
-  ) {
+  ): import('rxjs').Observable<Transaction[]> {
     const clauses = this.buildActiveClauses([Q.where('account_id', Q.oneOf(accountIds))]);
 
     if (dateRange) {
@@ -178,7 +178,7 @@ export class TransactionRepository {
       .fetch();
   }
 
-  observeByJournals(journalIds: string[]) {
+  observeByJournals(journalIds: string[]): import('rxjs').Observable<Transaction[]> {
     if (journalIds.length === 0) return of([] as Transaction[]);
     return this.transactions
       .query(Q.where('journal_id', Q.oneOf(journalIds)), Q.where('deleted_at', Q.eq(null)))

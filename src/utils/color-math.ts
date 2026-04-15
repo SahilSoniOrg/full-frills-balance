@@ -75,3 +75,27 @@ export function addAlpha(hexColor: string, opacity: number): string {
   const _opacity = Math.round(Math.min(Math.max(opacity || 1, 0), 1) * 255);
   return hexColor + _opacity.toString(16).toUpperCase().padStart(2, '0');
 }
+
+/**
+ * Blends two hex colors together based on alpha weight.
+ * Returns a solid 6-digit hex string.
+ */
+export function blendColors(fg: string, bg: string, alpha: number): string {
+  const parse = (hex: string) => {
+    const c = hex.replace('#', '');
+    const r = parseInt(c.length === 3 ? c[0] + c[0] : c.substring(0, 2), 16);
+    const g = parseInt(c.length === 3 ? c[1] + c[1] : c.substring(2, 4), 16);
+    const b = parseInt(c.length === 3 ? c[2] + c[2] : c.substring(4, 6), 16);
+    return [r, g, b];
+  };
+
+  const [rf, gf, bf] = parse(fg);
+  const [rb, gb, bb] = parse(bg);
+
+  const r = Math.round(rf * alpha + rb * (1 - alpha));
+  const g = Math.round(gf * alpha + gb * (1 - alpha));
+  const b = Math.round(bf * alpha + bb * (1 - alpha));
+
+  const toHex = (n: number) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}

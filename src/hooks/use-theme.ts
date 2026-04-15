@@ -5,7 +5,7 @@ import {
   getThemeColors,
 } from '@/src/constants/design-tokens';
 import { useThemeOverride, useUI } from '@/src/contexts/UIContext';
-import { getWCAGContrastColor } from '@/src/utils/color-math';
+import { blendColors, getWCAGContrastColor } from '@/src/utils/color-math';
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
 import { useCallback, useMemo } from 'react';
 
@@ -77,6 +77,7 @@ export function useTheme() {
     fonts,
     tokens,
     onContrast,
+    blend: (color: string, alpha: number) => blendColors(color, theme.surface, alpha),
     getVariantColors: resolveVariantColors,
   };
 }

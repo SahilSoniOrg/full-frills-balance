@@ -2,225 +2,337 @@ import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
+import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
+import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { HeatmapPoint } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
-import React, { useMemo, useState } from 'react';
-import { Dimensions, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import Svg, { G, Rect, Text as SvgText } from 'react-native-svg';
+import { ChartTooltip } from './ChartTooltip';
 
 interface CalendarHeatmapProps {
-    data: HeatmapPoint[];
-    height?: number;
-    width?: number;
-    title?: string;
-    currency: string;
-    onCellPress?: (point: HeatmapPoint) => void;
+  data: HeatmapPoint[];
+  height?: number;
+  width?: number;
+  title?: string;
+  currency: string;
+  onCellPress?: (point: HeatmapPoint) => void;
+  renderTooltipContent?: (col: number, row: number) => React.ReactNode;
 }
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
-    data,
-    height = REPORT_CHART_LAYOUT.calendarDefaultHeight,
-    width: customWidth,
-    title = "Activity",
-    currency,
-    onCellPress
+  data,
+  height = REPORT_CHART_LAYOUT.calendarDefaultHeight,
+  width: customWidth,
+  title = 'Activity',
+  currency,
+  onCellPress,
+  renderTooltipContent,
 }) => {
-    const { theme } = useTheme();
-    const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
+  const { theme, onContrast, blend } = useTheme();
+  const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
 
-    const windowWidth = Dimensions.get('window').width;
-    const CHART_WIDTH = customWidth || (windowWidth - Spacing.lg * 2);
+  const windowWidth = Dimensions.get('window').width;
+  const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
 
-    const PADDING_LEFT = REPORT_CHART_LAYOUT.calendarPaddingLeft; // Increased for month labels
-    const PADDING_TOP = REPORT_CHART_LAYOUT.calendarPaddingTop;
-    const PADDING_BOTTOM = REPORT_CHART_LAYOUT.calendarPaddingBottom;
-    const CELL_SPACING = REPORT_CHART_LAYOUT.calendarCellSpacing;
-    const DAY_LABEL_HEIGHT = REPORT_CHART_LAYOUT.calendarDayLabelHeight;
-    const CELL_HEIGHT = REPORT_CHART_LAYOUT.calendarCellHeight;
+  const PADDING_LEFT = REPORT_CHART_LAYOUT.calendarPaddingLeft; // Increased for month labels
+  const PADDING_TOP = REPORT_CHART_LAYOUT.calendarPaddingTop;
+  const PADDING_BOTTOM = REPORT_CHART_LAYOUT.calendarPaddingBottom;
+  const CELL_SPACING = REPORT_CHART_LAYOUT.calendarCellSpacing;
+  const DAY_LABEL_HEIGHT = REPORT_CHART_LAYOUT.calendarDayLabelHeight;
+  const CELL_HEIGHT = REPORT_CHART_LAYOUT.calendarCellHeight;
 
-    const numWeeks = useMemo(() => {
-        if (data.length === 0) return 1;
-        return Math.max(...data.map(p => p.y)) + 1;
-    }, [data]);
+  const numWeeks = useMemo(() => {
+    if (data.length === 0) return 1;
+    return Math.max(...data.map(p => p.y)) + 1;
+  }, [data]);
 
-    const PLOT_WIDTH = CHART_WIDTH - PADDING_LEFT;
-    const calculatedHeight = PADDING_TOP + PADDING_BOTTOM + numWeeks * (CELL_HEIGHT + CELL_SPACING);
+  const PLOT_WIDTH = CHART_WIDTH - PADDING_LEFT;
+  const calculatedHeight = PADDING_TOP + PADDING_BOTTOM + numWeeks * (CELL_HEIGHT + CELL_SPACING);
 
-    // We want the SVG to at least fill the provided height or the calculated height
-    const totalHeight = Math.max(height, calculatedHeight);
+  // We want the SVG to at least fill the provided height or the calculated height
+  const totalHeight = Math.max(height, calculatedHeight);
 
-    const cellWidth = (PLOT_WIDTH - (6 * CELL_SPACING)) / 7;
+  const cellWidth = (PLOT_WIDTH - 6 * CELL_SPACING) / 7;
 
-    const maxValue = useMemo(() => Math.max(...data.map(p => p.value), 1), [data]);
+  const maxValue = useMemo(() => Math.max(...data.map(p => p.value), 1), [data]);
 
-    const getOpacity = (value: number) => {
-        if (value === 0) return 0.04;
-        return 0.15 + (Math.sqrt(value) / Math.sqrt(maxValue)) * 0.85;
-    };
+  const pointMap = useMemo(() => {
+    const map = new Map<string, HeatmapPoint>();
+    data.forEach(p => map.set(`${p.x}_${p.y}`, p));
+    return map;
+  }, [data]);
 
-    return (
-        <View style={{ height: totalHeight, width: CHART_WIDTH, overflow: 'visible' }}>
-            <TouchableWithoutFeedback onPress={() => setSelectedPoint(null)}>
-                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-            </TouchableWithoutFeedback>
+  const getOpacity = (value: number) => {
+    if (value === 0) return 0.04;
+    return 0.15 + (Math.sqrt(value) / Math.sqrt(maxValue)) * 0.85;
+  };
 
-            <View style={{ marginBottom: Spacing.sm }}>
-                <AppText variant="caption" style={{ color: theme.textSecondary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>
-                    {title}
-                </AppText>
-            </View>
-            <Svg height={totalHeight} width={CHART_WIDTH} style={{ overflow: 'visible' }}>
-                {/* Day Labels (X-Axis) */}
-                {DAYS.map((d, i) => (
+  const getTooltipPosition = useChartTooltipPosition({
+    containerWidth: CHART_WIDTH,
+    containerHeight: totalHeight,
+    offset: 12,
+    avoidPointVertical: true,
+  });
+
+  const { chartRef, onLayout, handleGesture } = useChartInteraction({
+    getInteractionFromTouch: useCallback(
+      (x: number, y: number) => {
+        if (data.length === 0) return { type: 'none' };
+        const col = Math.floor((x - PADDING_LEFT) / (cellWidth + CELL_SPACING));
+        const row = Math.floor((y - PADDING_TOP) / (CELL_HEIGHT + CELL_SPACING));
+
+        // Clamp
+        const clampedCol = Math.max(0, Math.min(7 - 1, col));
+        const clampedRow = Math.max(0, Math.min(numWeeks - 1, row));
+
+        return { type: 'grid', col: clampedCol, row: clampedRow };
+      },
+      [data.length, PADDING_LEFT, PADDING_TOP, cellWidth, CELL_SPACING, CELL_HEIGHT, numWeeks],
+    ),
+    onInteractionChange: useCallback(
+      (state: InteractionState) => {
+        if (state.type === 'grid') {
+          const point = pointMap.get(`${state.col}_${state.row}`);
+          setSelectedPoint(point || null);
+        } else if (state.type === 'none') {
+          setSelectedPoint(null);
+        }
+      },
+      [pointMap, setSelectedPoint],
+    ),
+    enabled: data.length > 0,
+  });
+
+  const pan = Gesture.Pan()
+    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
+    .onUpdate(e => runOnJS(handleGesture)(e.x, e.y, 'update'))
+    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'))
+    .onFinalize(() => {
+      // We keep the last point selected so the user can interact with the "View" button
+    });
+
+  const tap = Gesture.Tap()
+    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
+    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
+
+  const composed = Gesture.Simultaneous(pan, tap);
+
+  return (
+    <View
+      style={{ height: totalHeight, width: CHART_WIDTH, overflow: 'visible' }}
+      ref={chartRef}
+      onLayout={onLayout}
+      collapsable={false}
+    >
+      <View style={{ marginBottom: Spacing.sm }}>
+        <AppText
+          variant="caption"
+          style={{
+            color: theme.text,
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: 1.2,
+            opacity: 0.8,
+          }}
+        >
+          {title}
+        </AppText>
+      </View>
+
+      <GestureDetector gesture={composed}>
+        <View style={{ height: totalHeight, width: CHART_WIDTH }}>
+          <Svg height={totalHeight} width={CHART_WIDTH} style={{ overflow: 'visible' }}>
+            {/* Day Labels (X-Axis) */}
+            {DAYS.map((d, i) => (
+              <SvgText
+                key={i}
+                x={PADDING_LEFT + i * (cellWidth + CELL_SPACING) + cellWidth / 2}
+                y={DAY_LABEL_HEIGHT}
+                fontSize={10}
+                fontWeight="800"
+                fill={theme.text}
+                opacity={0.8}
+                textAnchor="middle"
+              >
+                {d}
+              </SvgText>
+            ))}
+
+            {/* Weeks and Months */}
+            {data.map((p, i) => {
+              const x = PADDING_LEFT + p.x * (cellWidth + CELL_SPACING);
+              const y = PADDING_TOP + p.y * (CELL_HEIGHT + CELL_SPACING);
+              const opacity = getOpacity(p.value);
+              const isSelected = selectedPoint === p;
+
+              // Blend with surface to get a solid hex (instead of translucent opacity)
+              const cellBackgroundColor = isSelected ? theme.text : blend(theme.primary, opacity);
+
+              // Determine content color via contrast engine using the solid blended color
+              // Opinionated flip: Only use dark text for high intensity (> 50%)
+              const contentColor = isSelected
+                ? theme.surface
+                : opacity > 0.5
+                  ? onContrast(cellBackgroundColor)
+                  : theme.text;
+
+              const contentOpacity = isSelected ? 1 : p.value === 0 ? 0.5 : 1;
+
+              return (
+                <G key={i}>
+                  {/* Month Label on the left of the start of a month */}
+                  {p.monthLabel && (
                     <SvgText
-                        key={i}
-                        x={PADDING_LEFT + i * (cellWidth + CELL_SPACING) + (cellWidth / 2)}
-                        y={DAY_LABEL_HEIGHT}
-                        fontSize={10}
-                        fontWeight="800"
-                        fill={theme.textSecondary}
-                        textAnchor="middle"
+                      x={PADDING_LEFT - 8}
+                      y={y + CELL_HEIGHT / 2 + 4}
+                      fontSize={10}
+                      fontWeight="800"
+                      fill={theme.text}
+                      opacity={0.8}
+                      textAnchor="end"
                     >
-                        {d}
+                      {p.monthLabel}
                     </SvgText>
-                ))}
+                  )}
 
-                {/* Weeks and Months */}
-                {data.map((p, i) => {
-                    const x = PADDING_LEFT + p.x * (cellWidth + CELL_SPACING);
-                    const y = PADDING_TOP + (p.y * (CELL_HEIGHT + CELL_SPACING));
-                    const isSelected = selectedPoint?.x === p.x && selectedPoint?.y === p.y;
-
-                    return (
-                        <G key={i}>
-                            {/* Month Label on the left of the start of a month */}
-                            {p.monthLabel && (
-                                <SvgText
-                                    x={PADDING_LEFT - 8}
-                                    y={y + CELL_HEIGHT / 2 + 4}
-                                    fontSize={10}
-                                    fontWeight="800"
-                                    fill={theme.text}
-                                    textAnchor="end"
-                                >
-                                    {p.monthLabel}
-                                </SvgText>
-                            )}
-
-                            <Rect
-                                x={x}
-                                y={y}
-                                width={cellWidth}
-                                height={CELL_HEIGHT}
-                                rx={4}
-                                fill={isSelected ? theme.text : theme.primary}
-                                opacity={isSelected ? 1 : getOpacity(p.value)}
-                                onPress={() => setSelectedPoint(p)}
-                            />
-                            {p.label && (
-                                <SvgText
-                                    x={x + cellWidth / 2}
-                                    y={y + CELL_HEIGHT / 2 + 3}
-                                    fontSize={8}
-                                    fontWeight="600"
-                                    fill={isSelected ? theme.surface : theme.text}
-                                    textAnchor="middle"
-                                    opacity={p.value === 0 ? 0.25 : 0.7}
-                                    pointerEvents="none"
-                                >
-                                    {p.label}
-                                </SvgText>
-                            )}
-                        </G>
-                    );
-                })}
-
-                {/* Legend - Positioned at the very bottom */}
-                <SvgText x={CHART_WIDTH - 65} y={totalHeight - 25} fontSize={9} fill={theme.textSecondary} textAnchor="end">Low</SvgText>
-                {[0.2, 0.4, 0.6, 0.8, 1.0].map((level, i) => (
-                    <Rect
-                        key={i}
-                        x={CHART_WIDTH - 60 + (i * 10)}
-                        y={totalHeight - 33}
-                        width={8}
-                        height={8}
-                        rx={1.5}
-                        fill={theme.primary}
-                        opacity={0.15 + level * 0.85}
-                    />
-                ))}
-                <SvgText x={CHART_WIDTH} y={totalHeight - 25} fontSize={9} fill={theme.textSecondary} textAnchor="start">High</SvgText>
-            </Svg>
-
-            {selectedPoint && (() => {
-                const isTopRow = selectedPoint.y < 2;
-                const tooltipY = PADDING_TOP + (selectedPoint.y * (CELL_HEIGHT + CELL_SPACING));
-                return (
-                    <View
-                        style={[
-                            styles.tooltip,
-                            {
-                                backgroundColor: theme.surface,
-                                borderColor: theme.border,
-                                top: isTopRow ? tooltipY + CELL_HEIGHT + 8 : tooltipY - 65,
-                                left: Math.max(Spacing.sm, Math.min(CHART_WIDTH - 150, PADDING_LEFT + selectedPoint.x * (cellWidth + CELL_SPACING) - 60)),
-                            }
-                        ]}
+                  <Rect
+                    x={x}
+                    y={y}
+                    width={cellWidth}
+                    height={CELL_HEIGHT}
+                    rx={4}
+                    fill={cellBackgroundColor}
+                  />
+                  {p.label && (
+                    <SvgText
+                      x={x + cellWidth / 2}
+                      y={y + CELL_HEIGHT / 2 + 3}
+                      fontSize={8}
+                      fontWeight="700"
+                      fill={contentColor}
+                      textAnchor="middle"
+                      opacity={contentOpacity}
+                      pointerEvents="none"
                     >
-                        <View style={styles.tooltipHeader}>
-                            <AppText variant="caption" style={{ fontWeight: '700', color: theme.textSecondary }}>
-                                {selectedPoint.timestamp ? dayjs(selectedPoint.timestamp).format('MMM D, YYYY') : `Day ${selectedPoint.label}`}
-                            </AppText>
+                      {p.label}
+                    </SvgText>
+                  )}
+                </G>
+              );
+            })}
 
-                            {onCellPress && (
-                                <TouchableOpacity
-                                    style={[styles.viewButton, { backgroundColor: theme.primaryLight }]}
-                                    onPress={() => {
-                                        onCellPress(selectedPoint);
-                                        setSelectedPoint(null);
-                                    }}
-                                >
-                                    <AppText variant="caption" style={{ color: theme.primary, fontWeight: '800', fontSize: 10 }}>VIEW</AppText>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        <AppText variant="body" style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}>
-                            {CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
-                        </AppText>
-                    </View>
-                );
-            })()}
+            {/* Legend - Positioned at the very bottom */}
+            <SvgText
+              x={CHART_WIDTH - 65}
+              y={totalHeight - 25}
+              fontSize={9}
+              fill={theme.text}
+              opacity={0.6}
+              textAnchor="end"
+            >
+              Low
+            </SvgText>
+            {[0.2, 0.4, 0.6, 0.8, 1.0].map((level, i) => (
+              <Rect
+                key={i}
+                x={CHART_WIDTH - 60 + i * 10}
+                y={totalHeight - 33}
+                width={8}
+                height={8}
+                rx={1.5}
+                fill={theme.primary}
+                opacity={0.15 + level * 0.85}
+              />
+            ))}
+            <SvgText
+              x={CHART_WIDTH}
+              y={totalHeight - 25}
+              fontSize={9}
+              fill={theme.text}
+              opacity={0.6}
+              textAnchor="start"
+            >
+              High
+            </SvgText>
+          </Svg>
         </View>
-    );
+      </GestureDetector>
+
+      {selectedPoint && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
+          {(() => {
+            const x = PADDING_LEFT + selectedPoint.x * (cellWidth + CELL_SPACING) + cellWidth / 2;
+            const y = PADDING_TOP + selectedPoint.y * (CELL_HEIGHT + CELL_SPACING);
+            const pos = getTooltipPosition(x, y);
+
+            return (
+              <ChartTooltip x={x} y={y} {...pos}>
+                {renderTooltipContent ? (
+                  renderTooltipContent(selectedPoint.x, selectedPoint.y)
+                ) : (
+                  <View style={{ width: 140 }}>
+                    <View style={styles.tooltipHeader}>
+                      <AppText
+                        variant="caption"
+                        style={{ fontWeight: '700', color: theme.textSecondary }}
+                      >
+                        {selectedPoint.timestamp
+                          ? dayjs(selectedPoint.timestamp).format('MMM D, YYYY')
+                          : `Day ${selectedPoint.label}`}
+                      </AppText>
+
+                      {onCellPress && (
+                        <TouchableOpacity
+                          style={[styles.viewButton, { backgroundColor: theme.primaryLight }]}
+                          onPress={() => {
+                            onCellPress(selectedPoint);
+                            setSelectedPoint(null);
+                          }}
+                        >
+                          <AppText
+                            variant="caption"
+                            style={{ color: theme.primary, fontWeight: '800', fontSize: 10 }}
+                          >
+                            VIEW
+                          </AppText>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    <AppText
+                      variant="title"
+                      style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
+                    >
+                      {CurrencyFormatter.formatAmount(selectedPoint.value, currency)}
+                    </AppText>
+                  </View>
+                )}
+              </ChartTooltip>
+            );
+          })()}
+        </View>
+      )}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    tooltip: {
-        position: 'absolute',
-        padding: Spacing.sm,
-        borderRadius: 12,
-        borderWidth: 1,
-        width: 140,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        elevation: 8,
-        zIndex: 100,
-    },
-    tooltipHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 4,
-    },
-    viewButton: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
-    }
+  tooltipHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  viewButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
 });

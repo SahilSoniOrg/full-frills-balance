@@ -1,14 +1,26 @@
 import { Theme } from '@/src/constants/design-tokens';
 
 export const REPORT_CHART_COLOR_KEYS = {
-  expense: ['error', 'warning', 'errorLight', 'primaryLight', 'expense'] as const satisfies readonly (keyof Theme)[],
-  income: ['success', 'primary', 'successLight', 'asset', 'income'] as const satisfies readonly (keyof Theme)[],
+  expense: [
+    'error',
+    'warning',
+    'errorLight',
+    'primaryLight',
+    'expense',
+  ] as const satisfies readonly (keyof Theme)[],
+  income: [
+    'success',
+    'primary',
+    'successLight',
+    'asset',
+    'income',
+  ] as const satisfies readonly (keyof Theme)[],
 } as const;
 
 export const REPORT_CHART_LAYOUT = {
   netWorthChartHeight: 180,
   barChartHeight: 220,
-  donutSize: 160,
+  donutSize: 140,
   donutStrokeWidth: 25,
   donutFullCircleAngleEpsilon: 0.0001,
   donutLegendCollapsedLimit: 5,
@@ -87,7 +99,7 @@ export const REPORT_CHART_STRINGS = {
   maxLabel: 'Max',
   categoryOther: 'Other',
 } as const;
- 
+
 export const REPORT_CHART_EVENTS = {
   globalTouch: 'globalTouch',
 } as const;

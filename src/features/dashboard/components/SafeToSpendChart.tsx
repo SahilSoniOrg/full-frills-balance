@@ -151,124 +151,126 @@ export const SafeToSpendChart = ({
               hasDetails: (point as any).details?.length > 0,
             });
           }}
-          renderTooltipContent={point => (
-            // <ChartTooltip style={{ minWidth: 100 }}>
-            <Stack gap="xs">
-              <Inline justifyContent="space-between" alignItems="center">
-                <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
-                  {dayjs(point.x).format('MMM D, YYYY')}
+          renderTooltipContent={index => {
+            const point = data[index];
+            if (!point) return null;
+            return (
+              <Stack gap="xs">
+                <Inline justifyContent="space-between" alignItems="center">
+                  <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
+                    {dayjs(point.x).format('MMM D, YYYY')}
+                  </AppText>
+                  {!point.isHistory && (
+                    <AppIcon
+                      name="trendingUpDown"
+                      size={12}
+                      color={theme.primary}
+                      style={{ opacity: 0.8 }}
+                    />
+                  )}
+                </Inline>
+
+                <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
+                  {formatValue(point.y)}
                 </AppText>
-                {!point.isHistory && (
-                  <AppIcon
-                    name="trendingUpDown"
-                    size={12}
-                    color={theme.primary}
-                    style={{ opacity: 0.8 }}
-                  />
-                )}
-              </Inline>
 
-              <AppText variant="body" weight="bold" color={point.y < 0 ? 'error' : 'primary'}>
-                {formatValue(point.y)}
-              </AppText>
+                {((point as any).dailyBurn > 0 || ((point as any).details?.length || 0) > 0) && (
+                  <>
+                    <Separator opacity={0.1} marginVertical="xs" />
 
-              {((point as any).dailyBurn > 0 || ((point as any).details?.length || 0) > 0) && (
-                <>
-                  <Separator opacity={0.1} marginVertical="xs" />
-
-                  {(point.dailyBurn ?? 0) > 0 && (
-                    <View
-                      style={{
-                        backgroundColor: withOpacity(theme.error, 0.08),
-                        paddingHorizontal: 6,
-                        paddingVertical: 4,
-                        borderRadius: 4,
-                        marginBottom: 2,
-                      }}
-                    >
-                      <Inline gap="xs" alignItems="center">
-                        <AppIcon name="flame" size={10} color={theme.error} />
-                        <AppText
-                          variant="caption"
-                          weight="bold"
-                          color="error"
-                          style={{ fontSize: 10 }}
-                        >
-                          Daily Burn: {formatValue(point.dailyBurn!)}
-                        </AppText>
-                      </Inline>
-                    </View>
-                  )}
-
-                  {point.details
-                    ?.slice(0, AppConfig.defaults.maxTooltipDetails)
-                    .map((detail, idx) => {
-                      const isInflow = detail.type === 'INFLOW';
-                      const isCcDate = detail.type === 'CC_DATE';
-
-                      // Map context/type to consistent icons
-                      let iconName: any = 'receipt';
-                      if (detail.context === 'BUDGET') iconName = 'pieChart';
-                      else if (detail.context === 'PLANNED' || detail.context === 'RESOLVED')
-                        iconName = 'calendar';
-                      else if (detail.context === 'LIABILITY') iconName = 'creditCard';
-                      else if (detail.context === 'TRANSFER') iconName = 'refresh';
-                      else if (isCcDate) iconName = 'calendar';
-
-                      const color = isInflow
-                        ? theme.success
-                        : detail.context === 'LIABILITY' ||
-                            detail.context === 'BUDGET' ||
-                            detail.context === 'RESOLVED'
-                          ? theme.error
-                          : theme.textSecondary;
-
-                      return (
-                        <Inline
-                          key={idx}
-                          space="md"
-                          justifyContent="space-between"
-                          alignItems="center"
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <AppIcon name={iconName} size={10} color={color} />
-                            <AppText
-                              variant="caption"
-                              color="secondary"
-                              numberOfLines={1}
-                              style={{ fontSize: 10, opacity: 0.9 }}
-                            >
-                              {detail.name}
-                            </AppText>
-                          </View>
-                          {detail.amount !== 0 && (
-                            <AppText
-                              variant="caption"
-                              weight="bold"
-                              color={isInflow ? 'success' : 'error'}
-                              style={{ fontSize: 10 }}
-                            >
-                              {isInflow ? '+' : '-'}
-                              {formatValue(Math.abs(detail.amount))}
-                            </AppText>
-                          )}
+                    {(point.dailyBurn ?? 0) > 0 && (
+                      <View
+                        style={{
+                          backgroundColor: withOpacity(theme.error, 0.08),
+                          paddingHorizontal: 6,
+                          paddingVertical: 4,
+                          borderRadius: 4,
+                          marginBottom: 2,
+                        }}
+                      >
+                        <Inline gap="xs" alignItems="center">
+                          <AppIcon name="flame" size={10} color={theme.error} />
+                          <AppText
+                            variant="caption"
+                            weight="bold"
+                            color="error"
+                            style={{ fontSize: 10 }}
+                          >
+                            Daily Burn: {formatValue(point.dailyBurn!)}
+                          </AppText>
                         </Inline>
-                      );
-                    })}
-                  {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      style={{ fontSize: 9, marginLeft: 14 }}
-                    >
-                      + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
-                    </AppText>
-                  )}
-                </>
-              )}
-            </Stack>
-            // </ChartTooltip>
-          )}
+                      </View>
+                    )}
+
+                    {point.details
+                      ?.slice(0, AppConfig.defaults.maxTooltipDetails)
+                      .map((detail, idx) => {
+                        const isInflow = detail.type === 'INFLOW';
+                        const isCcDate = detail.type === 'CC_DATE';
+
+                        // Map context/type to consistent icons
+                        let iconName: any = 'receipt';
+                        if (detail.context === 'BUDGET') iconName = 'pieChart';
+                        else if (detail.context === 'PLANNED' || detail.context === 'RESOLVED')
+                          iconName = 'calendar';
+                        else if (detail.context === 'LIABILITY') iconName = 'creditCard';
+                        else if (detail.context === 'TRANSFER') iconName = 'refresh';
+                        else if (isCcDate) iconName = 'calendar';
+
+                        const color = isInflow
+                          ? theme.success
+                          : detail.context === 'LIABILITY' ||
+                              detail.context === 'BUDGET' ||
+                              detail.context === 'RESOLVED'
+                            ? theme.error
+                            : theme.textSecondary;
+
+                        return (
+                          <Inline
+                            key={idx}
+                            space="md"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <AppIcon name={iconName} size={10} color={color} />
+                              <AppText
+                                variant="caption"
+                                color="secondary"
+                                numberOfLines={1}
+                                style={{ fontSize: 10, opacity: 0.9 }}
+                              >
+                                {detail.name}
+                              </AppText>
+                            </View>
+                            {detail.amount !== 0 && (
+                              <AppText
+                                variant="caption"
+                                weight="bold"
+                                color={isInflow ? 'success' : 'error'}
+                                style={{ fontSize: 10 }}
+                              >
+                                {isInflow ? '+' : '-'}
+                                {formatValue(Math.abs(detail.amount))}
+                              </AppText>
+                            )}
+                          </Inline>
+                        );
+                      })}
+                    {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
+                      <AppText
+                        variant="caption"
+                        color="secondary"
+                        style={{ fontSize: 9, marginLeft: 14 }}
+                      >
+                        + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
+                      </AppText>
+                    )}
+                  </>
+                )}
+              </Stack>
+            );
+          }}
         />
       </View>
     </View>

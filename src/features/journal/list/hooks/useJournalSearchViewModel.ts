@@ -11,6 +11,7 @@ import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournals } from '../../hooks/useJournals';
 import { mapJournalToCardProps } from '../../utils/journalUiUtils';
@@ -49,19 +50,50 @@ export interface JournalSearchViewModel {
 }
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
+  const params = useLocalSearchParams();
   const { defaultCurrency: baseCurrency } = useUI();
   const { rateMap: exchangeRateMap } = useExchangeRates(baseCurrency);
   const { precision } = useCurrencyPrecision(baseCurrency);
   const { accounts } = useAccounts();
 
+  // Route Params
+  const qParam = params.q as string;
+  const startParam = params.startDate as string;
+  const endParam = params.endDate as string;
+  const accountIdsParam = params.accountIds as string;
+  const minAmountParam = params.minAmount as string;
+  const maxAmountParam = params.maxAmount as string;
+  const displayTypeParam = params.displayType as string;
+
   // Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateRange, setDateRangeState] = useState<DateRange | null>(null);
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({ type: 'ALL_TIME' });
-  const [accountIds, setAccountIds] = useState<string[]>([]);
-  const [minAmount, setMinAmount] = useState('');
-  const [maxAmount, setMaxAmount] = useState('');
-  const [displayType, setDisplayType] = useState('');
+  const [searchQuery, setSearchQuery] = useState(qParam || '');
+  const [dateRange, setDateRangeState] = useState<DateRange | null>(() => {
+    if (startParam && endParam) {
+      const start = Number.parseInt(startParam, 10);
+      const end = Number.parseInt(endParam, 10);
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        return { startDate: start, endDate: end };
+      }
+    }
+    return null;
+  });
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(() => {
+    if (startParam && endParam) {
+      const start = Number.parseInt(startParam, 10);
+      const end = Number.parseInt(endParam, 10);
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        return { type: 'CUSTOM' };
+      }
+    }
+    return { type: 'ALL_TIME' };
+  });
+  const [accountIds, setAccountIds] = useState<string[]>(() => {
+    if (accountIdsParam) return accountIdsParam.split(',');
+    return [];
+  });
+  const [minAmount, setMinAmount] = useState(minAmountParam || '');
+  const [maxAmount, setMaxAmount] = useState(maxAmountParam || '');
+  const [displayType, setDisplayType] = useState(displayTypeParam || '');
 
   const setDateRange = useCallback((range: DateRange | null, filter: PeriodFilter) => {
     setDateRangeState(range);

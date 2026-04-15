@@ -124,22 +124,26 @@ export function BudgetDetailScreen() {
                 color={stripColor}
                 tooltipWidth={100}
                 tooltipHeight={60}
-                renderTooltipContent={point => (
-                  <View>
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      style={{ marginBottom: REPORT_CHART_LAYOUT.tooltipDateMarginBottom }}
-                    >
-                      {dayjs(point.x).format('MMM D')}
-                    </AppText>
-                    <AppText variant="body" weight="bold">
-                      {CurrencyFormatter.format(point.y, budget.currencyCode, {
-                        maximumFractionDigits: 0,
-                      })}
-                    </AppText>
-                  </View>
-                )}
+                renderTooltipContent={index => {
+                  const point = vm.chartData!.data[index];
+                  if (!point) return null;
+                  return (
+                    <View>
+                      <AppText
+                        variant="caption"
+                        color="secondary"
+                        style={{ marginBottom: REPORT_CHART_LAYOUT.tooltipDateMarginBottom }}
+                      >
+                        {dayjs(point.x).format('MMM D')}
+                      </AppText>
+                      <AppText variant="body" weight="bold">
+                        {CurrencyFormatter.format(point.y, budget.currencyCode, {
+                          maximumFractionDigits: 0,
+                        })}
+                      </AppText>
+                    </View>
+                  );
+                }}
               />
             )}
           </View>

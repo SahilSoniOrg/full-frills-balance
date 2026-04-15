@@ -1,263 +1,325 @@
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import { REPORT_CHART_EVENTS, REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
+import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
+import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DeviceEventEmitter, Dimensions, StyleSheet, View } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
+import { ChartTooltip } from './ChartTooltip';
 
 export interface BarChartDataPoint {
-    label: string;
-    values: number[]; // Array of values for multiple series (e.g. [Income, Expense])
-    colors: string[]; // Corresponding colors for each value
+  label: string;
+  values: number[]; // Array of values for multiple series (e.g. [Income, Expense])
+  colors: string[]; // Corresponding colors for each value
 }
 
 interface BarChartProps {
-    data: BarChartDataPoint[];
-    height?: number;
-    barWidth?: number;
-    width?: number;
-    onPress?: (index: number) => void;
-    selectedIndex?: number;
-    renderTooltip?: (props: { index: number; x: number; y: number }) => React.ReactNode;
+  data: BarChartDataPoint[];
+  height?: number;
+  barWidth?: number;
+  width?: number;
+  onPress?: (index: number) => void;
+  selectedIndex?: number;
+  renderTooltipContent?: (index: number) => React.ReactNode;
 }
 
 export const BarChart = ({
-    data,
-    height = REPORT_CHART_LAYOUT.barChartHeight,
-    barWidth = REPORT_CHART_LAYOUT.barChartDefaultBarWidth,
-    width: customWidth,
-    onPress,
-    selectedIndex,
-    renderTooltip,
+  data,
+  height = REPORT_CHART_LAYOUT.barChartHeight,
+  barWidth = REPORT_CHART_LAYOUT.barChartDefaultBarWidth,
+  width: customWidth,
+  onPress,
+  selectedIndex,
+  renderTooltipContent,
 }: BarChartProps) => {
-    const { theme } = useTheme();
-    const { width: windowWidth } = Dimensions.get('window');
-    const [scrollX, setScrollX] = useState(0);
+  const { theme } = useTheme();
+  const { width: windowWidth } = Dimensions.get('window');
+  const [scrollX, setScrollX] = useState(0);
 
-    const containerWidth = customWidth || (windowWidth - (Spacing.lg * 2));
-    const Y_AXIS_WIDTH = Spacing.xl * 2;
-    const BAR_SPACING = REPORT_CHART_LAYOUT.barSpacing;
-    const plotAreaWidth = Math.max(containerWidth - Y_AXIS_WIDTH, 0);
-    const minContentWidth = data.length * (barWidth + BAR_SPACING * 2);
-    const svgWidth = Math.max(plotAreaWidth, minContentWidth);
-    const chartRef = useRef<View>(null);
+  const containerWidth = customWidth || windowWidth - Spacing.lg * 2;
+  const Y_AXIS_WIDTH = Spacing.xl * 2;
+  const BAR_SPACING = REPORT_CHART_LAYOUT.barSpacing;
+  const plotAreaWidth = Math.max(containerWidth - Y_AXIS_WIDTH, 0);
+  const minContentWidth = data.length * (barWidth + BAR_SPACING * 2);
+  const svgWidth = Math.max(plotAreaWidth, minContentWidth);
 
-    const PADDING_LEFT = Spacing.sm;
-    const PADDING_RIGHT = Spacing.lg;
-    const PADDING_VERTICAL = Spacing.lg;
-    const PADDING_BOTTOM = Spacing.xxxxl + Spacing.xxxl; // Dedicated label band for vertical date text
+  const PADDING_LEFT = Spacing.sm;
+  const PADDING_RIGHT = Spacing.lg;
+  const PADDING_VERTICAL = Spacing.lg;
+  const PADDING_BOTTOM = Spacing.xxxxl + Spacing.xxxl; // Dedicated label band for vertical date text
 
-    const { processedData, domainMin, domainMax, domainRange } = useMemo(() => {
-        if (data.length === 0) return { processedData: [], domainMin: 0, domainMax: 1, domainRange: 1 };
+  const { processedData, domainMin, domainMax, domainRange } = useMemo(() => {
+    if (data.length === 0) return { processedData: [], domainMin: 0, domainMax: 1, domainRange: 1 };
 
-        const allValues = data.flatMap(d => d.values);
-        const min = Math.min(...allValues, 0);
-        const max = Math.max(...allValues, 0);
-        const valueRange = max - min || 1;
-        const padding = valueRange * 0.1;
+    const allValues = data.flatMap(d => d.values);
+    const min = Math.min(...allValues, 0);
+    const max = Math.max(...allValues, 0);
+    const valueRange = max - min || 1;
+    const padding = valueRange * 0.1;
 
-        const adjustedMin = min < 0 ? min - padding : min;
-        const adjustedMax = max > 0 ? max + padding : max;
-        const adjustedRange = adjustedMax - adjustedMin || 1;
+    const adjustedMin = min < 0 ? min - padding : min;
+    const adjustedMax = max > 0 ? max + padding : max;
+    const adjustedRange = adjustedMax - adjustedMin || 1;
 
-        return { processedData: data, domainMin: adjustedMin, domainMax: adjustedMax, domainRange: adjustedRange };
-    }, [data]);
+    return {
+      processedData: data,
+      domainMin: adjustedMin,
+      domainMax: adjustedMax,
+      domainRange: adjustedRange,
+    };
+  }, [data]);
 
-    const chartHeight = height - PADDING_VERTICAL - PADDING_BOTTOM;
-    const yForValue = useCallback((value: number) =>
-        height - PADDING_BOTTOM - (((value - domainMin) / domainRange) * chartHeight)
-        , [PADDING_BOTTOM, chartHeight, domainMin, domainRange, height]);
+  const chartHeight = height - PADDING_VERTICAL - PADDING_BOTTOM;
+  const yForValue = useCallback(
+    (value: number) => height - PADDING_BOTTOM - ((value - domainMin) / domainRange) * chartHeight,
+    [PADDING_BOTTOM, chartHeight, domainMin, domainRange, height],
+  );
 
-    const hasData = data.length > 0;
-    const groupWidth = hasData ? (svgWidth - PADDING_LEFT - PADDING_RIGHT) / data.length : 0;
-    const centerOffset = groupWidth / 2;
-    const labelStartY = height - PADDING_BOTTOM + Spacing.sm;
-    // Calculate total width of a group of bars (barWidth * numSeries + spacing)
-    const seriesCount = hasData ? data[0].values.length : 0;
-    const totalGroupBarWidth = (seriesCount * barWidth) + ((seriesCount - 1) * BAR_SPACING);
-    const startXOffset = -totalGroupBarWidth / 2;
+  const hasData = data.length > 0;
+  const groupWidth = hasData ? (svgWidth - PADDING_LEFT - PADDING_RIGHT) / data.length : 0;
+  const centerOffset = groupWidth / 2;
+  const labelStartY = height - PADDING_BOTTOM + Spacing.sm;
+  // Calculate total width of a group of bars (barWidth * numSeries + spacing)
+  const seriesCount = hasData ? data[0].values.length : 0;
+  const totalGroupBarWidth = seriesCount * barWidth + (seriesCount - 1) * BAR_SPACING;
+  const startXOffset = -totalGroupBarWidth / 2;
 
-    const tooltipElement = useMemo(() => {
-        if (selectedIndex === undefined || selectedIndex === -1 || !renderTooltip) return null;
+  const tooltipElement = useMemo(() => {
+    if (selectedIndex === undefined || selectedIndex === -1 || !renderTooltipContent) return null;
 
-        const point = processedData[selectedIndex];
-        if (!point) return null;
+    const point = processedData[selectedIndex];
+    if (!point) return null;
 
-        const xGroupCenter = PADDING_LEFT + (selectedIndex * groupWidth) + centerOffset;
+    const xGroupCenter = PADDING_LEFT + selectedIndex * groupWidth + centerOffset;
 
-        const y = Math.min(yForValue(0), ...point.values.map((value) => yForValue(value)));
+    const y = Math.min(yForValue(0), ...point.values.map(value => yForValue(value)));
 
-        // Convert chart-content coordinates to visible viewport coordinates.
-        const viewportX = Y_AXIS_WIDTH + xGroupCenter - scrollX;
-        return renderTooltip({ index: selectedIndex, x: viewportX, y });
-    }, [selectedIndex, processedData, groupWidth, centerOffset, PADDING_LEFT, renderTooltip, Y_AXIS_WIDTH, scrollX, yForValue]);
+    // Convert chart-content coordinates to visible viewport coordinates.
+    const viewportX = Y_AXIS_WIDTH + xGroupCenter - scrollX;
+    return { index: selectedIndex, x: viewportX, y };
+  }, [
+    selectedIndex,
+    processedData,
+    groupWidth,
+    centerOffset,
+    PADDING_LEFT,
+    Y_AXIS_WIDTH,
+    scrollX,
+    yForValue,
+    renderTooltipContent,
+  ]);
 
-    useEffect(() => {
-        const sub = DeviceEventEmitter.addListener(REPORT_CHART_EVENTS.globalTouch, (e) => {
-            if (selectedIndex !== undefined && selectedIndex !== -1) {
-                chartRef.current?.measure((_x, _y, _width, height, pageX, pageY) => {
-                    const { pageX: touchX, pageY: touchY } = e;
-                    const isInside = touchX >= pageX && touchX <= pageX + _width && touchY >= pageY && touchY <= pageY + height;
-                    if (!isInside) {
-                        if (onPress) onPress(-1);
-                    }
-                });
-            }
-        });
-        return () => sub.remove();
-    }, [selectedIndex, onPress]);
+  const getTooltipPosition = useChartTooltipPosition({
+    containerWidth: containerWidth,
+    containerHeight: height,
+    offset: 15,
+    edgePadding: Spacing.sm,
+  });
 
-    if (data.length === 0) {
-        return (
-            <View style={[styles.container, { height, borderColor: theme.border }]}>
-                <AppText color="secondary">{REPORT_CHART_STRINGS.chartNoData}</AppText>
-            </View>
-        );
-    }
+  const { chartRef, onLayout, handleGesture } = useChartInteraction({
+    getInteractionFromTouch: useCallback(
+      (x: number, _y: number) => {
+        if (data.length === 0) return { type: 'none' };
+        const relativeX = x + scrollX - PADDING_LEFT;
+        let finalIndex = -1;
+        if (groupWidth > 0) {
+          finalIndex = Math.floor(relativeX / groupWidth);
+        }
+        const clampedIndex = Math.max(0, Math.min(data.length - 1, finalIndex));
+        return { type: 'index', index: clampedIndex };
+      },
+      [data.length, scrollX, PADDING_LEFT, groupWidth],
+    ),
+    onInteractionChange: useCallback(
+      (state: InteractionState) => {
+        if (state.type === 'index') {
+          onPress?.(state.index);
+        } else if (state.type === 'none') {
+          onPress?.(-1);
+        }
+      },
+      [onPress],
+    ),
+    enabled: data.length > 0,
+  });
 
+  if (data.length === 0) {
     return (
-        <View style={{ height, width: containerWidth }} ref={chartRef} collapsable={false}>
-            <View style={styles.chartRow}>
-                <View style={[styles.yAxisColumn, { width: Y_AXIS_WIDTH }]}>
-                    {REPORT_CHART_LAYOUT.yAxisTicks.map((t) => {
-                        const tickValue = domainMin + (t * (domainMax - domainMin));
-                        const y = yForValue(tickValue);
-                        return (
-                            <View
-                                key={t}
-                                style={[styles.yAxisTick, { top: y - REPORT_CHART_LAYOUT.barChartAxisTickOffsetY }]}
-                            >
-                                <AppText variant="caption" color="secondary" style={styles.yAxisLabel}>
-                                    {CurrencyFormatter.formatShort(tickValue)}
-                                </AppText>
-                            </View>
-                        );
-                    })}
-                </View>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    onScroll={(event) => setScrollX(event.nativeEvent.contentOffset.x)}
-                    onScrollBeginDrag={() => onPress?.(-1)}
-                    scrollEventThrottle={16}
-                >
-                    <View>
-                        <Svg height={height} width={svgWidth}>
-                            <Rect
-                                x={0}
-                                y={0}
-                                width={svgWidth}
-                                height={height}
-                                fill="transparent"
-                                onPress={() => onPress?.(-1)}
-                            />
-                            {REPORT_CHART_LAYOUT.yAxisTicks.map((t) => {
-                                const y = yForValue(domainMin + (t * (domainMax - domainMin)));
-                                return (
-                                    <Line
-                                        key={t}
-                                        x1={PADDING_LEFT}
-                                        y1={y}
-                                        x2={svgWidth - PADDING_RIGHT}
-                                        y2={y}
-                                        stroke={theme.border}
-                                        strokeWidth={1}
-                                        strokeDasharray="4,4"
-                                    />
-                                );
-                            })}
-                            {processedData.map((point, index) => {
-                                const xGroupCenter = PADDING_LEFT + (index * groupWidth) + centerOffset;
-
-                                return (
-                                    <React.Fragment key={index}>
-                                        {point.values.map((val, vIndex) => {
-                                            const x = xGroupCenter + startXOffset + (vIndex * (barWidth + BAR_SPACING));
-                                            const zeroY = yForValue(0);
-                                            const valueY = yForValue(val);
-                                            const y = Math.min(valueY, zeroY);
-                                            const barHeight = Math.max(Math.abs(zeroY - valueY), 1);
-                                            const isSelected = selectedIndex === index;
-                                            const opacity = selectedIndex !== undefined
-                                                && selectedIndex !== -1
-                                                && !isSelected
-                                                ? REPORT_CHART_LAYOUT.barChartUnselectedOpacity
-                                                : 1;
-
-                                            return (
-                                                <React.Fragment key={vIndex}>
-                                                    <Rect
-                                                        x={x}
-                                                        y={y}
-                                                        width={barWidth}
-                                                        height={barHeight}
-                                                        fill={point.colors[vIndex]}
-                                                        rx={REPORT_CHART_LAYOUT.barChartBarCornerRadius}
-                                                        opacity={opacity}
-                                                        onPress={() => onPress?.(index)}
-                                                    />
-                                                    <Rect
-                                                        x={x - BAR_SPACING}
-                                                        y={0}
-                                                        width={barWidth + (BAR_SPACING * 2)}
-                                                        height={height}
-                                                        fill="transparent"
-                                                        onPress={() => onPress?.(index)}
-                                                    />
-                                                </React.Fragment>
-                                            );
-                                        })}
-
-                                        <SvgText
-                                            x={xGroupCenter}
-                                            y={labelStartY}
-                                            fontSize={REPORT_CHART_LAYOUT.barChartXAxisLabelFontSize}
-                                            fill={theme.textSecondary}
-                                            textAnchor="start"
-                                            alignmentBaseline="hanging"
-                                            transform={`rotate(90, ${xGroupCenter}, ${labelStartY})`}
-                                        >
-                                            {point.label}
-                                        </SvgText>
-                                    </React.Fragment>
-                                );
-                            })}
-                        </Svg>
-                    </View>
-                </ScrollView>
-            </View>
-            {tooltipElement && (
-                <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-                    {tooltipElement}
-                </View>
-            )}
-        </View>
+      <View style={[styles.container, { height, borderColor: theme.border }]}>
+        <AppText color="secondary">{REPORT_CHART_STRINGS.chartNoData}</AppText>
+      </View>
     );
+  }
+  const pan = Gesture.Pan()
+    .activateAfterLongPress(150)
+    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
+    .onUpdate(e => runOnJS(handleGesture)(e.x, e.y, 'update'))
+    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
+
+  const tap = Gesture.Tap()
+    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
+    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
+
+  const composed = Gesture.Simultaneous(pan, tap);
+
+  return (
+    <View
+      style={{ height, width: containerWidth }}
+      ref={chartRef}
+      collapsable={false}
+      onLayout={onLayout}
+    >
+      <View style={styles.chartRow}>
+        <View style={[styles.yAxisColumn, { width: Y_AXIS_WIDTH }]}>
+          {REPORT_CHART_LAYOUT.yAxisTicks.map(t => {
+            const tickValue = domainMin + t * (domainMax - domainMin);
+            const y = yForValue(tickValue);
+            return (
+              <View
+                key={t}
+                style={[styles.yAxisTick, { top: y - REPORT_CHART_LAYOUT.barChartAxisTickOffsetY }]}
+              >
+                <AppText variant="caption" color="secondary" style={styles.yAxisLabel}>
+                  {CurrencyFormatter.formatShort(tickValue)}
+                </AppText>
+              </View>
+            );
+          })}
+        </View>
+        <GestureDetector gesture={composed}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            onScroll={event => setScrollX(event.nativeEvent.contentOffset.x)}
+            onScrollBeginDrag={() => onPress?.(-1)}
+            scrollEventThrottle={16}
+          >
+            <View>
+              <Svg height={height} width={svgWidth}>
+                <Rect
+                  x={0}
+                  y={0}
+                  width={svgWidth}
+                  height={height}
+                  fill="transparent"
+                  onPress={() => onPress?.(-1)}
+                />
+                {REPORT_CHART_LAYOUT.yAxisTicks.map(t => {
+                  const y = yForValue(domainMin + t * (domainMax - domainMin));
+                  return (
+                    <Line
+                      key={t}
+                      x1={PADDING_LEFT}
+                      y1={y}
+                      x2={svgWidth - PADDING_RIGHT}
+                      y2={y}
+                      stroke={theme.border}
+                      strokeWidth={1}
+                      strokeDasharray="4,4"
+                    />
+                  );
+                })}
+                {processedData.map((point, index) => {
+                  const xGroupCenter = PADDING_LEFT + index * groupWidth + centerOffset;
+
+                  return (
+                    <React.Fragment key={index}>
+                      {point.values.map((val, vIndex) => {
+                        const x = xGroupCenter + startXOffset + vIndex * (barWidth + BAR_SPACING);
+                        const zeroY = yForValue(0);
+                        const valueY = yForValue(val);
+                        const y = Math.min(valueY, zeroY);
+                        const barHeight = Math.max(Math.abs(zeroY - valueY), 1);
+                        const isSelected = selectedIndex === index;
+                        const opacity =
+                          selectedIndex !== undefined && selectedIndex !== -1 && !isSelected
+                            ? REPORT_CHART_LAYOUT.barChartUnselectedOpacity
+                            : 1;
+
+                        return (
+                          <React.Fragment key={vIndex}>
+                            <Rect
+                              x={x}
+                              y={y}
+                              width={barWidth}
+                              height={barHeight}
+                              fill={point.colors[vIndex]}
+                              rx={REPORT_CHART_LAYOUT.barChartBarCornerRadius}
+                              opacity={opacity}
+                              onPress={() => onPress?.(index)}
+                            />
+                            <Rect
+                              x={x - BAR_SPACING}
+                              y={0}
+                              width={barWidth + BAR_SPACING * 2}
+                              height={height}
+                              fill="transparent"
+                              onPress={() => onPress?.(index)}
+                            />
+                          </React.Fragment>
+                        );
+                      })}
+
+                      <SvgText
+                        x={xGroupCenter}
+                        y={labelStartY}
+                        fontSize={REPORT_CHART_LAYOUT.barChartXAxisLabelFontSize}
+                        fill={theme.textSecondary}
+                        textAnchor="start"
+                        alignmentBaseline="hanging"
+                        transform={`rotate(90, ${xGroupCenter}, ${labelStartY})`}
+                      >
+                        {point.label}
+                      </SvgText>
+                    </React.Fragment>
+                  );
+                })}
+              </Svg>
+            </View>
+          </ScrollView>
+        </GestureDetector>
+      </View>
+      {tooltipElement && renderTooltipContent && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
+          {(() => {
+            const pos = getTooltipPosition(tooltipElement.x, tooltipElement.y);
+            return (
+              <ChartTooltip x={tooltipElement.x} y={tooltipElement.y} {...pos}>
+                {renderTooltipContent(tooltipElement.index)}
+              </ChartTooltip>
+            );
+          })()}
+        </View>
+      )}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    chartRow: {
-        flexDirection: 'row',
-    },
-    yAxisColumn: {
-        position: 'relative',
-        height: '100%',
-    },
-    yAxisTick: {
-        position: 'absolute',
-        right: Spacing.xs,
-    },
-    yAxisLabel: {
-        fontSize: REPORT_CHART_LAYOUT.barChartAxisLabelFontSize,
-    },
-    container: {
-        borderWidth: 1,
-        borderRadius: REPORT_CHART_LAYOUT.barChartEmptyBorderRadius,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderStyle: 'dashed',
-    }
+  chartRow: {
+    flexDirection: 'row',
+  },
+  yAxisColumn: {
+    position: 'relative',
+    height: '100%',
+  },
+  yAxisTick: {
+    position: 'absolute',
+    right: Spacing.xs,
+  },
+  yAxisLabel: {
+    fontSize: REPORT_CHART_LAYOUT.barChartAxisLabelFontSize,
+  },
+  container: {
+    borderWidth: 1,
+    borderRadius: REPORT_CHART_LAYOUT.barChartEmptyBorderRadius,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderStyle: 'dashed',
+  },
 });

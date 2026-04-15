@@ -3,6 +3,7 @@ import { REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDelta, DailyDelta } from '@/src/data/repositories/TransactionTypes';
@@ -98,11 +99,11 @@ interface ReportAccount {
 }
 
 interface ReportingDelta {
-  accountId: string;
+  accountId?: string;
   currencyCode: string;
   delta: number;
-  dayStart: number;
-  accountType: string;
+  dayStart?: number;
+  accountType?: string;
 }
 
 export class ReportService {
@@ -151,8 +152,8 @@ export class ReportService {
     targetCurrency?: string,
     accountIds?: string[],
   ): Observable<ExpenseCategory[]> {
-    return transactionRepository
-      .observeActive()
+    return journalRepository
+      .observeStatusMeta()
       .pipe(
         switchMap(() =>
           from(this.getExpenseBreakdown(startDate, endDate, targetCurrency, accountIds)),
@@ -169,8 +170,8 @@ export class ReportService {
     targetCurrency?: string,
     accountIds?: string[],
   ): Observable<ExpenseCategory[]> {
-    return transactionRepository
-      .observeActive()
+    return journalRepository
+      .observeStatusMeta()
       .pipe(
         switchMap(() =>
           from(this.getIncomeBreakdown(startDate, endDate, targetCurrency, accountIds)),
@@ -320,11 +321,7 @@ export class ReportService {
       (ids, start, end) => transactionRawRepository.getAccountDeltasGroupedRaw(ids, start, end),
     );
 
-    return this.calculateIncomeVsExpenseFromDeltas(
-      normalizedDeltas as unknown as ReportingDelta[],
-      allAccounts,
-      currency,
-    );
+    return this.calculateIncomeVsExpenseFromDeltas(normalizedDeltas, allAccounts, currency);
   }
 
   private calculateIncomeVsExpenseFromDeltas(
@@ -337,7 +334,7 @@ export class ReportService {
     let expense = Money.from(0, currency);
 
     for (const d of deltas) {
-      const type = d.accountType || accountTypeMap.get(d.accountId);
+      const type = d.accountType || (d.accountId ? accountTypeMap.get(d.accountId) : undefined);
       const delta = Money.from(d.delta, currency);
       if (type === AccountType.INCOME) {
         income = income.add(delta);
@@ -434,12 +431,7 @@ export class ReportService {
       (ids, start, end) => transactionRawRepository.getDailyDeltasGroupedRaw(ids, start, end),
     );
 
-    return this.calculateHistoryFromDeltas(
-      normalizedDeltas as unknown as ReportingDelta[],
-      startDate,
-      endDate,
-      currency,
-    );
+    return this.calculateHistoryFromDeltas(normalizedDeltas, startDate, endDate, currency);
   }
 
   private calculateHistoryFromDeltas(
@@ -496,12 +488,7 @@ export class ReportService {
       (ids, start, end) => transactionRawRepository.getDailyDeltasGroupedRaw(ids, start, end),
     );
 
-    return this.calculateDailyVsDeltas(
-      normalizedDeltas as unknown as ReportingDelta[],
-      startDate,
-      endDate,
-      currency,
-    );
+    return this.calculateDailyVsDeltas(normalizedDeltas, startDate, endDate, currency);
   }
 
   private calculateDailyVsDeltas(
@@ -730,14 +717,26 @@ export class ReportService {
     if (history.length === 0) return [];
     const startWeek = dayjs(history[0].startDate).startOf('week').valueOf();
 
+    let lastMonth = -1;
+
     return history.map(h => {
       const date = dayjs(h.startDate);
+      const currentMonth = date.month();
+      let monthLabel: string | undefined;
+
+      // Set label if month changes or it's the very first point
+      if (currentMonth !== lastMonth) {
+        monthLabel = date.format('MMM');
+        lastMonth = currentMonth;
+      }
+
       return {
         x: date.day(),
         y: Math.floor(dayjs(h.startDate).diff(startWeek, 'week')),
         value: h.expense,
         label: date.format('D'),
         timestamp: h.startDate,
+        monthLabel,
       };
     });
   }
@@ -852,8 +851,8 @@ export class ReportService {
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Observable<ReportSnapshot> {
-    return transactionRepository
-      .observeActive()
+    return journalRepository
+      .observeStatusMeta()
       .pipe(
         switchMap(() =>
           from(this.getReportSnapshot(startDate, endDate, targetCurrency, filterAccountIds)),
