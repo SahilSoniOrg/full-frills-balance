@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 18,
+  version: 19,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -50,7 +50,7 @@ export const schema = appSchema({
         { name: 'journal_date', type: 'number', isIndexed: true }, // timestamp
         { name: 'description', type: 'string', isOptional: true },
         { name: 'currency_code', type: 'string', isIndexed: true },
-        { name: 'status', type: 'string' }, // POSTED, REVERSED
+        { name: 'status', type: 'string', isIndexed: true }, // POSTED, REVERSED
         { name: 'original_journal_id', type: 'string', isOptional: true, isIndexed: true },
         { name: 'reversing_journal_id', type: 'string', isOptional: true, isIndexed: true },
         // Denormalized fields for list performance
@@ -68,7 +68,7 @@ export const schema = appSchema({
       columns: [
         { name: 'journal_id', type: 'string', isIndexed: true },
         { name: 'account_id', type: 'string', isIndexed: true },
-        { name: 'amount', type: 'number' }, // in minor units, always positive
+        { name: 'amount', type: 'number', isIndexed: true }, // in minor units, always positive
         { name: 'transaction_type', type: 'string' }, // DEBIT or CREDIT
         { name: 'currency_code', type: 'string', isIndexed: true },
         { name: 'transaction_date', type: 'number', isIndexed: true }, // timestamp
@@ -163,7 +163,7 @@ export const schema = appSchema({
         { name: 'start_date', type: 'number', isIndexed: true },
         { name: 'end_date', type: 'number', isOptional: true },
         { name: 'next_occurrence', type: 'number', isIndexed: true },
-        { name: 'status', type: 'string' }, // ACTIVE, PAUSED, COMPLETED
+        { name: 'status', type: 'string', isIndexed: true }, // ACTIVE, PAUSED, COMPLETED
         { name: 'is_auto_post', type: 'boolean' },
         { name: 'recurrence_day', type: 'number', isOptional: true },
         { name: 'recurrence_month', type: 'number', isOptional: true },

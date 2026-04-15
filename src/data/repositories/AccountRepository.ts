@@ -3,11 +3,17 @@ import Account, {
   AccountSubtype,
   AccountType,
   getDefaultSubtypeForType,
+  isAccountSubtype,
+  isAccountType,
   isSubtypeAllowedForType,
 } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import {
+  getPeriodDecreaseSQLSnippet,
+  getPeriodIncreaseSQLSnippet,
+} from '@/src/utils/accountingHelpers';
 import { ValidationError } from '@/src/utils/errors';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -41,6 +47,37 @@ export interface AccountPersistenceInput {
   }>;
 }
 
+export interface AccountListItemRaw {
+  id: string;
+  name: string;
+  account_type: AccountType;
+  account_subtype: AccountSubtype;
+  currency_code: string;
+  icon?: string;
+  parent_account_id?: string;
+  direct_balance: number;
+  direct_transaction_count: number;
+  periodIncrease: number;
+  periodDecrease: number;
+}
+
+/**
+ * Internal interface for raw query results matching the SQL schema.
+ */
+interface RawAccountRow {
+  id: string;
+  name: string;
+  account_type: string;
+  account_subtype?: string;
+  currency_code: string;
+  icon?: string;
+  parent_account_id?: string;
+  direct_balance: number;
+  direct_transaction_count: number;
+  periodIncrease: number;
+  periodDecrease: number;
+}
+
 export class AccountRepository {
   private get db() {
     return database;
@@ -53,6 +90,9 @@ export class AccountRepository {
   private get metadata() {
     return this.db.collections.get<AccountMetadata>('account_metadata');
   }
+
+  // Memoization cache for child list lookups (O(N) -> O(1) on repeat calls)
+  private descendantMapCache = new WeakMap<Account[], Map<string, string[]>>();
 
   /**
    * Reactive Observation Methods
@@ -175,7 +215,9 @@ export class AccountRepository {
 
   async findAllByIds(ids: string[]): Promise<Account[]> {
     if (ids.length === 0) return [];
-    return this.accounts.query(Q.where('id', Q.oneOf(ids))).fetch();
+    return this.accounts
+      .query(Q.where('id', Q.oneOf(ids)), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
   }
 
   async findByName(name: string): Promise<Account | null> {
@@ -365,23 +407,34 @@ export class AccountRepository {
    * Zero DB queries — call this whenever you already have all accounts in memory.
    */
   getDescendantIdsFromList(accountId: string, allAccounts: Account[]): string[] {
-    const childrenMap = new Map<string, string[]>();
-    for (const acc of allAccounts) {
-      if (acc.parentAccountId && !acc.deletedAt) {
-        const arr = childrenMap.get(acc.parentAccountId) ?? [];
-        arr.push(acc.id);
-        childrenMap.set(acc.parentAccountId, arr);
+    let childrenMap = this.descendantMapCache.get(allAccounts);
+
+    if (!childrenMap) {
+      childrenMap = new Map<string, string[]>();
+      for (const acc of allAccounts) {
+        if (acc.parentAccountId && !acc.deletedAt) {
+          const arr = childrenMap.get(acc.parentAccountId) ?? [];
+          arr.push(acc.id);
+          childrenMap.set(acc.parentAccountId, arr);
+        }
       }
+      this.descendantMapCache.set(allAccounts, childrenMap);
     }
 
     const result: string[] = [];
     const queue: string[] = [accountId];
-    while (queue.length > 0) {
-      const current = queue.shift()!;
+    const visited = new Set<string>([accountId]); // Cycle protection
+    let head = 0; // O(1) queue processing
+
+    while (head < queue.length) {
+      const current = queue[head++]!;
       const children = childrenMap.get(current) ?? [];
       for (const childId of children) {
-        result.push(childId);
-        queue.push(childId);
+        if (!visited.has(childId)) {
+          visited.add(childId);
+          result.push(childId);
+          queue.push(childId);
+        }
       }
     }
     return result;
@@ -418,9 +471,8 @@ export class AccountRepository {
   private async ensureUniqueName(name: string, excludeId?: string): Promise<void> {
     const sanitizedName = name.trim();
 
-    // Query specifically for the name to avoid fetching all accounts.
-    // We use a case-insensitive check in SQLite via normalized comparison if possible,
-    // otherwise a small set of matches is checked in JS.
+    // App-level secondary check for user convenience.
+    // Note: Database integrity should still be enforced by unique indices where possible.
     const potentialDuplicates = await this.accounts
       .query(
         Q.where('name', Q.like(Q.sanitizeLikeString(sanitizedName))),
@@ -453,73 +505,68 @@ export class AccountRepository {
     endOfMonth: number,
     includeTotalCount: boolean = false,
     includeDeleted: boolean = false,
-  ): Promise<any[] | null> {
-    if (!supportsRawSql(this.db)) return null;
+  ): Promise<AccountListItemRaw[] | null> {
+    if (!supportsRawSql(this.db)) {
+      logger.warn(
+        '[AccountRepository] getAccountListItemsRaw: Raw SQL not supported. Performance risk.',
+      );
+      return null;
+    }
 
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const statusArgs = [...ACTIVE_JOURNAL_STATUSES];
 
     // We split the query into parts to avoid scanning the entire transactions table multiple times.
-    // 1. LatestTrans/LatestBalance: Finds current balance (fast with indices).
-    // 2. AggregatedStats: Calculates monthly totals (fast with date filter).
-    // 3. TotalCount (Optional): Full scan only if requested.
+    // 1. RankedTransactions: Finds the absolute latest balance for each account using ROW_NUMBER.
+    //    Optimization: Prune transaction scan to only include active accounts.
+    // 2. AggregatedStats: Calculates monthly totals using unified helpers.
     const sql = `
-      WITH LatestTrans AS (
-        SELECT t.account_id, MAX(t.transaction_date) as max_date, MAX(t.created_at) as max_created
+      WITH RankedTransactions AS (
+        SELECT 
+          t.account_id, 
+          t.running_balance,
+          ROW_NUMBER() OVER (
+            PARTITION BY t.account_id 
+            ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
+          ) as rn
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
-        WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${activeStatusesStr})
-        GROUP BY t.account_id
+        WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${placeholders})
+          AND t.account_id IN (SELECT id FROM accounts WHERE deleted_at IS NULL)
       ),
       LatestBalance AS (
-        SELECT t.account_id, t.running_balance
-        FROM transactions t
-        JOIN LatestTrans lt ON t.account_id = lt.account_id AND t.transaction_date = lt.max_date AND t.created_at = lt.max_created
+        SELECT account_id, running_balance
+        FROM RankedTransactions
+        WHERE rn = 1
       ),
       MonthlyAggregates AS (
         SELECT 
           t.account_id,
-          SUM(
-            CASE 
-              WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'CREDIT') THEN t.amount
-              WHEN (a.account_type = 'INCOME' AND t.transaction_type = 'DEBIT') THEN -t.amount
-              WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'CREDIT') THEN -t.amount
-              WHEN (a.account_type = 'EXPENSE' AND t.transaction_type = 'DEBIT') THEN t.amount
-              WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'DEBIT') THEN t.amount
-              WHEN (a.account_type = 'ASSET' AND t.transaction_type = 'CREDIT') THEN -t.amount
-              WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'CREDIT') THEN t.amount
-              WHEN (a.account_type IN ('LIABILITY', 'EQUITY') AND t.transaction_type = 'DEBIT') THEN -t.amount
-              ELSE 0 
-            END
-          ) as monthly_income,
-          SUM(
-            CASE 
-              WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'DEBIT' THEN t.amount
-              WHEN a.account_type IN ('EXPENSE', 'ASSET') AND t.transaction_type = 'CREDIT' THEN -t.amount
-              ELSE 0 
-            END
-          ) as monthly_expenses
+          SUM(${getPeriodIncreaseSQLSnippet()}) as periodIncrease,
+          SUM(${getPeriodDecreaseSQLSnippet()}) as periodDecrease
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
         JOIN accounts a ON t.account_id = a.id
         WHERE t.deleted_at IS NULL 
           AND j.deleted_at IS NULL 
-          AND j.status IN (${activeStatusesStr})
+          AND j.status IN (${placeholders})
           AND t.transaction_date >= ? AND t.transaction_date <= ?
         GROUP BY t.account_id
-      )${
-        includeTotalCount
-          ? `,
+      )
+    ${
+      includeTotalCount
+        ? `,
       TotalCounts AS (
         SELECT 
           t.account_id,
           COUNT(*) as direct_transaction_count
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
-        WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${activeStatusesStr})
+        WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${placeholders})
         GROUP BY t.account_id
       )`
-          : ``
-      }
+        : ``
+    }
       SELECT 
         a.id as id, 
         a.name as name, 
@@ -530,8 +577,8 @@ export class AccountRepository {
         a.parent_account_id as parent_account_id,
         lb.running_balance as direct_balance,
         ${includeTotalCount ? 'IFNULL(tc.direct_transaction_count, 0)' : '0'} as direct_transaction_count,
-        IFNULL(ma.monthly_income, 0) as monthly_income,
-        IFNULL(ma.monthly_expenses, 0) as monthly_expenses
+        IFNULL(ma.periodIncrease, 0) as periodIncrease,
+        IFNULL(ma.periodDecrease, 0) as periodDecrease
       FROM accounts a
       LEFT JOIN LatestBalance lb ON a.id = lb.account_id
       LEFT JOIN MonthlyAggregates ma ON a.id = ma.account_id
@@ -540,16 +587,53 @@ export class AccountRepository {
       ORDER BY a.order_num ASC
     `;
 
+    const args: any[] = [...statusArgs, ...statusArgs, startOfMonth, endOfMonth];
+
+    if (includeTotalCount) {
+      args.push(...statusArgs);
+    }
+
     const start = Date.now();
-    const results = await transactionRawRepository.queryRaw(sql, [startOfMonth, endOfMonth]);
+    const results = await transactionRawRepository.queryRaw<RawAccountRow>(sql, args);
     const duration = Date.now() - start;
 
     logger.info(`[Trace] AccountRepository.getAccountListItemsRaw: ${duration}ms`, {
       count: results?.length || 0,
     });
 
-    return results;
+    if (!results) return null;
+
+    // Boundary Validation: Ensure DB strings match TypeScript enums
+    return results.map(row => {
+      if (!isAccountType(row.account_type)) {
+        logger.error(
+          `[Integrity] Invalid account_type found in DB: ${row.account_type} for account ${row.id}`,
+        );
+        row.account_type = AccountType.ASSET; // Safe fallback
+      }
+      if (row.account_subtype && !isAccountSubtype(row.account_subtype)) {
+        logger.error(
+          `[Integrity] Invalid account_subtype found in DB: ${row.account_subtype} for account ${row.id}`,
+        );
+        row.account_subtype = undefined;
+      }
+      return row as AccountListItemRaw;
+    });
   }
 }
+
+/**
+ * PRODUCTION INDEX REQUIREMENTS
+ *
+ * To ensure the above raw queries remain performant at scale (>10k transactions),
+ * the following composite indices must be present in the database:
+ *
+ * 1. (account_id, transaction_date DESC, created_at DESC, id DESC)
+ *    - Optimizes RankedTransactions/LatestBalance lookup.
+ * 2. (journal_id)
+ *    - Optimizes transaction-journal joins.
+ * 3. (status, deleted_at)
+ *    - Optimizes journal status filtering.
+ */
 
 export const accountRepository = new AccountRepository();

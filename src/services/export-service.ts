@@ -8,8 +8,8 @@
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { JournalDisplayType } from '@/src/types/domain';
 import { analytics } from '@/src/services/analytics-service';
+import { JournalDisplayType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
 import { supportsRawSql } from '../data/database/DatabaseUtils';
@@ -216,8 +216,18 @@ export interface SmsAutoPostRuleExport {
   updatedAt: string;
 }
 
-const snakeToCamel = (str: string) => str.replace(/(_\w)/g, (m) => m[1].toUpperCase());
-const DATE_COLUMN_NAMES = ['created_at', 'updated_at', 'deleted_at', 'journal_date', 'transaction_date', 'start_date', 'end_date', 'next_occurrence', 'effective_date'];
+const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
+const DATE_COLUMN_NAMES = [
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'journal_date',
+  'transaction_date',
+  'start_date',
+  'end_date',
+  'next_occurrence',
+  'effective_date',
+];
 
 export interface ExportData {
   exportDate: string;
@@ -273,7 +283,7 @@ class ExportService {
   private getTableSchema(tableName: string) {
     const tables = (schema as any).tables;
     if (Array.isArray(tables)) {
-      return tables.find((table) => table.name === tableName);
+      return tables.find(table => table.name === tableName);
     }
     if (tables && typeof tables === 'object') {
       if (tables[tableName]) return tables[tableName];
@@ -300,17 +310,34 @@ class ExportService {
       .map((col: { name: string; type: string }) => snakeToCamel(col.name));
 
     const dateFields = columns
-      .filter((col: { name: string; type: string }) => col.type === 'number' && DATE_COLUMN_NAMES.includes(col.name))
+      .filter(
+        (col: { name: string; type: string }) =>
+          col.type === 'number' && DATE_COLUMN_NAMES.includes(col.name),
+      )
       .map((col: { name: string; type: string }) => snakeToCamel(col.name));
 
     let raws: Record<string, unknown>[] = [];
+    let useFallback = true;
     if (supportsRawSql(database)) {
       const selectFields = columnNames
         .map(snake => `${snake} AS ${snakeToCamel(snake)}`)
         .join(', ');
       const sql = `SELECT ${selectFields} FROM ${tableName}`;
-      raws = await transactionRawRepository.queryRaw<Record<string, unknown>>(sql);
-    } else {
+      const results = await transactionRawRepository.queryRaw<Record<string, unknown>>(
+        sql,
+        [],
+        tableName,
+      );
+      if (results !== null) {
+        raws = results;
+        useFallback = false;
+      }
+    }
+
+    if (useFallback) {
+      logger.warn(
+        `[ExportService] fetchAndTransformTable(${tableName}) falling back to ORM loop. Performance risk.`,
+      );
       const collection = (database.collections as any).get?.(tableName);
       if (!collection?.query) return [];
       const rows = await collection.query().fetch();
@@ -325,7 +352,7 @@ class ExportService {
       });
     }
 
-    return raws.map((raw) => {
+    return raws.map(raw => {
       const transformed = { ...raw } as Record<string, any>;
 
       // Convert date numbers to ISO strings

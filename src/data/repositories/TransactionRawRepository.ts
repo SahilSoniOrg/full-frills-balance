@@ -6,17 +6,41 @@ import { Q } from '@nozbe/watermelondb';
 import { from, map, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { getRawAdapter } from '../database/DatabaseUtils';
-import Account from '../models/Account';
+import Account, { AccountType } from '../models/Account';
 import Transaction, { TransactionType } from '../models/Transaction';
 import { transactionRepository } from './TransactionRepository';
 import { AccountDelta, DailyDelta, RebuildTransaction, RecurringPattern } from './TransactionTypes';
 
 /**
+ * Internal interfaces for raw SQL result sets.
+ * These ensure type-safety at the database-to-domain boundary.
+ */
+interface RawPeriodMetricsRow {
+  accountId: string;
+  totalDebit: number;
+  totalCredit: number;
+}
+
+interface RawUnreconciledMetricsRow {
+  count: number;
+  total: number | null;
+}
+
+/**
+ * Mapped result types for domain consumption.
+ */
+export interface AccountPeriodMetrics {
+  totalIncrease: number;
+  totalDecrease: number;
+}
+
+/**
  * Specialized repository for high-performance raw SQL queries on transactions.
  * Bypasses the WatermelonDB bridge/ORM layers for bulk data operations.
  */
-class TransactionRawRepository {
+export class TransactionRawRepository {
   private keyCache: Map<string, string> = new Map();
+  private mappingCache: Map<string, { original: string; camel: string }[]> = new Map();
 
   private toCamelCase(str: string): string {
     const cached = this.keyCache.get(str);
@@ -26,39 +50,54 @@ class TransactionRawRepository {
     return result;
   }
 
-  private getSignedDelta(accountType: any, transactionType: string, amount: number): number {
-    return getAccountBalanceDelta(amount, accountType, transactionType as any);
+  private getSignedDelta(
+    accountType: AccountType,
+    transactionType: string,
+    amount: number,
+  ): number {
+    return getAccountBalanceDelta(amount, accountType, transactionType as TransactionType);
   }
 
   /**
    * Universal raw query helper for consolidated SQL aliasing.
    */
-  async queryRaw<T>(sql: string, args: (string | number)[] = []): Promise<T[]> {
+  async queryRaw<T>(
+    sql: string,
+    args: (string | number)[] = [],
+    table?: string,
+  ): Promise<T[] | null> {
     const sqlAdapter = getRawAdapter(database);
-    if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') return [];
+    if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') return null;
 
     try {
-      const result = await sqlAdapter.queryRaw(sql, args);
+      const result = await sqlAdapter.queryRaw(sql, args, table);
       const rawRows = Array.isArray(result) ? result : result?.rows || [];
 
       if (rawRows.length === 0) return [];
 
-      // High-performance mapping: Pre-calculate key transformations ONCE per result set
+      // High-performance mapping: Pre-calculate key transformations ONCE per schema signature
       const sampleRow = rawRows[0];
       const keys = Object.keys(sampleRow);
-      const mapping: { original: string; camel: string }[] = keys.map(key => {
-        const lower = key.toLowerCase();
-        return {
-          original: key,
-          camel: this.toCamelCase(lower),
-        };
-      });
+      const schemaSignature = keys.join('|');
 
-      return rawRows.map((row: any) => {
-        const normalized: any = {};
-        for (let i = 0; i < mapping.length; i++) {
-          const m = mapping[i];
-          const val = row[m.original];
+      let mapping = this.mappingCache.get(schemaSignature);
+      if (!mapping) {
+        mapping = keys.map(key => {
+          const lower = key.toLowerCase();
+          return {
+            original: key,
+            camel: this.toCamelCase(lower),
+          };
+        });
+        this.mappingCache.set(schemaSignature, mapping);
+      }
+
+      return rawRows.map((row: unknown) => {
+        const castRow = row as Record<string, unknown>;
+        const normalized: Record<string, unknown> = {};
+        for (let i = 0; i < mapping!.length; i++) {
+          const m = mapping![i];
+          const val = castRow[m.original];
           normalized[m.original] = val;
           if (m.original !== m.camel) {
             normalized[m.camel] = val;
@@ -66,12 +105,16 @@ class TransactionRawRepository {
         }
         return normalized as T;
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error(`[TransactionRawRepository] queryRaw failed`, {
-        sql: sql.substring(0, 500),
-        error,
+        sql: sql.substring(0, 1000),
+        errorMessage: error?.message || 'Unknown error',
+        errorCode: error?.code,
+        errorName: error?.name,
+        stack: error?.stack?.substring(0, 200),
       });
-      return [];
+      // Do not swallow errors - financial integrity depends on accurate results
+      throw error;
     }
   }
 
@@ -85,8 +128,8 @@ class TransactionRawRepository {
   ): Promise<Map<string, number>> {
     if (accountIds.length === 0) return new Map();
 
-    const placeholders = accountIds.map(() => '?').join(',');
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const accountPlaceholders = accountIds.map(() => '?').join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
       WITH RankedTransactions AS (
@@ -99,11 +142,11 @@ class TransactionRawRepository {
           ) as rn
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
-        WHERE t.account_id IN (${placeholders})
+        WHERE t.account_id IN (${accountPlaceholders})
           AND t.transaction_date <= ?
           AND t.deleted_at IS NULL
           AND j.deleted_at IS NULL
-          AND j.status IN (${activeStatusesStr})
+          AND j.status IN (${placeholders})
       )
       SELECT accountId, runningBalance
       FROM RankedTransactions
@@ -113,11 +156,18 @@ class TransactionRawRepository {
     const raws = await this.queryRaw<{ accountId: string; runningBalance: number }>(sql, [
       ...accountIds,
       cutoffDate,
+      ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
-    if (raws.length > 0) {
+    if (raws !== null) {
+      if (raws.length === 0) return new Map();
       return new Map(raws.map(r => [r.accountId, r.runningBalance]));
     }
+
+    // Fallback path is significantly slower (O(N) queries)
+    logger.warn(
+      '[TransactionRawRepository] getLatestBalancesRaw falling back to ORM loop. Performance risk.',
+    );
 
     // Fallback for LokiJS/Test
     const results = new Map<string, number>();
@@ -155,7 +205,7 @@ class TransactionRawRepository {
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
 
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     let sql = `
       SELECT SUM(${multiplierSql}) as total
@@ -165,9 +215,9 @@ class TransactionRawRepository {
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
-        AND j.status IN (${activeStatusesStr})
+        AND j.status IN (${placeholders})
     `;
-    const args = [accountId, cutoffDate];
+    const args = [accountId, cutoffDate, ...ACTIVE_JOURNAL_STATUSES];
 
     if (upToTransactionId) {
       // Include everything strictly chronologically UP TO this transaction (H-6 fix)
@@ -208,7 +258,7 @@ class TransactionRawRepository {
     }
 
     const raws = await this.queryRaw<{ total: number }>(sql, args);
-    if (raws.length > 0) return raws[0]?.total || 0;
+    if (raws !== null) return raws[0]?.total || 0;
 
     // Fallback for LokiJS/Test
     // Fix: Fallback was incorrectly returning latest runningBalance instead of SUM of deltas
@@ -251,7 +301,7 @@ class TransactionRawRepository {
 
         if (startFound) {
           sum += this.getSignedDelta(
-            isAssetOrExpense ? 'ASSET' : 'LIABILITY',
+            isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY,
             tx.transactionType,
             tx.amount,
           );
@@ -273,7 +323,7 @@ class TransactionRawRepository {
       (acc, tx) =>
         acc +
         this.getSignedDelta(
-          isAssetOrExpense ? 'ASSET' : 'LIABILITY',
+          isAssetOrExpense ? AccountType.ASSET : AccountType.LIABILITY,
           tx.transactionType,
           tx.amount,
         ),
@@ -292,8 +342,8 @@ class TransactionRawRepository {
   ): Promise<DailyDelta[]> {
     if (accountIds.length === 0) return [];
 
-    const placeholders = accountIds.map(() => '?').join(',');
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const accountPlaceholders = accountIds.map(() => '?').join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
       SELECT
@@ -310,18 +360,23 @@ class TransactionRawRepository {
       FROM transactions t
       JOIN accounts a ON t.account_id = a.id
       JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id IN (${placeholders})
+      WHERE t.account_id IN (${accountPlaceholders})
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
-        AND j.status IN (${activeStatusesStr})
+        AND j.status IN (${placeholders})
       GROUP BY dayStart, t.currency_code, a.account_type
       ORDER BY dayStart ASC
     `;
 
-    const raws = await this.queryRaw<DailyDelta>(sql, [...accountIds, startDate, endDate]);
-    if (raws.length > 0) return raws;
+    const raws = await this.queryRaw<DailyDelta>(sql, [
+      ...accountIds,
+      startDate,
+      endDate,
+      ...ACTIVE_JOURNAL_STATUSES,
+    ]);
+    if (raws !== null) return raws;
 
     // Fallback for LokiJS/Test
     const [accounts, txs] = await Promise.all([
@@ -380,8 +435,8 @@ class TransactionRawRepository {
   ): Promise<AccountDelta[]> {
     if (accountIds.length === 0) return [];
 
-    const placeholders = accountIds.map(() => '?').join(',');
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const accountPlaceholders = accountIds.map(() => '?').join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
       SELECT
@@ -397,17 +452,22 @@ class TransactionRawRepository {
       FROM transactions t
       JOIN accounts a ON t.account_id = a.id
       JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id IN (${placeholders})
+      WHERE t.account_id IN (${accountPlaceholders})
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
-        AND j.status IN (${activeStatusesStr})
+        AND j.status IN (${placeholders})
       GROUP BY t.account_id, t.currency_code
     `;
 
-    const raws = await this.queryRaw<AccountDelta>(sql, [...accountIds, startDate, endDate]);
-    if (raws.length > 0) return raws;
+    const raws = await this.queryRaw<AccountDelta>(sql, [
+      ...accountIds,
+      startDate,
+      endDate,
+      ...ACTIVE_JOURNAL_STATUSES,
+    ]);
+    if (raws !== null) return raws;
 
     // Fallback for LokiJS/Test
     const [accounts, txs] = await Promise.all([
@@ -458,7 +518,7 @@ class TransactionRawRepository {
    * Optimized for AccountingRebuildService.
    */
   async getRebuildDataRaw(accountId: string, startDate: number): Promise<RebuildTransaction[]> {
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
       SELECT
@@ -474,12 +534,16 @@ class TransactionRawRepository {
         AND t.transaction_date >= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
-        AND j.status IN (${activeStatusesStr})
+        AND j.status IN (${placeholders})
       ORDER BY t.transaction_date ASC, t.created_at ASC
     `;
 
-    const raws = await this.queryRaw<RebuildTransaction>(sql, [accountId, startDate]);
-    if (raws.length > 0) return raws;
+    const raws = await this.queryRaw<RebuildTransaction>(sql, [
+      accountId,
+      startDate,
+      ...ACTIVE_JOURNAL_STATUSES,
+    ]);
+    if (raws !== null) return raws;
 
     // Fallback for LokiJS/Test
     const txs = await database.collections
@@ -509,7 +573,7 @@ class TransactionRawRepository {
    * Finds potential recurring transactions by grouping by amount and account.
    */
   async getRecurringPatternsRaw(startDate: number, minCount: number): Promise<RecurringPattern[]> {
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
       SELECT
@@ -525,14 +589,18 @@ class TransactionRawRepository {
       WHERE t.transaction_date >= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
-        AND j.status IN (${activeStatusesStr})
+        AND j.status IN (${placeholders})
       GROUP BY t.amount, t.account_id, t.currency_code
-      HAVING occurrenceCount >= ?
+      HAVING COUNT(*) >= ?
       ORDER BY occurrenceCount DESC
     `;
 
-    const raws = await this.queryRaw<RecurringPattern>(sql, [startDate, minCount]);
-    if (raws.length > 0) return raws;
+    const raws = await this.queryRaw<RecurringPattern>(sql, [
+      startDate,
+      ...ACTIVE_JOURNAL_STATUSES,
+      minCount,
+    ]);
+    if (raws !== null) return raws;
 
     // Fallback for LokiJS/Test
     const txs = await database.collections
@@ -610,65 +678,69 @@ class TransactionRawRepository {
     minTransactionDate?: number,
   ): Promise<Map<string, number>> {
     if (accountIdsWithBoundaries.length === 0) return new Map();
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
-    // 1. Build optimized SQL query with per-account boundaries
-    // Logic: (date > D OR (date == D AND created > C) OR (date == D AND created == C AND id > I))
-    const accountConditions: string[] = [];
-    const params: (string | number)[] = [];
+    // 1. Build optimized SQL query with per-account boundaries using CTE
+    // This avoids the massive OR clause which destroys query planner performance at scale.
+    // We use a UNION ALL ladder instead of VALUES clause for maximum SQLite compatibility (pre-3.32).
+    const unionParts: string[] = [];
+    const boundaryParams: (string | number)[] = [];
 
     for (const b of accountIdsWithBoundaries) {
-      if (!b.afterTransactionId) {
-        accountConditions.push('t.account_id = ?');
-        params.push(b.accountId);
-      } else {
-        accountConditions.push(`
-          (t.account_id = ? AND (
-            t.transaction_date > ? 
-            OR (t.transaction_date = ? AND t.created_at > ?)
-            OR (t.transaction_date = ? AND t.created_at = ? AND t.id > ?)
-          ))
-        `);
-        params.push(
-          b.accountId,
-          b.afterTransactionDate || 0,
-          b.afterTransactionDate || 0,
-          b.afterTransactionCreatedAt || 0,
-          b.afterTransactionDate || 0,
-          b.afterTransactionCreatedAt || 0,
-          b.afterTransactionId,
-        );
-      }
+      unionParts.push('SELECT ? as acc_id, ? as last_date, ? as last_created, ? as last_id');
+      boundaryParams.push(
+        b.accountId,
+        b.afterTransactionDate || 0,
+        b.afterTransactionCreatedAt || 0,
+        b.afterTransactionId || '',
+      );
     }
 
     const sql = `
+      WITH search_boundaries(acc_id, last_date, last_created, last_id) AS (
+        ${unionParts.join(' UNION ALL ')}
+      )
       SELECT t.account_id as accountId, COUNT(*) as count
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
+      JOIN search_boundaries b ON t.account_id = b.acc_id
       WHERE t.deleted_at IS NULL
         AND j.deleted_at IS NULL
-        AND j.status IN (${activeStatusesStr})
+        AND j.status IN (${placeholders})
         AND t.transaction_date <= ?
         ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
-        AND (${accountConditions.join(' OR ')})
+        AND (
+          b.last_id = '' 
+          OR t.transaction_date > b.last_date 
+          OR (t.transaction_date = b.last_date AND t.created_at > b.last_created)
+          OR (t.transaction_date = b.last_date AND t.created_at = b.last_created AND t.id > b.last_id)
+        )
       GROUP BY t.account_id
     `;
 
-    const queryParams: (string | number)[] = [endDate];
+    const queryParams: (string | number)[] = [
+      ...boundaryParams,
+      ...ACTIVE_JOURNAL_STATUSES,
+      endDate,
+    ];
     if (minTransactionDate !== undefined) queryParams.push(minTransactionDate);
-    queryParams.push(...params);
 
     const raws = await this.queryRaw<{ accountId: string; count: number }>(sql, queryParams);
 
     const results = new Map<string, number>();
     // Pre-populate with zeros for all requested accounts
     for (const b of accountIdsWithBoundaries) results.set(b.accountId, 0);
-    // Fill with actual counts
-    for (const row of raws) results.set(row.accountId, row.count);
 
-    if (raws.length > 0 || accountIdsWithBoundaries.length === 0) {
+    if (raws !== null) {
+      // Fill with actual counts
+      for (const row of raws) results.set(row.accountId, row.count);
       return results;
     }
+
+    // Fallback path is significantly slower (O(N) queries)
+    logger.warn(
+      '[TransactionRawRepository] getAccountTransactionCountsRaw falling back to ORM loop. Performance risk.',
+    );
 
     // Fallback for LokiJS/Test
     for (const item of accountIdsWithBoundaries) {
@@ -742,8 +814,8 @@ class TransactionRawRepository {
     if (accountConfigs.length === 0) return new Map();
 
     const accountIds = accountConfigs.map(c => c.accountId);
-    const placeholders = accountIds.map(() => '?').join(',');
-    const activeStatusesStr = ACTIVE_JOURNAL_STATUSES.map(s => `'${s}'`).join(',');
+    const accountPlaceholders = accountIds.map(() => '?').join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
       SELECT 
@@ -752,31 +824,34 @@ class TransactionRawRepository {
         SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END) as totalCredit
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id IN (${placeholders})
+      WHERE t.account_id IN (${accountPlaceholders})
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
-        AND j.status IN (${activeStatusesStr})
+        AND j.status IN (${placeholders})
       GROUP BY t.account_id
     `;
 
-    const results = new Map<string, { totalIncrease: number; totalDecrease: number }>();
+    const results = new Map<string, AccountPeriodMetrics>();
     try {
-      const raws = await this.queryRaw<{
-        accountId: string;
-        totalDebit: number;
-        totalCredit: number;
-      }>(sql, [...accountIds, startDate, endDate]);
+      const raws = await this.queryRaw<RawPeriodMetricsRow>(sql, [
+        ...accountIds,
+        startDate,
+        endDate,
+        ...ACTIVE_JOURNAL_STATUSES,
+      ]);
 
-      const configMap = new Map(accountConfigs.map(c => [c.accountId, c.isAssetOrExpense]));
+      if (raws) {
+        const configMap = new Map(accountConfigs.map(c => [c.accountId, c.isAssetOrExpense]));
 
-      for (const row of raws) {
-        const isAssetOrExpense = configMap.get(row.accountId) ?? true;
-        results.set(row.accountId, {
-          totalIncrease: isAssetOrExpense ? row.totalDebit : row.totalCredit,
-          totalDecrease: isAssetOrExpense ? row.totalCredit : row.totalDebit,
-        });
+        for (const row of raws) {
+          const isAssetOrExpense = configMap.get(row.accountId) ?? true;
+          results.set(row.accountId, {
+            totalIncrease: isAssetOrExpense ? row.totalDebit : row.totalCredit,
+            totalDecrease: isAssetOrExpense ? row.totalCredit : row.totalDebit,
+          });
+        }
       }
     } catch (error) {
       logger.error('Error in getBulkAccountPeriodMetricsRaw', error);
@@ -794,23 +869,21 @@ class TransactionRawRepository {
 
   /**
    * Reactive version of getAccountPeriodMetricsRaw.
-   * Emits whenever active transactions change.
+   * Uses a lightweight count observer as a trigger to avoid bridge congestion.
    */
   observeAccountPeriodMetricsRaw(
     accountId: string,
     startDate: number,
     endDate: number,
     isAssetOrExpense: boolean = true,
-  ): Observable<{ totalIncrease: number; totalDecrease: number }> {
-    return transactionRepository.observeActive().pipe(
+  ): Observable<AccountPeriodMetrics> {
+    return transactionRepository.observeActiveCount().pipe(
       switchMap(() =>
         from(this.getAccountPeriodMetricsRaw(accountId, startDate, endDate, isAssetOrExpense)),
       ),
       distinctUntilChanged(
-        (
-          prev: { totalIncrease: number; totalDecrease: number },
-          curr: { totalIncrease: number; totalDecrease: number },
-        ) => prev.totalIncrease === curr.totalIncrease && prev.totalDecrease === curr.totalDecrease,
+        (prev, curr) =>
+          prev.totalIncrease === curr.totalIncrease && prev.totalDecrease === curr.totalDecrease,
       ),
     );
   }
@@ -825,7 +898,7 @@ class TransactionRawRepository {
     endDate: number,
   ): Observable<AccountDelta[]> {
     return transactionRepository
-      .observeActive()
+      .observeActiveCount()
       .pipe(switchMap(() => from(this.getAccountDeltasGroupedRaw(accountIds, startDate, endDate))));
   }
 
@@ -842,7 +915,7 @@ class TransactionRawRepository {
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
 
-    return transactionRepository.observeActive().pipe(
+    return transactionRepository.observeActiveCount().pipe(
       switchMap(() => {
         const sql = `
           SELECT COUNT(*) as count, SUM(${multiplierSql}) as total
@@ -855,16 +928,16 @@ class TransactionRawRepository {
             AND j.status IN (${activeStatusesStr})
         `;
         return from(
-          this.queryRaw<{ count: number; total: number | null }>(sql, [
+          this.queryRaw<RawUnreconciledMetricsRow>(sql, [
             accountId,
             reconciledAt || 0,
             reconciledAt ?? 0,
           ]),
         );
       }),
-      map((raws: { count: number; total: number | null }[]) => ({
-        count: raws[0]?.count || 0,
-        total: raws[0]?.total || 0,
+      map((raws: RawUnreconciledMetricsRow[] | null) => ({
+        count: raws?.[0]?.count || 0,
+        total: raws?.[0]?.total || 0,
       })),
     );
   }

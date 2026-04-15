@@ -116,6 +116,38 @@ export function isValueLeaving(transactionType: TransactionType): boolean {
 export const isIncrease = isBalanceIncrease;
 
 /**
+ * Returns the SQL snippet for calculating the account balance delta (period increase/decrease).
+ * This unifies JS and SQL business logic.
+ */
+export function getPeriodIncreaseSQLSnippet(): string {
+  // Matches getBalanceImpactMultiplier logic
+  return `
+    CASE 
+      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
+      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN -t.amount
+      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN -t.amount
+      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
+      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
+      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN -t.amount
+      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
+      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.DEBIT}') THEN -t.amount
+      ELSE 0 
+    END
+  `.trim();
+}
+
+export function getPeriodDecreaseSQLSnippet(): string {
+  // Matches period decrease logic (specifically for Expense/Asset flows)
+  return `
+    CASE 
+      WHEN a.account_type IN ('${AccountType.EXPENSE}', '${AccountType.ASSET}') AND t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount
+      WHEN a.account_type IN ('${AccountType.EXPENSE}', '${AccountType.ASSET}') AND t.transaction_type = '${TransactionType.CREDIT}' THEN -t.amount
+      ELSE 0 
+    END
+  `.trim();
+}
+
+/**
  * Validates if a set of journal lines are balanced.
  * @param lines Journal lines to validate
  * @param precision Precision of the journal currency (default 2)

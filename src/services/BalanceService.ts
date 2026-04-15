@@ -8,7 +8,8 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace, traceService } from '@/src/utils/TraceService';
-import { Money, roundToPrecision } from '../utils/money';
+import { hashString } from '@/src/utils/hashUtils';
+import { Money } from '../utils/money';
 import { preferences } from '../utils/preferences';
 
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
@@ -18,7 +19,7 @@ interface CachedHierarchy {
   depthCache: Map<string, number>;
   levelMap: Map<number, string[]>;
   maxDepth: number;
-  accountIds: string; // Serialized list of IDs for cache key
+  fingerprint: bigint; // 64-bit Structural hash for cache key
 }
 
 export class BalanceService {
@@ -30,7 +31,7 @@ export class BalanceService {
   public async aggregateBalances(
     accounts: Account[],
     balancesMap: Map<string, AccountBalance>,
-    accountPrecisionMap: Map<string, number>,
+    currencyPrecisionMap: Map<string, number>,
     targetDefaultCurrency: string = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
     parentTrace?: Trace,
   ) {
@@ -39,43 +40,59 @@ export class BalanceService {
       if (accounts.length === 0) return;
 
       // 1. Build/Retrieve hierarchy (Memoized)
-      // Optimization: Sorting and joining IDs is faster than rebuilding the whole tree structure
-      const currentAccountIds = accounts
-        .map(a => `${a.id}:${a.parentAccountId || ''}`)
-        .sort()
-        .join('|');
+      // Optimization: Using 64-bit non-commutative polynomial fingerprint for elite collision resistance
+      const fingerPrint = accounts.reduce((acc, a) => {
+        // use 31n for BigInt polynomial hash
+        const idHash = BigInt(hashString(`${a.id}:${a.parentAccountId || ''}`));
+        return acc * 31n + idHash;
+      }, BigInt(accounts.length));
 
-      if (!this.hierarchyCache || this.hierarchyCache.accountIds !== currentAccountIds) {
-        this.rebuildHierarchyCache(accounts, currentAccountIds);
+      if (!this.hierarchyCache || this.hierarchyCache.fingerprint !== fingerPrint) {
+        this.rebuildHierarchyCache(accounts, fingerPrint);
       }
       trace.metric('hierarchyBuilt');
 
       const { parentIdMap, levelMap, maxDepth } = this.hierarchyCache!;
 
       // 2. Track sub-tree currencies for each parent to determine target currency
-      // Optimization: Use a map of sets, but initialize once
-      const subTreeCurrencies = new Map<string, Set<string>>();
-      accounts.forEach(a => {
-        const currencies = new Set<string>();
+      // Optimization: Lazy allocation - Store string for single currency, Set for multiple
+      const subTreeCurrencies = new Map<string, Set<string> | string>();
+      for (const a of accounts) {
         const balance = balancesMap.get(a.id);
         if (balance && (balance.balance !== 0 || balance.transactionCount > 0)) {
-          currencies.add(balance.currencyCode);
+          subTreeCurrencies.set(a.id, balance.currencyCode);
         }
-        subTreeCurrencies.set(a.id, currencies);
-      });
+      }
 
       // 3. Propagate currency lists up the chain using the level map (Leaf to Root)
-      // This is $O(N)$ instead of sorting $O(N log N)$ every time
       for (let d = maxDepth; d > 0; d--) {
         const ids = levelMap.get(d) || [];
         for (const id of ids) {
           const parentId = parentIdMap.get(id);
           if (!parentId) continue;
 
-          const myCurrencies = subTreeCurrencies.get(id);
-          const parentCurrencies = subTreeCurrencies.get(parentId);
-          if (myCurrencies && parentCurrencies) {
-            myCurrencies.forEach(c => parentCurrencies.add(c));
+          const myData = subTreeCurrencies.get(id);
+          if (!myData) continue;
+
+          const parentData = subTreeCurrencies.get(parentId);
+          if (!parentData) {
+            // Clone if it's a Set to prevent reference sharing across branches
+            subTreeCurrencies.set(parentId, myData instanceof Set ? new Set(myData) : myData);
+          } else if (parentData instanceof Set) {
+            if (myData instanceof Set) {
+              myData.forEach(c => parentData.add(c));
+            } else {
+              parentData.add(myData);
+            }
+          } else if (parentData !== myData) {
+            // Upgrade to Set
+            const newSet = new Set<string>([parentData]);
+            if (myData instanceof Set) {
+              myData.forEach(c => newSet.add(c));
+            } else {
+              newSet.add(myData);
+            }
+            subTreeCurrencies.set(parentId, newSet);
           }
         }
       }
@@ -91,16 +108,35 @@ export class BalanceService {
         }
       }
 
-      // 4. Background Fetch: Trigger required rates in background (Non-Blocking)
-      // We don't await here because we want the UI to render instantly.
-      // Reactive updates are handled via ReactiveDataService observing exchangeRateRepository.
-      Array.from(uniqueBaseCurrencies).forEach(base => {
-        exchangeRateService.fetchRatesForBase(base).catch(err => {
-          logger.error(`[Trace] Background rate fetch failed for ${base}:`, err);
-        });
-      });
+      // 5. Staged aggregation setup (Transactional read consistency)
+      // We aggregate into a separate structure to avoid exposing half-baked states to reactive readers.
+      const stagedResults = new Map<
+        string,
+        {
+          balance: number;
+          monthlyIncome: number;
+          monthlyExpenses: number;
+          transactionCount: number;
+          currencyCode: string;
+          childBalancesMap: Map<
+            string,
+            { currencyCode: string; balance: number; transactionCount: number }
+          >;
+        }
+      >();
 
-      // 7. Aggregate leaf-to-root, level by level (Synchronous execution)
+      for (const b of balancesMap.values()) {
+        stagedResults.set(b.accountId, {
+          balance: b.balance,
+          monthlyIncome: b.monthlyIncome,
+          monthlyExpenses: b.monthlyExpenses,
+          transactionCount: b.transactionCount,
+          currencyCode: b.currencyCode,
+          childBalancesMap: new Map(),
+        });
+      }
+
+      // 6. Aggregate leaf-to-root, level by level (Synchronous execution)
       for (let d = maxDepth; d > 0; d--) {
         const accountIdsAtLevel = levelMap.get(d) || [];
 
@@ -110,72 +146,106 @@ export class BalanceService {
 
           const myBalance = balancesMap.get(accountId);
           const parentBalance = balancesMap.get(parentId);
-          if (
-            !myBalance ||
-            !parentBalance ||
-            (myBalance.balance === 0 && myBalance.transactionCount === 0)
-          )
-            continue;
+          if (!myBalance || !parentBalance) continue;
 
-          const pCurrencies = subTreeCurrencies.get(parentId);
-          let targetCurrency = parentBalance.currencyCode;
+          const parentStaged = stagedResults.get(parentId);
+          if (!parentStaged) continue;
 
-          if (pCurrencies && pCurrencies.size === 1) {
-            targetCurrency = Array.from(pCurrencies)[0] || parentBalance.currencyCode;
-          } else if (pCurrencies && pCurrencies.size > 1) {
-            targetCurrency = targetDefaultCurrency;
+          const targetCurrency = parentStaged.currencyCode;
+
+          const pData = subTreeCurrencies.get(parentId);
+          let effectiveCurrency = targetCurrency;
+
+          if (typeof pData === 'string') {
+            effectiveCurrency = pData;
+          } else if (pData instanceof Set) {
+            // Optimization: Zero-allocation set peeking
+            // If the set has exactly one currency, use it. Otherwise, fallback to the target default.
+            const firstCurrency = pData.values().next().value;
+            effectiveCurrency =
+              pData.size === 1 && typeof firstCurrency === 'string'
+                ? firstCurrency
+                : targetDefaultCurrency;
           }
 
-          parentBalance.currencyCode = targetCurrency;
+          // Stage currency alongside numeric values — never mutate live balance objects mid-aggregation
+          parentStaged.currencyCode = effectiveCurrency;
 
-          const precision = accountPrecisionMap.get(parentId) ?? AppConfig.defaultCurrencyPrecision;
+          const precision =
+            currencyPrecisionMap.get(effectiveCurrency) ?? AppConfig.defaultCurrencyPrecision;
 
-          const myBalanceMoney = Money.from(myBalance.balance, myBalance.currencyCode);
-          const myIncomeMoney = Money.from(myBalance.monthlyIncome, myBalance.currencyCode);
-          const myExpensesMoney = Money.from(myBalance.monthlyExpenses, myBalance.currencyCode);
+          const myStaged = stagedResults.get(accountId);
+          if (!myStaged) continue;
+          const myBalanceMoney = Money.from(myStaged.balance, myBalance.currencyCode);
+          const myIncomeMoney = Money.from(myStaged.monthlyIncome, myBalance.currencyCode);
+          const myExpensesMoney = Money.from(myStaged.monthlyExpenses, myBalance.currencyCode);
 
           let convertedBalance = myBalanceMoney;
           let convertedIncome = myIncomeMoney;
           let convertedExpenses = myExpensesMoney;
 
-          if (myBalance.currencyCode !== targetCurrency) {
+          if (myBalance.currencyCode !== effectiveCurrency) {
             // FAST: getRateSafe hits memory cache pre-warmed by fetchRatesForBase
-            const rate = exchangeRateService.getRateSafe(myBalance.currencyCode, targetCurrency);
+            const rate = exchangeRateService.getRateSafe(myBalance.currencyCode, effectiveCurrency);
 
-            convertedBalance = Money.from(myBalance.balance * rate, targetCurrency);
-            convertedIncome = Money.from(myBalance.monthlyIncome * rate, targetCurrency);
-            convertedExpenses = Money.from(myBalance.monthlyExpenses * rate, targetCurrency);
+            // FX Integrity Guard: Fail fast if an exchange rate is invalid to prevent corrupted totals
+            if (!rate || rate <= 0) {
+              throw new Error(
+                `[BalanceService] Missing or invalid exchange rate for ${myBalance.currencyCode} -> ${effectiveCurrency}`,
+              );
+            }
 
-            // Track mixed child balances for UI "Multi-currency" indicator
-            if (!parentBalance.childBalances) parentBalance.childBalances = [];
-            const existing = parentBalance.childBalances.find(
-              cb => cb.currencyCode === myBalance.currencyCode,
-            );
+            convertedBalance = Money.from(myStaged.balance * rate, effectiveCurrency);
+            convertedIncome = Money.from(myStaged.monthlyIncome * rate, effectiveCurrency);
+            convertedExpenses = Money.from(myStaged.monthlyExpenses * rate, effectiveCurrency);
+
+            // Track mixed child balances (O(1) Map lookup instead of O(N) find)
+            const existing = parentStaged.childBalancesMap.get(myBalance.currencyCode);
             if (existing) {
-              existing.balance = roundToPrecision(existing.balance + myBalance.balance, precision);
+              const childPrecision =
+                currencyPrecisionMap.get(myBalance.currencyCode) ??
+                AppConfig.defaultCurrencyPrecision;
+              existing.balance = Money.from(existing.balance, myBalance.currencyCode)
+                .add(Money.from(myStaged.balance, myBalance.currencyCode))
+                .round(childPrecision).amount;
             } else {
-              parentBalance.childBalances.push({
+              parentStaged.childBalancesMap.set(myBalance.currencyCode, {
                 currencyCode: myBalance.currencyCode,
-                balance: myBalance.balance,
-                transactionCount: myBalance.transactionCount,
+                balance: myStaged.balance,
+                transactionCount: myStaged.transactionCount,
               });
             }
           }
 
-          const parentBalanceMoney = Money.from(parentBalance.balance, targetCurrency);
-          const parentIncomeMoney = Money.from(parentBalance.monthlyIncome, targetCurrency);
-          const parentExpensesMoney = Money.from(parentBalance.monthlyExpenses, targetCurrency);
+          const parentBalanceMoney = Money.from(parentStaged.balance, effectiveCurrency);
+          const parentIncomeMoney = Money.from(parentStaged.monthlyIncome, effectiveCurrency);
+          const parentExpensesMoney = Money.from(parentStaged.monthlyExpenses, effectiveCurrency);
 
-          parentBalance.balance = parentBalanceMoney.add(convertedBalance).round(precision).amount;
-          parentBalance.monthlyIncome = parentIncomeMoney
+          parentStaged.balance = parentBalanceMoney.add(convertedBalance).round(precision).amount;
+          parentStaged.monthlyIncome = parentIncomeMoney
             .add(convertedIncome)
             .round(precision).amount;
-          parentBalance.monthlyExpenses = parentExpensesMoney
+          parentStaged.monthlyExpenses = parentExpensesMoney
             .add(convertedExpenses)
             .round(precision).amount;
-          parentBalance.transactionCount += myBalance.transactionCount;
+          parentStaged.transactionCount += myStaged.transactionCount;
         }
       }
+
+      // 7. Commit staged results to the main balances map in a synchronous pass
+      // This pattern ensures that any parallel readers never see half-aggregated states.
+      for (const [id, staging] of stagedResults) {
+        const balance = balancesMap.get(id);
+        if (balance) {
+          balance.currencyCode = staging.currencyCode;
+          balance.balance = staging.balance;
+          balance.monthlyIncome = staging.monthlyIncome;
+          balance.monthlyExpenses = staging.monthlyExpenses;
+          balance.transactionCount = staging.transactionCount;
+          balance.childBalances = Array.from(staging.childBalancesMap.values());
+        }
+      }
+
       trace.metric('aggregationComplete');
     } catch (error) {
       logger.error('Failed to aggregate balances:', error);
@@ -185,7 +255,7 @@ export class BalanceService {
     }
   }
 
-  private rebuildHierarchyCache(accounts: Account[], accountIdsKey: string) {
+  private rebuildHierarchyCache(accounts: Account[], fingerprint: bigint) {
     const parentIdMap = new Map<string, string>();
     accounts.forEach(a => {
       if (a.parentAccountId) parentIdMap.set(a.id, a.parentAccountId);
@@ -197,35 +267,38 @@ export class BalanceService {
 
     const getDepth = (id: string): number => {
       if (depthCache.has(id)) return depthCache.get(id)!;
+      const visited = new Set<string>();
       const path: string[] = [];
-      let current = id;
+      let current: string | undefined = id;
       while (current) {
-        if (path.includes(current)) return 0; // Cycle
+        if (visited.has(current)) return 0; // Cycle detected
         if (depthCache.has(current)) {
           let d = depthCache.get(current)!;
           for (let i = path.length - 1; i >= 0; i--) depthCache.set(path[i], ++d);
           return depthCache.get(id)!;
         }
+        visited.add(current);
         path.push(current);
-        current = parentIdMap.get(current) || '';
+        current = parentIdMap.get(current);
       }
       for (let i = path.length - 1; i >= 0; i--) depthCache.set(path[i], path.length - i - 1);
       return depthCache.get(id)!;
     };
 
-    accounts.forEach(a => {
+    for (const a of accounts) {
       const d = getDepth(a.id);
       if (d > maxDepth) maxDepth = d;
-      if (!levelMap.has(d)) levelMap.set(d, []);
-      levelMap.get(d)!.push(a.id);
-    });
+      const itemsInLevel = levelMap.get(d) || [];
+      itemsInLevel.push(a.id);
+      levelMap.set(d, itemsInLevel);
+    }
 
     this.hierarchyCache = {
       parentIdMap,
       depthCache,
       levelMap,
       maxDepth,
-      accountIds: accountIdsKey,
+      fingerprint,
     };
   }
 
@@ -367,17 +440,12 @@ export class BalanceService {
 
       const balancesMap = new Map(balances.map(b => [b.accountId, b]));
 
-      const precisionMap = new Map<string, number>();
-      for (const account of accounts) {
-        const precision =
-          currencyPrecisionMap.get(account.currencyCode) ?? AppConfig.defaultCurrencyPrecision;
-        precisionMap.set(account.id, precision);
-      }
+      // No longer need precisionMap by account ID, we use currencyPrecisionMap directly
 
       await this.aggregateBalances(
         accounts,
         balancesMap,
-        precisionMap,
+        currencyPrecisionMap,
         targetDefaultCurrency,
         trace,
       );

@@ -17,6 +17,30 @@ export class TransactionRepository {
   }
 
   /**
+   * Centralized logic for defining what constitutes an "Active" (valid/non-deleted) transaction.
+   * Prevents logic divergence across the repository.
+   */
+  private buildActiveClauses(extraClauses: any[] = []): any[] {
+    return [
+      Q.experimentalJoinTables(['journals']),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.on('journals', [
+        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+        Q.where('deleted_at', Q.eq(null)),
+      ]),
+      ...extraClauses,
+    ];
+  }
+
+  private deterministicSort(query: any, qSort: any = Q.desc) {
+    return query.extend(
+      Q.sortBy('transaction_date', qSort),
+      Q.sortBy('created_at', qSort),
+      Q.sortBy('id', qSort),
+    );
+  }
+
+  /**
    * Creates a new transaction
    * @param transactionData Transaction data to create
    * @param enforcePositiveAmount If true, will throw if amount is not positive
@@ -42,6 +66,10 @@ export class TransactionRepository {
       );
     }
 
+    if (!transactionData.transactionType) {
+      throw new Error('transactionType is required for transaction creation');
+    }
+
     const accountId = transactionData.accountId;
     if (!accountId) throw new Error('accountId is required for transaction creation');
 
@@ -51,8 +79,8 @@ export class TransactionRepository {
           ...transactionData,
           // Ensure amount is positive and rounded to precision
           amount: roundToPrecision(Math.abs(transactionData.amount || 0), precision),
-          // Never set running_balance during creation
-          running_balance: undefined,
+          // Set running_balance to null (meaning uncomputed) instead of undefined
+          running_balance: null,
         });
         transaction.createdAt = new Date();
         transaction.updatedAt = new Date();
@@ -91,27 +119,15 @@ export class TransactionRepository {
     dateRange?: { startDate: number; endDate: number },
     sortOrder: 'asc' | 'desc' = 'desc',
   ): Promise<Transaction[]> {
-    const clauses: any[] = [
-      Q.experimentalJoinTables(['journals']),
-      Q.where('account_id', accountId),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.on('journals', [
-        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.where('deleted_at', Q.eq(null)),
-      ]),
-    ];
+    const qSort = sortOrder === 'asc' ? Q.asc : Q.desc;
+    const clauses = this.buildActiveClauses([Q.where('account_id', accountId)]);
 
     if (dateRange) {
       clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
       clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)));
     }
 
-    const qSort = sortOrder === 'asc' ? Q.asc : Q.desc;
-
-    let query = this.transactions
-      .query(...clauses)
-      .extend(Q.sortBy('transaction_date', qSort))
-      .extend(Q.sortBy('created_at', qSort));
+    let query = this.deterministicSort(this.transactions.query(...clauses), qSort);
 
     if (limit) {
       query = query.extend(Q.take(limit));
@@ -133,25 +149,14 @@ export class TransactionRepository {
     limit: number = AppConfig.pagination.dashboardPageSize,
     dateRange?: { startDate: number; endDate: number },
   ) {
-    const clauses: any[] = [
-      Q.experimentalJoinTables(['journals']),
-      Q.where('account_id', Q.oneOf(accountIds)),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.on('journals', [
-        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.where('deleted_at', Q.eq(null)),
-      ]),
-    ];
+    const clauses = this.buildActiveClauses([Q.where('account_id', Q.oneOf(accountIds))]);
 
     if (dateRange) {
       clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
       clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)));
     }
 
-    return this.transactions
-      .query(...clauses)
-      .extend(Q.sortBy('transaction_date', Q.desc))
-      .extend(Q.sortBy('created_at', Q.desc))
+    return this.deterministicSort(this.transactions.query(...clauses), Q.desc)
       .extend(Q.take(limit))
       .observeWithColumns([
         'amount',
@@ -228,25 +233,14 @@ export class TransactionRepository {
     limit: number = AppConfig.pagination.dashboardPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): Promise<Transaction[]> {
-    const clauses: any[] = [
-      Q.experimentalJoinTables(['journals']),
-      Q.where('account_id', Q.oneOf(accountIds)),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.on('journals', [
-        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.where('deleted_at', Q.eq(null)),
-      ]),
-    ];
+    const clauses = this.buildActiveClauses([Q.where('account_id', Q.oneOf(accountIds))]);
 
     if (dateRange) {
       clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
       clauses.push(Q.where('transaction_date', Q.lte(dateRange.endDate)));
     }
 
-    let query = this.transactions
-      .query(...clauses)
-      .extend(Q.sortBy('transaction_date', Q.desc))
-      .extend(Q.sortBy('created_at', Q.desc));
+    let query = this.deterministicSort(this.transactions.query(...clauses), Q.desc);
 
     if (limit) {
       query = query.extend(Q.take(limit));
@@ -267,20 +261,14 @@ export class TransactionRepository {
   }
 
   /**
-   * Observe all active (non-deleted) transactions
-   * Useful for dashboard summary reactive updates
+   * Observe all active (non-deleted) transactions.
+   *
+   * @deprecated USE WITH EXTREME CAUTION. Loading ALL historical transactions causes
+   * massive bridge congestion and OOM at scale. Prefer observeByDateRange() or
+   * observeByAccounts() whenever possible.
    */
-  observeActive() {
-    return this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
-        ]),
-      )
-      .observe();
+  observeAllActive_UNSAFE() {
+    return this.transactions.query(...this.buildActiveClauses()).observe();
   }
 
   /**
@@ -288,29 +276,11 @@ export class TransactionRepository {
    * Efficient trigger: Signals changes without loading full models into memory.
    */
   observeActiveCount(shouldThrottle: boolean = true) {
-    return this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
-        ]),
-      )
-      .observeCount(shouldThrottle);
+    return this.transactions.query(...this.buildActiveClauses()).observeCount(shouldThrottle);
   }
 
   observeActiveWithColumns(columns: string[]) {
-    return this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
-        ]),
-      )
-      .observeWithColumns(columns);
+    return this.transactions.query(...this.buildActiveClauses()).observeWithColumns(columns);
   }
 
   /**
@@ -319,25 +289,13 @@ export class TransactionRepository {
    * avoids deserializing the entire transaction history across the bridge.
    */
   observeByDateRange(startDate: number, endDate?: number) {
-    const clauses: any[] = [
-      Q.experimentalJoinTables(['journals']),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('transaction_date', Q.gte(startDate)),
-    ];
-
+    const extra: any[] = [Q.where('transaction_date', Q.gte(startDate))];
     if (endDate !== undefined) {
-      clauses.push(Q.where('transaction_date', Q.lte(endDate)));
+      extra.push(Q.where('transaction_date', Q.lte(endDate)));
     }
 
-    clauses.push(
-      Q.on('journals', [
-        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.where('deleted_at', Q.eq(null)),
-      ]),
-    );
-
     return this.transactions
-      .query(...clauses)
+      .query(...this.buildActiveClauses(extra))
       .observeWithColumns([
         'amount',
         'account_id',
@@ -418,21 +376,15 @@ export class TransactionRepository {
     date: number,
     inclusive: boolean = true,
   ): Promise<Transaction | null> {
-    const transactions = await this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
+    const transactions = await this.deterministicSort(
+      this.transactions.query(
+        ...this.buildActiveClauses([
+          Q.where('account_id', accountId),
+          Q.where('transaction_date', inclusive ? Q.lte(date) : Q.lt(date)),
         ]),
-        Q.where('account_id', accountId),
-        Q.where('transaction_date', inclusive ? Q.lte(date) : Q.lt(date)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('transaction_date', Q.desc),
-        Q.sortBy('created_at', Q.desc),
         Q.take(1),
-      )
-      .fetch();
+      ),
+    ).fetch();
     return transactions[0] || null;
   }
 
@@ -446,20 +398,51 @@ export class TransactionRepository {
     endDate: number,
   ): Promise<Transaction[]> {
     const start = Date.now();
-    const results = await this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('account_id', Q.oneOf(accountIds)),
-        Q.where('transaction_date', Q.gte(startDate)),
-        Q.where('transaction_date', Q.lte(endDate)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
-        ]),
-      )
-      .extend(Q.sortBy('transaction_date', Q.desc))
-      .fetch();
+    const clauses = this.buildActiveClauses([
+      Q.where('account_id', Q.oneOf(accountIds)),
+      Q.where('transaction_date', Q.gte(startDate)),
+      Q.where('transaction_date', Q.lte(endDate)),
+    ]);
+
+    // Batching logic: For large account sets, we chunk the query to prevent SQLite performance collapse.
+    const CHUNK_SIZE = 100;
+    const CONCURRENCY_LIMIT = 4; // Prevent bridge stampede
+    let results: Transaction[] = [];
+
+    if (accountIds.length <= CHUNK_SIZE) {
+      results = await this.deterministicSort(this.transactions.query(...clauses), Q.desc).fetch();
+    } else {
+      // Seq/Parallel hybrid batch fetch to balance throughput and bridge health
+      const allChunks: string[][] = [];
+      for (let i = 0; i < accountIds.length; i += CHUNK_SIZE) {
+        allChunks.push(accountIds.slice(i, i + CHUNK_SIZE));
+      }
+
+      const chunkResults: Transaction[][] = [];
+      for (let i = 0; i < allChunks.length; i += CONCURRENCY_LIMIT) {
+        const batch = allChunks.slice(i, i + CONCURRENCY_LIMIT);
+        const batchResults = await Promise.all(
+          batch.map(chunk => {
+            const chunkClauses = this.buildActiveClauses([
+              Q.where('account_id', Q.oneOf(chunk)),
+              Q.where('transaction_date', Q.gte(startDate)),
+              Q.where('transaction_date', Q.lte(endDate)),
+            ]);
+            return this.deterministicSort(this.transactions.query(...chunkClauses), Q.desc).fetch();
+          }),
+        );
+        chunkResults.push(...batchResults);
+      }
+
+      // Merge and global sort in memory to ensure cross-chunk deterministic order
+      results = chunkResults.flat().sort((a, b) => {
+        const dateDiff = b.transactionDate - a.transactionDate;
+        if (dateDiff !== 0) return dateDiff;
+        const createDiff = b.createdAt.getTime() - a.createdAt.getTime();
+        if (createDiff !== 0) return createDiff;
+        return b.id.localeCompare(a.id);
+      });
+    }
 
     logger.info(
       `[Trace] TransactionRepository.findByAccountsAndDateRange: ${Date.now() - start}ms`,
@@ -490,15 +473,11 @@ export class TransactionRepository {
   ): Promise<number> {
     return this.transactions
       .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
+        ...this.buildActiveClauses([
+          Q.where('account_id', accountId),
+          Q.where('transaction_date', Q.gte(startDate)), // Fix boundary to be inclusive
+          Q.where('transaction_date', Q.lte(endDate)),
         ]),
-        Q.where('account_id', accountId),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('transaction_date', Q.gt(startDate)),
-        Q.where('transaction_date', Q.lte(endDate)),
       )
       .fetchCount();
   }
@@ -510,13 +489,9 @@ export class TransactionRepository {
   observeCountByDateRange(startDate: number, endDate: number, shouldThrottle: boolean = true) {
     return this.transactions
       .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('transaction_date', Q.gte(startDate)),
-        Q.where('transaction_date', Q.lte(endDate)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
+        ...this.buildActiveClauses([
+          Q.where('transaction_date', Q.gte(startDate)),
+          Q.where('transaction_date', Q.lte(endDate)),
         ]),
       )
       .observeCount(shouldThrottle);
@@ -525,13 +500,9 @@ export class TransactionRepository {
   observeByDateRangeWithColumns(startDate: number, endDate: number, columns: string[]) {
     return this.transactions
       .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('transaction_date', Q.gte(startDate)),
-        Q.where('transaction_date', Q.lte(endDate)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
+        ...this.buildActiveClauses([
+          Q.where('transaction_date', Q.gte(startDate)),
+          Q.where('transaction_date', Q.lte(endDate)),
         ]),
       )
       .observeWithColumns(columns);
@@ -556,15 +527,7 @@ export class TransactionRepository {
 
   async hasTransactions(accountId: string): Promise<boolean> {
     const count = await this.transactions
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
-        ]),
-        Q.where('account_id', accountId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
+      .query(...this.buildActiveClauses([Q.where('account_id', accountId)]))
       .fetchCount();
     return count > 0;
   }

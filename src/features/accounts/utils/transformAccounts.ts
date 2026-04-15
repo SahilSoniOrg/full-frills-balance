@@ -97,11 +97,12 @@ export function transformAccountsToSections(
     totalIncome,
     totalExpense,
     expandedAccountIds,
+    onContrast,
   } = options;
 
   const rawSections = getAccountSections(accounts);
 
-  return rawSections.map(section => {
+  const sections = rawSections.map(section => {
     const sectionColor = getSectionColor(section.title, {
       asset: theme.asset,
       liability: theme.liability,
@@ -146,11 +147,13 @@ export function transformAccountsToSections(
       const isExpanded = expandedAccountIds.has(account.id);
       const children = accountsByParent.get(account.id) || [];
 
-      // Pass contrast resolution to the transform options
-      const { onContrast } = options;
-
       // CACHE KEY: Specific to THIS instance's volatile state
-      const stateKey = `${account.id}:${balance}:${monthlyIncome}:${monthlyExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${isLoading}:${theme.asset}`;
+      // M-5 FIX: Remove isLoading from the key to preserve cache once loading finishes.
+      // M-5 FIX: Round numbers to 2 decimals to prevent floating-point drift misses.
+      const roundedBalance = Math.round(balance * 100) / 100;
+      const roundedIncome = Math.round(monthlyIncome * 100) / 100;
+      const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
+      const stateKey = `${account.id}:${roundedBalance}:${roundedIncome}:${roundedExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${theme.asset}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
@@ -174,7 +177,7 @@ export function transformAccountsToSections(
       }
 
       // LAYER 1: Static Metadata (Colors/Icons)
-      const metaKey = `${account.id}:${account.accountType}:${account.name}:${theme.background}`; // Add theme background to key to avoid stale cache on theme switch
+      const metaKey = `${account.id}:${account.accountType}:${account.name}:${theme.background}`;
       let meta = STATIC_META_CACHE.get(metaKey);
 
       if (!meta) {
@@ -243,7 +246,7 @@ export function transformAccountsToSections(
 
     rootAccounts.forEach(root => flatten(root, 0));
 
-    const result = {
+    return {
       title: section.title,
       count: typeAccounts.length,
       totalDisplay,
@@ -251,14 +254,14 @@ export function transformAccountsToSections(
       isCollapsed: collapsedSections.has(section.title),
       data: flattenedData,
     };
-
-    const duration = Date.now() - startTime;
-    logger.info(`[Trace] transformAccountsToSections: ${duration}ms`, {
-      accounts: totalAccounts,
-      cacheHits,
-      hitRate: totalAccounts > 0 ? `${((cacheHits / totalAccounts) * 100).toFixed(1)}%` : '0%',
-    });
-
-    return result;
   });
+
+  const duration = Date.now() - startTime;
+  logger.info(`[Trace] transformAccountsToSections: ${duration}ms`, {
+    accounts: totalAccounts,
+    cacheHits,
+    hitRate: totalAccounts > 0 ? `${((cacheHits / totalAccounts) * 100).toFixed(1)}%` : '0%',
+  });
+
+  return sections;
 }

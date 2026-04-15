@@ -64,38 +64,39 @@ export class BalanceSnapshotRepository {
     if (accountIds.length === 0) return result;
 
     const sqlAdapter = getRawAdapter(database);
-    if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') return result;
+    if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') {
+      logger.warn(
+        '[BalanceSnapshotRepository] findLatestForAccountsRaw: Raw SQL not supported. Performance risk.',
+      );
+      return result;
+    }
 
     const sql = `
-            SELECT
-                bs.id,
-                bs.account_id AS accountId,
-                bs.transaction_id AS transactionId,
-                bs.transaction_date AS transactionDate,
-                bs.absolute_balance AS absoluteBalance,
-                bs.transaction_count AS transactionCount,
-                bs.created_at AS createdAt,
-                bs.updated_at AS updatedAt,
-                t.created_at AS transactionCreatedAt
-            FROM balance_snapshots bs
-            LEFT JOIN transactions t ON bs.transaction_id = t.id
-            WHERE bs.account_id IN (${accountIds.map(() => '?').join(',')})
-              AND bs.transaction_date <= ?
-              AND NOT EXISTS (
-                SELECT 1
-                FROM balance_snapshots bs_next
-                WHERE bs_next.account_id = bs.account_id
-                  AND bs_next.transaction_date <= ?
-                  AND (
-                    bs_next.transaction_date > bs.transaction_date
-                    OR (bs_next.transaction_date = bs.transaction_date AND bs_next.created_at > bs.created_at)
-                    OR (bs_next.transaction_date = bs.transaction_date AND bs_next.created_at = bs.created_at AND bs_next.id > bs.id)
-                  )
-            )
-        `;
+      WITH RankedSnapshots AS (
+        SELECT 
+          bs.id,
+          bs.account_id AS accountId,
+          bs.transaction_id AS transactionId,
+          bs.transaction_date AS transactionDate,
+          bs.absolute_balance AS absoluteBalance,
+          bs.transaction_count AS transactionCount,
+          bs.created_at AS createdAt,
+          bs.updated_at AS updatedAt,
+          t.created_at AS transactionCreatedAt,
+          ROW_NUMBER() OVER (
+            PARTITION BY bs.account_id 
+            ORDER BY bs.transaction_date DESC, bs.created_at DESC, bs.id DESC
+          ) as rn
+        FROM balance_snapshots bs
+        LEFT JOIN transactions t ON bs.transaction_id = t.id
+        WHERE bs.account_id IN (${accountIds.map(() => '?').join(',')})
+          AND bs.transaction_date <= ?
+      )
+      SELECT * FROM RankedSnapshots WHERE rn = 1
+    `;
 
     try {
-      const rows = await sqlAdapter.queryRaw(sql, [...accountIds, date, date]);
+      const rows = await sqlAdapter.queryRaw(sql, [...accountIds, date]);
       const data = Array.isArray(rows) ? rows : rows?.rows || [];
       for (const row of data) {
         result.set(row.accountId, row as SnapshotData);

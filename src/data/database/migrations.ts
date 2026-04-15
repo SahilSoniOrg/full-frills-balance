@@ -324,5 +324,85 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 19,
+      steps: [
+        unsafeExecuteSql(`DROP INDEX IF EXISTS idx_transactions_chronological;`),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_transactions_high_perf 
+          ON transactions (account_id, transaction_date DESC, created_at DESC, id DESC) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_journals_status_active 
+          ON journals (status, deleted_at) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_exchange_rates_lookup 
+          ON exchange_rates (from_currency, to_currency, effective_date DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_history 
+          ON audit_logs (entity_type, entity_id, timestamp DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_planned_payments_active 
+          ON planned_payments (status, deleted_at, next_occurrence ASC) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_journals_main_ledger 
+          ON journals (status, deleted_at, journal_date DESC) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_transactions_amount 
+          ON transactions (amount) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_balance_snapshots_chronological 
+          ON balance_snapshots (account_id, transaction_date DESC, created_at DESC, id DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_budgets_active_sorted 
+          ON budgets (active, start_month DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_sms_inbox_chronological 
+          ON sms_inbox_records (sms_date DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_accounts_ordered 
+          ON accounts (deleted_at, order_num ASC) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_transactions_global_chronological 
+          ON transactions (transaction_date DESC, created_at DESC, id DESC) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_journals_dedup 
+          ON journals (total_amount, journal_date) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_transactions_by_journal 
+          ON transactions (journal_id, transaction_date, created_at) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_sms_inbox_pending 
+          ON sms_inbox_records (processing_status, sms_date DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_planned_payments_upcoming 
+          ON planned_payments (deleted_at, next_occurrence ASC) 
+          WHERE deleted_at IS NULL;
+        `),
+      ],
+    },
   ],
 });
