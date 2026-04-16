@@ -1,5 +1,5 @@
 import { AppCard, AppText } from '@/src/components/core';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import PlannedPayment, {
   PlannedPaymentInterval,
@@ -51,7 +51,7 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
 
   return (
     <AppCard elevation="sm" padding="md" radius="r2" style={styles.card}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
         <Stack gap="sm">
           <Inline justify="space-between" align="flex-start">
             <Stack gap="xs" flex={1}>

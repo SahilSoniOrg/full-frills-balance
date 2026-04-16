@@ -1,5 +1,5 @@
 import { AppText } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
@@ -139,7 +139,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
             fontWeight: '700',
             textTransform: 'uppercase',
             letterSpacing: 1.2,
-            opacity: 0.8,
+            opacity: Opacity.strong,
           }}
         >
           {title}
@@ -158,7 +158,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                 fontSize={10}
                 fontWeight="800"
                 fill={theme.text}
-                opacity={0.8}
+                opacity={Opacity.strong}
                 textAnchor="middle"
               >
                 {d}
@@ -195,7 +195,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                       fontSize={10}
                       fontWeight="800"
                       fill={theme.text}
-                      opacity={0.8}
+                      opacity={Opacity.strong}
                       textAnchor="end"
                     >
                       {p.monthLabel}
@@ -234,7 +234,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
               y={totalHeight - 25}
               fontSize={9}
               fill={theme.text}
-              opacity={0.6}
+              opacity={Opacity.medium}
               textAnchor="end"
             >
               Low
@@ -256,7 +256,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
               y={totalHeight - 25}
               fontSize={9}
               fill={theme.text}
-              opacity={0.6}
+              opacity={Opacity.medium}
               textAnchor="start"
             >
               High

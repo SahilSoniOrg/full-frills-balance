@@ -1,5 +1,5 @@
 import { AppButton, AppText } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
@@ -43,7 +43,7 @@ export const SmsImportSheet = ({ onClose }: SmsImportSheetProps) => {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: withOpacity('#000000', Opacity.medium),
     justifyContent: 'flex-end',
   },
   container: {

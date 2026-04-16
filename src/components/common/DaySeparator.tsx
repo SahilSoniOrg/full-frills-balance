@@ -1,5 +1,5 @@
 import { AppIcon, AppText, Badge } from '@/src/components/core';
-import { AppConfig, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   formatDaySeparator,
@@ -126,7 +126,7 @@ export function DaySeparator({
 
   return (
     <TouchableOpacity
-      activeOpacity={0.7}
+      activeOpacity={Opacity.heavy}
       onPress={onToggle}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   statCount: {
     fontSize: Typography.sizes.xs,
-    opacity: 0.7,
+    opacity: Opacity.heavy,
     marginTop: 2,
   },
   netAmount: {
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   reconciledLine: {
     flex: 1,
     height: 1,
-    opacity: 0.3,
+    opacity: Opacity.muted,
   },
   reconciledContent: {
     flexDirection: 'row',

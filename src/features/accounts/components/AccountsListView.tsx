@@ -5,7 +5,7 @@ import {
   IconButton,
 } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import {
@@ -98,7 +98,7 @@ export function AccountsListView({
             return (
               <TouchableOpacity
                 onPress={() => onToggleSection(section.title)}
-                activeOpacity={0.7}
+                activeOpacity={Opacity.heavy}
                 style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}
                 accessibilityLabel={`${section.title} section, ${section.count} accounts`}
                 accessibilityRole="button"

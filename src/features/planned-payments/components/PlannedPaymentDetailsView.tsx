@@ -427,6 +427,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: withOpacity('#000', 0.1),
+    borderColor: withOpacity('#000000', Opacity.hover),
   },
 });

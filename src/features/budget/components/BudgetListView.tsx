@@ -1,5 +1,5 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { ColorKey, Shape, Size, Spacing } from '@/src/constants';
+import { ColorKey, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -39,7 +39,7 @@ export function BudgetListView() {
       <TouchableOpacity
         style={styles.cardContainer}
         onPress={() => handlePress(item)}
-        activeOpacity={0.8}
+        activeOpacity={Opacity.heavy}
       >
         <AppCard elevation="md" padding="lg" radius="r2">
           <Stack gap="lg">

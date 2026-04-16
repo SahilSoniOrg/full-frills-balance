@@ -1,4 +1,5 @@
 import { AppIcon, AppText, type IconName, isValidIconName } from '@/src/components/core';
+import { Opacity } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -69,7 +70,11 @@ export function SettingsMenuItem({
   };
 
   return (
-    <TouchableOpacity onPress={onPress} disabled={disabled || !onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || !onPress}
+      activeOpacity={Opacity.heavy}
+    >
       <Inline
         align="center"
         justify="space-between"
@@ -98,7 +103,7 @@ export function SettingsMenuItem({
                 name="refresh"
                 size={16}
                 color={theme.textSecondary}
-                style={{ opacity: 0.5 }}
+                style={{ opacity: Opacity.medium }}
               />
             </Box>
           ) : (
@@ -109,7 +114,7 @@ export function SettingsMenuItem({
               name="chevronRight"
               size={16}
               color={theme.textSecondary}
-              style={{ opacity: 0.5 }}
+              style={{ opacity: Opacity.medium }}
             />
           )}
         </Inline>

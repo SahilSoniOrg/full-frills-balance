@@ -1,6 +1,6 @@
 import { InfoSheet } from '@/src/components/common/InfoSheet';
 import { AppCard, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -64,7 +64,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
           <AppCard
             elevation="none"
             style={{
-              backgroundColor: withOpacity(theme.surfaceSecondary, 0.3),
+              backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.muted),
               borderColor: theme.primary,
               borderWidth: 1,
               borderStyle: 'dashed',
@@ -122,7 +122,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                   -{formatValue(committedLiabilities)}
                 </AppText>
               </View>
-              <Separator marginVertical="md" opacity={0.3} />
+              <Separator marginVertical="md" opacity={Opacity.muted} />
               <View style={styles.breakdownRow}>
                 <AppText variant="heading" style={{ fontSize: Typography.sizes.xl }}>
                   Safe to Spend
@@ -141,7 +141,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                 marginTop: Spacing.lg,
                 paddingTop: Spacing.lg,
                 borderTopWidth: 1,
-                borderTopColor: withOpacity(theme.border, 0.2),
+                borderTopColor: withOpacity(theme.border, Opacity.active),
                 borderStyle: 'dashed',
               }}
             >
@@ -265,7 +265,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               );
             })()}
 
-            <Separator marginVertical="xs" opacity={0.3} />
+            <Separator marginVertical="xs" opacity={Opacity.muted} />
             <View style={styles.breakdownRow}>
               <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>
                 {labels.totalCommitted}
@@ -307,7 +307,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               </AppText>
             </View>
 
-            <Separator marginVertical="xl" opacity={0.3} />
+            <Separator marginVertical="xl" opacity={Opacity.muted} />
 
             {(() => {
               const beforeIncome = debtBreakdown.filter(
@@ -369,7 +369,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
               );
             })()}
 
-            <Separator marginVertical="xs" opacity={0.3} />
+            <Separator marginVertical="xs" opacity={Opacity.muted} />
 
             <View style={styles.breakdownRow}>
               <AppText variant="body" weight="bold" style={{ fontSize: Typography.sizes.lg }}>
@@ -384,7 +384,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                 {formatValue(committedLiabilities)}
               </AppText>
             </View>
-            <Separator marginVertical="md" opacity={0.3} />
+            <Separator marginVertical="md" opacity={Opacity.muted} />
             <View style={styles.breakdownRow}>
               <AppText variant="caption" color="secondary" weight="bold">
                 {labels.totalBalanceInfo.toUpperCase()}

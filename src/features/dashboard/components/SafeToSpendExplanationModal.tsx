@@ -49,8 +49,8 @@ export const SafeToSpendExplanationModal = ({
         ledgerHeader: {
           padding: Spacing.xl,
           borderBottomWidth: 1,
-          borderBottomColor: withOpacity(theme.border, 0.2),
-          backgroundColor: withOpacity(theme.surfaceSecondary, 0.5),
+          borderBottomColor: withOpacity(theme.border, Opacity.active),
+          backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.medium),
           flexDirection: 'row',
           alignItems: 'center',
           gap: Spacing.sm,
@@ -80,9 +80,9 @@ export const SafeToSpendExplanationModal = ({
         resultLine: {
           flex: 1,
           padding: Spacing.xl,
-          backgroundColor: withOpacity(theme.surfaceSecondary, 0.5),
+          backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.medium),
           borderTopWidth: 1,
-          borderTopColor: withOpacity(theme.border, 0.2),
+          borderTopColor: withOpacity(theme.border, Opacity.active),
           borderStyle: 'solid',
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -92,7 +92,7 @@ export const SafeToSpendExplanationModal = ({
           marginTop: Spacing.md,
           paddingHorizontal: Spacing.md,
           paddingVertical: Spacing.sm,
-          backgroundColor: withOpacity(theme.expense, 0.05),
+          backgroundColor: withOpacity(theme.expense, Opacity.selection),
           borderRadius: Shape.radius.sm,
           borderLeftWidth: 3,
           borderLeftColor: theme.expense,
@@ -133,7 +133,7 @@ export const SafeToSpendExplanationModal = ({
         style={{
           marginBottom: Spacing.xl,
           lineHeight: Typography.sizes.base * 1.5,
-          opacity: 0.9,
+          opacity: Opacity.high,
         }}
       >
         {info.intro}
@@ -146,7 +146,7 @@ export const SafeToSpendExplanationModal = ({
           marginBottom: Spacing.xl,
           borderRadius: Shape.radius.r3,
           borderWidth: 1,
-          borderColor: withOpacity(theme.border, 0.4),
+          borderColor: withOpacity(theme.border, Opacity.muted),
           overflow: 'hidden',
         }}
       >
@@ -169,7 +169,10 @@ export const SafeToSpendExplanationModal = ({
                 style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
               >
                 <View
-                  style={[styles.stepIcon, { backgroundColor: withOpacity(theme.primary, 0.1) }]}
+                  style={[
+                    styles.stepIcon,
+                    { backgroundColor: withOpacity(theme.primary, Opacity.hover) },
+                  ]}
                 >
                   <AppIcon name="wallet" size={Size.sm} color={theme.primary} />
                 </View>
@@ -222,7 +225,10 @@ export const SafeToSpendExplanationModal = ({
                 style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
               >
                 <View
-                  style={[styles.stepIcon, { backgroundColor: withOpacity(theme.primary, 0.1) }]}
+                  style={[
+                    styles.stepIcon,
+                    { backgroundColor: withOpacity(theme.primary, Opacity.hover) },
+                  ]}
                 >
                   <AppIcon name="trendingUp" size={Size.sm} color={theme.primary} />
                 </View>
@@ -277,7 +283,7 @@ export const SafeToSpendExplanationModal = ({
                         }
                       }}
                       disabled={inc.type !== 'PLANNED_PAYMENT'}
-                      activeOpacity={0.7}
+                      activeOpacity={Opacity.heavy}
                     >
                       <View style={{ flex: 1 }}>
                         <AppText variant="caption" weight="bold">
@@ -289,7 +295,7 @@ export const SafeToSpendExplanationModal = ({
                           <AppIcon
                             name={inc.type === 'PLANNED_PAYMENT' ? 'calendar' : 'refresh'}
                             size={10}
-                            color={withOpacity(theme.success, 0.7)}
+                            color={withOpacity(theme.success, Opacity.heavy)}
                           />
                           <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
                             Day {inc.dayOffset} •{' '}
@@ -325,7 +331,10 @@ export const SafeToSpendExplanationModal = ({
                 style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
               >
                 <View
-                  style={[styles.stepIcon, { backgroundColor: withOpacity(theme.warning, 0.1) }]}
+                  style={[
+                    styles.stepIcon,
+                    { backgroundColor: withOpacity(theme.warning, Opacity.hover) },
+                  ]}
                 >
                   <AppIcon name="lock" size={Size.sm} color={theme.warning} />
                 </View>
@@ -410,7 +419,7 @@ export const SafeToSpendExplanationModal = ({
                                 }
                               }}
                               disabled={det.type !== 'PLANNED_PAYMENT'}
-                              activeOpacity={0.7}
+                              activeOpacity={Opacity.heavy}
                             >
                               <View
                                 style={{
@@ -463,7 +472,7 @@ export const SafeToSpendExplanationModal = ({
                                   {isPostIncome && (
                                     <View
                                       style={{
-                                        backgroundColor: withOpacity(theme.success, 0.1),
+                                        backgroundColor: withOpacity(theme.success, Opacity.hover),
                                         paddingHorizontal: 6,
                                         paddingVertical: 2,
                                         borderRadius: 4,
@@ -511,7 +520,12 @@ export const SafeToSpendExplanationModal = ({
               <View
                 style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}
               >
-                <View style={[styles.stepIcon, { backgroundColor: withOpacity(theme.error, 0.1) }]}>
+                <View
+                  style={[
+                    styles.stepIcon,
+                    { backgroundColor: withOpacity(theme.error, Opacity.hover) },
+                  ]}
+                >
                   <AppIcon name="error" size={Size.sm} color={theme.error} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -668,7 +682,7 @@ export const SafeToSpendExplanationModal = ({
         <Separator
           background="border"
           space={1}
-          opacity={0.3}
+          opacity={Opacity.muted}
           style={{ width: 40, marginBottom: Spacing.lg }}
         />
         <AppText
@@ -677,7 +691,7 @@ export const SafeToSpendExplanationModal = ({
           color="secondary"
           style={{
             textAlign: 'center',
-            opacity: 0.8,
+            opacity: Opacity.strong,
             paddingHorizontal: Spacing.xl,
             lineHeight: 18,
           }}

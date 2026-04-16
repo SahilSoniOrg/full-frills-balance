@@ -1,29 +1,24 @@
-import React from 'react'
-import { DimensionValue, StyleSheet } from 'react-native'
-import { MotiView } from 'moti'
-import { useTheme } from '@/src/hooks/use-theme'
-import { Box } from './Box'
-import { RadiusKey } from '@/src/constants/design-tokens'
+import React from 'react';
+import { DimensionValue, StyleSheet } from 'react-native';
+import { MotiView } from 'moti';
+import { useTheme } from '@/src/hooks/use-theme';
+import { Box } from './Box';
+import { Opacity, RadiusKey } from '@/src/constants/design-tokens';
 
 export type SkeletonProps = {
-  width?: DimensionValue
-  height?: DimensionValue
-  radius?: RadiusKey | number
-  color?: string
-}
+  width?: DimensionValue;
+  height?: DimensionValue;
+  radius?: RadiusKey | number;
+  color?: string;
+};
 
 /**
  * Skeleton - Placeholder for loading states
  * Provides a subtle pulse animation using Moti.
  */
-export const Skeleton = ({
-  width = '100%',
-  height = 20,
-  radius = 'sm',
-  color,
-}: SkeletonProps) => {
-  const { theme } = useTheme()
-  const baseColor = color || theme.surface
+export const Skeleton = ({ width = '100%', height = 20, radius = 'sm', color }: SkeletonProps) => {
+  const { theme } = useTheme();
+  const baseColor = color || theme.surface;
 
   return (
     <Box
@@ -34,8 +29,8 @@ export const Skeleton = ({
       style={styles.container}
     >
       <MotiView
-        from={{ opacity: 0.3 }}
-        animate={{ opacity: 0.6 }}
+        from={{ opacity: Opacity.muted }}
+        animate={{ opacity: Opacity.medium }}
         transition={{
           type: 'timing',
           duration: 1000,
@@ -44,15 +39,15 @@ export const Skeleton = ({
         }}
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: theme.primary, opacity: 0.1 },
+          { backgroundColor: theme.primary, opacity: Opacity.hover },
         ]}
       />
     </Box>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
   },
-})
+});

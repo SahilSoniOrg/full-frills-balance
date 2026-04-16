@@ -1,6 +1,6 @@
 import { AppButton, AppText, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Spacing } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -47,8 +47,8 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
       {shouldRenderChildren && (
         <MotiView
           animate={{
-            opacity: isAppCurrentlyLocked ? 0 : 1,
-            scale: isAppCurrentlyLocked ? 0.98 : 1,
+            opacity: isAppCurrentlyLocked ? Opacity.solid * 0 : Opacity.solid,
+            scale: isAppCurrentlyLocked ? Opacity.subtle : Opacity.solid,
           }}
           transition={{
             type: 'timing',
@@ -83,8 +83,8 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
             <Screen showBack={false} withPadding>
               <View style={styles.container}>
                 <MotiView
-                  from={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
+                  from={{ scale: Opacity.strong, opacity: Opacity.solid * 0 }}
+                  animate={{ scale: Opacity.solid, opacity: Opacity.solid }}
                   transition={{ type: 'timing', duration: 400, delay: 100 }}
                   style={[styles.iconContainer, { backgroundColor: theme.surfaceSecondary }]}
                 >

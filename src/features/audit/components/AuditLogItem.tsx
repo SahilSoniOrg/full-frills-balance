@@ -48,7 +48,7 @@ export const AuditLogItem = ({
         onPress={onToggle}
         accessibilityLabel={AppConfig.strings.audit.viewDetails}
         accessibilityRole="button"
-        activeOpacity={0.7}
+        activeOpacity={Opacity.heavy}
       >
         <Inline gap="md" align="center">
           <Box

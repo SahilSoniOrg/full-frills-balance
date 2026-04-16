@@ -1,11 +1,11 @@
 import { AppIcon, AppText, Badge } from '@/src/components/core';
-import { Shape, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { analytics } from '@/src/services/analytics-service';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
 import { AppNavigation } from '@/src/utils/navigation';
-import { analytics } from '@/src/services/analytics-service';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -42,7 +42,7 @@ export const SafeToSpendLedger = ({
                 key={i}
                 size="sm"
                 variant="secondary"
-                style={{ backgroundColor: withOpacity(theme.surfaceSecondary, 0.8) }}
+                style={{ backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.strong) }}
               >
                 {formatAccountSubtypeLabel(st)}
               </Badge>
@@ -91,12 +91,12 @@ export const SafeToSpendLedger = ({
                       {
                         backgroundColor: withOpacity(
                           isShortfall ? theme.error : theme.surfaceSecondary,
-                          isZero ? 0.1 : 0.4,
+                          isZero ? Opacity.hover : Opacity.muted,
                         ),
                         paddingHorizontal: Spacing.sm,
                         paddingVertical: Spacing.xs,
                         borderRadius: Shape.radius.sm,
-                        opacity: isZero ? 0.6 : 1,
+                        opacity: isZero ? Opacity.medium : Opacity.solid,
                         borderLeftWidth: isShortfall ? 2 : 0,
                         borderLeftColor: theme.error,
                       },
@@ -110,7 +110,7 @@ export const SafeToSpendLedger = ({
                         });
                         AppNavigation.toAccountDetails(acc.accountId);
                       }}
-                      activeOpacity={0.7}
+                      activeOpacity={Opacity.heavy}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <AppText variant="caption" weight="bold">
@@ -120,7 +120,7 @@ export const SafeToSpendLedger = ({
                           name="chevronRight"
                           size={10}
                           color={theme.textSecondary}
-                          style={{ opacity: 0.5 }}
+                          style={{ opacity: Opacity.medium }}
                         />
                       </View>
                       <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
@@ -130,7 +130,7 @@ export const SafeToSpendLedger = ({
                         <AppText
                           variant="caption"
                           color="secondary"
-                          style={{ fontSize: 9, opacity: 0.5 }}
+                          style={{ fontSize: 9, opacity: Opacity.medium }}
                         >
                           •
                         </AppText>
@@ -183,7 +183,7 @@ export const SafeToSpendLedger = ({
                                 flexDirection: 'row',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                opacity: 0.7,
+                                opacity: Opacity.heavy,
                               }}
                             >
                               <TouchableOpacity
@@ -207,7 +207,7 @@ export const SafeToSpendLedger = ({
                                   }
                                 }}
                                 disabled={!item.id || item.source !== 'PLANNED_PAYMENT'}
-                                activeOpacity={0.6}
+                                activeOpacity={Opacity.medium}
                               >
                                 <AppIcon
                                   name={icon}
@@ -233,7 +233,7 @@ export const SafeToSpendLedger = ({
                                       name="chevronRight"
                                       size={8}
                                       color={theme.textSecondary}
-                                      style={{ opacity: 0.4 }}
+                                      style={{ opacity: Opacity.muted }}
                                     />
                                   )}
                                   {item.isPostIncome && (
@@ -264,7 +264,7 @@ export const SafeToSpendLedger = ({
                               flexDirection: 'row',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              opacity: 0.7,
+                              opacity: Opacity.heavy,
                             }}
                           >
                             <View

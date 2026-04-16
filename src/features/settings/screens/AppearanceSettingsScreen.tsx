@@ -1,7 +1,7 @@
 import { AppCard, AppText } from '@/src/components/core';
 import { AppButton } from '@/src/components/core/AppButton';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, FontIds, FontSchemes, Spacing, ThemeIds } from '@/src/constants';
+import { AppConfig, FontIds, FontSchemes, Opacity, Spacing, ThemeIds } from '@/src/constants';
 import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#E5E5E5',
     marginVertical: Spacing.lg,
-    opacity: 0.1,
+    opacity: Opacity.hover,
   },
   modeRow: {
     flexDirection: 'row',

@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   detailsSection: {
-    backgroundColor: withOpacity('#000', 0.02),
+    backgroundColor: withOpacity('#000', Opacity.ghost),
     padding: Spacing.md,
     borderRadius: Shape.radius.md,
   },

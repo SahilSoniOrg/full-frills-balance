@@ -1,6 +1,6 @@
 import { LineChart } from '@/src/components/charts/LineChart';
 import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { Inline, Separator, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
@@ -82,8 +82,8 @@ export const SafeToSpendChart = ({
                   marginTop: 0,
                   paddingVertical: 2,
                   paddingHorizontal: 6,
-                  backgroundColor: withOpacity(theme.success, 0.1),
-                  borderColor: withOpacity(theme.success, 0.2),
+                  backgroundColor: withOpacity(theme.success, Opacity.hover),
+                  borderColor: withOpacity(theme.success, Opacity.active),
                   borderWidth: 1,
                 },
               ]}
@@ -111,8 +111,8 @@ export const SafeToSpendChart = ({
                 marginTop: 0,
                 paddingVertical: 2,
                 paddingHorizontal: 6,
-                backgroundColor: withOpacity(theme.success, 0.1),
-                borderColor: withOpacity(theme.success, 0.2),
+                backgroundColor: withOpacity(theme.success, Opacity.hover),
+                borderColor: withOpacity(theme.success, Opacity.active),
                 borderWidth: 1,
               },
             ]}
@@ -165,7 +165,7 @@ export const SafeToSpendChart = ({
                       name="trendingUpDown"
                       size={12}
                       color={theme.primary}
-                      style={{ opacity: 0.8 }}
+                      style={{ opacity: Opacity.strong }}
                     />
                   )}
                 </Inline>
@@ -176,12 +176,12 @@ export const SafeToSpendChart = ({
 
                 {((point as any).dailyBurn > 0 || ((point as any).details?.length || 0) > 0) && (
                   <>
-                    <Separator opacity={0.1} marginVertical="xs" />
+                    <Separator opacity={Opacity.hover} marginVertical="xs" />
 
                     {(point.dailyBurn ?? 0) > 0 && (
                       <View
                         style={{
-                          backgroundColor: withOpacity(theme.error, 0.08),
+                          backgroundColor: withOpacity(theme.error, Opacity.shadow),
                           paddingHorizontal: 6,
                           paddingVertical: 4,
                           borderRadius: 4,
@@ -238,7 +238,7 @@ export const SafeToSpendChart = ({
                                 variant="caption"
                                 color="secondary"
                                 numberOfLines={1}
-                                style={{ fontSize: 10, opacity: 0.9 }}
+                                style={{ fontSize: 10, opacity: Opacity.high }}
                               >
                                 {detail.name}
                               </AppText>

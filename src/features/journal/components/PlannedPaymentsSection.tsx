@@ -1,9 +1,9 @@
 import { AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Spacing } from '@/src/constants';
+import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { useUI } from '@/src/contexts/UIContext';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
@@ -40,7 +40,7 @@ export function PlannedPaymentsSection({
       <TouchableOpacity
         style={styles.headerContainer}
         onPress={() => setIsExpanded(!isExpanded)}
-        activeOpacity={0.7}
+        activeOpacity={Opacity.heavy}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
           <AppText
@@ -115,7 +115,7 @@ export function PlannedPaymentsSection({
                 key={item.id}
                 style={styles.row}
                 onPress={() => onItemPress?.(item)}
-                activeOpacity={0.7}
+                activeOpacity={Opacity.heavy}
               >
                 <View style={styles.left}>
                   <AppText variant="body" style={{ color: dateColor }}>

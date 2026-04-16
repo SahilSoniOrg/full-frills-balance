@@ -1,5 +1,5 @@
 import { AppIcon, AppText, type IconName } from '@/src/components/core';
-import { Shape } from '@/src/constants';
+import { Opacity, Shape } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useEffect, useRef, useState } from 'react';
@@ -73,7 +73,7 @@ export const AppSegmentedControl = ({
     setContainerWidth(event.nativeEvent.layout.width);
   };
 
-  const contentWidth = Math.max(0, containerWidth - (pillInset * 2));
+  const contentWidth = Math.max(0, containerWidth - pillInset * 2);
   const itemWidth = contentWidth / options.length;
 
   const translateX = scrollValue.interpolate({
@@ -117,7 +117,7 @@ export const AppSegmentedControl = ({
             <TouchableOpacity
               key={option.id}
               onPress={() => onChange(option.id)}
-              activeOpacity={0.7}
+              activeOpacity={Opacity.heavy}
               style={[
                 styles.option,
                 isSmall && styles.optionSm,
@@ -130,9 +130,11 @@ export const AppSegmentedControl = ({
                   <AppIcon
                     name={option.icon}
                     size={14}
-                    color={isSelected
-                      ? (activeTextColor || theme.onPrimary)
-                      : (inactiveTextColor || theme.textSecondary)}
+                    color={
+                      isSelected
+                        ? activeTextColor || theme.onPrimary
+                        : inactiveTextColor || theme.textSecondary
+                    }
                   />
                 ) : null}
                 <AppText
@@ -140,8 +142,8 @@ export const AppSegmentedControl = ({
                   weight={isSelected ? 'semibold' : 'medium'}
                   style={{
                     color: isSelected
-                      ? (activeTextColor || theme.onPrimary)
-                      : (inactiveTextColor || theme.textSecondary),
+                      ? activeTextColor || theme.onPrimary
+                      : inactiveTextColor || theme.textSecondary,
                     textAlign: 'center',
                   }}
                 >

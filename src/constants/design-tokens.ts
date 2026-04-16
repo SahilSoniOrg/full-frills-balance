@@ -120,12 +120,16 @@ export const Spacing = {
 // Consistent transparency for overlays and semantic highlights
 export const Opacity = {
   none: 0,
+  ghost: 0.02, // Ultra-subtle highlights / ghost layers
   selection: 0.05, // Selection highlights
+  shadow: 0.08, // Subtle shadows / depth glows
   hover: 0.1, // Hover states
   soft: 0.15, // Secondary surfaces
+  active: 0.2, // Active states / whisper borders
   muted: 0.3, // Placeholders, disabled states
   medium: 0.5, // Overlays, inactive tabs
   heavy: 0.7, // Modal backdrops
+  strong: 0.8, // Forceful but translucent surfaces
   high: 0.9, // Near-solid highlights
   subtle: 0.98, // Decisive surfaces / tactile feedback
   solid: 1,
@@ -322,17 +326,17 @@ export const Shape = {
     sm: {
       elevation: 1,
       // @ts-ignore - boxShadow is valid in RN 0.81+ and Web
-      boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+      boxShadow: `0px 1px 2px ${withOpacity('#000000', Opacity.selection)}`,
     },
     md: {
       elevation: 3,
       // @ts-ignore
-      boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.08)',
+      boxShadow: `0px 2px 4px ${withOpacity('#000000', Opacity.shadow)}`,
     },
     lg: {
       elevation: 6,
       // @ts-ignore
-      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.12)',
+      boxShadow: `0px 4px 8px ${withOpacity('#000000', Opacity.hover)}`,
     },
   },
 } as const;
@@ -536,7 +540,7 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     textSecondary: '#6E6E73',
     textTertiary: '#9E9EA3',
     icon: '#6E6E73',
-    overlay: 'rgba(10, 10, 12, 0.5)',
+    overlay: withOpacity('#0A0A0C', Opacity.medium),
     divider: '#E1E1E6',
     pure: '#FFFFFF',
     pureInverse: '#000000',
@@ -568,7 +572,7 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     textSecondary: DeepSpacePalette.textSecondary,
     textTertiary: '#5A5666',
     icon: DeepSpacePalette.textSecondary,
-    overlay: 'rgba(0, 0, 0, 0.7)',
+    overlay: withOpacity('#000000', Opacity.heavy),
     divider: DeepSpacePalette.surfaceHighlight,
     pure: '#000000',
     pureInverse: '#FFFFFF',
@@ -603,7 +607,7 @@ const IvyTheme: { light: Theme; dark: Theme } = {
     textSecondary: IvyPalette.gray,
     textTertiary: IvyPalette.lightGray,
     icon: IvyPalette.gray,
-    overlay: 'rgba(9, 9, 10, 0.5)',
+    overlay: withOpacity('#09090A', Opacity.medium),
     divider: IvyPalette.extraLightGray,
     pure: '#FFFFFF',
     pureInverse: '#000000',
@@ -635,7 +639,7 @@ const IvyTheme: { light: Theme; dark: Theme } = {
     textSecondary: IvyPalette.lightGray,
     textTertiary: IvyPalette.gray,
     icon: IvyPalette.lightGray,
-    overlay: 'rgba(0, 0, 0, 0.8)',
+    overlay: withOpacity('#000000', Opacity.strong),
     divider: IvyPalette.darkGray,
     pure: '#000000',
     pureInverse: '#FFFFFF',
@@ -670,7 +674,7 @@ const EditorialTheme: { light: Theme; dark: Theme } = {
     textSecondary: '#5D6D7E',
     textTertiary: EditorialPalette.textSecondary,
     icon: '#5D6D7E',
-    overlay: 'rgba(44, 62, 80, 0.5)',
+    overlay: withOpacity('#2C3E50', Opacity.medium),
     divider: '#D5D8DC',
     pure: '#FFFFFF',
     pureInverse: '#000000',
@@ -702,7 +706,7 @@ const EditorialTheme: { light: Theme; dark: Theme } = {
     textSecondary: '#AAB7B8',
     textTertiary: '#7F8C8D',
     icon: '#AAB7B8',
-    overlay: 'rgba(0, 0, 0, 0.7)',
+    overlay: withOpacity('#000000', Opacity.heavy),
     divider: '#34495E',
     pure: '#000000',
     pureInverse: '#FFFFFF',
@@ -737,7 +741,7 @@ const GoldObsidianTheme: { light: Theme; dark: Theme } = {
     textSecondary: '#6B6864',
     textTertiary: '#9E9B97',
     icon: '#6B6864',
-    overlay: 'rgba(10, 12, 16, 0.5)',
+    overlay: withOpacity('#0A0C10', Opacity.medium),
     divider: '#E8E4DE',
     pure: '#FFFFFF',
     pureInverse: '#000000',
@@ -769,7 +773,7 @@ const GoldObsidianTheme: { light: Theme; dark: Theme } = {
     textSecondary: GoldObsidianPalette.textSecondary,
     textTertiary: GoldObsidianPalette.textTertiary,
     icon: GoldObsidianPalette.textSecondary,
-    overlay: 'rgba(0, 0, 0, 0.8)',
+    overlay: withOpacity('#000000', Opacity.strong),
     divider: GoldObsidianPalette.surfaceHighlight,
     pure: '#000000',
     pureInverse: '#FFFFFF',
