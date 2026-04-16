@@ -8,11 +8,15 @@ import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { analytics } from '@/src/services/analytics-service';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { DateRange, formatDate, PeriodFilter } from '@/src/utils/dateUtils';
+import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useSelection } from '@/src/hooks/useSelection';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, Share } from 'react-native';
 import { useJournals } from '../../hooks/useJournals';
 import { mapJournalToCardProps } from '../../utils/journalUiUtils';
 
@@ -47,6 +51,17 @@ export interface JournalSearchViewModel {
   hasMore: boolean;
   plannedJournals: EnrichedJournal[];
   accounts: Account[];
+
+  // Selection
+  selectedIds: Set<string>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: string) => void;
+  toggleSelection: (id: string) => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  exitSelectionMode: () => void;
+  onShareSelected: () => void;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
@@ -193,21 +208,41 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     loadMore();
   }, [hasMore, isLoadingMore, loadMore]);
 
-  const handleJournalPress = useCallback((journal: EnrichedJournal) => {
-    const cardProps = mapJournalToCardProps(journal);
-    AppNavigation.toTransactionDetails(journal.id, {
-      title: cardProps.title,
-      amount: cardProps.amount,
-      currencyCode: cardProps.currencyCode,
-      date:
-        typeof cardProps.transactionDate === 'number'
-          ? cardProps.transactionDate
-          : (cardProps.transactionDate as Date).getTime(),
-      typeColor: cardProps.presentation.typeColor,
-      typeIcon: cardProps.presentation.typeIcon,
-      displayType: journal.displayType,
-    });
-  }, []);
+  const selectionControl = useSelection<string>();
+  const {
+    selectedIds,
+    isSelectionModeActive,
+    toggleSelection,
+    onLongPressItem,
+    clearItems,
+    exitSelectionMode,
+    setSelectedIds,
+  } = selectionControl;
+
+  const handleJournalPress = useCallback(
+    (journal: EnrichedJournal) => {
+      if (isSelectionModeActive) {
+        // Fix: use mode instead of size
+        toggleSelection(journal.id);
+        return;
+      }
+
+      const cardProps = mapJournalToCardProps(journal);
+      AppNavigation.toTransactionDetails(journal.id, {
+        title: cardProps.title,
+        amount: cardProps.amount,
+        currencyCode: cardProps.currencyCode,
+        date:
+          typeof cardProps.transactionDate === 'number'
+            ? cardProps.transactionDate
+            : (cardProps.transactionDate as Date).getTime(),
+        typeColor: cardProps.presentation.typeColor,
+        typeIcon: cardProps.presentation.typeIcon,
+        displayType: journal.displayType,
+      });
+    },
+    [selectedIds.size, toggleSelection],
+  );
 
   const transactionGroupingOptions = useMemo(
     () => ({
@@ -247,6 +282,57 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
 
   const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
 
+  // Cleanup stale selection IDs (defensive cleanup)
+  useEffect(() => {
+    if (selectedIds.size === 0) return;
+
+    setSelectedIds(prev => {
+      const validIds = new Set(journals.map(j => j.id));
+      const filtered = new Set([...prev].filter(id => validIds.has(id)));
+      return filtered.size === prev.size ? prev : filtered;
+    });
+  }, [journals, selectedIds.size]);
+
+  const selectAll = useCallback(() => {
+    const visibleIds = items.filter(i => i.type === 'transaction').map(i => i.id);
+    selectionControl.selectAll(visibleIds);
+  }, [items, selectionControl]);
+
+  const onShareSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      const selectedJournals = journals.filter(j => selectedIds.has(j.id));
+      const shareText = selectedJournals
+        .map(j => {
+          const amount = CurrencyFormatter.format(j.totalAmount, j.currencyCode);
+          const date = formatDate(j.journalDate, { includeTime: true });
+          return `${date}: ${j.description || j.semanticLabel || 'Transaction'} - ${amount}`;
+        })
+        .join('\n');
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([shareText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `transactions-search-share-${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      await Share.share({
+        message: shareText,
+        title: 'Share Transactions',
+      });
+    } catch (error) {
+      logger.error('Failed to share search transactions', error);
+    }
+  }, [selectedIds, journals]);
+
   return {
     items,
     isLoading,
@@ -269,5 +355,14 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     hasMore,
     plannedJournals: [], // Not showing planned in search for now
     accounts,
+    selectedIds,
+    isSelectionModeActive,
+    onLongPressItem,
+    toggleSelection,
+    selectAll,
+    clearItems,
+    exitSelectionMode,
+    onShareSelected,
+    setSelectedIds,
   };
 }

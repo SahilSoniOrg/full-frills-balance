@@ -1,5 +1,6 @@
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppButton, AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
@@ -54,6 +55,13 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     isSubAccountsModalVisible,
     onShowSubAccounts,
     onHideSubAccounts,
+    selectedIds,
+    isSelectionModeActive,
+    onLongPressItem,
+    selectAll,
+    clearItems,
+    onShareSelected,
+    exitSelectionMode,
   } = vm;
 
   if (accountLoading) {
@@ -141,41 +149,79 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     <Screen
       title={isParent ? 'Group Account' : 'Account Details'}
       headerActions={headerActionsNode}
+      onBack={isSelectionModeActive ? exitSelectionMode : onBack}
+      showBack={true}
+      headerStyle={{ opacity: isSelectionModeActive ? 0.3 : 1 }}
     >
-      <TransactionListView
-        items={transactionItems}
-        isLoading={transactionsLoading}
-        isLoadingMore={transactionsLoadingMore}
-        onEndReached={onLoadMore}
-        emptyTitle="No transactions yet"
-        emptySubtitle="Transactions for this account will appear here."
-        ListHeaderComponent={
-          <AccountDetailsHeader
-            accountName={accountName}
-            accountIcon={accountIcon}
-            accountType={accountType}
-            accountSubtypeLabel={accountSubtypeLabel}
-            accountTypeVariant={accountTypeVariant}
-            accountTypeColorKey={accountTypeColorKey}
-            isParent={isParent}
-            isDeleted={isDeleted}
-            subAccountCount={subAccountCount}
-            onShowSubAccounts={onShowSubAccounts}
-            balanceText={balanceText}
-            secondaryBalances={secondaryBalances}
-            transactionCountText={transactionCountText}
-            reconciledAt={vm.reconciledAt}
-            dateRange={dateRange}
-            onShowDatePicker={showDatePicker}
-            onPreviousPeriod={navigatePrevious}
-            onNextPeriod={navigateNext}
-            chartData={chartData}
-            rollingAverageData={rollingAverageData}
-            xTicks={xTicks}
-            periodMetricsFormatted={periodMetricsFormatted}
+      <View style={StyleSheet.absoluteFill}>
+        {/* Backdrop (Back) - catches taps that miss the list entirely */}
+        {isSelectionModeActive && (
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: 'transparent' }]}
+            onStartShouldSetResponder={() => {
+              exitSelectionMode();
+              return true;
+            }}
           />
-        }
-        contentContainerStyle={styles.listContainer}
+        )}
+        <TransactionListView
+          items={transactionItems}
+          isLoading={transactionsLoading}
+          isLoadingMore={transactionsLoadingMore}
+          onEndReached={onLoadMore}
+          emptyTitle="No transactions yet"
+          emptySubtitle="Transactions for this account will appear here."
+          selectedIds={selectedIds}
+          onLongPressItem={onLongPressItem}
+          isSelectionModeActive={isSelectionModeActive}
+          ListHeaderComponent={
+            <AccountDetailsHeader
+              accountName={accountName}
+              accountIcon={accountIcon}
+              accountType={accountType}
+              accountSubtypeLabel={accountSubtypeLabel}
+              accountTypeVariant={accountTypeVariant}
+              accountTypeColorKey={accountTypeColorKey}
+              isParent={isParent}
+              isDeleted={isDeleted}
+              subAccountCount={subAccountCount}
+              onShowSubAccounts={onShowSubAccounts}
+              balanceText={balanceText}
+              secondaryBalances={secondaryBalances}
+              transactionCountText={transactionCountText}
+              reconciledAt={vm.reconciledAt}
+              dateRange={dateRange}
+              onShowDatePicker={showDatePicker}
+              onPreviousPeriod={navigatePrevious}
+              onNextPeriod={navigateNext}
+              chartData={chartData}
+              rollingAverageData={rollingAverageData}
+              xTicks={xTicks}
+              periodMetricsFormatted={periodMetricsFormatted}
+            />
+          }
+          ListFooterComponent={
+            <View
+              onStartShouldSetResponder={() => {
+                if (isSelectionModeActive) exitSelectionMode();
+                return false;
+              }}
+              style={{ height: Spacing.xxxxl * 2 }}
+            />
+          }
+          contentContainerStyle={styles.listContainer}
+          style={{ flex: 1 }}
+        />
+      </View>
+
+      <SelectionActionBar
+        isVisible={isSelectionModeActive}
+        selectedCount={selectedIds.size}
+        totalCount={transactionItems.filter(i => i.type === 'transaction').length}
+        onClear={exitSelectionMode}
+        onSelectAll={selectAll}
+        onDeselectAll={clearItems}
+        onShare={onShareSelected}
       />
 
       {!isDeleted ? (

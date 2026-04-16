@@ -18,11 +18,16 @@ interface TransactionListViewProps {
   emptyTitle?: string;
   emptySubtitle?: string;
   ListHeaderComponent?: React.ReactElement | null;
+  ListFooterComponent?: React.ReactElement | null;
   onEndReached?: () => void;
   contentContainerStyle?: any;
   plannedJournals?: EnrichedJournal[];
   onPlannedJournalPress?: (item: EnrichedJournal) => void;
   isPrivacyMode?: boolean;
+  selectedIds?: Set<string>;
+  onLongPressItem?: (id: string) => void;
+  isSelectionModeActive?: boolean;
+  style?: any;
 }
 
 export const TransactionListView = React.forwardRef<any, TransactionListViewProps>((props, ref) => {
@@ -37,6 +42,9 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
     onEndReached,
     contentContainerStyle,
     isPrivacyMode,
+    selectedIds,
+    onLongPressItem,
+    isSelectionModeActive,
   } = props;
   const listEmpty =
     isLoading && items.length === 0 ? (
@@ -52,14 +60,19 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
       <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
     );
 
-  const listFooter = isLoadingMore ? (
-    <Inline align="center" justify="center" space="sm" paddingVertical="lg">
-      <ActivityIndicator size="small" />
-      <AppText variant="caption" color="secondary">
-        {loadingMoreText || AppConfig.strings.common.loadingMore}
-      </AppText>
-    </Inline>
-  ) : null;
+  const listFooter = (
+    <Stack>
+      {isLoadingMore && (
+        <Inline align="center" justify="center" space="sm" paddingVertical="lg">
+          <ActivityIndicator size="small" />
+          <AppText variant="caption" color="secondary">
+            {loadingMoreText || AppConfig.strings.common.loadingMore}
+          </AppText>
+        </Inline>
+      )}
+      {props.ListFooterComponent}
+    </Stack>
+  );
 
   return (
     <FlashList
@@ -81,6 +94,9 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
           <TransactionCard
             {...item.cardProps!}
             onPress={item.onPress!}
+            onLongPress={onLongPressItem ? () => onLongPressItem(item.id) : undefined}
+            isSelected={selectedIds?.has(item.id)}
+            isSelectionModeActive={isSelectionModeActive}
             isPrivacyMode={isPrivacyMode}
           />
         )

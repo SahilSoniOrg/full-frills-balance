@@ -10,6 +10,7 @@ import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
+import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { AccountBalance, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
@@ -17,7 +18,7 @@ import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { confirm, showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { DateRange, formatDate, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
@@ -25,7 +26,8 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform, Share } from 'react-native';
 import { map, of } from 'rxjs';
 
 export interface PeriodMetrics {
@@ -106,6 +108,15 @@ export interface AccountDetailsViewModel {
   onHideSubAccounts: () => void;
   unreconciledCount: number;
   unreconciledAmountText: string;
+  selectedIds: Set<string>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: string) => void;
+  toggleSelection: (id: string) => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  exitSelectionMode: () => void;
+  onShareSelected: () => void;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
@@ -115,6 +126,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const startDateParam = params.startDate as string;
   const endDateParam = params.endDate as string;
 
+  // --- Date Handling ---
   const initialDateRange = useMemo(() => {
     if (startDateParam && endDateParam) {
       const parsedStartDate = Number.parseInt(startDateParam, 10);
@@ -122,10 +134,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       if (!Number.isFinite(parsedStartDate) || !Number.isFinite(parsedEndDate)) {
         return null;
       }
-      return {
-        startDate: parsedStartDate,
-        endDate: parsedEndDate,
-      };
+      return { startDate: parsedStartDate, endDate: parsedEndDate };
     }
     return null;
   }, [startDateParam, endDateParam]);
@@ -144,6 +153,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     initialDateRange,
   });
 
+  // --- Data Services ---
   const {
     account: dbAccount,
     balanceData: dbBalanceData,
@@ -152,7 +162,33 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     isLoading: dashboardLoading,
   } = useAccountDashboard(accountId);
 
-  // Initial Data Injection: Extract preview data from params
+  const { deleteAccount, recoverAccount: recoverAction, reconcileAccount } = useAccountActions();
+
+  const {
+    transactions,
+    isLoading: transactionsLoading,
+    isLoadingMore: transactionsLoadingMore,
+    hasMore,
+    loadMore,
+  } = useLedgerTransactionsForAccount(
+    accountId,
+    AppConfig.defaults.journalPageSize,
+    dateRange || undefined,
+  );
+
+  // --- Selection State ---
+  const selectionControl = useSelection<string>();
+  const {
+    selectedIds,
+    isSelectionModeActive,
+    toggleSelection,
+    onLongPressItem,
+    clearItems,
+    exitSelectionMode,
+    setSelectedIds,
+  } = selectionControl;
+
+  // --- Initial Data Extraction (Preview) ---
   const pName = params.pName as string;
   const pBalance = params.pBalance as string;
   const pCurrency = params.pCurrency as string;
@@ -191,9 +227,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     [dbBalanceData, pBalance, accountId, pCurrency, account?.currencyCode, defaultCurrency],
   );
 
-  // Perceived loading state: if we have preview metadata, we can show the header immediately
+  // --- Derived State ---
   const accountLoading = dashboardLoading && !pName;
-
+  const accountType = account?.accountType || '';
+  const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
   const isParent = useMemo(
     () => accounts.some((a: Account) => a.parentAccountId === accountId && a.deletedAt === null),
     [accounts, accountId],
@@ -205,76 +242,31 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     [accounts, accountId],
   );
 
-  const {
-    transactions,
-    isLoading: transactionsLoading,
-    isLoadingMore: transactionsLoadingMore,
-    hasMore,
-    loadMore,
-  } = useLedgerTransactionsForAccount(
-    accountId,
-    AppConfig.defaults.journalPageSize,
-    dateRange || undefined,
-  );
-  const { deleteAccount, recoverAccount: recoverAction, reconcileAccount } = useAccountActions();
+  const balanceCurrency = balanceData?.currencyCode || account?.currencyCode || defaultCurrency;
+  const balance = dbBalanceData?.balance || 0;
+  const transactionCount = balanceData?.transactionCount || 0;
+  const isDeleted = account?.deletedAt != null;
+  const reconciledAt = account?.reconciledAt || null;
 
-  // Chart-specific unpaginated transactions
-  const { data: chartTransactions } = useObservable<Transaction[]>(
-    () => {
-      if (!accountId) return of([]);
-      const MS_PER_DAY = AppConfig.time.msPerDay;
-      // Pad 7 days before and after
-      const start = dateRange
-        ? dateRange.startDate - 7 * MS_PER_DAY
-        : dayjs().startOf('month').valueOf() - 7 * MS_PER_DAY;
-      const end = dateRange
-        ? dateRange.endDate + 7 * MS_PER_DAY
-        : dayjs().endOf('month').valueOf() + 7 * MS_PER_DAY;
+  const accountSubtypeLabel = account?.accountSubtype
+    ? formatAccountSubtypeLabel(account.accountSubtype)
+    : '';
+  const accountTypeVariant = getAccountTypeVariant(accountType);
+  const accountTypeColorKey = getAccountTypeColorKey(accountType);
 
-      return transactionRepository
-        .transactionsQuery(
-          Q.where('account_id', accountId),
-          Q.where('deleted_at', Q.eq(null)),
-          Q.where('transaction_date', Q.gte(start)),
-          Q.where('transaction_date', Q.lte(end)),
-          Q.sortBy('transaction_date', Q.asc),
-        )
-        .observeWithColumns(['running_balance', 'transaction_date']);
-    },
-    [accountId, dateRange],
-    [],
-  );
+  const balanceText = account ? CurrencyFormatter.format(balance, balanceCurrency) : '...';
+  const transactionCountText = String(transactionCount);
 
-  const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
-  const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
+  const secondaryBalances = useMemo(() => {
+    if (!balanceData?.childBalances) return [];
+    return balanceData.childBalances.map((cb: { currencyCode: string; balance: number }) => ({
+      currencyCode: cb.currencyCode,
+      amountText: CurrencyFormatter.format(cb.balance, cb.currencyCode),
+    }));
+  }, [balanceData]);
 
-  // Build recursive sub-tree from all accounts
-  const descendants = useMemo(() => {
-    if (!account || !accounts.length) return [];
-
-    const buildSubTree = (
-      parentId: string,
-      level: number,
-    ): { account: Account; level: number }[] => {
-      const result: { account: Account; level: number }[] = [];
-      const childrenForParent = accounts
-        .filter((a: Account) => a.parentAccountId === parentId && a.deletedAt === null)
-        .sort((a: Account, b: Account) => (a.orderNum || 0) - (b.orderNum || 0));
-
-      for (const child of childrenForParent) {
-        result.push({ account: child, level });
-        result.push(...buildSubTree(child.id, level + 1));
-      }
-      return result;
-    };
-
-    return buildSubTree(accountId, 0);
-  }, [account, accounts, accountId]);
-
-  const accountType = account?.accountType || '';
-
-  const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
-
+  // --- Metrics & Precisions ---
+  const { precision } = useCurrencyPrecision(balanceCurrency);
   const { data: periodMetricsResult, isLoading: metricsLoading } = useObservable<PeriodMetrics>(
     () => {
       if (!dateRange || !accountId || !accountType) {
@@ -286,7 +278,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
           isLoading: false,
         });
       }
-
       return transactionRawRepository
         .observeAccountPeriodMetricsRaw(
           accountId,
@@ -303,25 +294,17 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
               1,
               Math.ceil((de.getTime() - ds.getTime()) / AppConfig.time.msPerDay),
             );
-            const dailyAverage = netChange / days;
-
             return {
               ...metrics,
               netChange,
-              dailyAverage,
+              dailyAverage: netChange / days,
               isLoading: false,
             };
           }),
         );
     },
-    [accountId, dateRange, accountType],
-    {
-      totalIncrease: 0,
-      totalDecrease: 0,
-      netChange: 0,
-      dailyAverage: null,
-      isLoading: true,
-    },
+    [accountId, dateRange, accountType, isAssetOrExpense],
+    { totalIncrease: 0, totalDecrease: 0, netChange: 0, dailyAverage: null, isLoading: true },
   );
 
   const periodMetrics = useMemo(
@@ -332,27 +315,79 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     [periodMetricsResult, metricsLoading],
   );
 
+  const periodMetricsFormatted = useMemo(
+    () => ({
+      totalIncreaseText: CurrencyFormatter.format(periodMetrics.totalIncrease, balanceCurrency),
+      totalDecreaseText: CurrencyFormatter.format(periodMetrics.totalDecrease, balanceCurrency),
+      netChangeText: CurrencyFormatter.format(periodMetrics.netChange, balanceCurrency),
+      dailyAverageText:
+        periodMetrics.dailyAverage !== null
+          ? CurrencyFormatter.format(periodMetrics.dailyAverage, balanceCurrency)
+          : null,
+      isLoading: periodMetrics.isLoading,
+    }),
+    [periodMetrics, balanceCurrency],
+  );
+
+  // --- Sub Accounts Logic ---
+  const [isSubAccountsModalVisible, setIsSubAccountsModalVisible] = useState(false);
   const subBalances = useMemo(
     () =>
       new Map<string, AccountBalance>(rawSubBalances.map((b: AccountBalance) => [b.accountId, b])),
     [rawSubBalances],
   );
-  const subBalancesLoading = dashboardLoading;
-  const balanceLoading = dashboardLoading;
-  const balance = dbBalanceData?.balance || 0;
-  const transactionCount = balanceData?.transactionCount || 0;
-  const isDeleted = account?.deletedAt != null;
 
+  const descendants = useMemo(() => {
+    if (!account || !accounts.length) return [];
+    const buildSubTree = (
+      parentId: string,
+      level: number,
+    ): { account: Account; level: number }[] => {
+      const result: { account: Account; level: number }[] = [];
+      const children = accounts
+        .filter((a: Account) => a.parentAccountId === parentId && a.deletedAt === null)
+        .sort((a: Account, b: Account) => (a.orderNum || 0) - (b.orderNum || 0));
+      for (const child of children) {
+        result.push({ account: child, level });
+        result.push(...buildSubTree(child.id, level + 1));
+      }
+      return result;
+    };
+    return buildSubTree(accountId, 0);
+  }, [account, accounts, accountId]);
+
+  const { theme } = useTheme();
+  const subAccounts = useMemo(() => {
+    return descendants.map(({ account: child, level }) => {
+      const subBalance = subBalances.get(child.id);
+      const color = theme[getAccountTypeColorKey(child.accountType)];
+      const isGroup = accounts.some(
+        (a: Account) => a.parentAccountId === child.id && a.deletedAt === null,
+      );
+      return {
+        id: child.id,
+        name: child.name,
+        icon: child.icon || 'wallet',
+        balanceText: CurrencyFormatter.format(
+          subBalance?.balance ?? 0,
+          subBalance?.currencyCode || child.currencyCode || defaultCurrency,
+        ),
+        color,
+        level,
+        isGroup,
+      };
+    });
+  }, [descendants, subBalances, defaultCurrency, theme, accounts]);
+
+  // --- Handlers ---
   const onDelete = useCallback(() => {
     if (!account) return;
-    const hasTransactions = transactionCount > 0;
-    const message = hasTransactions
-      ? `This account has ${transactionCount} transaction(s). Deleting it will orphan these transactions. Are you sure?`
-      : 'Are you sure you want to delete this account? This action cannot be undone.';
-
     confirm.show({
       title: 'Delete Account',
-      message,
+      message:
+        transactionCount > 0
+          ? `This account has ${transactionCount} transaction(s). Deleting it will orphan these transactions. Are you sure?`
+          : 'Are you sure you want to delete this account? This action cannot be undone.',
       destructive: true,
       requiredConfirmationValue: account.name,
       onConfirm: async () => {
@@ -375,8 +410,9 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
           AppNavigation.toAccounts();
         } catch (error) {
           logger.error('Failed to delete account:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not delete account: ${errorMessage}`);
+          showErrorAlert(
+            `Could not delete account: ${error instanceof Error ? error.message : 'Unknown'}`,
+          );
         }
       },
     });
@@ -393,8 +429,9 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
           AppNavigation.replaceToAccountDetails(accountId);
         } catch (error) {
           logger.error('Failed to recover account:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not recover account: ${errorMessage}`);
+          showErrorAlert(
+            `Could not recover account: ${error instanceof Error ? error.message : 'Unknown'}`,
+          );
         }
       },
     );
@@ -404,6 +441,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     setIsReconcileModalVisible(true);
   }, []);
 
+  const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
   const onConfirmReconcile = useCallback(async () => {
     setIsReconcileModalVisible(false);
     try {
@@ -411,54 +449,46 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       toast.success(AppConfig.strings.accounts.reconciliation.alert.successMessage);
     } catch (error) {
       logger.error('Failed to reconcile account:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showErrorAlert(`Could not reconcile account: ${errorMessage}`);
+      showErrorAlert(
+        `Could not reconcile account: ${error instanceof Error ? error.message : 'Unknown'}`,
+      );
     }
   }, [accountId, reconcileAccount]);
 
   const onEdit = useCallback(() => {
-    AppNavigation.toAccountForm(
-      accountId,
-      account
-        ? {
-            name: account.name,
-            type: account.accountType,
-            currency: account.currencyCode,
-            icon: account.icon || 'wallet',
-          }
-        : undefined,
-    );
+    if (!account) return;
+    AppNavigation.toAccountForm(accountId, {
+      name: account.name,
+      type: account.accountType,
+      currency: account.currencyCode,
+      icon: account.icon || 'wallet',
+    });
   }, [accountId, account]);
 
-  const onBack = useCallback(() => {
-    AppNavigation.back();
-  }, []);
-
-  const onAuditPress = useCallback(() => {
-    AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId });
-  }, [accountId]);
-
-  const onTransactionPress = useCallback((transaction: DisplayTransaction) => {
-    if (transaction.journalId) {
-      const isIncrease = transaction.isIncrease;
-      const displayType = transaction.displayType as JournalDisplayType;
-      const base = journalPresenter.getPresentation(displayType, transaction.semanticLabel);
-
-      AppNavigation.toTransactionDetails(transaction.journalId, {
-        title: transaction.journalDescription || transaction.displayTitle || 'Transaction',
-        amount: transaction.amount,
-        currencyCode: transaction.currencyCode,
-        date: transaction.transactionDate,
-        typeColor: base.colorKey,
-        typeIcon: isIncrease ? 'arrowUp' : 'arrowDown',
-        displayType: transaction.displayType,
-      });
-    }
-  }, []);
-
-  const onAddPress = useCallback(() => {
-    AppNavigation.toJournalEntry({ sourceAccountId: accountId });
-  }, [accountId]);
+  const onTransactionPress = useCallback(
+    (transaction: DisplayTransaction) => {
+      if (isSelectionModeActive) {
+        toggleSelection(transaction.id);
+        return;
+      }
+      if (transaction.journalId) {
+        const base = journalPresenter.getPresentation(
+          transaction.displayType as JournalDisplayType,
+          transaction.semanticLabel,
+        );
+        AppNavigation.toTransactionDetails(transaction.journalId, {
+          title: transaction.journalDescription || transaction.displayTitle || 'Transaction',
+          amount: transaction.amount,
+          currencyCode: transaction.currencyCode,
+          date: transaction.transactionDate,
+          typeColor: base.colorKey,
+          typeIcon: transaction.isIncrease ? 'arrowUp' : 'arrowDown',
+          displayType: transaction.displayType,
+        });
+      }
+    },
+    [isSelectionModeActive, toggleSelection],
+  );
 
   const onDateSelect = useCallback(
     (range: DateRange | null, filter: PeriodFilter) => {
@@ -468,72 +498,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     [hideDatePicker, setFilter],
   );
 
-  const accountSubtypeLabel = account?.accountSubtype
-    ? formatAccountSubtypeLabel(account.accountSubtype)
-    : '';
-  const accountTypeVariant = getAccountTypeVariant(accountType);
-  const accountTypeColorKey = getAccountTypeColorKey(accountType);
-
-  const balanceCurrency = balanceData?.currencyCode || account?.currencyCode || defaultCurrency;
-
-  const balanceText = balanceLoading
-    ? '...'
-    : account
-      ? CurrencyFormatter.format(balance, balanceCurrency)
-      : '...';
-
-  const periodMetricsFormatted = useMemo(() => {
-    return {
-      totalIncreaseText: CurrencyFormatter.format(periodMetrics.totalIncrease, balanceCurrency),
-      totalDecreaseText: CurrencyFormatter.format(periodMetrics.totalDecrease, balanceCurrency),
-      netChangeText: CurrencyFormatter.format(periodMetrics.netChange, balanceCurrency),
-      dailyAverageText:
-        periodMetrics.dailyAverage !== null
-          ? CurrencyFormatter.format(periodMetrics.dailyAverage, balanceCurrency)
-          : null,
-      isLoading: periodMetrics.isLoading,
-    };
-  }, [periodMetrics, balanceCurrency]);
-
-  const secondaryBalances = useMemo(() => {
-    if (!balanceData?.childBalances) return [];
-    return balanceData.childBalances.map((cb: { currencyCode: string; balance: number }) => ({
-      currencyCode: cb.currencyCode,
-      amountText: CurrencyFormatter.format(cb.balance, cb.currencyCode),
-    }));
-  }, [balanceData]);
-
-  const transactionCountText = balanceLoading ? '...' : String(transactionCount);
-
-  const { theme } = useTheme();
-
-  const subAccounts = useMemo(() => {
-    return descendants.map(({ account: child, level }) => {
-      const subBalance = subBalances.get(child.id);
-      const balanceVal = subBalance?.balance ?? 0;
-      const currency = subBalance?.currencyCode || child.currencyCode || defaultCurrency;
-
-      const color = theme[getAccountTypeColorKey(child.accountType)];
-
-      const isGroup = accounts.some(a => a.parentAccountId === child.id && a.deletedAt === null);
-
-      return {
-        id: child.id,
-        name: child.name,
-        icon: child.icon || 'wallet',
-        balanceText: CurrencyFormatter.format(balanceVal, currency),
-        color,
-        level,
-        isGroup,
-      };
-    });
-  }, [descendants, subBalances, defaultCurrency, theme, accounts]);
-
-  const onShowSubAccounts = useCallback(() => setIsSubAccountsModalVisible(true), []);
-  const onHideSubAccounts = useCallback(() => setIsSubAccountsModalVisible(false), []);
-
-  const { precision } = useCurrencyPrecision(balanceCurrency);
-
+  // --- Transaction List Grouping ---
   const transactionGroupingOptions = useMemo(
     () => ({
       items: transactions,
@@ -542,26 +507,17 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       getStats: (txnsForDay: DisplayTransaction[]) => {
         let netAmount = 0;
         txnsForDay.forEach(t => {
-          if (t.isIncrease) {
-            netAmount = safeAdd(netAmount, t.amount, precision);
-          } else {
-            netAmount = safeSubtract(netAmount, t.amount, precision);
-          }
+          netAmount = t.isIncrease
+            ? safeAdd(netAmount, t.amount, precision)
+            : safeSubtract(netAmount, t.amount, precision);
         });
-        return {
-          count: txnsForDay.length,
-          netAmount,
-          currencyCode: balanceCurrency,
-        };
+        return { count: txnsForDay.length, netAmount, currencyCode: balanceCurrency };
       },
       renderItem: (transaction: DisplayTransaction & { counterAccounts?: any[] }) => {
         const displayAccounts = [] as any[];
-
         if (transaction.counterAccounts && transaction.counterAccounts.length > 0) {
-          // Show up to 2 counter accounts, or 1 + "+X more"
           const visibleCount =
             transaction.counterAccounts.length > 2 ? 1 : transaction.counterAccounts.length;
-
           for (let i = 0; i < visibleCount; i++) {
             const acc = transaction.counterAccounts[i];
             displayAccounts.push({
@@ -571,7 +527,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
               icon: acc.icon,
             });
           }
-
           if (transaction.counterAccounts.length > visibleCount) {
             displayAccounts.push({
               id: 'more',
@@ -580,28 +535,27 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
               icon: 'list',
             });
           }
-        } else if (transaction.counterAccountType) {
-          // Fallback for singular counter account
-          displayAccounts.push({
-            id: 'counter',
-            name: transaction.counterAccountName || transaction.counterAccountType,
-            accountType: transaction.counterAccountType,
-            icon: transaction.counterAccountIcon,
-          });
         } else {
-          // Last fallback: show current account if no counter-party found (e.g. adjustment)
-          displayAccounts.push({
-            id: transaction.accountId,
-            name: transaction.accountName || 'Unknown',
-            accountType: transaction.accountType || 'ASSET',
-            icon: transaction.icon,
-          });
+          const fallbackAcc = transaction.counterAccountType
+            ? {
+                id: 'counter',
+                name: transaction.counterAccountName || transaction.counterAccountType,
+                accountType: transaction.counterAccountType,
+                icon: transaction.counterAccountIcon,
+              }
+            : {
+                id: transaction.accountId,
+                name: transaction.accountName || 'Unknown',
+                accountType: transaction.accountType || 'ASSET',
+                icon: transaction.icon,
+              };
+          displayAccounts.push(fallbackAcc);
         }
 
-        const displayType = transaction.displayType as JournalDisplayType;
-        const base = journalPresenter.getPresentation(displayType, transaction.semanticLabel);
-        const isIncrease = transaction.isIncrease;
-
+        const base = journalPresenter.getPresentation(
+          transaction.displayType as JournalDisplayType,
+          transaction.semanticLabel,
+        );
         return {
           id: transaction.id,
           type: 'transaction' as const,
@@ -615,8 +569,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             presentation: {
               label: base.label,
               typeColor: base.colorKey,
-              typeIcon: (isIncrease ? 'arrowUp' : 'arrowDown') as IconName,
-              amountPrefix: isIncrease ? '+ ' : '− ',
+              typeIcon: (transaction.isIncrease ? 'arrowUp' : 'arrowDown') as IconName,
+              amountPrefix: transaction.isIncrease ? '+ ' : '− ',
             },
             badges: displayAccounts.map(acc => ({
               text: acc.name,
@@ -629,13 +583,95 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         };
       },
     }),
-    [transactions, balanceCurrency, onTransactionPress, precision],
+    [transactions, balanceCurrency, onTransactionPress, precision, isSelectionModeActive],
   );
-
-  const reconciledAt = account?.reconciledAt || null;
 
   const { groupedItems: rawGroupedItems } = useTransactionGrouping(transactionGroupingOptions);
 
+  const transactionItems = useMemo(() => {
+    if (!reconciledAt || !rawGroupedItems.length) return rawGroupedItems;
+    const result: TransactionListItem[] = [];
+    let markerAdded = false;
+    const reconTime = reconciledAt.getTime();
+    for (const item of rawGroupedItems) {
+      let itemToPush = item;
+      if (!markerAdded) {
+        if (item.type === 'transaction' && item.date && item.date <= reconTime) {
+          result.push({
+            id: 'reconciled-separator',
+            type: 'separator' as any,
+            date: reconTime,
+            isReconciledMarker: true,
+          } as any);
+          markerAdded = true;
+        } else if (item.type === 'separator') {
+          const startOfDay = item.date;
+          const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
+          if (reconTime >= startOfDay) {
+            itemToPush = { ...item, reconciledAt: reconTime } as any;
+            if (reconTime <= endOfDay || item.isCollapsed) markerAdded = true;
+            if (!item.isCollapsed && reconTime > endOfDay) {
+              result.push({
+                id: 'reconciled-separator',
+                type: 'separator' as any,
+                date: reconTime,
+                isReconciledMarker: true,
+              } as any);
+              markerAdded = true;
+            }
+          }
+        }
+      }
+      result.push(itemToPush);
+    }
+    return result;
+  }, [rawGroupedItems, reconciledAt]);
+
+  // --- Selection Actions ---
+  const onShareSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const selectedTransactions = transactions.filter(t => selectedIds.has(t.id));
+      const shareText = selectedTransactions
+        .map(t => {
+          const amount = CurrencyFormatter.format(t.amount, t.currencyCode);
+          const date = formatDate(t.transactionDate, { includeTime: true });
+          return `${date}: ${t.journalDescription || t.displayTitle || 'Transaction'} - ${amount}`;
+        })
+        .join('\n');
+      if (Platform.OS === 'web') {
+        const blob = new Blob([shareText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `account-transactions-share-${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+      await Share.share({ message: shareText, title: 'Share Transactions' });
+    } catch (error) {
+      logger.error('Failed to share transactions', error);
+    }
+  }, [selectedIds, transactions]);
+
+  const selectAll = useCallback(() => {
+    const visibleIds = transactionItems.filter(i => i.type === 'transaction').map(i => i.id);
+    selectionControl.selectAll(visibleIds);
+  }, [transactionItems, selectionControl]);
+
+  useEffect(() => {
+    if (selectedIds.size === 0) return;
+    setSelectedIds(prev => {
+      const validIds = new Set(transactions.map(t => t.id));
+      const filtered = new Set([...prev].filter(id => validIds.has(id)));
+      return filtered.size === prev.size ? prev : filtered;
+    });
+  }, [transactions, selectedIds.size, setSelectedIds]);
+
+  // --- Unreconciled Metrics ---
   const { data: unreconciledMetrics } = useObservable<{ count: number; total: number }>(
     () => {
       if (!accountId) return of({ count: 0, total: 0 });
@@ -649,187 +685,94 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     { count: 0, total: 0 },
   );
 
-  const transactionItems = useMemo(() => {
-    if (!reconciledAt || !rawGroupedItems.length) return rawGroupedItems;
-
-    const result: TransactionListItem[] = [];
-    let markerAdded = false;
-    const reconTime = reconciledAt.getTime();
-
-    for (let i = 0; i < rawGroupedItems.length; i++) {
-      const item = rawGroupedItems[i];
-      let itemToPush = item;
-
-      if (!markerAdded) {
-        if (item.type === 'transaction') {
-          if (item.date && item.date <= reconTime) {
-            result.push({
-              id: 'reconciled-separator',
-              type: 'separator' as any,
-              date: reconTime,
-              isReconciledMarker: true,
-            } as any);
-            markerAdded = true;
-          }
-        } else if (item.type === 'separator') {
-          const startOfDay = item.date;
-          const endOfDay = startOfDay + 24 * 60 * 60 * 1000 - 1;
-
-          if (reconTime >= startOfDay) {
-            if (reconTime <= endOfDay) {
-              // Inside or exactly at day start; attach indicator and swallow if collapsed
-              itemToPush = { ...item, reconciledAt: reconTime } as any;
-              if (item.isCollapsed) {
-                markerAdded = true;
-              }
-            } else {
-              // Recon time is in the future relative to this entire day.
-              // Since we are going DESC, the marker belongs ABOVE this day.
-              if (item.isCollapsed) {
-                // For a better UX in collapsed view, if the day is fully reconciled,
-                // show the status on the header and swallow the marker line.
-                itemToPush = { ...item, reconciledAt: reconTime } as any;
-                markerAdded = true;
-              } else {
-                // If expanded, showing a separate divider before the day makes the boundary clear.
-                result.push({
-                  id: 'reconciled-separator',
-                  type: 'separator' as any,
-                  date: reconTime,
-                  isReconciledMarker: true,
-                } as any);
-                markerAdded = true;
-              }
-            }
-          }
-        }
-      }
-      result.push(itemToPush);
-    }
-
-    if (!markerAdded) {
-      const lastItem = rawGroupedItems[rawGroupedItems.length - 1];
-      if (lastItem && lastItem.date && lastItem.date <= reconTime) {
-        result.push({
-          id: 'reconciled-separator',
-          type: 'separator' as any,
-          date: reconTime,
-          isReconciledMarker: true,
-        } as any);
-      }
-    }
-
-    return result;
-  }, [rawGroupedItems, reconciledAt]);
+  // --- Charts Logic ---
+  const { data: chartTransactions } = useObservable<Transaction[]>(
+    () => {
+      if (!accountId) return of([]);
+      const MS_PER_DAY = AppConfig.time.msPerDay;
+      const start =
+        (dateRange ? dateRange.startDate : dayjs().startOf('month').valueOf()) - 7 * MS_PER_DAY;
+      const end =
+        (dateRange ? dateRange.endDate : dayjs().endOf('month').valueOf()) + 7 * MS_PER_DAY;
+      return transactionRepository
+        .transactionsQuery(
+          Q.where('account_id', accountId),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('transaction_date', Q.gte(start)),
+          Q.where('transaction_date', Q.lte(end)),
+          Q.sortBy('transaction_date', Q.asc),
+        )
+        .observeWithColumns(['running_balance', 'transaction_date']);
+    },
+    [accountId, dateRange],
+    [],
+  );
 
   const { chartData, rollingAverageData, xTicks } = useMemo(() => {
     if (!chartTransactions || !chartTransactions.length)
       return { chartData: [], rollingAverageData: [], xTicks: [] };
 
+    // Process points into a flat series
     const firstWithBalance = chartTransactions.find(
       t => t.runningBalance !== undefined && t.runningBalance !== null,
     );
     let lastValidBalance = firstWithBalance?.runningBalance || 0;
     const pts = chartTransactions.map((t: Transaction) => {
-      if (t.runningBalance !== undefined && t.runningBalance !== null) {
+      if (t.runningBalance !== undefined && t.runningBalance !== null)
         lastValidBalance = t.runningBalance;
-      }
-      return {
-        x: t.transactionDate,
-        y: lastValidBalance,
-      };
+      return { x: t.transactionDate, y: lastValidBalance };
     });
 
     const MS_PER_DAY = AppConfig.time.msPerDay;
+    const visibleStart = dateRange ? dateRange.startDate : pts[0].x;
+    const visibleEnd = dateRange ? dateRange.endDate : pts[pts.length - 1].x;
+    const effectiveMaxX = visibleEnd + 7 * MS_PER_DAY;
 
-    // Define visible bounds to match the filtered chart data
-    const calcMinX = pts[0].x;
-    const calcMaxX = pts[pts.length - 1].x;
-
-    const visibleStart = dateRange ? dateRange.startDate : calcMinX;
-    const visibleEnd = dateRange ? dateRange.endDate : calcMaxX;
-    const effectiveMaxX = visibleEnd + 7 * MS_PER_DAY; // include 7 day future padding
-
-    // Compute xTicks (e.g., 4 ticks spread across the expected visible range)
+    // Ticks
     const ticks: number[] = [];
-    if (visibleStart !== effectiveMaxX) {
-      const numTicks = 4;
-      const step = (effectiveMaxX - visibleStart) / (numTicks - 1);
-      for (let i = 0; i < numTicks; i++) {
-        ticks.push(visibleStart + step * i);
-      }
-    } else {
-      ticks.push(visibleStart);
-    }
+    const numTicks = 4;
+    const range = effectiveMaxX - visibleStart;
+    const step = range / (numTicks - 1);
+    for (let i = 0; i < numTicks; i++) ticks.push(visibleStart + step * i);
 
-    const sortedPts = [...pts].sort((a, b) => a.x - b.x);
-
-    // the boundaries for calculation (includes the +/- 7 padding days)
-    const calcFirstTime = sortedPts[0].x;
-    const calcLastTime = sortedPts[sortedPts.length - 1].x;
-
-    // Daily balances over the entire padded range
+    // Full series generation
     const dailyBalances: { x: number; y: number }[] = [];
-    let currentDayStart = new Date(calcFirstTime).setHours(0, 0, 0, 0);
-
-    // Let's extend the logic to fill all the way to `endDate + 7 days` if needed,
-    // to naturally project a flat line for the future 7 days.
-    const targetEndDay = dateRange
-      ? dateRange.endDate + 7 * MS_PER_DAY
-      : calcLastTime + 7 * MS_PER_DAY;
-    const calcLastDayEnd = new Date(targetEndDay).setHours(23, 59, 59, 999);
-
-    let lastKnownBalance = sortedPts[0].y;
-    let ptIndex = 0;
-
-    while (currentDayStart <= calcLastDayEnd) {
-      const nextDayStart = currentDayStart + MS_PER_DAY;
-      while (ptIndex < sortedPts.length && sortedPts[ptIndex].x < nextDayStart) {
-        lastKnownBalance = sortedPts[ptIndex].y;
-        ptIndex++;
+    let currentDayStart = new Date(pts[0].x).setHours(0, 0, 0, 0);
+    const lastDayEnd = new Date(effectiveMaxX).setHours(23, 59, 59, 999);
+    let lb = pts[0].y;
+    let pi = 0;
+    while (currentDayStart <= lastDayEnd) {
+      const nds = currentDayStart + MS_PER_DAY;
+      while (pi < pts.length && pts[pi].x < nds) {
+        lb = pts[pi].y;
+        pi++;
       }
-      dailyBalances.push({
-        x: currentDayStart,
-        y: lastKnownBalance,
-      });
-      currentDayStart = nextDayStart;
+      dailyBalances.push({ x: currentDayStart, y: lb });
+      currentDayStart = nds;
     }
 
-    // Compute the 7-day trailing average for each day
-    const fullRollingAverageData: { x: number; y: number }[] = [];
-    for (let i = 0; i < dailyBalances.length; i++) {
-      let sum = 0;
-      let count = 0;
-      // look back up to 7 days
+    const fullRolling = dailyBalances.map((db, i) => {
+      let sum = 0,
+        count = 0;
       for (let j = 0; j < 7; j++) {
         if (i - j >= 0) {
           sum += dailyBalances[i - j].y;
           count++;
         }
       }
-      fullRollingAverageData.push({
-        x: dailyBalances[i].x,
-        y: count > 0 ? sum / count : 0,
-      });
-    }
-
-    // Cut off the padding days to keep graph strictly within the visible range or data bounds
-    const visibleChartData = dailyBalances.filter(
-      (pt: { x: number; y: number }) => pt.x >= visibleStart && pt.x <= effectiveMaxX,
-    );
-    // Include the requested "7 days future data" in the rolling average to complete the trailing overlap
-    const visibleRollingAvgData = fullRollingAverageData.filter(
-      (pt: { x: number; y: number }) => pt.x >= visibleStart && pt.x <= effectiveMaxX,
-    );
+      return { x: db.x, y: count > 0 ? sum / count : 0 };
+    });
 
     return {
-      chartData: visibleChartData,
-      rollingAverageData: visibleRollingAvgData,
+      chartData: dailyBalances.filter(p => p.x >= visibleStart && p.x <= effectiveMaxX),
+      rollingAverageData: fullRolling.filter(p => p.x >= visibleStart && p.x <= effectiveMaxX),
       xTicks: ticks,
     };
   }, [chartTransactions, dateRange]);
 
+  // --- Return VM ---
   return {
+    accountId,
     accountLoading,
     accountMissing: !accountLoading && !account,
     accountName: account?.name || '',
@@ -841,20 +784,20 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     isDeleted,
     balanceText,
     transactionCountText,
-    headerActions: {
-      canRecover: isDeleted,
-      onRecover,
-      onEdit,
-      onDelete,
-      onReconcile,
-    },
+    headerActions: { canRecover: isDeleted, onRecover, onEdit, onDelete, onReconcile },
     isReconcileModalVisible,
     setIsReconcileModalVisible,
     onConfirmReconcile,
     reconciledAt,
-    onBack,
-    onAuditPress,
-    onAddPress,
+    onBack: useCallback(() => AppNavigation.back(), []),
+    onAuditPress: useCallback(
+      () => AppNavigation.toAuditLog({ entityType: 'account', entityId: accountId }),
+      [accountId],
+    ),
+    onAddPress: useCallback(
+      () => AppNavigation.toJournalEntry({ sourceAccountId: accountId }),
+      [accountId],
+    ),
     dateRange,
     periodFilter,
     isDatePickerVisible,
@@ -866,6 +809,8 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     chartData,
     rollingAverageData,
     xTicks,
+    periodMetrics,
+    periodMetricsFormatted,
     transactionsLoading,
     transactionsLoadingMore,
     transactionItems,
@@ -874,14 +819,20 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     isParent: !!isParent,
     subAccountCount: subAccountCount || 0,
     subAccounts,
-    subAccountsLoading: balanceLoading || subBalancesLoading,
+    subAccountsLoading: dashboardLoading,
     isSubAccountsModalVisible,
-    onShowSubAccounts,
-    onHideSubAccounts,
-    accountId,
-    periodMetrics,
-    periodMetricsFormatted,
+    onShowSubAccounts: useCallback(() => setIsSubAccountsModalVisible(true), []),
+    onHideSubAccounts: useCallback(() => setIsSubAccountsModalVisible(false), []),
     unreconciledCount: unreconciledMetrics.count,
     unreconciledAmountText: CurrencyFormatter.format(unreconciledMetrics.total, balanceCurrency),
+    selectedIds,
+    isSelectionModeActive,
+    onLongPressItem,
+    toggleSelection,
+    selectAll,
+    clearItems,
+    exitSelectionMode,
+    onShareSelected,
+    setSelectedIds,
   };
 }

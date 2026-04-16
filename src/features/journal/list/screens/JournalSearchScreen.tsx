@@ -122,6 +122,16 @@ export default function JournalSearchScreen() {
           currentFilter: vm.periodFilter,
           onSelect: () => {},
         }}
+        selection={{
+          selectedIds: vm.selectedIds,
+          isSelectionModeActive: vm.isSelectionModeActive,
+          onLongPressItem: vm.onLongPressItem,
+          toggleSelection: vm.toggleSelection,
+          selectAll: vm.selectAll,
+          clearItems: vm.clearItems,
+          exitSelectionMode: vm.exitSelectionMode,
+          onShareSelected: vm.onShareSelected,
+        }}
       />
 
       <AccountPickerModal

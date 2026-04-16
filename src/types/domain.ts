@@ -2,10 +2,10 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 
 export enum JournalDisplayType {
-    INCOME = 'INCOME',
-    EXPENSE = 'EXPENSE',
-    TRANSFER = 'TRANSFER',
-    MIXED = 'MIXED',
+  INCOME = 'INCOME',
+  EXPENSE = 'EXPENSE',
+  TRANSFER = 'TRANSFER',
+  MIXED = 'MIXED',
 }
 
 export { AccountType, TransactionType };
@@ -14,8 +14,8 @@ export { AccountType, TransactionType };
  * Money - Standard value object for currency amounts.
  */
 export interface Money {
-    amount: number;
-    currencyCode: string;
+  amount: number;
+  currencyCode: string;
 }
 
 /**
@@ -28,186 +28,187 @@ export interface Money {
  * AccountBalance - Summary of an account's financial state
  */
 export interface AccountBalance {
-    accountId: string;
-    balance: number;
-    directBalance: number;
-    currencyCode: string;
-    transactionCount: number;
-    directTransactionCount: number;
-    asOfDate: number;
-    accountType: AccountType;
-    icon?: string;
-    monthlyIncome: number;
-    monthlyExpenses: number;
-    childBalances?: { currencyCode: string; balance: number; transactionCount: number }[];
+  accountId: string;
+  balance: number;
+  directBalance: number;
+  currencyCode: string;
+  transactionCount: number;
+  directTransactionCount: number;
+  asOfDate: number;
+  accountType: AccountType;
+  icon?: string;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  childBalances?: { currencyCode: string; balance: number; transactionCount: number }[];
 }
 
 /**
  * DisplayTransaction - Unified read model for transactions in the UI.
  */
 export interface DisplayTransaction {
-    id: string;
-    journalId?: string;
-    accountId: string;
-    amount: number;
-    currencyCode: string;
-    transactionType: TransactionType;
-    transactionDate: number;
-    notes?: string;
-    journalDescription?: string;
+  id: string;
+  journalId?: string;
+  accountId: string;
+  amount: number;
+  currencyCode: string;
+  transactionType: TransactionType;
+  transactionDate: number;
+  notes?: string;
+  journalDescription?: string;
 
-    // Account information for display
-    accountName?: string;
-    accountType?: AccountType;
-    counterAccountName?: string;
-    counterAccountType?: AccountType;
-    displayTitle: string;
-    displayType?: JournalDisplayType;
-    icon?: string;
-    counterAccountIcon?: string;
+  // Account information for display
+  accountName?: string;
+  accountType?: AccountType;
+  counterAccountName?: string;
+  counterAccountType?: AccountType;
+  displayTitle: string;
+  displayType?: JournalDisplayType;
+  icon?: string;
+  counterAccountIcon?: string;
 
-    // Semantic and derived flags
-    isIncrease: boolean;
-    flowDirection?: 'IN' | 'OUT';
-    balanceImpact?: 'INCREASE' | 'DECREASE';
+  // Semantic and derived flags
+  isIncrease: boolean;
+  flowDirection?: 'IN' | 'OUT';
+  balanceImpact?: 'INCREASE' | 'DECREASE';
 
-    // Running balance for this transaction
-    runningBalance?: number;
-    exchangeRate?: number;
+  // Running balance for this transaction
+  runningBalance?: number;
+  exchangeRate?: number;
 
-    // Feature-specific metadata
-    semanticType?: string;
-    semanticLabel?: string;
+  // Feature-specific metadata
+  semanticType?: string;
+  semanticLabel?: string;
 
-    // Audit fields
-    createdAt?: Date;
-    updatedAt?: Date;
+  // Audit fields
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**
  * JournalWithTransactionSummary - Journal data with computed summary from its transactions
  */
 export interface JournalWithTransactionSummary {
-    id: string;
-    journalDate: number;
-    description?: string;
-    currencyCode: string;
-    status: string;
+  id: string;
+  journalDate: number;
+  description?: string;
+  currencyCode: string;
+  status: string;
 
-    // Computed transaction summary
-    totalDebits: number;
-    totalCredits: number;
-    transactionCount: number;
-    isBalanced: boolean;
+  // Computed transaction summary
+  totalDebits: number;
+  totalCredits: number;
+  transactionCount: number;
+  isBalanced: boolean;
 
-    // Audit fields
-    createdAt: Date;
-    updatedAt: Date;
+  // Audit fields
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**
  * AccountWithBalance - Account data with its current balance information
  */
 export interface AccountWithBalance {
-    id: string;
-    name: string;
-    accountType: AccountType;
-    currencyCode: string;
-    description?: string;
+  id: string;
+  name: string;
+  accountType: AccountType;
+  currencyCode: string;
+  description?: string;
 
-    // Computed balance information
-    currentBalance: number;
-    transactionCount: number;
-    lastActivityDate?: number;
-    icon?: string;
+  // Computed balance information
+  currentBalance: number;
+  transactionCount: number;
+  lastActivityDate?: number;
+  icon?: string;
 
-    // Audit fields
-    createdAt: Date;
-    updatedAt: Date;
+  // Audit fields
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**
  * EnrichedJournal - Highly processed journal data for card-style list display
  */
 export interface EnrichedJournal {
+  id: string;
+  journalDate: number;
+  description?: string;
+  currencyCode: string;
+  status: string;
+  totalAmount: number;
+  transactionCount: number;
+  displayType: JournalDisplayType;
+  accounts: {
     id: string;
-    journalDate: number;
-    description?: string;
-    currencyCode: string;
-    status: string;
-    totalAmount: number;
-    transactionCount: number;
-    displayType: JournalDisplayType;
-    accounts: {
-        id: string;
-        name: string;
-        accountType: string;
-        icon?: string;
-        role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
-    }[];
-    semanticType?: string;
-    semanticLabel?: string;
-    notes?: string;
+    name: string;
+    accountType: string;
+    icon?: string;
+    role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
+  }[];
+  semanticType?: string;
+  semanticLabel?: string;
+  notes?: string;
+  plannedPaymentId?: string;
 }
 
 export interface SmsDuplicateCandidate {
-    journalId: string;
-    journalDate: number;
-    description?: string;
-    score: number;
-    reasons: string[];
+  journalId: string;
+  journalDate: number;
+  description?: string;
+  score: number;
+  reasons: string[];
 }
 
 export interface SmsLinkedJournalInfo {
-    journalId: string;
-    description?: string;
-    journalDate: number;
-    status: string;
+  journalId: string;
+  description?: string;
+  journalDate: number;
+  status: string;
 }
 
 export interface SmsInboxItem {
-    id: string;
-    deviceSmsId: string;
-    senderAddress: string;
-    rawBody: string;
-    smsDate: number;
-    parseStatus: string;
-    processingStatus: string;
-    parsedAmount?: number;
-    parsedCurrencyCode?: string;
-    parsedMerchant?: string;
-    parsedAccountSource?: string;
-    referenceNumber?: string;
-    direction: 'debit' | 'credit' | 'unknown';
-    parseConfidence?: number;
-    parseReason?: string;
-    linkedJournal?: SmsLinkedJournalInfo;
-    duplicateCandidate?: SmsDuplicateCandidate;
+  id: string;
+  deviceSmsId: string;
+  senderAddress: string;
+  rawBody: string;
+  smsDate: number;
+  parseStatus: string;
+  processingStatus: string;
+  parsedAmount?: number;
+  parsedCurrencyCode?: string;
+  parsedMerchant?: string;
+  parsedAccountSource?: string;
+  referenceNumber?: string;
+  direction: 'debit' | 'credit' | 'unknown';
+  parseConfidence?: number;
+  parseReason?: string;
+  linkedJournal?: SmsLinkedJournalInfo;
+  duplicateCandidate?: SmsDuplicateCandidate;
 }
 
 /**
  * SmsSourceMetadata - Detailed metadata for entries imported from SMS.
  */
 export interface SmsSourceMetadata {
-    smsFingerprint?: string;
-    deviceSmsId: string;
-    senderAddress: string;
-    rawBody: string;
-    smsDate: number;
-    parsedMerchant?: string;
-    parsedAmount?: number;
-    parsedCurrencyCode?: string;
-    referenceNumber?: string;
+  smsFingerprint?: string;
+  deviceSmsId: string;
+  senderAddress: string;
+  rawBody: string;
+  smsDate: number;
+  parsedMerchant?: string;
+  parsedAmount?: number;
+  parsedCurrencyCode?: string;
+  referenceNumber?: string;
 }
 
 /**
  * JournalMetadata - Consolidated domain metadata for a journal entry.
  */
 export interface JournalMetadata {
-    importSource: 'SMS' | 'CASHEW' | 'MANUAL' | string;
-    sms?: SmsSourceMetadata;
-    externalId?: string;
-    metadataJson?: string; // Fallback for unstructured historical data
+  importSource: 'SMS' | 'CASHEW' | 'MANUAL' | string;
+  sms?: SmsSourceMetadata;
+  externalId?: string;
+  metadataJson?: string; // Fallback for unstructured historical data
 }
 
 /**
@@ -220,49 +221,49 @@ export type JournalSmsMetadata = JournalMetadata;
  * Used in guided and advanced forms.
  */
 export interface JournalEntryLine {
-    id: string;
-    accountId: string;
-    accountName: string;
-    accountType: AccountType;
-    amount: string;
-    transactionType: TransactionType;
-    notes: string;
-    exchangeRate: string;
-    accountCurrency?: string;
+  id: string;
+  accountId: string;
+  accountName: string;
+  accountType: AccountType;
+  amount: string;
+  transactionType: TransactionType;
+  notes: string;
+  exchangeRate: string;
+  accountCurrency?: string;
 }
 
 /**
  * AccountCreateInput - Input for creating a new account
  */
 export interface AccountCreateInput {
-    name: string;
-    accountType: AccountType;
-    currencyCode: string;
-    description?: string;
-    parentAccountId?: string;
-    icon?: string;
-    initialBalance?: number;
+  name: string;
+  accountType: AccountType;
+  currencyCode: string;
+  description?: string;
+  parentAccountId?: string;
+  icon?: string;
+  initialBalance?: number;
 }
 
 /**
  * AccountUpdateInput - Input for updating an existing account
  */
 export interface AccountUpdateInput {
-    name?: string;
-    description?: string;
-    parentAccountId?: string;
-    accountType?: AccountType;
-    icon?: string;
+  name?: string;
+  description?: string;
+  parentAccountId?: string;
+  accountType?: AccountType;
+  icon?: string;
 }
 
 /**
  * AccountSummary - Aggregated financial summary across accounts
  */
 export interface AccountSummary {
-    totalAssets: number;
-    totalLiabilities: number;
-    totalEquity: number;
-    totalIncome: number;
-    totalExpenses: number;
-    netWorth: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  totalEquity: number;
+  totalIncome: number;
+  totalExpenses: number;
+  netWorth: number;
 }

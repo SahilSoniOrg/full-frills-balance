@@ -1,6 +1,7 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { useJournalListViewModel } from './useJournalListViewModel';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
+import { EnrichedJournal } from '@/src/types/domain';
 
 /**
  * Helper hook that encapsulates the common pattern of using JournalListViewModel
@@ -25,7 +26,7 @@ export function useJournalListScreen(config: Parameters<typeof useJournalListVie
       emptySubtitle: vm.emptyState.subtitle,
       onEndReached: vm.onEndReached,
       plannedJournals: vm.plannedJournals,
-      onPlannedJournalPress: (item: any) => {
+      onPlannedJournalPress: (item: EnrichedJournal) => {
         // If it's a planned payment, we should ideally go to its details
         // or ensure toTransactionDetails supports it.
         // Given the review feedback, let's route to Planned Payment details for the rule
@@ -54,6 +55,16 @@ export function useJournalListScreen(config: Parameters<typeof useJournalListVie
         onClose: vm.hideDatePicker,
         currentFilter: vm.periodFilter,
         onSelect: vm.onDateSelect,
+      },
+      selection: {
+        selectedIds: vm.selectedIds,
+        isSelectionModeActive: vm.isSelectionModeActive,
+        onLongPressItem: vm.onLongPressItem,
+        toggleSelection: vm.toggleSelection,
+        selectAll: vm.selectAll,
+        clearItems: vm.clearItems,
+        exitSelectionMode: vm.exitSelectionMode,
+        onShareSelected: vm.onShareSelected,
       },
     },
     /**

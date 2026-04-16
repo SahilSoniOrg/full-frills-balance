@@ -634,6 +634,7 @@ export class JournalService {
             transactionCount: j.transactionCount || 0,
             displayType: j.displayType as string,
             accounts: enrichedAccounts,
+            plannedPaymentId: j.plannedPaymentId,
           } as EnrichedJournal;
         });
       }),

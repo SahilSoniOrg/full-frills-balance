@@ -2,12 +2,14 @@ import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Size, Spacing } from '@/src/constants';
+import { Opacity, Size, Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
 import { EnrichedJournal } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+
+import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
 
 export interface JournalListViewProps {
   screenTitle?: string;
@@ -42,6 +44,16 @@ export interface JournalListViewProps {
   isPrivacyMode?: boolean;
   isSearchActive?: boolean;
   alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];
+  selection?: {
+    selectedIds: Set<string>;
+    isSelectionModeActive: boolean;
+    onLongPressItem: (id: string) => void;
+    toggleSelection: (id: string) => void;
+    selectAll: () => void;
+    clearItems: () => void;
+    exitSelectionMode: () => void;
+    onShareSelected: () => void;
+  };
 }
 
 export const JournalListView = React.forwardRef<any, JournalListViewProps>((props, ref) => {
@@ -68,17 +80,24 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
     isSearchActive,
     isPrivacyMode,
     alignTitle,
+    selection,
   } = props;
   return (
     <Screen
       title={screenTitle}
-      showBack={showBack}
+      showBack={showBack && !selection?.isSelectionModeActive}
       backIcon={backIcon}
       headerActions={headerActions}
       isSearchActive={isSearchActive}
       alignTitle={alignTitle}
+      headerStyle={{ opacity: selection?.isSelectionModeActive ? Opacity.medium : 1 }}
     >
       <View style={[styles.container, containerStyle]}>
+        {/* Backdrop (Back) - catches taps that miss the list entirely */}
+        {selection?.isSelectionModeActive && (
+          <Pressable style={StyleSheet.absoluteFill} onPress={selection.exitSelectionMode} />
+        )}
+
         <TransactionListView
           ref={ref}
           items={items}
@@ -94,9 +113,18 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           plannedJournals={plannedJournals}
           onPlannedJournalPress={onPlannedJournalPress}
           isPrivacyMode={isPrivacyMode}
+          selectedIds={selection?.selectedIds}
+          onLongPressItem={selection?.onLongPressItem}
+          isSelectionModeActive={selection?.isSelectionModeActive}
+          // Wrap footer in Pressable to catch taps on empty list area
+          ListFooterComponent={
+            selection?.isSelectionModeActive ? (
+              <Pressable style={{ height: 500 }} onPress={selection.exitSelectionMode} />
+            ) : undefined
+          }
         />
 
-        {fab && (
+        {fab && !selection?.isSelectionModeActive && (
           <FloatingActionButton
             onPress={fab.onPress}
             label={fab.label}
@@ -104,6 +132,16 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
             accessibilityLabel={fab.accessibilityLabel}
           />
         )}
+
+        <SelectionActionBar
+          selectedCount={selection?.selectedIds.size || 0}
+          totalCount={journalsCount(items)}
+          onClear={selection?.exitSelectionMode || (() => {})}
+          onSelectAll={selection?.selectAll || (() => {})}
+          onDeselectAll={selection?.clearItems || (() => {})}
+          onShare={selection?.onShareSelected || (() => {})}
+          isVisible={!!selection?.isSelectionModeActive}
+        />
 
         <DateRangePicker
           visible={datePicker.visible}
@@ -115,6 +153,9 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
     </Screen>
   );
 });
+
+const journalsCount = (items: JournalListViewModel['items']) =>
+  items.filter(i => i.type === 'transaction').length;
 
 JournalListView.displayName = 'JournalListView';
 

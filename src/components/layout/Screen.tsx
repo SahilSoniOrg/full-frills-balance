@@ -3,7 +3,7 @@ import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
 import React from 'react';
-import { ScrollViewProps, StyleSheet, View, type ViewProps } from 'react-native';
+import { ScrollViewProps, StyleSheet, View, type ViewProps, type ViewStyle } from 'react-native';
 import { type Edge } from 'react-native-safe-area-context';
 
 export type ScreenProps = ViewProps & {
@@ -24,6 +24,7 @@ export type ScreenProps = ViewProps & {
   keyboardAvoiding?: boolean;
   footer?: React.ReactNode;
   scrollViewProps?: ScrollViewProps;
+  headerStyle?: ViewStyle;
 };
 
 export function Screen({
@@ -42,6 +43,7 @@ export function Screen({
   keyboardAvoiding = false,
   footer,
   scrollViewProps,
+  headerStyle,
   style,
   ...rest
 }: ScreenProps) {
@@ -75,6 +77,7 @@ export function Screen({
           rightActions={headerActions}
           isSearchActive={isSearchActive}
           alignTitle={alignTitle}
+          style={headerStyle}
         />
       )}
       {content}

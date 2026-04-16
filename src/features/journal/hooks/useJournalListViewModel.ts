@@ -5,225 +5,339 @@ import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
+import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { DateRange, formatDate, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, Share } from 'react-native';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
 export interface JournalListEmptyState {
-    title: string;
-    subtitle: string;
+  title: string;
+  subtitle: string;
 }
 
 export interface JournalListViewModel {
-    items: TransactionListItem[];
-    isLoading: boolean;
-    isLoadingMore: boolean;
-    onEndReached?: () => void;
-    searchQuery: string;
-    onSearchChange: (value: string) => void;
-    isSearchGlobal: boolean;
-    toggleSearchGlobal: () => void;
-    dateRange: DateRange | null;
-    periodFilter: PeriodFilter;
-    isDatePickerVisible: boolean;
-    showDatePicker: () => void;
-    hideDatePicker: () => void;
-    navigatePrevious?: () => void;
-    navigateNext?: () => void;
-    onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
-    hasMore: boolean;
-    emptyState: JournalListEmptyState;
-    loadingText: string;
-    loadingMoreText: string;
-    plannedJournals: EnrichedJournal[];
+  items: TransactionListItem[];
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  onEndReached?: () => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  isSearchGlobal: boolean;
+  toggleSearchGlobal: () => void;
+  dateRange: DateRange | null;
+  periodFilter: PeriodFilter;
+  isDatePickerVisible: boolean;
+  showDatePicker: () => void;
+  hideDatePicker: () => void;
+  navigatePrevious?: () => void;
+  navigateNext?: () => void;
+  onDateSelect: (range: DateRange | null, filter: PeriodFilter) => void;
+  hasMore: boolean;
+  emptyState: JournalListEmptyState;
+  loadingText: string;
+  loadingMoreText: string;
+  plannedJournals: EnrichedJournal[];
+  selectedIds: Set<string>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: string) => void;
+  toggleSelection: (id: string) => void;
+  selectAll: () => void;
+  clearItems: () => void;
+  exitSelectionMode: () => void;
+  onShareSelected: () => void;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 interface UseJournalListViewModelParams {
-    pageSize?: number;
-    emptyState: JournalListEmptyState;
-    loadingText?: string;
-    loadingMoreText?: string;
-    initialDateRange?: DateRange | null;
-    defaultToCurrentMonth?: boolean;
+  pageSize?: number;
+  emptyState: JournalListEmptyState;
+  loadingText?: string;
+  loadingMoreText?: string;
+  initialDateRange?: DateRange | null;
+  defaultToCurrentMonth?: boolean;
 }
 
 export function useJournalListViewModel({
-    pageSize = AppConfig.defaults.journalPageSize,
-    emptyState,
-    loadingText = AppConfig.strings.common.loading,
-    loadingMoreText = AppConfig.strings.common.loading,
-    initialDateRange,
-    defaultToCurrentMonth = true,
+  pageSize = AppConfig.defaults.journalPageSize,
+  emptyState,
+  loadingText = AppConfig.strings.common.loading,
+  loadingMoreText = AppConfig.strings.common.loading,
+  initialDateRange,
+  defaultToCurrentMonth = true,
 }: UseJournalListViewModelParams): JournalListViewModel {
-    const { defaultCurrency: baseCurrency, isInitialized } = useUI();
-    const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
+  const { defaultCurrency: baseCurrency, isInitialized } = useUI();
+  const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isSearchGlobal, setIsSearchGlobal] = useState(true);
-    const missingCurrenciesCache = useRef(new Set<string>());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchGlobal, setIsSearchGlobal] = useState(true);
+  const missingCurrenciesCache = useRef(new Set<string>());
 
-    const {
-        dateRange,
-        periodFilter,
-        isPickerVisible: isDatePickerVisible,
-        showPicker: showDatePicker,
-        hidePicker: hideDatePicker,
-        setFilter,
-        navigatePrevious,
-        navigateNext,
-    } = useDateRangeFilter({ defaultToCurrentMonth, initialDateRange });
+  const {
+    dateRange,
+    periodFilter,
+    isPickerVisible: isDatePickerVisible,
+    showPicker: showDatePicker,
+    hidePicker: hideDatePicker,
+    setFilter,
+    navigatePrevious,
+    navigateNext,
+  } = useDateRangeFilter({ defaultToCurrentMonth, initialDateRange });
 
-    const effectiveDateRange = useMemo(() => {
-        if (searchQuery && isSearchGlobal) return undefined;
-        return dateRange || undefined;
-    }, [searchQuery, isSearchGlobal, dateRange]);
+  const effectiveDateRange = useMemo(() => {
+    if (searchQuery && isSearchGlobal) return undefined;
+    return dateRange || undefined;
+  }, [searchQuery, isSearchGlobal, dateRange]);
 
-    const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(pageSize, effectiveDateRange, searchQuery);
+  const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
+    pageSize,
+    effectiveDateRange,
+    searchQuery,
+  );
 
-    const { journals: plannedJournals } = useJournals(AppConfig.defaults.plannedJournalLimit, undefined, undefined, [JournalStatus.PLANNED]);
+  const { journals: plannedJournals } = useJournals(
+    AppConfig.defaults.plannedJournalLimit,
+    undefined,
+    undefined,
+    [JournalStatus.PLANNED],
+  );
 
-    const handleJournalPress = useCallback((journalId: string) => {
-        const journal = journals.find(j => j.id === journalId);
-        if (journal) {
-            const cardProps = mapJournalToCardProps(journal);
-            AppNavigation.toTransactionDetails(journalId, {
-                title: cardProps.title,
-                amount: cardProps.amount,
-                currencyCode: cardProps.currencyCode,
-                date: typeof cardProps.transactionDate === 'number' ? cardProps.transactionDate : (cardProps.transactionDate as Date).getTime(),
-                typeColor: cardProps.presentation.typeColor,
-                typeIcon: cardProps.presentation.typeIcon,
-                displayType: journal.displayType
-            });
-        } else {
-            AppNavigation.toTransactionDetails(journalId);
-        }
-    }, [journals]);
+  const selectionControl = useSelection<string>();
+  const {
+    selectedIds,
+    isSelectionModeActive,
+    toggleSelection,
+    onLongPressItem,
+    clearItems,
+    exitSelectionMode,
+    setSelectedIds,
+  } = selectionControl;
 
-    const onSearchChange = useCallback((value: string) => {
-        setSearchQuery(value);
-        if (value.length > 0 && !searchQuery) {
-            // Just started searching, reset to global by default
-            setIsSearchGlobal(true);
-        }
-    }, [searchQuery]);
+  const handleJournalPress = useCallback(
+    (journalId: string) => {
+      if (isSelectionModeActive) {
+        toggleSelection(journalId);
+        return;
+      }
 
-    const toggleSearchGlobal = useCallback(() => {
-        setIsSearchGlobal(prev => !prev);
-    }, []);
+      const journal = journals.find(j => j.id === journalId);
+      if (journal) {
+        const cardProps = mapJournalToCardProps(journal);
+        AppNavigation.toTransactionDetails(journalId, {
+          title: cardProps.title,
+          amount: cardProps.amount,
+          currencyCode: cardProps.currencyCode,
+          date:
+            typeof cardProps.transactionDate === 'number'
+              ? cardProps.transactionDate
+              : (cardProps.transactionDate as Date).getTime(),
+          typeColor: cardProps.presentation.typeColor,
+          typeIcon: cardProps.presentation.typeIcon,
+          displayType: journal.displayType,
+        });
+      } else {
+        AppNavigation.toTransactionDetails(journalId);
+      }
+    },
+    [journals, isSelectionModeActive, toggleSelection],
+  );
 
-    const onDateSelect = useCallback((range: DateRange | null, filter: PeriodFilter) => {
-        setFilter(range, filter);
-        setIsSearchGlobal(false); // If they manually pick a date, respect it
-        hideDatePicker();
-    }, [hideDatePicker, setFilter]);
+  const { precision } = useCurrencyPrecision(baseCurrency);
 
-    const { precision } = useCurrencyPrecision(baseCurrency);
+  const transactionGroupingOptions = useMemo(
+    () => ({
+      items: journals,
+      getDate: (j: EnrichedJournal) => j.journalDate,
+      sortByDate: 'desc' as const,
+      getStats: (journalsForDay: EnrichedJournal[]) => {
+        let netAmount = 0;
 
-    const transactionGroupingOptions = useMemo(() => ({
-        items: journals,
-        getDate: (j: EnrichedJournal) => j.journalDate,
-        sortByDate: 'desc' as const,
-        getStats: (journalsForDay: EnrichedJournal[]) => {
-            let netAmount = 0;
-
-            journalsForDay.forEach(j => {
-                let amount = 0;
-                if (j.currencyCode === baseCurrency) {
-                    amount = j.totalAmount;
-                } else {
-                    const rate = exchangeRateMap[j.currencyCode];
-                    if (rate && rate > 0) {
-                        amount = j.totalAmount / rate;
-                    } else {
-                        logger.warn(AppConfig.strings.journal.errors.missingExchangeRate(j.currencyCode, baseCurrency));
-                    }
-                }
-
-                if (amount !== 0) {
-                    if (j.displayType === JournalDisplayType.INCOME) {
-                        netAmount = safeAdd(netAmount, amount, precision);
-                    } else if (j.displayType === JournalDisplayType.EXPENSE) {
-                        netAmount = safeSubtract(netAmount, amount, precision);
-                    }
-                }
-            });
-
-            return {
-                count: journalsForDay.length,
-                netAmount,
-                currencyCode: baseCurrency,
-            };
-        },
-        renderItem: (journal: EnrichedJournal) => {
-            const cardProps = mapJournalToCardProps(journal);
-
-            return {
-                id: journal.id,
-                type: 'transaction' as const,
-                date: journal.journalDate,
-                onPress: () => handleJournalPress(journal.id),
-                cardProps,
-            };
-        }
-    }), [journals, baseCurrency, exchangeRateMap, handleJournalPress, precision]);
-
-    const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
-
-    useEffect(() => {
-        const toFetch = new Set<string>();
-        journals.forEach(j => {
-            if (j.currencyCode !== baseCurrency) {
-                const rate = exchangeRateMap[j.currencyCode];
-                if (!rate || rate <= 0) {
-                    if (!missingCurrenciesCache.current.has(j.currencyCode)) {
-                        toFetch.add(j.currencyCode);
-                        missingCurrenciesCache.current.add(j.currencyCode);
-                    }
-                }
+        journalsForDay.forEach(j => {
+          let amount = 0;
+          if (j.currencyCode === baseCurrency) {
+            amount = j.totalAmount;
+          } else {
+            const rate = exchangeRateMap[j.currencyCode];
+            if (rate && rate > 0) {
+              amount = j.totalAmount / rate;
+            } else {
+              logger.warn(
+                AppConfig.strings.journal.errors.missingExchangeRate(j.currencyCode, baseCurrency),
+              );
             }
+          }
+
+          if (amount !== 0) {
+            if (j.displayType === JournalDisplayType.INCOME) {
+              netAmount = safeAdd(netAmount, amount, precision);
+            } else if (j.displayType === JournalDisplayType.EXPENSE) {
+              netAmount = safeSubtract(netAmount, amount, precision);
+            }
+          }
         });
 
-        toFetch.forEach(currencyCode => {
-            exchangeRateService.getRate(baseCurrency, currencyCode)
-                .catch(e => logger.error(`Failed to dynamically fetch rate for missing currency ${currencyCode}`, e));
-        });
-    }, [journals, baseCurrency, exchangeRateMap]);
+        return {
+          count: journalsForDay.length,
+          netAmount,
+          currencyCode: baseCurrency,
+        };
+      },
+      renderItem: (journal: EnrichedJournal) => {
+        const cardProps = mapJournalToCardProps(journal);
 
-    const onEndReached = useMemo(() => {
-        if (searchQuery || !hasMore) return undefined;
-        return loadMore;
-    }, [searchQuery, hasMore, loadMore]);
+        return {
+          id: journal.id,
+          type: 'transaction' as const,
+          date: journal.journalDate,
+          onPress: () => handleJournalPress(journal.id),
+          cardProps,
+        };
+      },
+    }),
+    [journals, baseCurrency, exchangeRateMap, handleJournalPress, precision],
+  );
 
-    return {
-        items,
-        isLoading,
-        isLoadingMore,
-        onEndReached,
-        searchQuery,
-        onSearchChange,
-        isSearchGlobal,
-        toggleSearchGlobal,
-        dateRange,
-        periodFilter,
-        isDatePickerVisible,
-        showDatePicker,
-        hideDatePicker,
-        navigatePrevious,
-        navigateNext,
-        onDateSelect,
-        hasMore,
-        emptyState,
-        loadingText,
-        loadingMoreText,
-        plannedJournals,
-    };
+  const { groupedItems: items } = useTransactionGrouping(transactionGroupingOptions);
+
+  const onShareSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      const selectedJournals = journals.filter(j => selectedIds.has(j.id));
+      const shareText = selectedJournals
+        .map(j => {
+          const amount = CurrencyFormatter.format(j.totalAmount, j.currencyCode);
+          const date = formatDate(j.journalDate, { includeTime: true });
+          return `${date}: ${j.description || j.semanticLabel || 'Transaction'} - ${amount}`;
+        })
+        .join('\n');
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([shareText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `transactions-share-${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      await Share.share({
+        message: shareText,
+        title: 'Share Transactions',
+      });
+    } catch (error) {
+      logger.error('Failed to share transactions', error);
+    }
+  }, [selectedIds, journals]);
+
+  const selectAll = useCallback(() => {
+    const visibleIds = items.filter(i => i.type === 'transaction').map(i => i.id);
+    selectionControl.selectAll(visibleIds);
+  }, [items, selectionControl]);
+
+  const onSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+      if (value.length > 0 && !searchQuery) {
+        setIsSearchGlobal(true);
+      }
+    },
+    [searchQuery],
+  );
+
+  const toggleSearchGlobal = useCallback(() => {
+    setIsSearchGlobal(prev => !prev);
+  }, []);
+
+  const onDateSelect = useCallback(
+    (range: DateRange | null, filter: PeriodFilter) => {
+      setFilter(range, filter);
+      setIsSearchGlobal(false);
+      hideDatePicker();
+    },
+    [hideDatePicker, setFilter],
+  );
+
+  useEffect(() => {
+    const toFetch = new Set<string>();
+    journals.forEach(j => {
+      if (j.currencyCode !== baseCurrency) {
+        const rate = exchangeRateMap[j.currencyCode];
+        if (!rate || rate <= 0) {
+          if (!missingCurrenciesCache.current.has(j.currencyCode)) {
+            toFetch.add(j.currencyCode);
+            missingCurrenciesCache.current.add(j.currencyCode);
+          }
+        }
+      }
+    });
+
+    toFetch.forEach(currencyCode => {
+      exchangeRateService
+        .getRate(baseCurrency, currencyCode)
+        .catch(e =>
+          logger.error(`Failed to dynamically fetch rate for missing currency ${currencyCode}`, e),
+        );
+    });
+  }, [journals, baseCurrency, exchangeRateMap]);
+
+  useEffect(() => {
+    if (selectedIds.size === 0) return;
+
+    setSelectedIds(prev => {
+      const validIds = new Set(journals.map(j => j.id));
+      const filtered = new Set([...prev].filter(id => validIds.has(id)));
+      return filtered.size === prev.size ? prev : filtered;
+    });
+  }, [journals, selectedIds.size, setSelectedIds]);
+
+  const onEndReached = useMemo(() => {
+    if (searchQuery || !hasMore) return undefined;
+    return loadMore;
+  }, [searchQuery, hasMore, loadMore]);
+
+  return {
+    items,
+    isLoading,
+    isLoadingMore,
+    onEndReached,
+    searchQuery,
+    onSearchChange,
+    isSearchGlobal,
+    toggleSearchGlobal,
+    dateRange,
+    periodFilter,
+    isDatePickerVisible,
+    showDatePicker,
+    hideDatePicker,
+    navigatePrevious,
+    navigateNext,
+    onDateSelect,
+    hasMore,
+    emptyState,
+    loadingText,
+    loadingMoreText,
+    plannedJournals,
+    selectedIds,
+    isSelectionModeActive,
+    onLongPressItem,
+    toggleSelection,
+    selectAll,
+    clearItems,
+    exitSelectionMode,
+    onShareSelected,
+    setSelectedIds,
+  };
 }
-

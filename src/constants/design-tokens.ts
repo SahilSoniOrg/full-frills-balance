@@ -126,6 +126,8 @@ export const Opacity = {
   muted: 0.3, // Placeholders, disabled states
   medium: 0.5, // Overlays, inactive tabs
   heavy: 0.7, // Modal backdrops
+  high: 0.9, // Near-solid highlights
+  subtle: 0.98, // Decisive surfaces / tactile feedback
   solid: 1,
 } as const;
 

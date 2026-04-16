@@ -65,11 +65,15 @@ import {
   Scale,
   Search,
   Settings,
+  Share2,
   Shield,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
+  Square,
+  SquareCheck,
+  SquareMinus,
   Star,
   Tag,
   Trash2,
@@ -170,6 +174,11 @@ export const IconMap = {
   activity: Activity,
   filter: Filter,
   timeline: BetweenHorizontalStart,
+  share: Share2,
+  square: Square,
+  checkSquare: SquareCheck,
+  minusSquare: SquareMinus,
+  x: X,
 } as const;
 
 export type IconName = keyof typeof IconMap;
