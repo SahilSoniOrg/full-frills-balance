@@ -13,36 +13,47 @@ import { Platform } from 'react-native';
  * Powered by PostHog.
  */
 
-const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
-const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
+export const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 const BUILD_TYPE = process.env.APP_VARIANT || 'development'; // 'development', 'preview', 'production'
 
 export class AnalyticsService {
-  public readonly posthog: PostHog | null;
+  private _posthog: PostHog | null = null;
   private sessionStartTime: number = Date.now();
   private sessionTimeoutTimer: NodeJS.Timeout | null = null;
 
+  public get posthog(): PostHog | null {
+    return this._posthog;
+  }
+
   constructor() {
-    this.posthog = POSTHOG_API_KEY
-      ? new PostHog(POSTHOG_API_KEY, {
-          host: POSTHOG_HOST,
-          disabled: __DEV__,
-        })
-      : null;
+    // Constructor remains lightweight to avoid module evaluation delays
   }
 
   /**
    * Initialize analytics provider.
    */
   initialize() {
-    // Register as the performance reporter for the logger metric layer
+    // 1. Setup PostHog instance on-demand
+    if (!this._posthog && POSTHOG_API_KEY) {
+      try {
+        this._posthog = new PostHog(POSTHOG_API_KEY, {
+          host: POSTHOG_HOST,
+          disabled: __DEV__,
+        });
+      } catch (error) {
+        logger.error('[Analytics] Failed to create PostHog instance', error);
+      }
+    }
+
+    // 2. Register as the performance reporter for the logger metric layer
     logger.setPerformanceReporter((metric, value, context) => {
       this.trackPerformance(metric, value, context);
     });
 
-    if (this.posthog && __DEV__) {
+    if (this._posthog && __DEV__) {
       logger.info('[Analytics] PostHog client ready (debug mode — events disabled in __DEV__)');
-    } else if (this.posthog) {
+    } else if (this._posthog) {
       logger.info('[Analytics] PostHog client ready');
       this.startSessionTracking();
     } else {

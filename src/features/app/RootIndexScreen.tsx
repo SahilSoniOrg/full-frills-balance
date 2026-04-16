@@ -1,8 +1,11 @@
 import { useUI } from '@/src/contexts/UIContext';
-import { Redirect } from 'expo-router';
+import { useTheme } from '@/src/hooks/use-theme';
 import * as Linking from 'expo-linking';
+import { Redirect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
+
+import * as SplashScreen from 'expo-splash-screen';
 
 /**
  * Root Index - Entry point for the application.
@@ -13,7 +16,8 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
  * the deeplink path directly.
  */
 export function RootIndexScreen() {
-  const { isInitialized, hasCompletedOnboarding } = useUI();
+  const { isAppReady, hasCompletedOnboarding } = useUI();
+  const { theme } = useTheme();
   // undefined = still loading, null = no initial URL
   const [initialUrl, setInitialUrl] = useState<string | null | undefined>(undefined);
 
@@ -21,12 +25,20 @@ export function RootIndexScreen() {
     Linking.getInitialURL().then(url => setInitialUrl(url ?? null));
   }, []);
 
-  if (!isInitialized || initialUrl === undefined) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  useEffect(() => {
+    // HARDENED: Hide splash as soon as UI is safe (Phase 2).
+    // Do not wait for deep links if the main UI is ready to paint.
+    if (isAppReady) {
+      SplashScreen.hideAsync().catch(() => {
+        /* ignore */
+      });
+    }
+  }, [isAppReady]);
+
+  if (!isAppReady) {
+    // TIGHTENED: Render a themed carrier view instead of null to prevent "black void" flicker
+    // during the handoff from native splash to React Native surface.
+    return <View style={{ flex: 1, backgroundColor: theme.background }} />;
   }
 
   // If cold-started with a deeplink to a specific route, let Expo Router handle it
@@ -39,7 +51,3 @@ export function RootIndexScreen() {
 
   return hasCompletedOnboarding ? <Redirect href="/(tabs)" /> : <Redirect href="/onboarding" />;
 }
-
-const styles = StyleSheet.create({
-  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-});

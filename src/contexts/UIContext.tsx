@@ -18,6 +18,14 @@ import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
+export enum AppPhase {
+  BOOTING = 0, // Native splash active, loading critical prefs/fonts
+  READY = 1, // Preferences + Fonts loaded, UI safe to show (hide splash)
+  STABILIZED = 2, // Background tasks (integrity, payments, etc.) finished
+}
+
+export type BootEvent = 'PREFS_HYDRATED' | 'FONTS_LOADED' | 'STABILIZATION_DONE';
+
 // Simple UI state only - no domain data
 interface UIState {
   // Onboarding state
@@ -44,6 +52,7 @@ interface UIState {
   hasUnlockedThisSession: boolean; // Session transient state for cold boot protection
   isAppActive: boolean; // Track OS AppState in global context
   isLockAuthenticating: boolean; // Track if biometric prompt is visible
+  fontsReady: boolean; // Track if fonts are loaded
 
   // Account Display
   showAccountMonthlyStats: boolean;
@@ -69,11 +78,13 @@ interface UIState {
   notificationHour: number;
   notificationMinute: number;
   notificationWeekday: number;
+  appPhase: AppPhase;
 }
 
 interface UIContextType extends UIState {
   // Computed values
   themeMode: 'light' | 'dark';
+  isAppReady: boolean;
   isAppCurrentlyLocked: boolean; // BULLETPROOF: blocking logic unified for UI and services
 
   // Actions for UI state only
@@ -88,6 +99,7 @@ interface UIContextType extends UIState {
   authenticateSession: (unlocked: boolean) => void;
   setIsAppActive: (isActive: boolean) => void;
   setIsLockAuthenticating: (isAuthenticating: boolean) => void;
+  dispatchBootEvent: (event: BootEvent) => void;
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>;
   setArchetype: (archetype: string) => Promise<void>;
   setAdvancedMode: (advancedMode: boolean) => Promise<void>;
@@ -140,6 +152,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     notificationHour: 10,
     notificationMinute: 0,
     notificationWeekday: 1,
+    fontsReady: false,
+    appPhase: AppPhase.BOOTING,
   });
 
   // Load preferences on mount
@@ -171,6 +185,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           importStats: null,
           isLoading: false,
           isInitialized: true,
+          appPhase: uiState.fontsReady ? AppPhase.READY : AppPhase.BOOTING,
           archetype: loadedPreferences.archetype || 'balance-glancer',
           notificationCadence: loadedPreferences.notificationCadence || 'none',
           notificationHour: loadedPreferences.notificationHour ?? 10,
@@ -305,6 +320,42 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setUIState(prev => ({ ...prev, isLockAuthenticating }));
   }, []);
 
+  const dispatchBootEvent = useCallback((event: BootEvent) => {
+    setUIState(prev => {
+      let nextIsInitialized = prev.isInitialized;
+      let nextFontsReady = prev.fontsReady;
+
+      if (event === 'PREFS_HYDRATED') nextIsInitialized = true;
+      if (event === 'FONTS_LOADED') nextFontsReady = true;
+
+      let nextPhase = prev.appPhase;
+
+      // Transition to READY only if both critical paths are complete
+      if (nextIsInitialized && nextFontsReady && nextPhase < AppPhase.READY) {
+        nextPhase = AppPhase.READY;
+        logger.info('[UIContext] Boot Phase: READY');
+      }
+
+      // Transition to STABILIZED only if we were READY
+      if (event === 'STABILIZATION_DONE' && nextPhase === AppPhase.READY) {
+        nextPhase = AppPhase.STABILIZED;
+        logger.info('[UIContext] Boot Phase: STABILIZED');
+      }
+
+      // MONOTONIC LOCK: Prevent phase regression (cannot go back to BOOTING or READY)
+      if (nextPhase < prev.appPhase) {
+        nextPhase = prev.appPhase;
+      }
+
+      return {
+        ...prev,
+        isInitialized: nextIsInitialized,
+        fontsReady: nextFontsReady,
+        appPhase: nextPhase,
+      };
+    });
+  }, []);
+
   const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
     try {
       await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats);
@@ -389,6 +440,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const value: UIContextType = {
     ...uiState,
+    isAppReady: uiState.appPhase >= AppPhase.READY,
     themeMode: useMemo(() => {
       return uiState.themePreference === 'system'
         ? systemColorScheme === 'dark'
@@ -435,6 +487,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setNotificationCadence,
     setNotificationTime,
     setNotificationWeekday,
+    dispatchBootEvent,
     requireRestart,
   };
 

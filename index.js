@@ -1,5 +1,11 @@
+// Global anchor for boot performance telemetry
+import 'expo-router/entry';
+
+if (typeof global !== 'undefined') {
+  global.__BOOT_START_TIME__ = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  global.__HAS_MOUNTED_BEFORE__ = false;
+}
+
 if (process.env.EXPO_OS !== 'web') {
   require('react-native-quick-crypto').install();
 }
-
-import 'expo-router/entry';

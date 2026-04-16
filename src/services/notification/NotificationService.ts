@@ -21,8 +21,8 @@ import { Platform } from 'react-native';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { catchError, debounceTime, shareReplay, switchMap } from 'rxjs/operators';
-import { Insight, insightService } from '../insight/InsightService';
 import { balanceService } from '../BalanceService';
+import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
 
@@ -107,6 +107,22 @@ export class NotificationService {
     }
 
     return finalStatus === 'granted';
+  }
+
+  /**
+   * Pre-warms the Safe-to-Spend simulation pipeline in the background.
+   * This triggers the heavy data observation and cache hydration during the
+   * splash screen phase without blocking the first render.
+   */
+  preWarm(): void {
+    if (Platform.OS === 'web') return;
+    // Trigger the simulation chain. The shareReplay(1) in observeSafeToSpend
+    // will ensure the first screen to subscribe gets the result instantly.
+    const sub = this.observeSafeToSpend().subscribe();
+
+    // We keep the subscription alive for at least 10s to ensure the first results
+    // are calculated and cached in the shareReplay buffer.
+    setTimeout(() => sub.unsubscribe(), 10000);
   }
 
   async checkPermissions(): Promise<boolean> {

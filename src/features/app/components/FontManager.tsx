@@ -52,46 +52,64 @@ interface FontManagerProps {
  * This prevents loading all fonts at startup, saving memory and improving boot time.
  */
 export function FontManager({ children }: FontManagerProps) {
-  const { fontId } = useUI();
+  const { fontId, dispatchBootEvent } = useUI();
   const [loadedFontSets, setLoadedFontSets] = useState<Set<string>>(new Set());
   const [currentFontReady, setCurrentFontReady] = useState(false);
 
   useEffect(() => {
+    // Local RESET for UI blocking during theme switch
+    setCurrentFontReady(false);
+
+    let isActive = true;
+
     async function loadFontSet() {
       // If fonts for this theme are already loaded, we're ready
       if (loadedFontSets.has(fontId)) {
-        setCurrentFontReady(true);
+        if (isActive) {
+          setCurrentFontReady(true);
+          dispatchBootEvent('FONTS_LOADED');
+        }
         return;
       }
 
       const fontsToLoad = FONT_MAP[fontId];
       if (!fontsToLoad) {
         // Fallback for missing/invalid fontId
-        setCurrentFontReady(true);
+        if (isActive) {
+          setCurrentFontReady(true);
+          dispatchBootEvent('FONTS_LOADED');
+        }
         return;
       }
 
       try {
-        // We only show a loading state if the CURRENT theme's fonts aren't ready
-        setCurrentFontReady(false);
-
         await Font.loadAsync(fontsToLoad);
 
-        setLoadedFontSets(prev => {
-          const next = new Set(prev);
-          next.add(fontId);
-          return next;
-        });
-        setCurrentFontReady(true);
+        if (isActive) {
+          setLoadedFontSets(prev => {
+            const next = new Set(prev);
+            next.add(fontId);
+            return next;
+          });
+          setCurrentFontReady(true);
+          dispatchBootEvent('FONTS_LOADED');
+        }
       } catch (error) {
         console.error(`Failed to load fonts for ${fontId}`, error);
         // Still allow the app to show (with system fonts) if loading fails
-        setCurrentFontReady(true);
+        if (isActive) {
+          setCurrentFontReady(true);
+          dispatchBootEvent('FONTS_LOADED');
+        }
       }
     }
 
     loadFontSet();
-  }, [fontId, loadedFontSets]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [fontId, dispatchBootEvent]);
 
   // Block the app ONLY during the initial font load of the current theme
   if (!currentFontReady && loadedFontSets.size === 0) {

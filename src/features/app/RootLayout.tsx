@@ -8,10 +8,11 @@ import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
-import { analytics } from '@/src/services/analytics-service';
+import { analytics, POSTHOG_API_KEY, POSTHOG_HOST } from '@/src/services/analytics-service';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, usePathname, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
 import { View } from 'react-native';
@@ -20,6 +21,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FontManager } from './components/FontManager';
 
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
+
+// Prevent splash screen from auto-hiding before we are ready
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* ignore */
+});
 
 function PostHogScreenTracker() {
   const pathname = usePathname();
@@ -109,7 +115,12 @@ export default function RootLayout() {
             <DatabaseProvider database={database}>
               <UIProvider>
                 <FontManager>
-                  <PostHogProvider client={analytics.posthog ?? undefined} debug={__DEV__}>
+                  <PostHogProvider
+                    client={analytics.posthog ?? undefined}
+                    apiKey={analytics.posthog ? undefined : POSTHOG_API_KEY}
+                    options={analytics.posthog ? undefined : { host: POSTHOG_HOST, disabled: true }}
+                    debug={__DEV__}
+                  >
                     <PostHogScreenTracker />
                     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                       <AppLockInterceptor>

@@ -37,6 +37,7 @@ export const AppConfig = {
     appLockGracePeriodMs: 10000,
     appLockAuthTransitionMs: 500,
     appLockFadeDurationMs: 400,
+    bootWatchdogMs: 5000,
   },
 
   // Input constraints
@@ -91,6 +92,7 @@ export const AppConfig = {
         retryDelayMs: 2000,
       },
     },
+    ghostStepYieldMs: 20, // Small yield between major ghost hydration steps
   },
 
   // External API endpoints
