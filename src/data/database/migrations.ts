@@ -404,5 +404,24 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 20,
+      steps: [
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_transactions_high_perf 
+          ON transactions (account_id, transaction_date DESC, created_at DESC, id DESC) 
+          WHERE deleted_at IS NULL;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_balance_snapshots_chronological 
+          ON balance_snapshots (account_id, transaction_date DESC, created_at DESC, id DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_journals_main_ledger 
+          ON journals (status, deleted_at, journal_date DESC) 
+          WHERE deleted_at IS NULL;
+        `),
+      ],
+    },
   ],
 });

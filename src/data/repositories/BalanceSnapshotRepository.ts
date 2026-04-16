@@ -92,7 +92,11 @@ export class BalanceSnapshotRepository {
         WHERE bs.account_id IN (${accountIds.map(() => '?').join(',')})
           AND bs.transaction_date <= ?
       )
-      SELECT * FROM RankedSnapshots WHERE rn = 1
+      SELECT 
+        accountId, transactionId, transactionDate, absoluteBalance, 
+        transactionCount, createdAt, updatedAt, transactionCreatedAt
+      FROM RankedSnapshots 
+      WHERE rn = 1
     `;
 
     try {

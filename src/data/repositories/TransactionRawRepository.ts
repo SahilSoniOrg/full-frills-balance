@@ -92,10 +92,11 @@ export class TransactionRawRepository {
         this.mappingCache.set(schemaSignature, mapping);
       }
 
+      const mappingLen = mapping.length;
       return rawRows.map((row: unknown) => {
         const castRow = row as Record<string, unknown>;
         const normalized: Record<string, unknown> = {};
-        for (let i = 0; i < mapping!.length; i++) {
+        for (let i = 0; i < mappingLen; i++) {
           const m = mapping![i];
           const val = castRow[m.original];
           normalized[m.original] = val;
@@ -207,7 +208,7 @@ export class TransactionRawRepository {
 
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
-    let sql = `
+    const sql = `
       SELECT SUM(${multiplierSql}) as total
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
@@ -216,18 +217,29 @@ export class TransactionRawRepository {
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
-    `;
-    const args = [accountId, cutoffDate, ...ACTIVE_JOURNAL_STATUSES];
-
-    if (upToTransactionId) {
-      // Include everything strictly chronologically UP TO this transaction (H-6 fix)
-      // Logic: (date < targetDate) OR (date = targetDate AND created_at < targetCreated) OR (date = targetDate AND created_at = targetCreated AND id <= targetId)
-      sql += ` AND (t.transaction_date < (SELECT transaction_date FROM transactions WHERE id = ?)
+        ${
+          upToTransactionId
+            ? `AND (t.transaction_date < (SELECT transaction_date FROM transactions WHERE id = ?)
                 OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
                     AND t.created_at < (SELECT created_at FROM transactions WHERE id = ?))
                 OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
                     AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
-                    AND t.id <= ?))`;
+                    AND t.id <= ?))`
+            : ''
+        }
+        ${
+          afterTransactionId
+            ? `AND (t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
+                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
+                    AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?))
+                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
+                    AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
+                    AND t.id > ?))`
+            : ''
+        }
+    `;
+    const args: any[] = [accountId, cutoffDate, ...ACTIVE_JOURNAL_STATUSES];
+    if (upToTransactionId) {
       args.push(
         upToTransactionId,
         upToTransactionId,
@@ -237,16 +249,7 @@ export class TransactionRawRepository {
         upToTransactionId,
       );
     }
-
     if (afterTransactionId) {
-      // Include everything strictly chronologically AFTER this transaction
-      // Logic: (date > targetDate) OR (date = targetDate AND created_at > targetCreated) OR (date = targetDate AND created_at = targetCreated AND id > targetId)
-      sql += ` AND (t.transaction_date > (SELECT transaction_date FROM transactions WHERE id = ?)
-                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?) 
-                    AND t.created_at > (SELECT created_at FROM transactions WHERE id = ?))
-                OR (t.transaction_date = (SELECT transaction_date FROM transactions WHERE id = ?)
-                    AND t.created_at = (SELECT created_at FROM transactions WHERE id = ?)
-                    AND t.id > ?))`;
       args.push(
         afterTransactionId,
         afterTransactionId,
@@ -678,72 +681,84 @@ export class TransactionRawRepository {
     minTransactionDate?: number,
   ): Promise<Map<string, number>> {
     if (accountIdsWithBoundaries.length === 0) return new Map();
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
-
-    // 1. Build optimized SQL query with per-account boundaries using CTE
-    // This avoids the massive OR clause which destroys query planner performance at scale.
-    // We use a UNION ALL ladder instead of VALUES clause for maximum SQLite compatibility (pre-3.32).
-    const unionParts: string[] = [];
-    const boundaryParams: (string | number)[] = [];
-
-    for (const b of accountIdsWithBoundaries) {
-      unionParts.push('SELECT ? as acc_id, ? as last_date, ? as last_created, ? as last_id');
-      boundaryParams.push(
-        b.accountId,
-        b.afterTransactionDate || 0,
-        b.afterTransactionCreatedAt || 0,
-        b.afterTransactionId || '',
-      );
-    }
-
-    const sql = `
-      WITH search_boundaries(acc_id, last_date, last_created, last_id) AS (
-        ${unionParts.join(' UNION ALL ')}
-      )
-      SELECT t.account_id as accountId, COUNT(*) as count
-      FROM transactions t
-      JOIN journals j ON t.journal_id = j.id
-      JOIN search_boundaries b ON t.account_id = b.acc_id
-      WHERE t.deleted_at IS NULL
-        AND j.deleted_at IS NULL
-        AND j.status IN (${placeholders})
-        AND t.transaction_date <= ?
-        ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
-        AND (
-          b.last_id = '' 
-          OR t.transaction_date > b.last_date 
-          OR (t.transaction_date = b.last_date AND t.created_at > b.last_created)
-          OR (t.transaction_date = b.last_date AND t.created_at = b.last_created AND t.id > b.last_id)
-        )
-      GROUP BY t.account_id
-    `;
-
-    const queryParams: (string | number)[] = [
-      ...boundaryParams,
-      ...ACTIVE_JOURNAL_STATUSES,
-      endDate,
-    ];
-    if (minTransactionDate !== undefined) queryParams.push(minTransactionDate);
-
-    const raws = await this.queryRaw<{ accountId: string; count: number }>(sql, queryParams);
 
     const results = new Map<string, number>();
     // Pre-populate with zeros for all requested accounts
     for (const b of accountIdsWithBoundaries) results.set(b.accountId, 0);
 
-    if (raws !== null) {
-      // Fill with actual counts
-      for (const row of raws) results.set(row.accountId, row.count);
-      return results;
+    const CHUNK_SIZE = 100; // SQLite UNION ALL limit safety buffer
+    for (let i = 0; i < accountIdsWithBoundaries.length; i += CHUNK_SIZE) {
+      const chunk = accountIdsWithBoundaries.slice(i, i + CHUNK_SIZE);
+      const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+
+      // 1. Build optimized SQL query with per-account boundaries using CTE
+      // This avoids the massive OR clause which destroys query planner performance at scale.
+      const unionParts: string[] = [];
+      const boundaryParams: (string | number)[] = [];
+
+      for (const b of chunk) {
+        unionParts.push('SELECT ? as acc_id, ? as last_date, ? as last_created, ? as last_id');
+        boundaryParams.push(
+          b.accountId,
+          b.afterTransactionDate || 0,
+          b.afterTransactionCreatedAt || 0,
+          b.afterTransactionId || '',
+        );
+      }
+
+      const sql = `
+        WITH search_boundaries(acc_id, last_date, last_created, last_id) AS (
+          ${unionParts.join(' UNION ALL ')}
+        )
+        SELECT t.account_id as accountId, COUNT(*) as count
+        FROM transactions t
+        JOIN journals j ON t.journal_id = j.id
+        JOIN search_boundaries b ON t.account_id = b.acc_id
+        WHERE t.deleted_at IS NULL
+          AND j.deleted_at IS NULL
+          AND j.status IN (${placeholders})
+          AND t.transaction_date <= ?
+          ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
+          AND (
+            b.last_id = '' 
+            OR t.transaction_date > b.last_date 
+            OR (t.transaction_date = b.last_date AND t.created_at > b.last_created)
+            OR (t.transaction_date = b.last_date AND t.created_at = b.last_created AND t.id > b.last_id)
+          )
+        GROUP BY t.account_id
+      `;
+
+      const queryParams: (string | number)[] = [
+        ...boundaryParams,
+        ...ACTIVE_JOURNAL_STATUSES,
+        endDate,
+      ];
+      if (minTransactionDate !== undefined) queryParams.push(minTransactionDate);
+
+      const raws = await this.queryRaw<{ accountId: string; count: number }>(sql, queryParams);
+
+      if (raws !== null) {
+        for (const row of raws) results.set(row.accountId, row.count);
+      } else {
+        // Fallback if raw query is not supported in this environment
+        return this.getAccountTransactionCountsFallback(chunk, endDate, results);
+      }
     }
 
-    // Fallback path is significantly slower (O(N) queries)
+    return results;
+  }
+
+  private async getAccountTransactionCountsFallback(
+    chunk: { accountId: string; afterTransactionId?: string }[],
+    endDate: number,
+    results: Map<string, number>,
+  ): Promise<Map<string, number>> {
     logger.warn(
-      '[TransactionRawRepository] getAccountTransactionCountsRaw falling back to ORM loop. Performance risk.',
+      '[TransactionRawRepository] getAccountTransactionCountsRaw falling back to ORM loop.',
     );
 
     // Fallback for LokiJS/Test
-    for (const item of accountIdsWithBoundaries) {
+    for (const item of chunk) {
       const q = database.collections
         .get<Transaction>('transactions')
         .query(
@@ -765,9 +780,10 @@ export class TransactionRawRepository {
         return a.id.localeCompare(b.id);
       });
 
-      let startFound = !item.afterTransactionId;
+      const afterTransactionId = (item as any).afterTransactionId;
+      let startFound = !afterTransactionId;
       for (const tx of sorted) {
-        if (item.afterTransactionId && tx.id === item.afterTransactionId) {
+        if (afterTransactionId && tx.id === afterTransactionId) {
           startFound = true;
           continue;
         }
