@@ -15,6 +15,7 @@ import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { notificationService } from '@/src/services/notification/NotificationService';
+import { sharingService } from '@/src/services/SharingService';
 
 /**
  * Bootstraps app-wide side effects that must not live in UI context.
@@ -173,6 +174,12 @@ export function useAppBootstrap() {
           await plannedPaymentService.processDuePayments();
         } catch (error) {
           if (isActive) logger.error('[Bootstrap] Planned payments processing failed', error);
+        }
+
+        try {
+          await sharingService.init();
+        } catch (error) {
+          if (isActive) logger.warn('[Bootstrap] Sharing service initialization failed', { error });
         }
 
         try {

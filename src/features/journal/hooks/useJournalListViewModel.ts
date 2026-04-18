@@ -10,13 +10,14 @@ import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { DateRange, formatDate, PeriodFilter } from '@/src/utils/dateUtils';
+import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
+import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Share } from 'react-native';
+import { sharingService, ShareFormat } from '@/src/services/SharingService';
+import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
 export interface JournalListEmptyState {
@@ -212,31 +213,24 @@ export function useJournalListViewModel({
 
     try {
       const selectedJournals = journals.filter(j => selectedIds.has(j.id));
-      const shareText = selectedJournals
-        .map(j => {
-          const amount = CurrencyFormatter.format(j.totalAmount, j.currencyCode);
-          const date = formatDate(j.journalDate, { includeTime: true });
-          return `${date}: ${j.description || j.semanticLabel || 'Transaction'} - ${amount}`;
-        })
-        .join('\n');
-
-      if (Platform.OS === 'web') {
-        const blob = new Blob([shareText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `transactions-share-${Date.now()}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        return;
-      }
-
-      await Share.share({
-        message: shareText,
-        title: 'Share Transactions',
-      });
+      const provider = new TransactionShareProvider(
+        selectedJournals.map(j => ({
+          id: j.id,
+          date: j.journalDate,
+          description: j.description || j.semanticLabel || 'Transaction',
+          amount: j.totalAmount,
+          currencyCode: j.currencyCode,
+          displayType: j.displayType,
+        })),
+        {
+          title: 'Transactions Report',
+          includeTime: true,
+          sort: 'desc',
+          showEmojis: true,
+          defaultCurrency: preferences.defaultCurrencyCode,
+        },
+      );
+      await sharingService.share(provider, ShareFormat.TEXT);
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }

@@ -18,16 +18,18 @@ import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { confirm, showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { DateRange, formatDate, PeriodFilter } from '@/src/utils/dateUtils';
+import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Share } from 'react-native';
+import { sharingService, ShareFormat } from '@/src/services/SharingService';
+import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { map, of } from 'rxjs';
 
 export interface PeriodMetrics {
@@ -632,30 +634,28 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     if (selectedIds.size === 0) return;
     try {
       const selectedTransactions = transactions.filter(t => selectedIds.has(t.id));
-      const shareText = selectedTransactions
-        .map(t => {
-          const amount = CurrencyFormatter.format(t.amount, t.currencyCode);
-          const date = formatDate(t.transactionDate, { includeTime: true });
-          return `${date}: ${t.journalDescription || t.displayTitle || 'Transaction'} - ${amount}`;
-        })
-        .join('\n');
-      if (Platform.OS === 'web') {
-        const blob = new Blob([shareText], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `account-transactions-share-${Date.now()}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        return;
-      }
-      await Share.share({ message: shareText, title: 'Share Transactions' });
+      const provider = new TransactionShareProvider(
+        selectedTransactions.map(t => ({
+          id: t.id,
+          date: t.transactionDate,
+          description: t.journalDescription || t.displayTitle || 'Transaction',
+          amount: t.amount,
+          currencyCode: t.currencyCode,
+          displayType: (t.displayType as JournalDisplayType) || JournalDisplayType.MIXED,
+        })),
+        {
+          title: `Transactions for ${account?.name || 'Account'}`,
+          includeTime: true,
+          sort: 'desc',
+          showEmojis: true,
+          defaultCurrency: preferences.defaultCurrencyCode,
+        },
+      );
+      await sharingService.share(provider, ShareFormat.TEXT);
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }
-  }, [selectedIds, transactions]);
+  }, [selectedIds, transactions, account?.name]);
 
   const selectAll = useCallback(() => {
     const visibleIds = transactionItems.filter(i => i.type === 'transaction').map(i => i.id);
