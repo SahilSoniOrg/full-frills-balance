@@ -3,6 +3,7 @@ import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { ShareFormatPreference } from '@/src/features/settings/components/ShareFormatPreference';
 import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -46,6 +47,7 @@ export default function DataManagementSettingsScreen() {
               onPress={onExport}
               loading={isExporting}
             />
+            <ShareFormatPreference />
             <SettingsMenuItem
               leftIcon="refresh"
               title={AppConfig.strings.settings.data.importBtn}

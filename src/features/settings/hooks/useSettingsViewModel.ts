@@ -1,4 +1,5 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
+import { ShareFormat } from '@/src/types/sharing';
 import { useUI } from '@/src/contexts/UIContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
@@ -29,6 +30,8 @@ export interface SettingsViewModel {
   onToggleAppLock: () => void;
   showAccountMonthlyStats: boolean;
   onToggleAccountMonthlyStats: () => void;
+  defaultShareFormat: ShareFormat;
+  setDefaultShareFormat: (value: ShareFormat) => void;
   isExporting: boolean;
   isImporting: boolean;
   isMaintenanceMode: boolean;
@@ -69,6 +72,8 @@ export function useSettingsViewModel(): SettingsViewModel {
     setShowAccountMonthlyStats,
     isWidgetPrivacyEnabled,
     setWidgetPrivacyEnabled,
+    defaultShareFormat,
+    setDefaultShareFormat,
   } = ui;
   const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } = useSettingsActions();
   const { isImporting: isImportingData } = useImport();
@@ -359,6 +364,13 @@ export function useSettingsViewModel(): SettingsViewModel {
       setShowAccountMonthlyStats(!showAccountMonthlyStats);
       analytics.trackFeatureUsage('settings', 'toggle_monthly_stats', {
         new_state: !showAccountMonthlyStats,
+      });
+    },
+    defaultShareFormat,
+    setDefaultShareFormat: (value: ShareFormat) => {
+      setDefaultShareFormat(value);
+      analytics.trackFeatureUsage('settings', 'change_default_share_format', {
+        format: value,
       });
     },
     isWidgetPrivacyEnabled,

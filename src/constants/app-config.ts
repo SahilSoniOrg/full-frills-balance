@@ -412,6 +412,13 @@ export const AppConfig = {
         importBtn: 'Restore Backup',
         auditDesc: 'See every recorded change to your data.',
         auditBtn: 'Audit Trail',
+        shareFormatTitle: 'Default Share Format',
+        shareFormatDesc: 'Format used when sharing reports',
+        shareFormats: {
+          TEXT: 'Text',
+          CSV: 'CSV',
+          MARKDOWN: 'Markdown',
+        },
       },
       maintenance: {
         integrityDesc: 'Check your ledger for balance mismatches and repair what can be repaired.',

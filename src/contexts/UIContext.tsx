@@ -13,6 +13,7 @@
  */
 
 import { AppConfig, FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants';
+import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -79,6 +80,7 @@ interface UIState {
   notificationMinute: number;
   notificationWeekday: number;
   appPhase: AppPhase;
+  defaultShareFormat: ShareFormat;
 }
 
 interface UIContextType extends UIState {
@@ -106,6 +108,7 @@ interface UIContextType extends UIState {
   setNotificationCadence: (cadence: 'none' | 'daily' | 'weekly') => Promise<void>;
   setNotificationTime: (hour: number, minute: number) => Promise<void>;
   setNotificationWeekday: (weekday: number) => Promise<void>;
+  setDefaultShareFormat: (format: ShareFormat) => void;
   requireRestart: (options: {
     type: 'IMPORT' | 'RESET';
     stats?: {
@@ -154,6 +157,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     notificationWeekday: 1,
     fontsReady: false,
     appPhase: AppPhase.BOOTING,
+    defaultShareFormat: ShareFormat.TEXT,
   });
 
   // Load preferences on mount
@@ -191,6 +195,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           notificationHour: loadedPreferences.notificationHour ?? 10,
           notificationMinute: loadedPreferences.notificationMinute ?? 0,
           notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
+          defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
         }));
       } catch (error) {
         logger.warn('Failed to load preferences', { error });
@@ -417,79 +422,125 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const requireRestart = (options: {
-    type: 'IMPORT' | 'RESET';
-    stats?: {
-      accounts: number;
-      journals: number;
-      transactions: number;
-      budgets?: number;
-      auditLogs?: number;
-      plannedPayments?: number;
-      skippedTransactions: number;
-      skippedItems?: { id: string; reason: string; description?: string }[];
-    };
-  }) => {
-    setUIState(prev => ({
-      ...prev,
-      isRestartRequired: true,
-      restartType: options.type,
-      importStats: options.stats || null,
-    }));
-  };
+  const setDefaultShareFormat = useCallback((format: ShareFormat) => {
+    setUIState(prev => {
+      if (prev.defaultShareFormat === format) return prev;
+      return { ...prev, defaultShareFormat: format };
+    });
 
-  const value: UIContextType = {
-    ...uiState,
-    isAppReady: uiState.appPhase >= AppPhase.READY,
-    themeMode: useMemo(() => {
-      return uiState.themePreference === 'system'
-        ? systemColorScheme === 'dark'
-          ? 'dark'
-          : 'light'
-        : uiState.themePreference;
-    }, [uiState.themePreference, systemColorScheme]),
+    try {
+      preferences.setDefaultShareFormat(format);
+    } catch (error) {
+      logger.warn('Failed to save default share format', { error });
+    }
+  }, []);
 
-    /**
-     * BULLETPROOF LOCK TRUTH:
-     * App is locked IF lock is enabled AND (
-     *   1. It's not unlocked (unauthorized)
-     *   OR
-     *   2. The app is inactive/backgrounded AND we are NOT currently authenticating (switcher protection)
-     * )
-     *
-     * Adding 'isLockAuthenticating' check prevents "stuck on lock" on iOS when FaceID prompt
-     * makes the app 'inactive'.
-     */
-    isAppCurrentlyLocked: useMemo(() => {
-      const isActuallyBackgrounded = !uiState.isAppActive && !uiState.isLockAuthenticating;
-      return uiState.isAppLockEnabled && (!uiState.isUnlocked || isActuallyBackgrounded);
-    }, [
-      uiState.isAppLockEnabled,
-      uiState.isUnlocked,
-      uiState.isAppActive,
-      uiState.isLockAuthenticating,
-    ]),
+  const requireRestart = useCallback(
+    (options: {
+      type: 'IMPORT' | 'RESET';
+      stats?: {
+        accounts: number;
+        journals: number;
+        transactions: number;
+        budgets?: number;
+        auditLogs?: number;
+        plannedPayments?: number;
+        skippedTransactions: number;
+        skippedItems?: { id: string; reason: string; description?: string }[];
+      };
+    }) => {
+      setUIState(prev => ({
+        ...prev,
+        isRestartRequired: true,
+        restartType: options.type,
+        importStats: options.stats || null,
+      }));
+    },
+    [],
+  );
 
-    completeOnboarding,
-    setThemePreference,
-    setThemeId,
-    setFontId,
-    updateUserDetails,
-    setPrivacyMode,
-    setWidgetPrivacyEnabled,
-    setAppLockEnabled,
-    authenticateSession,
-    setIsAppActive,
-    setIsLockAuthenticating,
-    setShowAccountMonthlyStats,
-    setArchetype,
-    setAdvancedMode,
-    setNotificationCadence,
-    setNotificationTime,
-    setNotificationWeekday,
-    dispatchBootEvent,
-    requireRestart,
-  };
+  const themeMode = useMemo(() => {
+    return uiState.themePreference === 'system'
+      ? systemColorScheme === 'dark'
+        ? 'dark'
+        : 'light'
+      : uiState.themePreference;
+  }, [uiState.themePreference, systemColorScheme]);
+
+  /**
+   * BULLETPROOF LOCK TRUTH:
+   * App is locked IF lock is enabled AND (
+   *   1. It's not unlocked (unauthorized)
+   *   OR
+   *   2. The app is inactive/backgrounded AND we are NOT currently authenticating (switcher protection)
+   * )
+   *
+   * Adding 'isLockAuthenticating' check prevents "stuck on lock" on iOS when FaceID prompt
+   * makes the app 'inactive'.
+   */
+  const isAppCurrentlyLocked = useMemo(() => {
+    const isActuallyBackgrounded = !uiState.isAppActive && !uiState.isLockAuthenticating;
+    return uiState.isAppLockEnabled && (!uiState.isUnlocked || isActuallyBackgrounded);
+  }, [
+    uiState.isAppLockEnabled,
+    uiState.isUnlocked,
+    uiState.isAppActive,
+    uiState.isLockAuthenticating,
+  ]);
+
+  const value = useMemo<UIContextType>(
+    () => ({
+      ...uiState,
+      isAppReady: uiState.appPhase >= AppPhase.READY,
+      themeMode,
+      isAppCurrentlyLocked,
+      completeOnboarding,
+      setThemePreference,
+      setThemeId,
+      setFontId,
+      updateUserDetails,
+      setPrivacyMode,
+      setWidgetPrivacyEnabled,
+      setAppLockEnabled,
+      authenticateSession,
+      setIsAppActive,
+      setIsLockAuthenticating,
+      setShowAccountMonthlyStats,
+      setArchetype,
+      setAdvancedMode,
+      setNotificationCadence,
+      setNotificationTime,
+      setNotificationWeekday,
+      setDefaultShareFormat,
+      dispatchBootEvent,
+      requireRestart,
+    }),
+    [
+      uiState,
+      themeMode,
+      isAppCurrentlyLocked,
+      completeOnboarding,
+      setThemePreference,
+      setThemeId,
+      setFontId,
+      updateUserDetails,
+      setPrivacyMode,
+      setWidgetPrivacyEnabled,
+      setAppLockEnabled,
+      authenticateSession,
+      setIsAppActive,
+      setIsLockAuthenticating,
+      setShowAccountMonthlyStats,
+      setArchetype,
+      setAdvancedMode,
+      setNotificationCadence,
+      setNotificationTime,
+      setNotificationWeekday,
+      setDefaultShareFormat,
+      dispatchBootEvent,
+      requireRestart,
+    ],
+  );
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

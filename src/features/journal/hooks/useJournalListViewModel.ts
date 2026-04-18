@@ -75,7 +75,7 @@ export function useJournalListViewModel({
   initialDateRange,
   defaultToCurrentMonth = true,
 }: UseJournalListViewModelParams): JournalListViewModel {
-  const { defaultCurrency: baseCurrency, isInitialized } = useUI();
+  const { defaultCurrency: baseCurrency, isInitialized, defaultShareFormat } = useUI();
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -230,7 +230,7 @@ export function useJournalListViewModel({
           defaultCurrency: preferences.defaultCurrencyCode,
         },
       );
-      await sharingService.share(provider, ShareFormat.TEXT);
+      await sharingService.share(provider, defaultShareFormat);
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }

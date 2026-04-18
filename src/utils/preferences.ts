@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
+import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
 import { storage, migrateFromAsyncStorage } from './storage';
 
@@ -32,6 +33,7 @@ export interface UIPreferences {
   notificationMinute: number;
   notificationWeekday: number; // 1-7 (Mon-Sun)
   isSmsImportEnabled: boolean;
+  defaultShareFormat?: ShareFormat;
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -53,6 +55,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationMinute: 0,
   notificationWeekday: 1, // Monday
   isSmsImportEnabled: false,
+  defaultShareFormat: ShareFormat.TEXT,
 };
 
 class PreferencesHelper {
@@ -95,16 +98,40 @@ class PreferencesHelper {
     if (sanitized.dismissedPatternIds && !Array.isArray(sanitized.dismissedPatternIds)) {
       sanitized.dismissedPatternIds = [];
     }
-    if (sanitized.notificationCadence && !['none', 'daily', 'weekly'].includes(sanitized.notificationCadence)) {
+    if (
+      sanitized.notificationCadence &&
+      !['none', 'daily', 'weekly'].includes(sanitized.notificationCadence)
+    ) {
       delete sanitized.notificationCadence;
     }
-    if (sanitized.notificationHour !== undefined && (typeof sanitized.notificationHour !== 'number' || sanitized.notificationHour < 0 || sanitized.notificationHour > 23)) {
+    if (
+      sanitized.defaultShareFormat &&
+      !Object.values(ShareFormat).includes(sanitized.defaultShareFormat)
+    ) {
+      delete sanitized.defaultShareFormat;
+    }
+    if (
+      sanitized.notificationHour !== undefined &&
+      (typeof sanitized.notificationHour !== 'number' ||
+        sanitized.notificationHour < 0 ||
+        sanitized.notificationHour > 23)
+    ) {
       delete sanitized.notificationHour;
     }
-    if (sanitized.notificationMinute !== undefined && (typeof sanitized.notificationMinute !== 'number' || sanitized.notificationMinute < 0 || sanitized.notificationMinute > 59)) {
+    if (
+      sanitized.notificationMinute !== undefined &&
+      (typeof sanitized.notificationMinute !== 'number' ||
+        sanitized.notificationMinute < 0 ||
+        sanitized.notificationMinute > 59)
+    ) {
       delete sanitized.notificationMinute;
     }
-    if (sanitized.notificationWeekday !== undefined && (typeof sanitized.notificationWeekday !== 'number' || sanitized.notificationWeekday < 1 || sanitized.notificationWeekday > 7)) {
+    if (
+      sanitized.notificationWeekday !== undefined &&
+      (typeof sanitized.notificationWeekday !== 'number' ||
+        sanitized.notificationWeekday < 1 ||
+        sanitized.notificationWeekday > 7)
+    ) {
       delete sanitized.notificationWeekday;
     }
 
@@ -314,6 +341,14 @@ class PreferencesHelper {
 
   setIsSmsImportEnabled(enabled: boolean): void {
     this.updatePreferences({ isSmsImportEnabled: enabled });
+  }
+
+  get defaultShareFormat(): ShareFormat {
+    return this.preferences.defaultShareFormat || ShareFormat.TEXT;
+  }
+
+  setDefaultShareFormat(format: ShareFormat): void {
+    this.updatePreferences({ defaultShareFormat: format });
   }
 
   get dismissedPatternIds(): string[] {

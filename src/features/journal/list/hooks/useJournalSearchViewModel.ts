@@ -67,7 +67,7 @@ export interface JournalSearchViewModel {
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
   const params = useLocalSearchParams();
-  const { defaultCurrency: baseCurrency } = useUI();
+  const { defaultCurrency: baseCurrency, defaultShareFormat } = useUI();
   const { rateMap: exchangeRateMap } = useExchangeRates(baseCurrency);
   const { precision } = useCurrencyPrecision(baseCurrency);
   const { accounts } = useAccounts();
@@ -321,7 +321,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
           defaultCurrency: preferences.defaultCurrencyCode,
         },
       );
-      await sharingService.share(provider, ShareFormat.TEXT);
+      await sharingService.share(provider, defaultShareFormat);
     } catch (error) {
       logger.error('Failed to share search transactions', error);
     }

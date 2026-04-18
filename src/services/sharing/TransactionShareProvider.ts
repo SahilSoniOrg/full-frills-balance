@@ -35,6 +35,7 @@ export class TransactionShareProvider implements ShareProvider {
   public id = 'transaction-list';
   public title: string;
   public filename: string;
+  public supportedFormats = [ShareFormat.TEXT, ShareFormat.CSV, ShareFormat.MARKDOWN];
 
   constructor(
     private transactions: ShareableTransaction[],

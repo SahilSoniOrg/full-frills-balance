@@ -1,15 +1,14 @@
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
 import { logger } from '../utils/logger';
+import { toast } from '@/src/utils/alerts';
 
 import { analytics } from './analytics-service';
 
-export enum ShareFormat {
-  TEXT = 'TEXT',
-  CSV = 'CSV',
-  MARKDOWN = 'MARKDOWN',
-}
+import { ShareFormat } from '@/src/types/sharing';
+
+export { ShareFormat };
 
 export interface ShareProvider {
   id: string;
@@ -17,6 +16,7 @@ export interface ShareProvider {
   filename: string;
   mimeType?: string;
   fileExtension?: string;
+  supportedFormats?: ShareFormat[];
   getContent(format: ShareFormat): string;
 }
 
@@ -38,22 +38,37 @@ class SharingService {
    * Handles platform-specific delivery logic.
    */
   async share(provider: ShareProvider, format: ShareFormat = ShareFormat.TEXT): Promise<void> {
-    const content = provider.getContent(format);
+    let fallback_used = false;
+    let effectiveFormat = format;
+    if (provider.supportedFormats && !provider.supportedFormats.includes(effectiveFormat)) {
+      logger.warn(
+        `[SharingService] Provider ${provider.id} does not support format ${format}, falling back`,
+      );
+      effectiveFormat = provider.supportedFormats.includes(ShareFormat.TEXT)
+        ? ShareFormat.TEXT
+        : provider.supportedFormats[0] || ShareFormat.TEXT;
+      fallback_used = true;
+      toast.info(`${format} export unsupported here, sharing as ${effectiveFormat} instead.`);
+    }
+
+    const content = provider.getContent(effectiveFormat);
     if (!content) {
-      const msg = `[SharingService] Provider ${provider.id} returned empty content for ${format}`;
+      const msg = `[SharingService] Provider ${provider.id} returned empty content for ${effectiveFormat}`;
       logger.warn(msg);
       throw new Error('Nothing to share');
     }
 
     const now = Date.now();
     const randomSuffix = now.toString(36) + Math.random().toString(36).slice(2, 6);
-    const fileExtension = provider.fileExtension || this.getFileExtension(format);
+    const fileExtension = provider.fileExtension || this.getFileExtension(effectiveFormat);
     const filename = `${provider.filename}-${randomSuffix}.${fileExtension}`;
-    const mimeType = provider.mimeType || this.getMimeType(format);
+    const mimeType = provider.mimeType || this.getMimeType(effectiveFormat);
 
     analytics.track('share_started', {
       provider: provider.id,
-      format,
+      requested_format: format,
+      effective_format: effectiveFormat,
+      fallback_used,
       content_size: content.length,
     });
 
@@ -69,7 +84,7 @@ class SharingService {
 
       // Native sharing logic
       const isLargeContent = content.length > MAX_INLINE_SHARE;
-      const forceFileSharing = format !== ShareFormat.TEXT || isLargeContent;
+      const forceFileSharing = effectiveFormat !== ShareFormat.TEXT || isLargeContent;
 
       if (forceFileSharing) {
         if (await Sharing.isAvailableAsync()) {
@@ -81,7 +96,11 @@ class SharingService {
             dialogTitle: provider.title,
           });
 
-          analytics.track('share_sheet_opened', { provider: provider.id, format, mode: 'file' });
+          analytics.track('share_sheet_opened', {
+            provider: provider.id,
+            format: effectiveFormat,
+            mode: 'file',
+          });
           return;
         } else {
           logger.warn(
@@ -95,34 +114,37 @@ class SharingService {
         message: content,
         title: provider.title,
       });
-      analytics.track('share_sheet_opened', { provider: provider.id, format, mode: 'text' });
+      analytics.track('share_sheet_opened', {
+        provider: provider.id,
+        format: effectiveFormat,
+        mode: 'text',
+      });
     } catch (error) {
       logger.error(
-        `[SharingService] Failed to share provider ${provider.id} in ${format} format`,
+        `[SharingService] Failed to share provider ${provider.id} in ${effectiveFormat} format`,
         error,
       );
       analytics.track('share_failed', {
         provider: provider.id,
-        format,
+        requested_format: format,
+        effective_format: effectiveFormat,
+        fallback_used,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
     }
   }
 
-  /**
-   * Safe cleanup of previous share files to prevent race conditions with target apps.
-   */
   private async cleanupOldFiles(): Promise<void> {
     const now = Date.now();
-    const TEN_SECONDS_MS = 10_000;
+    const SIXTY_SECONDS_MS = 60_000;
 
     // Split files into those to delete and those to keep
     const toDelete: typeof this.pendingFiles = [];
     const toKeep: typeof this.pendingFiles = [];
 
     for (const file of this.pendingFiles) {
-      if (now - file.createdAt > TEN_SECONDS_MS) {
+      if (now - file.createdAt > SIXTY_SECONDS_MS) {
         toDelete.push(file);
       } else {
         toKeep.push(file);
@@ -133,7 +155,11 @@ class SharingService {
 
     for (const file of toDelete) {
       try {
-        await FileSystem.deleteAsync(file.uri, { idempotent: true });
+        const fileObj = new File(file.uri);
+        if (fileObj.exists) {
+          // In Expo SDK 54+, file operations are synchronous via JSI
+          fileObj.delete();
+        }
       } catch (err) {
         logger.debug(`[SharingService] Failed to cleanup ${file.uri}`, err as any);
       }
@@ -141,24 +167,18 @@ class SharingService {
   }
 
   private async writeToFile(content: string, filename: string): Promise<string> {
-    const cacheDir = (FileSystem as any).Paths?.cache?.uri || (FileSystem as any).cacheDirectory;
+    const cacheDir = Paths.cache;
 
     if (!cacheDir) {
       throw new Error('[SharingService] No cache directory available for file creation');
     }
 
-    const path = `${cacheDir}${filename}`;
+    // In Expo SDK 54+, you construct a File and act on it
+    const file = new File(cacheDir, filename);
 
-    // Tier 1: Robust Write Check
-    const writeFile = FileSystem.writeAsStringAsync || (FileSystem as any).writeAsStringAsync;
-    const encoding = (FileSystem as any).EncodingType?.UTF8 || 'utf8';
+    file.write(content, { encoding: 'utf8' });
 
-    if (!writeFile) {
-      throw new Error('[SharingService] No write function available in FileSystem SDK');
-    }
-
-    await writeFile(path, content, { encoding });
-    return path;
+    return file.uri;
   }
 
   private getMimeType(format: ShareFormat): string {

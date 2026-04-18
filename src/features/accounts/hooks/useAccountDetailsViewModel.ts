@@ -122,7 +122,7 @@ export interface AccountDetailsViewModel {
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
-  const { defaultCurrency } = useUI();
+  const { defaultCurrency, defaultShareFormat } = useUI();
   const params = useLocalSearchParams();
   const accountId = params.accountId as string;
   const startDateParam = params.startDate as string;
@@ -651,7 +651,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
           defaultCurrency: preferences.defaultCurrencyCode,
         },
       );
-      await sharingService.share(provider, ShareFormat.TEXT);
+      await sharingService.share(provider, defaultShareFormat);
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }

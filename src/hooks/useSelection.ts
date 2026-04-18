@@ -23,7 +23,11 @@ export interface UseSelectionResult<T> {
 /**
  * useSelection - Standardized multi-selection hook with explicit mode and haptics
  */
-export function useSelection<T>(options: UseSelectionOptions<T> = {}): UseSelectionResult<T> {
+const DEFAULT_OPTIONS = {};
+
+export function useSelection<T>(
+  options: UseSelectionOptions<T> = DEFAULT_OPTIONS as UseSelectionOptions<T>,
+): UseSelectionResult<T> {
   const [selectedIds, setSelectedIds] = useState<Set<T>>(new Set());
   const [isSelectionModeActive, setSelectionModeActive] = useState(false);
 
