@@ -298,6 +298,15 @@ export const getFontTheme = (fontId: FontId): FontTheme => {
   return FontSchemes[fontId] || FontSchemes[FontIds.DEEP_SPACE];
 };
 
+export interface ElevationStyle {
+  elevation: number;
+  boxShadow?: string;
+  shadowColor?: string;
+  shadowOffset?: { width: number; height: number };
+  shadowOpacity?: number;
+  shadowRadius?: number;
+}
+
 // === RADIUS & ELEVATION ===
 // Subtle, consistent shadows and rounded corners
 export const Shape = {
@@ -322,22 +331,19 @@ export const Shape = {
       shadowOpacity: 0,
       shadowRadius: 0,
       elevation: 0,
-    },
+    } as ElevationStyle,
     sm: {
       elevation: 1,
-      // @ts-ignore - boxShadow is valid in RN 0.81+ and Web
       boxShadow: `0px 1px 2px ${withOpacity('#000000', Opacity.selection)}`,
-    },
+    } as ElevationStyle,
     md: {
       elevation: 3,
-      // @ts-ignore
       boxShadow: `0px 2px 4px ${withOpacity('#000000', Opacity.shadow)}`,
-    },
+    } as ElevationStyle,
     lg: {
       elevation: 6,
-      // @ts-ignore
       boxShadow: `0px 4px 8px ${withOpacity('#000000', Opacity.hover)}`,
-    },
+    } as ElevationStyle,
   },
 } as const;
 

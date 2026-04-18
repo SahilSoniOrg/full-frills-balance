@@ -9,7 +9,7 @@ import SmsInboxRecord, {
   SmsParseStatus,
   SmsProcessingStatus,
 } from '@/src/data/models/SmsInboxRecord';
-import { TransactionType } from '@/src/data/models/Transaction';
+import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
@@ -747,10 +747,12 @@ class SmsService {
 
       if (parsed.accountSource) {
         const transactions = await database.collections
-          .get<any>('transactions')
+          .get<Transaction>('transactions')
           .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
           .fetch();
-        const accountIds = Array.from(new Set(transactions.map((item: any) => item.accountId)));
+        const accountIds = Array.from(
+          new Set(transactions.map((item: Transaction) => item.accountId)),
+        );
         const accounts = await accountRepository.findAllByIds(accountIds);
         for (const account of accounts) {
           accountLookup.set(
@@ -1204,11 +1206,11 @@ class SmsService {
 
     for (const journal of journals) {
       const transactions = await database.collections
-        .get<any>('transactions')
+        .get<Transaction>('transactions')
         .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
         .fetch();
       journalTransactions.set(journal.id, transactions);
-      transactions.forEach((tx: any) => accountIds.add(tx.accountId));
+      transactions.forEach((tx: Transaction) => accountIds.add(tx.accountId));
     }
 
     const accounts = await accountRepository.findAllByIds(Array.from(accountIds));

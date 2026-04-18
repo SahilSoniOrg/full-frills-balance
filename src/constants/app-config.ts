@@ -801,6 +801,12 @@ export const AppConfig = {
     },
     maxTooltipDetails: 6,
     budgetMode: 'SMOOTHED' as 'SMOOTHED' | 'ACTUAL',
+    archetype: 'balance-glancer',
+    notifications: {
+      defaultHour: 10,
+      defaultMinute: 0,
+      defaultWeekday: 1,
+    },
   },
   // Insight Configuration
   insights: {

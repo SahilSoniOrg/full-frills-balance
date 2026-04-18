@@ -9,7 +9,13 @@ import { getRawAdapter } from '../database/DatabaseUtils';
 import Account, { AccountType } from '../models/Account';
 import Transaction, { TransactionType } from '../models/Transaction';
 import { transactionRepository } from './TransactionRepository';
-import { AccountDelta, DailyDelta, RebuildTransaction, RecurringPattern } from './TransactionTypes';
+import {
+  AccountDelta,
+  DailyDelta,
+  RawSQLArg,
+  RebuildTransaction,
+  RecurringPattern,
+} from './TransactionTypes';
 
 /**
  * Internal interfaces for raw SQL result sets.
@@ -61,11 +67,7 @@ export class TransactionRawRepository {
   /**
    * Universal raw query helper for consolidated SQL aliasing.
    */
-  async queryRaw<T>(
-    sql: string,
-    args: (string | number)[] = [],
-    table?: string,
-  ): Promise<T[] | null> {
+  async queryRaw<T>(sql: string, args: RawSQLArg[] = [], table?: string): Promise<T[] | null> {
     const sqlAdapter = getRawAdapter(database);
     if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') return null;
 
@@ -93,26 +95,31 @@ export class TransactionRawRepository {
       }
 
       const mappingLen = mapping.length;
-      return rawRows.map((row: unknown) => {
-        const castRow = row as Record<string, unknown>;
+      const resultRows: T[] = new Array(rawRows.length);
+
+      for (let r = 0; r < rawRows.length; r++) {
+        const row = rawRows[r] as Record<string, unknown>;
         const normalized: Record<string, unknown> = {};
+
         for (let i = 0; i < mappingLen; i++) {
-          const m = mapping![i];
-          const val = castRow[m.original];
+          const m = mapping[i];
+          const val = row[m.original];
           normalized[m.original] = val;
           if (m.original !== m.camel) {
             normalized[m.camel] = val;
           }
         }
-        return normalized as T;
-      });
-    } catch (error: any) {
+        resultRows[r] = normalized as T;
+      }
+      return resultRows;
+    } catch (error: unknown) {
+      const e = error as Error & { code?: string };
       logger.error(`[TransactionRawRepository] queryRaw failed`, {
         sql: sql.substring(0, 1000),
-        errorMessage: error?.message || 'Unknown error',
-        errorCode: error?.code,
-        errorName: error?.name,
-        stack: error?.stack?.substring(0, 200),
+        errorMessage: e?.message || 'Unknown error',
+        errorCode: e?.code,
+        errorName: e?.name,
+        stack: e?.stack?.substring(0, 200),
       });
       // Do not swallow errors - financial integrity depends on accurate results
       throw error;
@@ -238,7 +245,7 @@ export class TransactionRawRepository {
             : ''
         }
     `;
-    const args: any[] = [accountId, cutoffDate, ...ACTIVE_JOURNAL_STATUSES];
+    const args: RawSQLArg[] = [accountId, cutoffDate, ...ACTIVE_JOURNAL_STATUSES];
     if (upToTransactionId) {
       args.push(
         upToTransactionId,
@@ -265,7 +272,7 @@ export class TransactionRawRepository {
 
     // Fallback for LokiJS/Test
     // Fix: Fallback was incorrectly returning latest runningBalance instead of SUM of deltas
-    const filterClauses: any[] = [
+    const filterClauses: Q.Clause[] = [
       Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
       Q.on('journals', 'deleted_at', Q.eq(null)),
       Q.where('account_id', accountId),
@@ -538,7 +545,7 @@ export class TransactionRawRepository {
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
-      ORDER BY t.transaction_date ASC, t.created_at ASC
+      ORDER BY t.transaction_date ASC, t.created_at ASC, t.id ASC
     `;
 
     const raws = await this.queryRaw<RebuildTransaction>(sql, [

@@ -5,8 +5,8 @@
  * Queues account IDs and processes them in batches with debouncing.
  */
 
-import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { AppConfig } from '@/src/constants';
+import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 
@@ -27,6 +27,7 @@ const DEFAULT_CONFIG: RebuildQueueConfig = {
 
 class RebuildQueueService {
   private static readonly STORAGE_KEY = 'rebuild_queue_v1';
+  private static readonly PROCESSING_KEY = 'rebuild_processing_batch_v1';
   private queue: Map<string, number> = new Map(); // accountId -> minFromDate
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isProcessing: boolean = false;
@@ -55,6 +56,23 @@ class RebuildQueueService {
     } catch (error) {
       logger.error('[RebuildQueue] Failed to load queue from disk', error);
       this.queue = new Map();
+    }
+
+    // Recover from crashes: items that were out for processing but never finished
+    try {
+      const processing = storage.getString(RebuildQueueService.PROCESSING_KEY);
+      if (processing) {
+        const entries = JSON.parse(processing);
+        if (Array.isArray(entries) && entries.length > 0) {
+          logger.warn(`[RebuildQueue] Recovering ${entries.length} items from interrupted batch`);
+          for (const [id, date] of entries) {
+            this.enqueue(id, date);
+          }
+          storage.remove(RebuildQueueService.PROCESSING_KEY);
+        }
+      }
+    } catch (error) {
+      logger.error('[RebuildQueue] Failed to recover processing batch', error);
     }
   }
 
@@ -173,11 +191,15 @@ class RebuildQueueService {
           }
         }
 
-        // Remove processed items from queue
+        // Move processed items from queue to processing batch storage
         for (const item of batch) {
           this.queue.delete(item.id);
         }
         this.syncQueueToDisk();
+        storage.set(
+          RebuildQueueService.PROCESSING_KEY,
+          JSON.stringify(batch.map(i => [i.id, i.fromDate])),
+        );
 
         logger.debug(`[RebuildQueue] Processing batch of ${batch.length} accounts`);
 
@@ -213,6 +235,9 @@ class RebuildQueueService {
             }
           }
         }
+
+        // Clear processing batch storage after completion
+        storage.remove(RebuildQueueService.PROCESSING_KEY);
 
         // Clear retry counts for successes
         results.forEach((result, index) => {

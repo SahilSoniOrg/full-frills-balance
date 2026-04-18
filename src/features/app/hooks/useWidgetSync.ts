@@ -114,40 +114,43 @@ export function useWidgetSync() {
       return;
     }
 
-    // Lazy load the module to avoid issues during bootstrap
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const expoWidgetsModule = require('@/modules/expo-widgets').default;
+    const bootstrapWidgets = async () => {
+      // Lazy load the module to avoid issues during bootstrap
+      const expoWidgetsModule = (await import('@/modules/expo-widgets')).default;
 
-    const isShortfall = (shortfall ?? 0) > 0;
-    const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);
+      const isShortfall = (shortfall ?? 0) > 0;
+      const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);
 
-    const snapshot: WidgetDataSnapshot = {
-      safeToSpend: isDataPresent
-        ? {
-            amount: displayAmount,
-            currencyCode,
-            formattedAmount: CurrencyFormatter.format(displayAmount, currencyCode, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 0,
-            }),
-            title: isShortfall
-              ? AppConfig.strings.dashboard.shortfall
-              : AppConfig.strings.dashboard.safeToSpendTitle,
-            subtitle: isShortfall
-              ? AppConfig.strings.dashboard.neededForObligations
-              : AppConfig.strings.dashboard.afterObligations,
-            updatedAt: Date.now(),
-          }
-        : undefined,
-      theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
-      isPrivacyEnabled: isWidgetPrivacyEnabled,
+      const snapshot: WidgetDataSnapshot = {
+        safeToSpend: isDataPresent
+          ? {
+              amount: displayAmount,
+              currencyCode,
+              formattedAmount: CurrencyFormatter.format(displayAmount, currencyCode, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              }),
+              title: isShortfall
+                ? AppConfig.strings.dashboard.shortfall
+                : AppConfig.strings.dashboard.safeToSpendTitle,
+              subtitle: isShortfall
+                ? AppConfig.strings.dashboard.neededForObligations
+                : AppConfig.strings.dashboard.afterObligations,
+              updatedAt: Date.now(),
+            }
+          : undefined,
+        theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
+        isPrivacyEnabled: isWidgetPrivacyEnabled,
+      };
+
+      await expoWidgetsModule.syncWidgetData(snapshot).catch((err: any) => {
+        console.warn('[useWidgetSync] Failed to sync widget data:', err);
+      });
     };
 
     // Use a small timeout to debounce rapid changes (e.g. during batch operations)
     const timeoutId = setTimeout(() => {
-      void expoWidgetsModule.syncWidgetData(snapshot).catch((err: any) => {
-        console.warn('[useWidgetSync] Failed to sync widget data:', err);
-      });
+      void bootstrapWidgets();
     }, 500);
 
     return () => clearTimeout(timeoutId);

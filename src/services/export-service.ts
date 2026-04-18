@@ -8,10 +8,12 @@
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { Model, TableSchema } from '@nozbe/watermelondb';
 import { analytics } from '@/src/services/analytics-service';
 import { JournalDisplayType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
+import { AppSchema } from '@nozbe/watermelondb/Schema';
 import { supportsRawSql } from '../data/database/DatabaseUtils';
 
 export interface AccountExport {
@@ -273,21 +275,22 @@ function toIsoDate(value: Date | number | undefined | null): string | undefined 
 }
 
 class ExportService {
-  private typeSafeColumns(tableSchema: any): { name: string; type: string }[] {
+  private typeSafeColumns(tableSchema: TableSchema): { name: string; type: string }[] {
     const rawColumns = Array.isArray(tableSchema?.columns)
       ? tableSchema.columns
       : Object.values(tableSchema?.columns || {});
     return rawColumns as { name: string; type: string }[];
   }
 
-  private getTableSchema(tableName: string) {
-    const tables = (schema as any).tables;
+  private getTableSchema(tableName: string): TableSchema | undefined {
+    const tables = (schema as unknown as AppSchema).tables;
     if (Array.isArray(tables)) {
-      return tables.find(table => table.name === tableName);
+      return (tables as TableSchema[]).find(table => table.name === tableName);
     }
     if (tables && typeof tables === 'object') {
-      if (tables[tableName]) return tables[tableName];
-      return Object.values(tables).find((table: any) => table?.name === tableName);
+      const tableRecord = tables as unknown as Record<string, TableSchema>;
+      if (tableRecord[tableName]) return tableRecord[tableName];
+      return Object.values(tableRecord).find(table => table.name === tableName);
     }
     return undefined;
   }
@@ -302,7 +305,7 @@ class ExportService {
 
     const columns = this.typeSafeColumns(tableSchema);
 
-    const columnNames = ['id', ...columns.map((column: any) => column.name)];
+    const columnNames = ['id', ...columns.map(column => column.name)];
 
     // Identify Boolean and Date fields from schema
     const booleanFields = columns
@@ -341,8 +344,8 @@ class ExportService {
       const collection = (database.collections as any).get?.(tableName);
       if (!collection?.query) return [];
       const rows = await collection.query().fetch();
-      raws = rows.map((row: any) => {
-        const source = row?._raw ?? row;
+      raws = rows.map((row: Model) => {
+        const source = (row as any)._raw ?? row;
         const mapped: Record<string, unknown> = {};
         for (const snake of columnNames) {
           const camel = snakeToCamel(snake);
@@ -353,12 +356,12 @@ class ExportService {
     }
 
     return raws.map(raw => {
-      const transformed = { ...raw } as Record<string, any>;
+      const transformed = { ...raw } as Record<string, unknown>;
 
       // Convert date numbers to ISO strings
       dateFields.forEach((f: string) => {
         if (transformed[f] !== undefined) {
-          transformed[f] = toIsoDate(transformed[f]);
+          transformed[f] = toIsoDate(transformed[f] as number);
         }
       });
 

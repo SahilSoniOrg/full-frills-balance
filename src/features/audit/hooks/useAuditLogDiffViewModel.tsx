@@ -22,6 +22,14 @@ export interface AuditLogEntry {
   canRevert?: boolean;
 }
 
+interface AuditTransactionSnapshot {
+  accountId: string;
+  amount: number;
+  type: string;
+  accountName?: string;
+  currencyCode?: string;
+}
+
 interface ParsedChanges {
   before?: Record<string, any>;
   after?: Record<string, any>;
@@ -104,19 +112,21 @@ export function useAuditLogDiffViewModel({
     if (Array.isArray(value)) {
       return (
         <View style={{ marginTop: Spacing.xs }}>
-          {value.map((val, index) => {
+          {value.map((val: any, index: number) => {
             if (typeof val === 'object' && val !== null && (val.accountName || val.accountId)) {
-              const accountInfo = accountMap[val.accountId] || { name: '', currency: '' };
+              const snapshot = val as AuditTransactionSnapshot;
+              const accountInfo = accountMap[snapshot.accountId] || { name: '', currency: '' };
               const accountName =
-                val.accountName ||
+                snapshot.accountName ||
                 accountInfo.name ||
-                `${AppConfig.strings.audit.accountPrefix}${val.accountId?.substring(0, AUDIT_ID_SHORT_LEN)}`;
-              const itemCurrency = val.currencyCode || accountInfo.currency || currencyCode;
+                `${AppConfig.strings.audit.accountPrefix}${snapshot.accountId?.substring(0, AUDIT_ID_SHORT_LEN)}`;
+              const itemCurrency = snapshot.currencyCode || accountInfo.currency || currencyCode;
 
-              const oppositeArray = Array.isArray(oppositeValue) ? oppositeValue : [];
+              const oppositeArray = (Array.isArray(oppositeValue) ? oppositeValue : []) as any[];
               const oppositeItem = oppositeArray.find(
-                (opp: any) => opp.accountId === val.accountId,
-              );
+                (opp: any) => opp.accountId === snapshot.accountId,
+              ) as AuditTransactionSnapshot | undefined;
+
               const oppositeInfo = oppositeItem
                 ? accountMap[oppositeItem.accountId] || { name: '', currency: '' }
                 : null;
@@ -138,7 +148,7 @@ export function useAuditLogDiffViewModel({
                   )}
                   <View style={shouldShowName ? { marginLeft: Spacing.md } : {}}>
                     <AppText variant="caption" color="secondary">
-                      {CurrencyFormatter.format(val.amount, itemCurrency)} ({val.type})
+                      {CurrencyFormatter.format(snapshot.amount, itemCurrency)} ({snapshot.type})
                     </AppText>
                   </View>
                 </View>
@@ -268,10 +278,12 @@ export function useAuditLogDiffViewModel({
             }
 
             if (key === TRANSACTIONS_KEY && Array.isArray(beforeVal) && Array.isArray(afterVal)) {
+              const beforeTxs = beforeVal as any[];
+              const afterTxs = afterVal as any[];
               const accountIds = Array.from(
                 new Set([
-                  ...beforeVal.map((t: any) => t.accountId),
-                  ...afterVal.map((t: any) => t.accountId),
+                  ...beforeTxs.map((t: any) => t.accountId),
+                  ...afterTxs.map((t: any) => t.accountId),
                 ]),
               );
 
@@ -289,8 +301,12 @@ export function useAuditLogDiffViewModel({
                   </AppText>
                   <View style={{ marginTop: Spacing.xs }}>
                     {accountIds.map(accountId => {
-                      const tBefore = beforeVal.find((t: any) => t.accountId === accountId);
-                      const tAfter = afterVal.find((t: any) => t.accountId === accountId);
+                      const tBefore = beforeTxs.find((t: any) => t.accountId === accountId) as
+                        | AuditTransactionSnapshot
+                        | undefined;
+                      const tAfter = afterTxs.find((t: any) => t.accountId === accountId) as
+                        | AuditTransactionSnapshot
+                        | undefined;
 
                       const accInfo = accountMap[accountId] || { name: '', currency: '' };
                       const name =

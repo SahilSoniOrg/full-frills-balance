@@ -9,7 +9,8 @@ import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
 import { accountingService } from '@/src/utils/accountingService';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
-import { Q } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
+import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
 
@@ -134,6 +135,9 @@ export class AccountingRebuildService {
         await database.batch(...preparedUpdates);
       }
 
+      // 5. Finalize in a single batch: delete old snapshots, create new ones, and update account
+      const finalBatch: Model[] = [];
+
       // Delete invalidated snapshots after the starting point
       const invalidatedSnapshots = await database.collections
         .get('balance_snapshots')
@@ -141,32 +145,36 @@ export class AccountingRebuildService {
         .fetch();
 
       if (invalidatedSnapshots.length > 0) {
-        await database.batch(...invalidatedSnapshots.map(s => s.prepareDestroyPermanently()));
+        finalBatch.push(...invalidatedSnapshots.map(s => s.prepareDestroyPermanently()));
       }
 
       // Create new snapshots
       if (snapshotsToCreate.length > 0) {
-        const snapshotsCollection = database.collections.get('balance_snapshots');
-        await database.batch(
+        const snapshotsCollection = database.collections.get<BalanceSnapshot>('balance_snapshots');
+        finalBatch.push(
           ...snapshotsToCreate.map(data =>
-            snapshotsCollection.prepareCreate((s: any) => {
-              s.accountId = accountId;
-              s.transactionId = data.transactionId;
-              s.transactionDate = data.transactionDate;
-              s.absoluteBalance = data.absoluteBalance;
-              s.transactionCount = data.transactionCount;
+            snapshotsCollection.prepareCreate((snapshot: BalanceSnapshot) => {
+              snapshot.accountId = accountId;
+              snapshot.transactionId = data.transactionId;
+              snapshot.transactionDate = data.transactionDate;
+              snapshot.absoluteBalance = data.absoluteBalance;
+              snapshot.transactionCount = data.transactionCount;
             }),
           ),
         );
       }
 
-      // Trigger lightweight reactive refreshes for account-centric views
+      // Trigger lightweight reactive refreshes
       if (idsNeedingUpdate.size > 0 && !silent) {
-        await database.batch(
+        finalBatch.push(
           account.prepareUpdate(a => {
             a.updatedAt = new Date();
           }),
         );
+      }
+
+      if (finalBatch.length > 0) {
+        await database.batch(...finalBatch);
       }
     }
   }

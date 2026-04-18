@@ -161,16 +161,16 @@ export function useAppBootstrap() {
 
         logger.info('[Bootstrap] Stabilizing background services...');
 
-        // Run non-critical background checks with INLINE REQUIRES
+        // Run non-critical background checks with DYNAMIC IMPORTS
         try {
-          const { integrityService } = require('@/src/services/integrity-service');
+          const { integrityService } = await import('@/src/services/integrity-service');
           await integrityService.runStartupCheck();
         } catch (error) {
           if (isActive) logger.warn('[Bootstrap] Integrity check failed', { error });
         }
 
         try {
-          const { plannedPaymentService } = require('@/src/services/PlannedPaymentService');
+          const { plannedPaymentService } = await import('@/src/services/PlannedPaymentService');
           await plannedPaymentService.processDuePayments();
         } catch (error) {
           if (isActive) logger.error('[Bootstrap] Planned payments processing failed', error);
@@ -183,9 +183,8 @@ export function useAppBootstrap() {
         }
 
         try {
-          const {
-            notificationService,
-          } = require('@/src/services/notification/NotificationService');
+          const { notificationService } =
+            await import('@/src/services/notification/NotificationService');
           const cadence = preferences.notificationCadence;
           const hour = preferences.notificationHour;
           const minute = preferences.notificationMinute;
@@ -196,7 +195,7 @@ export function useAppBootstrap() {
 
         try {
           if (Platform.OS === 'android' && preferences.isSmsImportEnabled) {
-            const { smsService } = require('@/src/services/sms-service');
+            const { smsService } = await import('@/src/services/sms-service');
             await smsService.processUnprocessedSms();
           }
         } catch (error) {

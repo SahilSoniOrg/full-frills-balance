@@ -10,6 +10,7 @@ import Account, {
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
 import {
   getPeriodDecreaseSQLSnippet,
   getPeriodIncreaseSQLSnippet,
@@ -61,22 +62,7 @@ export interface AccountListItemRaw {
   periodDecrease: number;
 }
 
-/**
- * Internal interface for raw query results matching the SQL schema.
- */
-interface RawAccountRow {
-  id: string;
-  name: string;
-  account_type: string;
-  account_subtype?: string;
-  currency_code: string;
-  icon?: string;
-  parent_account_id?: string;
-  direct_balance: number;
-  direct_transaction_count: number;
-  periodIncrease: number;
-  periodDecrease: number;
-}
+// RawAccountRow is now imported from TransactionTypes; local interface removed to fix lint warnings bit.
 
 export class AccountRepository {
   private get db() {
@@ -587,7 +573,7 @@ export class AccountRepository {
       ORDER BY a.order_num ASC
     `;
 
-    const args: any[] = [...statusArgs, ...statusArgs, startOfMonth, endOfMonth];
+    const args: RawSQLArg[] = [...statusArgs, ...statusArgs, startOfMonth, endOfMonth];
 
     if (includeTotalCount) {
       args.push(...statusArgs);

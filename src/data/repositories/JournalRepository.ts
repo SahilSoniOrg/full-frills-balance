@@ -5,7 +5,7 @@ import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { JournalDisplayType } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
-import { Q } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { map, of } from 'rxjs';
 // Imported here so the flush runs synchronously outside the write block —
@@ -76,7 +76,7 @@ export class JournalRepository {
       ]);
   }
 
-  transactionsQuery(...clauses: any[]) {
+  transactionsQuery(...clauses: Q.Clause[]) {
     return this.transactions.query(...clauses);
   }
 
@@ -89,7 +89,7 @@ export class JournalRepository {
     limit: number,
     dateRange?: { startDate: number; endDate: number },
   ) {
-    const clauses: any[] = [
+    const clauses: Q.Clause[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('account_id', accountId),
       Q.where('deleted_at', Q.eq(null)),
@@ -249,19 +249,21 @@ export class JournalRepository {
    */
   async patchMetadata(
     journalId: string,
-    partialMetadata: Record<string, any>,
+    partialMetadata: Record<string, unknown>,
     source?: string,
   ): Promise<void> {
     const existingMeta = await this.findMetadataByJournalId(journalId);
     if (existingMeta) {
-      await existingMeta.update((record: any) => {
-        const currentJson = record.metadataJson ? JSON.parse(record.metadataJson) : {};
+      await existingMeta.update((record: JournalMetadata) => {
+        const currentJson = record.metadataJson
+          ? (JSON.parse(record.metadataJson) as Record<string, unknown>)
+          : {};
         record.metadataJson = JSON.stringify({ ...currentJson, ...partialMetadata });
         if (source) record.importSource = source;
         record.updatedAt = new Date();
       });
     } else {
-      await this.journalMetadata.create((record: any) => {
+      await this.journalMetadata.create((record: JournalMetadata) => {
         record.journalId = journalId;
         record.importSource = source || 'manual';
         record.metadataJson = JSON.stringify(partialMetadata);
@@ -277,7 +279,7 @@ export class JournalRepository {
       .fetch();
 
     if (metadata.length === 0) return null;
-    return this.find(metadata[0].journal.id);
+    return this.find(metadata[0].journalId);
   }
 
   async findJournalBySmsFingerprint(smsFingerprint: string): Promise<Journal | null> {
@@ -307,7 +309,7 @@ export class JournalRepository {
     limit?: number;
   }): Promise<Journal[]> {
     const { centerDate, windowMs, amount, excludeJournalId, limit = 10 } = params;
-    const clauses: any[] = [
+    const clauses: Q.Clause[] = [
       Q.where('deleted_at', Q.eq(null)),
       Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
       Q.where('journal_date', Q.gte(centerDate - windowMs)),
@@ -376,10 +378,10 @@ export class JournalRepository {
         });
       });
 
-      const batchOps: any[] = [journal, ...transactions];
+      const batchOps: Model[] = [journal, ...transactions];
 
       if (metadata) {
-        const metaRecord = this.journalMetadata.prepareCreate((m: any) => {
+        const metaRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
           m.journalId = journal.id;
           m.importSource = metadata.importSource;
           m.originalSmsId = metadata.originalSmsId;
@@ -469,12 +471,12 @@ export class JournalRepository {
         j.updatedAt = new Date();
       });
 
-      const batchOps: any[] = [journalUpdate, ...deleteUpdates, ...createUpdates];
+      const batchOps: Model[] = [journalUpdate, ...deleteUpdates, ...createUpdates];
 
       if (metadata) {
         const existingMeta = await this.findMetadataByJournalId(journalId);
         if (existingMeta) {
-          const metaUpdate = existingMeta.prepareUpdate((m: any) => {
+          const metaUpdate = existingMeta.prepareUpdate((m: JournalMetadata) => {
             m.importSource = metadata.importSource;
             m.originalSmsId = metadata.originalSmsId;
             m.originalSmsSender = metadata.originalSmsSender;
@@ -484,7 +486,7 @@ export class JournalRepository {
           });
           batchOps.push(metaUpdate);
         } else {
-          const metaRecord = this.journalMetadata.prepareCreate((m: any) => {
+          const metaRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
             m.journalId = journalId;
             m.importSource = metadata.importSource;
             m.originalSmsId = metadata.originalSmsId;

@@ -28,7 +28,7 @@ import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { sharingService, ShareFormat } from '@/src/services/SharingService';
+import { sharingService } from '@/src/services/SharingService';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { map, of } from 'rxjs';
 
@@ -585,7 +585,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         };
       },
     }),
-    [transactions, balanceCurrency, onTransactionPress, precision, isSelectionModeActive],
+    [transactions, balanceCurrency, onTransactionPress, precision],
   );
 
   const { groupedItems: rawGroupedItems } = useTransactionGrouping(transactionGroupingOptions);
@@ -655,7 +655,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }
-  }, [selectedIds, transactions, account?.name]);
+  }, [selectedIds, transactions, account?.name, defaultShareFormat]);
 
   const selectAll = useCallback(() => {
     const visibleIds = transactionItems.filter(i => i.type === 'transaction').map(i => i.id);

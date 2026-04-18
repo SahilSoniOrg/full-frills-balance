@@ -22,6 +22,8 @@ import {
   switchMap,
 } from 'rxjs';
 
+type RawSQLRow = Record<string, unknown>;
+
 /**
  * Consolidated reactive data for dashboard widgets.
  * Eliminates duplicate subscriptions by providing a single source of truth.
@@ -222,11 +224,11 @@ class ReactiveDataService {
           if (rawItemsResponse === null) {
             finalBalances = await balanceService.getAccountBalances(undefined, targetCurrency);
           } else {
-            const rawItems: any[] = Array.isArray(rawItemsResponse)
-              ? rawItemsResponse
-              : (rawItemsResponse as any)?.rows || [];
+            const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
+              ? (rawItemsResponse as unknown as RawSQLRow[])
+              : (((rawItemsResponse as any)?.rows || []) as RawSQLRow[]);
 
-            const balances: AccountBalance[] = rawItems.map((item: any) =>
+            const balances: AccountBalance[] = rawItems.map((item: RawSQLRow) =>
               this.mapRawToBalance(item, now.getTime()),
             );
 
@@ -351,10 +353,10 @@ class ReactiveDataService {
           if (rawItemsResponse === null) {
             finalBalances = await balanceService.getAccountBalances(undefined, targetCurrency);
           } else {
-            const rawItems: any[] = Array.isArray(rawItemsResponse)
-              ? rawItemsResponse
-              : (rawItemsResponse as any)?.rows || [];
-            const balances: AccountBalance[] = rawItems.map((item: any) =>
+            const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
+              ? (rawItemsResponse as unknown as RawSQLRow[])
+              : (((rawItemsResponse as any)?.rows || []) as RawSQLRow[]);
+            const balances: AccountBalance[] = rawItems.map((item: RawSQLRow) =>
               this.mapRawToBalance(item, now.getTime()),
             );
             const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
@@ -413,7 +415,7 @@ class ReactiveDataService {
     );
   }
 
-  private mapRawToBalance(item: any, now: number): AccountBalance {
+  private mapRawToBalance(item: RawSQLRow, now: number): AccountBalance {
     // Optimization: Direct access for known SQL aliases instead of expensive regex loop
     const accountId = item.id || item.accountId || item.account_id;
     const balance = Number(item.direct_balance || item.directBalance || 0);

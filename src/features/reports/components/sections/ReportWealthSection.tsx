@@ -45,7 +45,7 @@ export function ReportWealthSection({ vm, theme, chartWidth }: ReportWealthSecti
         />
       );
     },
-    [dailyData, theme, vm.onViewTransactions],
+    [dailyData, theme, vm],
   );
 
   return (

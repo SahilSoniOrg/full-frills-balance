@@ -109,7 +109,7 @@ export function FontManager({ children }: FontManagerProps) {
     return () => {
       isActive = false;
     };
-  }, [fontId, dispatchBootEvent]);
+  }, [fontId, dispatchBootEvent, loadedFontSets]);
 
   // Block the app ONLY during the initial font load of the current theme
   if (!currentFontReady && loadedFontSets.size === 0) {

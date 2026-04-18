@@ -5,7 +5,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { DisplayTransaction, EnrichedJournal } from '@/src/types/domain';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { of } from 'rxjs';
 
 import { JournalStatus } from '@/src/data/models/Journal';
@@ -21,37 +21,31 @@ export function useJournals(
   plannedPaymentId?: string,
   options?: { minAmount?: number; maxAmount?: number; displayType?: string; accountIds?: string[] },
 ) {
-  // Stabilize inputs so callers can pass inline arrays/objects without breaking memoization
-  const stableStatusKey = status?.join(',') || '';
-  const stableOptionsKey = options
-    ? JSON.stringify([
-        options.minAmount,
-        options.maxAmount,
-        options.displayType,
-        options.accountIds,
-      ])
-    : '';
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableStatus = useMemo(() => (status ? [...status] : status), [stableStatusKey]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableOptions = useMemo(() => (options ? { ...options } : options), [stableOptionsKey]);
-
   const observe = useCallback(
     (limit: number, range?: { startDate: number; endDate: number }, query?: string) => {
+      // accountIds from options are merged into the observation range
       const enrichedRange =
         range || plannedPaymentId
-          ? ({ ...range, plannedPaymentId, accountIds: stableOptions?.accountIds } as any)
+          ? ({
+              ...range,
+              plannedPaymentId,
+              accountIds: options?.accountIds,
+              minAmount: options?.minAmount,
+              maxAmount: options?.maxAmount,
+              displayType: options?.displayType,
+            } as any)
           : undefined;
-      return journalService.observeEnrichedJournals(
-        limit,
-        enrichedRange,
-        query,
-        stableStatus,
-        stableOptions,
-      );
+
+      return journalService.observeEnrichedJournals(limit, enrichedRange, query, status);
     },
-    [stableStatus, plannedPaymentId, stableOptions],
+    [
+      status,
+      plannedPaymentId,
+      options?.accountIds,
+      options?.minAmount,
+      options?.maxAmount,
+      options?.displayType,
+    ],
   );
 
   const {
@@ -64,8 +58,15 @@ export function useJournals(
   } = usePaginatedObservable<any, EnrichedJournal>({
     pageSize,
     dateRange:
-      dateRange || plannedPaymentId || stableOptions?.accountIds
-        ? ({ ...dateRange, plannedPaymentId, accountIds: stableOptions?.accountIds } as any)
+      dateRange || plannedPaymentId || options?.accountIds
+        ? ({
+            ...dateRange,
+            plannedPaymentId,
+            accountIds: options?.accountIds,
+            minAmount: options?.minAmount,
+            maxAmount: options?.maxAmount,
+            displayType: options?.displayType,
+          } as any)
         : undefined,
     searchQuery,
     observe,

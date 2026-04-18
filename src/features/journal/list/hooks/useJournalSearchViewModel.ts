@@ -16,7 +16,7 @@ import { preferences } from '@/src/utils/preferences';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { sharingService, ShareFormat } from '@/src/services/SharingService';
+import { sharingService } from '@/src/services/SharingService';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { useJournals } from '../../hooks/useJournals';
 import { mapJournalToCardProps } from '../../utils/journalUiUtils';
@@ -242,7 +242,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
         displayType: journal.displayType,
       });
     },
-    [selectedIds.size, toggleSelection],
+    [isSelectionModeActive, toggleSelection],
   );
 
   const transactionGroupingOptions = useMemo(
@@ -292,7 +292,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       const filtered = new Set([...prev].filter(id => validIds.has(id)));
       return filtered.size === prev.size ? prev : filtered;
     });
-  }, [journals, selectedIds.size]);
+  }, [journals, selectedIds, setSelectedIds]);
 
   const selectAll = useCallback(() => {
     const visibleIds = items.filter(i => i.type === 'transaction').map(i => i.id);
@@ -325,7 +325,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     } catch (error) {
       logger.error('Failed to share search transactions', error);
     }
-  }, [selectedIds, journals]);
+  }, [selectedIds, journals, defaultShareFormat]);
 
   return {
     items,

@@ -13,167 +13,204 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 
 export interface DateRange {
-    startDate: number;
-    endDate: number;
+  startDate: number;
+  endDate: number;
 }
 
 export interface AccountDateRange extends DateRange {
-    accountId?: string;
-    accountVersion?: number;
-    journalIds?: string[];
-    plannedPaymentId?: string;
+  accountId?: string;
+  accountVersion?: number;
+  journalIds?: string[];
+  plannedPaymentId?: string;
 }
 
 export interface UsePaginatedObservableOptions<T, E = T> {
-    /** Number of items per page */
-    pageSize: number;
-    /** Optional date range filter */
-    dateRange?: AccountDateRange;
-    /** Optional search query filter */
-    searchQuery?: string;
-    /** Factory function to create the observable */
-    observe: (limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Observable<T[]>;
-    /** Optional enrichment function to transform raw items */
-    enrich?: (items: T[], limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Promise<E[]>;
-    /** If true, filter changes don't clear the list or set isLoading to true */
-    suppressResetOnSearch?: boolean;
+  /** Number of items per page */
+  pageSize: number;
+  /** Optional date range filter */
+  dateRange?: AccountDateRange;
+  /** Optional search query filter */
+  searchQuery?: string;
+  /** Factory function to create the observable */
+  observe: (limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Observable<T[]>;
+  /** Optional enrichment function to transform raw items */
+  enrich?: (
+    items: T[],
+    limit: number,
+    dateRange?: AccountDateRange,
+    searchQuery?: string,
+  ) => Promise<E[]>;
+  /** If true, filter changes don't clear the list or set isLoading to true */
+  suppressResetOnSearch?: boolean;
 }
 
 export interface UsePaginatedObservableResult<E> {
-    items: E[];
-    isLoading: boolean;
-    isLoadingMore: boolean;
-    hasMore: boolean;
-    loadMore: () => void;
-    version: number;
-    error: Error | null;
-    retry: () => void;
+  items: E[];
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  loadMore: () => void;
+  version: number;
+  error: Error | null;
+  retry: () => void;
 }
 
 export function usePaginatedObservable<T, E = T>(
-    options: UsePaginatedObservableOptions<T, E>
+  options: UsePaginatedObservableOptions<T, E>,
 ): UsePaginatedObservableResult<E> {
-    const { pageSize, dateRange, searchQuery, observe, enrich, suppressResetOnSearch = false } = options;
+  const {
+    pageSize,
+    dateRange,
+    searchQuery,
+    observe,
+    enrich,
+    suppressResetOnSearch = false,
+  } = options;
 
-    const [items, setItems] = useState<E[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [hasMore, setHasMore] = useState(true);
-    const [currentLimit, setCurrentLimit] = useState(pageSize);
-    const [version, setVersion] = useState(0);
-    const [error, setError] = useState<Error | null>(null);
-    const [retryKey, setRetryKey] = useState(0);
+  const [items, setItems] = useState<E[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentLimit, setCurrentLimit] = useState(pageSize);
+  const [version, setVersion] = useState(0);
+  const [error, setError] = useState<Error | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
-    // Stable key for structural filters (excluding version) to determine when to reset the list
-    const structuralKey = useMemo(
-        () => {
-            const rangePart = dateRange
-                ? `${dateRange.startDate}-${dateRange.endDate}-${dateRange.accountId || ''}-${dateRange.plannedPaymentId || ''}`
-                : 'none';
-            return `${rangePart}-${searchQuery || ''}`;
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [dateRange?.startDate, dateRange?.endDate, dateRange?.accountId, dateRange?.plannedPaymentId, searchQuery]
-    );
+  // Stabilize inputs using a primitive structural key
+  const structuralKey = useMemo(() => {
+    const rangePart = dateRange
+      ? `${dateRange.startDate}-${dateRange.endDate}-${dateRange.accountId || ''}-${dateRange.plannedPaymentId || ''}`
+      : 'none';
+    return `${rangePart}-${searchQuery || ''}`;
+  }, [dateRange, searchQuery]);
 
-    // Version key for re-fetching without clearing
-    const versionKey = dateRange?.accountVersion || 0;
+  // Track active props in a ref for use in effects without causing churn
+  const propsRef = useRef({
+    observe,
+    enrich,
+    dateRange,
+    searchQuery,
+    suppressResetOnSearch,
+    pageSize,
+  });
+  propsRef.current = { observe, enrich, dateRange, searchQuery, suppressResetOnSearch, pageSize };
 
-    // Combined key for effect dependency
-    const effectKey = `${structuralKey}-${versionKey}`;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
-    // Track previous filter inputs to detect filter changes vs pagination
-    const prevFilterRef = useRef({
+  // Version key for re-fetching without clearing
+  const versionKey = dateRange?.accountVersion || 0;
+
+  // Track previous filter inputs to detect filter changes vs pagination
+  const prevFilterRef = useRef({
+    structuralKey,
+    versionKey,
+    observe,
+    enrich,
+    pageSize,
+  });
+
+  useEffect(() => {
+    let isActive = true;
+    let sequence = 0;
+
+    const prev = prevFilterRef.current;
+    const isStructuralChange =
+      prev.structuralKey !== structuralKey ||
+      prev.observe !== observe ||
+      prev.enrich !== enrich ||
+      prev.pageSize !== pageSize;
+    const isVersionChange = prev.versionKey !== versionKey;
+
+    const {
+      observe: currentObserve,
+      enrich: currentEnrich,
+      dateRange: currentRange,
+      searchQuery: currentQuery,
+      suppressResetOnSearch: currentSuppress,
+      pageSize: AppPageSize,
+    } = propsRef.current;
+
+    if (isStructuralChange || isVersionChange) {
+      const shouldSuppressReset =
+        currentSuppress && prev.structuralKey !== structuralKey && prev.versionKey === versionKey;
+
+      // Only show loading if it's a structural change or the list is currently empty.
+      if (!shouldSuppressReset && (isStructuralChange || itemsRef.current.length === 0)) {
+        setIsLoading(true);
+      }
+
+      setHasMore(true);
+      prevFilterRef.current = {
         structuralKey,
         versionKey,
-        observe,
-        enrich,
-        pageSize
+        observe: currentObserve,
+        enrich: currentEnrich,
+        pageSize: AppPageSize,
+      };
+
+      if (isStructuralChange) {
+        if (!shouldSuppressReset) {
+          setItems([]); // Clear items ONLY on structural changes
+        }
+        if (currentLimit !== AppPageSize) {
+          setCurrentLimit(AppPageSize); // Reset pagination
+          return;
+        }
+      }
+    }
+
+    const observable = currentObserve(currentLimit, currentRange, currentQuery);
+
+    const subscription = observable.subscribe(async loaded => {
+      const current = ++sequence;
+      try {
+        if (currentEnrich) {
+          const enriched = await currentEnrich(loaded, currentLimit, currentRange, currentQuery);
+          if (!isActive || current !== sequence) return;
+          setItems([...enriched] as E[]);
+        } else {
+          if (!isActive || current !== sequence) return;
+          setItems([...loaded] as unknown as E[]);
+        }
+        setHasMore(loaded.length >= currentLimit);
+        setVersion(v => v + 1);
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      } catch (err) {
+        if (!isActive || current !== sequence) return;
+        const normalizedError = err instanceof Error ? err : new Error(String(err));
+        setError(normalizedError);
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     });
 
-    useEffect(() => {
-        let isActive = true;
-        let sequence = 0;
-
-        const prev = prevFilterRef.current;
-        const isStructuralChange = prev.structuralKey !== structuralKey || prev.observe !== observe || prev.enrich !== enrich || prev.pageSize !== pageSize;
-        const isVersionChange = prev.versionKey !== versionKey;
-
-        if (isStructuralChange || isVersionChange) {
-            const shouldSuppressReset = suppressResetOnSearch && prev.structuralKey !== structuralKey && prev.versionKey === versionKey;
-
-            // Only show loading if it's a structural change or the list is currently empty.
-            // This prevents the "flash of loading" when adding a single transaction.
-            if (!shouldSuppressReset && (isStructuralChange || items.length === 0)) {
-                setIsLoading(true);
-            }
-
-            setHasMore(true);
-            prevFilterRef.current = { structuralKey, versionKey, observe, enrich, pageSize };
-
-            if (isStructuralChange) {
-                if (!shouldSuppressReset) {
-                    setItems([]); // Clear items ONLY on structural changes
-                }
-                if (currentLimit !== pageSize) {
-                    setCurrentLimit(pageSize); // Reset pagination
-                    return;
-                }
-            }
-        }
-
-        const observable = observe(currentLimit, dateRange, searchQuery);
-
-        const subscription = observable.subscribe(async (loaded) => {
-            const current = ++sequence;
-            try {
-                if (enrich) {
-                    const enriched = await enrich(loaded, currentLimit, dateRange, searchQuery);
-                    if (!isActive || current !== sequence) return;
-                    setItems([...enriched] as E[]);
-                } else {
-                    if (!isActive || current !== sequence) return;
-                    setItems([...loaded] as unknown as E[]);
-                }
-                setHasMore(loaded.length >= currentLimit);
-                setVersion(v => v + 1);
-                setIsLoading(false);
-                setIsLoadingMore(false);
-            } catch (err) {
-                if (!isActive || current !== sequence) return;
-                const normalizedError = err instanceof Error ? err : new Error(String(err));
-                setError(normalizedError);
-                setIsLoading(false);
-                setIsLoadingMore(false);
-            }
-        });
-
-        return () => {
-            isActive = false;
-            subscription.unsubscribe();
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentLimit, effectKey, observe, enrich, pageSize, retryKey]);
-
-    const loadMore = useCallback(() => {
-        if (isLoadingMore || !hasMore) return;
-        setIsLoadingMore(true);
-        setCurrentLimit(prev => prev + pageSize);
-    }, [isLoadingMore, hasMore, pageSize]);
-
-    const retry = () => {
-        setError(null);
-        if (items.length > 0) {
-            // If we already have items, just trigger a re-observation with the current limit.
-            // This is safer for "load more" failures as it doesn't wipe existing pages.
-            setRetryKey(v => v + 1);
-        } else {
-            // Only full reset if we have no data at all
-            setItems([]);
-            setCurrentLimit(pageSize);
-            setRetryKey(v => v + 1);
-        }
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
     };
+  }, [currentLimit, structuralKey, versionKey, retryKey, observe, enrich, pageSize]); // Added stable prop dependencies Log)
 
-    return { items, isLoading, isLoadingMore, hasMore, loadMore, version, error, retry };
+  const loadMore = useCallback(() => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    setCurrentLimit(prev => prev + pageSize);
+  }, [isLoadingMore, hasMore, pageSize]);
+
+  const retry = () => {
+    setError(null);
+    if (items.length > 0) {
+      // If we already have items, just trigger a re-observation with the current limit.
+      // This is safer for "load more" failures as it doesn't wipe existing pages.
+      setRetryKey(v => v + 1);
+    } else {
+      // Only full reset if we have no data at all
+      setItems([]);
+      setCurrentLimit(pageSize);
+      setRetryKey(v => v + 1);
+    }
+  };
+
+  return { items, isLoading, isLoadingMore, hasMore, loadMore, version, error, retry };
 }

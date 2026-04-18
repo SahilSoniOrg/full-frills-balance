@@ -16,7 +16,7 @@ import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { sharingService, ShareFormat } from '@/src/services/SharingService';
+import { sharingService } from '@/src/services/SharingService';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
@@ -234,7 +234,7 @@ export function useJournalListViewModel({
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }
-  }, [selectedIds, journals]);
+  }, [selectedIds, journals, defaultShareFormat]);
 
   const selectAll = useCallback(() => {
     const visibleIds = items.filter(i => i.type === 'transaction').map(i => i.id);
@@ -295,7 +295,7 @@ export function useJournalListViewModel({
       const filtered = new Set([...prev].filter(id => validIds.has(id)));
       return filtered.size === prev.size ? prev : filtered;
     });
-  }, [journals, selectedIds.size, setSelectedIds]);
+  }, [journals, selectedIds, setSelectedIds]);
 
   const onEndReached = useMemo(() => {
     if (searchQuery || !hasMore) return undefined;

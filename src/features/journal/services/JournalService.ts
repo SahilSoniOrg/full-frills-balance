@@ -602,9 +602,16 @@ export class JournalService {
         if (journals.length === 0) return [] as EnrichedJournal[];
 
         const accountMap = new Map(accounts.map(a => [a.id, a]));
+        const transactionsByJournal = new Map<string, Transaction[]>();
+
+        for (const t of transactions) {
+          const list = transactionsByJournal.get(t.journalId) || [];
+          list.push(t);
+          transactionsByJournal.set(t.journalId, list);
+        }
 
         return journals.map(j => {
-          const jTxs = transactions.filter(t => t.journalId === j.id);
+          const jTxs = transactionsByJournal.get(j.id) || [];
           const journalAccountIds = Array.from(new Set(jTxs.map(t => t.accountId)));
 
           const enrichedAccounts = journalAccountIds.map(id => {

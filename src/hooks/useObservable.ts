@@ -12,21 +12,21 @@
  * If passing 'data' to React.memo components, you MUST pass 'version' as a prop or key
  * to ensure re-rendering.
  */
-import { DependencyList, useCallback, useEffect, useRef, useState } from 'react';
+import { DependencyList, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 
 export interface UseObservableResult<T> {
-    data: T;
-    isLoading: boolean;
-    error: Error | null;
-    version: number;
+  data: T;
+  isLoading: boolean;
+  error: Error | null;
+  version: number;
 }
 
 export interface UseObservableOptions<T> {
-    /** Keep previous data while loading new data */
-    keepPreviousData?: boolean;
-    /** Optional comparator to prevent re-renders when data hasn't changed */
-    comparator?: (prev: T, next: T) => boolean;
+  /** Keep previous data while loading new data */
+  keepPreviousData?: boolean;
+  /** Optional comparator to prevent re-renders when data hasn't changed */
+  comparator?: (prev: T, next: T) => boolean;
 }
 
 /**
@@ -38,66 +38,88 @@ export interface UseObservableOptions<T> {
  * @param options - Additional options
  */
 export function useObservable<T>(
-    observableFactory: () => Observable<T>,
-    deps: DependencyList,
-    initialValue: T,
-    options: UseObservableOptions<T> = {}
+  observableFactory: () => Observable<T>,
+  deps: DependencyList,
+  initialValue: T,
+  options: UseObservableOptions<T> = {},
 ): UseObservableResult<T> {
-    const { keepPreviousData = true } = options;
+  const factoryRef = useRef(observableFactory);
+  factoryRef.current = observableFactory;
 
-    const factoryRef = useRef(observableFactory);
-    factoryRef.current = observableFactory;
+  const stableFactory = useCallback(() => factoryRef.current(), []);
 
-    const stableFactory = useCallback(() => factoryRef.current(), []);
+  const [data, setData] = useState<T>(initialValue);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
-    const [data, setData] = useState<T>(initialValue);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
-    const [version, setVersion] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [version, setVersion] = useState(0);
 
-    useEffect(() => {
-        let isActive = true;
-        const { comparator } = options;
+  // Track options in a ref to keep them out of the dependency array safely
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
-        if (!keepPreviousData) {
-            setData(initialValue);
-        }
+  // Use a ref and useMemo to track dependency changes without triggering render-time setState
+  const depsRef = useRef(deps);
+  const revisionRef = useRef(0);
+  const depsRevision = useMemo(() => {
+    const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
+      if (oldDeps.length !== newDeps.length) return false;
+      return oldDeps.every((dep, i) => dep === newDeps[i]);
+    };
 
-        // Only show loading if we don't have data yet or we're not keeping previous data
-        if (!keepPreviousData || (initialValue !== undefined && data === initialValue)) {
-            setIsLoading(true);
-        }
-        setError(null);
+    if (!areDepsEqual(depsRef.current, deps)) {
+      depsRef.current = deps;
+      revisionRef.current += 1;
+    }
+    return revisionRef.current;
+  }, [deps]);
 
-        const subscription = stableFactory().subscribe({
-            next: (result) => {
-                if (!isActive) return;
+  useEffect(() => {
+    let isActive = true;
+    const { keepPreviousData = true, comparator } = optionsRef.current;
 
-                // Apply comparator if provided to avoid redundant updates
-                if (comparator && comparator(data, result)) {
-                    setIsLoading(false);
-                    return;
-                }
+    if (!keepPreviousData) {
+      setData(initialValue);
+      setIsLoading(true);
+    } else if (dataRef.current === initialValue) {
+      setIsLoading(true);
+    }
 
-                setData(result);
-                setVersion(v => v + 1);
-                setIsLoading(false);
-            },
-            error: (err) => {
-                if (!isActive) return;
-                setError(err instanceof Error ? err : new Error(String(err)));
-                setIsLoading(false);
-            },
+    // Reset error state
+    setError(null);
+
+    const subscription = stableFactory().subscribe({
+      next: result => {
+        if (!isActive) return;
+
+        setData(prevData => {
+          // Apply comparator if provided to avoid redundant updates
+          if (comparator && comparator(prevData, result)) {
+            setIsLoading(false);
+            return prevData;
+          }
+
+          setVersion(v => v + 1);
+          setIsLoading(false);
+          return result;
         });
+      },
+      error: err => {
+        if (!isActive) return;
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setIsLoading(false);
+      },
+    });
 
-        return () => {
-            isActive = false;
-            subscription.unsubscribe();
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [stableFactory, keepPreviousData, ...deps]);
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [stableFactory, depsRevision, initialValue]); // data, keepPreviousData, and comparator removed Log)
 
-    return { data, isLoading, error, version };
+  return { data, isLoading, error, version };
 }
 
 /**
@@ -112,74 +134,97 @@ export function useObservable<T>(
  * @param initialValue - Initial value for the data
  */
 export function useObservableWithEnrichment<T, E>(
-    observableFactory: () => Observable<T>,
-    enricher: (data: T) => Promise<E>,
-    deps: DependencyList,
-    initialValue: E,
-    options: UseObservableOptions<E> = {}
+  observableFactory: () => Observable<T>,
+  enricher: (data: T) => Promise<E>,
+  deps: DependencyList,
+  initialValue: E,
+  options: UseObservableOptions<E> = {},
 ): UseObservableResult<E> {
-    const factoryRef = useRef(observableFactory);
-    factoryRef.current = observableFactory;
+  const factoryRef = useRef(observableFactory);
+  factoryRef.current = observableFactory;
 
-    const enricherRef = useRef(enricher);
-    enricherRef.current = enricher;
+  const enricherRef = useRef(enricher);
+  enricherRef.current = enricher;
 
-    const stableFactory = useCallback(() => factoryRef.current(), []);
-    const stableEnricher = useCallback((d: T) => enricherRef.current(d), []);
+  const stableFactory = useCallback(() => factoryRef.current(), []);
+  const stableEnricher = useCallback((d: T) => enricherRef.current(d), []);
 
-    const [data, setData] = useState<E>(initialValue);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
-    const [version, setVersion] = useState(0);
+  const [data, setData] = useState<E>(initialValue);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
-    useEffect(() => {
-        let isActive = true;
-        let sequence = 0;
-        const { keepPreviousData = true, comparator } = options as UseObservableOptions<E>;
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [version, setVersion] = useState(0);
 
-        if (!keepPreviousData) {
-            setData(initialValue);
+  // Track refs to keep them out of the dependency array safely
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
+  const depsRef = useRef(deps);
+  const revisionRef = useRef(0);
+  const depsRevision = useMemo(() => {
+    const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
+      if (oldDeps.length !== newDeps.length) return false;
+      return oldDeps.every((dep, i) => dep === newDeps[i]);
+    };
+    if (!areDepsEqual(depsRef.current, deps)) {
+      depsRef.current = deps;
+      revisionRef.current += 1;
+    }
+    return revisionRef.current;
+  }, [deps]);
+
+  useEffect(() => {
+    let isActive = true;
+    let sequence = 0;
+    const { keepPreviousData = true, comparator } = optionsRef.current;
+
+    if (!keepPreviousData) {
+      setData(initialValue);
+      setIsLoading(true);
+    } else if (dataRef.current === initialValue) {
+      setIsLoading(true);
+    }
+
+    // Reset error state
+    setError(null);
+
+    const subscription = stableFactory().subscribe({
+      next: async result => {
+        const current = ++sequence;
+        try {
+          const enriched = await stableEnricher(result);
+          if (!isActive || current !== sequence) return;
+
+          setData(prevData => {
+            if (comparator && comparator(prevData, enriched)) {
+              setIsLoading(false);
+              return prevData;
+            }
+
+            setVersion(v => v + 1);
+            setIsLoading(false);
+            return enriched;
+          });
+        } catch (err) {
+          if (!isActive || current !== sequence) return;
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setIsLoading(false);
         }
+      },
+      error: err => {
+        if (!isActive) return;
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setIsLoading(false);
+      },
+    });
 
-        if (!keepPreviousData || data === initialValue) {
-            setIsLoading(true);
-        }
-        setError(null);
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, [stableFactory, stableEnricher, depsRevision, initialValue]); // data, keepPreviousData, and comparator removed Log)
 
-        const subscription = stableFactory().subscribe({
-            next: async (result) => {
-                const current = ++sequence;
-                try {
-                    const enriched = await stableEnricher(result);
-                    if (!isActive || current !== sequence) return;
-
-                    if (comparator && comparator(data, enriched)) {
-                        setIsLoading(false);
-                        return;
-                    }
-
-                    setData(enriched);
-                    setVersion(v => v + 1);
-                    setIsLoading(false);
-                } catch (err) {
-                    if (!isActive || current !== sequence) return;
-                    setError(err instanceof Error ? err : new Error(String(err)));
-                    setIsLoading(false);
-                }
-            },
-            error: (err) => {
-                if (!isActive) return;
-                setError(err instanceof Error ? err : new Error(String(err)));
-                setIsLoading(false);
-            },
-        });
-
-        return () => {
-            isActive = false;
-            subscription.unsubscribe();
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [stableFactory, stableEnricher, ...deps]);
-
-    return { data, isLoading, error, version };
+  return { data, isLoading, error, version };
 }

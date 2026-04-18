@@ -26,10 +26,6 @@ export class AnalyticsService {
     return this._posthog;
   }
 
-  constructor() {
-    // Constructor remains lightweight to avoid module evaluation delays
-  }
-
   /**
    * Initialize analytics provider.
    */

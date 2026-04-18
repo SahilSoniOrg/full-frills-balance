@@ -49,9 +49,6 @@ export function Screen({
 }: ScreenProps) {
   const { themeMode } = useTheme();
 
-  // Clean props for SafeAreaView to avoid Web DOM warnings
-  // @ts-ignore
-
   const content = (
     <View style={[styles.content, withPadding && styles.padded, style]}>{children}</View>
   );

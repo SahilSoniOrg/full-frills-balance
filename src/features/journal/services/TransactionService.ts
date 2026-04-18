@@ -1,3 +1,6 @@
+import Account, { AccountType } from '@/src/data/models/Account';
+import Journal from '@/src/data/models/Journal';
+import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -19,24 +22,25 @@ export class TransactionService {
 
     return transactions.map(tx => {
       const account = accountMap.get(tx.accountId);
+      const accType = account?.accountType ?? AccountType.ASSET;
       return {
         id: tx.id,
         amount: tx.amount,
-        transactionType: tx.transactionType as any,
+        transactionType: tx.transactionType,
         currencyCode: tx.currencyCode,
         transactionDate: tx.transactionDate,
         notes: tx.notes,
         accountId: tx.accountId,
         exchangeRate: tx.exchangeRate,
         accountName: account?.name || 'Unknown Account',
-        accountType: account?.accountType as any,
-        flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
-        balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any)
-          ? 'INCREASE'
-          : 'DECREASE',
+        accountType: account?.accountType,
+        flowDirection: isValueEntering(tx.transactionType) ? 'IN' : 'OUT',
+        balanceImpact: isBalanceIncrease(accType, tx.transactionType) ? 'INCREASE' : 'DECREASE',
         createdAt: tx.createdAt,
         updatedAt: tx.updatedAt,
         journalDescription: journal?.description,
+        displayTitle: journal?.description || 'Transaction',
+        isIncrease: isBalanceIncrease(accType, tx.transactionType),
       } as DisplayTransaction;
     });
   }
@@ -82,24 +86,25 @@ export class TransactionService {
 
         return validTransactions.map(tx => {
           const account = accountMap.get(tx.accountId);
+          const accType = account?.accountType ?? AccountType.ASSET;
           return {
             id: tx.id,
             amount: tx.amount,
-            transactionType: tx.transactionType as any,
+            transactionType: tx.transactionType,
             currencyCode: tx.currencyCode,
             transactionDate: tx.transactionDate,
             notes: tx.notes,
             accountId: tx.accountId,
             exchangeRate: tx.exchangeRate,
             accountName: account?.name || 'Unknown Account',
-            accountType: account?.accountType as any,
-            flowDirection: isValueEntering(tx.transactionType as any) ? 'IN' : 'OUT',
-            balanceImpact: isBalanceIncrease(account?.accountType as any, tx.transactionType as any)
-              ? 'INCREASE'
-              : 'DECREASE',
+            accountType: account?.accountType,
+            flowDirection: isValueEntering(tx.transactionType) ? 'IN' : 'OUT',
+            balanceImpact: isBalanceIncrease(accType, tx.transactionType) ? 'INCREASE' : 'DECREASE',
             createdAt: tx.createdAt,
             updatedAt: tx.updatedAt,
             journalDescription: journal?.description,
+            displayTitle: journal?.description || 'Transaction',
+            isIncrease: isBalanceIncrease(accType, tx.transactionType),
           } as DisplayTransaction;
         });
       }),
@@ -135,18 +140,20 @@ export class TransactionService {
   }
 
   private mapToEnriched(
-    tx: any,
-    transactions: any[],
-    accountMap: Map<string, any>,
-    journal: any,
+    tx: Transaction,
+    transactions: Transaction[],
+    accountMap: Map<string, Account>,
+    journal: Journal | null,
   ): DisplayTransaction {
     const account = accountMap.get(tx.accountId);
     const counterAccounts = transactions
       .filter(t => t.id !== tx.id)
       .map(t => accountMap.get(t.accountId))
-      .filter(Boolean);
+      .filter((a): a is Account => !!a);
     const counterAccount = counterAccounts.length === 1 ? counterAccounts[0] : undefined;
-    const isIncrease = isBalanceIncrease(account?.accountType as any, tx.transactionType as any);
+
+    const accType = account?.accountType ?? AccountType.ASSET;
+    const isIncrease = isBalanceIncrease(accType, tx.transactionType);
 
     return {
       id: tx.id,
@@ -154,19 +161,19 @@ export class TransactionService {
       accountId: tx.accountId,
       amount: tx.amount,
       currencyCode: tx.currencyCode,
-      transactionType: tx.transactionType as any,
+      transactionType: tx.transactionType,
       transactionDate: tx.transactionDate,
       notes: tx.notes,
       journalDescription: journal?.description,
       accountName: account?.name,
-      accountType: account?.accountType as any,
+      accountType: account?.accountType,
       icon: account?.icon,
       counterAccountName: counterAccount?.name,
-      counterAccountType: counterAccount?.accountType as any,
+      counterAccountType: counterAccount?.accountType,
       counterAccountIcon: counterAccount?.icon,
       runningBalance: tx.runningBalance,
       displayTitle: journal?.description || 'Transaction',
-      displayType: journal?.displayType as any,
+      displayType: journal?.displayType,
       isIncrease,
       exchangeRate: tx.exchangeRate,
     } as DisplayTransaction;
