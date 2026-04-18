@@ -76,6 +76,11 @@ export function useObservable<T>(
     return revisionRef.current;
   }, [deps]);
 
+  const initialValueKey = useMemo(
+    () => (typeof initialValue === 'object' ? JSON.stringify(initialValue) : String(initialValue)),
+    [initialValue],
+  );
+
   useEffect(() => {
     let isActive = true;
     const { keepPreviousData = true, comparator } = optionsRef.current;
@@ -117,7 +122,7 @@ export function useObservable<T>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, depsRevision, initialValue]); // data, keepPreviousData, and comparator removed Log)
+  }, [stableFactory, depsRevision, initialValueKey]); // initialValueKey instead of initialValue
 
   return { data, isLoading, error, version };
 }

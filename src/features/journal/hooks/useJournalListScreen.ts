@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useJournalListViewModel } from './useJournalListViewModel';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
@@ -12,11 +13,28 @@ import { EnrichedJournal } from '@/src/types/domain';
 export function useJournalListScreen(config: Parameters<typeof useJournalListViewModel>[0]) {
   const vm = useJournalListViewModel(config);
 
-  return {
-    /**
-     * Props ready to spread into JournalListView component
-     */
-    listViewProps: {
+  const onPlannedJournalPress = useCallback((item: EnrichedJournal) => {
+    if (item.plannedPaymentId) {
+      AppNavigation.toPlannedPaymentDetails(item.plannedPaymentId);
+    } else {
+      const cardProps = mapJournalToCardProps(item);
+      AppNavigation.toTransactionDetails(item.id, {
+        title: cardProps.title,
+        amount: cardProps.amount,
+        currencyCode: cardProps.currencyCode,
+        date:
+          typeof cardProps.transactionDate === 'number'
+            ? cardProps.transactionDate
+            : (cardProps.transactionDate as Date).getTime(),
+        typeColor: cardProps.presentation.typeColor,
+        typeIcon: cardProps.presentation.typeIcon,
+        displayType: item.displayType,
+      });
+    }
+  }, []);
+
+  const listViewProps = useMemo(
+    () => ({
       items: vm.items,
       isLoading: vm.isLoading,
       isLoadingMore: vm.isLoadingMore,
@@ -26,30 +44,7 @@ export function useJournalListScreen(config: Parameters<typeof useJournalListVie
       emptySubtitle: vm.emptyState.subtitle,
       onEndReached: vm.onEndReached,
       plannedJournals: vm.plannedJournals,
-      onPlannedJournalPress: (item: EnrichedJournal) => {
-        // If it's a planned payment, we should ideally go to its details
-        // or ensure toTransactionDetails supports it.
-        // Given the review feedback, let's route to Planned Payment details for the rule
-        // or fix TransactionDetails to show planned journals.
-        // The review says: "either route planned items to planned-payment details screen, or add a query path for transaction details that includes PLANNED"
-        if (item.plannedPaymentId) {
-          AppNavigation.toPlannedPaymentDetails(item.plannedPaymentId);
-        } else {
-          const cardProps = mapJournalToCardProps(item);
-          AppNavigation.toTransactionDetails(item.id, {
-            title: cardProps.title,
-            amount: cardProps.amount,
-            currencyCode: cardProps.currencyCode,
-            date:
-              typeof cardProps.transactionDate === 'number'
-                ? cardProps.transactionDate
-                : (cardProps.transactionDate as Date).getTime(),
-            typeColor: cardProps.presentation.typeColor,
-            typeIcon: cardProps.presentation.typeIcon,
-            displayType: item.displayType,
-          });
-        }
-      },
+      onPlannedJournalPress,
       datePicker: {
         visible: vm.isDatePickerVisible,
         onClose: vm.hideDatePicker,
@@ -66,10 +61,35 @@ export function useJournalListScreen(config: Parameters<typeof useJournalListVie
         exitSelectionMode: vm.exitSelectionMode,
         onShareSelected: vm.onShareSelected,
       },
-    },
-    /**
-     * Full view model for custom header needs
-     */
+    }),
+    [
+      vm.items,
+      vm.isLoading,
+      vm.isLoadingMore,
+      vm.loadingText,
+      vm.loadingMoreText,
+      vm.emptyState.title,
+      vm.emptyState.subtitle,
+      vm.onEndReached,
+      vm.plannedJournals,
+      onPlannedJournalPress,
+      vm.isDatePickerVisible,
+      vm.hideDatePicker,
+      vm.periodFilter,
+      vm.onDateSelect,
+      vm.selectedIds,
+      vm.isSelectionModeActive,
+      vm.onLongPressItem,
+      vm.toggleSelection,
+      vm.selectAll,
+      vm.clearItems,
+      vm.exitSelectionMode,
+      vm.onShareSelected,
+    ],
+  );
+
+  return {
+    listViewProps,
     vm,
   };
 }

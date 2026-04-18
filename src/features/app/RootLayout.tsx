@@ -97,6 +97,20 @@ function isModalScreen(screenName: string): boolean {
   return modalScreens.some(modal => screenName.includes(modal));
 }
 
+function BootManager() {
+  const { isAppReady } = useUI();
+
+  React.useEffect(() => {
+    if (isAppReady) {
+      SplashScreen.hideAsync().catch(() => {
+        /* ignore */
+      });
+    }
+  }, [isAppReady]);
+
+  return null;
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
@@ -114,6 +128,7 @@ export default function RootLayout() {
           <ErrorBoundary>
             <DatabaseProvider database={database}>
               <UIProvider>
+                <BootManager />
                 <FontManager>
                   <PostHogProvider
                     client={analytics.posthog ?? undefined}

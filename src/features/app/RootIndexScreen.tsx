@@ -5,8 +5,6 @@ import { Redirect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import * as SplashScreen from 'expo-splash-screen';
-
 /**
  * Root Index - Entry point for the application.
  * Routes user to the appropriate screen based on onboarding status.
@@ -24,16 +22,6 @@ export function RootIndexScreen() {
   useEffect(() => {
     Linking.getInitialURL().then(url => setInitialUrl(url ?? null));
   }, []);
-
-  useEffect(() => {
-    // HARDENED: Hide splash as soon as UI is safe (Phase 2).
-    // Do not wait for deep links if the main UI is ready to paint.
-    if (isAppReady) {
-      SplashScreen.hideAsync().catch(() => {
-        /* ignore */
-      });
-    }
-  }, [isAppReady]);
 
   if (!isAppReady) {
     // TIGHTENED: Render a themed carrier view instead of null to prevent "black void" flicker

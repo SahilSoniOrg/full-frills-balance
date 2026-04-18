@@ -137,24 +137,48 @@ export function useDashboardViewModel(): DashboardViewModel {
     [onAddPress],
   );
 
-  return {
-    isInitialized,
-    hasCompletedOnboarding,
-    isPrivacyMode: isLocalPrivacyMode,
-    listViewProps,
-    headerProps,
-    transactionSectionTitle: sectionTitle,
-    fab,
-    safeToSpendData,
-    explanationModalState: {
+  const explanationModalState = useMemo(
+    () => ({
       visible: isExplanationVisible,
       setVisible: setExplanationVisible,
       expandedSection,
       setExpandedSection,
-    },
-    legendModalState: {
+    }),
+    [isExplanationVisible, expandedSection],
+  );
+
+  const legendModalState = useMemo(
+    () => ({
       selectedItem: selectedLegendItem,
       setSelectedItem: setSelectedLegendItem,
-    },
-  };
+    }),
+    [selectedLegendItem],
+  );
+
+  return useMemo(
+    () => ({
+      isInitialized,
+      hasCompletedOnboarding,
+      isPrivacyMode: isLocalPrivacyMode,
+      listViewProps,
+      headerProps,
+      transactionSectionTitle: sectionTitle,
+      fab,
+      safeToSpendData,
+      explanationModalState,
+      legendModalState,
+    }),
+    [
+      isInitialized,
+      hasCompletedOnboarding,
+      isLocalPrivacyMode,
+      listViewProps,
+      headerProps,
+      sectionTitle,
+      fab,
+      safeToSpendData,
+      explanationModalState,
+      legendModalState,
+    ],
+  );
 }

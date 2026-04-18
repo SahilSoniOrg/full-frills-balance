@@ -181,7 +181,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
             endDate: dateRange.endDate,
           }
         : undefined,
-    [dateRange],
+    [dateRange?.startDate, dateRange?.endDate],
   );
 
   const queryOptions = useMemo(
@@ -191,7 +191,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       displayType: displayType || undefined,
       accountIds: accountIds.length > 0 ? accountIds : undefined,
     }),
-    [minAmount, maxAmount, displayType, accountIds],
+    [minAmount, maxAmount, displayType, accountIds.join(',')],
   );
 
   // Data Fetching

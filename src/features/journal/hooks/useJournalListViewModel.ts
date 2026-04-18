@@ -67,6 +67,8 @@ interface UseJournalListViewModelParams {
   defaultToCurrentMonth?: boolean;
 }
 
+const PLANNED_STATUS = [JournalStatus.PLANNED];
+
 export function useJournalListViewModel({
   pageSize = AppConfig.defaults.journalPageSize,
   emptyState,
@@ -108,7 +110,7 @@ export function useJournalListViewModel({
     AppConfig.defaults.plannedJournalLimit,
     undefined,
     undefined,
-    [JournalStatus.PLANNED],
+    PLANNED_STATUS,
   );
 
   const selectionControl = useSelection<string>();
@@ -288,14 +290,14 @@ export function useJournalListViewModel({
   }, [journals, baseCurrency, exchangeRateMap]);
 
   useEffect(() => {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0 || isLoading) return;
 
     setSelectedIds(prev => {
       const validIds = new Set(journals.map(j => j.id));
       const filtered = new Set([...prev].filter(id => validIds.has(id)));
       return filtered.size === prev.size ? prev : filtered;
     });
-  }, [journals, selectedIds, setSelectedIds]);
+  }, [journals, selectedIds, setSelectedIds, isLoading]);
 
   const onEndReached = useMemo(() => {
     if (searchQuery || !hasMore) return undefined;

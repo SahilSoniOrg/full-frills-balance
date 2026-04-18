@@ -5,7 +5,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { DisplayTransaction, EnrichedJournal } from '@/src/types/domain';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
 
 import { JournalStatus } from '@/src/data/models/Journal';
@@ -21,31 +21,37 @@ export function useJournals(
   plannedPaymentId?: string,
   options?: { minAmount?: number; maxAmount?: number; displayType?: string; accountIds?: string[] },
 ) {
+  // Stabilize composite dependencies
+  const statusKey = status?.join(',') || 'none';
+  const accountIdsKey = options?.accountIds?.join(',') || 'none';
+
+  // Memoize the effective date range object passed to usePaginatedObservable
+  // This prevents 'structuralKey' changes in usePaginatedObservable.
+  const effectiveRange = useMemo(() => {
+    if (!dateRange && !plannedPaymentId && !options?.accountIds) return undefined;
+    return {
+      ...dateRange,
+      plannedPaymentId,
+      accountIds: options?.accountIds,
+      minAmount: options?.minAmount,
+      maxAmount: options?.maxAmount,
+      displayType: options?.displayType,
+    } as any;
+  }, [
+    dateRange?.startDate,
+    dateRange?.endDate,
+    plannedPaymentId,
+    accountIdsKey,
+    options?.minAmount,
+    options?.maxAmount,
+    options?.displayType,
+  ]);
+
   const observe = useCallback(
     (limit: number, range?: { startDate: number; endDate: number }, query?: string) => {
-      // accountIds from options are merged into the observation range
-      const enrichedRange =
-        range || plannedPaymentId
-          ? ({
-              ...range,
-              plannedPaymentId,
-              accountIds: options?.accountIds,
-              minAmount: options?.minAmount,
-              maxAmount: options?.maxAmount,
-              displayType: options?.displayType,
-            } as any)
-          : undefined;
-
-      return journalService.observeEnrichedJournals(limit, enrichedRange, query, status);
+      return journalService.observeEnrichedJournals(limit, range as any, query, status);
     },
-    [
-      status,
-      plannedPaymentId,
-      options?.accountIds,
-      options?.minAmount,
-      options?.maxAmount,
-      options?.displayType,
-    ],
+    [statusKey], // Only recreate if status actually changes
   );
 
   const {
@@ -57,17 +63,7 @@ export function useJournals(
     version,
   } = usePaginatedObservable<any, EnrichedJournal>({
     pageSize,
-    dateRange:
-      dateRange || plannedPaymentId || options?.accountIds
-        ? ({
-            ...dateRange,
-            plannedPaymentId,
-            accountIds: options?.accountIds,
-            minAmount: options?.minAmount,
-            maxAmount: options?.maxAmount,
-            displayType: options?.displayType,
-          } as any)
-        : undefined,
+    dateRange: effectiveRange,
     searchQuery,
     observe,
     suppressResetOnSearch: true,

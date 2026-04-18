@@ -25,9 +25,8 @@ export function DashboardScreenView({
   legendModalState,
   isPrivacyMode,
 }: DashboardViewModel & { listRef?: React.RefObject<any> }) {
-  const safeToSpendViewModel = useSafeToSpendView({
-    ...(safeToSpendData || ({} as any)),
-    uiState: {
+  const uiState = React.useMemo(
+    () => ({
       isInfoVisible: explanationModalState.visible,
       setInfoVisible: explanationModalState.setVisible,
       expandedSection: explanationModalState.expandedSection,
@@ -35,7 +34,21 @@ export function DashboardScreenView({
       selectedLegendItem: legendModalState.selectedItem,
       setSelectedLegendItem: legendModalState.setSelectedItem,
       isPrivacyMode,
-    },
+    }),
+    [
+      explanationModalState.visible,
+      explanationModalState.setVisible,
+      explanationModalState.expandedSection,
+      explanationModalState.setExpandedSection,
+      legendModalState.selectedItem,
+      legendModalState.setSelectedItem,
+      isPrivacyMode,
+    ],
+  );
+
+  const safeToSpendViewModel = useSafeToSpendView({
+    ...(safeToSpendData || ({} as any)),
+    uiState,
     isLoading: !isInitialized,
   });
   if (!isInitialized) {
