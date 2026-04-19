@@ -1,16 +1,16 @@
-import React from 'react'
-import { SpacingKey } from '@/src/constants/design-tokens'
-import { Box, type BoxProps } from './Box'
+import React from 'react';
+import { SpacingKey } from '@/src/constants/design-tokens';
+import { Box, type BoxViewProps } from './Box';
 
-export type InsetProps = Omit<BoxProps, 'top' | 'bottom' | 'left' | 'right'> & {
-  space?: SpacingKey | number
-  top?: SpacingKey | number
-  bottom?: SpacingKey | number
-  left?: SpacingKey | number
-  right?: SpacingKey | number
-  horizontal?: SpacingKey | number
-  vertical?: SpacingKey | number
-}
+export type InsetProps = Omit<BoxViewProps, 'top' | 'bottom' | 'left' | 'right'> & {
+  space?: SpacingKey | number;
+  top?: SpacingKey | number;
+  bottom?: SpacingKey | number;
+  left?: SpacingKey | number;
+  right?: SpacingKey | number;
+  horizontal?: SpacingKey | number;
+  vertical?: SpacingKey | number;
+};
 
 /**
  * Inset - Layout component for padding
@@ -40,5 +40,5 @@ export const Inset = ({
     >
       {children}
     </Box>
-  )
-}
+  );
+};

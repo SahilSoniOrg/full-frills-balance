@@ -102,7 +102,7 @@ export function ConfirmDialog({
             </AppText>
             <AppInput
               value={inputValue}
-              onChangeText={text => {
+              onChangeText={(text: string) => {
                 setInputValue(text);
                 if (error) setError(undefined);
               }}

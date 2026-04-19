@@ -1,23 +1,13 @@
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import {
-  AppButton,
-  AppCard,
-  AppIcon,
-  AppText,
-  Badge,
-  IconName,
-  IvyIcon,
-} from '@/src/components/core';
+import { AppButton, AppIcon, AppSurface, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppConfig, Opacity, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { Box, Column, Row, Text } from '@/src/design-system';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
-import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { AppNavigation } from '@/src/utils/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 
 export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
   const {
@@ -38,6 +28,8 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
     isAutoPost,
     fromAccount,
     toAccount,
+    fromAccountColorKey,
+    toAccountColorKey,
     history,
     headerActions,
     onPost,
@@ -48,9 +40,9 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
   if (isLoading) {
     return (
       <Screen title="Details">
-        <View style={styles.center}>
-          <AppText variant="body">{AppConfig.strings.common.loading}</AppText>
-        </View>
+        <Column flex={1} align="center" justify="center">
+          <Text variant="base">{AppConfig.strings.common.loading}</Text>
+        </Column>
       </Screen>
     );
   }
@@ -58,15 +50,13 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
   if (isMissing) {
     return (
       <Screen title="Details">
-        <View style={styles.center}>
+        <Column flex={1} align="center" justify="center" gap="md">
           <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
-          <AppText variant="subheading" style={{ marginTop: Spacing.md }}>
-            Planned Payment not found
-          </AppText>
+          <Text variant="subheading">Planned Payment not found</Text>
           <AppButton variant="ghost" onPress={onBack} style={{ marginTop: Spacing.lg }}>
             Go Back
           </AppButton>
-        </View>
+        </Column>
       </Screen>
     );
   }
@@ -96,22 +86,25 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
 
   return (
     <Screen title={title} showBack={true} headerActions={headerActionsNode} scrollable withPadding>
-      <View style={styles.content}>
-        <AppCard elevation="md" radius="r2" padding="lg" style={styles.detailsCard}>
-          <View style={styles.accountHeader}>
-            <View
-              style={[styles.bigIcon, { backgroundColor: withOpacity(accentColor, Opacity.soft) }]}
+      <Column paddingVertical="lg">
+        <AppSurface elevation="sm" padding="lg" radius="r2" style={{ marginBottom: Spacing.lg }}>
+          <Row align="center" gap="md" marginBottom="lg">
+            <Box
+              width={Size.avatarLg}
+              height={Size.avatarLg}
+              borderRadius="full"
+              alignItems="center"
+              justifyContent="center"
+              background={typeColorKey as any}
+              backgroundOpacity="soft"
             >
               <AppIcon name={iconName as IconName} size={32} color={accentColor} />
-            </View>
-            <View style={styles.titleInfo}>
-              <AppText
-                variant="title"
-                style={{ fontSize: Typography.sizes.xl, marginBottom: Spacing.xs }}
-              >
+            </Box>
+            <Column flex={1} justify="center">
+              <Text variant="xl" weight="bold" marginBottom="xs">
                 {nameText}
-              </AppText>
-              <View style={styles.badgesRow}>
+              </Text>
+              <Row gap="xs" align="center" flexWrap="wrap">
                 <Badge variant={statusVariant as any} size="sm">
                   {statusLabel}
                 </Badge>
@@ -123,147 +116,142 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                     AUTO-POST
                   </Badge>
                 )}
-              </View>
-            </View>
-          </View>
+              </Row>
+            </Column>
+          </Row>
 
-          <View style={styles.accountStats}>
-            <View style={styles.statItem}>
-              <AppText variant="caption" color="secondary">
-                Amount Next
-              </AppText>
-              <AppText variant="heading">{amountText}</AppText>
-            </View>
-            <View style={styles.statItem}>
-              <AppText variant="caption" color="secondary">
-                Date Next
-              </AppText>
-              <AppText variant="subheading">{nextOccurrenceText}</AppText>
-            </View>
-          </View>
+          <Row gap="lg" marginBottom="lg">
+            <Column flex={1}>
+              <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>
+                AMOUNT NEXT
+              </Text>
+              <Text variant="xxl" weight="bold">
+                {amountText}
+              </Text>
+            </Column>
+            <Column flex={1}>
+              <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>
+                DATE NEXT
+              </Text>
+              <Text variant="base" weight="bold">
+                {nextOccurrenceText}
+              </Text>
+            </Column>
+          </Row>
 
-          <View style={[styles.accountStats, { paddingTop: 0 }]}>
-            <View style={styles.statItem}>
-              <AppText variant="caption" color="secondary">
-                Recurrence
-              </AppText>
-              <AppText variant="subheading">{intervalLabel}</AppText>
-            </View>
-          </View>
+          <Row paddingVertical="sm" paddingTop={0}>
+            <Column flex={1}>
+              <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>
+                RECURRENCE
+              </Text>
+              <Text variant="base" weight="semibold">
+                {intervalLabel}
+              </Text>
+            </Column>
+          </Row>
 
-          <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+          <Box height={1} background="divider" marginVertical="md" />
 
-          <View style={styles.flowSection}>
-            <AppText variant="caption" color="secondary" style={styles.flowTitle}>
+          <Column>
+            <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom="md">
               ACCOUNT FLOW
-            </AppText>
-            <View style={styles.accountRow}>
-              <View style={styles.accountInfo}>
+            </Text>
+            <Column gap="sm">
+              <Row align="center" gap="md">
                 <IvyIcon
                   name={fromAccount?.icon}
                   fallbackIcon="wallet"
                   label={fromAccount?.name}
-                  color={
-                    (theme[
-                      getAccountTypeVariant(fromAccount?.accountType) as keyof typeof theme
-                    ] as string) || theme.text
-                  }
-                  size={Size.avatarMd}
+                  color={theme[fromAccountColorKey as keyof typeof theme] as string}
+                  size={Size.avatarSm}
                   shape="circle"
                 />
-                <AppText
-                  variant="body"
-                  weight="bold"
-                  numberOfLines={1}
-                  style={styles.accountNameLeft}
-                >
+                <Text variant="base" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
                   {fromAccount?.name || AppConfig.strings.common.loading}
-                </AppText>
-              </View>
-              <View style={styles.arrowContainer}>
-                <Ionicons name="arrow-forward" size={16} color={theme.textTertiary} />
-              </View>
-              <View style={[styles.accountInfo, { justifyContent: 'flex-end' }]}>
-                <AppText
-                  variant="body"
-                  weight="bold"
-                  align="right"
-                  numberOfLines={1}
-                  style={styles.accountNameRight}
-                >
-                  {toAccount?.name || AppConfig.strings.common.loading}
-                </AppText>
+                </Text>
+              </Row>
+
+              <Row align="center" paddingLeft="xs" marginVertical={-2}>
+                <Ionicons name="arrow-down" size={14} color={theme.textTertiary} />
+              </Row>
+
+              <Row align="center" gap="md">
                 <IvyIcon
                   name={toAccount?.icon}
                   fallbackIcon="wallet"
                   label={toAccount?.name}
-                  color={
-                    (theme[
-                      getAccountTypeVariant(toAccount?.accountType) as keyof typeof theme
-                    ] as string) || theme.text
-                  }
-                  size={Size.avatarMd}
+                  color={theme[toAccountColorKey as keyof typeof theme] as string}
+                  size={Size.avatarSm}
                   shape="circle"
                 />
-              </View>
-            </View>
-          </View>
-        </AppCard>
-
-        <View style={styles.actionsContainer}>
+                <Text variant="base" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {toAccount?.name || AppConfig.strings.common.loading}
+                </Text>
+              </Row>
+            </Column>
+          </Column>
+        </AppSurface>
+        <Column marginBottom="xl" paddingHorizontal="sm">
           <AppButton
             variant="primary"
             onPress={onPost}
             style={{ width: '100%', marginBottom: Spacing.md }}
           >
-            <View style={styles.buttonInner}>
+            <Row align="center" justify="center" gap="sm">
               <AppIcon name="check" size={18} color={theme.onPrimary} />
-              <AppText
-                variant="body"
-                weight="bold"
-                style={{ marginLeft: Spacing.sm, color: theme.onPrimary }}
-              >
+              <Text variant="base" weight="bold" style={{ color: theme.onPrimary }}>
                 Post Next Occurrence
-              </AppText>
-            </View>
+              </Text>
+            </Row>
           </AppButton>
 
-          <View style={styles.actionsRow}>
+          <Row gap="md">
             <AppButton variant="outline" onPress={onSkip} style={{ flex: 1 }}>
-              <View style={styles.buttonInner}>
+              <Row align="center" justify="center" gap="sm">
                 <AppIcon name="close" size={18} color={theme.text} />
-                <AppText variant="body" weight="bold" style={{ marginLeft: Spacing.sm }}>
+                <Text variant="base" weight="bold">
                   Skip Next
-                </AppText>
-              </View>
+                </Text>
+              </Row>
             </AppButton>
 
-            <View style={{ width: Spacing.md }} />
-
             <AppButton variant="secondary" onPress={onToggleStatus} style={{ flex: 1 }}>
-              <View style={styles.buttonInner}>
+              <Row align="center" justify="center" gap="sm">
                 <AppIcon
                   name={statusLabel === 'ACTIVE' ? 'pause' : 'play'}
                   size={16}
                   color={theme.text}
                 />
-                <AppText variant="body" weight="semibold" style={{ marginLeft: Spacing.sm }}>
+                <Text variant="base" weight="semibold">
                   {statusLabel === 'ACTIVE' ? 'Pause' : 'Resume'}
-                </AppText>
-              </View>
+                </Text>
+              </Row>
             </AppButton>
-          </View>
-        </View>
+          </Row>
+        </Column>
 
-        <ScreenSectionHeader title="History" style={styles.sectionTitle} />
+        <Box marginHorizontal="sm" marginBottom="lg" marginTop="lg">
+          <Text variant="heading" weight="bold" color="secondary">
+            History
+          </Text>
+        </Box>
         {history?.length === 0 ? (
-          <AppCard padding="lg" style={styles.emptyHistory} radius="r2">
-            <AppText color="secondary" style={{ textAlign: 'center' }}>
+          <AppSurface
+            padding="lg"
+            radius="r2"
+            marginBottom="lg"
+            style={{
+              borderStyle: 'dashed',
+              borderWidth: 1,
+              borderColor: withOpacity(theme.text, Opacity.hover),
+            }}
+          >
+            <Text color="secondary" align="center">
               No transactions generated yet.
-            </AppText>
-          </AppCard>
+            </Text>
+          </AppSurface>
         ) : (
-          <View style={styles.historyList}>
+          <Column marginBottom="lg">
             {history?.map((journal: any) => {
               const dateValue = new Date(journal.journalDate).setHours(0, 0, 0, 0);
               const today = new Date().setHours(0, 0, 0, 0);
@@ -320,113 +308,9 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                 />
               );
             })}
-          </View>
+          </Column>
         )}
-      </View>
+      </Column>
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    paddingVertical: Spacing.lg,
-  },
-  detailsCard: {
-    width: '100%',
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  accountHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  bigIcon: {
-    width: Size.avatarLg,
-    height: Size.avatarLg,
-    borderRadius: Shape.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleInfo: {
-    marginLeft: Spacing.md,
-    flex: 1,
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  accountStats: {
-    flexDirection: 'row',
-    gap: Spacing.xl,
-    paddingVertical: Spacing.sm,
-  },
-  statItem: {
-    flex: 1,
-  },
-  divider: {
-    height: 1,
-    marginVertical: Spacing.md,
-  },
-  flowTitle: {
-    marginBottom: Spacing.md,
-  },
-  flowSection: {
-    marginTop: Spacing.xs,
-  },
-  accountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  accountInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  accountNameLeft: {
-    flex: 1,
-    marginLeft: Spacing.xs,
-  },
-  accountNameRight: {
-    flex: 1,
-    marginRight: Spacing.xs,
-  },
-  arrowContainer: {
-    paddingHorizontal: Spacing.xs,
-  },
-  actionsContainer: {
-    marginBottom: Spacing.xl,
-    paddingHorizontal: Spacing.sm,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  buttonInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    marginHorizontal: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  historyList: {
-    marginBottom: Spacing.lg,
-  },
-  emptyHistory: {
-    marginBottom: Spacing.lg,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: withOpacity('#000000', Opacity.hover),
-  },
-});

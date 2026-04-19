@@ -1,12 +1,12 @@
-import { AppCard, AppIcon, AppText } from '@/src/components/core';
-import { ColorKey, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { Box, Inline, Stack } from '@/src/design-system';
+import { AppIcon, AppSurface } from '@/src/components/core';
+import { ColorKey, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
+import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import { useBudgetListViewModel } from '../hooks/useBudgetListViewModel';
 import { BudgetItem } from '../types';
 
@@ -37,81 +37,108 @@ export function BudgetListView() {
 
     return (
       <TouchableOpacity
-        style={styles.cardContainer}
+        style={{ marginBottom: Spacing.md }}
         onPress={() => handlePress(item)}
         activeOpacity={Opacity.heavy}
       >
-        <AppCard elevation="md" padding="lg" radius="r2">
-          <Stack gap="lg">
-            <Inline justify="space-between" align="center">
-              <Inline gap="md" align="center">
+        <AppSurface
+          elevation="sm"
+          padding="lg"
+          radius="r3" // using r3 to match the history card's softer corners
+          background="surface"
+          borderWidth={1}
+          borderColor="surfaceSecondary"
+        >
+          <Column>
+            <Row justify="space-between" align="stretch" marginBottom="lg">
+              <Row gap="md" align="center" flex={1} marginRight="md">
                 <Box
                   width={Size.xl}
                   height={Size.xl}
                   borderRadius="md"
                   alignItems="center"
                   justifyContent="center"
-                  background="surfaceSecondary"
+                  background="primary"
+                  backgroundOpacity="soft"
                 >
                   <AppIcon name="pieChart" color={stripColor} size={20} />
                 </Box>
-                <Stack>
-                  <AppText variant="heading">{budget.name}</AppText>
+                <Column flex={1}>
+                  <Text variant="lg" weight="bold" numberOfLines={1}>
+                    {budget.name}
+                  </Text>
                   {item.previousUsage && (
-                    <Inline align="center" gap="xs">
+                    <Row align="center" gap="xs">
                       <AppIcon
                         name={item.previousUsage.remaining < 0 ? 'error' : 'checkCircle'}
                         size={12}
                         color={item.previousUsage.remaining < 0 ? theme.error : theme.success}
                       />
-                      <AppText
-                        variant="caption"
+                      <Text
+                        variant="xs"
+                        opacity={0.7}
+                        weight="medium"
                         color={item.previousUsage.remaining < 0 ? 'error' : 'success'}
                       >
-                        Last mo: {item.previousUsage.remaining < 0 ? 'Over budget' : 'Under budget'}
-                      </AppText>
-                    </Inline>
+                        {item.previousUsage.remaining < 0 ? 'Over' : 'Under'} last mo
+                      </Text>
+                    </Row>
                   )}
-                </Stack>
-              </Inline>
-              <AppText variant="title">
-                {CurrencyFormatter.format(budget.amount, budget.currencyCode, {
-                  maximumFractionDigits: 0,
-                })}
-              </AppText>
-            </Inline>
-
-            <Inline justify="space-between" align="center">
-              <Stack gap="xs">
-                <AppText variant="caption" color="secondary">
-                  Spent
-                </AppText>
-                <AppText variant="body">
-                  {CurrencyFormatter.format(usage.spent, budget.currencyCode, {
+                </Column>
+              </Row>
+              <Column align="flex-end" justify="center">
+                <Text variant="xl" weight="bold">
+                  {CurrencyFormatter.format(budget.amount, budget.currencyCode, {
                     maximumFractionDigits: 0,
                   })}
-                </AppText>
-              </Stack>
-              <Stack gap="xs" align="flex-end">
-                <AppText variant="caption" color="secondary">
-                  {isOver ? 'Over Limit' : 'Left'}
-                </AppText>
-                <Inline align="center" gap="xs">
-                  {isOver && <AppIcon name="alert" size={14} color={theme.error} />}
-                  <AppText variant="body" color={isOver ? 'error' : 'success'}>
-                    {CurrencyFormatter.format(Math.abs(usage.remaining), budget.currencyCode, {
-                      maximumFractionDigits: 0,
-                    })}
-                  </AppText>
-                </Inline>
-              </Stack>
-            </Inline>
+                </Text>
+              </Column>
+            </Row>
 
-            <Box height={6} background="border" borderRadius="sm" overflow="hidden">
-              <Box height="100%" width={`${progress}%`} background={stripColor} />
+            <Box
+              unsafe_backgroundRaw={withOpacity('#000', Opacity.ghost)}
+              padding="md"
+              borderRadius="md"
+            >
+              <Column gap="md">
+                <Row justify="space-between" align="center">
+                  <Column gap="xs">
+                    <Text variant="xs" color="secondary" weight="bold" opacity={0.6}>
+                      SPENT
+                    </Text>
+                    <Text variant="base" weight="bold">
+                      {CurrencyFormatter.format(usage.spent, budget.currencyCode, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </Text>
+                  </Column>
+                  <Column gap="xs" align="flex-end">
+                    <Text variant="xs" color="secondary" weight="bold" opacity={0.6}>
+                      {isOver ? 'OVER LIMIT' : 'LEFT'}
+                    </Text>
+                    <Row align="center" gap="xs">
+                      {isOver && <AppIcon name="alert" size={14} color={theme.error} />}
+                      <Text variant="base" weight="bold" color={isOver ? 'error' : 'success'}>
+                        {CurrencyFormatter.format(Math.abs(usage.remaining), budget.currencyCode, {
+                          maximumFractionDigits: 0,
+                        })}
+                      </Text>
+                    </Row>
+                  </Column>
+                </Row>
+
+                <Box height={6} background="surfaceSecondary" borderRadius="full" overflow="hidden">
+                  <Box
+                    height="100%"
+                    width={`${progress}%`}
+                    background={stripColor}
+                    borderRadius="full"
+                  />
+                </Box>
+              </Column>
             </Box>
-          </Stack>
-        </AppCard>
+          </Column>
+        </AppSurface>
       </TouchableOpacity>
     );
   };
@@ -123,69 +150,17 @@ export function BudgetListView() {
       renderItem={renderItem}
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
-        <View style={styles.emptyState}>
+        <Column flex={1} align="center" justify="center" marginTop="xxxl">
           <AppIcon name="pieChart" size={64} color={theme.border} />
-          <AppText variant="subheading" color="secondary" style={{ marginTop: Spacing.md }}>
+          <Text variant="subheading" color="secondary" marginTop="md">
             No budgets yet
-          </AppText>
-        </View>
+          </Text>
+        </Column>
       }
-      contentContainerStyle={styles.listContainer}
+      contentContainerStyle={{
+        paddingHorizontal: Spacing.lg,
+        paddingBottom: Spacing.xxxl,
+      }}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  cardContainer: {
-    marginBottom: Spacing.md,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  cardHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: Shape.radius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-  },
-  statColumn: {
-    justifyContent: 'center',
-  },
-  remainingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.xs,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: Shape.radius.sm,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-  },
-  listContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: Spacing.xxxl,
-  },
-});

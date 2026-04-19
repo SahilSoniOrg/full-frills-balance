@@ -1,113 +1,73 @@
-import { AppIcon, IconName } from '@/src/components/core/AppIcon';
+import { IconName } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
-import { Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
-import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
-import { StyleSheet, TextInput, type TextInputProps, View, ViewStyle } from 'react-native';
+import { Spacing } from '@/src/constants/design-tokens';
+import { Box, BoxBaseProps } from '@/src/design-system/Box';
+import { extractBoxProps } from '@/src/design-system/utils';
+import React, { forwardRef } from 'react';
+import { StyleProp, StyleSheet, TextInput, type TextInputProps, ViewStyle } from 'react-native';
+import { AppInputField } from './AppInputField';
 
-export type AppInputProps = TextInputProps & {
+export type AppInputBaseProps = BoxBaseProps & {
   label?: string;
   error?: string;
-  defaultValue?: string;
   variant?: 'default' | 'hero' | 'minimal';
-  containerStyle?: ViewStyle;
   leftIcon?: IconName;
+  inputStyle?: TextInputProps['style'];
+  /** @deprecated use structural Box props */
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
-export function AppInput({
-  label,
-  error,
-  variant = 'default',
-  containerStyle,
-  style,
-  leftIcon,
-  ...props
-}: AppInputProps) {
-  const { theme, tokens, fonts } = useTheme();
+export type AppInputProps = AppInputBaseProps & TextInputProps;
+
+export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref) => {
+  const {
+    label,
+    error,
+    variant,
+    leftIcon,
+    inputStyle,
+    containerStyle,
+    style: textInputStyle,
+    ...propsWithoutInputProps
+  } = initialProps;
+
+  const { boxProps, restProps } = extractBoxProps(propsWithoutInputProps);
+  const fieldProps = restProps;
+
+  const containerProps = boxProps;
 
   return (
-    <View style={[styles.container, containerStyle]}>
+    <Box width="100%" style={containerStyle} {...containerProps}>
       {label && (
         <AppText variant="body" weight="medium" style={styles.label}>
           {label}
         </AppText>
       )}
-      <View
-        style={[
-          styles.inputContainer,
-          variant === 'hero' && styles.heroInputContainer,
-          variant === 'minimal' && styles.minimalInputContainer,
-          props.multiline && { alignItems: 'flex-start' },
-          {
-            borderColor: error ? theme.error : variant === 'minimal' ? 'transparent' : theme.border,
-            backgroundColor: variant === 'minimal' ? 'transparent' : theme.surface,
-          },
-        ]}
-      >
-        {leftIcon && (
-          <View style={styles.iconContainer}>
-            <AppIcon name={leftIcon} size={20} color={tokens.input.placeholder} />
-          </View>
-        )}
-        <TextInput
-          style={[
-            styles.input,
-            variant === 'hero' && [styles.heroInput, { fontFamily: fonts.bold }],
-            { color: theme.text },
-            style,
-          ]}
-          placeholderTextColor={tokens.input.placeholder}
-          {...props}
-        />
-      </View>
+
+      <AppInputField
+        ref={ref}
+        variant={variant}
+        leftIcon={leftIcon}
+        style={textInputStyle}
+        inputStyle={inputStyle}
+        borderColor={error ? 'error' : undefined}
+        {...fieldProps}
+      />
+
       {error && (
         <AppText variant="caption" color="error" style={styles.error}>
           {error}
         </AppText>
       )}
-    </View>
+    </Box>
   );
-}
+});
+
+AppInput.displayName = 'AppInput';
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-  },
   label: {
     marginBottom: Spacing.xs,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: Shape.radius.r3,
-    paddingHorizontal: Spacing.md,
-    minHeight: Size.inputMd,
-  },
-  heroInputContainer: {
-    borderWidth: 0,
-    minHeight: Size.xxl * 2.5,
-    justifyContent: 'center',
-  },
-  minimalInputContainer: {
-    borderWidth: 0,
-    minHeight: 0,
-    paddingHorizontal: 0,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    fontSize: Typography.sizes.base,
-    minHeight: Size.inputMd,
-  },
-  heroInput: {
-    fontSize: Typography.sizes.hero,
-    // dynamic font
-    textAlign: 'center',
-    minHeight: Size.xxl * 2.5,
-  },
-  iconContainer: {
-    marginRight: Spacing.sm,
   },
   error: {
     marginTop: Spacing.xs,

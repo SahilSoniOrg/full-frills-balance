@@ -80,7 +80,7 @@ export const JournalLineItem = React.memo(
                 </AppText>
                 <AppInput
                   value={line.amount}
-                  onChangeText={value => onUpdate('amount', value)}
+                  onChangeText={(value: string) => onUpdate('amount', value)}
                   placeholder="0.00"
                   keyboardType="numeric"
                   style={styles.amountInput}
@@ -148,7 +148,7 @@ export const JournalLineItem = React.memo(
           <View style={{ flex: 1 }}>
             <AppInput
               value={line.notes}
-              onChangeText={value => onUpdate('notes', value)}
+              onChangeText={(value: string) => onUpdate('notes', value)}
               placeholder={AppConfig.strings.advancedEntry.notesPlaceholder}
               containerStyle={{ height: 44 }}
               style={{ fontSize: 14 }}
@@ -186,7 +186,7 @@ export const JournalLineItem = React.memo(
                 </AppText>
                 <AppInput
                   value={line.exchangeRate || ''}
-                  onChangeText={value => onUpdate('exchangeRate', value)}
+                  onChangeText={(value: string) => onUpdate('exchangeRate', value)}
                   placeholder="1.0"
                   keyboardType="decimal-pad"
                   variant="minimal"

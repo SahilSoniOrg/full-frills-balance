@@ -1,9 +1,10 @@
-import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity, Shape } from '@/src/constants';
-import { Box } from '@/src/design-system';
+import { Box } from '@/src/design-system/Box';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { AppIcon, type IconName } from './AppIcon';
+import { AppText } from './AppText';
 
 export type SegmentedOption = {
   id: string;

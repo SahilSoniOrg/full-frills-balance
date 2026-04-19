@@ -1,10 +1,10 @@
-import { Box, BoxProps } from './Box'
-import { DimensionValue, StyleSheet } from 'react-native'
+import { Box, BoxViewProps } from './Box';
+import { DimensionValue, StyleSheet } from 'react-native';
 
-export type SeparatorProps = BoxProps & {
-  vertical?: boolean
-  space?: DimensionValue
-}
+export type SeparatorProps = BoxViewProps & {
+  vertical?: boolean;
+  space?: DimensionValue;
+};
 
 /**
  * Separator - Themed divider component
@@ -25,11 +25,11 @@ export const Separator = ({
       style={[styles.separator, style]}
       {...props}
     />
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   separator: {
     alignSelf: 'stretch',
   },
-})
+});

@@ -3,6 +3,7 @@ import { useAccount } from '@/src/features/accounts';
 import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalDisplayType } from '@/src/types/domain';
+import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
 import { confirm } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -59,6 +60,8 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
           isAutoPost: false,
           fromAccount: null,
           toAccount: null,
+          fromAccountColorKey: 'textSecondary',
+          toAccountColorKey: 'primary',
           history: [],
           rawAmount: pAmount ? parseFloat(pAmount) : 0,
           rawName: pDesc,
@@ -199,6 +202,10 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
       // Account Flow
       fromAccount,
       toAccount,
+      fromAccountColorKey: fromAccount
+        ? getAccountTypeColorKey(fromAccount.accountType)
+        : 'textSecondary',
+      toAccountColorKey: toAccount ? getAccountTypeColorKey(toAccount.accountType) : typeColorKey,
 
       // History
       history,

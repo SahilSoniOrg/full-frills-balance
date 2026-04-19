@@ -1,9 +1,9 @@
-import React from 'react';
-import { TouchableOpacity } from 'react-native';
 import { AppIcon } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
-import { Inline, Stack, Text } from '@/src/design-system';
+import { Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import React from 'react';
+import { TouchableOpacity } from 'react-native';
 
 interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
@@ -23,13 +23,13 @@ export const SafeToSpendHeader = ({
   const strings = AppConfig.strings.dashboard;
 
   return (
-    <Stack gap="sm">
-      <Inline gap="xs" alignItems="center" justifyContent="space-between">
+    <Column gap="xs">
+      <Row align="center" justify="space-between">
         <Text
           variant="xs"
           weight="bold"
           color={isOverCommitted ? 'error' : 'secondary'}
-          style={{ letterSpacing: 1.5, textTransform: 'uppercase' }}
+          style={{ letterSpacing: 1.2, textTransform: 'uppercase' }}
         >
           {isOverCommitted ? strings.shortfall : strings.safeToSpendTitle}
         </Text>
@@ -45,7 +45,7 @@ export const SafeToSpendHeader = ({
             color={isOverCommitted ? theme.error : theme.textSecondary}
           />
         </TouchableOpacity>
-      </Inline>
+      </Row>
 
       <Text
         variant="hero"
@@ -55,13 +55,13 @@ export const SafeToSpendHeader = ({
         adjustsFontSizeToFit
         minimumFontScale={0.55}
         ellipsizeMode="tail"
-        style={{ width: '100%' }}
       >
         {displayValue}
       </Text>
-      <Text variant="xs" color={isOverCommitted ? 'error' : 'secondary'}>
+
+      <Text variant="xs" color={isOverCommitted ? 'error' : 'secondary'} opacity={0.8}>
         {isOverCommitted ? strings.neededForObligations : strings.afterObligations}
       </Text>
-    </Stack>
+    </Column>
   );
 };

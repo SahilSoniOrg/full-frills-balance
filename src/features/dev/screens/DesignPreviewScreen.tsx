@@ -17,16 +17,16 @@
  * ========================================
  */
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
-import { AppButton, AppCard, AppText, Badge, AppIcon } from '@/src/components/core';
+import { AppButton, AppCard, AppIcon, AppInputField, AppText, Badge } from '@/src/components/core';
 import { ListRow } from '@/src/components/core/ListRow';
 import { Shape, Spacing, ThemeMode } from '@/src/constants';
 import { ThemeOverride } from '@/src/contexts/UIContext';
+import { Box, Inline, Inset, Page, Separator, Stack } from '@/src/design-system';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
-import { Switch, StyleSheet } from 'react-native';
-import { Box, Inline, Inset, Page, Stack, Separator } from '@/src/design-system';
+import { Switch } from 'react-native';
 
 // Preview-only helper - demonstrates patterns, does not create new components
 // This is the ONLY preview-only component allowed in this file
@@ -227,50 +227,64 @@ export default function DesignPreviewScreen() {
               </Stack>
             </AppCard>
 
-            {/* Separators Section */}
+            {/* AppInput & Fields Section */}
             <AppCard elevation="sm" padding="lg">
               <Stack space="md">
-                <AppText variant="heading">Separators</AppText>
+                <AppText variant="heading">Inputs & Fields</AppText>
                 <Separator />
 
-                <AppText variant="body">Horizontal:</AppText>
-                <Box background="surfaceSecondary" padding="sm" borderRadius="md">
-                  <Separator space={1} />
-                </Box>
-                <Box background="surfaceSecondary" padding="sm" borderRadius="md">
-                  <Separator space={2} />
-                </Box>
+                <Stack space="lg">
+                  <Box>
+                    <Box marginBottom="xs">
+                      <AppText variant="caption" color="secondary">
+                        Default Field
+                      </AppText>
+                    </Box>
+                    <AppInputField placeholder="Search..." leftIcon="search" />
+                  </Box>
 
-                <AppText variant="body">Vertical:</AppText>
-                <Box background="surfaceSecondary" padding="md" borderRadius="md">
-                  <Inline space="sm" alignItems="center">
-                    <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
-                    <Separator vertical space={1} height={Spacing.xl} />
-                    <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
-                    <Separator vertical space={2} height={Spacing.xl} />
-                    <TokenBox size={Spacing.lg} radius={Shape.radius.sm} />
-                  </Inline>
-                </Box>
+                  <Box>
+                    <Box marginBottom="xs">
+                      <AppText variant="caption" color="secondary">
+                        Hero Variant
+                      </AppText>
+                    </Box>
+                    <AppInputField variant="hero" placeholder="0" keyboardType="numeric" />
+                  </Box>
+
+                  <Box>
+                    <Box marginBottom="xs">
+                      <AppText variant="caption" color="secondary">
+                        Minimal Variant
+                      </AppText>
+                    </Box>
+                    <AppInputField variant="minimal" placeholder="Add note..." />
+                  </Box>
+                </Stack>
               </Stack>
             </AppCard>
 
-            {/* Spacing Reference */}
+            {/* Performance Stress Test Section */}
             <AppCard elevation="sm" padding="lg">
               <Stack space="md">
-                <AppText variant="heading">Spacing Scale</AppText>
+                <AppText variant="heading">Performance Stress Test</AppText>
+                <AppText variant="caption" color="secondary">
+                  Rendering 100 Box components with prop-drainage enabled.
+                </AppText>
                 <Separator />
 
-                <AppText variant="body">4px grid system:</AppText>
-                {Object.entries(Spacing)
-                  .filter(([key]) => typeof Spacing[key as keyof typeof Spacing] === 'number')
-                  .map(([key, value]) => (
-                    <Inline key={key} space="md" alignItems="center">
-                      <AppText variant="caption" color="secondary" style={styles.spacingLabel}>
-                        {key}: {value}px
-                      </AppText>
-                      <TokenBox size={value as number} radius={Shape.radius.sm} />
-                    </Inline>
+                <Inline flexWrap="wrap" gap={4}>
+                  {Array.from({ length: 100 }).map((_, i) => (
+                    <Box
+                      key={i}
+                      width={16}
+                      height={16}
+                      background={i % 2 === 0 ? 'primary' : 'surfaceSecondary'}
+                      borderRadius={i % 5 === 0 ? 'full' : 'sm'}
+                      opacity={0.8}
+                    />
                   ))}
+                </Inline>
               </Stack>
             </AppCard>
 
@@ -295,9 +309,3 @@ export default function DesignPreviewScreen() {
     </ThemeOverride>
   );
 }
-
-const styles = StyleSheet.create({
-  spacingLabel: {
-    width: 80,
-  },
-});

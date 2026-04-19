@@ -1,9 +1,9 @@
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { AppText } from '@/src/components/core';
-import { Box, Stack } from '@/src/design-system';
+import { AppConfig } from '@/src/constants';
+import { Box, Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppConfig, Spacing } from '@/src/constants';
+import React from 'react';
+import { TouchableOpacity } from 'react-native';
 
 interface SafeToSpendBreakdownBarProps {
   effectiveTotal: number;
@@ -31,108 +31,79 @@ export const SafeToSpendBreakdownBar = ({
 
   if (effectiveTotal <= 0) {
     return (
-      <View style={styles.emptyState}>
+      <Box paddingVertical="sm" alignItems="center">
         <AppText variant="caption" color="secondary">
           {AppConfig.strings.dashboard.noDataForBreakdown}
         </AppText>
-      </View>
+      </Box>
     );
   }
 
   return (
-    <Stack gap="md">
+    <Column gap="md">
       <Box
-        background="surfaceSecondary"
-        height={12}
+        background="pureInverse"
+        backgroundOpacity="active"
+        height={10}
         borderRadius="full"
         flexDirection="row"
         overflow="hidden"
         marginBottom="md"
       >
         {committedTotal > 0 && (
-          <View
-            style={[
-              styles.progressSegment,
-              { flex: committedTotal, backgroundColor: theme.warning },
-            ]}
-          />
+          <Box height="100%" flex={committedTotal} unsafe_backgroundRaw={theme.warning} />
         )}
         {committedLiabilities > 0 && (
-          <View
-            style={[
-              styles.progressSegment,
-              { flex: committedLiabilities, backgroundColor: theme.error },
-            ]}
-          />
+          <Box height="100%" flex={committedLiabilities} unsafe_backgroundRaw={theme.error} />
         )}
         {safeToSpend > 0 && (
-          <View
-            style={[styles.progressSegment, { flex: safeToSpend, backgroundColor: theme.primary }]}
-          />
+          <Box height="100%" flex={safeToSpend} unsafe_backgroundRaw={theme.primary} />
         )}
       </Box>
 
-      <View style={styles.legendContainer}>
-        <TouchableOpacity style={styles.legendItem} onPress={() => onLegendPress('safe')}>
-          <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
-          <View style={{ flexDirection: 'row', gap: 4 }}>
-            <AppText variant="caption" color="secondary">
-              {labels.safePrefix}
-            </AppText>
-            <AppText variant="caption" weight="bold" color="primary">
-              {displaySafe}
-            </AppText>
-          </View>
+      <Row gap="sm" wrap="wrap" justify="space-between">
+        <TouchableOpacity onPress={() => onLegendPress('safe')}>
+          <Row align="center" gap="xs">
+            <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.primary} />
+            <Row gap="xs">
+              <AppText variant="caption" color="secondary">
+                {labels.safePrefix}
+              </AppText>
+              <AppText variant="caption" weight="bold" color="primary">
+                {displaySafe}
+              </AppText>
+            </Row>
+          </Row>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.legendItem} onPress={() => onLegendPress('committed')}>
-          <View style={[styles.legendDot, { backgroundColor: theme.warning }]} />
-          <View style={{ flexDirection: 'row', gap: 4 }}>
-            <AppText variant="caption" color="secondary">
-              {labels.committedPrefix}
-            </AppText>
-            <AppText variant="caption" weight="bold" color="warning">
-              {displayCommitted}
-            </AppText>
-          </View>
+
+        <TouchableOpacity onPress={() => onLegendPress('committed')}>
+          <Row align="center" gap="xs">
+            <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.warning} />
+            <Row gap="xs">
+              <AppText variant="caption" color="secondary">
+                {labels.committedPrefix}
+              </AppText>
+              <AppText variant="caption" weight="bold" color="warning">
+                {displayCommitted}
+              </AppText>
+            </Row>
+          </Row>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.legendItem} onPress={() => onLegendPress('debts')}>
-          <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
-          <View style={{ flexDirection: 'row', gap: 4 }}>
-            <AppText variant="caption" color="secondary">
-              {labels.debtsPrefix}
-            </AppText>
-            <AppText variant="caption" weight="bold" color="error">
-              {displayDebts}
-            </AppText>
-          </View>
+
+        <TouchableOpacity onPress={() => onLegendPress('debts')}>
+          <Row align="center" gap="xs">
+            <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.error} />
+            <Row gap="xs">
+              <AppText variant="caption" color="secondary">
+                {labels.debtsPrefix}
+              </AppText>
+              <AppText variant="caption" weight="bold" color="error">
+                {displayDebts}
+              </AppText>
+            </Row>
+          </Row>
         </TouchableOpacity>
-      </View>
-    </Stack>
+      </Row>
+    </Column>
   );
 };
-
-const styles = StyleSheet.create({
-  progressSegment: {
-    height: '100%',
-  },
-  legendContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: Spacing.sm,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  emptyState: {
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-  },
-});

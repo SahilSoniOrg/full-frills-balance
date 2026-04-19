@@ -1,39 +1,46 @@
-import { SpacingKey } from '@/src/constants/design-tokens'
-import React, { forwardRef } from 'react'
-import { View } from 'react-native'
-import { Box, type BoxProps } from './Box'
+import { SpacingKey } from '@/src/constants/design-tokens';
+import React, { forwardRef } from 'react';
+import { Box, type BoxBaseProps } from './Box';
+import { extractBoxProps } from './utils';
+import { View } from 'react-native';
 
-export type InlineProps = Omit<BoxProps, 'flexDirection'> & {
-  space?: SpacingKey | number
-  align?: BoxProps['alignItems']
-  justify?: BoxProps['justifyContent']
-  wrap?: boolean
-}
+type InlineSpacingProps =
+  | { space?: SpacingKey | number; gap?: never }
+  | { gap?: SpacingKey | number; space?: never };
 
-export const Inline = forwardRef<View, InlineProps>((
-  {
-    space,
-    align,
-    justify,
-    wrap = false,
-    children,
-    ...props
-  },
-  ref
-) => {
+export type InlineProps = Omit<BoxBaseProps, 'flexDirection' | 'gap'> &
+  InlineSpacingProps & {
+    align?: BoxBaseProps['alignItems'];
+    justify?: BoxBaseProps['justifyContent'];
+    wrap?: boolean | BoxBaseProps['flexWrap'];
+    children?: React.ReactNode;
+  };
+
+const InlineInner = forwardRef<View, InlineProps>((props, ref) => {
+  const { boxProps, restProps } = extractBoxProps(props);
+  const { gap, ...shellProps } = boxProps;
+  const spacing = props.space ?? props.gap;
+
   return (
     <Box
       ref={ref}
+      {...restProps}
+      {...shellProps}
       flexDirection="row"
-      gap={space}
-      alignItems={align}
-      justifyContent={justify}
-      flexWrap={wrap ? 'wrap' : undefined}
-      {...props}
+      {...(spacing !== undefined ? { gap: spacing } : {})}
+      {...(props.align !== undefined ? { alignItems: props.align } : {})}
+      {...(props.justify !== undefined ? { justifyContent: props.justify } : {})}
+      {...(props.wrap !== undefined
+        ? { flexWrap: props.wrap === true ? 'wrap' : props.wrap === false ? 'nowrap' : props.wrap }
+        : {})}
     >
-      {children}
+      {props.children}
     </Box>
-  )
-})
+  );
+});
 
-Inline.displayName = 'Inline'
+InlineInner.displayName = 'Inline';
+
+export const Inline = InlineInner;
+
+Inline.displayName = 'Inline';

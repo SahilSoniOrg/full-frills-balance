@@ -1,10 +1,11 @@
-import { AppCard, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
+import { AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
+import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentHistoryCardProps {
   journalId: string;
@@ -54,12 +55,13 @@ export const PlannedPaymentHistoryCard = ({
   const formattedAmount = CurrencyFormatter.format(journalAmount, currencyCode);
 
   const content = (
-    <View style={styles.cardContent}>
-      <View style={styles.headerRow}>
-        {/* Date is the primary identifier for history rows */}
-        <AppText variant="subheading" weight="bold" style={styles.dateTitle} numberOfLines={1}>
-          {formattedDate}
-        </AppText>
+    <Column padding="lg">
+      <Row justify="space-between" align="center" marginBottom="md">
+        <Column flex={1} marginRight="sm">
+          <Text variant="subheading" weight="bold" numberOfLines={1}>
+            {formattedDate}
+          </Text>
+        </Column>
 
         <Badge
           variant="default"
@@ -74,78 +76,82 @@ export const PlannedPaymentHistoryCard = ({
         >
           {presentation.label}
         </Badge>
-      </View>
+      </Row>
 
-      <View style={styles.detailsSection}>
-        <View style={styles.row}>
-          <View style={styles.detailItem}>
-            <AppText variant="caption" color="secondary" style={styles.label}>
+      <Box unsafe_backgroundRaw={withOpacity('#000', Opacity.ghost)} padding="md" borderRadius="md">
+        <Row gap="md">
+          <Column flex={1}>
+            <Text variant="xs" color="secondary" marginBottom="xs">
               AMOUNT
-            </AppText>
-            <View style={styles.amountContainer}>
-              <AppText
-                variant="body"
+            </Text>
+            <Row align="center" gap="xs">
+              <Text
+                variant="base"
                 weight="bold"
                 style={{ color: theme[presentation.typeColor as keyof typeof theme] as string }}
               >
                 {formattedAmount}
-              </AppText>
+              </Text>
               {isAmountDeviated && (
-                <View
-                  style={[
-                    styles.badgeContainer,
-                    { backgroundColor: withOpacity(theme.warning, Opacity.soft) },
-                  ]}
+                <Box
+                  unsafe_backgroundRaw={withOpacity(theme.warning, Opacity.soft)}
+                  padding={2}
+                  borderRadius="full"
                 >
                   <AppIcon name="error" size={12} color={theme.warning} />
-                </View>
+                </Box>
               )}
-            </View>
+            </Row>
             {isAmountDeviated && (
-              <AppText variant="caption" color="warning" style={styles.deviationText}>
+              <Text
+                variant="xs"
+                color="warning"
+                opacity={0.8}
+                marginTop={2}
+                style={{ fontSize: 10 }}
+              >
                 Originally {CurrencyFormatter.format(plannedAmount, currencyCode)}
-              </AppText>
+              </Text>
             )}
-          </View>
+          </Column>
 
-          <View style={styles.detailItem}>
-            <AppText variant="caption" color="secondary" style={styles.label}>
+          <Column flex={1}>
+            <Text variant="xs" color="secondary" marginBottom="xs">
               TITLE
-            </AppText>
-            <View style={styles.titleContainer}>
-              <AppText variant="body" numberOfLines={1}>
+            </Text>
+            <Row align="center" style={{ flexShrink: 1 }}>
+              <Text variant="base" numberOfLines={1} style={{ flexShrink: 1 }}>
                 {journalTitle || 'No Title'}
-              </AppText>
+              </Text>
               {isTitleDeviated && (
-                <View
-                  style={[
-                    styles.badgeContainer,
-                    {
-                      backgroundColor: withOpacity(theme.primary, Opacity.soft),
-                      marginLeft: Spacing.xs,
-                    },
-                  ]}
+                <Box
+                  unsafe_backgroundRaw={withOpacity(theme.primary, Opacity.soft)}
+                  marginLeft="xs"
+                  padding={2}
+                  borderRadius="full"
                 >
                   <AppIcon name="edit" size={12} color={theme.primary} />
-                </View>
+                </Box>
               )}
-            </View>
-          </View>
-        </View>
-      </View>
-    </View>
+            </Row>
+          </Column>
+        </Row>
+      </Box>
+    </Column>
   );
 
   return (
-    <AppCard
+    <AppSurface
       elevation="sm"
       padding="none"
       radius="r3"
-      style={[
-        styles.container,
-        { backgroundColor: theme.surface },
-        isOverdue && { borderWidth: 1, borderColor: theme.error },
-      ]}
+      background="surface"
+      borderWidth={isOverdue ? 1 : undefined}
+      borderColor={isOverdue ? 'error' : undefined}
+      style={{
+        marginBottom: Spacing.md,
+        overflow: 'hidden',
+      }}
     >
       {onPress ? (
         <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
@@ -154,62 +160,6 @@ export const PlannedPaymentHistoryCard = ({
       ) : (
         content
       )}
-    </AppCard>
+    </AppSurface>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.md,
-    overflow: 'hidden',
-  },
-  cardContent: {
-    padding: Spacing.lg,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  dateTitle: {
-    fontSize: Typography.sizes.lg,
-    flex: 1,
-    marginRight: Spacing.sm,
-  },
-  detailsSection: {
-    backgroundColor: withOpacity('#000', Opacity.ghost),
-    padding: Spacing.md,
-    borderRadius: Shape.radius.md,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  detailItem: {
-    flex: 1,
-  },
-  label: {
-    marginBottom: Spacing.xs,
-    fontSize: Typography.sizes.xs,
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  badgeContainer: {
-    padding: 2,
-    borderRadius: Shape.radius.full,
-  },
-  deviationText: {
-    fontSize: 10,
-    marginTop: 2,
-    opacity: Opacity.heavy,
-  },
-});

@@ -105,6 +105,7 @@ import { withOpacity } from '@/src/utils/color-math';
 // === SPACING SCALE ===
 // Based on 4px grid system for consistency
 export const Spacing = {
+  none: 0, // No spacing
   xs: 4, // 0.25rem
   sm: 8, // 0.5rem
   md: 12, // 0.75rem

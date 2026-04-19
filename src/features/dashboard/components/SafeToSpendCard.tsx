@@ -1,10 +1,11 @@
-import { Spacing } from '@/src/constants';
-import { Box, Separator, Stack } from '@/src/design-system';
+import { AppSurface } from '@/src/components/core';
+import { Column, Separator } from '@/src/design-system';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
+import React from 'react';
+import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendChart } from './SafeToSpendChart';
 import { SafeToSpendHeader } from './SafeToSpendHeader';
-import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 export interface SafeToSpendCardProps extends SafeToSpendResult {
   isLoading?: boolean;
@@ -12,15 +13,6 @@ export interface SafeToSpendCardProps extends SafeToSpendResult {
   onLegendPress: (i: 'safe' | 'committed' | 'debts' | null) => void;
   viewModel: SafeToSpendViewModel;
   isPrivacyMode?: boolean;
-  uiState?: {
-    isInfoVisible?: boolean;
-    setInfoVisible?: (v: boolean) => void;
-    expandedSection?: 'assets' | 'income' | 'committed' | 'debts' | null;
-    setExpandedSection?: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => void;
-    selectedLegendItem?: 'safe' | 'committed' | 'debts' | null;
-    setSelectedLegendItem?: (i: 'safe' | 'committed' | 'debts' | null) => void;
-    isPrivacyMode?: boolean;
-  };
 }
 
 export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
@@ -38,8 +30,8 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
   } = viewModel;
 
   return (
-    <Box paddingVertical="xs">
-      <Stack gap="lg">
+    <AppSurface elevation="none" paddingHorizontal="none" paddingVertical="sm">
+      <Column gap="lg">
         <SafeToSpendHeader
           isOverCommitted={isOverCommitted}
           isPositiveSafeToSpend={isPositiveSafeToSpend}
@@ -68,10 +60,9 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
           isPrivacyMode={isPrivacyMode || false}
           formatValue={formatValue}
         />
-        <Box style={{ marginBottom: Spacing.md }}>
-          <Separator />
-        </Box>
-      </Stack>
-    </Box>
+
+        <Separator />
+      </Column>
+    </AppSurface>
   );
 };

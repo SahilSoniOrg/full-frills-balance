@@ -1,7 +1,7 @@
 import { AppCard } from '@/src/components/core/AppCard';
 import { render, screen } from '@/src/utils/test-utils';
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 describe('AppCard', () => {
   it('renders correctly with children', () => {
@@ -47,12 +47,13 @@ describe('AppCard', () => {
 
   it('renders with custom padding', () => {
     render(
-      <AppCard padding="lg">
+      <AppCard testID="custom-card" padding="md">
         <View testID="test-child" />
       </AppCard>,
     );
 
-    expect(screen.getByTestId('test-child')).toBeTruthy();
+    const card = screen.getByTestId('custom-card');
+    expect(StyleSheet.flatten(card.props.style).padding).toBe(16);
   });
 
   it('renders with no padding when specified', () => {
@@ -63,6 +64,17 @@ describe('AppCard', () => {
     );
 
     expect(screen.getByTestId('test-child')).toBeTruthy();
+  });
+
+  it('allows numeric padding to pass through as raw Box padding', () => {
+    render(
+      <AppCard testID="custom-card" padding={0}>
+        <View testID="test-child" />
+      </AppCard>,
+    );
+
+    const card = screen.getByTestId('custom-card');
+    expect(StyleSheet.flatten(card.props.style).padding).toBe(0);
   });
 
   it('renders with custom border radius', () => {
@@ -103,5 +115,20 @@ describe('AppCard', () => {
     );
 
     expect(screen.getByTestId('custom-card')).toBeTruthy();
+  });
+
+  it('applies custom styles to the card itself', () => {
+    render(
+      <AppCard testID="custom-card" style={{ opacity: 0.5, transform: [{ scale: 0.95 }] }}>
+        <View testID="test-child" />
+      </AppCard>,
+    );
+
+    const card = screen.getByTestId('custom-card');
+    expect(card.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ opacity: 0.5, transform: [{ scale: 0.95 }] }),
+      ]),
+    );
   });
 });

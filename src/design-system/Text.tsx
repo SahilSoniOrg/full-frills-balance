@@ -15,6 +15,7 @@ export type TextProps = RNTextProps & {
   marginTop?: SpacingKey | number;
   marginBottom?: SpacingKey | number;
   marginHorizontal?: SpacingKey | number;
+  opacity?: number;
 };
 
 export function Text({
@@ -26,6 +27,7 @@ export function Text({
   marginTop,
   marginBottom,
   marginHorizontal,
+  opacity,
   style,
   ...props
 }: TextProps) {
@@ -68,9 +70,10 @@ export function Text({
         textAlign: align,
         fontFamily: resolvedFontFamily,
         fontStyle: (italic ? 'italic' : 'normal') as TextStyle['fontStyle'],
-        marginTop: resolveSpacing(marginTop),
-        marginBottom: resolveSpacing(marginBottom),
-        marginHorizontal: resolveSpacing(marginHorizontal),
+        marginTop: resolveSpacing(marginTop) as any,
+        marginBottom: resolveSpacing(marginBottom) as any,
+        marginHorizontal: resolveSpacing(marginHorizontal) as any,
+        opacity,
       },
       style,
     ];
@@ -83,6 +86,7 @@ export function Text({
     marginTop,
     marginBottom,
     marginHorizontal,
+    opacity,
     getVariantColors,
     fonts,
     style,
