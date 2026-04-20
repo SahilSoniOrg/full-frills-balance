@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
-import Account from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
@@ -17,6 +17,7 @@ import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { EnrichedJournal, JournalEntryLine } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
+import { journalPresenter } from '@/src/utils/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -614,6 +615,14 @@ export class JournalService {
           const jTxs = transactionsByJournal.get(j.id) || [];
           const journalAccountIds = Array.from(new Set(jTxs.map(t => t.accountId)));
 
+          const accountTypesMap = new Map<string, AccountType>();
+          journalAccountIds.forEach(id => {
+            const acc = accountMap.get(id);
+            if (acc) {
+              accountTypesMap.set(id, acc.accountType as AccountType);
+            }
+          });
+
           const enrichedAccounts = journalAccountIds.map(id => {
             const acc = accountMap.get(id);
 
@@ -631,6 +640,15 @@ export class JournalService {
             };
           });
 
+          // Recalculate displayType, semanticType, and semanticLabel using multi-leg logic
+          const { source, destination } = journalPresenter.getSourceAndDestTypes(
+            jTxs,
+            accountTypesMap,
+          );
+          const semanticType = journalPresenter.getSemanticType(source, destination);
+          const displayType = journalPresenter.getJournalDisplayType(jTxs, accountTypesMap);
+          const semanticLabel = journalPresenter.getJournalSemanticLabel(jTxs, accountTypesMap);
+
           return {
             id: j.id,
             journalDate: j.journalDate,
@@ -639,7 +657,9 @@ export class JournalService {
             status: j.status,
             totalAmount: j.totalAmount || 0,
             transactionCount: j.transactionCount || 0,
-            displayType: j.displayType as string,
+            displayType,
+            semanticType,
+            semanticLabel,
             accounts: enrichedAccounts,
             plannedPaymentId: j.plannedPaymentId,
           } as EnrichedJournal;
