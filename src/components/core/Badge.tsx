@@ -55,7 +55,7 @@ export function Badge({
       iconSize: currentIconSize,
       finalTextColor: textColor,
     };
-  }, [getVariantColors, fonts, variant, size, solid, customBg, customText, style]);
+  }, [getVariantColors, fonts, variant, size, solid, customBg, customText, style, theme]);
 
   return (
     <View style={badgeStyle} {...props}>
