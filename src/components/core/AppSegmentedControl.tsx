@@ -1,5 +1,6 @@
 import { Opacity, Shape } from '@/src/constants';
 import { Box } from '@/src/design-system/Box';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -42,6 +43,13 @@ export const AppSegmentedControl = ({
   inactiveTextColor,
 }: AppSegmentedControlProps) => {
   const { theme } = useTheme();
+  const resolvedTrackColor = resolveThemeColor(theme, trackColor || theme.surfaceSecondary);
+  const resolvedPillColor = resolveThemeColor(theme, pillColor || theme.primary);
+  const resolvedActiveTextColor = resolveThemeColor(theme, activeTextColor || theme.onPrimary);
+  const resolvedInactiveTextColor = resolveThemeColor(
+    theme,
+    inactiveTextColor || theme.textSecondary,
+  );
   const [containerWidth, setContainerWidth] = useState(0);
   const isSmall = size === 'sm';
   const isLarge = size === 'lg';
@@ -92,7 +100,7 @@ export const AppSegmentedControl = ({
         isSmall && styles.containerSm,
         isLarge && styles.containerLg,
         { padding: pillInset },
-        { backgroundColor: trackColor || theme.surfaceSecondary },
+        { backgroundColor: resolvedTrackColor },
         flex ? { width: '100%' } : { alignSelf: 'flex-start' },
       ]}
     >
@@ -102,7 +110,7 @@ export const AppSegmentedControl = ({
             styles.pill,
             {
               width: itemWidth,
-              backgroundColor: pillColor || theme.primary,
+              backgroundColor: resolvedPillColor,
               top: pillInset,
               bottom: pillInset,
               left: pillInset,
@@ -131,20 +139,14 @@ export const AppSegmentedControl = ({
                   <AppIcon
                     name={option.icon}
                     size={14}
-                    color={
-                      isSelected
-                        ? activeTextColor || theme.onPrimary
-                        : inactiveTextColor || theme.textSecondary
-                    }
+                    color={isSelected ? resolvedActiveTextColor : resolvedInactiveTextColor}
                   />
                 ) : null}
                 <AppText
                   variant="caption"
                   weight={isSelected ? 'semibold' : 'medium'}
                   style={{
-                    color: isSelected
-                      ? activeTextColor || theme.onPrimary
-                      : inactiveTextColor || theme.textSecondary,
+                    color: isSelected ? resolvedActiveTextColor : resolvedInactiveTextColor,
                     textAlign: 'center',
                   }}
                 >

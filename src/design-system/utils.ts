@@ -50,11 +50,11 @@ export function resolveRadius(value: RadiusKey | number | undefined): number | u
 
 export function resolveThemeColor(
   theme: Theme,
-  color: keyof Theme | string | undefined,
+  color: keyof Theme | string | null | undefined,
   opacity?: OpacityKey | number,
 ): string | undefined {
-  if (color === undefined) return undefined;
-  const baseColor = color in theme ? theme[color as keyof Theme] : color;
+  if (color === undefined || color === null) return undefined;
+  const baseColor = (color in theme ? theme[color as keyof Theme] : color) as string;
 
   if (opacity !== undefined) {
     const opacityValue = typeof opacity === 'number' ? opacity : Opacity[opacity];
@@ -62,6 +62,30 @@ export function resolveThemeColor(
   }
 
   return baseColor;
+}
+
+export function resolveStyleColors(theme: Theme, style: any): any {
+  if (!style) return style;
+  if (Array.isArray(style)) {
+    return style.map(s => resolveStyleColors(theme, s));
+  }
+
+  const flattened = { ...style };
+  const colorKeys = [
+    'color',
+    'backgroundColor',
+    'borderColor',
+    'textDecorationColor',
+    'textShadowColor',
+  ];
+
+  colorKeys.forEach(key => {
+    if (flattened[key]) {
+      flattened[key] = resolveThemeColor(theme, flattened[key]);
+    }
+  });
+
+  return flattened;
 }
 
 export function negateSpace(value: SpacingKey | number | undefined): number | undefined {

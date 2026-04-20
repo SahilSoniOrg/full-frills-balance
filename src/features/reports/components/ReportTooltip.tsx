@@ -1,6 +1,7 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -24,7 +25,10 @@ const TooltipBase = ({
   onViewTransactions,
   children,
 }: TooltipBaseProps) => {
-  const { onContrast } = useTheme();
+  const { theme, onContrast } = useTheme();
+  const resolvedBg = resolveThemeColor(theme, backgroundColor) as string;
+  const resolvedBorder = resolveThemeColor(theme, borderColor) as string;
+
   return (
     <View
       style={[
@@ -33,8 +37,8 @@ const TooltipBase = ({
           left,
           top,
           width: REPORT_CHART_LAYOUT.tooltipWidth,
-          backgroundColor,
-          borderColor,
+          backgroundColor: resolvedBg,
+          borderColor: resolvedBorder,
         },
       ]}
     >
@@ -51,7 +55,7 @@ const TooltipBase = ({
         <AppIcon
           name="arrowRight"
           size={REPORT_CHART_LAYOUT.tooltipIconSize}
-          color={onContrast(backgroundColor)}
+          color={onContrast(resolvedBg)}
         />
       </TouchableOpacity>
       {children}

@@ -1,5 +1,6 @@
 import { AppIcon, IconName, isValidIconName } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
@@ -29,7 +30,7 @@ export const IvyIcon = ({
   iconColor,
   shape = 'circle',
 }: IvyIconProps) => {
-  const { onContrast } = useTheme();
+  const { theme, onContrast } = useTheme();
   const textColor = iconColor || onContrast(color);
   const iconSize = size * 0.6;
   const labelSize = size * 0.5;
@@ -42,7 +43,7 @@ export const IvyIcon = ({
       style={[
         styles.container,
         {
-          backgroundColor: color,
+          backgroundColor: resolveThemeColor(theme, color),
           width: size,
           height: size,
           borderRadius: shape === 'circle' ? size / 2 : 8,

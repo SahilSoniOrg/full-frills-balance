@@ -1,6 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { Layout, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
 import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
@@ -77,7 +78,8 @@ export const LineChart = <T extends DataPoint>({
   offset = 15,
 }: LineChartProps<T>) => {
   const { theme } = useTheme();
-  const chartColor = color || theme.primary;
+  const chartColor = resolveThemeColor(theme, color) || theme.primary;
+  const resolvedSecondaryColor = resolveThemeColor(theme, secondaryColor);
   const { width: windowWidth } = Dimensions.get('window');
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2; // Padding
   const PADDING_VERTICAL = Spacing.lg;
@@ -514,7 +516,7 @@ export const LineChart = <T extends DataPoint>({
               {secondaryPath ? (
                 <Path
                   d={secondaryPath}
-                  stroke={secondaryColor || theme.textSecondary}
+                  stroke={resolvedSecondaryColor || theme.textSecondary}
                   strokeWidth={REPORT_CHART_LAYOUT.lineChartSeriesStrokeWidth}
                   fill="none"
                   opacity={0.7}

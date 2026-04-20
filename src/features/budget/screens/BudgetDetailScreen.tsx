@@ -4,6 +4,7 @@ import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader
 import { TransactionListView } from '@/src/components/common/TransactionListView';
 import { AppButton, AppCard, AppIcon, AppText, IvyIcon, LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import { REPORT_CHART_LAYOUT, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -30,12 +31,13 @@ export function BudgetDetailScreen() {
   const { budget, usage } = vm;
 
   const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));
-  let stripColor = theme.primary;
+  let stripColorBase = theme.primary;
   if (usage.usagePercent >= 1) {
-    stripColor = theme.error;
+    stripColorBase = theme.error;
   } else if (usage.usagePercent >= 0.8) {
-    stripColor = theme.warning;
+    stripColorBase = theme.warning;
   }
+  const stripColor = resolveThemeColor(theme, stripColorBase) as string;
 
   const isOver = usage.remaining < 0;
 

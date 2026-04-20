@@ -1,6 +1,7 @@
 import { AppIcon, IconName } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useMemo } from 'react';
@@ -29,12 +30,14 @@ export function Badge({
   style,
   ...props
 }: BadgeProps) {
-  const { fonts, getVariantColors } = useTheme();
+  const { fonts, getVariantColors, theme } = useTheme();
 
   const { badgeStyle, textStyle, iconSize, finalTextColor } = useMemo(() => {
     const variantColors = getVariantColors(variant);
-    const backgroundColor = customBg || (solid ? variantColors.main : variantColors.light);
-    const textColor = customText || (solid ? variantColors.contrast : variantColors.main);
+    const backgroundColor =
+      resolveThemeColor(theme, customBg) || (solid ? variantColors.main : variantColors.light);
+    const textColor =
+      resolveThemeColor(theme, customText) || (solid ? variantColors.contrast : variantColors.main);
 
     const sizeStyles = size === 'sm' ? styles.sizeSm : styles.sizeMd;
     const textTypography = size === 'sm' ? styles.textSm : styles.textMd;

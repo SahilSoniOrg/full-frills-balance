@@ -1,4 +1,5 @@
 import { useTheme } from '@/src/hooks/use-theme';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import {
   Activity,
   CircleAlert as AlertCircle,
@@ -226,7 +227,7 @@ export const AppIcon = ({
 
   return (
     <IconComponent
-      color={color || theme.icon}
+      color={resolveThemeColor(theme, color) || theme.icon}
       size={size}
       style={style}
       strokeWidth={strokeWidth}

@@ -116,10 +116,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
           </Box>
 
           <Stack space="sm" alignItems="center">
-            <AppText
-              variant="title"
-              style={{ fontSize: Typography.sizes.xxxl, color: vm.amountColor }}
-            >
+            <AppText variant="title" color={vm.amountColor as any}>
               {amountText}
             </AppText>
             <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
@@ -166,7 +163,7 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
                     }
                     trailing={
                       <Inline space="xs" alignItems="center">
-                        <AppText variant="subheading" style={{ color: item.amountColor }}>
+                        <AppText variant="subheading" color={item.amountColor as any}>
                           {item.amountText}
                         </AppText>
                         <AppIcon

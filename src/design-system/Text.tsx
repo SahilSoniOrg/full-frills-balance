@@ -3,7 +3,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import React, { useMemo } from 'react';
 import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
-import { resolveSpacing } from './utils';
+import { resolveMarginSpacing, resolveStyleColors } from './utils';
 
 export type TextProps = RNTextProps & {
   variant?: keyof typeof Typography.sizes | 'subheading' | 'heading';
@@ -31,7 +31,7 @@ export function Text({
   style,
   ...props
 }: TextProps) {
-  const { fonts, getVariantColors } = useTheme();
+  const { fonts, getVariantColors, theme } = useTheme();
 
   const textStyle = useMemo(() => {
     const fontSize = (() => {
@@ -61,22 +61,21 @@ export function Text({
 
     const variantColors = getVariantColors(color);
 
-    return [
-      {
-        fontSize,
-        lineHeight: fontSize * lineHeightMultiplier,
-        letterSpacing,
-        color: variantColors.main,
-        textAlign: align,
-        fontFamily: resolvedFontFamily,
-        fontStyle: (italic ? 'italic' : 'normal') as TextStyle['fontStyle'],
-        marginTop: resolveSpacing(marginTop) as any,
-        marginBottom: resolveSpacing(marginBottom) as any,
-        marginHorizontal: resolveSpacing(marginHorizontal) as any,
-        opacity,
-      },
-      style,
-    ];
+    const baseStyle = {
+      fontSize,
+      lineHeight: fontSize * lineHeightMultiplier,
+      letterSpacing,
+      color: variantColors.main,
+      textAlign: align,
+      fontFamily: resolvedFontFamily,
+      fontStyle: (italic ? 'italic' : 'normal') as TextStyle['fontStyle'],
+      marginTop: resolveMarginSpacing(marginTop) as any,
+      marginBottom: resolveMarginSpacing(marginBottom) as any,
+      marginHorizontal: resolveMarginSpacing(marginHorizontal) as any,
+      opacity,
+    };
+
+    return [baseStyle, resolveStyleColors(theme, style)];
   }, [
     variant,
     color,
@@ -88,6 +87,7 @@ export function Text({
     marginHorizontal,
     opacity,
     getVariantColors,
+    theme,
     fonts,
     style,
   ]);

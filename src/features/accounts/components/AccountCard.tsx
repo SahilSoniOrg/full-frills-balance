@@ -3,6 +3,7 @@ import { Opacity, Size } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
+import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React from 'react';
@@ -23,7 +24,8 @@ export function AccountCardBase({
   dividerColor,
   surfaceColor,
 }: AccountCardProps) {
-  const { fonts } = useTheme();
+  const { theme, fonts } = useTheme();
+  const resolvedTextColor = resolveThemeColor(theme, account.textColor);
 
   return (
     <AppCard
@@ -53,7 +55,7 @@ export function AccountCardBase({
                   variant="base"
                   weight="bold"
                   numberOfLines={1}
-                  style={{ color: account.textColor, flex: 1 }}
+                  style={{ color: resolvedTextColor, flex: 1 }}
                 >
                   {account.name}
                 </Text>
@@ -75,7 +77,7 @@ export function AccountCardBase({
                       weight="medium"
                       variant="xs"
                       opacity={0.7}
-                      style={{ color: account.textColor, lineHeight: 12 }}
+                      style={{ color: resolvedTextColor, lineHeight: 12 }}
                     >
                       {formatRelativeReconciledDate(account.reconciledAt)}
                     </Text>
@@ -106,7 +108,7 @@ export function AccountCardBase({
                 variant="xxxl"
                 weight="bold"
                 style={{
-                  color: account.textColor,
+                  color: resolvedTextColor,
                   fontFamily: fonts.bold,
                 }}
               >

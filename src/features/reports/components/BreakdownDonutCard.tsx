@@ -3,6 +3,8 @@ import { AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
+import { resolveThemeColor } from '@/src/design-system/utils';
+import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -42,6 +44,8 @@ export function BreakdownDonutCard({
   donutSize = DEFAULT_DONUT_SIZE,
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
 }: BreakdownDonutCardProps) {
+  const { theme } = useTheme();
+
   return (
     <View style={styles.donutContainer}>
       <DonutChart data={donutData} size={donutSize} strokeWidth={donutStrokeWidth} />
@@ -53,7 +57,12 @@ export function BreakdownDonutCard({
             onPress={() => onLegendRowPress(row.id)}
             activeOpacity={REPORT_CHART_LAYOUT.donutLegendRowActiveOpacity}
           >
-            <View style={[styles.dot, { backgroundColor: row.color }]} />
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: resolveThemeColor(theme, row.color) || theme.border },
+              ]}
+            />
             <View style={styles.legendNameWrap}>
               <AppText variant="caption" numberOfLines={1}>
                 {row.accountName}

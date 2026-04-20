@@ -1,4 +1,5 @@
 import { Typography } from '@/src/constants/design-tokens';
+import { resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useMemo } from 'react';
@@ -23,7 +24,7 @@ export function AppText({
   style,
   ...props
 }: AppTextProps) {
-  const { fonts, getVariantColors } = useTheme();
+  const { fonts, getVariantColors, theme } = useTheme();
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
@@ -62,22 +63,20 @@ export function AppText({
 
     const variantColors = getVariantColors(color);
 
-    return [
+    const baseStyle = [
       // Base styles (fontSize, lineHeight) - we intentionally override fontFamily below
       typographyStyles,
       {
         color: variantColors.main,
         textAlign: align,
         fontFamily: resolvedFontFamily,
-        // We do NOT set fontWeight here because we are selecting the specific font file
-        // that already embodies the weight (e.g. InstrumentSans-Bold).
-        // Setting fontWeight: 'bold' effectively double-applies it or breaks linking.
         fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
         fontVariant: (tabular ? ['tabular-nums'] : []) as any,
       },
-      style,
     ];
-  }, [variant, weight, color, getVariantColors, fonts, align, italic, tabular, style]);
+
+    return [baseStyle, resolveStyleColors(theme, style)];
+  }, [variant, weight, color, getVariantColors, theme, fonts, align, italic, tabular, style]);
 
   return <Text style={textStyle} {...props} />;
 }
