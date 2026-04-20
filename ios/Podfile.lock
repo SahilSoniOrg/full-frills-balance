@@ -344,7 +344,7 @@ PODS:
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
   - MMKVCore (2.4.0)
-  - NitroMmkv (4.3.0):
+  - NitroMmkv (4.3.1):
     - hermes-engine
     - MMKVCore (= 2.4.0)
     - NitroModules
@@ -369,7 +369,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - NitroModules (0.35.2):
+  - NitroModules (0.35.4):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -392,7 +392,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - QuickCrypto (1.0.18):
+  - QuickCrypto (1.0.19):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -3010,9 +3010,9 @@ SPEC CHECKSUMS:
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
-  NitroMmkv: 880dee1e4b343bf2f2bf010fb8c2c68490632cfd
-  NitroModules: 76063cb7bc1a21cf46d11b25abfcf1759bf0be47
-  QuickCrypto: d83ea91eedfc80d9eabbd2fc209436502347950e
+  NitroMmkv: 7a7572934538ba6748e05dffc6ee8b06caad91cc
+  NitroModules: f45159491c5a0e7161685a301b1c6c11440b3ab1
+  QuickCrypto: 0708a392535332365b7f4a16a0b229482be9a1e0
   RCTDeprecation: 5045f20b2cc1239bf422764004338c720684a22f
   RCTRequired: b6b9724225dd780ac2989d2e575d5513c50fe04b
   RCTSwiftUI: 395b65655229fa2006415207adcfcb6e35dc78ed
