@@ -1,46 +1,32 @@
 # Known Gaps & Risks
 
 ## 🐛 Bugs
-*   **None Critical found yet** in static analysis.
-*   *Risk*: `FlashList` type workaround in `JournalListScreen.tsx` (`as any`). May hide type errors.
+*   **None critical** identified in latest audit.
 
-## ⚠️ UX Flaws
-1.  **Account Deletion Safety**:
-    *   **Severity**: P1 (Critical Risk)
-    *   **Issue**: `AccountRepository.delete()` performs a soft delete without checking for linked transactions at the repository level. While `AccountDetailsScreen` shows a warning, programmatic access or other UI paths could lead to orphaned transactions.
-    *   **Impact**: Financial data integrity risk.
-2.  **Simple Mode Defaults**:
-    *   **Severity**: P2
-    *   **Issue**: In "Simple Mode", does it intelligently select the "From" account? If a user has 5 asset accounts, valid default selection is crucial to avoid friction.
-3.  **Loading States**:
-    *   **Severity**: P2
-    *   **Issue**: Initial dashboard load might show layout shift if Net Worth calculates slowly.
+## ⚠️ UX Considerations
+1.  **Loading States on Boot**:
+    *   **Severity**: P3
+    *   **Issue**: Initial dashboard load runs the full simulation pipeline. On older Android devices, the Safe to Spend card may show a brief loading skeleton before resolving.
+    *   **Mitigation**: Adaptive boot scheduling prioritizes UI thread. Splash screen covers cold-boot latency.
 
-## 🧩 Missing Features
-1.  **Search Filtering**:
-    *   **Severity**: P2
-    *   **Issue**: Search exists but might strictly match strings. Date range filtering is missing.
+2.  **Chart Gesture Conflicts**:
+    *   **Severity**: P3
+    *   **Issue**: Vertical scrolling can occasionally trigger chart tooltip on the Safe to Spend projection chart.
+    *   **Mitigation**: `activeOffsetX/Y` thresholds on `Gesture.Pan` reduce false activations. Ongoing refinement.
 
-## 🧱 Product Debt
-1.  **No Cloud Sync**:
-    *   **Why**: By design (Local-first), but users *will* ask for backup beyond manual JSON export.
-2.  **Hardcoded Currencies**:
-    *   **Why**: Currency service loads local list. Updating rates/currencies requires app update.
+## 🧩 Known Limitations
+1.  **SMS Import — Android Only**:
+    *   **Why**: iOS does not expose SMS access APIs. Feature requires the `expo-sms-inbox` native module.
+2.  **No Cloud Sync**:
+    *   **Why**: By design (offline-first, privacy-centric). Users rely on JSON export/import for backup.
+    *   **Future**: Encrypted file-based backup is on the roadmap.
+3.  **Exchange Rate Freshness**:
+    *   **Why**: Rates are fetched from ExchangeRate-API and cached locally. Stale rates are possible during extended offline periods.
 
----
-
-# Future Roadmap
-
-## Phase 1: V1 Polish (Immediate)
-- [ ] Expand reports drill-down and exportable summaries.
-- [ ] Verify Account Deletion safeguards (Prevent orphan transactions).
-- [ ] Add Date Range filter to Transaction List.
-
-## Phase 2: Trust & Safety
-- [ ] Biometric Lock (FaceID/TouchID) on app launch.
-- [ ] Automatic Backup (Local file versioning).
-
-## Phase 3: Power Features
-- [ ] CSV Import (Bank statements).
-- [ ] Recurring Transactions.
-- [ ] Budgeting Goals.
+## 🧱 Technical Debt
+1.  **`as any` Residue**:
+    *   Some `as any` casts remain in sharing and older UI components. Being cleaned up incrementally.
+2.  **Test Coverage Gaps**:
+    *   Simulation engine has strong coverage (unit + heavy scenario tests). Some newer UI features (hub, commitments view) lack dedicated tests.
+3.  **Import Plugin Error Handling**:
+    *   Edge cases in Ivy Wallet and Cashew import plugins could produce partial imports on malformed files. Validation coverage is being expanded.
