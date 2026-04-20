@@ -261,8 +261,9 @@ export class NotificationService {
     ]).pipe(
       debounceTime(AppConfig.insights.observeDebounceMs),
       switchMap(([assets, liabilities, budgets, plannedPayments, allAccounts, plannedJournals]) => {
-        const now = dayjs().startOf('day');
-        const thirtyDaysAgo = now.subtract(safeToSpendDays, 'day').valueOf();
+        const now = dayjs();
+        const startOfToday = now.startOf('day');
+        const thirtyDaysAgo = startOfToday.subtract(safeToSpendDays, 'day').valueOf();
 
         const parentIds = new Set<string>(
           allAccounts.map(a => a.parentAccountId).filter((id): id is string => Boolean(id)),
@@ -282,7 +283,7 @@ export class NotificationService {
           transactionRawRepository.getDailyDeltasGroupedRaw(
             liquidAssetIds,
             thirtyDaysAgo,
-            now.valueOf() + AppConfig.time.msPerDay,
+            startOfToday.valueOf() + AppConfig.time.msPerDay,
           ),
         );
 
@@ -442,11 +443,11 @@ export class NotificationService {
             });
 
             for (let i = 0; i < safeToSpendDays; i++) {
-              const targetDay = now.subtract(i, 'day').valueOf();
+              const targetDay = startOfToday.subtract(i, 'day').valueOf();
               const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
               runningBalance -= flowThatDay;
               historyPoints.push({
-                timestamp: now.subtract(i + 1, 'day').valueOf(),
+                timestamp: startOfToday.subtract(i + 1, 'day').valueOf(),
                 value: runningBalance,
                 isProjected: false,
               });
