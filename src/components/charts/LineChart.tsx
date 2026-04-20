@@ -8,8 +8,7 @@ import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
 import Svg, {
   Circle,
   Defs,
@@ -192,7 +191,11 @@ export const LineChart = <T extends DataPoint>({
   const isControlled = selectedIndex !== undefined;
   const activeIndex = isControlled ? selectedIndex : internalSelectedIndex;
 
-  const { chartRef, onLayout, handleGesture } = useChartInteraction({
+  const { chartRef, onLayout, gesture } = useChartInteraction({
+    gestureConfig: {
+      activeOffsetX: REPORT_CHART_LAYOUT.gestureSensitivity,
+      type: 'exclusive',
+    },
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
         if (data.length === 0) return { type: 'none' };
@@ -223,21 +226,6 @@ export const LineChart = <T extends DataPoint>({
     edgePadding: REPORT_CHART_LAYOUT.gestureSensitivity * 2,
     avoidPointVertical,
   });
-
-  const pan = Gesture.Pan()
-    .activeOffsetX([
-      -REPORT_CHART_LAYOUT.gestureSensitivity,
-      REPORT_CHART_LAYOUT.gestureSensitivity,
-    ])
-    .onBegin(e => {
-      runOnJS(handleGesture)(e.x, e.y, 'start');
-    })
-    .onUpdate(e => {
-      runOnJS(handleGesture)(e.x, e.y, 'update');
-    })
-    .onEnd(e => {
-      runOnJS(handleGesture)(e.x, e.y, 'end');
-    });
 
   const selectedPointInfo = useMemo(() => {
     if (activeIndex === undefined || activeIndex === -1 || !data[activeIndex] || data.length === 0)
@@ -293,7 +281,7 @@ export const LineChart = <T extends DataPoint>({
       onLayout={onLayout}
     >
       <View style={{ width: CHART_WIDTH, height, overflow: 'visible' }}>
-        <GestureDetector gesture={pan}>
+        <GestureDetector gesture={gesture}>
           <View style={{ width: CHART_WIDTH, height }}>
             <Svg height={height} width={CHART_WIDTH}>
               <Defs>

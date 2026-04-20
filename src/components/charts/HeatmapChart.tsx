@@ -8,8 +8,7 @@ import { HeatmapPoint } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
 import Svg, { G, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
@@ -80,7 +79,10 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
     avoidPointVertical: true,
   });
 
-  const { chartRef, onLayout, handleGesture } = useChartInteraction({
+  const { chartRef, onLayout, gesture } = useChartInteraction({
+    gestureConfig: {
+      type: 'simultaneous',
+    },
     getInteractionFromTouch: useCallback(
       (x: number, y: number) => {
         if (data.length === 0) return { type: 'none' };
@@ -109,17 +111,6 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
     enabled: data.length > 0,
   });
 
-  const pan = Gesture.Pan()
-    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-    .onUpdate(e => runOnJS(handleGesture)(e.x, e.y, 'update'))
-    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
-
-  const tap = Gesture.Tap()
-    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
-
-  const composed = Gesture.Simultaneous(pan, tap);
-
   return (
     <View
       style={{ height, width: CHART_WIDTH, overflow: 'visible' }}
@@ -127,7 +118,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
       onLayout={onLayout}
       collapsable={false}
     >
-      <GestureDetector gesture={composed}>
+      <GestureDetector gesture={gesture}>
         <View style={{ height, width: CHART_WIDTH }}>
           <Svg height={height} width={CHART_WIDTH} style={{ overflow: 'visible' }}>
             {/* Y-Axis Labels (Hours) */}

@@ -5,8 +5,7 @@ import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInter
 import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
@@ -46,7 +45,11 @@ export const AreaChart: React.FC<AreaChartProps> = ({
 
   const data = series[0] || [];
 
-  const { chartRef, onLayout, handleGesture } = useChartInteraction({
+  const { chartRef, onLayout, gesture } = useChartInteraction({
+    gestureConfig: {
+      type: 'exclusive',
+      activeOffsetX: REPORT_CHART_LAYOUT.gestureSensitivity,
+    },
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
         const dataLength = data.length;
@@ -146,21 +149,6 @@ export const AreaChart: React.FC<AreaChartProps> = ({
     [series, colors, theme.primary, theme.error],
   );
 
-  const pan = Gesture.Pan()
-    .activeOffsetX([
-      -REPORT_CHART_LAYOUT.gestureSensitivity,
-      REPORT_CHART_LAYOUT.gestureSensitivity,
-    ])
-    .onBegin(e => {
-      runOnJS(handleGesture)(e.x, e.y, 'start');
-    })
-    .onUpdate(e => {
-      runOnJS(handleGesture)(e.x, e.y, 'update');
-    })
-    .onEnd(e => {
-      runOnJS(handleGesture)(e.x, e.y, 'end');
-    });
-
   const selectedX = useMemo(() => {
     if (activeIndex === undefined || activeIndex === -1 || !series[0]?.[activeIndex]) return null;
     return getX(series[0][activeIndex].x);
@@ -180,7 +168,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       onLayout={onLayout}
       collapsable={false}
     >
-      <GestureDetector gesture={pan}>
+      <GestureDetector gesture={gesture}>
         <View style={{ width: CHART_WIDTH, height }}>
           <Svg height={height} width={CHART_WIDTH} style={{ overflow: 'visible' }}>
             <Defs>

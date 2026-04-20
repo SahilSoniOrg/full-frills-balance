@@ -9,8 +9,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
 import Svg, { G, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
@@ -81,7 +80,10 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
     avoidPointVertical: true,
   });
 
-  const { chartRef, onLayout, handleGesture } = useChartInteraction({
+  const { chartRef, onLayout, gesture } = useChartInteraction({
+    gestureConfig: {
+      type: 'simultaneous',
+    },
     getInteractionFromTouch: useCallback(
       (x: number, y: number) => {
         if (data.length === 0) return { type: 'none' };
@@ -110,20 +112,6 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
     enabled: data.length > 0,
   });
 
-  const pan = Gesture.Pan()
-    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-    .onUpdate(e => runOnJS(handleGesture)(e.x, e.y, 'update'))
-    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'))
-    .onFinalize(() => {
-      // We keep the last point selected so the user can interact with the "View" button
-    });
-
-  const tap = Gesture.Tap()
-    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
-
-  const composed = Gesture.Simultaneous(pan, tap);
-
   return (
     <View
       style={{ height: totalHeight, width: CHART_WIDTH, overflow: 'visible' }}
@@ -146,7 +134,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
         </AppText>
       </View>
 
-      <GestureDetector gesture={composed}>
+      <GestureDetector gesture={gesture}>
         <View style={{ height: totalHeight, width: CHART_WIDTH }}>
           <Svg height={totalHeight} width={CHART_WIDTH} style={{ overflow: 'visible' }}>
             {/* Day Labels (X-Axis) */}

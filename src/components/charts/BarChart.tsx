@@ -7,8 +7,7 @@ import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
 
@@ -121,7 +120,11 @@ export const BarChart = ({
     edgePadding: Spacing.sm,
   });
 
-  const { chartRef, onLayout, handleGesture } = useChartInteraction({
+  const { chartRef, onLayout, gesture } = useChartInteraction({
+    gestureConfig: {
+      type: 'simultaneous',
+      activateAfterLongPress: 150,
+    },
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
         if (data.length === 0) return { type: 'none' };
@@ -155,17 +158,6 @@ export const BarChart = ({
       </View>
     );
   }
-  const pan = Gesture.Pan()
-    .activateAfterLongPress(150)
-    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-    .onUpdate(e => runOnJS(handleGesture)(e.x, e.y, 'update'))
-    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
-
-  const tap = Gesture.Tap()
-    .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-    .onEnd(e => runOnJS(handleGesture)(e.x, e.y, 'end'));
-
-  const composed = Gesture.Simultaneous(pan, tap);
 
   return (
     <View
@@ -191,7 +183,7 @@ export const BarChart = ({
             );
           })}
         </View>
-        <GestureDetector gesture={composed}>
+        <GestureDetector gesture={gesture}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
