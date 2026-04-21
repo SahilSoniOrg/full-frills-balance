@@ -1,10 +1,9 @@
 import { AppText } from '@/src/components/core';
-import { Layout, Spacing } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
@@ -56,9 +55,38 @@ interface LineChartProps<T extends DataPoint = DataPoint> {
   offset?: number; // Distance from point to tooltip
 }
 
+const findNearestIndex = (data: DataPoint[], targetX: number): number => {
+  if (data.length === 0) return -1;
+  if (data.length === 1) return 0;
+
+  let left = 0;
+  let right = data.length - 1;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    if (data[mid].x === targetX) return mid;
+    if (data[mid].x < targetX) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  // Check neighbors to find exact nearest
+  const leftIdx = Math.max(0, right);
+  const rightIdx = Math.min(data.length - 1, left);
+
+  if (leftIdx === rightIdx) return leftIdx;
+
+  const leftDiff = Math.abs(data[leftIdx].x - targetX);
+  const rightDiff = Math.abs(data[rightIdx].x - targetX);
+
+  return leftDiff <= rightDiff ? leftIdx : rightIdx;
+};
+
 export const LineChart = <T extends DataPoint>({
   data,
-  height = Layout.chart.line.defaultHeight,
+  height: propHeight,
   color,
   showGradient = true,
   width: customWidth,
@@ -75,6 +103,8 @@ export const LineChart = <T extends DataPoint>({
   extraHorizontalLines,
   avoidPointVertical = false,
   offset = 15,
+  tooltipWidth,
+  tooltipHeight,
 }: LineChartProps<T>) => {
   const { theme } = useTheme();
   const chartColor = resolveThemeColor(theme, color) || theme.primary;
@@ -86,102 +116,122 @@ export const LineChart = <T extends DataPoint>({
   const PADDING_RIGHT = Spacing.lg; // Prevent right-side clipping
   const PLOT_WIDTH = Math.max(0, CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT);
 
-  const { path, secondaryPath, gradientPath, minX, maxX, displayMinY, displayRange, maxValPoint } =
-    useMemo(() => {
-      if (data.length === 0)
-        return {
-          path: '',
-          secondaryPath: '',
-          gradientPath: '',
-          minX: 0,
-          maxX: 0,
-          displayMinY: 0,
-          displayRange: 0,
-          maxValPoint: undefined,
-        };
+  // Dynamic height calculation
+  const height = propHeight ?? REPORT_CHART_LAYOUT.lineChartDefaultHeight;
 
-      const yValues = data.map(d => d.y);
-      const xValues = data.map(d => d.x);
+  const {
+    path,
+    secondaryPath,
+    gradientPath,
+    minX,
+    maxX,
+    displayMinY,
+    displayRange,
+    maxValPoint,
+    sortedData,
+  } = useMemo(() => {
+    if (data.length === 0)
+      return {
+        path: '',
+        secondaryPath: '',
+        gradientPath: '',
+        minX: 0,
+        maxX: 0,
+        displayMinY: 0,
+        displayRange: 0,
+        maxValPoint: undefined,
+        sortedData: [] as T[],
+      };
 
-      if (secondaryData && secondaryData.length > 0) {
-        yValues.push(...secondaryData.map(d => d.y));
-        xValues.push(...secondaryData.map(d => d.x));
+    // Ensure data is sorted for binary search safety
+    const activeData = [...data].sort((a, b) => a.x - b.x);
+    const activeSecondaryData = secondaryData
+      ? [...secondaryData].sort((a, b) => a.x - b.x)
+      : undefined;
+
+    const yValues = activeData.map(d => d.y);
+    const xValues = activeData.map(d => d.x);
+
+    if (activeSecondaryData && activeSecondaryData.length > 0) {
+      yValues.push(...activeSecondaryData.map(d => d.y));
+      xValues.push(...activeSecondaryData.map(d => d.x));
+    }
+
+    const minXVal = domainX ? domainX[0] : Math.min(...xValues);
+    const maxXVal = domainX ? domainX[1] : Math.max(...xValues);
+    const minYVal = Math.min(...yValues);
+    const maxYVal = Math.max(...yValues);
+
+    // Add some padding to Y range
+    const yRange = maxYVal - minYVal || 1;
+    const displayMinYVal = minYVal - yRange * 0.1;
+    const displayMaxYVal = maxYVal + yRange * 0.1;
+    const displayRangeVal = displayMaxYVal - displayMinYVal;
+    const xRangeVal = maxXVal - minXVal;
+
+    // Determine max value point for annotation (only from primary data)
+    const maxValIndex = data.map(d => d.y).indexOf(Math.max(...data.map(d => d.y)));
+    const maxValPointVal = maxValIndex >= 0 ? data[maxValIndex] : undefined;
+
+    let pathStr = '';
+    let gradientPathStr = '';
+
+    data.forEach((point, index) => {
+      const normalizedX = xRangeVal === 0 ? 0.5 : (point.x - minXVal) / xRangeVal;
+      const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
+      // Invert Y because SVG 0 is top
+      const y =
+        height -
+        PADDING_VERTICAL -
+        ((point.y - displayMinYVal) / displayRangeVal) * (height - PADDING_VERTICAL * 2);
+
+      if (index === 0) {
+        pathStr += `M ${x} ${y}`;
+        gradientPathStr += `M ${x} ${height - PADDING_VERTICAL} L ${x} ${y}`;
+      } else {
+        pathStr += ` L ${x} ${y}`;
+        gradientPathStr += ` L ${x} ${y}`;
       }
+    });
 
-      const minX = domainX ? domainX[0] : Math.min(...xValues);
-      const maxX = domainX ? domainX[1] : Math.max(...xValues);
-      const minY = Math.min(...yValues);
-      const maxY = Math.max(...yValues);
+    // Close gradient path
+    if (activeData.length > 0) {
+      const lastPoint = activeData[activeData.length - 1];
+      const normalizedLastX = xRangeVal === 0 ? 0.5 : (lastPoint.x - minXVal) / xRangeVal;
+      const lastX = PADDING_LEFT + normalizedLastX * PLOT_WIDTH;
+      gradientPathStr += ` L ${lastX} ${height - PADDING_VERTICAL} L ${PADDING_LEFT} ${height - PADDING_VERTICAL} Z`;
+    }
 
-      // Add some padding to Y range
-      const yRange = maxY - minY || 1;
-      const displayMinY = minY - yRange * 0.1;
-      const displayMaxY = maxY + yRange * 0.1;
-      const displayRange = displayMaxY - displayMinY;
-      const xRange = maxX - minX;
-
-      // Determine max value point for annotation (only from primary data)
-      const maxValIndex = data.map(d => d.y).indexOf(Math.max(...data.map(d => d.y)));
-      const maxValPoint = maxValIndex >= 0 ? data[maxValIndex] : undefined;
-
-      let pathStr = '';
-      let gradientPathStr = '';
-
-      data.forEach((point, index) => {
-        const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
+    let secondaryPathStr = '';
+    if (activeSecondaryData && activeSecondaryData.length > 0) {
+      activeSecondaryData.forEach((point, index) => {
+        const normalizedX = xRangeVal === 0 ? 0.5 : (point.x - minXVal) / xRangeVal;
         const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-        // Invert Y because SVG 0 is top
         const y =
           height -
           PADDING_VERTICAL -
-          ((point.y - displayMinY) / displayRange) * (height - PADDING_VERTICAL * 2);
+          ((point.y - displayMinYVal) / displayRangeVal) * (height - PADDING_VERTICAL * 2);
 
         if (index === 0) {
-          pathStr += `M ${x} ${y}`;
-          gradientPathStr += `M ${x} ${height - PADDING_VERTICAL} L ${x} ${y}`;
+          secondaryPathStr += `M ${x} ${y}`;
         } else {
-          pathStr += ` L ${x} ${y}`;
-          gradientPathStr += ` L ${x} ${y}`;
+          secondaryPathStr += ` L ${x} ${y}`;
         }
       });
+    }
 
-      // Close gradient path
-      if (data.length > 0) {
-        const lastPoint = data[data.length - 1];
-        const normalizedLastX = xRange === 0 ? 0.5 : (lastPoint.x - minX) / xRange;
-        const lastX = PADDING_LEFT + normalizedLastX * PLOT_WIDTH;
-        gradientPathStr += ` L ${lastX} ${height - PADDING_VERTICAL} L ${PADDING_LEFT} ${height - PADDING_VERTICAL} Z`;
-      }
-
-      let secondaryPathStr = '';
-      if (secondaryData && secondaryData.length > 0) {
-        secondaryData.forEach((point, index) => {
-          const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
-          const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
-          const y =
-            height -
-            PADDING_VERTICAL -
-            ((point.y - displayMinY) / displayRange) * (height - PADDING_VERTICAL * 2);
-
-          if (index === 0) {
-            secondaryPathStr += `M ${x} ${y}`;
-          } else {
-            secondaryPathStr += ` L ${x} ${y}`;
-          }
-        });
-      }
-
-      return {
-        path: pathStr,
-        secondaryPath: secondaryPathStr,
-        gradientPath: gradientPathStr,
-        minX,
-        maxX,
-        displayMinY,
-        displayRange,
-        maxValPoint,
-      };
-    }, [data, height, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX, secondaryData]);
+    return {
+      path: pathStr,
+      secondaryPath: secondaryPathStr,
+      gradientPath: gradientPathStr,
+      minX: minXVal,
+      maxX: maxXVal,
+      displayMinY: displayMinYVal,
+      displayRange: displayRangeVal,
+      maxValPoint: maxValPointVal,
+      sortedData: activeData,
+    };
+  }, [data, height, PLOT_WIDTH, PADDING_VERTICAL, PADDING_LEFT, domainX, secondaryData]);
 
   const [internalSelectedIndex, setInternalSelectedIndex] = React.useState<number | undefined>(
     undefined,
@@ -198,15 +248,18 @@ export const LineChart = <T extends DataPoint>({
     },
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
-        if (data.length === 0) return { type: 'none' };
+        if (sortedData.length === 0) return { type: 'none' };
+
         const relativeX = x - PADDING_LEFT;
-        // Use PLOT_WIDTH for more accurate mapping
-        const step = PLOT_WIDTH / (data.length - 1 || 1);
-        const finalIndex = Math.round(relativeX / step);
-        const clampedIndex = Math.max(0, Math.min(data.length - 1, finalIndex));
-        return { type: 'index', index: clampedIndex };
+        const normalizedX = Math.max(0, Math.min(1, relativeX / PLOT_WIDTH));
+        const targetX = minX + normalizedX * (maxX - minX);
+
+        // Find nearest point via Binary Search (O(log n))
+        const closestIndex = findNearestIndex(sortedData, targetX);
+
+        return { type: 'index', index: closestIndex };
       },
-      [data.length, PADDING_LEFT, PLOT_WIDTH],
+      [sortedData, PADDING_LEFT, PLOT_WIDTH, minX, maxX],
     ),
     onInteractionChange: useCallback(
       (state: InteractionState) => {
@@ -216,23 +269,20 @@ export const LineChart = <T extends DataPoint>({
       },
       [onPress, isControlled, setInternalSelectedIndex],
     ),
-    enabled: data.length > 0,
-  });
-
-  const getTooltipPosition = useChartTooltipPosition({
-    containerWidth: CHART_WIDTH,
-    containerHeight: height,
-    offset,
-    edgePadding: REPORT_CHART_LAYOUT.gestureSensitivity * 2,
-    avoidPointVertical,
+    enabled: sortedData.length > 0,
   });
 
   const selectedPointInfo = useMemo(() => {
-    if (activeIndex === undefined || activeIndex === -1 || !data[activeIndex] || data.length === 0)
+    if (
+      activeIndex === undefined ||
+      activeIndex === -1 ||
+      !sortedData[activeIndex] ||
+      sortedData.length === 0
+    )
       return null;
     const xRange = maxX - minX;
 
-    const point = data[activeIndex];
+    const point = sortedData[activeIndex];
     const normalizedX = xRange === 0 ? 0.5 : (point.x - minX) / xRange;
     const x = PADDING_LEFT + normalizedX * PLOT_WIDTH;
     const y =
@@ -275,14 +325,14 @@ export const LineChart = <T extends DataPoint>({
 
   return (
     <View
-      style={{ height, width: CHART_WIDTH, overflow: 'visible', zIndex: 1 }}
+      style={{ height, width: CHART_WIDTH, overflow: 'visible' }}
       ref={chartRef}
       collapsable={false}
       onLayout={onLayout}
     >
-      <View style={{ width: CHART_WIDTH, height, overflow: 'visible' }}>
+      <View style={{ width: CHART_WIDTH, height, overflow: 'visible', zIndex: 0 }}>
         <GestureDetector gesture={gesture}>
-          <View style={{ width: CHART_WIDTH, height }}>
+          <View style={{ width: CHART_WIDTH, height, zIndex: 0 }}>
             <Svg height={height} width={CHART_WIDTH}>
               <Defs>
                 <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
@@ -551,19 +601,24 @@ export const LineChart = <T extends DataPoint>({
         </GestureDetector>
       </View>
 
-      {/* Built-in Tooltip Overlay */}
       {selectedPointInfo && renderTooltipContent && (
-        <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
-          {(() => {
-            const info = selectedPointInfo;
-            const pos = getTooltipPosition(info.x, info.y);
-
-            return (
-              <ChartTooltip x={info.x} y={info.y} avoidPointVertical={avoidPointVertical} {...pos}>
-                {renderTooltipContent!(activeIndex!)}
-              </ChartTooltip>
-            );
-          })()}
+        <View
+          style={[StyleSheet.absoluteFill, { zIndex: 100, elevation: 100 }]}
+          pointerEvents="box-none"
+        >
+          <ChartTooltip
+            x={selectedPointInfo.x}
+            y={selectedPointInfo.y}
+            containerWidth={CHART_WIDTH}
+            containerHeight={height}
+            tooltipWidth={tooltipWidth}
+            tooltipHeight={tooltipHeight}
+            offset={offset}
+            edgePadding={REPORT_CHART_LAYOUT.gestureSensitivity * 2}
+            avoidPointVertical={avoidPointVertical}
+          >
+            {renderTooltipContent!(activeIndex!)}
+          </ChartTooltip>
         </View>
       )}
     </View>

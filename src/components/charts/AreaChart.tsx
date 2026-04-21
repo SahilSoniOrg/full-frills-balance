@@ -2,7 +2,6 @@ import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -22,6 +21,8 @@ interface AreaChartProps {
   onPress?: (index: number) => void;
   selectedIndex?: number;
   renderTooltipContent?: (index: number) => React.ReactNode;
+  tooltipWidth?: number;
+  tooltipHeight?: number;
 }
 
 export const AreaChart: React.FC<AreaChartProps> = ({
@@ -32,6 +33,8 @@ export const AreaChart: React.FC<AreaChartProps> = ({
   onPress,
   selectedIndex,
   renderTooltipContent,
+  tooltipWidth,
+  tooltipHeight,
 }) => {
   const { theme } = useTheme();
   const windowWidth = Dimensions.get('window').width;
@@ -44,36 +47,6 @@ export const AreaChart: React.FC<AreaChartProps> = ({
   const activeIndex = selectedIndex !== undefined ? selectedIndex : internalSelectedIndex;
 
   const data = series[0] || [];
-
-  const { chartRef, onLayout, gesture } = useChartInteraction({
-    gestureConfig: {
-      type: 'exclusive',
-      activeOffsetX: REPORT_CHART_LAYOUT.gestureSensitivity,
-    },
-    getInteractionFromTouch: useCallback(
-      (x: number, _y: number) => {
-        const dataLength = data.length;
-        if (dataLength === 0) return { type: 'none' };
-
-        const relativeX = x - PADDING_H;
-        const step = (CHART_WIDTH - PADDING_H * 2) / (dataLength - 1 || 1);
-        const finalIndex = Math.round(relativeX / step);
-        const clampedIndex = Math.max(0, Math.min(dataLength - 1, finalIndex));
-
-        return { type: 'index', index: clampedIndex };
-      },
-      [data.length, PADDING_H, CHART_WIDTH],
-    ),
-    onInteractionChange: useCallback(
-      (state: InteractionState) => {
-        const index = state.type === 'index' ? state.index : -1;
-        if (onPress) onPress(index);
-        setInternalSelectedIndex(index === -1 ? undefined : index);
-      },
-      [onPress, setInternalSelectedIndex],
-    ),
-    enabled: data.length > 0,
-  });
 
   const { paths, getX, getY } = useMemo(() => {
     if (series.length === 0 || series[0].length === 0) {
@@ -154,11 +127,34 @@ export const AreaChart: React.FC<AreaChartProps> = ({
     return getX(series[0][activeIndex].x);
   }, [activeIndex, series, getX]);
 
-  const getTooltipPosition = useChartTooltipPosition({
-    containerWidth: CHART_WIDTH,
-    containerHeight: height,
-    offset: 15,
-    edgePadding: REPORT_CHART_LAYOUT.gestureSensitivity * 2,
+  const { chartRef, onLayout, gesture } = useChartInteraction({
+    gestureConfig: {
+      type: 'exclusive',
+      activeOffsetX: REPORT_CHART_LAYOUT.gestureSensitivity,
+    },
+    getInteractionFromTouch: useCallback(
+      (x: number, _y: number) => {
+        const dataLength = data.length;
+        if (dataLength === 0) return { type: 'none' };
+
+        const relativeX = x - PADDING_H;
+        const step = (CHART_WIDTH - PADDING_H * 2) / (dataLength - 1 || 1);
+        const finalIndex = Math.round(relativeX / step);
+        const clampedIndex = Math.max(0, Math.min(dataLength - 1, finalIndex));
+
+        return { type: 'index', index: clampedIndex };
+      },
+      [data.length, PADDING_H, CHART_WIDTH],
+    ),
+    onInteractionChange: useCallback(
+      (state: InteractionState) => {
+        const index = state.type === 'index' ? state.index : -1;
+        if (onPress) onPress(index);
+        setInternalSelectedIndex(index === -1 ? undefined : index);
+      },
+      [onPress],
+    ),
+    enabled: data.length > 0,
   });
 
   return (
@@ -234,9 +230,18 @@ export const AreaChart: React.FC<AreaChartProps> = ({
           <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
             {(() => {
               const y = getY(series[0][activeIndex].y);
-              const pos = getTooltipPosition(selectedX, y);
               return (
-                <ChartTooltip x={selectedX} y={y} {...pos}>
+                <ChartTooltip
+                  x={selectedX}
+                  y={y}
+                  containerWidth={CHART_WIDTH}
+                  containerHeight={height}
+                  tooltipWidth={tooltipWidth}
+                  tooltipHeight={tooltipHeight}
+                  offset={15}
+                  edgePadding={REPORT_CHART_LAYOUT.gestureSensitivity * 2}
+                  avoidPointVertical={false}
+                >
                   {renderTooltipContent(activeIndex)}
                 </ChartTooltip>
               );

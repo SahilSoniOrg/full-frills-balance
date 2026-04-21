@@ -3,7 +3,6 @@ import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { HeatmapPoint } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -18,6 +17,8 @@ interface HeatmapChartProps {
   width?: number;
   currency: string;
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
+  tooltipWidth?: number;
+  tooltipHeight?: number;
 }
 
 export const HeatmapChart: React.FC<HeatmapChartProps> = ({
@@ -26,6 +27,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   width: customWidth,
   currency,
   renderTooltipContent,
+  tooltipWidth,
+  tooltipHeight,
 }) => {
   const { theme, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
@@ -72,13 +75,6 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
     return 0.12 + (Math.sqrt(value) / Math.sqrt(maxValue)) * 0.88;
   };
 
-  const getTooltipPosition = useChartTooltipPosition({
-    containerWidth: CHART_WIDTH,
-    containerHeight: height,
-    offset: 12,
-    avoidPointVertical: true,
-  });
-
   const { chartRef, onLayout, gesture } = useChartInteraction({
     gestureConfig: {
       type: 'simultaneous',
@@ -106,7 +102,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
           setSelectedPoint(null);
         }
       },
-      [pointMap, setSelectedPoint],
+      [pointMap],
     ),
     enabled: data.length > 0,
   });
@@ -220,11 +216,19 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
         <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
           {(() => {
             const x = PADDING_LEFT + selectedPoint.x * cellWidth + cellWidth / 2;
-            const y = PADDING_TOP + selectedPoint.y * cellHeight;
-            const pos = getTooltipPosition(x, y);
-
+            const y = PADDING_TOP + selectedPoint.y * cellHeight + cellHeight / 2;
             return (
-              <ChartTooltip x={x} y={y} {...pos}>
+              <ChartTooltip
+                x={x}
+                y={y}
+                containerWidth={CHART_WIDTH}
+                containerHeight={height}
+                tooltipWidth={tooltipWidth}
+                tooltipHeight={tooltipHeight}
+                offset={cellHeight / 2 + 10}
+                edgePadding={Spacing.sm}
+                avoidPointVertical={true}
+              >
                 {renderTooltipContent ? (
                   renderTooltipContent(selectedPoint.x, selectedPoint.y)
                 ) : (

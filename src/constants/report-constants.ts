@@ -19,6 +19,7 @@ export const REPORT_CHART_COLOR_KEYS = {
 
 export const REPORT_CHART_LAYOUT = {
   netWorthChartHeight: 180,
+  lineChartDefaultHeight: 180,
   barChartHeight: 220,
   donutSize: 140,
   donutStrokeWidth: 25,

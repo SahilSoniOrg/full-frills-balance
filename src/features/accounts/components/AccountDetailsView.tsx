@@ -187,6 +187,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
               subAccountCount={subAccountCount}
               onShowSubAccounts={onShowSubAccounts}
               balanceText={balanceText}
+              currencyCode={vm.currencyCode}
               secondaryBalances={secondaryBalances}
               transactionCountText={transactionCountText}
               reconciledAt={vm.reconciledAt}

@@ -61,6 +61,7 @@ export interface AccountDetailsViewModel {
   accountIcon: IconName | null;
   accountTypeColorKey: string;
   isDeleted: boolean;
+  currencyCode: string;
   balanceText: string;
   transactionCountText: string;
   headerActions: {
@@ -782,6 +783,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     accountIcon: account?.icon || null,
     accountTypeColorKey,
     isDeleted,
+    currencyCode: balanceCurrency,
     balanceText,
     transactionCountText,
     headerActions: { canRecover: isDeleted, onRecover, onEdit, onDelete, onReconcile },

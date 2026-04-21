@@ -3,7 +3,6 @@ import { Opacity, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { HeatmapPoint } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
@@ -21,6 +20,8 @@ interface CalendarHeatmapProps {
   currency: string;
   onCellPress?: (point: HeatmapPoint) => void;
   renderTooltipContent?: (col: number, row: number) => React.ReactNode;
+  tooltipWidth?: number;
+  tooltipHeight?: number;
 }
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -33,6 +34,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
   currency,
   onCellPress,
   renderTooltipContent,
+  tooltipWidth,
+  tooltipHeight,
 }) => {
   const { theme, onContrast, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
@@ -73,13 +76,6 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
     return 0.15 + (Math.sqrt(value) / Math.sqrt(maxValue)) * 0.85;
   };
 
-  const getTooltipPosition = useChartTooltipPosition({
-    containerWidth: CHART_WIDTH,
-    containerHeight: totalHeight,
-    offset: 12,
-    avoidPointVertical: true,
-  });
-
   const { chartRef, onLayout, gesture } = useChartInteraction({
     gestureConfig: {
       type: 'simultaneous',
@@ -107,7 +103,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
           setSelectedPoint(null);
         }
       },
-      [pointMap, setSelectedPoint],
+      [pointMap],
     ),
     enabled: data.length > 0,
   });
@@ -257,11 +253,21 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
         <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
           {(() => {
             const x = PADDING_LEFT + selectedPoint.x * (cellWidth + CELL_SPACING) + cellWidth / 2;
-            const y = PADDING_TOP + selectedPoint.y * (CELL_HEIGHT + CELL_SPACING);
-            const pos = getTooltipPosition(x, y);
+            const y =
+              PADDING_TOP + selectedPoint.y * (CELL_HEIGHT + CELL_SPACING) + CELL_HEIGHT / 2;
 
             return (
-              <ChartTooltip x={x} y={y} {...pos}>
+              <ChartTooltip
+                x={x}
+                y={y}
+                containerWidth={CHART_WIDTH}
+                containerHeight={totalHeight}
+                tooltipWidth={tooltipWidth}
+                tooltipHeight={tooltipHeight}
+                offset={CELL_HEIGHT / 2 + 10}
+                edgePadding={Spacing.sm}
+                avoidPointVertical={true}
+              >
                 {renderTooltipContent ? (
                   renderTooltipContent(selectedPoint.x, selectedPoint.y)
                 ) : (

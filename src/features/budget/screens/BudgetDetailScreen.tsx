@@ -59,7 +59,7 @@ export function BudgetDetailScreen() {
         </AppButton>
       </View>
 
-      <AppCard elevation="sm" style={styles.heroCard}>
+      <AppCard elevation="sm" style={styles.heroCard} overflow="visible">
         <View style={styles.cardHeader}>
           <IvyIcon
             name="pieChart"
@@ -122,10 +122,7 @@ export function BudgetDetailScreen() {
                 data={vm.chartData.data}
                 domainX={vm.chartData.domainX}
                 width={chartWidth}
-                height={120}
                 color={stripColor}
-                tooltipWidth={100}
-                tooltipHeight={60}
                 renderTooltipContent={index => {
                   const point = vm.chartData!.data[index];
                   if (!point) return null;

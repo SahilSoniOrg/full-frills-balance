@@ -3,7 +3,6 @@ import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
-import { useChartTooltipPosition } from '@/src/hooks/useChartTooltipPosition';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
@@ -25,6 +24,8 @@ interface BarChartProps {
   onPress?: (index: number) => void;
   selectedIndex?: number;
   renderTooltipContent?: (index: number) => React.ReactNode;
+  tooltipWidth?: number;
+  tooltipHeight?: number;
 }
 
 export const BarChart = ({
@@ -35,6 +36,8 @@ export const BarChart = ({
   onPress,
   selectedIndex,
   renderTooltipContent,
+  tooltipWidth,
+  tooltipHeight,
 }: BarChartProps) => {
   const { theme } = useTheme();
   const { width: windowWidth } = Dimensions.get('window');
@@ -112,13 +115,6 @@ export const BarChart = ({
     yForValue,
     renderTooltipContent,
   ]);
-
-  const getTooltipPosition = useChartTooltipPosition({
-    containerWidth: containerWidth,
-    containerHeight: height,
-    offset: 15,
-    edgePadding: Spacing.sm,
-  });
 
   const { chartRef, onLayout, gesture } = useChartInteraction({
     gestureConfig: {
@@ -278,14 +274,19 @@ export const BarChart = ({
       </View>
       {tooltipElement && renderTooltipContent && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 1000 }]} pointerEvents="box-none">
-          {(() => {
-            const pos = getTooltipPosition(tooltipElement.x, tooltipElement.y);
-            return (
-              <ChartTooltip x={tooltipElement.x} y={tooltipElement.y} {...pos}>
-                {renderTooltipContent(tooltipElement.index)}
-              </ChartTooltip>
-            );
-          })()}
+          <ChartTooltip
+            x={tooltipElement.x}
+            y={tooltipElement.y}
+            containerWidth={containerWidth}
+            containerHeight={height}
+            tooltipWidth={tooltipWidth}
+            tooltipHeight={tooltipHeight}
+            offset={15}
+            edgePadding={Spacing.sm}
+            avoidPointVertical={true}
+          >
+            {renderTooltipContent(tooltipElement.index)}
+          </ChartTooltip>
         </View>
       )}
     </View>
