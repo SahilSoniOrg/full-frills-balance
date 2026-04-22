@@ -103,14 +103,7 @@ export function transformAccountsToSections(
   const rawSections = getAccountSections(accounts);
 
   const sections = rawSections.map(section => {
-    const sectionColor = getSectionColor(section.title, {
-      asset: theme.asset,
-      liability: theme.liability,
-      equity: theme.equity,
-      income: theme.income,
-      expense: theme.expense,
-      text: theme.text,
-    });
+    const sectionColor = getSectionColor(section.title, theme);
 
     let sectionTotal = 0;
     if (section.title === 'Assets') sectionTotal = totalAssets;
@@ -181,14 +174,7 @@ export function transformAccountsToSections(
       let meta = STATIC_META_CACHE.get(metaKey);
 
       if (!meta) {
-        const accentColor = getAccountAccentColor(account.accountType, {
-          asset: theme.asset,
-          liability: theme.liability,
-          equity: theme.equity,
-          income: theme.income,
-          expense: theme.expense,
-          text: theme.text,
-        });
+        const accentColor = getAccountAccentColor(account.accountType, theme);
         const textColor = onContrast(accentColor);
         meta = { accentColor, textColor, contrastColor: textColor };
         STATIC_META_CACHE.set(metaKey, meta);

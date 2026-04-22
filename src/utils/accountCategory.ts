@@ -1,3 +1,4 @@
+import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
@@ -60,10 +61,10 @@ export function getAccountTypeVariant(typeOrLabel: string | AccountType): Compon
   return type ? ACCOUNT_TYPE_VARIANTS[type] : 'text';
 }
 
-export function getAccountTypeColorKey(typeOrLabel: string | AccountType): AccountTypeColorKey {
+export function getAccountTypeColorKey(typeOrLabel: string | AccountType): ColorKey {
   const type = toAccountType(typeOrLabel);
   if (!type) return 'text';
-  return ACCOUNT_TYPE_VARIANTS[type] as AccountTypeColorKey;
+  return ACCOUNT_TYPE_VARIANTS[type] as ColorKey;
 }
 
 export function createAccountTypeRecord<T>(
@@ -121,30 +122,10 @@ export function getAccountVariant(typeOrTitle: string | AccountType): ComponentV
   return getAccountTypeVariant(typeOrTitle);
 }
 
-export function getSectionColor(
-  title: string | AccountType,
-  theme: {
-    asset: string;
-    liability: string;
-    equity: string;
-    income: string;
-    expense: string;
-    text: string;
-  },
-): string {
+export function getSectionColor(title: string | AccountType, theme: Theme): string {
   return theme[getAccountTypeColorKey(title)];
 }
 
-export function getAccountAccentColor(
-  accountType: string | AccountType,
-  theme: {
-    asset: string;
-    liability: string;
-    equity: string;
-    income: string;
-    expense: string;
-    text: string;
-  },
-): string {
+export function getAccountAccentColor(accountType: string | AccountType, theme: Theme): string {
   return theme[getAccountTypeColorKey(accountType)];
 }

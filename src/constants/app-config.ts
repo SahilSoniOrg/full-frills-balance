@@ -753,6 +753,8 @@ export const AppConfig = {
         deleteTitle: 'Delete Budget',
         deleteConfirm: 'This permanently removes this budget.',
       },
+      formTitleNew: 'New Budget',
+      formTitleEdit: 'Edit Budget',
     },
     alerts: {
       success: 'Success',

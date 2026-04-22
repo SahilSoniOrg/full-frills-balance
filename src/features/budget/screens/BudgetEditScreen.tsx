@@ -1,11 +1,14 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
+import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { AppButton, AppText, ListRow, LoadingView } from '@/src/components/core';
-import { AppInput } from '@/src/components/core/AppInput';
+import { AppButton, LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
+import { Stack } from '@/src/design-system';
 import { CurrencySelector } from '@/src/features/accounts';
+import { useTheme } from '@/src/hooks/use-theme';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import React, { useState } from 'react';
@@ -32,6 +35,7 @@ export default function BudgetEditScreen() {
     isFormValid,
     budget,
   } = useBudgetEditViewModel();
+  const { theme } = useTheme();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isAssetPickerVisible, setIsAssetPickerVisible] = useState(false);
 
@@ -62,14 +66,10 @@ export default function BudgetEditScreen() {
   return (
     <>
       <EntityFormScreen
-        title={budget ? 'Edit Budget' : 'New Budget'}
-        edges={['top', 'bottom']}
-        headerActions={
-          <AppButton variant="ghost" onPress={AppNavigation.back}>
-            {AppConfig.strings.common.cancel}
-          </AppButton>
+        title={
+          budget ? AppConfig.strings.budget.formTitleEdit : AppConfig.strings.budget.formTitleNew
         }
-        contentContainerStyle={{ padding: Spacing.lg }}
+        edges={['top', 'bottom']}
         submitAction={{
           onPress: handleSave,
           disabled: !isFormValid || isSaving,
@@ -82,55 +82,50 @@ export default function BudgetEditScreen() {
               : 'Create Budget',
         }}
       >
-        <FormSectionGroup title="Budget Details">
-          <AppInput
-            label="Budget Name"
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g., Groceries"
-            autoCapitalize="words"
-          />
-          <AppInput
-            label="Monthly Amount"
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-            style={{ marginTop: Spacing.lg }}
-          />
-          <AppText variant="body" style={{ marginTop: Spacing.lg, marginBottom: Spacing.sm }}>
-            Currency
-          </AppText>
-          <CurrencySelector
-            selectedCurrency={currencyCode}
-            currencies={currencies}
-            onSelect={setCurrencyCode}
-          />
-        </FormSectionGroup>
+        <FormHeroSection
+          nameLabel="Budget Name"
+          nameValue={name}
+          onNameChange={setName}
+          amountLabel="Monthly Amount"
+          amountValue={amount}
+          onAmountChange={setAmount}
+          footer={
+            <CurrencySelector
+              variant="pill"
+              selectedCurrency={currencyCode}
+              currencies={currencies}
+              onSelect={setCurrencyCode}
+            />
+          }
+        />
 
-        <FormSectionGroup title="Scope (Expense Accounts)">
-          <ListRow
-            title={
-              selectedAccountIds.length > 0
-                ? `${selectedAccountIds.length} accounts selected`
-                : 'Select accounts'
-            }
-            subtitle="Choose which accounts this budget applies to"
-            onPress={() => setIsAccountPickerVisible(true)}
-          />
-        </FormSectionGroup>
+        <Stack space="xl" padding="lg">
+          <FormSectionGroup title="Accounts">
+            <Stack space="md" paddingHorizontal="md">
+              <AccountSelectionRow
+                title="Target Accounts"
+                accounts={expenseAccounts}
+                selectedAccountIds={selectedAccountIds}
+                placeholder="Select accounts"
+                onPress={() => setIsAccountPickerVisible(true)}
+                style={{
+                  paddingHorizontal: 0,
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.border,
+                }}
+              />
 
-        <FormSectionGroup title="Drawing From (Liquid Assets)">
-          <ListRow
-            title={
-              assetAccountIds.length > 0
-                ? `${assetAccountIds.length} accounts selected`
-                : 'Select accounts'
-            }
-            subtitle="Choose which asset accounts this budget draws from (Defaults to first available)"
-            onPress={() => setIsAssetPickerVisible(true)}
-          />
-        </FormSectionGroup>
+              <AccountSelectionRow
+                title="Source Accounts"
+                accounts={liquidAssetAccounts}
+                selectedAccountIds={assetAccountIds}
+                placeholder="Select accounts"
+                onPress={() => setIsAssetPickerVisible(true)}
+                style={{ paddingHorizontal: 0 }}
+              />
+            </Stack>
+          </FormSectionGroup>
+        </Stack>
       </EntityFormScreen>
 
       <AccountPickerModal

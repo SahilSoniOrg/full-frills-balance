@@ -10,8 +10,8 @@ export type ListRowProps = TouchableOpacityProps &
   BoxViewProps & {
     // Content areas
     leading?: React.ReactNode;
-    title: string;
-    subtitle?: string;
+    title: string | React.ReactNode;
+    subtitle?: string | React.ReactNode;
     trailing?: React.ReactNode;
     // Visual options
     showSeparator?: boolean;
@@ -87,24 +87,31 @@ export function ListRow(initialProps: ListRowProps) {
       )}
 
       <Box flex={1} justifyContent="center">
-        <AppText
-          variant={titleVariant}
-          color={titleColor as AppTextProps['color']}
-          numberOfLines={1}
-          style={styles.title}
-        >
-          {title}
-        </AppText>
-        {subtitle && (
+        {typeof title === 'string' ? (
           <AppText
-            variant={subtitleVariant}
-            color="secondary"
-            numberOfLines={2}
-            style={styles.subtitle}
+            variant={titleVariant}
+            color={titleColor as AppTextProps['color']}
+            numberOfLines={1}
+            style={styles.title}
           >
-            {subtitle}
+            {title}
           </AppText>
+        ) : (
+          title
         )}
+        {subtitle &&
+          (typeof subtitle === 'string' ? (
+            <AppText
+              variant={subtitleVariant}
+              color="secondary"
+              numberOfLines={1}
+              style={styles.subtitle}
+            >
+              {subtitle}
+            </AppText>
+          ) : (
+            subtitle
+          ))}
       </Box>
 
       {trailing && (

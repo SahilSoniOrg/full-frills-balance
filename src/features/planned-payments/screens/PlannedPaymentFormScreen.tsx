@@ -1,15 +1,18 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
+import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { AppInput, AppText, ListRow } from '@/src/components/core';
+import { SectionLabel } from '@/src/components/common/SectionLabel';
+import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
+import { Box, FadeIn, Stack, Text } from '@/src/design-system';
 import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export default function PlannedPaymentFormScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,118 +35,172 @@ export default function PlannedPaymentFormScreen() {
           disabled: !vm.isValid || vm.isSubmitting,
         }}
       >
-        <View style={styles.formSection}>
-          <FormSectionGroup title="Details">
-            <AppInput
-              label={AppConfig.strings.plannedPayments.nameLabel}
-              value={vm.form.name}
-              onChangeText={(val: string) => vm.setField('name', val)}
-              placeholder={AppConfig.strings.plannedPayments.namePlaceholder}
-            />
+        <FormHeroSection
+          nameLabel="Rule Name"
+          nameValue={vm.form.name}
+          onNameChange={(val: string) => vm.setField('name', val)}
+          namePlaceholder={AppConfig.strings.plannedPayments.namePlaceholder}
+          amountLabel="Amount"
+          amountValue={vm.form.amount}
+          onAmountChange={(val: string) => vm.setField('amount', val)}
+        />
 
-            <AppInput
-              label={AppConfig.strings.plannedPayments.amountLabel}
-              value={vm.form.amount}
-              onChangeText={(val: string) => vm.setField('amount', val)}
-              placeholder={AppConfig.strings.plannedPayments.amountPlaceholder}
-              keyboardType="numeric"
-            />
+        <Stack space="xl" style={styles.formSection}>
+          <FormSectionGroup title="Accounts">
+            <Stack space="md" paddingHorizontal="md">
+              <AccountSelectionRow
+                title={AppConfig.strings.plannedPayments.fromAccountLabel}
+                accounts={vm.accounts}
+                selectedAccountId={vm.form.fromAccountId}
+                placeholder={AppConfig.strings.plannedPayments.selectAccount}
+                onPress={() => vm.pickerState.open('from')}
+                style={{
+                  paddingHorizontal: 0,
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.border,
+                }}
+              />
 
-            <AccountSelectionRow
-              title={AppConfig.strings.plannedPayments.fromAccountLabel}
-              accounts={vm.accounts}
-              selectedAccountId={vm.form.fromAccountId}
-              placeholder={AppConfig.strings.plannedPayments.selectAccount}
-              onPress={() => vm.pickerState.open('from')}
-            />
-
-            <AccountSelectionRow
-              title={AppConfig.strings.plannedPayments.toAccountLabel}
-              accounts={vm.accounts}
-              selectedAccountId={vm.form.toAccountId}
-              placeholder={AppConfig.strings.plannedPayments.selectAccount}
-              onPress={() => vm.pickerState.open('to')}
-            />
+              <AccountSelectionRow
+                title={AppConfig.strings.plannedPayments.toAccountLabel}
+                accounts={vm.accounts}
+                selectedAccountId={vm.form.toAccountId}
+                placeholder={AppConfig.strings.plannedPayments.selectAccount}
+                onPress={() => vm.pickerState.open('to')}
+                style={{ paddingHorizontal: 0 }}
+              />
+            </Stack>
           </FormSectionGroup>
 
           <FormSectionGroup title={AppConfig.strings.plannedPayments.recurrenceTitle}>
-            <ListRow
-              title={AppConfig.strings.plannedPayments.intervalLabel}
-              subtitle={vm.form.intervalType}
-              onPress={vm.cycleIntervalType}
-            />
-
-            {vm.form.intervalType === PlannedPaymentInterval.WEEKLY && (
-              <View style={styles.recurrenceOptions}>
-                <AppText variant="caption" style={{ marginBottom: Spacing.xs }}>
-                  {AppConfig.strings.plannedPayments.dayOfWeek}
-                </AppText>
-                <View style={styles.chipContainer}>
-                  {AppConfig.strings.plannedPayments.dayNames.map((day, index) => (
-                    <TouchableOpacity
-                      key={day}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor:
-                            vm.form.recurrenceDay === index
-                              ? theme.primary
-                              : theme.surfaceSecondary,
-                        },
-                      ]}
-                      onPress={() => vm.setField('recurrenceDay', index)}
-                    >
-                      <AppText
-                        style={{
-                          color: vm.form.recurrenceDay === index ? '#fff' : theme.textSecondary,
-                        }}
-                      >
-                        {day}
-                      </AppText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {vm.form.intervalType === PlannedPaymentInterval.MONTHLY && (
-              <View style={styles.recurrenceOptions}>
-                <AppInput
-                  label="Day of Month (1-31)"
-                  value={vm.form.recurrenceDay?.toString() || ''}
-                  onChangeText={vm.setRecurrenceDayFromInput}
-                  keyboardType="numeric"
+            <Stack space="lg" paddingHorizontal="md">
+              <Box>
+                <SectionLabel label="Interval" marginTop="none" />
+                <AppSegmentedControl
+                  flex
+                  variant="minimal"
+                  options={[
+                    { id: PlannedPaymentInterval.DAILY, label: 'Daily' },
+                    { id: PlannedPaymentInterval.WEEKLY, label: 'Weekly' },
+                    { id: PlannedPaymentInterval.MONTHLY, label: 'Monthly' },
+                    { id: PlannedPaymentInterval.YEARLY, label: 'Yearly' },
+                  ]}
+                  value={vm.form.intervalType}
+                  onChange={val => vm.setField('intervalType', val)}
                 />
-              </View>
-            )}
+              </Box>
 
-            {vm.form.intervalType === PlannedPaymentInterval.YEARLY && (
-              <View style={styles.recurrenceOptions}>
-                <ListRow
-                  title={AppConfig.strings.plannedPayments.month}
-                  subtitle={
-                    AppConfig.strings.plannedPayments.monthNames[(vm.form.recurrenceMonth || 1) - 1]
-                  }
-                  onPress={vm.cycleRecurrenceMonth}
-                />
-                <AppInput
-                  label="Day of Month (1-31)"
-                  value={vm.form.recurrenceDay?.toString() || ''}
-                  onChangeText={vm.setRecurrenceDayFromInput}
-                  keyboardType="numeric"
-                />
-              </View>
-            )}
+              {vm.form.intervalType === PlannedPaymentInterval.WEEKLY && (
+                <FadeIn fromY={5} duration={300}>
+                  <Box>
+                    <SectionLabel
+                      label="Day of Week"
+                      style={{ marginLeft: Spacing.md }}
+                      marginTop="none"
+                    />
+                    <AppSegmentedControl<number>
+                      scrollable
+                      variant="minimal"
+                      size="sm"
+                      options={AppConfig.strings.plannedPayments.dayNames.map((day, index) => ({
+                        id: index,
+                        label: day,
+                      }))}
+                      value={vm.form.recurrenceDay ?? 0}
+                      onChange={val => vm.setField('recurrenceDay', val)}
+                    />
+                  </Box>
+                </FadeIn>
+              )}
 
-            <View style={styles.switchRow}>
-              <AppText>{AppConfig.strings.plannedPayments.autoPostLabel}</AppText>
-              <Switch
-                value={vm.form.isAutoPost}
-                onValueChange={val => vm.setField('isAutoPost', val)}
+              {vm.form.intervalType === PlannedPaymentInterval.MONTHLY && (
+                <FadeIn fromY={5} duration={300}>
+                  <Box>
+                    <SectionLabel
+                      label="Day of Month"
+                      style={{ marginLeft: Spacing.md }}
+                      marginTop="none"
+                    />
+                    <AppSegmentedControl<number>
+                      scrollable
+                      variant="minimal"
+                      size="sm"
+                      options={Array.from({ length: 31 }, (_, i) => i + 1).map(day => ({
+                        id: day,
+                        label: day.toString(),
+                      }))}
+                      value={vm.form.recurrenceDay ?? 1}
+                      onChange={val => vm.setField('recurrenceDay', val)}
+                    />
+                  </Box>
+                </FadeIn>
+              )}
+
+              {vm.form.intervalType === PlannedPaymentInterval.YEARLY && (
+                <FadeIn fromY={5} duration={300}>
+                  <Stack space="lg">
+                    <Box>
+                      <SectionLabel
+                        label="Month"
+                        style={{ marginLeft: Spacing.md }}
+                        marginTop="none"
+                      />
+                      <AppSegmentedControl<number>
+                        scrollable
+                        variant="minimal"
+                        size="sm"
+                        options={AppConfig.strings.plannedPayments.monthNames.map(
+                          (month, index) => ({
+                            id: index + 1,
+                            label: month,
+                          }),
+                        )}
+                        value={vm.form.recurrenceMonth ?? 1}
+                        onChange={val => vm.setField('recurrenceMonth', val)}
+                      />
+                    </Box>
+
+                    <Box>
+                      <SectionLabel
+                        label="Day of Month"
+                        style={{ marginLeft: Spacing.md }}
+                        marginTop="none"
+                      />
+                      <AppSegmentedControl<number>
+                        scrollable
+                        variant="minimal"
+                        size="sm"
+                        options={Array.from({ length: 31 }, (_, i) => i + 1).map(day => ({
+                          id: day,
+                          label: day.toString(),
+                        }))}
+                        value={vm.form.recurrenceDay ?? 1}
+                        onChange={val => vm.setField('recurrenceDay', val)}
+                      />
+                    </Box>
+                  </Stack>
+                </FadeIn>
+              )}
+
+              <ListRow
+                padding="sm"
+                title={
+                  <Box>
+                    <SectionLabel label="Auto-Post" marginTop="none" style={{ marginBottom: 4 }} />
+                    <Text weight="medium">Post Automatically</Text>
+                  </Box>
+                }
+                subtitle="To ledger on due date"
+                trailing={
+                  <AppToggle
+                    value={vm.form.isAutoPost}
+                    onValueChange={val => vm.setField('isAutoPost', val)}
+                  />
+                }
               />
-            </View>
+            </Stack>
           </FormSectionGroup>
-        </View>
+        </Stack>
       </EntityFormScreen>
 
       <AccountPickerModal
@@ -158,36 +215,8 @@ export default function PlannedPaymentFormScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {},
   formSection: {
     padding: Spacing.lg,
     gap: Spacing.md,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.md,
-  },
-  recurrenceOptions: {
-    marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: 16,
-    minWidth: 50,
-    alignItems: 'center',
   },
 });
