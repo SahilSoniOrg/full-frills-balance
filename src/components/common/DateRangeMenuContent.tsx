@@ -3,7 +3,7 @@ import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/
 import { Theme } from '@/src/constants/design-tokens';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
-import { FlatList, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface DateRangeMenuContentProps {
   theme: Theme;
@@ -13,9 +13,8 @@ interface DateRangeMenuContentProps {
   lastNValue: string;
   lastNUnit: 'days' | 'weeks' | 'months';
   monthList: { month: number; year: number; label: string }[];
-  flatListRef: React.RefObject<FlatList | null>;
-  initialMonthIndex: number;
   onSelectMonth: (month: number, year: number) => void;
+  onSelectCustom: () => void;
   onSelectAllTime: () => void;
   onShowStartDate: () => void;
   onShowEndDate: () => void;
@@ -30,9 +29,8 @@ export function DateRangeMenuContent({
   lastNValue,
   lastNUnit,
   monthList,
-  flatListRef,
-  initialMonthIndex,
   onSelectMonth,
+  onSelectCustom,
   onSelectAllTime,
   onShowStartDate,
   onShowEndDate,
@@ -130,51 +128,22 @@ export function DateRangeMenuContent({
             </AppText>
           </View>
         </View>
-        <FlatList
-          ref={flatListRef}
-          horizontal
-          data={monthList}
-          keyExtractor={item => `${item.year}-${item.month}`}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalScroll}
-          initialScrollIndex={initialMonthIndex}
-          getItemLayout={(_, index) => ({
-            length: Layout.datePicker.monthSlider.itemWidth,
-            offset: Layout.datePicker.monthSlider.itemWidth * index,
-            index,
-          })}
-          renderItem={({ item }) => {
-            const isActive =
-              draftFilter.type === 'MONTH' &&
-              draftFilter.month === item.month &&
-              draftFilter.year === item.year;
-
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: isActive
-                      ? theme.primary
-                      : withOpacity(theme.surfaceSecondary, Opacity.muted),
-                    borderColor: isActive ? theme.primary : 'transparent',
-                  },
-                ]}
-                onPress={() => onSelectMonth(item.month, item.year)}
-              >
-                <AppText
-                  variant="body"
-                  style={{
-                    color: isActive ? theme.onPrimary : theme.text,
-                    fontFamily: isActive ? fonts.semibold : fonts.medium,
-                  }}
-                >
-                  {item.label}
-                </AppText>
-              </TouchableOpacity>
-            );
-          }}
-        />
+        <View style={{ marginTop: Spacing.sm }}>
+          <AppSegmentedControl<string>
+            scrollable
+            variant="minimal"
+            itemWidth={Layout.datePicker.monthSlider.itemWidth}
+            options={monthList.map(item => ({
+              id: `${item.year}-${item.month}`,
+              label: item.label,
+            }))}
+            value={draftFilter.type === 'MONTH' ? `${draftFilter.year}-${draftFilter.month}` : ''}
+            onChange={id => {
+              const [year, month] = id.split('-').map(Number);
+              onSelectMonth(month, year);
+            }}
+          />
+        </View>
       </View>
 
       <View
@@ -191,7 +160,7 @@ export function DateRangeMenuContent({
           },
         ]}
       >
-        <View style={styles.panelHeader}>
+        <TouchableOpacity style={styles.panelHeader} onPress={onSelectCustom} activeOpacity={0.7}>
           <View
             style={[
               styles.panelIcon,
@@ -254,7 +223,7 @@ export function DateRangeMenuContent({
                 : 'Pick exact start and end dates.'}
             </AppText>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.customRangeRow}>
           <TouchableOpacity
@@ -317,7 +286,11 @@ export function DateRangeMenuContent({
           },
         ]}
       >
-        <View style={styles.panelHeader}>
+        <TouchableOpacity
+          style={styles.panelHeader}
+          onPress={() => onUpdateLastN(lastNValue, lastNUnit)}
+          activeOpacity={0.7}
+        >
           <View
             style={[
               styles.panelIcon,
@@ -378,7 +351,7 @@ export function DateRangeMenuContent({
               {rollingPanelActive ? rollingSummary : 'Great for “last 7 days” or “last 3 months”.'}
             </AppText>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.lastNRow}>
           <View

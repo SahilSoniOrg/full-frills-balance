@@ -5,7 +5,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import type { Dayjs } from 'dayjs';
 import React from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
 import { DateRangeCalendarStep } from './DateRangeCalendarStep';
 import { DateRangeMenuContent } from './DateRangeMenuContent';
@@ -24,13 +24,12 @@ export interface DateRangePickerViewProps {
   lastNValue: string;
   lastNUnit: 'days' | 'weeks' | 'months';
   monthList: { month: number; year: number; label: string }[];
-  flatListRef: React.RefObject<FlatList | null>;
   handleSelectMonth: (month: number, year: number) => void;
+  handleSelectCustom: () => void;
   handleSelectAllTime: () => void;
   updateLastN: (value: string, unit: 'days' | 'weeks' | 'months') => void;
   handleDateSelect: (date: Dayjs) => void;
   handleApply: () => void;
-  INITIAL_MONTH_INDEX: number;
 }
 
 export function DateRangePickerView({
@@ -45,13 +44,12 @@ export function DateRangePickerView({
   lastNValue,
   lastNUnit,
   monthList,
-  flatListRef,
   handleSelectMonth,
+  handleSelectCustom,
   handleSelectAllTime,
   updateLastN,
   handleDateSelect,
   handleApply,
-  INITIAL_MONTH_INDEX,
 }: DateRangePickerViewProps) {
   const { fonts } = useTheme();
 
@@ -117,9 +115,8 @@ export function DateRangePickerView({
                 lastNValue={lastNValue}
                 lastNUnit={lastNUnit}
                 monthList={monthList}
-                flatListRef={flatListRef}
-                initialMonthIndex={INITIAL_MONTH_INDEX}
                 onSelectMonth={handleSelectMonth}
+                onSelectCustom={handleSelectCustom}
                 onSelectAllTime={handleSelectAllTime}
                 onShowStartDate={() => setView('START_DATE')}
                 onShowEndDate={() => setView('END_DATE')}
