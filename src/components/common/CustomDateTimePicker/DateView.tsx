@@ -13,7 +13,7 @@ interface DateViewProps {
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function DateView({ date, onChange }: DateViewProps) {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
   const [currentMonth, setCurrentMonth] = useState(() => date.startOf('month'));
 
   const handlePrevMonth = () => setCurrentMonth(prev => prev.subtract(1, 'month'));
@@ -35,6 +35,10 @@ export function DateView({ date, onChange }: DateViewProps) {
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(i);
     }
+    // Pad to 42 cells (6 rows) to prevent height jumping
+    while (days.length < 42) {
+      days.push(null);
+    }
     return days;
   }, [daysInMonth, firstDayOfWeek]);
 
@@ -46,12 +50,10 @@ export function DateView({ date, onChange }: DateViewProps) {
           onPress={handlePrevMonth}
           variant="surface"
           iconColor={theme.textSecondary}
+          size={32}
         />
         <View style={styles.monthTitle}>
-          <AppText variant="caption" color="secondary">
-            Calendar
-          </AppText>
-          <AppText variant="body" style={{ fontFamily: fonts.bold }}>
+          <AppText variant="body" weight="bold" style={{ color: theme.text }}>
             {currentMonth.format('MMMM YYYY')}
           </AppText>
         </View>
@@ -60,62 +62,68 @@ export function DateView({ date, onChange }: DateViewProps) {
           onPress={handleNextMonth}
           variant="surface"
           iconColor={theme.textSecondary}
+          size={32}
         />
       </View>
-      <View style={styles.daysHeader}>
-        {DAYS_OF_WEEK.map(day => (
-          <View key={day} style={styles.dayCell}>
-            <AppText variant="caption" color="secondary">
-              {day}
-            </AppText>
-          </View>
-        ))}
-      </View>
-      <View style={styles.grid}>
-        {grid.map((day, index) => {
-          if (day === null) {
-            return <View key={`empty-${index}`} style={styles.dayCell} />;
-          }
-          const isSelected =
-            date.year() === currentMonth.year() &&
-            date.month() === currentMonth.month() &&
-            date.date() === day;
-          const isToday =
-            dayjs().year() === currentMonth.year() &&
-            dayjs().month() === currentMonth.month() &&
-            dayjs().date() === day;
 
-          return (
-            <TouchableOpacity
-              key={`day-${day}`}
-              style={[
-                styles.dayCell,
-                { borderColor: 'transparent', borderWidth: 1 },
-                isToday &&
-                  !isSelected && {
-                    borderColor: withOpacity(theme.primary, Opacity.muted),
-                    borderRadius: Shape.radius.full,
-                  },
-                isSelected && {
-                  backgroundColor: theme.primary,
-                  borderRadius: Shape.radius.full,
-                  borderColor: theme.primary,
-                },
-              ]}
-              onPress={() => handleSelectDate(day)}
-            >
-              <AppText
-                variant="body"
-                style={[
-                  isSelected && { color: theme.onPrimary, fontFamily: fonts.bold },
-                  !isSelected && isToday && { color: theme.primary, fontFamily: fonts.bold },
-                ]}
-              >
+      <View style={styles.calendarContainer}>
+        <View style={styles.daysHeader}>
+          {DAYS_OF_WEEK.map(day => (
+            <View key={day} style={styles.dayCell}>
+              <AppText variant="caption" weight="semibold" style={{ color: theme.textSecondary }}>
                 {day}
               </AppText>
-            </TouchableOpacity>
-          );
-        })}
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.grid}>
+          {grid.map((day, index) => {
+            if (day === null) {
+              return <View key={`empty-${index}`} style={styles.dayCell} />;
+            }
+            const isSelected =
+              date.year() === currentMonth.year() &&
+              date.month() === currentMonth.month() &&
+              date.date() === day;
+            const isToday =
+              dayjs().year() === currentMonth.year() &&
+              dayjs().month() === currentMonth.month() &&
+              dayjs().date() === day;
+
+            return (
+              <TouchableOpacity
+                key={`day-${day}`}
+                style={[
+                  styles.dayCell,
+                  isToday &&
+                    !isSelected && {
+                      backgroundColor: withOpacity(theme.primary, Opacity.soft),
+                      borderRadius: Shape.radius.md,
+                    },
+                  isSelected && {
+                    backgroundColor: theme.primary,
+                    borderRadius: Shape.radius.md,
+                  },
+                ]}
+                onPress={() => handleSelectDate(day)}
+                activeOpacity={0.7}
+              >
+                <AppText
+                  variant="body"
+                  weight={isSelected || isToday ? 'bold' : 'regular'}
+                  style={[
+                    isSelected && { color: theme.onPrimary },
+                    !isSelected && isToday && { color: theme.primary },
+                    !isSelected && !isToday && { color: theme.text },
+                  ]}
+                >
+                  {day}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -127,15 +135,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.xs,
   },
   monthTitle: {
     alignItems: 'center',
-    gap: 2,
+  },
+  calendarContainer: {
+    backgroundColor: 'transparent',
   },
   daysHeader: {
     flexDirection: 'row',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   grid: {
     flexDirection: 'row',
@@ -143,9 +154,9 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: `${100 / 7}%`,
-    aspectRatio: 1,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginVertical: 2,
   },
 });
