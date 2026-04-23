@@ -1,15 +1,15 @@
-import { AppCard, AppText } from '@/src/components/core';
+import { AppIcon, AppSurface, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
-import { Box, Inline, Stack } from '@/src/design-system';
+import { Box, Column, Row, Text } from '@/src/design-system';
 import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { Ionicons } from '@expo/vector-icons';
+import { getSmartDateLabel } from '@/src/utils/dateHelpers';
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentCardProps {
   item: PlannedPayment;
@@ -50,68 +50,86 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
   else if (isDueSoon) dateColor = theme.warning;
 
   return (
-    <AppCard elevation="sm" padding="md" radius="r2" style={styles.card}>
-      <TouchableOpacity onPress={onPress} activeOpacity={Opacity.heavy}>
-        <Stack gap="sm">
-          <Inline justify="space-between" align="flex-start">
-            <Stack gap="xs" flex={1}>
-              <AppText variant="body" weight="semibold">
-                {item.name}
-              </AppText>
-              <AppText variant="caption" color="secondary">
-                {getIntervalLabel()}
-              </AppText>
-            </Stack>
-            <AppText
-              variant="body"
-              weight="bold"
-              style={{ color: item.amount < 0 ? theme.error : theme.success }}
-            >
-              {CurrencyFormatter.format(item.amount, item.currencyCode)}
-            </AppText>
-          </Inline>
-
-          <Inline justify="space-between" align="center">
-            <Inline gap="xs" align="center">
-              <Ionicons
-                name={
-                  isOverdue
-                    ? 'alert-circle-outline'
-                    : isDueSoon
-                      ? 'time-outline'
-                      : 'calendar-outline'
-                }
-                size={14}
-                color={dateColor}
-              />
-              <AppText variant="caption" style={{ color: dateColor }}>
-                {AppConfig.strings.plannedPayments.nextOccurrence(
-                  new Date(item.nextOccurrence).toLocaleDateString(),
-                )}
-              </AppText>
-            </Inline>
-
-            {item.status === PlannedPaymentStatus.PAUSED && (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={Opacity.heavy}
+      style={{ marginBottom: Spacing.md }}
+    >
+      <AppSurface
+        elevation="sm"
+        padding="lg"
+        radius="r3"
+        background="surface"
+        borderWidth={1}
+        borderColor="surfaceSecondary"
+      >
+        <Column gap="md">
+          <Row justify="space-between" align="center">
+            <Row gap="md" align="center" flex={1}>
               <Box
-                background="surfaceSecondary"
-                paddingHorizontal="xs"
-                paddingVertical="xs"
-                borderRadius="sm"
+                width={40}
+                height={40}
+                borderRadius="md"
+                alignItems="center"
+                justifyContent="center"
+                background={item.amount < 0 ? 'error' : 'success'}
+                backgroundOpacity="soft"
               >
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.plannedPayments.statusPaused}
-                </AppText>
+                <AppIcon
+                  name={item.amount < 0 ? 'trendingDown' : 'trendingUp'}
+                  color={item.amount < 0 ? 'error' : 'success'}
+                  size={20}
+                />
               </Box>
-            )}
-          </Inline>
-        </Stack>
-      </TouchableOpacity>
-    </AppCard>
+              <Column flex={1}>
+                <Text variant="base" weight="bold" numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Row align="center" gap="sm" marginTop="xs">
+                  <Text variant="xs" color="secondary" opacity={0.6}>
+                    {getIntervalLabel()}
+                  </Text>
+                  {item.status === PlannedPaymentStatus.PAUSED ? (
+                    <Badge variant="default" size="sm">
+                      {AppConfig.strings.plannedPayments.statusPaused}
+                    </Badge>
+                  ) : isOverdue ? (
+                    <Badge variant="error" size="sm" icon="alert">
+                      Overdue
+                    </Badge>
+                  ) : isDueSoon ? (
+                    <Badge variant="warning" size="sm" icon="time">
+                      Due Soon
+                    </Badge>
+                  ) : (
+                    <Badge variant="success" size="sm" icon="calendar">
+                      Active
+                    </Badge>
+                  )}
+                </Row>
+              </Column>
+            </Row>
+
+            <Column align="flex-end">
+              <Text variant="lg" weight="bold" color={item.amount < 0 ? 'error' : 'success'}>
+                {CurrencyFormatter.format(item.amount, item.currencyCode)}
+              </Text>
+            </Column>
+          </Row>
+
+          <Box height={1} background="surfaceSecondary" opacity={0.5} />
+
+          <Row justify="space-between" align="center">
+            <Row align="center" gap="xs">
+              <AppIcon name={isOverdue ? 'alert' : 'calendar'} size={14} color={dateColor} />
+              <Text variant="xs" weight="medium" style={{ color: dateColor }}>
+                Next: {getSmartDateLabel(item.nextOccurrence)}
+              </Text>
+            </Row>
+            <AppIcon name="chevronRight" size={16} color={theme.textSecondary} opacity={0.4} />
+          </Row>
+        </Column>
+      </AppSurface>
+    </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: Spacing.md,
-  },
-});

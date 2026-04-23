@@ -78,6 +78,7 @@ import {
   Star,
   Tag,
   Trash2,
+  TrendingDown,
   TrendingUp,
   TrendingUpDown,
   User,
@@ -135,6 +136,7 @@ export const IconMap = {
   safe: Vault,
   creditCard: CreditCard,
   trendingUp: TrendingUp,
+  trendingDown: TrendingDown,
   briefcase: Briefcase,
   coffee: Coffee,
   shoppingCart: ShoppingCart,
@@ -198,6 +200,7 @@ interface AppIconProps {
   size?: number;
   style?: ViewStyle;
   strokeWidth?: number;
+  opacity?: number;
 }
 
 /**
@@ -211,6 +214,7 @@ export const AppIcon = ({
   size = 24,
   style,
   strokeWidth = 2,
+  opacity,
 }: AppIconProps) => {
   const { theme } = useTheme();
 
@@ -229,7 +233,7 @@ export const AppIcon = ({
     <IconComponent
       color={resolveThemeColor(theme, color) || theme.icon}
       size={size}
-      style={style}
+      style={[style, opacity !== undefined && { opacity }]}
       strokeWidth={strokeWidth}
     />
   );

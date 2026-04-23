@@ -12,97 +12,96 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 type Tab = 'budgets' | 'planned';
 
 export default function CommitmentsScreen() {
-    const { theme } = useTheme();
-    const [activeTab, setActiveTab] = useState<Tab>('budgets');
+  const { theme } = useTheme();
+  const [activeTab, setActiveTab] = useState<Tab>('budgets');
 
-    const handleAdd = () => {
-        if (activeTab === 'budgets') {
-            AppNavigation.toBudgetForm();
-        } else {
-            AppNavigation.toPlannedPaymentForm();
+  const handleAdd = () => {
+    if (activeTab === 'budgets') {
+      AppNavigation.toBudgetForm();
+    } else {
+      AppNavigation.toPlannedPaymentForm();
+    }
+  };
+
+  return (
+    <Screen title="Commitments" showBack={false} scrollable={false}>
+      <View style={[styles.topRegion, { borderBottomColor: theme.border }]}>
+        <View style={styles.tabRow}>
+          <TouchableOpacity
+            onPress={() => setActiveTab('budgets')}
+            style={[
+              styles.tab,
+              activeTab === 'budgets' && { borderBottomColor: theme.primary, borderBottomWidth: 2 },
+            ]}
+          >
+            <AppText
+              variant="body"
+              weight={activeTab === 'budgets' ? 'bold' : 'medium'}
+              style={{ color: activeTab === 'budgets' ? theme.primary : theme.textSecondary }}
+            >
+              Budgets
+            </AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab('planned')}
+            style={[
+              styles.tab,
+              activeTab === 'planned' && { borderBottomColor: theme.primary, borderBottomWidth: 2 },
+            ]}
+          >
+            <AppText
+              variant="body"
+              weight={activeTab === 'planned' ? 'bold' : 'medium'}
+              style={{ color: activeTab === 'planned' ? theme.primary : theme.textSecondary }}
+            >
+              Planned
+            </AppText>
+          </TouchableOpacity>
+        </View>
+        <ScreenSectionHeader
+          subtitle={
+            activeTab === 'budgets'
+              ? 'Monthly budget limits and usage.'
+              : 'Recurring rules and upcoming posts.'
+          }
+          style={styles.sectionHeader}
+        />
+      </View>
+
+      <View style={styles.content}>
+        {activeTab === 'budgets' ? <BudgetListView /> : <PlannedPaymentListView />}
+      </View>
+      <FloatingActionButton
+        onPress={handleAdd}
+        label={activeTab === 'budgets' ? 'New Budget' : 'New Planned Payment'}
+        placement="end"
+        accessibilityLabel={
+          activeTab === 'budgets' ? 'Create a new budget' : 'Create a new planned payment'
         }
-    };
-
-    return (
-        <Screen title="Commitments" showBack={false} scrollable={false}>
-            <View style={[styles.topRegion, { borderBottomColor: theme.border }]}>
-                <View style={styles.tabRow}>
-                    <TouchableOpacity
-                        onPress={() => setActiveTab('budgets')}
-                        style={[
-                            styles.tab,
-                            activeTab === 'budgets' && { borderBottomColor: theme.primary, borderBottomWidth: 2 }
-                        ]}
-                    >
-                        <AppText
-                            variant="body"
-                            weight={activeTab === 'budgets' ? 'bold' : 'medium'}
-                            style={{ color: activeTab === 'budgets' ? theme.primary : theme.textSecondary }}
-                        >
-                            Budgets
-                        </AppText>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => setActiveTab('planned')}
-                        style={[
-                            styles.tab,
-                            activeTab === 'planned' && { borderBottomColor: theme.primary, borderBottomWidth: 2 }
-                        ]}
-                    >
-                        <AppText
-                            variant="body"
-                            weight={activeTab === 'planned' ? 'bold' : 'medium'}
-                            style={{ color: activeTab === 'planned' ? theme.primary : theme.textSecondary }}
-                        >
-                            Planned
-                        </AppText>
-                    </TouchableOpacity>
-                </View>
-                <ScreenSectionHeader
-                    title={activeTab === 'budgets' ? 'Budgets' : 'Planned Payments'}
-                    subtitle={activeTab === 'budgets'
-                        ? 'Monthly budget limits and usage.'
-                        : 'Recurring rules and upcoming posts.'}
-                    style={styles.sectionHeader}
-                />
-            </View>
-
-            <View style={styles.content}>
-                {activeTab === 'budgets' ? (
-                    <BudgetListView />
-                ) : (
-                    <PlannedPaymentListView />
-                )}
-            </View>
-            <FloatingActionButton
-                onPress={handleAdd}
-                label={activeTab === 'budgets' ? 'New Budget' : 'New Planned Payment'}
-                placement="end"
-                accessibilityLabel={activeTab === 'budgets' ? 'Create a new budget' : 'Create a new planned payment'}
-            />
-        </Screen>
-    );
+      />
+    </Screen>
+  );
 }
 
 const styles = StyleSheet.create({
-    topRegion: {
-        paddingHorizontal: Spacing.lg,
-        paddingVertical: Spacing.sm,
-        borderBottomWidth: 1,
-    },
-    tabRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    sectionHeader: {
-        marginTop: Spacing.sm,
-        paddingVertical: Spacing.sm,
-    },
-    tab: {
-        paddingVertical: Spacing.md,
-        marginRight: Spacing.xl,
-    },
-    content: {
-        flex: 1,
-    },
+  topRegion: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    borderBottomWidth: 1,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionHeader: {
+    marginTop: Spacing.xs,
+  },
+  tab: {
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+    marginRight: Spacing.xl,
+  },
+  content: {
+    flex: 1,
+  },
 });

@@ -16,6 +16,7 @@ export type TextProps = RNTextProps & {
   marginBottom?: SpacingKey | number;
   marginHorizontal?: SpacingKey | number;
   opacity?: number;
+  letterSpacing?: number;
 };
 
 export function Text({
@@ -28,6 +29,7 @@ export function Text({
   marginBottom,
   marginHorizontal,
   opacity,
+  letterSpacing,
   style,
   ...props
 }: TextProps) {
@@ -48,11 +50,6 @@ export function Text({
         ? Typography.lineHeights.tight
         : Typography.lineHeights.normal;
 
-    const letterSpacing =
-      isHeading || variant === 'subheading'
-        ? Typography.letterSpacing.tight
-        : Typography.letterSpacing.normal;
-
     const resolvedFontFamily = (() => {
       if (isHeading) return fonts.heading;
       if (variant === 'subheading') return fonts.subheading;
@@ -64,7 +61,11 @@ export function Text({
     const baseStyle = {
       fontSize,
       lineHeight: fontSize * lineHeightMultiplier,
-      letterSpacing,
+      letterSpacing:
+        letterSpacing ??
+        (isHeading || variant === 'subheading'
+          ? Typography.letterSpacing.tight
+          : Typography.letterSpacing.normal),
       color: variantColors.main,
       textAlign: align,
       fontFamily: resolvedFontFamily,
