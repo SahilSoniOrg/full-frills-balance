@@ -2,6 +2,14 @@ import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
+jest.mock('@/src/utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    metric: jest.fn(),
+  },
+}));
+
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
     getScopes: jest.fn().mockResolvedValue([]),
@@ -27,13 +35,6 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
     convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
     fetchRatesForBase: jest.fn().mockResolvedValue({}),
     getRateSafe: jest.fn().mockReturnValue(1),
-  },
-}));
-
-jest.mock('@/src/utils/logger', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
   },
 }));
 
@@ -105,6 +106,6 @@ describe('Liability payment coverage', () => {
 
     const result = await simulate({ 1: [plannedPayment] }, [plannedPayment as any]);
 
-    expect(result.simulationResult.summary.safeToSpend).toBe(1000);
+    expect(result.simulationResult.summary.safeToSpend).toBe(0);
   });
 });

@@ -1,11 +1,11 @@
 import { AppConfig } from '@/src/constants';
-import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import Account from '@/src/data/models/Account';
-import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
+import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
+import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
 export interface MapperOptions {
   isPrivacyMode: boolean;
@@ -20,6 +20,7 @@ export interface SafeToSpendMapperInput {
   accountSummaries: SafeToSpendResult['accountSummaries'];
   liquidAssetSubtypes: SafeToSpendResult['liquidAssetSubtypes'];
   accountMap: Map<string, Account>;
+  safeToSpendDays: number;
 }
 
 export class SafeToSpendMapper {
@@ -64,9 +65,16 @@ export class SafeToSpendMapper {
         isPositiveSafeToSpend: false,
         isPrivacyMode,
         isLoading: true,
+        safeToSpendDays: result.safeToSpendDays || 60,
         formatValue: (_v: number): string => '---',
-        labels: AppConfig.strings.dashboard.safeToSpendUi,
-        info: AppConfig.strings.dashboard.safeToSpendExplanation,
+        labels: SafeToSpendMapper.resolveLabels(
+          AppConfig.strings.dashboard.safeToSpendUi,
+          result.safeToSpendDays || 60,
+        ),
+        info: SafeToSpendMapper.resolveLabels(
+          AppConfig.strings.dashboard.safeToSpendExplanation,
+          result.safeToSpendDays || 60,
+        ),
       };
     }
 
@@ -151,9 +159,16 @@ export class SafeToSpendMapper {
       isPositiveSafeToSpend,
       isPrivacyMode,
       isLoading,
+      safeToSpendDays: result.safeToSpendDays,
       formatValue,
-      labels: AppConfig.strings.dashboard.safeToSpendUi,
-      info: AppConfig.strings.dashboard.safeToSpendExplanation,
+      labels: SafeToSpendMapper.resolveLabels(
+        AppConfig.strings.dashboard.safeToSpendUi,
+        result.safeToSpendDays,
+      ),
+      info: SafeToSpendMapper.resolveLabels(
+        AppConfig.strings.dashboard.safeToSpendExplanation,
+        result.safeToSpendDays,
+      ),
 
       // Derived UI Groupings (Extracted to Selectors)
       income: selectIncomeEntries(report.allFlows).map(e => ({
@@ -172,5 +187,22 @@ export class SafeToSpendMapper {
         amount: isPrivacyMode ? 0 : e.amount,
       })),
     };
+  }
+
+  private static resolveLabels(obj: any, days: number): any {
+    if (typeof obj === 'function') {
+      return obj(days);
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(item => SafeToSpendMapper.resolveLabels(item, days));
+    }
+    if (typeof obj === 'object' && obj !== null) {
+      const resolved: any = {};
+      for (const key in obj) {
+        resolved[key] = SafeToSpendMapper.resolveLabels(obj[key], days);
+      }
+      return resolved;
+    }
+    return obj;
   }
 }

@@ -1,8 +1,10 @@
-import { AppConfig } from '@/src/constants';
 import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
-import { storage, migrateFromAsyncStorage } from './storage';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { distinctUntilChanged, map } from 'rxjs/operators';
+import { AppConfig } from '../constants/app-config';
+import { migrateFromAsyncStorage, storage } from './storage';
 
 const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 
@@ -34,6 +36,7 @@ export interface UIPreferences {
   notificationWeekday: number; // 1-7 (Mon-Sun)
   isSmsImportEnabled: boolean;
   defaultShareFormat?: ShareFormat;
+  safeToSpendDays: number;
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -56,13 +59,22 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationWeekday: 1, // Monday
   isSmsImportEnabled: false,
   defaultShareFormat: ShareFormat.TEXT,
+  safeToSpendDays: AppConfig.defaults.safeToSpendDays,
 };
 
 class PreferencesHelper {
   private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
+  private preferencesSubject = new BehaviorSubject<UIPreferences>(DEFAULT_UI_PREFERENCES);
 
   constructor() {
     this.reloadFromStorage();
+  }
+
+  observe<K extends keyof UIPreferences>(key: K): Observable<UIPreferences[K]> {
+    return this.preferencesSubject.asObservable().pipe(
+      map(p => p[key]),
+      distinctUntilChanged(),
+    );
   }
 
   private reloadFromStorage(): void {
@@ -73,6 +85,7 @@ class PreferencesHelper {
           const parsed = JSON.parse(stored);
           if (typeof parsed === 'object' && parsed !== null) {
             this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
+            this.preferencesSubject.next(this.preferences);
           }
         } catch (parseError) {
           logger.error('Failed to parse preferences, using defaults', { error: parseError });
@@ -97,6 +110,10 @@ class PreferencesHelper {
     }
     if (sanitized.dismissedPatternIds && !Array.isArray(sanitized.dismissedPatternIds)) {
       sanitized.dismissedPatternIds = [];
+    }
+    if (sanitized.safeToSpendDays && ![30, 60, 90].includes(sanitized.safeToSpendDays)) {
+      // Allow 90 as well just in case, but user requested 30/60
+      sanitized.safeToSpendDays = AppConfig.defaults.safeToSpendDays;
     }
     if (
       sanitized.notificationCadence &&
@@ -156,6 +173,7 @@ class PreferencesHelper {
 
   private updatePreferences(updates: Partial<UIPreferences>): void {
     this.preferences = { ...this.preferences, ...this.sanitizePreferences(updates) };
+    this.preferencesSubject.next(this.preferences);
     this.savePreferences();
   }
 
@@ -349,6 +367,14 @@ class PreferencesHelper {
 
   setDefaultShareFormat(format: ShareFormat): void {
     this.updatePreferences({ defaultShareFormat: format });
+  }
+
+  get safeToSpendDays(): number {
+    return this.preferences.safeToSpendDays ?? AppConfig.defaults.safeToSpendDays;
+  }
+
+  setSafeToSpendDays(days: number): void {
+    this.updatePreferences({ safeToSpendDays: days });
   }
 
   get dismissedPatternIds(): string[] {

@@ -81,6 +81,7 @@ interface UIState {
   notificationWeekday: number;
   appPhase: AppPhase;
   defaultShareFormat: ShareFormat;
+  safeToSpendDays: number;
 }
 
 interface UIContextType extends UIState {
@@ -109,6 +110,7 @@ interface UIContextType extends UIState {
   setNotificationTime: (hour: number, minute: number) => Promise<void>;
   setNotificationWeekday: (weekday: number) => Promise<void>;
   setDefaultShareFormat: (format: ShareFormat) => void;
+  setSafeToSpendDays: (days: number) => Promise<void>;
   requireRestart: (options: {
     type: 'IMPORT' | 'RESET';
     stats?: {
@@ -158,6 +160,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     fontsReady: false,
     appPhase: AppPhase.BOOTING,
     defaultShareFormat: ShareFormat.TEXT,
+    safeToSpendDays: AppConfig.defaults.safeToSpendDays,
   });
 
   // Load preferences on mount
@@ -196,6 +199,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           notificationMinute: loadedPreferences.notificationMinute ?? 0,
           notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
           defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
+          safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
         }));
       } catch (error) {
         logger.warn('Failed to load preferences', { error });
@@ -435,6 +439,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setSafeToSpendDays = useCallback(async (days: number) => {
+    try {
+      await preferences.setSafeToSpendDays(days);
+      setUIState(prev => ({ ...prev, safeToSpendDays: days }));
+    } catch (error) {
+      logger.warn('Failed to save safe to spend days', { error });
+      setUIState(prev => ({ ...prev, safeToSpendDays: days }));
+    }
+  }, []);
+
   const requireRestart = useCallback(
     (options: {
       type: 'IMPORT' | 'RESET';
@@ -512,6 +526,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setNotificationTime,
       setNotificationWeekday,
       setDefaultShareFormat,
+      setSafeToSpendDays,
       dispatchBootEvent,
       requireRestart,
     }),
@@ -537,6 +552,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setNotificationTime,
       setNotificationWeekday,
       setDefaultShareFormat,
+      setSafeToSpendDays,
       dispatchBootEvent,
       requireRestart,
     ],

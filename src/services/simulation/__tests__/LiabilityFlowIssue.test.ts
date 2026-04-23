@@ -1,10 +1,16 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
 
-jest.mock('react-native', () => ({}), { virtual: true });
+jest.mock('@/src/utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    metric: jest.fn(),
+  },
+}));
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {

@@ -1,6 +1,6 @@
+import { AppConfig } from '@/src/constants';
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
-import { AppConfig } from '@/src/constants';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 
 jest.mock('@/src/utils/currencyFormatter', () => ({
@@ -81,6 +81,7 @@ describe('SafeToSpendMapper', () => {
     liquidAssetSubtypes: [],
     accountMap: new Map(),
     dailyBudgetBurn: 0,
+    safeToSpendDays: 0,
     projection: { history: [], projection: [], safeDaysCount: null, safeToSpend: 0 },
   };
 
@@ -99,10 +100,10 @@ describe('SafeToSpendMapper', () => {
       opt,
     );
 
-  it('throws error if report is missing', () => {
-    expect(() => SafeToSpendMapper.mapToViewModel({} as any, mockOptions)).toThrow(
-      'SafeToSpendMapper: Simulation report is missing',
-    );
+  it('returns fallback data if report is missing', () => {
+    const vm = SafeToSpendMapper.mapToViewModel({} as any, mockOptions);
+    expect(vm.safeToSpend).toBe(0);
+    expect(vm.displaySafeToSpend).toBe('---');
   });
 
   it('correctly calculates effectiveTotal for bar chart scale', () => {
@@ -145,5 +146,15 @@ describe('SafeToSpendMapper', () => {
     };
     const vm = mapToVM(smallResult as any);
     expect(vm.displaySafeToSpend).toBe('< $1');
+  });
+
+  it('resolves dynamic labels with safeToSpendDays', () => {
+    const days = 45;
+    const vm = mapToVM({ ...mockResult, safeToSpendDays: days });
+
+    // Check if one of the formula items contains the days
+    const incomingStr = vm.info.formulaItems[1];
+    expect(typeof incomingStr).toBe('string');
+    expect(incomingStr).toContain('45 days');
   });
 });

@@ -20,7 +20,7 @@ import { Platform } from 'react-native';
 
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
-import { catchError, debounceTime, shareReplay, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, map, shareReplay, switchMap } from 'rxjs/operators';
 import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
@@ -69,6 +69,7 @@ export interface SafeToSpendResult {
   dailyBudgetBurn: number;
   projection: SafeToSpendProjection;
   accountMap: Map<string, Account>;
+  safeToSpendDays: number;
 }
 
 export class NotificationService {
@@ -235,293 +236,322 @@ export class NotificationService {
       return this.safeToSpend$;
     }
 
-    const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
-
-    this.safeToSpend$ = combineLatest([
-      accountRepository.observeByType(AccountType.ASSET),
-      accountRepository.observeByType(AccountType.LIABILITY),
-      budgetRepository.observeAllActive(),
-      plannedPaymentRepository.observeActive(),
-      accountRepository.observeAll(),
-      journalRepository.observePlannedInRange(
-        dayjs().subtract(AppConfig.defaults.safeToSpendDays, 'day').startOf('day').valueOf(),
-        dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
-      ),
-      transactionRepository.observeActiveWithColumns(['running_balance']),
-      journalRepository.observeStatusMeta(),
-    ] as [
-      Observable<Account[]>,
-      Observable<Account[]>,
-      Observable<Budget[]>,
-      Observable<PlannedPayment[]>,
-      Observable<Account[]>,
-      Observable<Journal[]>,
-      Observable<unknown[]>,
-      Observable<Journal[]>,
-    ]).pipe(
-      debounceTime(AppConfig.insights.observeDebounceMs),
-      switchMap(([assets, liabilities, budgets, plannedPayments, allAccounts, plannedJournals]) => {
-        const now = dayjs();
-        const startOfToday = now.startOf('day');
-        const thirtyDaysAgo = startOfToday.subtract(safeToSpendDays, 'day').valueOf();
-
-        const parentIds = new Set<string>(
-          allAccounts.map(a => a.parentAccountId).filter((id): id is string => Boolean(id)),
-        );
-
-        const liquidAssets = assets.filter(
-          a => isLiquidAssetSubtype(a.accountSubtype) && !parentIds.has(a.id),
-        );
-        const liquidLiabilities = liabilities.filter(
-          l => l.accountType === AccountType.LIABILITY && !parentIds.has(l.id),
-        );
-
-        const liquidAssetIds = liquidAssets.map(a => a.id);
-
-        // Fetch historical deltas as part of the simulation flow
-        const history$ = from(
-          transactionRawRepository.getDailyDeltasGroupedRaw(
-            liquidAssetIds,
-            thirtyDaysAgo,
-            startOfToday.valueOf() + AppConfig.time.msPerDay,
+    this.safeToSpend$ = preferences.observe('safeToSpendDays').pipe(
+      switchMap(safeToSpendDays => {
+        return combineLatest([
+          accountRepository.observeByType(AccountType.ASSET),
+          accountRepository.observeByType(AccountType.LIABILITY),
+          budgetRepository.observeAllActive(),
+          plannedPaymentRepository.observeActive(),
+          accountRepository.observeAll(),
+          journalRepository.observePlannedInRange(
+            dayjs().subtract(safeToSpendDays, 'day').startOf('day').valueOf(),
+            dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
           ),
+          transactionRepository.observeActiveWithColumns(['running_balance']),
+          journalRepository.observeStatusMeta(),
+        ] as [
+          Observable<Account[]>,
+          Observable<Account[]>,
+          Observable<Budget[]>,
+          Observable<PlannedPayment[]>,
+          Observable<Account[]>,
+          Observable<Journal[]>,
+          Observable<unknown[]>,
+          Observable<Journal[]>,
+        ]).pipe(
+          map(([assets, liabilities, budgets, plannedPayments, allAccounts, plannedJournals]) => ({
+            assets,
+            liabilities,
+            budgets,
+            plannedPayments,
+            allAccounts,
+            plannedJournals,
+            safeToSpendDays,
+          })),
         );
+      }),
+      debounceTime(AppConfig.insights.observeDebounceMs),
+      switchMap(
+        ({
+          assets,
+          liabilities,
+          budgets,
+          plannedPayments,
+          allAccounts,
+          plannedJournals,
+          safeToSpendDays,
+        }) => {
+          const now = dayjs();
+          const startOfToday = now.startOf('day');
+          const lookbackDate = startOfToday.subtract(safeToSpendDays, 'day').valueOf();
 
-        const resultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+          const parentIds = new Set<string>(
+            allAccounts.map(a => a.parentAccountId).filter((id): id is string => Boolean(id)),
+          );
 
-        if (liquidAssets.length === 0) {
-          const empty: SafeToSpendResult = {
-            summary: {
-              safeToSpend: 0,
-              shortfall: 0,
-              trajectoryMinBalance: 0,
-              safeDaysCount: null,
-              totalFutureInflow: 0,
-              totalPlannedInflow: 0,
-              totalPlannedOutflow: 0,
-              totalCommittedPlanned: 0,
-              firstMajorInflowDay: null,
-            },
-            report: {
-              allFlows: [],
-              liabilities: {
-                total: 0,
-                totalCreditCard: 0,
-                totalOther: 0,
-                committed: 0,
-                committedCreditCard: 0,
-                committedOther: 0,
-              },
-              budget: {
-                currentMonthRemaining: 0,
-                nextMonthProjected: 0,
-                nextMonthDays: 0,
-              },
+          const liquidAssets = assets.filter(
+            a => isLiquidAssetSubtype(a.accountSubtype) && !parentIds.has(a.id),
+          );
+          const liquidLiabilities = liabilities.filter(
+            l => l.accountType === AccountType.LIABILITY && !parentIds.has(l.id),
+          );
+
+          const liquidAssetIds = liquidAssets.map(a => a.id);
+
+          // Fetch historical deltas as part of the simulation flow
+          const history$ = from(
+            transactionRawRepository.getDailyDeltasGroupedRaw(
+              liquidAssetIds,
+              lookbackDate,
+              startOfToday.valueOf() + AppConfig.time.msPerDay,
+            ),
+          );
+
+          const resultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+
+          if (liquidAssets.length === 0) {
+            const empty: SafeToSpendResult = {
               summary: {
-                firstMajorInflowDay: null,
+                safeToSpend: 0,
+                shortfall: 0,
+                trajectoryMinBalance: 0,
+                safeDaysCount: null,
                 totalFutureInflow: 0,
                 totalPlannedInflow: 0,
                 totalPlannedOutflow: 0,
                 totalCommittedPlanned: 0,
+                firstMajorInflowDay: null,
               },
-            },
-            accountSummaries: [],
-            totalLiquidAssets: 0,
-            currencyCode: resultCurrency,
-            liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-            dailyBudgetBurn: 0,
-            projection: {
-              history: [],
-              projection: [],
-              safeDaysCount: null,
-              safeToSpend: 0,
-            },
-            accountMap: new Map(),
-          };
-          return of(empty);
-        }
+              report: {
+                allFlows: [],
+                liabilities: {
+                  total: 0,
+                  totalCreditCard: 0,
+                  totalOther: 0,
+                  committed: 0,
+                  committedCreditCard: 0,
+                  committedOther: 0,
+                },
+                budget: {
+                  currentMonthRemaining: 0,
+                  nextMonthProjected: 0,
+                  nextMonthDays: 0,
+                },
+                summary: {
+                  firstMajorInflowDay: null,
+                  totalFutureInflow: 0,
+                  totalPlannedInflow: 0,
+                  totalPlannedOutflow: 0,
+                  totalCommittedPlanned: 0,
+                },
+              },
+              accountSummaries: [],
+              totalLiquidAssets: 0,
+              currencyCode: resultCurrency,
+              liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
+              dailyBudgetBurn: 0,
+              projection: {
+                history: [],
+                projection: [],
+                safeDaysCount: null,
+                safeToSpend: 0,
+              },
+              accountMap: new Map(),
+              safeToSpendDays: 0,
+            };
+            return of(empty);
+          }
 
-        const budgetUsageObservables = budgets.map(b => budgetReadService.observeBudgetUsage(b));
+          const budgetUsageObservables = budgets.map(b => budgetReadService.observeBudgetUsage(b));
 
-        const budgetUsage$ =
-          budgetUsageObservables.length > 0
-            ? combineLatest(budgetUsageObservables)
-            : of([] as BudgetUsage[]);
+          const budgetUsage$ =
+            budgetUsageObservables.length > 0
+              ? combineLatest(budgetUsageObservables)
+              : of([] as BudgetUsage[]);
 
-        return combineLatest([budgetUsage$, history$]).pipe(
-          switchMap(async ([usages, rawDeltas]) => {
-            // Phase 1: Normalized balance fetch (includes hierarchy rollups and exclusions)
-            const allBalances = await balanceService.getAccountBalances(
-              now.valueOf(),
-              resultCurrency,
-            );
-            const balancesMapByAccountId = new Map(allBalances.map(b => [b.accountId, b.balance]));
+          return combineLatest([budgetUsage$, history$]).pipe(
+            switchMap(async ([usages, rawDeltas]) => {
+              // Phase 1: Normalized balance fetch (includes hierarchy rollups and exclusions)
+              const allBalances = await balanceService.getAccountBalances(
+                now.valueOf(),
+                resultCurrency,
+              );
+              const balancesMapByAccountId = new Map(
+                allBalances.map(b => [b.accountId, b.balance]),
+              );
 
-            // P0 Perf: Pre-warm exchange rates once, then use sync getRateSafe()
-            // Replaces N sequential await convert() calls across RN bridge
-            const uniqueBaseCurrencies = new Set<string>();
-            uniqueBaseCurrencies.add(resultCurrency);
-            for (const a of liquidAssets) {
-              if (a.currencyCode && a.currencyCode !== resultCurrency) {
-                uniqueBaseCurrencies.add(a.currencyCode);
-              }
-            }
-            for (const l of liquidLiabilities) {
-              if (l.currencyCode && l.currencyCode !== resultCurrency) {
-                uniqueBaseCurrencies.add(l.currencyCode);
-              }
-            }
-            await Promise.all(
-              Array.from(uniqueBaseCurrencies).map(base =>
-                exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
-              ),
-            );
-
-            const startingBalances = new Map<string, number>();
-            let totalLiquidAssetsAmount = 0;
-
-            const liquidAssetAccounts: { name: string; amount: number }[] = [];
-            for (const a of liquidAssets) {
-              const balance = balancesMapByAccountId.get(a.id) || 0;
-              totalLiquidAssetsAmount += balance;
-              liquidAssetAccounts.push({ name: a.name, amount: balance });
-              startingBalances.set(a.id, balance);
-            }
-
-            const totalLiquidMoney = Money.from(totalLiquidAssetsAmount, resultCurrency);
-
-            const liquidLiabilityAccounts: { name: string; amount: number }[] = [];
-            const liabilityAccountBalances = liquidLiabilities.map(l => {
-              const balance = Math.abs(balancesMapByAccountId.get(l.id) || 0);
-              liquidLiabilityAccounts.push({ name: l.name, amount: balance });
-              return {
-                account: l,
-                balance,
-              };
-            });
-
-            // Call the simulation engine
-            const runResult = await cashFlowSimulationService.simulate(
-              startingBalances,
-              plannedPayments,
-              plannedJournals,
-              liquidAssetIds,
-              liabilityAccountBalances,
-              budgets,
-              usages,
-              allAccounts,
-              resultCurrency,
-            );
-
-            // Calculate History Points (UI concern)
-            // P1 Perf: Use sync getRateSafe() — rates already pre-warmed above
-            const netCashFlowByDay = new Map<number, number>();
-            const deltas = rawDeltas || [];
-            for (const delta of deltas) {
-              let amount = delta.delta;
-              if (delta.currencyCode !== resultCurrency) {
-                try {
-                  const rate = exchangeRateService.getRateSafe(delta.currencyCode, resultCurrency);
-                  amount = roundToPrecision(amount * rate, 2);
-                } catch (e) {
-                  logger.error('Failed to convert delta for history projection', e);
+              // P0 Perf: Pre-warm exchange rates once, then use sync getRateSafe()
+              // Replaces N sequential await convert() calls across RN bridge
+              const uniqueBaseCurrencies = new Set<string>();
+              uniqueBaseCurrencies.add(resultCurrency);
+              for (const a of liquidAssets) {
+                if (a.currencyCode && a.currencyCode !== resultCurrency) {
+                  uniqueBaseCurrencies.add(a.currencyCode);
                 }
               }
-              const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
-              netCashFlowByDay.set(
-                localDayStart,
-                (netCashFlowByDay.get(localDayStart) || 0) + amount,
+              for (const l of liquidLiabilities) {
+                if (l.currencyCode && l.currencyCode !== resultCurrency) {
+                  uniqueBaseCurrencies.add(l.currencyCode);
+                }
+              }
+              await Promise.all(
+                Array.from(uniqueBaseCurrencies).map(base =>
+                  exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
+                ),
               );
-            }
 
-            const historyPoints: SafeToSpendDataPoint[] = [];
-            let runningBalance = totalLiquidMoney.amount;
-            historyPoints.push({
-              timestamp: now.valueOf(),
-              value: runningBalance,
-              isProjected: false,
-            });
+              const startingBalances = new Map<string, number>();
+              let totalLiquidAssetsAmount = 0;
 
-            for (let i = 0; i < safeToSpendDays; i++) {
-              const targetDay = startOfToday.subtract(i, 'day').valueOf();
-              const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
-              runningBalance -= flowThatDay;
+              const liquidAssetAccounts: { name: string; amount: number }[] = [];
+              for (const a of liquidAssets) {
+                const balance = balancesMapByAccountId.get(a.id) || 0;
+                totalLiquidAssetsAmount += balance;
+                liquidAssetAccounts.push({ name: a.name, amount: balance });
+                startingBalances.set(a.id, balance);
+              }
+
+              const totalLiquidMoney = Money.from(totalLiquidAssetsAmount, resultCurrency);
+
+              const liquidLiabilityAccounts: { name: string; amount: number }[] = [];
+              const liabilityAccountBalances = liquidLiabilities.map(l => {
+                const balance = Math.abs(balancesMapByAccountId.get(l.id) || 0);
+                liquidLiabilityAccounts.push({ name: l.name, amount: balance });
+                return {
+                  account: l,
+                  balance,
+                };
+              });
+
+              // Call the simulation engine
+              const runResult = await cashFlowSimulationService.simulate(
+                startingBalances,
+                plannedPayments,
+                plannedJournals,
+                liquidAssetIds,
+                liabilityAccountBalances,
+                budgets,
+                usages,
+                allAccounts,
+                resultCurrency,
+                safeToSpendDays,
+              );
+
+              // Calculate History Points (UI concern)
+              // P1 Perf: Use sync getRateSafe() — rates already pre-warmed above
+              const netCashFlowByDay = new Map<number, number>();
+              const deltas = rawDeltas || [];
+              for (const delta of deltas) {
+                let amount = delta.delta;
+                if (delta.currencyCode !== resultCurrency) {
+                  try {
+                    const rate = exchangeRateService.getRateSafe(
+                      delta.currencyCode,
+                      resultCurrency,
+                    );
+                    amount = roundToPrecision(amount * rate, 2);
+                  } catch (e) {
+                    logger.error('Failed to convert delta for history projection', e);
+                  }
+                }
+                const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
+                netCashFlowByDay.set(
+                  localDayStart,
+                  (netCashFlowByDay.get(localDayStart) || 0) + amount,
+                );
+              }
+
+              const historyPoints: SafeToSpendDataPoint[] = [];
+              let runningBalance = totalLiquidMoney.amount;
               historyPoints.push({
-                timestamp: startOfToday.subtract(i + 1, 'day').valueOf(),
+                timestamp: now.valueOf(),
                 value: runningBalance,
                 isProjected: false,
               });
-            }
-            historyPoints.reverse();
 
-            const points = runResult.simulationResult.projections.map(p => {
-              const details = p.flows.map(f => ({
-                name: f.label,
-                amount: f.amount,
-                type: f.kind === 'INFLOW' ? FlowType.INFLOW : FlowType.OUTFLOW,
-                context: f.origin,
-              }));
+              for (let i = 0; i < safeToSpendDays; i++) {
+                const targetDay = startOfToday.subtract(i, 'day').valueOf();
+                const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
+                runningBalance -= flowThatDay;
+                historyPoints.push({
+                  timestamp: startOfToday.subtract(i + 1, 'day').valueOf(),
+                  value: runningBalance,
+                  isProjected: false,
+                });
+              }
+              historyPoints.reverse();
 
-              const dailyBurn = p.flows
-                .filter(f => {
-                  const isBudget = f.origin === FlowSource.BUDGET || f.resolvedFrom === 'BUDGET';
-                  return isBudget && f.kind === 'OUTFLOW';
-                })
-                .reduce((sum, f) => sum + f.amount, 0);
+              const points = runResult.simulationResult.projections.map(p => {
+                const details = p.flows.map(f => ({
+                  name: f.label,
+                  amount: f.amount,
+                  type: f.kind === 'INFLOW' ? FlowType.INFLOW : FlowType.OUTFLOW,
+                  context: f.origin,
+                }));
+
+                const dailyBurn = p.flows
+                  .filter(f => {
+                    const isBudget = f.origin === FlowSource.BUDGET || f.resolvedFrom === 'BUDGET';
+                    return isBudget && f.kind === 'OUTFLOW';
+                  })
+                  .reduce((sum, f) => sum + f.amount, 0);
+
+                return {
+                  timestamp: p.timestamp,
+                  dayOffset: p.dayOffset,
+                  value: p.globalBalance,
+                  isProjected: true,
+                  accountBalances: p.accountBalances,
+                  details,
+                  dailyBurn: dailyBurn > 0 ? dailyBurn : undefined,
+                };
+              });
+
+              const safeDaysCount = (function () {
+                const liquidIds = new Set(liquidAssetIds);
+                let startingGlobal = 0;
+                for (const [accountId, balance] of startingBalances.entries()) {
+                  if (liquidIds.has(accountId)) startingGlobal += balance;
+                }
+                if (startingGlobal < 0) return 0;
+                const firstNeg = runResult.simulationResult.projections.find(
+                  p => p.globalBalance < 0,
+                );
+                return firstNeg ? firstNeg.dayOffset + 1 : null;
+              })();
 
               return {
-                timestamp: p.timestamp,
-                dayOffset: p.dayOffset,
-                value: p.globalBalance,
-                isProjected: true,
-                accountBalances: p.accountBalances,
-                details,
-                dailyBurn: dailyBurn > 0 ? dailyBurn : undefined,
+                summary: {
+                  ...runResult.simulationResult.summary,
+                  ...runResult.report.summary,
+                  safeCurrentBalance: totalLiquidMoney.amount, // Added for UI validation
+                  safeDaysCount,
+                },
+                report: runResult.report,
+                accountSummaries: runResult.accountSummaries,
+                totalLiquidAssets: totalLiquidMoney.amount,
+                currencyCode: resultCurrency,
+                liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
+                dailyBudgetBurn: runResult.report.budget.currentMonthRemaining / safeToSpendDays,
+                projection: {
+                  history: historyPoints,
+                  projection: points as any,
+                  safeDaysCount,
+                  safeToSpend: runResult.simulationResult.summary.safeToSpend,
+                },
+                accountMap: runResult.accountMap,
+                safeToSpendDays,
               };
-            });
-
-            const safeDaysCount = (function () {
-              const liquidIds = new Set(liquidAssetIds);
-              let startingGlobal = 0;
-              for (const [accountId, balance] of startingBalances.entries()) {
-                if (liquidIds.has(accountId)) startingGlobal += balance;
-              }
-              if (startingGlobal < 0) return 0;
-              const firstNeg = runResult.simulationResult.projections.find(
-                p => p.globalBalance < 0,
-              );
-              return firstNeg ? firstNeg.dayOffset + 1 : null;
-            })();
-
-            return {
-              summary: {
-                ...runResult.simulationResult.summary,
-                ...runResult.report.summary,
-                safeCurrentBalance: totalLiquidMoney.amount, // Added for UI validation
-                safeDaysCount,
-              },
-              report: runResult.report,
-              accountSummaries: runResult.accountSummaries,
-              totalLiquidAssets: totalLiquidMoney.amount,
-              currencyCode: resultCurrency,
-              liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
-              dailyBudgetBurn: runResult.report.budget.currentMonthRemaining / safeToSpendDays,
-              projection: {
-                history: historyPoints,
-                projection: points as any,
-                safeDaysCount,
-                safeToSpend: runResult.simulationResult.summary.safeToSpend,
-              },
-              accountMap: runResult.accountMap,
-            };
-          }),
-          catchError(err => {
-            logger.error('[SafeToSpend] Error in simulation pipeline:', err);
-            // Return an empty/fallback result instead of letting the observable die
-            return of(this.getEmptySafeToSpendResult(resultCurrency));
-          }),
-        );
-      }),
+            }),
+            catchError(err => {
+              logger.error('[SafeToSpend] Error in simulation pipeline:', err);
+              // Return an empty/fallback result instead of letting the observable die
+              return of(this.getEmptySafeToSpendResult(resultCurrency));
+            }),
+          );
+        },
+      ),
       catchError(err => {
         logger.error('[SafeToSpend] Outer pipeline error:', err);
         return of(this.getEmptySafeToSpendResult(AppConfig.defaultCurrency));
@@ -580,6 +610,7 @@ export class NotificationService {
         safeToSpend: 0,
       },
       accountMap: new Map(),
+      safeToSpendDays: 0,
     };
   }
 }

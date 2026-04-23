@@ -1,9 +1,9 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
-import { ShareFormat } from '@/src/types/sharing';
 import { useUI } from '@/src/contexts/UIContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
 import { analytics } from '@/src/services/analytics-service';
+import { ShareFormat } from '@/src/types/sharing';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { logger } from '@/src/utils/logger';
@@ -55,6 +55,8 @@ export interface SettingsViewModel {
   integrityProgressMessage: string;
   onCleanup: () => void;
   onFactoryReset: () => void;
+  safeToSpendDays: number;
+  setSafeToSpendDays: (days: number) => void;
 }
 
 export function useSettingsViewModel(): SettingsViewModel {
@@ -403,5 +405,12 @@ export function useSettingsViewModel(): SettingsViewModel {
     onFixIntegrity,
     onCleanup,
     onFactoryReset,
+    safeToSpendDays: ui.safeToSpendDays,
+    setSafeToSpendDays: (value: number) => {
+      ui.setSafeToSpendDays(value);
+      analytics.trackFeatureUsage('settings', 'change_safe_to_spend_days', {
+        days: value,
+      });
+    },
   };
 }

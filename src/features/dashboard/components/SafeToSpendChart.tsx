@@ -41,7 +41,10 @@ export const SafeToSpendChart = ({
 
   const minX =
     data.length > 0 ? Math.min(...data.map(d => d.x)) : dayjs().subtract(7, 'day').valueOf();
-  const maxX = data.length > 0 ? Math.max(...data.map(d => d.x)) : dayjs().add(30, 'day').valueOf();
+  const maxX =
+    data.length > 0
+      ? Math.max(...data.map(d => d.x))
+      : dayjs().add(AppConfig.defaults.safeToSpendDays, 'day').valueOf();
 
   const tickCount = AppConfig.defaults.chartTickCount;
   const xTicks = [];

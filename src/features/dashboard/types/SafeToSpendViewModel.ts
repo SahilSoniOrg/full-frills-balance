@@ -1,10 +1,10 @@
-import {
-  AccountSimulationSummary,
-  IncomeEntry,
-  AccountCommitment,
-  DebtEntry,
-} from '@/src/services/simulation/types';
 import { AccountSubtype } from '@/src/data/models/Account';
+import {
+  AccountCommitment,
+  AccountSimulationSummary,
+  DebtEntry,
+  IncomeEntry,
+} from '@/src/services/simulation/types';
 import React from 'react';
 
 export interface SafeToSpendViewModel {
@@ -47,6 +47,7 @@ export interface SafeToSpendViewModel {
   isPositiveSafeToSpend: boolean;
   isPrivacyMode: boolean;
   isLoading: boolean;
+  safeToSpendDays: number;
 
   // Helpers
   formatValue: (val: number) => string | React.ReactNode;

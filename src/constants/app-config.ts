@@ -191,8 +191,10 @@ export const AppConfig = {
         formulaTitle: 'Calculation',
         formulaItems: [
           'Available now: cash and cash-like account balances you can use soon.',
-          'Incoming: expected pay, refunds, and transfers scheduled within 30 days.',
-          'Reserved: bills, planned payments, transfers, and budgeted spending expected within 30 days.',
+          (days: number) =>
+            `Incoming: expected pay, refunds, and transfers scheduled within ${days} days.`,
+          (days: number) =>
+            `Reserved: bills, planned payments, transfers, and budgeted spending expected within ${days} days.`,
           'Outstanding debt: balances you still owe. Only the amount due soon reduces Safe to Spend.',
           'Safe to Spend: what remains after those amounts are counted.',
         ],
@@ -210,15 +212,16 @@ export const AppConfig = {
       },
       legendDetails: {
         safeTitle: 'Safe to Spend',
-        safeDesc: 'Money left after funds are reserved for the next 30 days.',
+        safeDesc: (days: number) =>
+          `Money left after funds are reserved for the next ${days} days.`,
         committedTitle: 'Reserved',
-        committedDesc:
-          'Money set aside for planned payments, transfers, and active budgets in the next 30 days.',
+        committedDesc: (days: number) =>
+          `Money set aside for planned payments, transfers, and active budgets in the next ${days} days.`,
         debtsTitle: 'Outstanding',
-        debtsDesc:
-          'Balances you still owe. The amount due within 30 days is already included in Reserved.',
+        debtsDesc: (days: number) =>
+          `Balances you still owe. The amount due within ${days} days is already included in Reserved.`,
         inflowTitle: 'Incoming',
-        inflowDesc: 'Expected income and transfers within 30 days.',
+        inflowDesc: (days: number) => `Expected income and transfers within ${days} days.`,
       },
       safeToSpendUi: {
         safePrefix: 'Safe to Spend:',
@@ -243,7 +246,7 @@ export const AppConfig = {
         calculationFormula: "Lower of today's available money and the lowest projected balance",
         plannedPayments: 'Planned payments',
         plannedJournals: 'Planned transfers',
-        activeBudgets: 'Budget reserves (30 days)',
+        activeBudgets: (days: number) => `Budget reserves (${days} days)`,
         breakdownByAccount: 'By account',
         totalCommitted: 'Total reserved',
         creditCardStatements: 'Card statements',
@@ -441,6 +444,9 @@ export const AppConfig = {
         themeTypographyDesc: 'Colors, fonts, dark mode',
         smsAutoPostTitle: 'SMS Auto-Post',
         smsAutoPostDesc: 'Rules that turn reviewed SMS messages into entries automatically',
+        forecastTitle: 'Simulation Horizon',
+        forecastDesc:
+          'Determines how far into the future your balance is projected to calculate Safe-to-Spend.',
       },
       community: {
         telegramTitle: 'Telegram',

@@ -1,14 +1,16 @@
+import { AppConfig } from '@/src/constants/app-config';
+import Budget from '@/src/data/models/Budget';
 import dayjs from 'dayjs';
 import { BudgetFlowGenerator } from '../engines/BudgetFlowGenerator';
 import { FlowCategory, SimulationContext } from '../types';
-import Budget from '@/src/data/models/Budget';
 
 describe('BudgetReconciliation', () => {
   const simulationStartMs = dayjs('2026-04-12T00:00:00Z').valueOf();
+  const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
   const context: SimulationContext = {
     simulationStartMs,
-    simulationDays: 30,
-    simulationEndMs: simulationStartMs + 30 * 24 * 60 * 60 * 1000,
+    simulationDays: safeToSpendDays,
+    simulationEndMs: simulationStartMs + safeToSpendDays * 24 * 60 * 60 * 1000,
     resultCurrency: 'USD',
     liquidAccountIds: new Set(['acc1']),
     orderedLiquidAccountIds: ['acc1'],
@@ -49,17 +51,17 @@ describe('BudgetReconciliation', () => {
       context,
       [budget],
       [usage as any],
-      30, // 30 days left
-      30, // next month days
+      safeToSpendDays, // days left
+      safeToSpendDays, // next month days
       budgetCategoryMap,
       plannedFlows,
     );
 
     // Total budget was $1000. Planned was $800.
     // Remaining for burn should be $200.
-    // Daily burn over 30 days = $200 / 30 = 6.666...
+    // Daily burn over window = $200 / safeToSpendDays
     const day0Burn = budgetFlows.find(f => f.dayOffset === 0);
-    expect(day0Burn?.amount).toBeCloseTo(200 / 30, 2);
+    expect(day0Burn?.amount).toBeCloseTo(200 / safeToSpendDays, 2);
 
     const totalBurn = budgetFlows.reduce((sum, f) => sum + f.amount, 0);
     expect(totalBurn).toBeCloseTo(200, 2);

@@ -1,9 +1,11 @@
+import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
 
 describe('PlannedFlowGenerator May 5th Regression', () => {
   const simulationStartMs = dayjs('2026-04-08').startOf('day').valueOf();
-  const simulationEndMs = dayjs('2026-04-08').startOf('day').add(30, 'day').valueOf();
+  const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
+  const simulationEndMs = dayjs('2026-04-08').startOf('day').add(safeToSpendDays, 'day').valueOf();
 
   const liquidAccountIds = new Set(['bank']);
   const liabilityAccountIds = new Set(['cc']);
@@ -27,7 +29,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
     const result = PlannedFlowGenerator.generate(
       {
         simulationStartMs,
-        simulationDays: 30,
+        simulationDays: safeToSpendDays,
         simulationEndMs,
         resultCurrency: 'USD',
         liquidAccountIds,
@@ -42,13 +44,14 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       new Map(),
     );
 
-    // We expect TWO flows:
+    // We expect THREE flows in 60-day window:
     // 1. One for the overdue April 5th payment (pulled to Day 0)
     // 2. One for the May 5th payment
+    // 3. One for the June 5th payment
     const day0Flow = result.flows.find(f => f.dayOffset === 0);
     const may5Flow = result.flows.find(f => f.dayOffset === 27); // (May 5 - April 8) = 27 days
 
-    expect(result.flows.length).toBe(2);
+    expect(result.flows.length).toBe(3);
     expect(day0Flow).toBeDefined();
     expect(may5Flow).toBeDefined();
     expect(may5Flow?.amount).toBe(1000);
@@ -72,7 +75,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
     const result = PlannedFlowGenerator.generate(
       {
         simulationStartMs,
-        simulationDays: 30,
+        simulationDays: safeToSpendDays,
         simulationEndMs,
         resultCurrency: 'USD',
         liquidAccountIds,

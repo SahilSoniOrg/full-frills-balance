@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
@@ -45,6 +46,7 @@ jest.mock('@/src/utils/logger', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
+    metric: jest.fn(),
   },
 }));
 
@@ -218,7 +220,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     } as any);
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
-    expect(liabilityFlows).toHaveLength(3);
+    expect(liabilityFlows).toHaveLength(5);
     expect(liabilityFlows).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ accountId: 'savings', amount: 250, dayOffset: 9 }),
@@ -226,16 +228,16 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         expect.objectContaining({ accountId: 'cash', amount: 600, dayOffset: 19 }),
       ]),
     );
-    expect(result.simulationResult.summary.safeToSpend).toBe(1050);
+    expect(result.simulationResult.summary.safeToSpend).toBe(600);
     expect(result.simulationResult.summary.shortfall).toBe(0);
     expect(
       result.accountSummaries!.find(summary => summary.accountId === 'cash')?.usageDetails!
         .totalOutflow,
-    ).toBe(1000);
+    ).toBe(1400);
     expect(
       result.accountSummaries!.find(summary => summary.accountId === 'savings')?.usageDetails!
         .totalOutflow,
-    ).toBe(250);
+    ).toBe(300);
   });
 
   it('reports a coherent shortfall when stacked liabilities exceed liquid balances', async () => {
@@ -423,8 +425,8 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     } as any);
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);
-    expect(liabilityFlows).toHaveLength(10);
-    expect(result.simulationResult.projections).toHaveLength(30);
+    expect(liabilityFlows).toHaveLength(20);
+    expect(result.simulationResult.projections).toHaveLength(AppConfig.defaults.safeToSpendDays);
     expect(result.simulationResult.summary.safeToSpend).toBeGreaterThanOrEqual(0);
     expect(result.simulationResult.summary.safeToSpend).toBeLessThanOrEqual(8350);
     expect(result.simulationResult.summary.trajectoryMinBalance).toBeLessThanOrEqual(8350);
@@ -432,7 +434,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     for (const flow of liabilityFlows) {
       expect(flow.amount).toBeGreaterThan(0);
       expect(flow.dayOffset).toBeGreaterThanOrEqual(0);
-      expect(flow.dayOffset).toBeLessThan(30);
+      expect(flow.dayOffset).toBeLessThan(AppConfig.defaults.safeToSpendDays);
       expect(['cash', 'savings']).toContain((flow as any).accountId);
     }
   });
@@ -493,7 +495,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         }),
       ]),
     );
-    expect(result.simulationResult.summary.safeToSpend).toBe(200);
+    expect(result.simulationResult.summary.safeToSpend).toBe(0);
   });
 
   it.skip('TODO: converts statement balances for foreign-currency credit cards before obligation math', async () => {

@@ -1,13 +1,15 @@
+import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
 import { SimulationContext } from '../types';
 
 describe('PlannedFlowGenerator Past Handling', () => {
   const simulationStartMs = dayjs('2026-04-12T00:00:00Z').valueOf();
+  const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
   const context: SimulationContext = {
     simulationStartMs,
-    simulationDays: 30,
-    simulationEndMs: simulationStartMs + 30 * 24 * 60 * 60 * 1000,
+    simulationDays: safeToSpendDays,
+    simulationEndMs: simulationStartMs + safeToSpendDays * 24 * 60 * 60 * 1000,
     resultCurrency: 'USD',
     liquidAccountIds: new Set(['cash']),
     orderedLiquidAccountIds: ['cash'],

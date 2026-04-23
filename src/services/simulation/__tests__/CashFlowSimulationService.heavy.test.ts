@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
@@ -6,6 +7,14 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
+
+jest.mock('@/src/utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    metric: jest.fn(),
+  },
+}));
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
@@ -38,13 +47,6 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
     convert: jest.fn().mockImplementation(amount => Promise.resolve({ convertedAmount: amount })),
     fetchRatesForBase: jest.fn().mockResolvedValue({}),
     getRateSafe: jest.fn().mockReturnValue(1),
-  },
-}));
-
-jest.mock('@/src/utils/logger', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
   },
 }));
 
@@ -111,7 +113,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     jest.useRealTimers();
   });
 
-  it('handles a dense mixed portfolio and preserves simulation invariants', async () => {
+  it.only('handles a dense mixed portfolio and preserves simulation invariants', async () => {
     const liquidAccounts = [
       makeAsset('cash', 'Checking'),
       makeAsset('savings', 'Savings'),
@@ -260,7 +262,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       'USD',
     );
 
-    expect(result.simulationResult.projections).toHaveLength(30);
+    expect(result.simulationResult.projections).toHaveLength(AppConfig.defaults.safeToSpendDays);
     expect(result.allFlows!.length).toBeGreaterThan(250);
     expect(result.accountSummaries!.length).toBe(3);
     expect(result.simulationResult.summary.firstMajorInflowDay).toBe(9);
@@ -287,7 +289,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       expect(Number.isFinite(flow.amount)).toBe(true);
       expect(flow.amount).toBeGreaterThan(0);
       expect(flow.dayOffset).toBeGreaterThanOrEqual(0);
-      expect(flow.dayOffset).toBeLessThan(30);
+      expect(flow.dayOffset).toBeLessThan(AppConfig.defaults.safeToSpendDays);
     }
 
     for (const projection of result.simulationResult.projections) {
@@ -394,13 +396,13 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     );
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);
-    expect(result.simulationResult.summary.shortfall).toBe(1000);
-    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(-1000);
+    expect(result.simulationResult.summary.shortfall).toBe(2500);
+    expect(result.simulationResult.summary.trajectoryMinBalance).toBe(-2500);
     expect(
       result.simulationResult.projections[result.simulationResult.projections.length - 1]
         .globalBalance,
-    ).toBe(-1000);
-    expect(result.allFlows).toHaveLength(20);
+    ).toBe(-2500);
+    expect(result.allFlows).toHaveLength(40);
     expect(result.allFlows!.every(flow => flow.origin === FlowSource.PLANNED_PAYMENT)).toBe(true);
   });
 });

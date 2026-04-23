@@ -3,12 +3,12 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppNavigation } from '@/src/utils/navigation';
 import { analytics } from '@/src/services/analytics-service';
+import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeToSpendLedger } from './SafeToSpendLedger';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
+import { SafeToSpendLedger } from './SafeToSpendLedger';
 
 interface SafeToSpendExplanationModalProps {
   visible: boolean;
@@ -183,10 +183,12 @@ export const SafeToSpendExplanationModal = ({
                     color="primary"
                     style={{ letterSpacing: 0.5, marginBottom: 2 }}
                   >
-                    {info.formulaItems[0].split(': ')[0].toUpperCase()}
+                    {String(info.formulaItems[0] || '')
+                      .split(': ')[0]
+                      .toUpperCase()}
                   </AppText>
                   <AppText variant="caption" color="secondary">
-                    {info.formulaItems[0].split(': ')[1]}
+                    {String(info.formulaItems[0] || '').split(': ')[1]}
                   </AppText>
                 </View>
               </View>
@@ -242,7 +244,7 @@ export const SafeToSpendExplanationModal = ({
                     {labels.upcomingIncome.toUpperCase()}
                   </AppText>
                   <AppText variant="caption" color="secondary">
-                    {info.formulaItems[1]
+                    {info.formulaItems[1] && typeof info.formulaItems[1] === 'string'
                       ? info.formulaItems[1].split(': ')[1]
                       : 'Predicted inflows'}
                   </AppText>
@@ -348,7 +350,7 @@ export const SafeToSpendExplanationModal = ({
                     {labels.committedLine.split(' (')[0].toUpperCase()}
                   </AppText>
                   <AppText variant="caption" color="secondary">
-                    {info.formulaItems[2]
+                    {info.formulaItems[2] && typeof info.formulaItems[2] === 'string'
                       ? info.formulaItems[2].split(': ')[1]
                       : 'Bills and Budgets'}
                   </AppText>
@@ -538,7 +540,7 @@ export const SafeToSpendExplanationModal = ({
                     {labels.debtsBucket.toUpperCase()}
                   </AppText>
                   <AppText variant="caption" color="secondary">
-                    {info.formulaItems[3]
+                    {info.formulaItems[3] && typeof info.formulaItems[3] === 'string'
                       ? info.formulaItems[3].split(': ')[1]
                       : 'Short-term liabilities'}
                   </AppText>

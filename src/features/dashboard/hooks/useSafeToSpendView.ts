@@ -49,8 +49,15 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
   const setSelectedLegendItem =
     props.uiState?.setSelectedLegendItem ?? setInternalSelectedLegendItem;
 
-  const { summary, totalLiquidAssets, report, accountSummaries, liquidAssetSubtypes, accountMap } =
-    props;
+  const {
+    summary,
+    totalLiquidAssets,
+    report,
+    accountSummaries,
+    liquidAssetSubtypes,
+    accountMap,
+    safeToSpendDays,
+  } = props;
 
   const viewModel = useMemo(() => {
     if (!report) {
@@ -83,6 +90,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
         isPositiveSafeToSpend: false,
         isPrivacyMode,
         isLoading: true,
+        safeToSpendDays: safeToSpendDays || 60,
         formatValue: (_v: number): string => '---',
         labels: AppConfig.strings.dashboard.safeToSpendUi,
         info: AppConfig.strings.dashboard.safeToSpendExplanation,
@@ -97,6 +105,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
         accountSummaries,
         liquidAssetSubtypes,
         accountMap,
+        safeToSpendDays,
       },
       {
         isPrivacyMode,
@@ -114,6 +123,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
     isPrivacyMode,
     propsIsLoading,
     currencyCode,
+    safeToSpendDays,
   ]);
 
   const handleSetInfoVisible = useCallback(
