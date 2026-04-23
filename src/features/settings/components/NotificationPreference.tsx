@@ -67,8 +67,9 @@ export const NotificationPreference = () => {
           options={options}
           value={notificationCadence}
           onChange={handleSelectCadence}
-          minWidth={60}
+          minWidth={64}
           flex={false}
+          size="sm"
         />
 
         <TouchableOpacity

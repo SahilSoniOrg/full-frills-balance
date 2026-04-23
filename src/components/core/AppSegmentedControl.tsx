@@ -176,11 +176,15 @@ export const AppSegmentedControl = <T extends string | number>({
     const horizontalHeight = isSmall ? 28 : isLarge ? 48 : 40;
 
     const itemWidth = isVertical
-      ? Math.max(0, containerSize.width - effectivePillInset * 2)
+      ? flex
+        ? Math.max(0, containerSize.width - effectivePillInset * 2)
+        : minWidth || 44
       : scrollable
         ? propItemWidth || (isSmall ? 44 : 64)
         : options.length > 0
-          ? Math.max(0, containerSize.width - effectivePillInset * 2) / options.length
+          ? flex
+            ? Math.max(0, containerSize.width - effectivePillInset * 2) / options.length
+            : propItemWidth || minWidth || (isSmall ? 44 : 64)
           : 0;
 
     const itemHeight = isVertical
@@ -211,6 +215,8 @@ export const AppSegmentedControl = <T extends string | number>({
     scrollable,
     propItemWidth,
     propItemHeight,
+    minWidth,
+    flex,
   ]);
 
   // 3. Animation State
@@ -395,14 +401,24 @@ export const AppSegmentedControl = <T extends string | number>({
         { backgroundColor: colors.track },
         isMinimal && { padding: 0 },
         isVertical
-          ? { minHeight: 0, minWidth: 44 }
+          ? { minHeight: 0, minWidth: minWidth || 44 }
           : {
               height: layout.horizontalHeight,
               width: flex ? '100%' : 'auto',
               alignSelf: (flex ? 'stretch' : 'flex-start') as FlexStyle['alignSelf'],
+              minWidth,
             },
       ] as StyleProp<ViewStyle>,
-    [isSmall, isLarge, colors.track, isMinimal, isVertical, layout.horizontalHeight, flex],
+    [
+      isSmall,
+      isLarge,
+      colors.track,
+      isMinimal,
+      isVertical,
+      layout.horizontalHeight,
+      flex,
+      minWidth,
+    ],
   );
 
   if (scrollable) {
@@ -427,8 +443,8 @@ export const AppSegmentedControl = <T extends string | number>({
             paddingVertical: isVertical ? Spacing.md : 0,
           }}
         >
-          {hasSize && (
-            <View style={contentStyle}>
+          {(hasSize || !flex) && (
+            <View style={[contentStyle, flex && !hasSize && { opacity: 0 }]}>
               {options.length > 0 && <Animated.View style={pillStyle} />}
               {renderedOptions}
             </View>
@@ -446,8 +462,8 @@ export const AppSegmentedControl = <T extends string | number>({
       accessibilityRole="tablist"
       testID={testID}
     >
-      {hasSize && (
-        <View style={contentStyle}>
+      {(hasSize || !flex) && (
+        <View style={[contentStyle, flex && !hasSize && { opacity: 0 }]}>
           {options.length > 0 && <Animated.View style={pillStyle} />}
           {renderedOptions}
         </View>
