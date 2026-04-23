@@ -1,19 +1,24 @@
+import { AppTabs, FloatingActionButton } from '@/src/components/core';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { AppText, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Spacing } from '@/src/constants';
+import { Box, Stack } from '@/src/design-system';
 import { BudgetListView } from '@/src/features/budget';
 import { PlannedPaymentListView } from '@/src/features/planned-payments';
-import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
 
 type Tab = 'budgets' | 'planned';
 
 export default function CommitmentsScreen() {
-  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>('budgets');
+
+  const tabOptions = useMemo(
+    () => [
+      { id: 'budgets' as const, label: 'Budgets' },
+      { id: 'planned' as const, label: 'Planned' },
+    ],
+    [],
+  );
 
   const handleAdd = () => {
     if (activeTab === 'budgets') {
@@ -25,52 +30,25 @@ export default function CommitmentsScreen() {
 
   return (
     <Screen title="Commitments" showBack={false} scrollable={false}>
-      <View style={[styles.topRegion, { borderBottomColor: theme.border }]}>
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            onPress={() => setActiveTab('budgets')}
-            style={[
-              styles.tab,
-              activeTab === 'budgets' && { borderBottomColor: theme.primary, borderBottomWidth: 2 },
-            ]}
-          >
-            <AppText
-              variant="body"
-              weight={activeTab === 'budgets' ? 'bold' : 'medium'}
-              style={{ color: activeTab === 'budgets' ? theme.primary : theme.textSecondary }}
-            >
-              Budgets
-            </AppText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('planned')}
-            style={[
-              styles.tab,
-              activeTab === 'planned' && { borderBottomColor: theme.primary, borderBottomWidth: 2 },
-            ]}
-          >
-            <AppText
-              variant="body"
-              weight={activeTab === 'planned' ? 'bold' : 'medium'}
-              style={{ color: activeTab === 'planned' ? theme.primary : theme.textSecondary }}
-            >
-              Planned
-            </AppText>
-          </TouchableOpacity>
-        </View>
-        <ScreenSectionHeader
-          subtitle={
-            activeTab === 'budgets'
-              ? 'Monthly budget limits and usage.'
-              : 'Recurring rules and upcoming posts.'
-          }
-          style={styles.sectionHeader}
-        />
-      </View>
+      <Stack gap="lg">
+        <Box marginTop="md">
+          <AppTabs options={tabOptions} value={activeTab} onChange={setActiveTab} />
+        </Box>
+        <Box paddingHorizontal="lg">
+          <ScreenSectionHeader
+            subtitle={
+              activeTab === 'budgets'
+                ? 'Monthly budget limits and usage.'
+                : 'Recurring rules and upcoming posts.'
+            }
+          />
+        </Box>
+      </Stack>
 
-      <View style={styles.content}>
+      <Box flex={1} marginTop="md">
         {activeTab === 'budgets' ? <BudgetListView /> : <PlannedPaymentListView />}
-      </View>
+      </Box>
+
       <FloatingActionButton
         onPress={handleAdd}
         label={activeTab === 'budgets' ? 'New Budget' : 'New Planned Payment'}
@@ -82,26 +60,3 @@ export default function CommitmentsScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  topRegion: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-    borderBottomWidth: 1,
-  },
-  tabRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionHeader: {
-    marginTop: Spacing.xs,
-  },
-  tab: {
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-    marginRight: Spacing.xl,
-  },
-  content: {
-    flex: 1,
-  },
-});

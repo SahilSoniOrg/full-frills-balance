@@ -54,3 +54,6 @@ export type { AppToggleProps } from './AppToggle';
 
 export { AppSegmentedControl } from './AppSegmentedControl';
 export type { SegmentedOption } from './AppSegmentedControl';
+
+export { AppTabs } from './AppTabs';
+export type { TabOption } from './AppTabs';

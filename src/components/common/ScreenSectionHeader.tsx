@@ -1,7 +1,7 @@
 import { AppText } from '@/src/components/core';
-import { Spacing } from '@/src/constants';
+import { Box, Stack } from '@/src/design-system';
 import React from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle } from 'react-native';
 
 interface ScreenSectionHeaderProps {
   title?: string;
@@ -10,40 +10,32 @@ interface ScreenSectionHeaderProps {
   style?: StyleProp<ViewStyle>;
 }
 
+/**
+ * ScreenSectionHeader - A modernized header for screen sections.
+ * Uses design-system primitives for layout and spacing.
+ */
 export function ScreenSectionHeader({ title, subtitle, action, style }: ScreenSectionHeaderProps) {
   return (
-    <View style={[styles.container, style]}>
-      <View style={styles.copy}>
+    <Box
+      flexDirection="row"
+      justifyContent="space-between"
+      alignItems="center"
+      gap="md"
+      style={style}
+    >
+      <Stack gap="xs" flex={1}>
         {title ? (
           <AppText variant="subheading" weight="bold">
             {title}
           </AppText>
         ) : null}
         {subtitle ? (
-          <AppText variant="caption" color="secondary" style={styles.subtitle}>
+          <AppText variant="caption" color="secondary">
             {subtitle}
           </AppText>
         ) : null}
-      </View>
-      {action ? <View style={styles.action}>{action}</View> : null}
-    </View>
+      </Stack>
+      {action ? <Box flexShrink={0}>{action}</Box> : null}
+    </Box>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  copy: {
-    flex: 1,
-  },
-  subtitle: {
-    marginTop: Spacing.xs,
-  },
-  action: {
-    flexShrink: 0,
-  },
-});

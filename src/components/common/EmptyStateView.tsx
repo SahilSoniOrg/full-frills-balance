@@ -1,55 +1,59 @@
-import { AppButton } from '@/src/components/core/AppButton'
-import { AppText } from '@/src/components/core/AppText'
-import { Spacing } from '@/src/constants'
-import React from 'react'
-import { StyleSheet, View, type ViewStyle } from 'react-native'
+import { AppButton } from '@/src/components/core/AppButton';
+import { AppIcon, type IconName } from '@/src/components/core/AppIcon';
+import { AppText } from '@/src/components/core/AppText';
+import { Box, Stack } from '@/src/design-system';
+import React from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
 
 export interface EmptyStateViewProps {
-    title: string
-    subtitle?: string
-    style?: ViewStyle
-    primaryActionLabel?: string
-    onPrimaryAction?: () => void
+  title: string;
+  subtitle?: string;
+  icon?: IconName;
+  style?: StyleProp<ViewStyle>;
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
 }
 
-export function EmptyStateView({ title, subtitle, style, primaryActionLabel, onPrimaryAction }: EmptyStateViewProps) {
-    return (
-        <View style={[styles.container, style]}>
-            <AppText variant="heading" style={styles.title}>
-                {title}
+/**
+ * EmptyStateView - A modernized empty state component.
+ * Supports icons, titles, subtitles, and primary actions.
+ */
+export function EmptyStateView({
+  title,
+  subtitle,
+  icon,
+  style,
+  primaryActionLabel,
+  onPrimaryAction,
+}: EmptyStateViewProps) {
+  return (
+    <Box flex={1} justifyContent="center" alignItems="center" padding="xl" style={style}>
+      <Stack gap="lg" alignItems="center">
+        {icon && (
+          <Box marginBottom="sm">
+            <AppIcon name={icon} size={48} color="textSecondary" />
+          </Box>
+        )}
+        <Stack gap="xs" alignItems="center">
+          <AppText variant="heading" style={{ textAlign: 'center' }}>
+            {title}
+          </AppText>
+          {subtitle && (
+            <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+              {subtitle}
             </AppText>
-            {subtitle && (
-                <AppText variant="body" color="secondary" style={styles.subtitle}>
-                    {subtitle}
-                </AppText>
-            )}
-            {primaryActionLabel && onPrimaryAction ? (
-                <AppButton
-                    onPress={onPrimaryAction}
-                    style={styles.actionButton}
-                    accessibilityLabel={primaryActionLabel}
-                >
-                    {primaryActionLabel}
-                </AppButton>
-            ) : null}
-        </View>
-    )
+          )}
+        </Stack>
+        {primaryActionLabel && onPrimaryAction ? (
+          <AppButton
+            onPress={onPrimaryAction}
+            accessibilityLabel={primaryActionLabel}
+            style={{ marginTop: 8 }}
+          >
+            {primaryActionLabel}
+          </AppButton>
+        ) : null}
+      </Stack>
+    </Box>
+  );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingTop: Spacing.xxxxl * 2,
-    },
-    title: {
-        marginBottom: Spacing.sm,
-    },
-    subtitle: {
-        textAlign: 'center',
-    },
-    actionButton: {
-        marginTop: Spacing.lg,
-    },
-})
