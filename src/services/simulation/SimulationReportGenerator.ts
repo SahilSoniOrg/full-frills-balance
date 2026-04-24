@@ -81,7 +81,8 @@ export class SimulationReportGenerator {
     for (const flow of allFlows) {
       if (flow.timeframe === 'PAST') continue;
       if (flow.category === FlowCategory.BUDGET && flow.kind === 'OUTFLOW') {
-        if (flow.dayOffset < daysLeftInMonth) {
+        const isCurrentCycle = flow.meta?.tags?.includes('CURRENT_CYCLE');
+        if (isCurrentCycle) {
           currentMonthRemaining += flow.amount;
         } else {
           nextMonthProjected += flow.amount;

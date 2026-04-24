@@ -43,38 +43,48 @@ export function useBudgetEditViewModel() {
     pCurrency || defaultCurrency || AppConfig.defaultCurrency,
   );
   const [startMonth, setStartMonth] = useState(new Date());
+  const [intervalType, setIntervalType] = useState('MONTHLY');
+  const [intervalN, setIntervalN] = useState(1);
+  const [recurrenceDay, setRecurrenceDay] = useState(1);
+  const [recurrenceMonth, setRecurrenceMonth] = useState(1);
+  const [startDate, setStartDate] = useState<number | undefined>(undefined);
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
   const [assetAccountIds, setAssetAccountIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(!!budgetId && !pName);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (budgetId) {
-      budgetRepository
-        .find(budgetId)
-        .then(async b => {
-          if (!b) return;
-          setBudget(b);
-          setName(b.name);
-          setAmount(b.amount.toString());
-          setCurrencyCode(b.currencyCode || defaultCurrency || AppConfig.defaultCurrency);
-          const [year, month] = b.startMonth.split('-');
-          setStartMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
+    if (!budgetId) return;
 
-          const scopes = await budgetRepository.getScopes(budgetId);
-          setSelectedAccountIds(scopes.map(s => s.account.id));
+    budgetRepository
+      .find(budgetId)
+      .then(async b => {
+        if (!b) return;
+        setBudget(b);
+        setName(b.name);
+        setAmount(b.amount.toString());
+        setCurrencyCode(b.currencyCode || defaultCurrency || AppConfig.defaultCurrency);
+        const [year, month] = b.startMonth.split('-');
+        setStartMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
+        setIntervalType(b.intervalType || 'MONTHLY');
+        setIntervalN(b.intervalN || 1);
+        setRecurrenceDay(b.recurrenceDay || 1);
+        setRecurrenceMonth(b.recurrenceMonth || 1);
+        setStartDate(b.startDate);
 
-          if (b.assetAccountIds) {
-            setAssetAccountIds(b.assetAccountIds.split(','));
-          }
+        const scopes = await budgetRepository.getScopes(budgetId);
+        setSelectedAccountIds(scopes.map(s => s.account.id));
 
-          setLoading(false);
-        })
-        .catch(e => {
-          logger.error('Failed to load budget', e);
-          setLoading(false);
-        });
-    }
+        if (b.assetAccountIds) {
+          setAssetAccountIds(b.assetAccountIds.split(','));
+        }
+
+        setLoading(false);
+      })
+      .catch(e => {
+        logger.error('Failed to load budget', e);
+        setLoading(false);
+      });
   }, [budgetId, defaultCurrency]);
 
   const save = useCallback(async () => {
@@ -92,6 +102,11 @@ export function useBudgetEditViewModel() {
         amount: parsedAmount,
         currencyCode,
         startMonth: monthStr,
+        intervalType,
+        intervalN: intervalN || 1,
+        startDate,
+        recurrenceDay: recurrenceDay || 1,
+        recurrenceMonth: recurrenceMonth || 1,
         active: true,
         assetAccountIds: assetAccountIds.length > 0 ? assetAccountIds : undefined,
       };
@@ -105,7 +120,20 @@ export function useBudgetEditViewModel() {
     } finally {
       setIsSaving(false);
     }
-  }, [budget, name, amount, startMonth, selectedAccountIds, assetAccountIds, currencyCode]);
+  }, [
+    budget,
+    name,
+    amount,
+    startMonth,
+    selectedAccountIds,
+    assetAccountIds,
+    currencyCode,
+    intervalType,
+    intervalN,
+    startDate,
+    recurrenceDay,
+    recurrenceMonth,
+  ]);
 
   return {
     expenseAccounts,
@@ -117,6 +145,16 @@ export function useBudgetEditViewModel() {
     setAmount,
     startMonth,
     setStartMonth,
+    intervalType,
+    setIntervalType,
+    intervalN,
+    setIntervalN,
+    recurrenceDay,
+    setRecurrenceDay,
+    recurrenceMonth,
+    setRecurrenceMonth,
+    startDate,
+    setStartDate,
     selectedAccountIds,
     setSelectedAccountIds,
     assetAccountIds,

@@ -21,12 +21,13 @@ import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
+import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 
 export function useBudgetDetailViewModel() {
   const params = useLocalSearchParams();
   const budgetId = params.id as string;
 
-  const [targetMonth, setTargetMonth] = useState(() => dayjs().format('YYYY-MM'));
+  const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
   const missingCurrenciesCache = useRef(new Set<string>());
   const baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
@@ -44,16 +45,16 @@ export function useBudgetDetailViewModel() {
         if (!budget) return of(null);
         return combineLatest([
           of(budget),
-          budgetReadService.observeBudgetUsage(budget as any, targetMonth),
-          budgetReadService.observeBudgetDisplayTransactions(budget as any, targetMonth),
+          budgetReadService.observeBudgetUsage(budget as any, refTimestamp),
+          budgetReadService.observeBudgetDisplayTransactions(budget as any, refTimestamp),
         ]);
       }),
     );
-  }, [budgetId, targetMonth]);
+  }, [budgetId, refTimestamp]);
 
   const { data: dbBudgetData, isLoading: dbLoading } = useObservable(
     () => budgetData$,
-    [budgetId, targetMonth],
+    [budgetId, refTimestamp],
     null,
   );
 
@@ -82,7 +83,6 @@ export function useBudgetDetailViewModel() {
     if (pName) {
       return {
         budgetId,
-        targetMonth,
         spentAmount: 0,
         targetAmount: pAmount ? parseFloat(pAmount) : 0,
         percentage: 0,
@@ -91,7 +91,7 @@ export function useBudgetDetailViewModel() {
       } as any;
     }
     return null;
-  }, [dbBudgetData, pName, pAmount, pCurrency, budgetId, targetMonth, baseCurrency]);
+  }, [dbBudgetData, pName, pAmount, pCurrency, budgetId, baseCurrency]);
 
   const transactions = useMemo(() => (dbBudgetData ? dbBudgetData[2] : []), [dbBudgetData]);
 
@@ -214,14 +214,15 @@ export function useBudgetDetailViewModel() {
     const data: { x: number; y: number }[] = [];
     let cumulativeSpent = 0;
 
-    const startOfMonth = dayjs(`${targetMonth}-01`).startOf('month');
-    const endOfMonth = dayjs(`${targetMonth}-01`).endOf('month');
-    const daysInMonth = endOfMonth.date();
+    const { startDate, endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
+    const startOfCycle = dayjs(startDate);
+    const endOfCycle = dayjs(endDate);
+    const daysInCycle = endOfCycle.diff(startOfCycle, 'day') + 1;
 
     let txIndex = 0;
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const currentDay = startOfMonth.date(d);
+    for (let d = 0; d < daysInCycle; d++) {
+      const currentDay = startOfCycle.add(d, 'day');
       const dayStart = currentDay.startOf('day').valueOf();
       const dayEnd = currentDay.endOf('day').valueOf();
 
@@ -264,24 +265,37 @@ export function useBudgetDetailViewModel() {
 
     // If no data points were added (e.g. start of month with no transactions yet), add start point
     if (data.length === 0) {
-      data.push({ x: startOfMonth.valueOf(), y: 0 });
+      data.push({ x: startDate, y: 0 });
     }
 
     return {
       data,
-      domainX: [startOfMonth.valueOf(), endOfMonth.valueOf()] as [number, number],
+      domainX: [startDate, endDate] as [number, number],
     };
-  }, [transactions, targetMonth, budget, baseCurrency, ratesMap, precision]);
+  }, [transactions, refTimestamp, budget, baseCurrency, ratesMap, precision]);
 
   const nextMonth = useCallback(() => {
-    setTargetMonth(prev => dayjs(`${prev}-01`).add(1, 'month').format('YYYY-MM'));
-  }, []);
+    if (!budget) return;
+    const { endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
+    setRefTimestamp(endDate + 1);
+  }, [budget, refTimestamp]);
 
   const prevMonth = useCallback(() => {
-    setTargetMonth(prev => dayjs(`${prev}-01`).subtract(1, 'month').format('YYYY-MM'));
+    if (!budget) return;
+    const { startDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
+    setRefTimestamp(startDate - 1);
+  }, [budget, refTimestamp]);
+
+  const resetToToday = useCallback(() => {
+    setRefTimestamp(Date.now());
   }, []);
 
-  const isCurrentMonth = targetMonth === dayjs().format('YYYY-MM');
+  const isCurrentMonth = useMemo(() => {
+    if (!budget) return true;
+    const { startDate } = BudgetPeriodUtils.getCurrentPeriod(budget);
+    const { startDate: currentRefStart } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
+    return startDate === currentRefStart;
+  }, [budget, refTimestamp]);
 
   const handleDelete = useCallback(() => {
     if (!budget) return;
@@ -306,11 +320,13 @@ export function useBudgetDetailViewModel() {
     usage,
     items,
     isLoading,
-    targetMonth,
+    targetMonth: dayjs(refTimestamp).format('YYYY-MM'),
     nextMonth,
     prevMonth,
+    resetToToday,
     isCurrentMonth,
     chartData,
+    periodLabel: budget ? BudgetPeriodUtils.getPeriodLabel(budget, refTimestamp) : '',
     handleDelete,
   };
 }

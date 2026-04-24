@@ -48,7 +48,7 @@ export function BudgetDetailScreen() {
           <AppIcon name="chevronLeft" size={24} color={theme.text} />
         </AppButton>
         <AppText variant="heading" style={{ minWidth: 120, textAlign: 'center' }}>
-          {dayjs(`${vm.targetMonth}-01`).format('MMMM YYYY')}
+          {vm.periodLabel}
         </AppText>
         <AppButton variant="ghost" onPress={vm.nextMonth} size="sm" disabled={vm.isCurrentMonth}>
           <AppIcon
@@ -147,6 +147,19 @@ export function BudgetDetailScreen() {
             )}
           </View>
         )}
+
+        {!vm.isCurrentMonth && (
+          <AppButton
+            variant="ghost"
+            onPress={vm.resetToToday}
+            size="sm"
+            style={styles.cardTodayButton}
+          >
+            <AppText variant="caption" color="primary" weight="bold">
+              BACK TO TODAY
+            </AppText>
+          </AppButton>
+        )}
       </AppCard>
 
       <ScreenSectionHeader title="Activity" style={styles.activityTitle} />
@@ -212,6 +225,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.lg,
+  },
+  cardTodayButton: {
+    marginTop: Spacing.md,
   },
   heroCard: {
     marginBottom: Spacing.xl,

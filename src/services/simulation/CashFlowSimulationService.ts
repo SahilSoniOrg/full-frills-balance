@@ -187,8 +187,6 @@ export class CashFlowSimulationService {
       context,
       filteredBudgets,
       filteredUsages,
-      time.daysLeftInMonth(),
-      time.nextMonthDays(),
       budgetCategoryMap,
       plannedFlows,
     );

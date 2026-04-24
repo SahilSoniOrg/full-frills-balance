@@ -3,6 +3,8 @@ import Budget from '@/src/data/models/Budget';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { Flow, FlowCategory, FlowSource, SimulationContext } from '../types';
 import { assertValidFlow } from '../utils/FlowInvariants';
+import { BudgetPeriodUtils } from '../../budget/BudgetPeriodUtils';
+import dayjs from 'dayjs';
 
 export class BudgetFlowGenerator {
   /**
@@ -12,8 +14,6 @@ export class BudgetFlowGenerator {
     context: SimulationContext,
     budgets: Budget[],
     usages: BudgetUsage[],
-    daysLeftInMonth: number,
-    nextMonthDays: number,
     budgetCategoryMap: Map<string, Set<string>>,
     plannedFlows: Flow[] = [],
   ): Flow[] {
@@ -49,25 +49,38 @@ export class BudgetFlowGenerator {
 
       const budgetCategories = budgetCategoryMap.get(budget.id) || new Set<string>();
 
+      const { endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, context.simulationStartMs);
+      const daysLeftInCycle = Math.max(
+        1,
+        dayjs(endDate).diff(dayjs(context.simulationStartMs), 'day') + 1,
+      );
+
+      const nextCycleStart = dayjs(endDate).add(1, 'ms').valueOf();
+      const nextCycleRange = BudgetPeriodUtils.getCurrentPeriod(budget, nextCycleStart);
+      const nextCycleDays = Math.max(
+        1,
+        dayjs(nextCycleRange.endDate).diff(dayjs(nextCycleRange.startDate), 'day') + 1,
+      );
+
       // Subtract planned flows that match this budget's categories
-      let currentMonthPlannedTotal = 0;
-      let nextMonthPlannedTotal = 0;
+      let currentCyclePlannedTotal = 0;
+      let nextCyclePlannedTotal = 0;
 
       budgetCategories.forEach(catId => {
         const matching = plannedByCategoryId.get(catId) || [];
         matching.forEach(f => {
-          if (f.dayOffset < daysLeftInMonth) {
-            currentMonthPlannedTotal += f.amount;
+          if (f.dayOffset < daysLeftInCycle) {
+            currentCyclePlannedTotal += f.amount;
           } else {
-            nextMonthPlannedTotal += f.amount;
+            nextCyclePlannedTotal += f.amount;
           }
         });
       });
 
-      const effectiveRemaining = Math.max(0, usage.remaining - currentMonthPlannedTotal);
-      const effectiveNextMonthTotal = Math.max(0, budget.amount - nextMonthPlannedTotal);
+      const effectiveRemaining = Math.max(0, usage.remaining - currentCyclePlannedTotal);
+      const effectiveNextCycleTotal = Math.max(0, budget.amount - nextCyclePlannedTotal);
 
-      if (effectiveRemaining === 0 && effectiveNextMonthTotal === 0 && budget.amount === 0)
+      if (effectiveRemaining === 0 && effectiveNextCycleTotal === 0 && budget.amount === 0)
         continue;
 
       const burns = new Array(context.simulationDays).fill(0);
@@ -76,22 +89,22 @@ export class BudgetFlowGenerator {
       if (isSmoothed) {
         const totalInWindow =
           effectiveRemaining +
-          Math.max(0, context.simulationDays - daysLeftInMonth) *
-            (effectiveNextMonthTotal / Math.max(1, nextMonthDays));
+          Math.max(0, context.simulationDays - daysLeftInCycle) *
+            (effectiveNextCycleTotal / nextCycleDays);
         const smoothedDaily = totalInWindow / context.simulationDays;
         burns.fill(smoothedDaily);
       } else {
         const useConstant30 = AppConfig.insights.useConstant30DayBurn ?? true;
         const minDays = AppConfig.insights.burnRateLookbackMinDays ?? 7;
-        const nextMonthDailyRate =
-          effectiveNextMonthTotal /
-          (useConstant30 ? AppConfig.insights.constantDaysInMonth : nextMonthDays);
-        const currentMonthDailyRate =
+        const nextCycleDailyRate =
+          effectiveNextCycleTotal /
+          (useConstant30 ? AppConfig.insights.constantDaysInMonth : nextCycleDays);
+        const currentCycleDailyRate =
           effectiveRemaining /
-          (useConstant30 ? Math.max(daysLeftInMonth, minDays) : Math.max(1, daysLeftInMonth));
+          (useConstant30 ? Math.max(daysLeftInCycle, minDays) : Math.max(1, daysLeftInCycle));
 
         for (let d = 0; d < context.simulationDays; d++) {
-          burns[d] = d < daysLeftInMonth ? currentMonthDailyRate : nextMonthDailyRate;
+          burns[d] = d < daysLeftInCycle ? currentCycleDailyRate : nextCycleDailyRate;
         }
       }
 
@@ -119,6 +132,9 @@ export class BudgetFlowGenerator {
               origin: FlowSource.BUDGET,
               categoryId: representativeCategoryId,
               referenceId: budget.id,
+              meta: {
+                tags: d < daysLeftInCycle ? ['CURRENT_CYCLE'] : [],
+              },
             });
           }
         }

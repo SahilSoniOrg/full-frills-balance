@@ -12,6 +12,11 @@ export default class Budget extends Model {
   @field('amount') amount!: number;
   @field('currency_code') currencyCode!: string;
   @field('start_month') startMonth!: string;
+  @field('interval_type') intervalType!: string;
+  @field('interval_n') intervalN!: number;
+  @field('start_date') startDate?: number;
+  @field('recurrence_day') recurrenceDay?: number;
+  @field('recurrence_month') recurrenceMonth?: number;
   @field('active') active!: boolean;
   @field('asset_account_ids') assetAccountIds?: string;
 

@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { BudgetItem } from '../types';
+import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 
 interface BudgetCardProps {
   item: BudgetItem;
@@ -27,9 +28,9 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
     statusColor = 'warning';
   }
 
-  const daysInMonth = dayjs().daysInMonth();
-  const currentDay = dayjs().date();
-  const daysLeft = daysInMonth - currentDay;
+  const { endDate } = BudgetPeriodUtils.getCurrentPeriod(budget);
+  const daysLeft = Math.max(0, dayjs(endDate).diff(dayjs(), 'day'));
+  const periodLabel = BudgetPeriodUtils.getPeriodLabel(budget);
 
   return (
     <TouchableOpacity
@@ -65,8 +66,8 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
                   {budget.name}
                 </Text>
                 <Row align="center" gap="xs">
-                  <Text variant="xs" color="secondary" opacity={0.6}>
-                    {daysLeft === 0 ? 'Last day today' : `${daysLeft} days remaining`}
+                  <Text variant="xs" color="secondary" opacity={0.6} numberOfLines={1}>
+                    {daysLeft === 0 ? 'Ends today' : `${daysLeft} days left`} • {periodLabel}
                   </Text>
                 </Row>
               </Column>
@@ -89,7 +90,7 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
                     weight="semibold"
                     color={previousUsage.remaining < 0 ? 'error' : 'success'}
                   >
-                    {previousUsage.remaining < 0 ? 'Over' : 'Under'} last month
+                    {previousUsage.remaining < 0 ? 'Over' : 'Under'} last period
                   </Text>
                 </Row>
               )}

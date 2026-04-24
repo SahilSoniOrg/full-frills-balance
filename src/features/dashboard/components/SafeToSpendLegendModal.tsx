@@ -29,6 +29,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
     income: incomeBreakdown,
     committed: committedBreakdown,
     debt: debtBreakdown,
+    safeToSpendDays,
   } = viewModel;
 
   const { firstMajorInflowDay, committedLiabilitiesCC, committedLiabilitiesOther } = insights;
@@ -59,7 +60,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
       {type === 'safe' && (
         <View style={styles.modalSection}>
           <AppText variant="body" style={{ marginBottom: Spacing.md, lineHeight: 22 }}>
-            {legendStrings.safeDesc}
+            {legendStrings.safeDesc(safeToSpendDays)}
           </AppText>
           <AppCard
             elevation="none"
@@ -190,7 +191,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
       {type === 'committed' && (
         <View style={styles.modalSection}>
           <AppText variant="body" style={{ marginBottom: Spacing.md }}>
-            {legendStrings.committedDesc}
+            {legendStrings.committedDesc(safeToSpendDays)}
           </AppText>
 
           <View style={{ gap: Spacing.md }}>
@@ -286,7 +287,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
       {type === 'debts' && (
         <View style={styles.modalSection}>
           <AppText variant="body" style={{ marginBottom: Spacing.md }}>
-            {legendStrings.debtsDesc}
+            {legendStrings.debtsDesc(safeToSpendDays)}
           </AppText>
 
           <View style={{ gap: Spacing.md }}>

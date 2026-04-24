@@ -17,21 +17,22 @@ describe('BudgetFlowGenerator', () => {
   };
 
   const budgets = [
-    { id: 'b1', name: 'Groceries', amount: 300, assetAccountIds: 'acc-1' },
+    {
+      id: 'b1',
+      name: 'Groceries',
+      amount: 300,
+      assetAccountIds: 'acc-1',
+      intervalType: 'MONTHLY',
+      intervalN: 1,
+      recurrenceDay: 1,
+    },
   ] as unknown as Budget[];
   const usages: BudgetUsage[] = [{ spent: 0, remaining: 300, budgetAmount: 300, usagePercent: 0 }];
   const budgetCategoryMap: Map<string, Set<string>> = new Map([['b1', new Set(['cat-1'])]]);
 
   it('generates daily burn flows in default mode', () => {
     // 300 remaining over 30 days = 10 per day
-    const flows = BudgetFlowGenerator.generate(
-      mockContext,
-      budgets,
-      usages,
-      30, // daysLeftInMonth
-      30, // nextMonthDays
-      budgetCategoryMap,
-    );
+    const flows = BudgetFlowGenerator.generate(mockContext, budgets, usages, budgetCategoryMap);
 
     expect(flows).toHaveLength(30);
     expect(flows[0]).toMatchObject({
@@ -58,8 +59,6 @@ describe('BudgetFlowGenerator', () => {
       contextWithTwoAccounts,
       multiAccountBudget as unknown as Budget[],
       [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }] as BudgetUsage[],
-      10,
-      30,
       new Map([['b2', new Set()]]),
     );
 
@@ -71,6 +70,6 @@ describe('BudgetFlowGenerator', () => {
     const day0Acc1 = flows.find(
       f => f.dayOffset === 0 && 'accountId' in f && f.accountId === 'acc-1',
     );
-    expect(day0Acc1 && 'amount' in day0Acc1 ? day0Acc1.amount : 0).toBeCloseTo(2.777, 2);
+    expect(day0Acc1 && 'amount' in day0Acc1 ? day0Acc1.amount : 0).toBeCloseTo(1.67, 2);
   });
 });

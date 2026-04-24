@@ -3,10 +3,11 @@ import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { AppButton, LoadingView } from '@/src/components/core';
+import { SectionLabel } from '@/src/components/common/SectionLabel';
+import { AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
-import { Stack } from '@/src/design-system';
+import { Box, FadeIn, Stack } from '@/src/design-system';
 import { CurrencySelector } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { toast } from '@/src/utils/alerts';
@@ -29,6 +30,12 @@ export default function BudgetEditScreen() {
     setSelectedAccountIds,
     assetAccountIds,
     setAssetAccountIds,
+    intervalType,
+    setIntervalType,
+    recurrenceDay,
+    setRecurrenceDay,
+    recurrenceMonth,
+    setRecurrenceMonth,
     save,
     loading,
     isSaving,
@@ -86,7 +93,13 @@ export default function BudgetEditScreen() {
           nameLabel="Budget Name"
           nameValue={name}
           onNameChange={setName}
-          amountLabel="Monthly Amount"
+          amountLabel={
+            intervalType === 'WEEKLY'
+              ? 'Weekly Amount'
+              : intervalType === 'YEARLY'
+                ? 'Yearly Amount'
+                : 'Monthly Amount'
+          }
           amountValue={amount}
           onAmountChange={setAmount}
           footer={
@@ -100,6 +113,101 @@ export default function BudgetEditScreen() {
         />
 
         <Stack space="xl" padding="lg">
+          <FormSectionGroup title="Schedule">
+            <Stack space="lg" paddingHorizontal="md">
+              <Box>
+                <SectionLabel label="Interval" marginTop="none" />
+                <AppSegmentedControl
+                  flex
+                  variant="minimal"
+                  options={[
+                    { label: 'Weekly', id: 'WEEKLY' },
+                    { label: 'Monthly', id: 'MONTHLY' },
+                    { label: 'Yearly', id: 'YEARLY' },
+                  ]}
+                  value={intervalType}
+                  onChange={setIntervalType}
+                />
+              </Box>
+
+              {intervalType === 'WEEKLY' && (
+                <FadeIn fromY={5} duration={300}>
+                  <Box>
+                    <SectionLabel label="Budget Start Day" marginTop="none" />
+                    <AppSegmentedControl<number>
+                      scrollable
+                      variant="minimal"
+                      size="sm"
+                      options={AppConfig.strings.plannedPayments.dayNames.map((day, index) => ({
+                        id: index,
+                        label: day,
+                      }))}
+                      value={recurrenceDay}
+                      onChange={setRecurrenceDay}
+                    />
+                  </Box>
+                </FadeIn>
+              )}
+
+              {intervalType === 'MONTHLY' && (
+                <FadeIn fromY={5} duration={300}>
+                  <Box>
+                    <SectionLabel label="Budget Start Day" marginTop="none" />
+                    <AppSegmentedControl<number>
+                      scrollable
+                      variant="minimal"
+                      size="sm"
+                      options={Array.from({ length: 31 }, (_, i) => i + 1).map(day => ({
+                        id: day,
+                        label: day.toString(),
+                      }))}
+                      value={recurrenceDay}
+                      onChange={setRecurrenceDay}
+                    />
+                  </Box>
+                </FadeIn>
+              )}
+
+              {intervalType === 'YEARLY' && (
+                <FadeIn fromY={5} duration={300}>
+                  <Stack space="lg">
+                    <Box>
+                      <SectionLabel label="Month" marginTop="none" />
+                      <AppSegmentedControl<number>
+                        scrollable
+                        variant="minimal"
+                        size="sm"
+                        options={AppConfig.strings.plannedPayments.monthNames.map(
+                          (month, index) => ({
+                            id: index + 1,
+                            label: month,
+                          }),
+                        )}
+                        value={recurrenceMonth}
+                        onChange={setRecurrenceMonth}
+                      />
+                    </Box>
+
+                    <Box>
+                      <SectionLabel label="Budget Start Date" marginTop="none" />
+                      <AppSegmentedControl<number>
+                        scrollable
+                        variant="minimal"
+                        size="sm"
+                        options={Array.from({ length: 31 }, (_, i) => i + 1).map(day => ({
+                          id: day,
+                          label: day.toString(),
+                        }))}
+                        value={recurrenceDay}
+                        onChange={setRecurrenceDay}
+                      />
+                    </Box>
+                  </Stack>
+                </FadeIn>
+              )}
+            </Stack>
+          </FormSectionGroup>
+
           <FormSectionGroup title="Accounts">
             <Stack space="md" paddingHorizontal="md">
               <AccountSelectionRow

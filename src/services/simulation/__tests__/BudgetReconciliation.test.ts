@@ -25,6 +25,9 @@ describe('BudgetReconciliation', () => {
       name: 'General',
       amount: 1000, // Monthly amount
       currencyCode: 'USD',
+      intervalType: 'MONTHLY',
+      intervalN: 1,
+      recurrenceDay: 1,
     } as Budget;
 
     const usage = {
@@ -51,8 +54,6 @@ describe('BudgetReconciliation', () => {
       context,
       [budget],
       [usage as any],
-      safeToSpendDays, // days left
-      safeToSpendDays, // next month days
       budgetCategoryMap,
       plannedFlows,
     );

@@ -423,5 +423,20 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 21,
+      steps: [
+        addColumns({
+          table: 'budgets',
+          columns: [
+            { name: 'interval_type', type: 'string' },
+            { name: 'interval_n', type: 'number' },
+            { name: 'start_date', type: 'number', isOptional: true },
+            { name: 'recurrence_day', type: 'number', isOptional: true },
+            { name: 'recurrence_month', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

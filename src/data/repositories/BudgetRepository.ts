@@ -8,6 +8,11 @@ export interface BudgetInput {
   amount: number;
   currencyCode: string;
   startMonth: string;
+  intervalType?: string;
+  intervalN?: number;
+  startDate?: number;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
   active?: boolean;
   assetAccountIds?: string[];
 }
@@ -63,6 +68,11 @@ export class BudgetRepository {
         record.amount = data.amount;
         record.currencyCode = data.currencyCode;
         record.startMonth = data.startMonth;
+        record.intervalType = data.intervalType || 'MONTHLY';
+        record.intervalN = data.intervalN || 1;
+        record.startDate = data.startDate;
+        record.recurrenceDay = data.recurrenceDay;
+        record.recurrenceMonth = data.recurrenceMonth;
         record.active = data.active ?? true;
         if (data.assetAccountIds) record.assetAccountIds = data.assetAccountIds.join(',');
         record.createdAt = new Date();
@@ -96,6 +106,11 @@ export class BudgetRepository {
         if (updates.amount !== undefined) record.amount = updates.amount;
         if (updates.currencyCode !== undefined) record.currencyCode = updates.currencyCode;
         if (updates.startMonth !== undefined) record.startMonth = updates.startMonth;
+        if (updates.intervalType !== undefined) record.intervalType = updates.intervalType;
+        if (updates.intervalN !== undefined) record.intervalN = updates.intervalN;
+        if (updates.startDate !== undefined) record.startDate = updates.startDate;
+        if (updates.recurrenceDay !== undefined) record.recurrenceDay = updates.recurrenceDay;
+        if (updates.recurrenceMonth !== undefined) record.recurrenceMonth = updates.recurrenceMonth;
         if (updates.active !== undefined) record.active = updates.active;
         if (updates.assetAccountIds !== undefined)
           record.assetAccountIds = updates.assetAccountIds.join(',');
