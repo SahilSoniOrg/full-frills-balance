@@ -1,10 +1,11 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
+import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import {
-  AppButton,
   AppInput,
   AppSegmentedControl,
   AppText,
+  FilterChipButton,
   IconButton,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
@@ -39,30 +40,33 @@ export default function JournalSearchScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipContainer}
         >
-          <AppButton variant="secondary" size="sm" onPress={() => setIsDatePickerVisible(true)}>
-            <AppText variant="caption">
-              {vm.dateRange
-                ? `${new Date(vm.dateRange.startDate).toLocaleDateString()} - ${new Date(vm.dateRange.endDate).toLocaleDateString()}`
-                : 'Any Time'}
-            </AppText>
-          </AppButton>
-
-          <AppButton variant="secondary" size="sm" onPress={() => setIsAccountPickerVisible(true)}>
-            <AppText variant="caption">
-              {vm.accountIds.length > 0 ? `${vm.accountIds.length} Accounts` : 'All Accounts'}
-            </AppText>
-          </AppButton>
-
-          <AppSegmentedControl
-            options={[
-              { label: 'All', id: '' },
-              { label: 'Income', id: 'INCOME' },
-              { label: 'Expense', id: 'EXPENSE' },
-              { label: 'Transfer', id: 'TRANSFER' },
-            ]}
-            value={vm.displayType}
-            onChange={vm.setDisplayType}
+          <DateRangeTrigger
+            range={vm.dateRange}
+            onPress={() => setIsDatePickerVisible(true)}
+            showNavigationArrows={false}
           />
+
+          <View style={{ marginLeft: Spacing.sm }}>
+            <FilterChipButton
+              label={vm.accountIds.length > 0 ? `${vm.accountIds.length} Accounts` : 'All Accounts'}
+              icon="wallet"
+              isActive={vm.accountIds.length > 0}
+              onPress={() => setIsAccountPickerVisible(true)}
+            />
+          </View>
+
+          <View style={{ marginLeft: Spacing.sm }}>
+            <AppSegmentedControl
+              options={[
+                { label: 'All', id: '' },
+                { label: 'Income', id: 'INCOME' },
+                { label: 'Expense', id: 'EXPENSE' },
+                { label: 'Transfer', id: 'TRANSFER' },
+              ]}
+              value={vm.displayType}
+              onChange={vm.setDisplayType}
+            />
+          </View>
         </ScrollView>
 
         <View style={styles.amountRangeRow}>

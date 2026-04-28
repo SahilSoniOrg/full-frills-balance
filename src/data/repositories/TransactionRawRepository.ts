@@ -3,6 +3,7 @@ import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
+import dayjs from 'dayjs';
 import { from, map, Observable } from 'rxjs';
 import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { getRawAdapter } from '../database/DatabaseUtils';
@@ -357,7 +358,7 @@ export class TransactionRawRepository {
 
     const sql = `
       SELECT
-        (CAST(t.transaction_date / 86400000 AS INTEGER) * 86400000) AS dayStart,
+        strftime('%Y-%m-%d', t.transaction_date / 1000, 'unixepoch', 'localtime') AS dayStartStr,
         t.currency_code AS currencyCode,
         a.account_type AS accountType,
         SUM(
@@ -376,17 +377,23 @@ export class TransactionRawRepository {
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
-      GROUP BY dayStart, t.currency_code, a.account_type
-      ORDER BY dayStart ASC
+      GROUP BY dayStartStr, t.currency_code, a.account_type
+      ORDER BY dayStartStr ASC
     `;
 
-    const raws = await this.queryRaw<DailyDelta>(sql, [
+    const raws = await this.queryRaw<any>(sql, [
       ...accountIds,
       startDate,
       endDate,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
-    if (raws !== null) return raws;
+
+    if (raws !== null) {
+      return raws.map((r: any) => ({
+        ...r,
+        dayStart: new Date(r.dayStartStr + 'T00:00:00').getTime(),
+      }));
+    }
 
     // Fallback for LokiJS/Test
     const [accounts, txs] = await Promise.all([
@@ -414,7 +421,7 @@ export class TransactionRawRepository {
       const accountType = accountTypeById.get(tx.accountId);
       if (!accountType) continue;
 
-      const dayStart = Math.floor(tx.transactionDate / 86400000) * 86400000;
+      const dayStart = dayjs(tx.transactionDate).startOf('day').valueOf();
       const key = `${dayStart}|${tx.currencyCode}|${accountType}`;
       const delta = this.getSignedDelta(accountType, tx.transactionType, tx.amount);
       const existing = grouped.get(key);
@@ -477,6 +484,16 @@ export class TransactionRawRepository {
       endDate,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
+
+    if (__DEV__) {
+      logger.debug('[DEBUG_REPORT] getAccountDeltasGroupedRaw called', {
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        accountIds,
+        rawsCount: raws?.length,
+      });
+    }
+
     if (raws !== null) return raws;
 
     // Fallback for LokiJS/Test

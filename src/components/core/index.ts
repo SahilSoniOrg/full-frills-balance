@@ -57,3 +57,4 @@ export type { SegmentedOption } from './AppSegmentedControl';
 
 export { AppTabs } from './AppTabs';
 export type { TabOption } from './AppTabs';
+export * from './FilterChipButton';

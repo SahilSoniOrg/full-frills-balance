@@ -2,6 +2,7 @@ import { AppButton, AppIcon, AppSegmentedControl, AppText } from '@/src/componen
 import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { PeriodFilter } from '@/src/utils/dateUtils';
+import dayjs from 'dayjs';
 import React from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -55,6 +56,8 @@ export function DateRangeMenuContent({
     lastNValue.trim().length > 0
       ? `Using last ${lastNValue.trim()} ${lastNUnit}`
       : 'Enter a range length';
+
+  const getMonthId = (month: number, year: number) => `${year}-${month}`;
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -134,10 +137,16 @@ export function DateRangeMenuContent({
             variant="minimal"
             itemWidth={Layout.datePicker.monthSlider.itemWidth}
             options={monthList.map(item => ({
-              id: `${item.year}-${item.month}`,
+              id: getMonthId(item.month, item.year),
               label: item.label,
             }))}
-            value={draftFilter.type === 'MONTH' ? `${draftFilter.year}-${draftFilter.month}` : ''}
+            value={
+              draftFilter.type === 'MONTH' &&
+              draftFilter.month !== undefined &&
+              draftFilter.year !== undefined
+                ? getMonthId(draftFilter.month, draftFilter.year)
+                : getMonthId(dayjs().month(), dayjs().year())
+            }
             onChange={id => {
               const [year, month] = id.split('-').map(Number);
               onSelectMonth(month, year);
@@ -476,12 +485,14 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: Spacing.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: Shape.radius.r4,
+    marginHorizontal: -Spacing.xs,
   },
   sectionActive: {
-    borderWidth: 1,
-    borderRadius: Shape.radius.r4,
-    padding: Spacing.md,
-    marginHorizontal: -Spacing.xs,
+    // Styling (border and background) is applied inline dynamically
   },
   panelHeader: {
     flexDirection: 'row',
@@ -564,8 +575,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: Shape.radius.r4,
+    marginHorizontal: -Spacing.xs,
   },
   allTimeBtn: {
     minWidth: 84,

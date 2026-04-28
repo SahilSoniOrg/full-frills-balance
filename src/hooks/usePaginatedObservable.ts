@@ -24,24 +24,23 @@ export interface AccountDateRange extends DateRange {
   plannedPaymentId?: string;
 }
 
-export interface UsePaginatedObservableOptions<T, E = T> {
+export interface UsePaginatedObservableOptions<T, E = T, F = unknown> {
   /** Number of items per page */
   pageSize: number;
-  /** Optional date range filter */
-  dateRange?: AccountDateRange;
+  /** Optional filter object (previously dateRange) */
+  filter?: F;
   /** Optional search query filter */
   searchQuery?: string;
   /** Factory function to create the observable */
-  observe: (limit: number, dateRange?: AccountDateRange, searchQuery?: string) => Observable<T[]>;
+  observe: (limit: number, filter?: F, searchQuery?: string) => Observable<T[]>;
   /** Optional enrichment function to transform raw items */
-  enrich?: (
-    items: T[],
-    limit: number,
-    dateRange?: AccountDateRange,
-    searchQuery?: string,
-  ) => Promise<E[]>;
+  enrich?: (items: T[], limit: number, filter?: F, searchQuery?: string) => Promise<E[]>;
   /** If true, filter changes don't clear the list or set isLoading to true */
   suppressResetOnSearch?: boolean;
+  /** Optional key builder for filter to bypass object identity check */
+  getFilterKey?: (filter: F) => string;
+  /** Optional version key getter to force reload on version bump */
+  getVersionKey?: (filter: F) => number;
 }
 
 export interface UsePaginatedObservableResult<E> {
@@ -55,16 +54,18 @@ export interface UsePaginatedObservableResult<E> {
   retry: () => void;
 }
 
-export function usePaginatedObservable<T, E = T>(
-  options: UsePaginatedObservableOptions<T, E>,
+export function usePaginatedObservable<T, E = T, F = unknown>(
+  options: UsePaginatedObservableOptions<T, E, F>,
 ): UsePaginatedObservableResult<E> {
   const {
     pageSize,
-    dateRange,
+    filter,
     searchQuery,
     observe,
     enrich,
     suppressResetOnSearch = false,
+    getFilterKey,
+    getVersionKey,
   } = options;
 
   const [items, setItems] = useState<E[]>([]);
@@ -76,30 +77,31 @@ export function usePaginatedObservable<T, E = T>(
   const [error, setError] = useState<Error | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
-  // Stabilize inputs using a primitive structural key
+  // We rely on callers to either memoize `filter` or provide `getFilterKey`.
+  // If neither is strictly followed, we fall back to object reference which might churn if inline,
+  // but this enforces clean downstream state models.
   const structuralKey = useMemo(() => {
-    const rangePart = dateRange
-      ? `${dateRange.startDate}-${dateRange.endDate}-${dateRange.accountId || ''}-${dateRange.plannedPaymentId || ''}`
-      : 'none';
-    return `${rangePart}-${searchQuery || ''}`;
-  }, [dateRange, searchQuery]);
+    if (!filter) return `none-${searchQuery || ''}`;
+    const filterPart = getFilterKey ? getFilterKey(filter) : 'ref';
+    return `${filterPart}-${searchQuery || ''}`;
+  }, [filter, searchQuery, getFilterKey]);
 
   // Track active props in a ref for use in effects without causing churn
   const propsRef = useRef({
     observe,
     enrich,
-    dateRange,
+    filter,
     searchQuery,
     suppressResetOnSearch,
     pageSize,
   });
-  propsRef.current = { observe, enrich, dateRange, searchQuery, suppressResetOnSearch, pageSize };
+  propsRef.current = { observe, enrich, filter, searchQuery, suppressResetOnSearch, pageSize };
 
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
-  // Version key for re-fetching without clearing
-  const versionKey = dateRange?.accountVersion || 0;
+  // Version key for re-fetching without clearing (if filter object supports it)
+  const versionKey = filter && getVersionKey ? getVersionKey(filter) : 0;
 
   // Track previous filter inputs to detect filter changes vs pagination
   const prevFilterRef = useRef({
@@ -125,7 +127,7 @@ export function usePaginatedObservable<T, E = T>(
     const {
       observe: currentObserve,
       enrich: currentEnrich,
-      dateRange: currentRange,
+      filter: currentFilter,
       searchQuery: currentQuery,
       suppressResetOnSearch: currentSuppress,
       pageSize: AppPageSize,
@@ -160,13 +162,13 @@ export function usePaginatedObservable<T, E = T>(
       }
     }
 
-    const observable = currentObserve(currentLimit, currentRange, currentQuery);
+    const observable = currentObserve(currentLimit, currentFilter, currentQuery);
 
     const subscription = observable.subscribe(async loaded => {
       const current = ++sequence;
       try {
         if (currentEnrich) {
-          const enriched = await currentEnrich(loaded, currentLimit, currentRange, currentQuery);
+          const enriched = await currentEnrich(loaded, currentLimit, currentFilter, currentQuery);
           if (!isActive || current !== sequence) return;
           setItems([...enriched] as E[]);
         } else {

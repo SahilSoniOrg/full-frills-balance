@@ -48,6 +48,8 @@ export function useObservable<T>(
 
   const stableFactory = useCallback(() => factoryRef.current(), []);
 
+  // We capture the initial seed only once to use as a baseline for resets
+  const initialSeedRef = useRef(initialValue);
   const [data, setData] = useState<T>(initialValue);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -76,19 +78,14 @@ export function useObservable<T>(
     return revisionRef.current;
   }, [deps]);
 
-  const initialValueKey = useMemo(
-    () => (typeof initialValue === 'object' ? JSON.stringify(initialValue) : String(initialValue)),
-    [initialValue],
-  );
-
   useEffect(() => {
     let isActive = true;
     const { keepPreviousData = true, comparator } = optionsRef.current;
 
     if (!keepPreviousData) {
-      setData(initialValue);
+      setData(initialSeedRef.current);
       setIsLoading(true);
-    } else if (dataRef.current === initialValue) {
+    } else if (dataRef.current === initialSeedRef.current) {
       setIsLoading(true);
     }
 
@@ -122,7 +119,7 @@ export function useObservable<T>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, depsRevision, initialValueKey]); // initialValueKey instead of initialValue
+  }, [stableFactory, depsRevision]); // initialSeedRef is stable
 
   return { data, isLoading, error, version };
 }
@@ -166,6 +163,9 @@ export function useObservableWithEnrichment<T, E>(
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
+  // We capture the initial seed only once to use as a baseline for resets
+  const initialSeedRef = useRef(initialValue);
+
   const depsRef = useRef(deps);
   const revisionRef = useRef(0);
   const depsRevision = useMemo(() => {
@@ -186,9 +186,9 @@ export function useObservableWithEnrichment<T, E>(
     const { keepPreviousData = true, comparator } = optionsRef.current;
 
     if (!keepPreviousData) {
-      setData(initialValue);
+      setData(initialSeedRef.current);
       setIsLoading(true);
-    } else if (dataRef.current === initialValue) {
+    } else if (dataRef.current === initialSeedRef.current) {
       setIsLoading(true);
     }
 
@@ -229,7 +229,7 @@ export function useObservableWithEnrichment<T, E>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, stableEnricher, depsRevision, initialValue]); // data, keepPreviousData, and comparator removed Log)
+  }, [stableFactory, stableEnricher, depsRevision]); // data, keepPreviousData, and comparator removed Log)
 
   return { data, isLoading, error, version };
 }
