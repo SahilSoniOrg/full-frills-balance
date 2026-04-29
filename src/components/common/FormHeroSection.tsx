@@ -1,6 +1,6 @@
 import { AppInput } from '@/src/components/core/AppInput';
 import { Spacing, Typography } from '@/src/constants';
-import { Box } from '@/src/design-system/Box';
+import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { ReactNode } from 'react';
 import { HeroNumberInput } from './HeroNumberInput';
@@ -16,6 +16,8 @@ interface FormHeroSectionProps {
   nameLabel?: string;
   amountLabel?: string;
   footer?: ReactNode;
+  prefix?: ReactNode;
+  nameAlign?: 'left' | 'center';
 }
 
 /**
@@ -32,6 +34,8 @@ export const FormHeroSection = ({
   nameLabel = 'Name',
   amountLabel = 'Amount',
   footer,
+  prefix,
+  nameAlign = 'center',
 }: FormHeroSectionProps) => {
   const { theme, fonts } = useTheme();
 
@@ -42,20 +46,25 @@ export const FormHeroSection = ({
         marginTop="none"
         style={{ marginBottom: Spacing.xs, letterSpacing: 1 }}
       />
-      <AppInput
-        placeholder={namePlaceholder}
-        value={nameValue}
-        onChangeText={onNameChange}
-        variant="minimal"
-        inputStyle={{
-          textAlign: 'center',
-          fontSize: Typography.sizes.xl,
-          fontFamily: fonts.medium,
-          color: theme.text,
-          letterSpacing: -0.5,
-        }}
-        containerStyle={{ marginBottom: Spacing.lg }}
-      />
+      <Inline align="center" space="md" style={{ marginBottom: Spacing.lg, width: '100%' }}>
+        {prefix && <Box>{prefix}</Box>}
+        <Box flex={1}>
+          <AppInput
+            placeholder={namePlaceholder}
+            value={nameValue}
+            onChangeText={onNameChange}
+            variant="minimal"
+            inputStyle={{
+              textAlign: nameAlign,
+              fontSize: Typography.sizes.xl,
+              fontFamily: fonts.medium,
+              color: theme.text,
+              letterSpacing: -0.5,
+            }}
+            containerStyle={{ marginBottom: 0 }}
+          />
+        </Box>
+      </Inline>
 
       <SectionLabel
         label={amountLabel}

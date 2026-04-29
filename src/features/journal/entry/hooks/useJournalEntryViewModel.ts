@@ -15,35 +15,35 @@ import { useCallback, useMemo, useState } from 'react';
  * JournalEntryViewModel - Public interface for the Journal Entry screen state.
  */
 export interface JournalEntryViewModel {
-    editor: ReturnType<typeof useJournalEditor>;
-    simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
-    accounts: ReturnType<typeof useAccounts>['accounts'];
-    isLoading: boolean;
-    headerTitle: string;
-    showEditBanner: boolean;
-    editBannerText: string;
-    isGuidedMode: boolean;
-    onToggleGuidedMode: (mode: boolean) => void;
-    showAccountPicker: boolean;
-    onCloseAccountPicker: () => void;
+  editor: ReturnType<typeof useJournalEditor>;
+  simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
+  accounts: ReturnType<typeof useAccounts>['accounts'];
+  isLoading: boolean;
+  headerTitle: string;
+  showEditBanner: boolean;
+  editBannerText: string;
+  isGuidedMode: boolean;
+  onToggleGuidedMode: (mode: boolean) => void;
+  showAccountPicker: boolean;
+  onCloseAccountPicker: () => void;
+  onSelectAccountRequest: (lineId: string) => void;
+  onAccountSelected: (accountId: string) => void;
+  selectedAccountId?: string;
+  simpleFormIsValid: boolean;
+  advancedFormIsValid: boolean;
+  advancedFormConfig: {
     onSelectAccountRequest: (lineId: string) => void;
-    onAccountSelected: (accountId: string) => void;
-    selectedAccountId?: string;
-    simpleFormIsValid: boolean;
-    advancedFormIsValid: boolean;
-    advancedFormConfig: {
-        onSelectAccountRequest: (lineId: string) => void;
-    };
-    isSimpleModeDisabled: boolean;
-    primaryDisplayAmount: string;
-    primaryDisplayCurrency: string;
-    availableCurrencies: string[];
-    selectedCurrency: string;
-    onSelectCurrency: (currency: string) => void;
-    totalDebits: number;
-    totalCredits: number;
-    isBalanced: boolean;
-    launchSource?: string;
+  };
+  isSimpleModeDisabled: boolean;
+  primaryDisplayAmount: string;
+  primaryDisplayCurrency: string;
+  availableCurrencies: string[];
+  selectedCurrency: string;
+  onSelectCurrency: (currency: string) => void;
+  totalDebits: number;
+  totalCredits: number;
+  isBalanced: boolean;
+  launchSource?: string;
 }
 
 /**
@@ -54,189 +54,225 @@ export interface JournalEntryViewModel {
  * - FINDING-004: Centralized navigation via AppNavigation utility.
  */
 export function useJournalEntryViewModel(): JournalEntryViewModel {
-    const params = useLocalSearchParams();
-    const initialMode = params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
-    const initialType = params.type === 'expense' || params.type === 'income' || params.type === 'transfer' ? params.type : undefined;
-    const initialSourceAccountId = typeof params.sourceAccountId === 'string'
-        ? params.sourceAccountId
-        : typeof params.sourceId === 'string'
-            ? params.sourceId
-            : undefined;
-    const initialDestinationAccountId = typeof params.destinationAccountId === 'string'
-        ? params.destinationAccountId
-        : typeof params.destinationId === 'string'
-            ? params.destinationId
-            : undefined;
+  const params = useLocalSearchParams();
+  const initialMode =
+    params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
+  const initialType =
+    params.type === 'expense' || params.type === 'income' || params.type === 'transfer'
+      ? params.type
+      : undefined;
+  const initialSourceAccountId =
+    typeof params.sourceAccountId === 'string'
+      ? params.sourceAccountId
+      : typeof params.sourceId === 'string'
+        ? params.sourceId
+        : undefined;
+  const initialDestinationAccountId =
+    typeof params.destinationAccountId === 'string'
+      ? params.destinationAccountId
+      : typeof params.destinationId === 'string'
+        ? params.destinationId
+        : undefined;
 
-    const { accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { accounts, isLoading: isLoadingAccounts } = useAccounts();
 
-    const smsId = params.smsId as string | undefined;
-    const smsRecordId = params.smsRecordId as string | undefined;
+  const smsId = params.smsId as string | undefined;
+  const smsRecordId = params.smsRecordId as string | undefined;
 
-    const editor = useJournalEditor({
-        journalId: params.journalId as string,
-        initialMode,
-        initialType,
-        initialAmount: params.amount as string,
-        initialDescription: params.notes as string,
-        smsId,
-        smsRecordId,
-        smsSender: params.smsSender as string,
-        rawSmsBody: params.rawSmsBody as string,
-        initialDate: params.initialDate as string,
-        initialSourceId: initialSourceAccountId,
-        initialDestinationId: initialDestinationAccountId,
-        // M-9 fix: sms processing is a screen-level concern, not a journal editor concern.
-        // The hook calls this callback after a successful save without knowing what it does.
-        onAfterSave: smsRecordId
-            ? async (result) => {
-                if (result.journalId) {
-                    await smsService.finalizeManualImport(smsRecordId, result.journalId);
-                }
-                if (smsId) {
-                    await smsService.markSmsAsProcessed(smsId);
-                }
-            }
-            : (smsId ? async () => smsService.markSmsAsProcessed(smsId) : undefined),
-        onSuccess: () => AppNavigation.back(),
-    });
-
-    // Editor for Simple Mode
-    const simpleEditor = useSimpleJournalEditor({
-        accounts,
-        editor,
-    });
-
-    const [showAccountPicker, setShowAccountPicker] = useState(false);
-    const [activeLineId, setActiveLineId] = useState<string | null>(null);
-
-    const onSelectAccountRequest = useCallback((lineId: string) => {
-        setActiveLineId(lineId);
-        setShowAccountPicker(true);
-    }, []);
-
-    const onCloseAccountPicker = useCallback(() => {
-        setShowAccountPicker(false);
-        setActiveLineId(null);
-    }, []);
-
-    const onAccountSelected = useCallback((accountId: string) => {
-        if (activeLineId) {
-            const account = accounts.find(a => a.id === accountId);
-            if (account) {
-                editor.updateLine(activeLineId, {
-                    accountId,
-                    accountName: account.name,
-                    accountType: account.accountType,
-                    accountCurrency: account.currencyCode
-                });
-            }
+  const editor = useJournalEditor({
+    journalId: params.journalId as string,
+    initialMode,
+    initialType,
+    initialAmount: params.amount as string,
+    initialDescription: params.notes as string,
+    smsId,
+    smsRecordId,
+    smsSender: params.smsSender as string,
+    rawSmsBody: params.rawSmsBody as string,
+    initialDate: params.initialDate as string,
+    initialSourceId: initialSourceAccountId,
+    initialDestinationId: initialDestinationAccountId,
+    // M-9 fix: sms processing is a screen-level concern, not a journal editor concern.
+    // The hook calls this callback after a successful save without knowing what it does.
+    onAfterSave: smsRecordId
+      ? async result => {
+          if (result.journalId) {
+            await smsService.finalizeManualImport(smsRecordId, result.journalId);
+          }
+          if (smsId) {
+            await smsService.markSmsAsProcessed(smsId);
+          }
         }
-        setShowAccountPicker(false);
-        setActiveLineId(null);
-    }, [accounts, activeLineId, editor]);
+      : smsId
+        ? async () => smsService.markSmsAsProcessed(smsId)
+        : undefined,
+    onSuccess: () => AppNavigation.back(),
+  });
 
-    const isSimpleModeDisabled = editor.lines.length > 2;
+  // Editor for Simple Mode
+  const simpleEditor = useSimpleJournalEditor({
+    accounts,
+    editor,
+  });
 
-    const onToggleGuidedMode = useCallback((mode: boolean) => {
-        if (mode && isSimpleModeDisabled) {
-            showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, true);
-            return;
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [activeLineId, setActiveLineId] = useState<string | null>(null);
+
+  const onSelectAccountRequest = useCallback((lineId: string) => {
+    setActiveLineId(lineId);
+    setShowAccountPicker(true);
+  }, []);
+
+  const onCloseAccountPicker = useCallback(() => {
+    setShowAccountPicker(false);
+    setActiveLineId(null);
+  }, []);
+
+  const onAccountSelected = useCallback(
+    (accountId: string) => {
+      if (activeLineId) {
+        const account = accounts.find(a => a.id === accountId);
+        if (account) {
+          editor.updateLine(activeLineId, {
+            accountId,
+            accountName: account.name,
+            accountType: account.accountType,
+            accountCurrency: account.currencyCode,
+          });
         }
+      }
+      setShowAccountPicker(false);
+      setActiveLineId(null);
+    },
+    [accounts, activeLineId, editor],
+  );
 
-        editor.setIsGuidedMode(mode);
-    }, [editor, isSimpleModeDisabled]);
+  const isSimpleModeDisabled = editor.lines.length > 2;
 
-    const headerTitle = useMemo(() => {
-        if (editor.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
-        return editor.isGuidedMode ? AppConfig.strings.transactionFlow.headers.new : AppConfig.strings.transactionFlow.headers.default;
-    }, [editor.isEdit, editor.isGuidedMode]);
+  const onToggleGuidedMode = useCallback(
+    (mode: boolean) => {
+      if (mode && isSimpleModeDisabled) {
+        showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
+        return;
+      }
 
-    // Calculate Validations
-    const isSimpleValid = simpleEditor.isValidAmount && !!simpleEditor.sourceId && !!simpleEditor.destinationId &&
-        (simpleEditor.sourceId !== simpleEditor.destinationId) && !simpleEditor.isSubmitting &&
-        !simpleEditor.isLoadingRate && !simpleEditor.rateError;
+      editor.setIsGuidedMode(mode);
+    },
+    [editor, isSimpleModeDisabled],
+  );
 
-    const { totalDebits, totalCredits, isBalanced, availableCurrencies, selectedCurrency, setSelectedCurrency } = useAdvancedJournalSummary(editor.lines);
+  const headerTitle = useMemo(() => {
+    if (editor.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
+    return editor.isGuidedMode
+      ? AppConfig.strings.transactionFlow.headers.new
+      : AppConfig.strings.transactionFlow.headers.default;
+  }, [editor.isEdit, editor.isGuidedMode]);
 
-    const primaryDisplayCurrency = useMemo(() => {
-        // For Simple Mode, strictly use the curated displayCurrency from simpleEditor
-        if (editor.isGuidedMode) return simpleEditor.displayCurrency;
+  // Calculate Validations
+  const isSimpleValid =
+    simpleEditor.isValidAmount &&
+    !!simpleEditor.sourceId &&
+    !!simpleEditor.destinationId &&
+    simpleEditor.sourceId !== simpleEditor.destinationId &&
+    !simpleEditor.isSubmitting &&
+    !simpleEditor.isLoadingRate &&
+    !simpleEditor.rateError;
 
-        // For Advanced Mode, prioritize the first leg's currency as per Rule 1 & 4
-        const firstLineCurrency = editor.lines[0]?.accountCurrency;
-        if (firstLineCurrency) return firstLineCurrency;
+  const {
+    totalDebits,
+    totalCredits,
+    isBalanced,
+    availableCurrencies,
+    selectedCurrency,
+    setSelectedCurrency,
+  } = useAdvancedJournalSummary(editor.lines);
 
-        // Fallback to any line with currency
-        const lineWithCurrency = editor.lines.find(l => !!l.accountCurrency);
-        if (lineWithCurrency?.accountCurrency) return lineWithCurrency.accountCurrency;
+  const primaryDisplayCurrency = useMemo(() => {
+    // For Simple Mode, strictly use the curated displayCurrency from simpleEditor
+    if (editor.isGuidedMode) return simpleEditor.displayCurrency;
 
-        // Final fallback
-        return preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-    }, [editor.isGuidedMode, editor.lines, simpleEditor.displayCurrency]);
+    // For Advanced Mode, prioritize the first leg's currency as per Rule 1 & 4
+    const firstLineCurrency = editor.lines[0]?.accountCurrency;
+    if (firstLineCurrency) return firstLineCurrency;
 
-    const primaryDisplayAmount = useMemo(() => {
-        if (editor.isGuidedMode) return simpleEditor.amount;
+    // Fallback to any line with currency
+    const lineWithCurrency = editor.lines.find(l => !!l.accountCurrency);
+    if (lineWithCurrency?.accountCurrency) return lineWithCurrency.accountCurrency;
 
-        // In Advanced Mode, we calculate the footer amount in primaryDisplayCurrency
-        // This keeps the footer stable while the user toggles the summary box.
-        const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    // Final fallback
+    return preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+  }, [editor.isGuidedMode, editor.lines, simpleEditor.displayCurrency]);
 
-        // Hoist primaryCurrencyLine lookup out of reduce to be O(1) inside loop
-        const primaryCurrencyLine = editor.lines.find(l => l.accountCurrency === primaryDisplayCurrency);
-        const primaryRate = primaryCurrencyLine ? (typeof primaryCurrencyLine.exchangeRate === 'string' ? parseFloat(primaryCurrencyLine.exchangeRate) : primaryCurrencyLine.exchangeRate) : 1;
+  const primaryDisplayAmount = useMemo(() => {
+    if (editor.isGuidedMode) return simpleEditor.amount;
 
-        const debitTotalInPrimary = editor.lines
-            .filter(l => l.transactionType === 'DEBIT')
-            .reduce((sum, line) => {
-                const baseAmount = JournalCalculator.getLineBaseAmount({
-                    amount: line.amount,
-                    exchangeRate: line.exchangeRate,
-                    accountCurrency: line.accountCurrency
-                });
+    // In Advanced Mode, we calculate the footer amount in primaryDisplayCurrency
+    // This keeps the footer stable while the user toggles the summary box.
+    const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
-                if (primaryDisplayCurrency === defaultCurrency) return sum + baseAmount;
+    // Hoist primaryCurrencyLine lookup out of reduce to be O(1) inside loop
+    const primaryCurrencyLine = editor.lines.find(
+      l => l.accountCurrency === primaryDisplayCurrency,
+    );
+    const primaryRate = primaryCurrencyLine
+      ? typeof primaryCurrencyLine.exchangeRate === 'string'
+        ? parseFloat(primaryCurrencyLine.exchangeRate)
+        : primaryCurrencyLine.exchangeRate
+      : 1;
 
-                const finalAmount = (primaryRate && primaryRate > 0) ? baseAmount / (primaryRate as number) : baseAmount;
-                return sum + finalAmount;
-            }, 0);
+    const debitTotalInPrimary = editor.lines
+      .filter(l => l.transactionType === 'DEBIT')
+      .reduce((sum, line) => {
+        const baseAmount = JournalCalculator.getLineBaseAmount({
+          amount: line.amount,
+          exchangeRate: line.exchangeRate,
+          accountCurrency: line.accountCurrency,
+        });
 
-        return JournalCalculator.roundAmount(debitTotalInPrimary).toFixed(2);
-    }, [editor.isGuidedMode, simpleEditor.amount, editor.lines, primaryDisplayCurrency]);
+        if (primaryDisplayCurrency === defaultCurrency) return sum + baseAmount;
 
-    const hasDescription = editor.description.trim().length > 0;
-    const hasIncompleteLines = editor.lines.some(line => !line.accountId || !line.amount.trim());
-    const isAdvancedValid = isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
+        const finalAmount =
+          primaryRate && primaryRate > 0 ? baseAmount / (primaryRate as number) : baseAmount;
+        return sum + finalAmount;
+      }, 0);
 
-    return {
-        editor,
-        simpleEditor,
-        accounts,
-        isLoading: isLoadingAccounts || editor.isLoading,
-        headerTitle,
-        showEditBanner: editor.isEdit,
-        editBannerText: AppConfig.strings.transactionFlow.banners.editing,
-        isGuidedMode: editor.isGuidedMode,
-        onToggleGuidedMode,
-        showAccountPicker,
-        onCloseAccountPicker,
-        onSelectAccountRequest,
-        onAccountSelected,
-        selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
-        simpleFormIsValid: isSimpleValid,
-        advancedFormIsValid: isAdvancedValid,
-        advancedFormConfig: {
-            onSelectAccountRequest,
-        },
-        isSimpleModeDisabled,
-        isBalanced,
-        primaryDisplayAmount,
-        primaryDisplayCurrency,
-        availableCurrencies,
-        selectedCurrency,
-        onSelectCurrency: setSelectedCurrency,
-        totalDebits,
-        totalCredits,
-        launchSource: typeof params.source === 'string' ? params.source : undefined,
-    };
+    return JournalCalculator.roundAmount(debitTotalInPrimary).toFixed(2);
+  }, [editor.isGuidedMode, simpleEditor.amount, editor.lines, primaryDisplayCurrency]);
+
+  const hasDescription = editor.description.trim().length > 0;
+  const hasIncompleteLines = editor.lines.some(line => !line.accountId || !line.amount.trim());
+  const isAdvancedValid =
+    isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
+
+  return {
+    editor,
+    simpleEditor,
+    accounts,
+    isLoading: isLoadingAccounts || editor.isLoading,
+    headerTitle,
+    showEditBanner: editor.isEdit,
+    editBannerText: AppConfig.strings.transactionFlow.banners.editing,
+    isGuidedMode: editor.isGuidedMode,
+    onToggleGuidedMode,
+    showAccountPicker,
+    onCloseAccountPicker,
+    onSelectAccountRequest,
+    onAccountSelected,
+    selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
+    simpleFormIsValid: isSimpleValid,
+    advancedFormIsValid: isAdvancedValid,
+    advancedFormConfig: {
+      onSelectAccountRequest,
+    },
+    isSimpleModeDisabled,
+    isBalanced,
+    primaryDisplayAmount,
+    primaryDisplayCurrency,
+    availableCurrencies,
+    selectedCurrency,
+    onSelectCurrency: setSelectedCurrency,
+    totalDebits,
+    totalCredits,
+    launchSource: typeof params.source === 'string' ? params.source : undefined,
+  };
 }

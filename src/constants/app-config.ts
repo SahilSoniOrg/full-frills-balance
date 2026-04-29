@@ -529,7 +529,7 @@ export const AppConfig = {
       selectCurrency: 'Currency',
       form: {
         accountName: 'Account Name',
-        accountNamePlaceholder: 'e.g., Checking Account',
+        accountNamePlaceholder: 'e.g., Bank',
         accountType: 'Type',
         accountSubtype: 'Subtype',
         currentBalance: 'Current Balance',
@@ -539,6 +539,8 @@ export const AppConfig = {
         clear: 'Clear',
         payDebtFrom: 'Pay Debt From',
         selectPaymentAccount: 'Select Payment Account',
+        currencyLockedTooltip:
+          'Currency cannot be changed once an account is created to maintain data integrity.',
       },
       hierarchy: {
         title: 'Hierarchy',

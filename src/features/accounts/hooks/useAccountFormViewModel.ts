@@ -24,7 +24,7 @@ import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
 export interface AccountMetadataFormModel {
@@ -164,6 +164,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
+  const hasInjectedRef = useRef(false);
 
   // Metadata State
   const [statementDay, setStatementDay] = useState('');
@@ -191,12 +192,12 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       setSelectedIcon(existingAccount.icon || 'wallet');
       setParentAccountId(existingAccount.parentAccountId || '');
 
-      if (balanceData && initialBalance === '') {
+      if (balanceData && initialBalance === '' && !hasInjectedRef.current) {
         setInitialBalance(balanceData.balance.toString());
       }
 
       // Load metadata
-      if (existingMetadata) {
+      if (existingMetadata && !hasInjectedRef.current) {
         setStatementDay(existingMetadata.statementDay?.toString() || '');
         setDueDay(existingMetadata.dueDay?.toString() || '');
         setCreditLimitAmount(existingMetadata.creditLimitAmount?.toString() || '');
@@ -210,8 +211,19 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         setPayFromAccountId(existingMetadata.payFromAccountId || '');
         setNotes(existingMetadata.notes || '');
       }
+
+      if (existingAccount && (balanceData || !isBalanceLoading)) {
+        hasInjectedRef.current = true;
+      }
     }
-  }, [existingAccount, accountVersion, existingMetadata, balanceData, initialBalance]);
+  }, [
+    existingAccount,
+    accountVersion,
+    existingMetadata,
+    balanceData,
+    initialBalance,
+    isBalanceLoading,
+  ]);
 
   const validation = useAccountValidation(accountName, accounts, accountId);
 
@@ -229,6 +241,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const onInitialBalanceChange = (value: string) => {
     setInitialBalance(value);
+    if (localFormError) setLocalFormError(null);
   };
 
   const onSave = async () => {

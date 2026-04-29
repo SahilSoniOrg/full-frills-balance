@@ -174,12 +174,36 @@ function AppContent() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="journal-entry" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen
+        name="journal-entry"
+        options={{
+          headerShown: false,
+          presentation: 'card',
+          animation: 'slide_from_bottom',
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
+        }}
+      />
       <Stack.Screen
         name="account-creation"
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+          animation: 'slide_from_bottom',
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
+        }}
       />
-      <Stack.Screen name="onboarding" options={{ headerShown: false, presentation: 'modal' }} />
+      <Stack.Screen
+        name="onboarding"
+        options={{
+          headerShown: false,
+          presentation: 'card',
+          animation: 'slide_from_bottom',
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
+        }}
+      />
       <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
       <Stack.Screen name="account-details" options={{ headerShown: false }} />
       <Stack.Screen name="transaction-details" options={{ headerShown: false }} />

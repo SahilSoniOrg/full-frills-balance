@@ -33,7 +33,7 @@ export function OnboardingCategorySelectionStep({
     () => [
       ...DEFAULT_CATEGORIES.map(category => ({
         ...category,
-        id: category.name,
+        id: category.id,
         subtitle: category.type === 'INCOME' ? incomeLabel : expenseLabel,
       })),
       ...customCategories.map(category => ({

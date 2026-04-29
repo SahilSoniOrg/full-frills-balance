@@ -5,9 +5,11 @@ import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
+import { triggerHaptic } from '@/src/utils/haptics';
+import { MotiView } from 'moti';
 
 export interface SelectableItem {
-  id?: string;
+  id: string;
   name: string;
   icon?: IconName;
   symbol?: string;
@@ -32,6 +34,154 @@ export interface SelectableGridProps {
   bottomContent?: React.ReactNode;
 }
 
+interface SelectableGridItemProps {
+  item: SelectableItem;
+  index: number;
+  isSelected: boolean;
+  isAtMax: boolean;
+  accentColor: string;
+  backgroundColor: string;
+  borderColor: string;
+  textColor: string;
+  secondaryTextColor: string;
+  onToggle: (id: string) => void;
+  renderIcon?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
+  renderSubtitle?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
+}
+
+const SelectableGridItem = React.memo(
+  ({
+    item,
+    index,
+    isSelected,
+    isAtMax,
+    accentColor,
+    backgroundColor,
+    borderColor,
+    textColor,
+    secondaryTextColor,
+    onToggle,
+    renderIcon,
+    renderSubtitle,
+  }: SelectableGridItemProps) => {
+    const { id, name, icon, symbol, subtitle } = item;
+
+    return (
+      <MotiView
+        from={{ opacity: 0, scale: 0.9, translateY: 15 }}
+        animate={{ opacity: 1, scale: 1, translateY: 0 }}
+        transition={{
+          type: 'spring',
+          damping: 15,
+          stiffness: 120,
+          delay: Math.min(50 + index * 30, 300),
+        }}
+        style={styles.itemWrapper}
+      >
+        <TouchableOpacity
+          onPress={() => onToggle(id)}
+          disabled={isAtMax}
+          activeOpacity={Opacity.heavy}
+          accessibilityLabel={`${name}, ${isSelected ? 'selected' : 'not selected'}`}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isSelected, disabled: isAtMax }}
+        >
+          <Box
+            borderRadius="r3"
+            style={[
+              styles.itemContainer,
+              {
+                borderWidth: 1.5,
+                borderColor,
+              },
+            ]}
+            unsafe_backgroundRaw={backgroundColor}
+            padding="md"
+            justifyContent="space-between"
+          >
+            <Inline justify="space-between" align="flex-start" marginBottom="md">
+              <Box
+                width={Size.xl}
+                height={Size.xl}
+                borderRadius="full"
+                justifyContent="center"
+                alignItems="center"
+                unsafe_backgroundRaw={
+                  isSelected ? withOpacity(accentColor, Opacity.soft) : undefined
+                }
+                style={!isSelected && styles.iconCircleBase}
+              >
+                {renderIcon ? (
+                  renderIcon(item, isSelected)
+                ) : icon ? (
+                  <AppIcon
+                    name={icon}
+                    size={Size.iconMd}
+                    color={isSelected ? accentColor : textColor}
+                  />
+                ) : symbol ? (
+                  <AppText
+                    variant="heading"
+                    style={{ color: isSelected ? accentColor : textColor }}
+                  >
+                    {symbol}
+                  </AppText>
+                ) : null}
+              </Box>
+              {isSelected && <AppIcon name="checkCircle" size={Size.iconMd} color={accentColor} />}
+            </Inline>
+
+            <Stack space="xs">
+              <AppText
+                variant="subheading"
+                style={{ color: isSelected ? accentColor : textColor }}
+                numberOfLines={1}
+              >
+                {name}
+              </AppText>
+              {renderSubtitle ? (
+                renderSubtitle(item, isSelected)
+              ) : subtitle ? (
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  style={{
+                    color: isSelected
+                      ? withOpacity(accentColor, Opacity.strong)
+                      : secondaryTextColor,
+                  }}
+                >
+                  {subtitle}
+                </AppText>
+              ) : null}
+            </Stack>
+          </Box>
+        </TouchableOpacity>
+      </MotiView>
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.isSelected === next.isSelected &&
+      prev.isAtMax === next.isAtMax &&
+      prev.accentColor === next.accentColor &&
+      prev.backgroundColor === next.backgroundColor &&
+      prev.borderColor === next.borderColor &&
+      prev.textColor === next.textColor &&
+      prev.secondaryTextColor === next.secondaryTextColor &&
+      // Deep field check for the item itself
+      prev.item.id === next.item.id &&
+      prev.item.name === next.item.name &&
+      prev.item.icon === next.item.icon &&
+      prev.item.symbol === next.item.symbol &&
+      prev.item.subtitle === next.item.subtitle &&
+      prev.item.color === next.item.color
+    );
+  },
+);
+
+SelectableGridItem.displayName = 'SelectableGridItem';
+
 export const SelectableGrid: React.FC<SelectableGridProps> = ({
   title,
   subtitle,
@@ -51,110 +201,46 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
   const { theme } = useTheme();
   const effectiveAccentColor = accentColor || theme.primary;
 
+  // Kill O(n^2) selection lookups
+  const selectedSet = React.useMemo(() => new Set(selectedIds), [selectedIds]);
+
   const handleToggle = useCallback(
     (id: string) => {
-      if (maxSelection && selectedIds.length >= maxSelection && !selectedIds.includes(id)) {
+      if (maxSelection && selectedSet.size >= maxSelection && !selectedSet.has(id)) {
+        triggerHaptic('warning');
         return;
       }
       onToggle(id);
     },
-    [maxSelection, onToggle, selectedIds],
+    [maxSelection, onToggle, selectedSet],
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: SelectableItem }) => {
-      const itemId = item.id ?? item.name;
-      const isSelected = selectedIds.includes(itemId);
-      const isAtMax =
-        maxSelection !== undefined && selectedIds.length >= maxSelection && !isSelected;
+    ({ item, index }: { item: SelectableItem; index: number }) => {
+      const isSelected = selectedSet.has(item.id);
+      const isAtMax = maxSelection !== undefined && selectedSet.size >= maxSelection && !isSelected;
 
       return (
-        <TouchableOpacity
-          onPress={() => handleToggle(itemId)}
-          disabled={isAtMax}
-          activeOpacity={Opacity.heavy}
-          accessibilityLabel={`${item.name}, ${isSelected ? 'selected' : 'not selected'}`}
-          accessibilityRole="button"
-          accessibilityState={{ selected: isSelected, disabled: isAtMax }}
-        >
-          <Box
-            borderRadius="r3"
-            style={{
-              borderWidth: 1.5,
-              backgroundColor: isSelected
-                ? withOpacity(effectiveAccentColor, Opacity.selection)
-                : theme.surface,
-              borderColor: isSelected ? effectiveAccentColor : theme.border,
-              minHeight: Layout.touchTarget.minHeight,
-            }}
-            padding="md"
-            justifyContent="space-between"
-          >
-            <Inline justify="space-between" align="flex-start" marginBottom="md">
-              <Box
-                width={Size.xl}
-                height={Size.xl}
-                borderRadius="full"
-                justifyContent="center"
-                alignItems="center"
-                background={
-                  (isSelected
-                    ? withOpacity(effectiveAccentColor, Opacity.soft)
-                    : theme.background) as any
-                }
-              >
-                {renderIcon ? (
-                  renderIcon(item, isSelected)
-                ) : item.icon ? (
-                  <AppIcon
-                    name={item.icon}
-                    size={Size.iconMd}
-                    color={isSelected ? effectiveAccentColor : theme.text}
-                  />
-                ) : item.symbol ? (
-                  <AppText
-                    variant="heading"
-                    style={{ color: isSelected ? effectiveAccentColor : theme.text }}
-                  >
-                    {item.symbol}
-                  </AppText>
-                ) : null}
-              </Box>
-              {isSelected && (
-                <AppIcon name="checkCircle" size={Size.iconMd} color={effectiveAccentColor} />
-              )}
-            </Inline>
-
-            <Stack space="xs">
-              <AppText
-                variant="subheading"
-                style={{ color: isSelected ? effectiveAccentColor : theme.text }}
-                numberOfLines={1}
-              >
-                {item.name}
-              </AppText>
-              {renderSubtitle ? (
-                renderSubtitle(item, isSelected)
-              ) : item.subtitle ? (
-                <AppText
-                  variant="caption"
-                  color="secondary"
-                  style={{
-                    color: isSelected
-                      ? withOpacity(effectiveAccentColor, Opacity.strong)
-                      : theme.textSecondary,
-                  }}
-                >
-                  {item.subtitle}
-                </AppText>
-              ) : null}
-            </Stack>
-          </Box>
-        </TouchableOpacity>
+        <SelectableGridItem
+          item={item}
+          index={index}
+          isSelected={isSelected}
+          isAtMax={isAtMax}
+          accentColor={effectiveAccentColor}
+          backgroundColor={
+            isSelected ? withOpacity(effectiveAccentColor, Opacity.selection) : theme.surface
+          }
+          borderColor={isSelected ? effectiveAccentColor : theme.border}
+          textColor={theme.text}
+          secondaryTextColor={theme.textSecondary}
+          onToggle={handleToggle}
+          renderIcon={renderIcon}
+          renderSubtitle={renderSubtitle}
+        />
       );
     },
     [
-      selectedIds,
+      selectedSet,
       theme,
       effectiveAccentColor,
       maxSelection,
@@ -168,10 +254,8 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     <Box flex={1}>
       <FlatList
         data={items}
-        renderItem={({ item }: { item: SelectableItem }) => (
-          <Box style={{ width: '46%', margin: '2%' }}>{renderItem({ item })}</Box>
-        )}
-        keyExtractor={(item: SelectableItem) => item.id ?? item.name}
+        renderItem={renderItem}
+        keyExtractor={(item: SelectableItem) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.grid}
         style={styles.scrollContainer}
@@ -226,5 +310,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginHorizontal: -Spacing.xs,
+  },
+  itemWrapper: {
+    flex: 1,
+    flexBasis: '46%',
+    margin: '2%',
+  },
+  itemContainer: {
+    minHeight: Layout.touchTarget.minHeight,
+  },
+  iconCircleBase: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
 });

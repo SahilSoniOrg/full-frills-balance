@@ -195,23 +195,38 @@ export const showErrorAlert = (
   let title = customTitle || AppConfig.strings.alerts.error;
   let message = appError.message;
 
-  // Provide user-friendly messages for common errors
-  switch (appError.code) {
-    case 'VALIDATION_ERROR':
-      title = AppConfig.strings.alerts.validationError;
-      break;
-    case 'DATABASE_ERROR':
-      title = AppConfig.strings.alerts.databaseError;
-      message = AppConfig.strings.alerts.databaseErrorMessage;
-      break;
-    case 'NETWORK_ERROR':
-      title = AppConfig.strings.alerts.connectionError;
-      message = AppConfig.strings.alerts.networkErrorMessage;
-      break;
-    default:
-      message = AppConfig.strings.alerts.genericError;
+  // Map codes to titles if no custom title provided
+  if (!customTitle) {
+    switch (appError.code) {
+      case 'VALIDATION_ERROR':
+        title = AppConfig.strings.alerts.validationError;
+        break;
+      case 'DATABASE_ERROR':
+        title = AppConfig.strings.alerts.databaseError;
+        break;
+      case 'NETWORK_ERROR':
+        title = AppConfig.strings.alerts.connectionError;
+        break;
+    }
   }
 
+  // If message is missing or just the name of the error class, provide a fallback
+  const isGenericMessage =
+    !message || message === 'AppError' || message === 'DatabaseError' || message === 'Error';
+  if (isGenericMessage && !useSameErrorMessage) {
+    switch (appError.code) {
+      case 'DATABASE_ERROR':
+        message = AppConfig.strings.alerts.databaseErrorMessage;
+        break;
+      case 'NETWORK_ERROR':
+        message = AppConfig.strings.alerts.networkErrorMessage;
+        break;
+      default:
+        message = AppConfig.strings.alerts.genericError;
+    }
+  }
+
+  // Final override if explicitly requested to show the raw error
   if (useSameErrorMessage) {
     message = appError.message;
   }

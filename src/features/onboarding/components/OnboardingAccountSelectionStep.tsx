@@ -25,16 +25,20 @@ export function OnboardingAccountSelectionStep({
   isCompleting,
 }: OnboardingAccountSelectionStepProps) {
   const items: SelectableItem[] = [
-    ...DEFAULT_ACCOUNTS,
+    ...DEFAULT_ACCOUNTS.map(account => ({
+      id: account.id,
+      name: account.name,
+      icon: account.icon,
+    })),
     ...customAccounts.map(account => ({
-      id: account.name,
+      id: account.name, // Custom accounts still use name as ID for now
       name: account.name,
       icon: account.icon,
     })),
   ];
 
   const handleToggle = (id: string) => {
-    const account = items.find(candidate => (candidate.id ?? candidate.name) === id);
+    const account = items.find(candidate => candidate.id === id);
     if (account && !selectedAccounts.includes(id)) {
       if (
         !DEFAULT_ACCOUNTS.some(candidate => candidate.name === id) &&

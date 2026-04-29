@@ -1,4 +1,5 @@
 import { FormSelectorField } from '@/src/components/common/FormSelectorField';
+import { SectionLabel } from '@/src/components/common/SectionLabel';
 import { AppInput, AppText } from '@/src/components/core';
 import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
 import { Spacing } from '@/src/constants';
@@ -77,11 +78,7 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
         </View>
       </View>
 
-      <View style={styles.simulationHeader}>
-        <AppText variant="body" weight="semibold" color="secondary" style={styles.simulationTitle}>
-          SIMULATION SETTINGS
-        </AppText>
-      </View>
+      <SectionLabel label="Simulation Settings" />
 
       <View style={styles.fieldGroup}>
         <AppText variant="body" weight="medium" style={styles.label}>
