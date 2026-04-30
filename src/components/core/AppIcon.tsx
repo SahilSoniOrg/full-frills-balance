@@ -1,5 +1,5 @@
-import { useTheme } from '@/src/hooks/use-theme';
 import { resolveThemeColor } from '@/src/design-system/utils';
+import { useTheme } from '@/src/hooks/use-theme';
 import {
   Activity,
   CircleAlert as AlertCircle,
@@ -147,6 +147,8 @@ export const IconMap = {
   history: History,
   eject: LogOut,
   helpCircle: HelpCircle,
+  repeat: Repeat,
+  plus: Plus,
   sparkles: Sparkles,
   messageCircle: MessageCircle,
   playSquare: PlaySquare,
@@ -173,7 +175,6 @@ export const IconMap = {
   wrench: Wrench,
   handshake: Handshake,
   dashboard: LayoutDashboard,
-  repeat: Repeat,
   activity: Activity,
   filter: Filter,
   timeline: BetweenHorizontalStart,

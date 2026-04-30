@@ -1,4 +1,4 @@
-import { AppInput, AppText } from '@/src/components/core';
+import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -35,70 +35,57 @@ export const JournalLineItem = React.memo(
 
     return (
       <View style={styles.container}>
-        {/* Main Row: Account & Amount */}
         <View style={styles.mainRow}>
+          {/* Account Selector - Flat and clean */}
           <TouchableOpacity
             style={[
               styles.accountSelector,
-              { backgroundColor: theme.surface, borderColor: theme.border },
+              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
             ]}
             onPress={onSelectAccount}
           >
             <View style={{ flex: 1, justifyContent: 'center' }}>
-              <AppText
-                variant="caption"
-                color="secondary"
-                weight="bold"
-                style={{ fontSize: 10, marginBottom: 2, letterSpacing: 0.5 }}
-              >
+              <AppText variant="caption" color="tertiary" weight="bold" style={styles.fieldLabel}>
                 ACCOUNT
               </AppText>
               <AppText variant="body" weight="semibold" numberOfLines={1}>
                 {line.accountName || AppConfig.strings.advancedEntry.selectAccount}
               </AppText>
             </View>
-            <AppText variant="caption" color="secondary" style={{ paddingLeft: Spacing.sm }}>
-              ▼
-            </AppText>
+            <AppIcon name="chevronDown" size={14} color={theme.textTertiary} />
           </TouchableOpacity>
 
-          <View style={styles.amountContainer}>
-            <View
-              style={[
-                styles.amountInputWrapper,
-                { backgroundColor: theme.surface, borderColor: theme.border },
-              ]}
-            >
-              <View style={{ flex: 1, paddingLeft: Spacing.md, paddingVertical: 4 }}>
-                <AppText
-                  variant="caption"
-                  color="secondary"
-                  weight="bold"
-                  style={{ fontSize: 10, marginBottom: 0, letterSpacing: 0.5 }}
-                >
-                  {line.accountCurrency || AppConfig.defaultCurrency}
-                </AppText>
-                <AppInput
-                  value={line.amount}
-                  onChangeText={(value: string) => onUpdate('amount', value)}
-                  placeholder="0.00"
-                  keyboardType="numeric"
-                  style={styles.amountInput}
-                  variant="minimal"
-                  containerStyle={{ minHeight: 0 }}
-                  testID={`amount-input-${line.id}`}
-                />
-              </View>
+          {/* Amount Input - Prominent but integrated */}
+          <View
+            style={[
+              styles.amountInputWrapper,
+              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+            ]}
+          >
+            <View style={{ flex: 1, paddingLeft: Spacing.md }}>
+              <AppText variant="caption" color="tertiary" weight="bold" style={styles.fieldLabel}>
+                {line.accountCurrency || AppConfig.defaultCurrency}
+              </AppText>
+              <AppInput
+                value={line.amount}
+                onChangeText={(value: string) => onUpdate('amount', value)}
+                placeholder="0.00"
+                keyboardType="numeric"
+                style={styles.amountInput}
+                variant="minimal"
+                containerStyle={{ minHeight: 0, marginTop: -4 }}
+                testID={`amount-input-${line.id}`}
+              />
             </View>
           </View>
         </View>
 
-        {/* Sub Row: Type, Notes and Action */}
         <View style={styles.secondaryRow}>
+          {/* DR/CR Toggle - Modern Segmented Style */}
           <View
             style={[
               styles.typeSelector,
-              { borderColor: theme.border, backgroundColor: theme.surfaceSecondary },
+              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
             ]}
           >
             <TouchableOpacity
@@ -113,11 +100,12 @@ export const JournalLineItem = React.memo(
               <AppText
                 variant="caption"
                 weight="bold"
-                style={
-                  line.transactionType === TransactionType.DEBIT
-                    ? { color: theme.pureInverse }
-                    : { color: theme.textSecondary }
-                }
+                style={{
+                  color:
+                    line.transactionType === TransactionType.DEBIT
+                      ? theme.pureInverse
+                      : theme.textSecondary,
+                }}
               >
                 DR
               </AppText>
@@ -134,23 +122,31 @@ export const JournalLineItem = React.memo(
               <AppText
                 variant="caption"
                 weight="bold"
-                style={
-                  line.transactionType === TransactionType.CREDIT
-                    ? { color: theme.pureInverse }
-                    : { color: theme.textSecondary }
-                }
+                style={{
+                  color:
+                    line.transactionType === TransactionType.CREDIT
+                      ? theme.pureInverse
+                      : theme.textSecondary,
+                }}
               >
                 CR
               </AppText>
             </TouchableOpacity>
           </View>
 
+          {/* Notes Input */}
           <View style={{ flex: 1 }}>
             <AppInput
               value={line.notes}
               onChangeText={(value: string) => onUpdate('notes', value)}
               placeholder={AppConfig.strings.advancedEntry.notesPlaceholder}
-              containerStyle={{ height: 44 }}
+              variant="minimal"
+              containerStyle={{
+                height: 44,
+                backgroundColor: theme.surfaceSecondary,
+                borderRadius: Shape.radius.r2,
+                paddingHorizontal: Spacing.sm,
+              }}
               style={{ fontSize: 14 }}
             />
           </View>
@@ -160,12 +156,10 @@ export const JournalLineItem = React.memo(
               onPress={onRemove}
               style={[
                 styles.removeButton,
-                { backgroundColor: withOpacity(theme.error, Opacity.hover) },
+                { backgroundColor: withOpacity(theme.error, Opacity.soft) },
               ]}
             >
-              <AppText variant="body" color="error" weight="bold">
-                ×
-              </AppText>
+              <AppIcon name="delete" size={Size.iconXs} color={theme.error} />
             </TouchableOpacity>
           )}
         </View>
@@ -174,9 +168,17 @@ export const JournalLineItem = React.memo(
         {line.accountCurrency &&
           line.accountCurrency !==
             (preferences.defaultCurrencyCode || AppConfig.defaultCurrency) && (
-            <View style={[styles.exchangeRateRow, { backgroundColor: theme.surfaceSecondary }]}>
-              <View style={{ flex: 1 }}>
-                <AppText variant="caption" color="secondary">
+            <View
+              style={[
+                styles.exchangeRateRow,
+                { backgroundColor: withOpacity(theme.primary, Opacity.soft) },
+              ]}
+            >
+              <View
+                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+              >
+                <AppIcon name="refresh" size={12} color={theme.primary} />
+                <AppText variant="caption" color="primary" weight="medium">
                   ≈ {CurrencyFormatter.format(getLineBaseAmount(line))}
                 </AppText>
               </View>
@@ -190,23 +192,25 @@ export const JournalLineItem = React.memo(
                   placeholder="1.0"
                   keyboardType="decimal-pad"
                   variant="minimal"
-                  containerStyle={{ width: Size.buttonXl, minHeight: 0 }}
-                  style={{ fontSize: 13, textAlign: 'right' }}
+                  containerStyle={{ width: 60, minHeight: 0 }}
+                  style={{ fontSize: 13, textAlign: 'right', fontWeight: 'bold' }}
                 />
-                {onBalanceLine && (
-                  <TouchableOpacity onPress={onBalanceLine} style={styles.fetchButton}>
-                    <AppText variant="caption" color="primary" weight="semibold">
-                      Balance
-                    </AppText>
-                  </TouchableOpacity>
-                )}
-                {onAutoFetchRate && (
-                  <TouchableOpacity onPress={onAutoFetchRate} style={styles.fetchButton}>
-                    <AppText variant="caption" color="secondary" weight="semibold">
-                      Fetch
-                    </AppText>
-                  </TouchableOpacity>
-                )}
+                <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
+                  {onBalanceLine && (
+                    <TouchableOpacity onPress={onBalanceLine} style={styles.fetchButton}>
+                      <AppText variant="caption" color="primary" weight="bold">
+                        Balance
+                      </AppText>
+                    </TouchableOpacity>
+                  )}
+                  {onAutoFetchRate && (
+                    <TouchableOpacity onPress={onAutoFetchRate} style={styles.fetchButton}>
+                      <AppText variant="caption" color="secondary" weight="bold">
+                        Fetch
+                      </AppText>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
           )}
@@ -221,13 +225,13 @@ JournalLineItem.displayName = 'JournalLineItem';
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Spacing.lg,
-    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
   },
   mainRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   secondaryRow: {
     flexDirection: 'row',
@@ -235,54 +239,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   accountSelector: {
-    flex: 1.4,
+    flex: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderWidth: 1,
     borderRadius: Shape.radius.r3,
-    height: 68, // Increased height to prevent clipping
+    height: 60,
   },
-  amountContainer: {
-    flex: 1,
+  fieldLabel: {
+    fontSize: 9,
+    marginBottom: 0,
+    letterSpacing: 1,
+    opacity: 0.7,
   },
   amountInputWrapper: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: Shape.radius.r3,
-    height: 68, // Increased height to prevent clipping
+    height: 60,
     overflow: 'hidden',
   },
   amountInput: {
     textAlign: 'right',
     fontSize: 18,
     fontWeight: '700',
-    paddingRight: Spacing.sm,
+    paddingRight: Spacing.md,
     minHeight: 0,
   },
   typeSelector: {
     flexDirection: 'row',
     height: 44,
     borderRadius: Shape.radius.r2,
-    padding: 4,
+    padding: 3,
     borderWidth: 1,
     alignItems: 'center',
   },
   typeSegment: {
-    width: 44,
-    height: 34,
+    width: 40,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Shape.radius.r2 - 4,
+    borderRadius: Shape.radius.r2 - 2,
   },
   removeButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    // Background set in component due to theme dependency
     borderRadius: Shape.radius.r2,
   },
   exchangeRateRow: {
@@ -290,18 +297,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: Shape.radius.r2,
-    marginTop: -Spacing.xs,
+    marginTop: 0,
   },
   fetchButton: {
     paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
   },
   divider: {
     height: 1,
     width: '100%',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
     opacity: Opacity.muted,
   },
 });

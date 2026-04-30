@@ -1,10 +1,14 @@
+import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import { AppConfig } from '@/src/constants';
+import Account, { AccountType } from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
 import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { smsService } from '@/src/services/sms-service';
+import { AccountRole } from '@/src/types/domain';
+import { getAllowedAccountTypes, getInferredAccountType } from '@/src/utils/accountCategory';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
@@ -34,6 +38,7 @@ export interface JournalEntryViewModel {
   advancedFormConfig: {
     onSelectAccountRequest: (lineId: string) => void;
   };
+  selectableAccounts: Account[];
   isSimpleModeDisabled: boolean;
   primaryDisplayAmount: string;
   primaryDisplayCurrency: string;
@@ -44,6 +49,7 @@ export interface JournalEntryViewModel {
   totalCredits: number;
   isBalanced: boolean;
   launchSource?: string;
+  onCreateAccountRequest: (intent: CreateAccountIntent) => void;
 }
 
 /**
@@ -113,6 +119,12 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   const simpleEditor = useSimpleJournalEditor({
     accounts,
     editor,
+    onSelectAccountRequest: (role: AccountRole) => {
+      const lineId = editor.getLineIdByRole(role);
+      if (lineId) {
+        onSelectAccountRequest(lineId);
+      }
+    },
   });
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
@@ -146,6 +158,42 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     },
     [accounts, activeLineId, editor],
   );
+
+  const onCreateAccountRequest = useCallback(
+    (intent: CreateAccountIntent) => {
+      onCloseAccountPicker();
+
+      let inferredType: AccountType | undefined;
+      const activeLine = editor.lines.find(l => l.id === activeLineId);
+
+      if (editor.isGuidedMode && activeLine) {
+        inferredType = getInferredAccountType(editor.transactionType, activeLine.transactionType);
+      }
+
+      AppNavigation.toAccountForm(undefined, {
+        name: intent.suggestedName,
+        type: inferredType,
+      });
+    },
+    [activeLineId, editor.isGuidedMode, editor.transactionType, editor.lines, onCloseAccountPicker],
+  );
+
+  const selectableAccounts = useMemo(() => {
+    if (!activeLineId) return accounts;
+
+    // In Simple mode, we strictly filter based on Rule 1 & 4 from principles.md
+    if (editor.isGuidedMode) {
+      const type = editor.transactionType;
+      const line = editor.lines.find(l => l.id === activeLineId);
+      if (!line) return accounts;
+
+      const allowedTypes = getAllowedAccountTypes(type, line.transactionType);
+      return accounts.filter(a => allowedTypes.includes(a.accountType));
+    }
+
+    // In Advanced mode, return all accounts to allow full flexibility
+    return accounts;
+  }, [accounts, activeLineId, editor.isGuidedMode, editor.transactionType, editor.lines]);
 
   const isSimpleModeDisabled = editor.lines.length > 2;
 
@@ -264,6 +312,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     advancedFormConfig: {
       onSelectAccountRequest,
     },
+    selectableAccounts,
     isSimpleModeDisabled,
     isBalanced,
     primaryDisplayAmount,
@@ -274,5 +323,6 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     totalDebits,
     totalCredits,
     launchSource: typeof params.source === 'string' ? params.source : undefined,
+    onCreateAccountRequest,
   };
 }

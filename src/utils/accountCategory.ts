@@ -1,5 +1,7 @@
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
+import { TransactionType } from '@/src/data/models/Transaction';
+import { TabType } from '@/src/types/domain';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
 export type AccountTypeColorKey = 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'text';
@@ -91,6 +93,32 @@ export function isDebitNormalAccountType(typeOrLabel: string | AccountType): boo
 export function isAssetOrLiability(typeOrLabel: string | AccountType): boolean {
   const type = toAccountType(typeOrLabel);
   return type === AccountType.ASSET || type === AccountType.LIABILITY;
+}
+
+export function getInferredAccountType(tab: TabType, side: TransactionType): AccountType {
+  if (tab === 'expense') {
+    return side === TransactionType.DEBIT ? AccountType.EXPENSE : AccountType.ASSET;
+  }
+  if (tab === 'income') {
+    return side === TransactionType.CREDIT ? AccountType.INCOME : AccountType.ASSET;
+  }
+  // For transfers, both sides are Assets (or Liabilities)
+  return AccountType.ASSET;
+}
+
+export function getAllowedAccountTypes(tab: TabType, side: TransactionType): AccountType[] {
+  if (tab === 'expense') {
+    return side === TransactionType.DEBIT
+      ? [AccountType.EXPENSE]
+      : [AccountType.ASSET, AccountType.LIABILITY];
+  }
+  if (tab === 'income') {
+    return side === TransactionType.CREDIT
+      ? [AccountType.INCOME]
+      : [AccountType.ASSET, AccountType.LIABILITY];
+  }
+  // Transfer
+  return [AccountType.ASSET, AccountType.LIABILITY];
 }
 
 export function groupAccountsByType(accounts: Account[]): Record<AccountType, Account[]> {

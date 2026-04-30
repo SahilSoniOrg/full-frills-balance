@@ -14,6 +14,7 @@ interface SimpleFormAmountInputProps {
   readOnly?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  variant?: 'default' | 'hero';
 }
 
 export function SimpleFormAmountInput({
@@ -24,15 +25,23 @@ export function SimpleFormAmountInput({
   readOnly,
   onFocus,
   onBlur,
+  variant = 'default',
 }: SimpleFormAmountInputProps) {
   const { theme, fonts } = useTheme();
   const resolvedActiveColor = resolveThemeColor(theme, activeColor);
 
+  const isHero = variant === 'hero';
+
   return (
-    <View style={[styles.amountRow, { backgroundColor: theme.surfaceSecondary }]}>
+    <View
+      style={[
+        styles.amountRow,
+        isHero ? styles.heroRow : { backgroundColor: theme.surfaceSecondary },
+      ]}
+    >
       <View style={styles.currencyWrap}>
         <AppText
-          variant="xl"
+          variant={isHero ? 'heading' : 'xl'}
           weight="bold"
           style={{ color: theme.textSecondary, opacity: Opacity.heavy }}
         >
@@ -42,7 +51,7 @@ export function SimpleFormAmountInput({
       {readOnly ? (
         <View style={styles.amountDisplay}>
           <AppText
-            variant="title"
+            variant={isHero ? 'hero' : 'title'}
             weight="bold"
             style={{ color: resolvedActiveColor, textAlign: 'right' }}
             numberOfLines={1}
@@ -52,11 +61,18 @@ export function SimpleFormAmountInput({
         </View>
       ) : (
         <TextInput
-          style={[styles.amountInput, { color: resolvedActiveColor, fontFamily: fonts.heading }]}
+          style={[
+            styles.amountInput,
+            {
+              color: resolvedActiveColor,
+              fontFamily: fonts.heading,
+              fontSize: isHero ? Typography.sizes.jumbo : Typography.sizes.xxxl,
+            },
+          ]}
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
-          autoFocus
+          autoFocus={isHero}
           numberOfLines={1}
           placeholder="0"
           placeholderTextColor={withOpacity(theme.textSecondary, Opacity.medium)}
@@ -72,12 +88,6 @@ export function SimpleFormAmountInput({
 }
 
 const styles = StyleSheet.create({
-  amountCard: {
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-  },
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -89,17 +99,24 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
   },
+  heroRow: {
+    backgroundColor: 'transparent',
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent', // Can be used for a subtle divider
+  },
   currencyWrap: {
     justifyContent: 'center',
     alignItems: 'center',
-    minWidth: Size.xl * 2,
+    minWidth: Size.xl,
   },
   amountInput: {
     flex: 1,
     minWidth: 0,
     maxWidth: '100%',
     flexShrink: 1,
-    fontSize: Typography.sizes.xxxl,
     textAlign: 'right',
     writingDirection: 'auto',
     includeFontPadding: false,

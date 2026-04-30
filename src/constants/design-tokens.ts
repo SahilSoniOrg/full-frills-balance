@@ -232,6 +232,7 @@ export const Typography = {
     xl: 20, // Card titles, screen headers
     xxl: 24, // Large headers
     xxxl: 32, // Hero titles
+    jumbo: 48, // Sub-hero amounts
     hero: 72, // Massive financial amounts
   },
 

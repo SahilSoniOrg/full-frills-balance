@@ -1,6 +1,9 @@
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 
+export type TabType = 'expense' | 'income' | 'transfer';
+export type AccountRole = 'source' | 'destination';
+
 export enum JournalDisplayType {
   INCOME = 'INCOME',
   EXPENSE = 'EXPENSE',

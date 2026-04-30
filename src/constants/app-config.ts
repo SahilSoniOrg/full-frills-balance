@@ -323,6 +323,8 @@ export const AppConfig = {
       to: 'To: ',
       transaction: 'Entry',
       transfer: 'Transfer',
+      expense: 'Expense',
+      income: 'Income',
       transactionCount: (count: number) => (count === 1 ? '1 entry' : `${count} entries`),
       reconciledUntilHere: (dateText: string) => `Reconciled through ${dateText}`,
       errors: {

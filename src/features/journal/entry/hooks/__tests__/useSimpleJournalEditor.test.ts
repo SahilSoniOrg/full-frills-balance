@@ -4,103 +4,105 @@ import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSi
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/hooks/useExchangeRate', () => ({
-    useExchangeRate: jest.fn(() => ({
-        fetchRate: jest.fn().mockResolvedValue(1),
-    })),
+  useExchangeRate: jest.fn(() => ({
+    fetchRate: jest.fn().mockResolvedValue(1),
+  })),
 }));
 
 jest.mock('@/src/features/journal/hooks/useAccountSelection', () => ({
-    useAccountSelection: jest.fn(({ accounts }) => ({
-        transactionAccounts: accounts,
-        expenseAccounts: accounts,
-        incomeAccounts: accounts,
-    })),
+  useAccountSelection: jest.fn(({ accounts }) => ({
+    transactionAccounts: accounts,
+    expenseAccounts: accounts,
+    incomeAccounts: accounts,
+  })),
 }));
 
 jest.mock('@/src/utils/preferences', () => ({
-    preferences: {
-        defaultCurrencyCode: 'USD',
-        setLastUsedSourceAccountId: jest.fn().mockResolvedValue(undefined),
-        setLastUsedDestinationAccountId: jest.fn().mockResolvedValue(undefined),
-    },
+  preferences: {
+    defaultCurrencyCode: 'USD',
+    setLastUsedSourceAccountId: jest.fn().mockResolvedValue(undefined),
+    setLastUsedDestinationAccountId: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 
 function createEditor(success: boolean) {
-    return {
-        transactionType: 'expense' as const,
-        setTransactionType: jest.fn(),
-        isGuidedMode: true,
-        lines: [
-            {
-                id: '1',
-                accountId: 'source',
-                accountName: 'Cash',
-                accountType: AccountType.ASSET,
-                amount: '10',
-                transactionType: TransactionType.CREDIT,
-                notes: '',
-                exchangeRate: '',
-                accountCurrency: 'USD',
-            },
-            {
-                id: '2',
-                accountId: 'destination',
-                accountName: 'Food',
-                accountType: AccountType.EXPENSE,
-                amount: '10',
-                transactionType: TransactionType.DEBIT,
-                notes: '',
-                exchangeRate: '',
-                accountCurrency: 'USD',
-            },
-        ],
-        updateLine: jest.fn(),
-        description: 'Lunch',
-        setDescription: jest.fn(),
-        submit: jest.fn().mockResolvedValue({ success }),
-        isSubmitting: false,
-        journalDate: '2026-01-01',
-        journalTime: '12:00',
-    };
+  return {
+    transactionType: 'expense' as const,
+    setTransactionType: jest.fn(),
+    isGuidedMode: true,
+    lines: [
+      {
+        id: '1',
+        accountId: 'source',
+        accountName: 'Cash',
+        accountType: AccountType.ASSET,
+        amount: '10',
+        transactionType: TransactionType.CREDIT,
+        notes: '',
+        exchangeRate: '',
+        accountCurrency: 'USD',
+      },
+      {
+        id: '2',
+        accountId: 'destination',
+        accountName: 'Food',
+        accountType: AccountType.EXPENSE,
+        amount: '10',
+        transactionType: TransactionType.DEBIT,
+        notes: '',
+        exchangeRate: '',
+        accountCurrency: 'USD',
+      },
+    ],
+    updateLine: jest.fn(),
+    description: 'Lunch',
+    setDescription: jest.fn(),
+    submit: jest.fn().mockResolvedValue({ success }),
+    isSubmitting: false,
+    journalDate: '2026-01-01',
+    journalTime: '12:00',
+  };
 }
 
 describe('useSimpleJournalEditor', () => {
-    const accounts = [
-        { id: 'source', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
-        { id: 'destination', name: 'Food', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
-    ] as any;
+  const accounts = [
+    { id: 'source', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+    { id: 'destination', name: 'Food', accountType: AccountType.EXPENSE, currencyCode: 'USD' },
+  ] as any;
 
-    it('navigates via onSuccess when submit succeeds', async () => {
-        const editor = createEditor(true);
+  it('navigates via onSuccess when submit succeeds', async () => {
+    const editor = createEditor(true);
 
-        const { result } = renderHook(() =>
-            useSimpleJournalEditor({
-                accounts,
-                editor: editor as any,
-            })
-        );
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
 
-        await act(async () => {
-            await result.current.handleSave();
-        });
-
-        expect(editor.submit).toHaveBeenCalled();
+    await act(async () => {
+      await result.current.handleSave();
     });
 
-    it('does not navigate via onSuccess when submit fails', async () => {
-        const editor = createEditor(false);
+    expect(editor.submit).toHaveBeenCalled();
+  });
 
-        const { result } = renderHook(() =>
-            useSimpleJournalEditor({
-                accounts,
-                editor: editor as any,
-            })
-        );
+  it('does not navigate via onSuccess when submit fails', async () => {
+    const editor = createEditor(false);
 
-        await act(async () => {
-            await result.current.handleSave();
-        });
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
 
-        expect(editor.submit).toHaveBeenCalled();
+    await act(async () => {
+      await result.current.handleSave();
     });
+
+    expect(editor.submit).toHaveBeenCalled();
+  });
 });

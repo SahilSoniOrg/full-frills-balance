@@ -3,338 +3,373 @@ import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import { JournalEntryLine } from '@/src/types/domain';
+import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domain';
+import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useJournalEditor } from './useJournalEditor';
 
-export type TabType = 'expense' | 'income' | 'transfer';
-
 export interface UseSimpleJournalEditorProps {
-    accounts: Account[];
-    editor: ReturnType<typeof useJournalEditor>;
+  accounts: Account[];
+  editor: ReturnType<typeof useJournalEditor>;
+  onSelectAccountRequest: (role: AccountRole) => void;
 }
 
 /**
  * useSimpleJournalEditor - Controller hook for the simple journal form.
  * Handles state, basic validation, and exchange rate calculations.
- * 
+ *
  * REFACTORED: Now uses `editor` as the single source of truth for transaction state.
  */
 export function useSimpleJournalEditor({
-    accounts,
-    editor,
+  accounts,
+  editor,
+  onSelectAccountRequest,
 }: UseSimpleJournalEditorProps) {
-    const { fetchRate } = useExchangeRate();
+  const { fetchRate } = useExchangeRate();
 
-    const [exchangeRate, setExchangeRate] = useState<number | null>(null);
-    const [isLoadingRate, setIsLoadingRate] = useState(false);
-    const [rateError, setRateError] = useState<string | null>(null);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
 
-    // Derived State from Editor
-    const type = editor.transactionType;
+  // Derived State from Editor
+  const type = editor.transactionType;
 
-    const sourceLine = useMemo(() => editor.lines.find(l => l.transactionType === TransactionType.CREDIT), [editor.lines]);
-    const destinationLine = useMemo(() => editor.lines.find(l => l.transactionType === TransactionType.DEBIT), [editor.lines]);
+  const sourceLine = useMemo(
+    () => editor.lines.find(l => l.transactionType === TransactionType.CREDIT),
+    [editor.lines],
+  );
+  const destinationLine = useMemo(
+    () => editor.lines.find(l => l.transactionType === TransactionType.DEBIT),
+    [editor.lines],
+  );
 
-    const amount = sourceLine?.amount || destinationLine?.amount || '';
-    const sourceId = sourceLine?.accountId || '';
-    const destinationId = destinationLine?.accountId || '';
+  const amount = sourceLine?.amount || destinationLine?.amount || '';
+  const sourceId = sourceLine?.accountId || '';
+  const destinationId = destinationLine?.accountId || '';
 
-    // Use shared account selection logic for filtering
-    const {
-        transactionAccounts,
-        expenseAccounts,
-        incomeAccounts,
-    } = useAccountSelection({ accounts });
+  // Use shared account selection logic for filtering
+  const { transactionAccounts, expenseAccounts, incomeAccounts } = useAccountSelection({
+    accounts,
+  });
 
-    const sourceAccount = useMemo(() => accounts.find(a => a.id === sourceId), [accounts, sourceId]);
-    const destAccount = useMemo(() => accounts.find(a => a.id === destinationId), [accounts, destinationId]);
+  const sourceAccount = useMemo(() => accounts.find(a => a.id === sourceId), [accounts, sourceId]);
+  const destAccount = useMemo(
+    () => accounts.find(a => a.id === destinationId),
+    [accounts, destinationId],
+  );
 
-    const sourceCurrency = useMemo(() => sourceAccount?.currencyCode, [sourceAccount]);
-    const destCurrency = useMemo(() => destAccount?.currencyCode, [destAccount]);
+  const sourceCurrency = useMemo(() => sourceAccount?.currencyCode, [sourceAccount]);
+  const destCurrency = useMemo(() => destAccount?.currencyCode, [destAccount]);
 
-    const isCrossCurrency = !!(sourceCurrency && destCurrency && sourceCurrency !== destCurrency);
+  const isCrossCurrency = !!(sourceCurrency && destCurrency && sourceCurrency !== destCurrency);
 
-    // Rate calculations
-    useEffect(() => {
-        const fetchCurrentRate = async () => {
-            if (!isCrossCurrency || !sourceCurrency || !destCurrency) {
-                setExchangeRate(null);
-                return;
-            }
+  // Rate calculations
+  useEffect(() => {
+    const fetchCurrentRate = async () => {
+      if (!isCrossCurrency || !sourceCurrency || !destCurrency) {
+        setExchangeRate(null);
+        return;
+      }
 
-            setIsLoadingRate(true);
-            setRateError(null);
-            try {
-                const rate = await fetchRate(sourceCurrency, destCurrency);
-                setExchangeRate(rate);
-            } catch (error) {
-                setRateError('Rate unavailable');
-                logger.error('Failed to fetch rate', { sourceCurrency, destCurrency, error });
-            } finally {
-                setIsLoadingRate(false);
-            }
-        };
-
-        fetchCurrentRate();
-    }, [isCrossCurrency, sourceCurrency, destCurrency, fetchRate]);
-
-    const numAmount = useMemo(() => {
-        return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
-    }, [amount]);
-
-    const convertedAmount = useMemo(() => {
-        if (!isCrossCurrency || !exchangeRate) return numAmount;
-        return numAmount * exchangeRate;
-    }, [numAmount, isCrossCurrency, exchangeRate]);
-
-    // Sync exchange rate and converted amounts back to lines for Advanced mode consistency
-    useEffect(() => {
-        if (!editor.isGuidedMode || !sourceLine || !destinationLine) return;
-
-        const updates: Record<string, Partial<JournalEntryLine>> = {};
-        const baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-
-        if (isCrossCurrency && exchangeRate) {
-            const formattedConverted = convertedAmount.toFixed(2);
-            const parsedConverted = parseFloat(formattedConverted);
-
-            // Set source line rate to Base Currency
-            if (sourceCurrency !== baseCurrency) {
-                const srcRate = destCurrency === baseCurrency
-                    ? (numAmount > 0 ? (parsedConverted / numAmount).toFixed(6) : '')
-                    : '';
-                if (sourceLine.exchangeRate !== srcRate) updates[sourceLine.id] = { exchangeRate: srcRate };
-            } else if (sourceLine.exchangeRate) {
-                updates[sourceLine.id] = { exchangeRate: '' };
-            }
-
-            // Set destination line rate to Base Currency
-            if (destCurrency !== baseCurrency) {
-                const dstRate = sourceCurrency === baseCurrency
-                    ? (parsedConverted > 0 ? (numAmount / parsedConverted).toFixed(6) : '')
-                    : '';
-                if (destinationLine.exchangeRate !== dstRate) updates[destinationLine.id] = { exchangeRate: dstRate };
-            } else if (destinationLine.exchangeRate) {
-                updates[destinationLine.id] = { exchangeRate: '' };
-            }
-
-            if (destinationLine.amount !== formattedConverted) {
-                updates[destinationLine.id] = { amount: formattedConverted };
-            }
-        } else if (!isCrossCurrency) {
-            if (sourceLine.exchangeRate) updates[sourceLine.id] = { exchangeRate: '' };
-            if (destinationLine.exchangeRate) updates[destinationLine.id] = { exchangeRate: '' };
-            if (destinationLine.amount !== amount) updates[destinationLine.id] = { amount };
-        }
-
-        Object.entries(updates).forEach(([id, up]) => editor.updateLine(id, up));
-    }, [
-        exchangeRate,
-        isCrossCurrency,
-        sourceLine,
-        destinationLine,
-        convertedAmount,
-        amount,
-        editor,
-        sourceCurrency,
-        destCurrency,
-        numAmount,
-    ]);
-
-    // Helpers to update editor state
-    const setType = (newType: 'expense' | 'income' | 'transfer') => {
-        editor.setTransactionType(newType);
-
-        // Simple mode always assumes 2 lines. Let's ensure they have the correct roles.
-        // Expense: Source (Credit: Asset/Liab) -> Dest (Debit: Expense)
-        // Income: Source (Credit: Income) -> Dest (Debit: Asset/Liab)
-        // Transfer: Source (Credit: Asset/Liab) -> Dest (Debit: Asset/Liab)
-
-        if (sourceLine) {
-            editor.updateLine(sourceLine.id, {
-                transactionType: TransactionType.CREDIT,
-                accountId: '',
-                accountName: '',
-                accountType: newType === 'income' ? AccountType.INCOME : AccountType.ASSET,
-                accountCurrency: undefined
-            });
-        }
-        if (destinationLine) {
-            editor.updateLine(destinationLine.id, {
-                transactionType: TransactionType.DEBIT,
-                accountId: '',
-                accountName: '',
-                accountType: newType === 'expense' ? AccountType.EXPENSE : AccountType.ASSET,
-                accountCurrency: undefined
-            });
-        }
+      setIsLoadingRate(true);
+      setRateError(null);
+      try {
+        const rate = await fetchRate(sourceCurrency, destCurrency);
+        setExchangeRate(rate);
+      } catch (error) {
+        setRateError('Rate unavailable');
+        logger.error('Failed to fetch rate', { sourceCurrency, destCurrency, error });
+      } finally {
+        setIsLoadingRate(false);
+      }
     };
 
-    const setAmount = (newAmount: string) => {
-        // Update both lines - the effect will handle the cross-currency conversion
-        if (sourceLine) editor.updateLine(sourceLine.id, { amount: newAmount });
-        if (destinationLine && !isCrossCurrency) editor.updateLine(destinationLine.id, { amount: newAmount });
-    };
+    fetchCurrentRate();
+  }, [isCrossCurrency, sourceCurrency, destCurrency, fetchRate]);
 
-    const setSourceId = useCallback((id: string) => {
-        const account = accounts.find(a => a.id === id);
-        if (sourceLine) {
-            editor.updateLine(sourceLine.id, {
-                accountId: id,
-                accountName: account?.name || '',
-                accountType: account?.accountType || AccountType.ASSET,
-                accountCurrency: account?.currencyCode
-            });
-        }
-    }, [accounts, sourceLine, editor]);
+  const numAmount = useMemo(() => {
+    return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
+  }, [amount]);
 
-    const setDestinationId = useCallback((id: string) => {
-        const account = accounts.find(a => a.id === id);
-        if (destinationLine) {
-            editor.updateLine(destinationLine.id, {
-                accountId: id,
-                accountName: account?.name || '',
-                accountType: account?.accountType || AccountType.ASSET,
-                accountCurrency: account?.currencyCode
-            });
-        }
-    }, [accounts, destinationLine, editor]);
+  const convertedAmount = useMemo(() => {
+    if (!isCrossCurrency || !exchangeRate) return numAmount;
+    return numAmount * exchangeRate;
+  }, [numAmount, isCrossCurrency, exchangeRate]);
 
-    // Account defaulting logic (re-implemented to work with editor state)
-    useEffect(() => {
-        if (editor.isEdit) return; // Never apply defaults in Edit mode - use the journal's data
+  // Sync exchange rate and converted amounts back to lines for Advanced mode consistency
+  useEffect(() => {
+    if (!editor.isGuidedMode || !sourceLine || !destinationLine) return;
 
-        const lastSourceId = preferences.lastUsedSourceAccountId;
-        const lastDestId = preferences.lastUsedDestinationAccountId;
+    const updates: Record<string, Partial<JournalEntryLine>> = {};
+    const baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
-        let shouldUpdate = false;
-        let newSourceId: string | undefined;
-        let newDestId: string | undefined;
+    if (isCrossCurrency && exchangeRate) {
+      const formattedConverted = convertedAmount.toFixed(2);
+      const parsedConverted = parseFloat(formattedConverted);
 
-        // Only default if empty
-        if (!sourceId && lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
-            if (type === 'transfer' || type === 'expense') {
-                newSourceId = lastSourceId;
-                shouldUpdate = true;
-            }
-        }
+      // Set source line rate to Base Currency
+      if (sourceCurrency !== baseCurrency) {
+        const srcRate =
+          destCurrency === baseCurrency
+            ? numAmount > 0
+              ? (parsedConverted / numAmount).toFixed(6)
+              : ''
+            : '';
+        if (sourceLine.exchangeRate !== srcRate) updates[sourceLine.id] = { exchangeRate: srcRate };
+      } else if (sourceLine.exchangeRate) {
+        updates[sourceLine.id] = { exchangeRate: '' };
+      }
 
-        if (!destinationId && lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
-            if (type === 'transfer' || type === 'income') {
-                newDestId = lastDestId;
-                shouldUpdate = true;
-            }
-        }
+      // Set destination line rate to Base Currency
+      if (destCurrency !== baseCurrency) {
+        const dstRate =
+          sourceCurrency === baseCurrency
+            ? parsedConverted > 0
+              ? (numAmount / parsedConverted).toFixed(6)
+              : ''
+            : '';
+        if (destinationLine.exchangeRate !== dstRate)
+          updates[destinationLine.id] = { exchangeRate: dstRate };
+      } else if (destinationLine.exchangeRate) {
+        updates[destinationLine.id] = { exchangeRate: '' };
+      }
 
-        if (shouldUpdate) {
-            editor.setLines(prev => {
-                return prev.map(line => {
-                    if (line.transactionType === TransactionType.CREDIT && newSourceId) {
-                        const account = accounts.find(a => a.id === newSourceId);
-                        return {
-                            ...line,
-                            accountId: newSourceId,
-                            accountName: account?.name || '',
-                            accountType: account?.accountType || AccountType.ASSET,
-                            accountCurrency: account?.currencyCode
-                        };
-                    }
-                    if (line.transactionType === TransactionType.DEBIT && newDestId) {
-                        const account = accounts.find(a => a.id === newDestId);
-                        return {
-                            ...line,
-                            accountId: newDestId,
-                            accountName: account?.name || '',
-                            accountType: account?.accountType || AccountType.ASSET,
-                            accountCurrency: account?.currencyCode
-                        };
-                    }
-                    return line;
-                });
-            });
-        }
-    }, [type, transactionAccounts, destinationId, sourceId, accounts, editor]); // Run when type changes or accounts load
+      if (destinationLine.amount !== formattedConverted) {
+        updates[destinationLine.id] = { amount: formattedConverted };
+      }
+    } else if (!isCrossCurrency) {
+      if (sourceLine.exchangeRate) updates[sourceLine.id] = { exchangeRate: '' };
+      if (destinationLine.exchangeRate) updates[destinationLine.id] = { exchangeRate: '' };
+      if (destinationLine.amount !== amount) updates[destinationLine.id] = { amount };
+    }
 
-    // Hydrate account details into lines if they were initialized just with accountId (like from deep link or params)
-    useEffect(() => {
-        if (accounts.length === 0) return;
+    Object.entries(updates).forEach(([id, up]) => editor.updateLine(id, up));
+  }, [
+    exchangeRate,
+    isCrossCurrency,
+    sourceLine,
+    destinationLine,
+    convertedAmount,
+    amount,
+    editor,
+    sourceCurrency,
+    destCurrency,
+    numAmount,
+  ]);
 
-        editor.lines.forEach(line => {
-            if (line.accountId && !line.accountName) {
-                const acct = accounts.find(a => a.id === line.accountId);
-                if (acct) {
-                    editor.updateLine(line.id, {
-                        accountName: acct.name,
-                        accountType: acct.accountType,
-                        accountCurrency: acct.currencyCode
-                    });
-                }
-            }
+  // Helpers to update editor state
+  const setType = (newType: TabType) => {
+    editor.setTransactionType(newType);
+
+    // Simple mode always assumes 2 lines. Let's ensure they have the correct roles.
+    // Expense: Source (Credit: Asset/Liab) -> Dest (Debit: Expense)
+    // Income: Source (Credit: Income) -> Dest (Debit: Asset/Liab)
+    // Transfer: Source (Credit: Asset/Liab) -> Dest (Debit: Asset/Liab)
+
+    if (sourceLine) {
+      editor.updateLine(sourceLine.id, {
+        transactionType: TransactionType.CREDIT,
+        accountId: '',
+        accountName: '',
+        accountType: getInferredAccountType(newType, TransactionType.CREDIT),
+        accountCurrency: undefined,
+      });
+    }
+    if (destinationLine) {
+      editor.updateLine(destinationLine.id, {
+        transactionType: TransactionType.DEBIT,
+        accountId: '',
+        accountName: '',
+        accountType: getInferredAccountType(newType, TransactionType.DEBIT),
+        accountCurrency: undefined,
+      });
+    }
+  };
+
+  const setAmount = (newAmount: string) => {
+    // Update both lines - the effect will handle the cross-currency conversion
+    if (sourceLine) editor.updateLine(sourceLine.id, { amount: newAmount });
+    if (destinationLine && !isCrossCurrency)
+      editor.updateLine(destinationLine.id, { amount: newAmount });
+  };
+
+  const setSourceId = useCallback(
+    (id: string) => {
+      const account = accounts.find(a => a.id === id);
+      if (sourceLine) {
+        editor.updateLine(sourceLine.id, {
+          accountId: id,
+          accountName: account?.name || '',
+          accountType: account?.accountType || AccountType.ASSET,
+          accountCurrency: account?.currencyCode,
         });
-    }, [accounts, editor.lines, editor.updateLine, editor]);
+      }
+    },
+    [accounts, sourceLine, editor],
+  );
 
+  const setDestinationId = useCallback(
+    (id: string) => {
+      const account = accounts.find(a => a.id === id);
+      if (destinationLine) {
+        editor.updateLine(destinationLine.id, {
+          accountId: id,
+          accountName: account?.name || '',
+          accountType: account?.accountType || AccountType.ASSET,
+          accountCurrency: account?.currencyCode,
+        });
+      }
+    },
+    [accounts, destinationLine, editor],
+  );
 
-    const handleSave = useCallback(async () => {
-        if (numAmount <= 0) {
-            return;
+  // Account defaulting logic (re-implemented to work with editor state)
+  useEffect(() => {
+    if (editor.isEdit) return; // Never apply defaults in Edit mode - use the journal's data
+
+    const lastSourceId = preferences.lastUsedSourceAccountId;
+    const lastDestId = preferences.lastUsedDestinationAccountId;
+
+    let shouldUpdate = false;
+    let newSourceId: string | undefined;
+    let newDestId: string | undefined;
+
+    // Only default if empty
+    if (!sourceId && lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
+      if (type === 'transfer' || type === 'expense') {
+        newSourceId = lastSourceId;
+        shouldUpdate = true;
+      }
+    }
+
+    if (!destinationId && lastDestId && transactionAccounts.some(a => a.id === lastDestId)) {
+      if (type === 'transfer' || type === 'income') {
+        newDestId = lastDestId;
+        shouldUpdate = true;
+      }
+    }
+
+    if (shouldUpdate) {
+      editor.setLines(prev => {
+        return prev.map(line => {
+          if (line.transactionType === TransactionType.CREDIT && newSourceId) {
+            const account = accounts.find(a => a.id === newSourceId);
+            return {
+              ...line,
+              accountId: newSourceId,
+              accountName: account?.name || '',
+              accountType: account?.accountType || AccountType.ASSET,
+              accountCurrency: account?.currencyCode,
+            };
+          }
+          if (line.transactionType === TransactionType.DEBIT && newDestId) {
+            const account = accounts.find(a => a.id === newDestId);
+            return {
+              ...line,
+              accountId: newDestId,
+              accountName: account?.name || '',
+              accountType: account?.accountType || AccountType.ASSET,
+              accountCurrency: account?.currencyCode,
+            };
+          }
+          return line;
+        });
+      });
+    }
+  }, [type, transactionAccounts, destinationId, sourceId, accounts, editor]); // Run when type changes or accounts load
+
+  // Hydrate account details into lines if they were initialized just with accountId (like from deep link or params)
+  useEffect(() => {
+    if (accounts.length === 0) return;
+
+    editor.lines.forEach(line => {
+      if (line.accountId && !line.accountName) {
+        const acct = accounts.find(a => a.id === line.accountId);
+        if (acct) {
+          editor.updateLine(line.id, {
+            accountName: acct.name,
+            accountType: acct.accountType,
+            accountCurrency: acct.currencyCode,
+          });
         }
-        if (!sourceId || !destinationId) {
-            return;
-        }
+      }
+    });
+  }, [accounts, editor.lines, editor.updateLine, editor]);
 
-        let overrides;
-        // Default description to type if empty
-        if (!editor.description.trim()) {
-            let defaultDesc = 'Transfer';
-            if (type === 'expense' && destAccount) {
-                defaultDesc = `Paid for ${destAccount.name}`;
-            } else if (type === 'income' && sourceAccount) {
-                defaultDesc = `Income from ${sourceAccount.name}`;
-            }
+  const handleSave = useCallback(async () => {
+    if (numAmount <= 0) {
+      return;
+    }
+    if (!sourceId || !destinationId) {
+      return;
+    }
 
-            editor.setDescription(defaultDesc);
-            overrides = { description: defaultDesc };
-        }
+    let overrides;
+    // Default description to type if empty
+    if (!editor.description.trim()) {
+      let defaultDesc = 'Transfer';
+      if (type === 'expense' && destAccount) {
+        defaultDesc = `Paid for ${destAccount.name}`;
+      } else if (type === 'income' && sourceAccount) {
+        defaultDesc = `Income from ${sourceAccount.name}`;
+      }
 
-        // Save preferences
-        if (type === 'expense' || type === 'transfer') await preferences.setLastUsedSourceAccountId(sourceId);
-        if (type === 'income' || type === 'transfer') await preferences.setLastUsedDestinationAccountId(destinationId);
+      editor.setDescription(defaultDesc);
+      overrides = { description: defaultDesc };
+    }
 
-        // Use the main editor submit
-        await editor.submit(overrides);
-    }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount]);
+    // Save preferences
+    if (type === 'expense' || type === 'transfer')
+      await preferences.setLastUsedSourceAccountId(sourceId);
+    if (type === 'income' || type === 'transfer')
+      await preferences.setLastUsedDestinationAccountId(destinationId);
 
-    return {
-        type,
-        setType,
-        amount,
-        setAmount,
-        sourceId,
-        setSourceId,
-        destinationId,
-        setDestinationId,
-        // Passthrough props for UI compatibility
-        journalDate: editor.journalDate,
-        journalTime: editor.journalTime,
-        description: editor.description,
+    // Use the main editor submit
+    await editor.submit(overrides);
+  }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount]);
 
-        isSubmitting: editor.isSubmitting,
-        exchangeRate,
-        isLoadingRate,
-        rateError,
-        isCrossCurrency,
-        convertedAmount,
-        transactionAccounts,
-        expenseAccounts,
-        incomeAccounts,
-        allAccounts: accounts,
-        sourceCurrency,
-        destCurrency,
-        displayCurrency: sourceCurrency || destCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
-        handleSave,
-        isValidAmount: numAmount > 0,
-    };
+  const openAccountPicker = useCallback(
+    (role: AccountRole) => {
+      onSelectAccountRequest(role);
+    },
+    [onSelectAccountRequest],
+  );
+
+  return {
+    type,
+    setType,
+    amount,
+    setAmount,
+    sourceId,
+    setSourceId,
+    destinationId,
+    setDestinationId,
+    // Passthrough props for UI compatibility
+    journalDate: editor.journalDate,
+    journalTime: editor.journalTime,
+    description: editor.description,
+
+    isSubmitting: editor.isSubmitting,
+    exchangeRate,
+    isLoadingRate,
+    rateError,
+    isCrossCurrency,
+    convertedAmount,
+    transactionAccounts,
+    expenseAccounts,
+    incomeAccounts,
+    allAccounts: accounts,
+    sourceCurrency,
+    destCurrency,
+    displayCurrency:
+      sourceCurrency ||
+      destCurrency ||
+      preferences.defaultCurrencyCode ||
+      AppConfig.defaultCurrency,
+    handleSave,
+    openAccountPicker,
+    isValidAmount: numAmount > 0,
+  };
 }
