@@ -87,6 +87,7 @@ export function Text({
     marginBottom,
     marginHorizontal,
     opacity,
+    letterSpacing,
     getVariantColors,
     theme,
     fonts,

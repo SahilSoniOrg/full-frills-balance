@@ -14,6 +14,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
+import { Keyboard } from 'react-native';
 
 /**
  * JournalEntryViewModel - Public interface for the Journal Entry screen state.
@@ -50,6 +51,11 @@ export interface JournalEntryViewModel {
   isBalanced: boolean;
   launchSource?: string;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
+  submitLabel: string;
+  isSubmitDisabled: boolean;
+  handleSubmit: () => void;
+  isAmountFocused: boolean;
+  setIsAmountFocused: (focused: boolean) => void;
 }
 
 /**
@@ -129,11 +135,15 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
 
-  const onSelectAccountRequest = useCallback((lineId: string) => {
-    setActiveLineId(lineId);
-    setShowAccountPicker(true);
-  }, []);
+  const onSelectAccountRequest = useCallback(
+    (idOrRole: string) => {
+      setActiveLineId(editor.resolveActiveLineId(idOrRole));
+      setShowAccountPicker(true);
+    },
+    [editor],
+  );
 
   const onCloseAccountPicker = useCallback(() => {
     setShowAccountPicker(false);
@@ -172,7 +182,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
       AppNavigation.toAccountForm(undefined, {
         name: intent.suggestedName,
-        type: inferredType,
+        type: intent.type || inferredType,
       });
     },
     [activeLineId, editor.isGuidedMode, editor.transactionType, editor.lines, onCloseAccountPicker],
@@ -188,7 +198,11 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       if (!line) return accounts;
 
       const allowedTypes = getAllowedAccountTypes(type, line.transactionType);
-      return accounts.filter(a => allowedTypes.includes(a.accountType));
+      const filtered = accounts.filter(a => allowedTypes.includes(a.accountType));
+
+      // Safety Fallback: If filtering by specific types returns nothing,
+      // show all accounts so the user isn't stuck with an empty modal.
+      return filtered.length > 0 ? filtered : accounts;
     }
 
     // In Advanced mode, return all accounts to allow full flexibility
@@ -292,37 +306,122 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   const isAdvancedValid =
     isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
 
-  return {
-    editor,
-    simpleEditor,
-    accounts,
-    isLoading: isLoadingAccounts || editor.isLoading,
-    headerTitle,
-    showEditBanner: editor.isEdit,
-    editBannerText: AppConfig.strings.transactionFlow.banners.editing,
-    isGuidedMode: editor.isGuidedMode,
-    onToggleGuidedMode,
-    showAccountPicker,
-    onCloseAccountPicker,
-    onSelectAccountRequest,
-    onAccountSelected,
-    selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
-    simpleFormIsValid: isSimpleValid,
-    advancedFormIsValid: isAdvancedValid,
-    advancedFormConfig: {
+  const handleSubmit = useCallback(() => {
+    if (editor.isGuidedMode) {
+      if (isAmountFocused && !isSimpleValid) {
+        Keyboard.dismiss();
+      } else {
+        simpleEditor.handleSave();
+      }
+    } else {
+      editor.submit();
+    }
+  }, [editor, isAmountFocused, isSimpleValid, simpleEditor]);
+
+  const isSubmitDisabled = editor.isGuidedMode
+    ? isAmountFocused
+      ? false
+      : !isSimpleValid
+    : !isAdvancedValid;
+
+  const submitLabel = useMemo(() => {
+    if (editor.isGuidedMode) {
+      if (isAmountFocused && !isSimpleValid) {
+        return AppConfig.strings.transactionFlow.continue;
+      }
+      return simpleEditor.isSubmitting
+        ? AppConfig.strings.transactionFlow.saving
+        : AppConfig.strings.transactionFlow.save(simpleEditor.type);
+    }
+
+    if (editor.isSubmitting) {
+      return editor.isEdit
+        ? AppConfig.strings.advancedEntry.updating
+        : AppConfig.strings.advancedEntry.creating;
+    }
+
+    return editor.isEdit
+      ? AppConfig.strings.advancedEntry.updateJournal
+      : AppConfig.strings.advancedEntry.createJournal;
+  }, [
+    editor.isGuidedMode,
+    editor.isSubmitting,
+    editor.isEdit,
+    isAmountFocused,
+    isSimpleValid,
+    simpleEditor.isSubmitting,
+    simpleEditor.type,
+  ]);
+
+  return useMemo(
+    () => ({
+      editor,
+      simpleEditor,
+      accounts,
+      isLoading: isLoadingAccounts || editor.isLoading,
+      headerTitle,
+      showEditBanner: editor.isEdit,
+      editBannerText: AppConfig.strings.transactionFlow.banners.editing,
+      isGuidedMode: editor.isGuidedMode,
+      onToggleGuidedMode,
+      showAccountPicker,
+      onCloseAccountPicker,
       onSelectAccountRequest,
-    },
-    selectableAccounts,
-    isSimpleModeDisabled,
-    isBalanced,
-    primaryDisplayAmount,
-    primaryDisplayCurrency,
-    availableCurrencies,
-    selectedCurrency,
-    onSelectCurrency: setSelectedCurrency,
-    totalDebits,
-    totalCredits,
-    launchSource: typeof params.source === 'string' ? params.source : undefined,
-    onCreateAccountRequest,
-  };
+      onAccountSelected,
+      selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
+      simpleFormIsValid: isSimpleValid,
+      advancedFormIsValid: isAdvancedValid,
+      advancedFormConfig: {
+        onSelectAccountRequest,
+      },
+      selectableAccounts,
+      isSimpleModeDisabled,
+      isBalanced,
+      primaryDisplayAmount,
+      primaryDisplayCurrency,
+      availableCurrencies,
+      selectedCurrency,
+      onSelectCurrency: setSelectedCurrency,
+      totalDebits,
+      totalCredits,
+      launchSource: typeof params.source === 'string' ? params.source : undefined,
+      onCreateAccountRequest,
+      submitLabel,
+      isSubmitDisabled,
+      handleSubmit,
+      isAmountFocused,
+      setIsAmountFocused,
+    }),
+    [
+      editor,
+      simpleEditor,
+      accounts,
+      isLoadingAccounts,
+      headerTitle,
+      onToggleGuidedMode,
+      showAccountPicker,
+      onCloseAccountPicker,
+      onSelectAccountRequest,
+      onAccountSelected,
+      activeLineId,
+      isSimpleValid,
+      isAdvancedValid,
+      selectableAccounts,
+      isSimpleModeDisabled,
+      isBalanced,
+      primaryDisplayAmount,
+      primaryDisplayCurrency,
+      availableCurrencies,
+      selectedCurrency,
+      setSelectedCurrency,
+      totalDebits,
+      totalCredits,
+      params.source,
+      onCreateAccountRequest,
+      submitLabel,
+      isSubmitDisabled,
+      handleSubmit,
+      isAmountFocused,
+    ],
+  );
 }

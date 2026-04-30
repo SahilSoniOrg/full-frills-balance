@@ -1,4 +1,4 @@
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import {
@@ -138,10 +138,9 @@ export default function JournalSearchScreen() {
         }}
       />
 
-      <AccountPickerModal
+      <MultiAccountPickerModal
         visible={isAccountPickerVisible}
         onClose={() => setIsAccountPickerVisible(false)}
-        multiple={true}
         selectedIds={vm.accountIds}
         onSelect={vm.setAccountIds}
         accounts={vm.accounts}

@@ -1,49 +1,45 @@
 import Account from '@/src/data/models/Account';
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 
-export type { CreateAccountIntent };
-
-export interface AccountPickerModalProps {
+export interface MultiAccountPickerModalProps {
   visible: boolean;
   accounts: Account[];
-  selectedId?: string;
+  selectedIds: string[];
   title?: string;
   onClose: () => void;
-  onSelect: (accountId: string) => void;
+  onSelect: (accountIds: string[]) => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   excludeParentAccounts?: boolean;
 }
 
-export function AccountPickerModal({
+export function MultiAccountPickerModal({
   visible,
   accounts,
-  selectedId,
-  title = 'Select Account',
+  selectedIds,
+  title = 'Select Accounts',
   onClose,
   onSelect,
   onCreateRequest,
   excludeParentAccounts = false,
-}: AccountPickerModalProps) {
-  const handleSelect = useCallback(
-    (id: string) => {
-      onSelect(id);
-    },
-    [onSelect],
-  );
+}: MultiAccountPickerModalProps) {
+  const handleApply = (ids: Set<string>) => {
+    onSelect(Array.from(ids));
+    onClose();
+  };
 
-  const selectedIds = useMemo(() => new Set(selectedId ? [selectedId] : []), [selectedId]);
+  const selectedSet = React.useMemo(() => new Set(selectedIds), [selectedIds]);
 
   return (
     <BaseAccountPickerModal visible={visible} onClose={onClose} title={title}>
       <AccountPickerList
         accounts={accounts}
-        selectedIds={selectedIds}
-        onSelect={handleSelect}
+        selectedIds={selectedSet}
+        onApply={handleApply}
         onCreateRequest={onCreateRequest}
         onClose={onClose}
-        isMultiple={false}
+        isMultiple={true}
         excludeParentAccounts={excludeParentAccounts}
       />
     </BaseAccountPickerModal>

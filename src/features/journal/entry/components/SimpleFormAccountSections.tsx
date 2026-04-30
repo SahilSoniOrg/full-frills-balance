@@ -12,7 +12,6 @@ interface SimpleFormAccountSectionsProps {
     selectedId: string;
     onSelect: (id: string) => void;
     role: 'source' | 'destination';
-    totalAccountsCount?: number;
   }[];
   onSearchRequest: (role: DomainAccountRole) => void;
 }
@@ -31,7 +30,6 @@ export function SimpleFormAccountSections({
             selectedId={section.selectedId}
             onSelect={section.onSelect}
             onSearchRequest={() => onSearchRequest(section.role)}
-            totalAccountsCount={section.totalAccountsCount}
           />
         </View>
       ))}

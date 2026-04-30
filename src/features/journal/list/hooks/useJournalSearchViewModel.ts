@@ -160,7 +160,16 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, accountIds, minAmount, maxAmount, displayType, dateRange, periodFilter.type]);
+  }, [
+    searchQuery,
+    accountIds,
+    minAmount,
+    maxAmount,
+    displayType,
+    dateRange?.startDate,
+    dateRange?.endDate,
+    periodFilter.type,
+  ]);
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
@@ -191,7 +200,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       displayType: displayType || undefined,
       accountIds: accountIds.length > 0 ? accountIds : undefined,
     }),
-    [minAmount, maxAmount, displayType, accountIds.join(',')],
+    [minAmount, maxAmount, displayType, accountIds],
   );
 
   // Data Fetching

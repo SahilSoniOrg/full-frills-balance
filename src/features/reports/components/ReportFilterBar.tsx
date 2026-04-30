@@ -1,6 +1,6 @@
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
+import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
@@ -70,14 +70,13 @@ export function ReportFilterBar(vm: ReportsViewModel) {
         currentFilter={periodFilter}
       />
 
-      <AccountPickerModal
+      <MultiAccountPickerModal
         visible={showAccountPicker}
         onClose={onCloseAccountPicker}
         onSelect={onAccountSelect}
         accounts={vm.accounts}
         selectedIds={accountIds}
         title="Filter by Accounts"
-        multiple={true}
       />
     </View>
   );

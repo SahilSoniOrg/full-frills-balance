@@ -293,7 +293,7 @@ export const LineChart = <T extends DataPoint>({
     return { x, y, point };
   }, [
     activeIndex,
-    data,
+    sortedData,
     minX,
     maxX,
     displayMinY,

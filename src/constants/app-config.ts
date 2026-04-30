@@ -499,6 +499,19 @@ export const AppConfig = {
       banners: {
         editing: 'Editing this entry',
       },
+      simpleEntry: {
+        toCategory: 'To Category / Account',
+        fromAccount: 'From Account',
+        fromSource: 'From Source / Account',
+        toAccount: 'To Account',
+        sourceAccount: 'Source Account',
+        destinationAccount: 'Destination Account',
+        defaultDescriptions: {
+          transfer: 'Transfer',
+          expense: (name: string) => `Paid for ${name}`,
+          income: (name: string) => `Income from ${name}`,
+        },
+      },
     },
     advancedModeExplanation: {
       title: 'Advanced Mode',
@@ -543,6 +556,21 @@ export const AppConfig = {
         selectPaymentAccount: 'Select Payment Account',
         currencyLockedTooltip:
           'Currency cannot be changed once an account is created to maintain data integrity.',
+      },
+      sections: {
+        assets: 'Assets',
+        liabilities: 'Liabilities',
+        equity: 'Equity',
+        income: 'Income',
+        expenses: 'Expenses',
+        other: 'Other Accounts',
+      },
+      picker: {
+        searchPlaceholder: 'Search accounts...',
+        noResults: (query: string) => `No accounts found for "${query}"`,
+        noAccountsInCategory: 'No accounts available in this category',
+        createAccount: 'Create New Account',
+        applySelection: (count: number) => `Apply Selection (${count})`,
       },
       hierarchy: {
         title: 'Hierarchy',

@@ -1,8 +1,8 @@
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { SectionLabel } from '@/src/components/common/SectionLabel';
 import { AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
@@ -236,28 +236,26 @@ export default function BudgetEditScreen() {
         </Stack>
       </EntityFormScreen>
 
-      <AccountPickerModal
-        multiple
+      <MultiAccountPickerModal
         visible={isAccountPickerVisible}
         accounts={expenseAccounts}
         selectedIds={selectedAccountIds}
         title="Select Scope Accounts"
         onClose={() => setIsAccountPickerVisible(false)}
         onSelect={ids => {
-          setSelectedAccountIds(ids as string[]);
+          setSelectedAccountIds(ids);
           setIsAccountPickerVisible(false);
         }}
       />
 
-      <AccountPickerModal
-        multiple
+      <MultiAccountPickerModal
         visible={isAssetPickerVisible}
         accounts={liquidAssetAccounts}
         selectedIds={assetAccountIds}
         title="Select Asset Accounts"
         onClose={() => setIsAssetPickerVisible(false)}
         onSelect={ids => {
-          setAssetAccountIds(ids as string[]);
+          setAssetAccountIds(ids);
           setIsAssetPickerVisible(false);
         }}
       />

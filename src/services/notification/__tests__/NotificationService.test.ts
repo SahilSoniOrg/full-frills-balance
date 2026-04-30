@@ -29,7 +29,7 @@ jest.mock('@/src/utils/preferences', () => ({
     dismissedPatternIds: [],
     dismissPattern: jest.fn(),
     undismissPattern: jest.fn(),
-    observe: jest.fn(() => require('rxjs').of(60)),
+    observe: jest.fn(() => of(60)),
     safeToSpendDays: 60,
   },
 }));

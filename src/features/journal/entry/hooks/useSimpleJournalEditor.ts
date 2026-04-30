@@ -16,6 +16,14 @@ export interface UseSimpleJournalEditorProps {
   onSelectAccountRequest: (role: AccountRole) => void;
 }
 
+export interface SimpleFormSection {
+  title: string;
+  accounts: Account[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  role: AccountRole;
+}
+
 /**
  * useSimpleJournalEditor - Controller hook for the simple journal form.
  * Handles state, basic validation, and exchange rate calculations.
@@ -145,7 +153,9 @@ export function useSimpleJournalEditor({
       if (destinationLine.amount !== amount) updates[destinationLine.id] = { amount };
     }
 
-    Object.entries(updates).forEach(([id, up]) => editor.updateLine(id, up));
+    if (Object.keys(updates).length > 0) {
+      editor.updateLines(updates);
+    }
   }, [
     exchangeRate,
     isCrossCurrency,
@@ -284,19 +294,24 @@ export function useSimpleJournalEditor({
   useEffect(() => {
     if (accounts.length === 0) return;
 
+    const updates: Record<string, Partial<JournalEntryLine>> = {};
     editor.lines.forEach(line => {
       if (line.accountId && !line.accountName) {
         const acct = accounts.find(a => a.id === line.accountId);
         if (acct) {
-          editor.updateLine(line.id, {
+          updates[line.id] = {
             accountName: acct.name,
             accountType: acct.accountType,
             accountCurrency: acct.currencyCode,
-          });
+          };
         }
       }
     });
-  }, [accounts, editor.lines, editor.updateLine, editor]);
+
+    if (Object.keys(updates).length > 0) {
+      editor.updateLines(updates);
+    }
+  }, [accounts, editor.lines, editor]);
 
   const handleSave = useCallback(async () => {
     if (numAmount <= 0) {
@@ -309,11 +324,16 @@ export function useSimpleJournalEditor({
     let overrides;
     // Default description to type if empty
     if (!editor.description.trim()) {
-      let defaultDesc = 'Transfer';
+      let defaultDesc: string =
+        AppConfig.strings.transactionFlow.simpleEntry.defaultDescriptions.transfer;
       if (type === 'expense' && destAccount) {
-        defaultDesc = `Paid for ${destAccount.name}`;
+        defaultDesc = AppConfig.strings.transactionFlow.simpleEntry.defaultDescriptions.expense(
+          destAccount.name,
+        );
       } else if (type === 'income' && sourceAccount) {
-        defaultDesc = `Income from ${sourceAccount.name}`;
+        defaultDesc = AppConfig.strings.transactionFlow.simpleEntry.defaultDescriptions.income(
+          sourceAccount.name,
+        );
       }
 
       editor.setDescription(defaultDesc);
@@ -330,6 +350,70 @@ export function useSimpleJournalEditor({
     await editor.submit(overrides);
   }, [numAmount, sourceId, destinationId, type, editor, destAccount, sourceAccount]);
 
+  const accountSections = useMemo((): SimpleFormSection[] => {
+    const sections =
+      type === 'expense'
+        ? [
+            {
+              title: AppConfig.strings.transactionFlow.simpleEntry.toCategory,
+              accounts: expenseAccounts,
+              selectedId: destinationId,
+              onSelect: setDestinationId,
+              role: 'destination' as const,
+            },
+            {
+              title: AppConfig.strings.transactionFlow.simpleEntry.fromAccount,
+              accounts: transactionAccounts,
+              selectedId: sourceId,
+              onSelect: setSourceId,
+              role: 'source' as const,
+            },
+          ]
+        : type === 'income'
+          ? [
+              {
+                title: AppConfig.strings.transactionFlow.simpleEntry.fromSource,
+                accounts: incomeAccounts,
+                selectedId: sourceId,
+                onSelect: setSourceId,
+                role: 'source' as const,
+              },
+              {
+                title: AppConfig.strings.transactionFlow.simpleEntry.toAccount,
+                accounts: transactionAccounts,
+                selectedId: destinationId,
+                onSelect: setDestinationId,
+                role: 'destination' as const,
+              },
+            ]
+          : [
+              {
+                title: AppConfig.strings.transactionFlow.simpleEntry.sourceAccount,
+                accounts: transactionAccounts,
+                selectedId: sourceId,
+                onSelect: setSourceId,
+                role: 'source' as const,
+              },
+              {
+                title: AppConfig.strings.transactionFlow.simpleEntry.destinationAccount,
+                accounts: transactionAccounts,
+                selectedId: destinationId,
+                onSelect: setDestinationId,
+                role: 'destination' as const,
+              },
+            ];
+    return sections;
+  }, [
+    type,
+    expenseAccounts,
+    incomeAccounts,
+    transactionAccounts,
+    sourceId,
+    destinationId,
+    setSourceId,
+    setDestinationId,
+  ]);
+
   const openAccountPicker = useCallback(
     (role: AccountRole) => {
       onSelectAccountRequest(role);
@@ -337,39 +421,71 @@ export function useSimpleJournalEditor({
     [onSelectAccountRequest],
   );
 
-  return {
-    type,
-    setType,
-    amount,
-    setAmount,
-    sourceId,
-    setSourceId,
-    destinationId,
-    setDestinationId,
-    // Passthrough props for UI compatibility
-    journalDate: editor.journalDate,
-    journalTime: editor.journalTime,
-    description: editor.description,
+  return useMemo(
+    () => ({
+      type,
+      setType,
+      amount,
+      setAmount,
+      sourceId,
+      setSourceId,
+      destinationId,
+      setDestinationId,
+      // Passthrough props for UI compatibility
+      journalDate: editor.journalDate,
+      journalTime: editor.journalTime,
+      description: editor.description,
 
-    isSubmitting: editor.isSubmitting,
-    exchangeRate,
-    isLoadingRate,
-    rateError,
-    isCrossCurrency,
-    convertedAmount,
-    transactionAccounts,
-    expenseAccounts,
-    incomeAccounts,
-    allAccounts: accounts,
-    sourceCurrency,
-    destCurrency,
-    displayCurrency:
-      sourceCurrency ||
-      destCurrency ||
-      preferences.defaultCurrencyCode ||
-      AppConfig.defaultCurrency,
-    handleSave,
-    openAccountPicker,
-    isValidAmount: numAmount > 0,
-  };
+      isSubmitting: editor.isSubmitting,
+      exchangeRate,
+      isLoadingRate,
+      rateError,
+      isCrossCurrency,
+      convertedAmount,
+      transactionAccounts,
+      expenseAccounts,
+      incomeAccounts,
+      allAccounts: accounts,
+      sourceCurrency,
+      destCurrency,
+      displayCurrency:
+        sourceCurrency ||
+        destCurrency ||
+        preferences.defaultCurrencyCode ||
+        AppConfig.defaultCurrency,
+      handleSave,
+      openAccountPicker,
+      isValidAmount: numAmount > 0,
+      accountSections,
+    }),
+    [
+      type,
+      setType,
+      amount,
+      setAmount,
+      sourceId,
+      setSourceId,
+      destinationId,
+      setDestinationId,
+      editor.journalDate,
+      editor.journalTime,
+      editor.description,
+      editor.isSubmitting,
+      exchangeRate,
+      isLoadingRate,
+      rateError,
+      isCrossCurrency,
+      convertedAmount,
+      transactionAccounts,
+      expenseAccounts,
+      incomeAccounts,
+      accounts,
+      sourceCurrency,
+      destCurrency,
+      handleSave,
+      openAccountPicker,
+      numAmount,
+      accountSections,
+    ],
+  );
 }

@@ -1,7 +1,7 @@
 import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { AppIcon, AppText } from '@/src/components/core';
 import { IconName } from '@/src/components/core/AppIcon';
-import { Opacity, Spacing } from '@/src/constants';
+import { Opacity, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
@@ -14,7 +14,6 @@ export interface AccountTileListProps {
   selectedId: string;
   onSelect: (id: string) => void;
   onSearchRequest?: () => void;
-  totalAccountsCount?: number;
 }
 
 export const AccountTileList = ({
@@ -23,7 +22,6 @@ export const AccountTileList = ({
   selectedId,
   onSelect,
   onSearchRequest,
-  totalAccountsCount = 0,
 }: AccountTileListProps) => {
   const { theme } = useTheme();
 
@@ -38,7 +36,7 @@ export const AccountTileList = ({
 
   return (
     <View style={{ gap: Spacing.xs, marginVertical: Spacing.sm }}>
-      {/* Standard non-clickable header */}
+      {/* Clickable header for opening the modal */}
       {title && (
         <View
           style={{
@@ -57,37 +55,36 @@ export const AccountTileList = ({
           >
             {title}
           </AppText>
+
+          {onSearchRequest && (
+            <TouchableOpacity
+              onPress={onSearchRequest}
+              activeOpacity={Opacity.medium}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: Spacing.xs,
+                paddingHorizontal: Spacing.sm,
+                paddingVertical: Spacing.sm,
+              }}
+            >
+              <AppIcon name="search" size={Size.iconXs} color={theme.primary} />
+              <AppText variant="caption" weight="bold" color="primary">
+                Browse all
+              </AppText>
+            </TouchableOpacity>
+          )}
         </View>
       )}
       <View>
         <SelectionTileList
           items={items}
           selectedId={selectedId}
-          onSelect={id => onSelect(id)}
+          onSelect={onSelect}
           testIDPrefix="account-option"
         />
       </View>
-
-      {/* Clear, distinct interaction for opening the modal */}
-      {onSearchRequest && totalAccountsCount > accounts.length && (
-        <TouchableOpacity
-          onPress={onSearchRequest}
-          activeOpacity={Opacity.medium}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: Spacing.sm,
-            marginTop: Spacing.xs,
-            gap: Spacing.xs,
-          }}
-        >
-          <AppIcon name="search" size={14} color={theme.textTertiary} />
-          <AppText variant="caption" weight="semibold" color="tertiary">
-            Browse all accounts...
-          </AppText>
-        </TouchableOpacity>
-      )}
     </View>
   );
 };

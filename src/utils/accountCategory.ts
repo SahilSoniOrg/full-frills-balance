@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
@@ -15,11 +16,11 @@ export const ACCOUNT_TYPE_ORDER: AccountType[] = [
 ];
 
 export const ACCOUNT_TYPE_SECTION_TITLES: Record<AccountType, string> = {
-  [AccountType.ASSET]: 'Assets',
-  [AccountType.LIABILITY]: 'Liabilities',
-  [AccountType.EQUITY]: 'Equity',
-  [AccountType.INCOME]: 'Income',
-  [AccountType.EXPENSE]: 'Expenses',
+  [AccountType.ASSET]: AppConfig.strings.accounts.sections.assets,
+  [AccountType.LIABILITY]: AppConfig.strings.accounts.sections.liabilities,
+  [AccountType.EQUITY]: AppConfig.strings.accounts.sections.equity,
+  [AccountType.INCOME]: AppConfig.strings.accounts.sections.income,
+  [AccountType.EXPENSE]: AppConfig.strings.accounts.sections.expenses,
 };
 
 export const ACCOUNT_TYPE_VARIANTS: Record<AccountType, ComponentVariant> = {
@@ -132,16 +133,40 @@ export function groupAccountsByType(accounts: Account[]): Record<AccountType, Ac
   return groups;
 }
 
-export function getAccountSections(accounts: Account[]): { title: string; data: Account[] }[] {
+export type AccountSection = {
+  key: string;
+  title: string;
+  data: Account[];
+  type?: AccountType;
+};
+
+export function getAccountSections(accounts: Account[]): AccountSection[] {
   const groups = groupAccountsByType(accounts);
-  const sections: { title: string; data: Account[] }[] = [];
+  const sections: AccountSection[] = [];
 
   ACCOUNT_TYPE_ORDER.forEach(type => {
     if (groups[type].length > 0) {
       const sortedData = [...groups[type]].sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));
-      sections.push({ title: getAccountTypeSectionTitle(type), data: sortedData });
+      sections.push({
+        key: `type-${type}`,
+        title: getAccountTypeSectionTitle(type),
+        data: sortedData,
+        type,
+      });
     }
   });
+
+  // Catch-all: If there are accounts that didn't fit into standard sections
+  const classifiedIds = new Set(sections.flatMap(s => s.data.map(a => a.id)));
+  const unclassified = accounts.filter(a => !classifiedIds.has(a.id));
+
+  if (unclassified.length > 0) {
+    sections.push({
+      key: 'fallback-other',
+      title: AppConfig.strings.accounts.sections.other,
+      data: unclassified,
+    });
+  }
 
   return sections;
 }

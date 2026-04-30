@@ -12,7 +12,7 @@ import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export interface UseJournalEditorOptions {
   journalId?: string;
@@ -240,6 +240,11 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     setLines(prev => prev.map(line => (line.id === id ? { ...line, ...updates } : line)));
   }, []);
 
+  const updateLines = useCallback((batch: Record<string, Partial<JournalEntryLine>>) => {
+    if (Object.keys(batch).length === 0) return;
+    setLines(prev => prev.map(line => (batch[line.id] ? { ...line, ...batch[line.id] } : line)));
+  }, []);
+
   const autoFetchLineRate = useCallback(
     async (id: string) => {
       const line = lines.find(l => l.id === id);
@@ -358,28 +363,64 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     return lines.find(l => l.transactionType === targetType)?.id;
   };
 
-  return {
-    isGuidedMode,
-    setIsGuidedMode: setGuidedModeInternal,
-    transactionType,
-    setTransactionType,
-    isEdit,
-    isLoading,
-    lines,
-    setLines,
-    description,
-    setDescription,
-    journalDate,
-    setJournalDate,
-    journalTime,
-    setJournalTime,
-    isSubmitting,
-    addLine,
-    removeLine,
-    updateLine,
-    balanceLine,
-    autoFetchLineRate,
-    getLineIdByRole,
-    submit,
+  /**
+   * Resolves a selection request (role or direct ID) to a line ID.
+   * Centralizes guided-mode mapping logic.
+   */
+  const resolveActiveLineId = (roleOrId: string): string => {
+    if (isGuidedMode) {
+      return getLineIdByRole(roleOrId as AccountRole) || roleOrId;
+    }
+    return roleOrId;
   };
+
+  return useMemo(
+    () => ({
+      isGuidedMode,
+      setIsGuidedMode: setGuidedModeInternal,
+      transactionType,
+      setTransactionType,
+      isEdit,
+      isLoading,
+      lines,
+      setLines,
+      description,
+      setDescription,
+      journalDate,
+      setJournalDate,
+      journalTime,
+      setJournalTime,
+      isSubmitting,
+      addLine,
+      removeLine,
+      updateLine,
+      updateLines,
+      balanceLine,
+      autoFetchLineRate,
+      getLineIdByRole,
+      resolveActiveLineId,
+      submit,
+    }),
+    [
+      isGuidedMode,
+      setGuidedModeInternal,
+      transactionType,
+      isEdit,
+      isLoading,
+      lines,
+      description,
+      journalDate,
+      journalTime,
+      isSubmitting,
+      addLine,
+      removeLine,
+      updateLine,
+      updateLines,
+      balanceLine,
+      autoFetchLineRate,
+      getLineIdByRole,
+      resolveActiveLineId,
+      submit,
+    ],
+  );
 }

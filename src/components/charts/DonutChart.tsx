@@ -70,7 +70,7 @@ export const DonutChart = ({
       startAngle += angle;
       return segment;
     });
-  }, [data, radius, center]);
+  }, [data, radius, center, theme]);
 
   if (paths.length === 0) {
     return (
