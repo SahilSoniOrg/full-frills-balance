@@ -1,10 +1,8 @@
-import { database } from '@/src/data/database/Database';
 import { AppConfig } from '@/src/constants';
-import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog';
+import { database } from '@/src/data/database/Database';
+import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
 import { AuditEntry, auditRepository } from '@/src/data/repositories/AuditRepository';
-import { JournalStatus } from '@/src/data/models/Journal';
-import { accountService } from '@/src/features/accounts/services/AccountService';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { revertRegistry } from '@/src/services/revert-registry';
 
 /**
  * Audit Service
@@ -28,63 +26,16 @@ export class AuditService {
     if (!log.canRevert)
       return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
 
-    const changes = log.parsedChanges;
-    const entityId = log.entityId;
+    const handler = revertRegistry.getHandler(log.entityType);
+    if (!handler) {
+      return {
+        success: false,
+        error: AppConfig.strings.audit.errors.revertTypeNotSupported(log.entityType),
+      };
+    }
 
     try {
-      switch (log.entityType) {
-        case 'account': {
-          if (log.action === AuditAction.CREATE) {
-            // Reverting CREATE -> Delete
-            await accountService.deleteAccount(entityId);
-          } else if (log.action === AuditAction.DELETE) {
-            // Reverting DELETE -> Recover
-            await accountService.recoverAccount(entityId);
-          } else if (log.action === AuditAction.UPDATE) {
-            // Reverting UPDATE -> Restore 'before' state
-            if (changes.before) {
-              if ('deletedAt' in changes.before) {
-                // Reverting an undelete
-                await accountService.deleteAccount(entityId);
-              } else {
-                await accountService.updateAccount(entityId, changes.before);
-              }
-            }
-          }
-          break;
-        }
-        case 'journal': {
-          if (log.action === AuditAction.CREATE) {
-            await journalService.deleteJournal(entityId);
-          } else if (log.action === AuditAction.DELETE) {
-            // Reverting DELETE for journal now supported via recoverJournal
-            await journalService.recoverJournal(entityId);
-          } else if (log.action === AuditAction.UPDATE) {
-            if (changes.before) {
-              if ('deletedAt' in changes.before) {
-                // Reverting an undelete
-                await journalService.deleteJournal(entityId);
-              } else if ('status' in changes.before && !changes.before.transactions) {
-                // Reverting a status change
-                if (changes.before.status === JournalStatus.PLANNED) {
-                  await journalService.revertToPlanned(entityId);
-                } else if (changes.before.status === JournalStatus.POSTED) {
-                  await journalService.postJournal(entityId);
-                }
-              } else {
-                await journalService.updateJournal(entityId, changes.before);
-              }
-            }
-          }
-          break;
-        }
-        default:
-          return {
-            success: false,
-            error: AppConfig.strings.audit.errors.revertTypeNotSupported(log.entityType),
-          };
-      }
-
+      await handler(log.entityId, log.parsedChanges, log.action);
       return { success: true };
     } catch (error: any) {
       return {

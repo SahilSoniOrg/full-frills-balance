@@ -21,6 +21,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FontManager } from './components/FontManager';
 
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
+import '@/src/services/audit-handlers';
 
 // Prevent splash screen from auto-hiding before we are ready
 SplashScreen.preventAutoHideAsync().catch(() => {

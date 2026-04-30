@@ -9,6 +9,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { AccountDelta, DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
+import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
@@ -582,8 +583,16 @@ export class ReportService {
     fetchRaw: (ids: string[], start: number, end: number) => Promise<T[]>,
   ): Promise<T[]> {
     const items = await fetchRaw(accountIds, startDate, endDate);
+    if (items.length > 0) {
+      return this.getNormalizedDeltas(items, targetCurrency);
+    }
 
-    if (items.length === 0 && accountIds.length > 0) {
+    if (accountIds.length > 0) {
+      logger.metric('ReportService.getScopedDeltas.fallbackTriggered', 1, {
+        accountCount: accountIds.length,
+        rangeDays: dayjs(endDate).diff(dayjs(startDate), 'days'),
+      });
+
       const converted = await this.getConvertedReportTransactions(
         startDate,
         endDate,
@@ -608,7 +617,7 @@ export class ReportService {
         });
     }
 
-    return this.getNormalizedDeltas(items, targetCurrency);
+    return [];
   }
 
   async getReportSnapshot(
@@ -746,23 +755,37 @@ export class ReportService {
     targetCurrency: string,
     accounts: ReportAccount[],
   ): Promise<ConvertedReportTransaction[]> {
-    return Promise.all(
-      transactions.map(async tx => {
-        const { convertedAmount } = await exchangeRateService.convert(
-          tx.amount,
-          tx.currencyCode,
-          targetCurrency,
-        );
-        const account = accounts.find(a => a.id === tx.accountId);
-        return {
-          accountId: tx.accountId,
-          amount: convertedAmount,
-          transactionType: tx.transactionType,
-          transactionDate: tx.transactionDate,
-          accountType: account?.accountType || AccountType.EXPENSE,
-        };
-      }),
+    if (transactions.length === 0) return [];
+
+    // 1. Identify unique source currencies
+    const sourceCurrencies = new Set<string>();
+    transactions.forEach(tx => {
+      if (tx.currencyCode) sourceCurrencies.add(tx.currencyCode);
+    });
+
+    // 2. Pre-fetch all required rates in parallel
+    await Promise.all(
+      Array.from(sourceCurrencies).map(base =>
+        exchangeRateService.fetchRatesForBase(base).catch(() => {}),
+      ),
     );
+
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
+
+    // 3. Synchronous conversion pass
+    return transactions.map(tx => {
+      const rate = exchangeRateService.getRateSafe(tx.currencyCode, targetCurrency);
+      const convertedAmount = tx.amount * rate;
+      const account = accountMap.get(tx.accountId);
+
+      return {
+        accountId: tx.accountId,
+        accountType: account?.accountType || (tx as any).accountType || 'EXPENSE',
+        transactionType: tx.transactionType,
+        transactionDate: tx.transactionDate,
+        amount: convertedAmount,
+      };
+    });
   }
 
   /**
@@ -908,16 +931,31 @@ export class ReportService {
       endDate,
     );
 
-    const converted = await Promise.all(
-      transactions.map(async tx => {
+    if (transactions.length === 0) return [];
+
+    // 1. Identify unique currencies
+    const sourceCurrencies = new Set<string>();
+    transactions.forEach(tx => {
+      const txCurrency = tx.currencyCode || accountCurrencyById.get(tx.accountId) || currency;
+      sourceCurrencies.add(txCurrency);
+    });
+
+    // 2. Pre-fetch all required rates
+    await Promise.all(
+      Array.from(sourceCurrencies).map(base =>
+        exchangeRateService.fetchRatesForBase(base).catch(() => {}),
+      ),
+    );
+
+    // 3. Synchronous conversion
+    return transactions
+      .map(tx => {
         const accountType = accountTypeById.get(tx.accountId);
         if (!accountType) return null;
 
-        const { convertedAmount } = await exchangeRateService.convert(
-          tx.amount,
-          tx.currencyCode || accountCurrencyById.get(tx.accountId) || currency,
-          currency,
-        );
+        const txCurrency = tx.currencyCode || accountCurrencyById.get(tx.accountId) || currency;
+        const rate = exchangeRateService.getRateSafe(txCurrency, currency);
+        const convertedAmount = tx.amount * rate;
 
         return {
           accountId: tx.accountId,
@@ -926,10 +964,8 @@ export class ReportService {
           transactionDate: tx.transactionDate,
           amount: convertedAmount,
         } as ConvertedReportTransaction;
-      }),
-    );
-
-    return converted.filter((row): row is ConvertedReportTransaction => !!row);
+      })
+      .filter((row): row is ConvertedReportTransaction => !!row);
   }
 
   private buildBreakdownFromSums(

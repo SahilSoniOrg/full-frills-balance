@@ -1,4 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
+import { IconName } from '@/src/components/core/AppIcon';
+import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 
 export type TabType = 'expense' | 'income' | 'transfer';
@@ -308,4 +309,64 @@ export interface AccountSummary {
   totalIncome: number;
   totalExpenses: number;
   netWorth: number;
+}
+/**
+ * Audit State Interfaces - Used for type-safe reversion logic
+ */
+
+export interface TransactionAuditState {
+  accountId: string;
+  amount: number;
+  transactionType: TransactionType;
+  notes?: string;
+  exchangeRate?: number;
+  currencyCode?: string;
+}
+
+export interface JournalAuditState {
+  description?: string;
+  journalDate?: number;
+  currencyCode?: string;
+  status?: string;
+  totalAmount?: number;
+  transactions?: TransactionAuditState[];
+  deletedAt?: Date;
+  restoredAt?: Date;
+}
+
+export interface AccountAuditState {
+  name?: string;
+  accountType?: AccountType;
+  accountSubtype?: AccountSubtype;
+  currencyCode?: string;
+  description?: string;
+  icon?: IconName;
+  parentAccountId?: string;
+  deletedAt?: Date;
+  restoredAt?: Date;
+}
+/**
+ * TransactionLike - Minimal interface for mapping transactions to audit state.
+ */
+export interface TransactionLike {
+  accountId: string;
+  amount: number;
+  transactionType: TransactionType;
+  notes?: string;
+  exchangeRate?: number;
+  currencyCode?: string;
+}
+
+/**
+ * Maps a Transaction model or object to a TransactionAuditState for logging.
+ */
+export function mapTransactionToAudit(t: TransactionLike): TransactionAuditState {
+  return {
+    accountId: t.accountId,
+    amount: t.amount,
+    transactionType: t.transactionType,
+    notes: t.notes || undefined,
+    exchangeRate: t.exchangeRate || undefined,
+    currencyCode: t.currencyCode || undefined,
+  };
 }

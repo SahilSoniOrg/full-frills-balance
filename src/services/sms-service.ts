@@ -15,10 +15,15 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
-import { Q } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Observable } from 'rxjs';
+import { rebuildQueueService } from './RebuildQueueService';
+
+const SMS_CONFIG = AppConfig.input.sms;
+const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
 
 export interface ParsedTransaction {
   id: string;
@@ -118,7 +123,6 @@ type DuplicateMatch = {
 
 class SmsService {
   private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
-  private readonly DAY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
   private get rules() {
     return database.collections.get<SmsAutoPostRule>('sms_auto_post_rules');
@@ -486,28 +490,42 @@ class SmsService {
       .fetch();
     const existingMap = new Map(existing.map(record => [record.deviceSmsId, record]));
 
-    let importedCount = 0;
+    const parsedMessages = messages.map(msg => {
+      const parsed = this.parseTransactionMessage(msg);
+      const fingerprint = this.computeSmsFingerprint(msg.address, msg.body, msg.date);
+      return { message: msg, parsed, fingerprint };
+    });
 
-    for (const message of messages) {
-      const parsed = this.parseTransactionMessage(message);
+    const messageIds = messages.map(m => m.id);
+    const fingerprints = parsedMessages.map(m => m.fingerprint);
+
+    const [journalsById, journalsByFingerprint] = await Promise.all([
+      journalRepository.findJournalsByOriginalSmsIds(messageIds),
+      journalRepository.findJournalsBySmsFingerprints(fingerprints),
+    ]);
+
+    const parsedWithAmounts = parsedMessages.filter(
+      m => m.parsed.parseStatus === SmsParseStatus.PARSED && m.parsed.amount,
+    );
+
+    const allCandidateJournals = await this.findManyDuplicateCandidates(parsedWithAmounts);
+
+    let importedCount = 0;
+    const allOps: Model[] = [];
+    const allAccountsToRebuild = new Set<string>();
+
+    for (const { message, parsed, fingerprint } of parsedMessages) {
       if (parsed.parseStatus === SmsParseStatus.IGNORED) {
         continue;
       }
 
-      const smsFingerprint = this.computeSmsFingerprint(
-        message.address,
-        message.body,
-        message.date,
-      );
-      const exactJournal = await journalRepository.findJournalByOriginalSmsId(message.id);
+      const existingRecord = existingMap.get(message.id) || null;
+      const duplicate = allCandidateJournals.get(message.id) || null;
+      const exactJournal = journalsById.get(message.id) || null;
       const fingerprintJournal = exactJournal
         ? null
-        : await journalRepository.findJournalBySmsFingerprint(smsFingerprint);
-      const duplicate =
-        parsed.parseStatus === SmsParseStatus.PARSED && parsed.amount
-          ? await this.findDuplicateCandidatesForParsed(parsed)
-          : null;
-      const existingRecord = existingMap.get(message.id) || null;
+        : journalsByFingerprint.get(fingerprint) || null;
+
       const nextStatus = this.resolveProcessingStatus({
         parsed,
         processedIds,
@@ -516,41 +534,131 @@ class SmsService {
         existingStatus: existingRecord?.processingStatus,
       });
 
-      const record = await this.upsertInboxRecord(
+      const { record, ops: upsertOps } = this.prepareUpsertInboxRecord(
         message,
         parsed,
-        smsFingerprint,
+        fingerprint,
         existingRecord,
         nextStatus,
         exactJournal?.id || fingerprintJournal?.id,
         duplicate,
       );
+      allOps.push(...upsertOps);
 
       if (
         parsed.parseStatus === SmsParseStatus.PARSED &&
         nextStatus === SmsProcessingStatus.PENDING
       ) {
-        const ruleResult = await this.tryAutoPostRecord(record, parsed, activeRules);
-        if (ruleResult === 'auto_posted') {
-          importedCount += 1;
+        const ruleResult = await this.prepareAutoPostRecord(record, parsed, activeRules);
+        if (ruleResult) {
+          allOps.push(...ruleResult.ops);
+          ruleResult.accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
+          if (ruleResult.status === 'auto_posted') {
+            importedCount += 1;
+          }
         }
+      }
+    }
+
+    if (allOps.length > 0) {
+      await database.write(async () => {
+        for (let i = 0; i < allOps.length; i += SMS_CONFIG.batchOpChunkSize) {
+          const chunk = allOps.slice(i, i + SMS_CONFIG.batchOpChunkSize);
+          await database.batch(...chunk);
+        }
+      });
+
+      if (allAccountsToRebuild.size > 0) {
+        // We use the latest message date as a heuristic for rebuild start
+        const latestDate = Math.max(...messages.map(m => m.date));
+        rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate);
       }
     }
 
     logger.info(`[Trace] SmsService.scanInbox: ${Date.now() - start}ms`, {
       scannedMessages: messages.length,
       importedCount,
+      totalOps: allOps.length,
     });
 
     return importedCount;
   }
 
-  private async tryAutoPostRecord(
+  private async findManyDuplicateCandidates(
+    parsedItems: { message: SmsMessage; parsed: ParsedTransaction }[],
+  ): Promise<Map<string, DuplicateMatch>> {
+    if (parsedItems.length === 0) return new Map();
+
+    const results = new Map<string, DuplicateMatch>();
+    const amounts = Array.from(new Set(parsedItems.map(p => p.parsed.amount!)));
+    const minDate =
+      Math.min(...parsedItems.map(p => p.message.date)) - DUPLICATE_CONFIG.dayWindowMs;
+    const maxDate =
+      Math.max(...parsedItems.map(p => p.message.date)) + DUPLICATE_CONFIG.dayWindowMs;
+
+    // Fetch all journals that match any of the amounts and are within the date range
+    const journals = await journalRepository.findNearbyJournals({
+      centerDate: (minDate + maxDate) / 2,
+      windowMs: (maxDate - minDate) / 2,
+      amounts,
+      limit: 100,
+    });
+
+    if (journals.length === 0) return results;
+
+    // For each parsed item, find best match from the pre-fetched journals
+    for (const { message, parsed } of parsedItems) {
+      const nearby = journals.filter(
+        j =>
+          Math.abs(j.journalDate - message.date) <= DUPLICATE_CONFIG.dayWindowMs &&
+          j.totalAmount === parsed.amount,
+      );
+
+      if (nearby.length === 0) continue;
+
+      let best: DuplicateMatch = null;
+      for (const journal of nearby) {
+        const reasons: string[] = ['Same amount'];
+        let score = DUPLICATE_CONFIG.weightAmount;
+
+        const timeDistance = Math.abs(journal.journalDate - message.date);
+        const timeScore = Math.max(
+          0,
+          DUPLICATE_CONFIG.weightTime -
+            (timeDistance / DUPLICATE_CONFIG.dayWindowMs) * DUPLICATE_CONFIG.weightTime,
+        );
+        score += timeScore;
+        if (timeScore > DUPLICATE_CONFIG.weightTime / 2) reasons.push('Close in time');
+
+        const description = (journal.description || '').toLowerCase();
+        if (parsed.merchant && description.includes(parsed.merchant.toLowerCase())) {
+          score += DUPLICATE_CONFIG.weightMerchant;
+          reasons.push('Merchant matches description');
+        }
+
+        if (!best || score > best.score) {
+          best = { journalId: journal.id, score, reasons };
+        }
+      }
+
+      if (best && best.score >= DUPLICATE_CONFIG.scoreThreshold) {
+        results.set(message.id, best);
+      }
+    }
+
+    return results;
+  }
+
+  private async prepareAutoPostRecord(
     record: SmsInboxRecord,
     parsed: ParsedTransaction,
     activeRules: SmsAutoPostRule[],
-  ): Promise<'auto_posted' | 'ignored' | 'review' | 'none'> {
-    if (activeRules.length === 0 || !parsed.amount) return 'none';
+  ): Promise<{
+    ops: Model[];
+    status: 'auto_posted' | 'ignored';
+    accountsToRebuild: Set<string>;
+  } | null> {
+    if (activeRules.length === 0 || !parsed.amount) return null;
 
     for (const rule of activeRules) {
       const definition = this.getRuleDefinition(rule);
@@ -559,22 +667,26 @@ class SmsService {
       }
 
       if (definition.actions.disposition === 'ignore') {
-        await this.markInboxRecordStatus(record.id, SmsProcessingStatus.DISMISSED);
+        const updateOp = record.prepareUpdate(entry => {
+          entry.processingStatus = SmsProcessingStatus.DISMISSED;
+          entry.processedAt = Date.now();
+        });
         this.markSmsAsProcessed(record.deviceSmsId);
-        return 'ignored';
+        return { ops: [updateOp], status: 'ignored', accountsToRebuild: new Set() };
       }
 
       if (definition.actions.disposition === 'review') {
-        return 'review';
+        return null;
       }
 
       if (!definition.actions.sourceAccountId || !definition.actions.categoryAccountId) {
-        return 'none';
+        return null;
       }
 
       const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
       const isExpense = parsed.type === 'debit';
-      const journal = await ledgerWriteService.createJournal({
+
+      const { journal, ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal({
         journalDate: parsed.date || Date.now(),
         description: parsed.merchant
           ? `Auto-Posted: ${parsed.merchant}`
@@ -611,15 +723,21 @@ class SmsService {
         ],
       });
 
-      await this.linkSmsToJournal(record.id, journal.id, SmsProcessingStatus.AUTO_POSTED);
-      await this.markSmsAsProcessed(record.deviceSmsId);
-      return 'auto_posted';
+      // Link SMS to Journal
+      const linkOp = record.prepareUpdate(entry => {
+        entry.linkedJournalId = journal.id;
+        entry.processingStatus = SmsProcessingStatus.AUTO_POSTED;
+        entry.processedAt = Date.now();
+      });
+
+      this.markSmsAsProcessed(record.deviceSmsId);
+      return { ops: [...ops, linkOp], status: 'auto_posted', accountsToRebuild };
     }
 
-    return 'none';
+    return null;
   }
 
-  private async upsertInboxRecord(
+  private prepareUpsertInboxRecord(
     sms: SmsMessage,
     parsed: ParsedTransaction,
     smsFingerprint: string,
@@ -627,7 +745,7 @@ class SmsService {
     processingStatus: SmsProcessingStatus,
     linkedJournalId?: string,
     duplicate?: DuplicateMatch,
-  ): Promise<SmsInboxRecord> {
+  ): { record: SmsInboxRecord; ops: Model[] } {
     const now = Date.now();
     const metadataJson = JSON.stringify({
       duplicateReasons: duplicate?.reasons || [],
@@ -640,37 +758,7 @@ class SmsService {
     });
 
     if (existing) {
-      await database.write(async () => {
-        await existing.update(entry => {
-          entry.senderAddress = sms.address;
-          entry.rawBody = sms.body;
-          entry.smsDate = sms.date;
-          entry.smsFingerprint = smsFingerprint;
-          entry.parseStatus = parsed.parseStatus;
-          entry.parsedAmount = parsed.amount;
-          entry.parsedCurrencyCode = parsed.currencyCode;
-          entry.parsedMerchant = parsed.merchant;
-          entry.parsedAccountSource = parsed.accountSource;
-          entry.referenceNumber = parsed.referenceNumber;
-          entry.direction = this.toDirection(parsed.type);
-          entry.processingStatus = processingStatus;
-          entry.linkedJournalId = linkedJournalId || existing.linkedJournalId;
-          entry.duplicateJournalId = duplicate?.journalId;
-          entry.duplicateConfidence = duplicate?.score;
-          entry.parseConfidence = parsed.confidence;
-          entry.parseReason = parsed.parseReason;
-          entry.metadataJson = metadataJson;
-          entry.lastScannedAt = now;
-          entry.processedAt = this.isProcessedStatus(processingStatus) ? now : existing.processedAt;
-        });
-      });
-      return existing;
-    }
-
-    let created!: SmsInboxRecord;
-    await database.write(async () => {
-      created = await this.inbox.create(entry => {
-        entry.deviceSmsId = sms.id;
+      const op = existing.prepareUpdate(entry => {
         entry.senderAddress = sms.address;
         entry.rawBody = sms.body;
         entry.smsDate = sms.date;
@@ -683,108 +771,44 @@ class SmsService {
         entry.referenceNumber = parsed.referenceNumber;
         entry.direction = this.toDirection(parsed.type);
         entry.processingStatus = processingStatus;
-        entry.linkedJournalId = linkedJournalId;
+        entry.linkedJournalId = linkedJournalId || existing.linkedJournalId;
         entry.duplicateJournalId = duplicate?.journalId;
         entry.duplicateConfidence = duplicate?.score;
         entry.parseConfidence = parsed.confidence;
         entry.parseReason = parsed.parseReason;
         entry.metadataJson = metadataJson;
-        entry.firstSeenAt = now;
         entry.lastScannedAt = now;
-        entry.processedAt = this.isProcessedStatus(processingStatus) ? now : undefined;
+        entry.processedAt = this.isProcessedStatus(processingStatus) ? now : existing.processedAt;
       });
+      return { record: existing, ops: [op] };
+    }
+
+    const created = this.inbox.prepareCreate(entry => {
+      entry.deviceSmsId = sms.id;
+      entry.senderAddress = sms.address;
+      entry.rawBody = sms.body;
+      entry.smsDate = sms.date;
+      entry.smsFingerprint = smsFingerprint;
+      entry.parseStatus = parsed.parseStatus;
+      entry.parsedAmount = parsed.amount;
+      entry.parsedCurrencyCode = parsed.currencyCode;
+      entry.parsedMerchant = parsed.merchant;
+      entry.parsedAccountSource = parsed.accountSource;
+      entry.referenceNumber = parsed.referenceNumber;
+      entry.direction = this.toDirection(parsed.type);
+      entry.processingStatus = processingStatus;
+      entry.linkedJournalId = linkedJournalId;
+      entry.duplicateJournalId = duplicate?.journalId;
+      entry.duplicateConfidence = duplicate?.score;
+      entry.parseConfidence = parsed.confidence;
+      entry.parseReason = parsed.parseReason;
+      entry.metadataJson = metadataJson;
+      entry.firstSeenAt = now;
+      entry.lastScannedAt = now;
+      entry.processedAt = this.isProcessedStatus(processingStatus) ? now : undefined;
     });
 
-    return created;
-  }
-
-  private async findDuplicateCandidatesForParsed(
-    parsed: ParsedTransaction,
-  ): Promise<DuplicateMatch> {
-    const exact = await journalRepository.findJournalByOriginalSmsId(parsed.id);
-    if (exact) {
-      return { journalId: exact.id, score: 1, reasons: ['Exact SMS already linked to journal'] };
-    }
-
-    if (!parsed.amount) return null;
-
-    const scanStart = Date.now();
-    const nearby = await journalRepository.findNearbyJournals({
-      centerDate: parsed.date,
-      windowMs: this.DAY_WINDOW_MS,
-      amount: parsed.amount,
-      limit: 8,
-    });
-
-    if (nearby.length === 0) return null;
-
-    const accountLookup = new Map<string, string>();
-    let best: DuplicateMatch = null;
-
-    for (const journal of nearby) {
-      const reasons: string[] = [];
-      let score = 0;
-
-      score += 0.45;
-      reasons.push('Same amount');
-
-      const timeDistance = Math.abs(journal.journalDate - parsed.date);
-      const timeScore = Math.max(0, 0.2 - (timeDistance / this.DAY_WINDOW_MS) * 0.2);
-      score += timeScore;
-      if (timeScore > 0.1) {
-        reasons.push('Close in time');
-      }
-
-      const description = (journal.description || '').toLowerCase();
-      if (parsed.merchant && description.includes(parsed.merchant.toLowerCase())) {
-        score += 0.2;
-        reasons.push('Merchant matches description');
-      }
-      if (parsed.referenceNumber && description.includes(parsed.referenceNumber.toLowerCase())) {
-        score += 0.1;
-        reasons.push('Reference matches description');
-      }
-
-      if (parsed.accountSource) {
-        const transactions = await database.collections
-          .get<Transaction>('transactions')
-          .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
-          .fetch();
-        const accountIds = Array.from(
-          new Set(transactions.map((item: Transaction) => item.accountId)),
-        );
-        const accounts = await accountRepository.findAllByIds(accountIds);
-        for (const account of accounts) {
-          accountLookup.set(
-            account.id,
-            `${account.name} ${account.description || ''}`.toLowerCase(),
-          );
-        }
-        const normalizedSource = parsed.accountSource.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const sourceMatched = accounts.some(account =>
-          accountLookup
-            .get(account.id)
-            ?.replace(/[^a-z0-9]/g, '')
-            .includes(normalizedSource),
-        );
-        if (sourceMatched) {
-          score += 0.05;
-          reasons.push('Account source hint matches account');
-        }
-      }
-
-      if (!best || score > best.score) {
-        best = { journalId: journal.id, score, reasons };
-      }
-    }
-
-    if (best && best.score >= 0.45) {
-      logger.info(`[Trace] SmsService.findDuplicate: ${Date.now() - scanStart}ms`, {
-        score: best.score,
-      });
-      return best;
-    }
-    return null;
+    return { record: created, ops: [created] };
   }
 
   private classifyDirection(text: string): 'debit' | 'credit' | 'unknown' {
@@ -1006,34 +1030,26 @@ class SmsService {
     let mode: SmsRuleMode = 'regex';
 
     if (rule.conditionsJson) {
-      try {
-        const parsed = JSON.parse(rule.conditionsJson);
-        if (Array.isArray(parsed)) {
-          conditions = parsed.filter(condition => this.isMeaningfulCondition(condition));
-          if (conditions.length > 0) {
-            mode = 'builder';
-          }
+      const parsed = safeParseJSON<any[]>(rule.conditionsJson, []);
+      if (Array.isArray(parsed)) {
+        conditions = parsed.filter(condition => this.isMeaningfulCondition(condition));
+        if (conditions.length > 0) {
+          mode = 'builder';
         }
-      } catch {
-        conditions = [];
       }
     }
 
     if (rule.actionsJson) {
-      try {
-        const parsed = JSON.parse(rule.actionsJson);
-        if (parsed && typeof parsed === 'object') {
-          actions = {
-            disposition:
-              parsed.disposition === 'ignore' || parsed.disposition === 'review'
-                ? parsed.disposition
-                : 'auto_post',
-            sourceAccountId: parsed.sourceAccountId || actions.sourceAccountId,
-            categoryAccountId: parsed.categoryAccountId || actions.categoryAccountId,
-          };
-        }
-      } catch {
-        // keep fallback actions
+      const parsed = safeParseJSON<any>(rule.actionsJson, {});
+      if (parsed && typeof parsed === 'object') {
+        actions = {
+          disposition:
+            parsed.disposition === 'ignore' || parsed.disposition === 'review'
+              ? parsed.disposition
+              : 'auto_post',
+          sourceAccountId: parsed.sourceAccountId || actions.sourceAccountId,
+          categoryAccountId: parsed.categoryAccountId || actions.categoryAccountId,
+        };
       }
     }
 
@@ -1159,7 +1175,7 @@ class SmsService {
   private getProcessedSmsIds(): string[] {
     try {
       const data = storage.getString(this.PROCESSED_SMS_KEY);
-      return data ? JSON.parse(data) : [];
+      return data ? safeParseJSON(data, []) : [];
     } catch (error) {
       logger.error('Failed to get processed SMS IDs from MMKV', error);
       return [];
@@ -1189,7 +1205,7 @@ class SmsService {
       .replace(/\s+/g, ' ')
       .replace(/[^a-z0-9 ]/g, '')
       .trim();
-    const dateBucket = Math.floor(date / this.DAY_WINDOW_MS);
+    const dateBucket = Math.floor(date / DUPLICATE_CONFIG.dayWindowMs);
     return `${normalizedSender}::${normalizedBody.slice(0, 160)}::${dateBucket}`;
   }
 

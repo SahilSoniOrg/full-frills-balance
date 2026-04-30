@@ -1,9 +1,11 @@
 import { AuditAction } from '@/src/data/models/AuditLog';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { auditService } from '@/src/services/audit-service';
 import { JournalStatus } from '@/src/data/models/Journal';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { accountService } from '@/src/features/accounts/services/AccountService';
 import { journalService } from '@/src/features/journal/services/JournalService';
+import { auditService } from '@/src/services/audit-service';
+
+import { revertRegistry } from '@/src/services/revert-registry';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AuditRepository');
@@ -13,6 +15,7 @@ jest.mock('@/src/data/database/Database', () => ({
     batch: jest.fn(),
   },
 }));
+
 jest.mock('@/src/features/accounts/services/AccountService', () => ({
   accountService: {
     deleteAccount: jest.fn(),
@@ -20,6 +23,7 @@ jest.mock('@/src/features/accounts/services/AccountService', () => ({
     updateAccount: jest.fn(),
   },
 }));
+
 jest.mock('@/src/features/journal/services/JournalService', () => ({
   journalService: {
     deleteJournal: jest.fn(),
@@ -31,6 +35,31 @@ jest.mock('@/src/features/journal/services/JournalService', () => ({
 }));
 
 describe('AuditService', () => {
+  beforeAll(() => {
+    // Manually register handlers since mocks don't run constructors
+    revertRegistry.register('account', async (id, changes, action) => {
+      if (action === AuditAction.CREATE) await accountService.deleteAccount(id);
+      else if (action === AuditAction.DELETE) await accountService.recoverAccount(id);
+      else if (action === AuditAction.UPDATE && changes.before) {
+        if (changes.before.deletedAt) await accountService.deleteAccount(id);
+        else await accountService.updateAccount(id, changes.before);
+      }
+    });
+
+    revertRegistry.register('journal', async (id, changes, action) => {
+      if (action === AuditAction.CREATE) await journalService.deleteJournal(id);
+      else if (action === AuditAction.DELETE) await journalService.recoverJournal(id);
+      else if (action === AuditAction.UPDATE && changes.before) {
+        if (changes.before.deletedAt) await journalService.deleteJournal(id);
+        else if (changes.before.status === JournalStatus.PLANNED)
+          await journalService.revertToPlanned(id);
+        else if (changes.before.status === JournalStatus.POSTED)
+          await journalService.postJournal(id);
+        else await journalService.updateJournal(id, changes.before as any);
+      }
+    });
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

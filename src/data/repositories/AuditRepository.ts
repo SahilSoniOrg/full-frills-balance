@@ -30,25 +30,38 @@ export class AuditRepository {
   async log<T>(entry: AuditEntry<T>): Promise<void> {
     await database.write(async () => {
       await this.auditLogs.create((record: AuditLog) => {
-        record.entityType = entry.entityType.toLowerCase() as AuditEntityType;
-        record.entityId = entry.entityId;
-        record.action = entry.action;
-        try {
-          record.changes = JSON.stringify(entry.changes);
-        } catch (error) {
-          logger.warn('[AuditRepository] Failed to stringify changes (possibly circular)', {
-            entityType: entry.entityType,
-            entityId: entry.entityId,
-          });
-          record.changes = JSON.stringify({
-            error: 'Failed to serialize changes (Circular reference)',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-        record.timestamp = Date.now();
-        record.createdAt = new Date();
+        this.applyEntryToRecord(record, entry);
       });
     });
+  }
+
+  /**
+   * Prepare an audit entry (does not write to DB)
+   */
+  prepareLog<T>(entry: AuditEntry<T>): AuditLog {
+    return this.auditLogs.prepareCreate((record: AuditLog) => {
+      this.applyEntryToRecord(record, entry);
+    });
+  }
+
+  private applyEntryToRecord<T>(record: AuditLog, entry: AuditEntry<T>): void {
+    record.entityType = entry.entityType.toLowerCase() as AuditEntityType;
+    record.entityId = entry.entityId;
+    record.action = entry.action;
+    try {
+      record.changes = JSON.stringify(entry.changes);
+    } catch (error) {
+      logger.warn('[AuditRepository] Failed to stringify changes (possibly circular)', {
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+      });
+      record.changes = JSON.stringify({
+        error: 'Failed to serialize changes (Circular reference)',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    record.timestamp = Date.now();
+    record.createdAt = new Date();
   }
 
   /**

@@ -8,6 +8,7 @@
 import { AppConfig } from '@/src/constants';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { logger } from '@/src/utils/logger';
+import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
 
 interface RebuildQueueConfig {
@@ -44,7 +45,7 @@ class RebuildQueueService {
     try {
       const stored = storage.getString(RebuildQueueService.STORAGE_KEY);
       if (stored) {
-        const entries = JSON.parse(stored);
+        const entries = safeParseJSON<[string, number][]>(stored, []);
         if (Array.isArray(entries)) {
           this.queue = new Map(entries);
           logger.info(`[RebuildQueue] Loaded ${this.queue.size} items from disk`);
@@ -62,7 +63,7 @@ class RebuildQueueService {
     try {
       const processing = storage.getString(RebuildQueueService.PROCESSING_KEY);
       if (processing) {
-        const entries = JSON.parse(processing);
+        const entries = safeParseJSON<[string, number][]>(processing, []);
         if (Array.isArray(entries) && entries.length > 0) {
           logger.warn(`[RebuildQueue] Recovering ${entries.length} items from interrupted batch`);
           for (const [id, date] of entries) {
@@ -203,12 +204,17 @@ class RebuildQueueService {
 
         logger.debug(`[RebuildQueue] Processing batch of ${batch.length} accounts`);
 
-        // Process all accounts in the batch
-        const results = await Promise.allSettled(
-          batch.map(item =>
-            accountingRebuildService.rebuildAccountBalances(item.id, item.fromDate),
-          ),
-        );
+        // Process all accounts in the batch sequentially.
+        // This avoids DB lock contention and long-held write locks, especially for large accounts.
+        const results: { status: 'fulfilled' | 'rejected'; reason?: any }[] = [];
+        for (const item of batch) {
+          try {
+            await accountingRebuildService.rebuildAccountBalances(item.id, item.fromDate);
+            results.push({ status: 'fulfilled' });
+          } catch (error) {
+            results.push({ status: 'rejected', reason: error });
+          }
+        }
 
         // Log any failures
         const failures = results

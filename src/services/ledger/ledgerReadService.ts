@@ -25,7 +25,7 @@ export class LedgerReadService {
   ) {
     if (!rootAccountIds || rootAccountIds.length === 0) return of([] as DisplayTransaction[]);
 
-    const descendantIds$ = accountRepository.observeAll().pipe(
+    const descendantIds$ = accountRepository.observeHierarchy().pipe(
       map(accounts => {
         const allIds = new Set<string>();
         for (const rootId of rootAccountIds) {

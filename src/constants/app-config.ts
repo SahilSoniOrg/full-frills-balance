@@ -51,6 +51,14 @@ export const AppConfig = {
       maxBodyMatchLength: 1000,
       maxStoredProcessedIds: 1000,
       previewBodyChars: 100,
+      duplicateDetection: {
+        scoreThreshold: 0.45,
+        weightAmount: 0.45,
+        weightTime: 0.2,
+        weightMerchant: 0.2,
+        dayWindowMs: 24 * 60 * 60 * 1000,
+      },
+      batchOpChunkSize: 200,
     },
   },
 

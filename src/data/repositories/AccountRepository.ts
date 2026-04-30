@@ -101,6 +101,12 @@ export class AccountRepository {
       ]);
   }
 
+  observeHierarchy() {
+    return this.accounts
+      .query(Q.where('deleted_at', Q.eq(null)))
+      .observeWithColumns(['parent_account_id', 'deleted_at']);
+  }
+
   observeByType(accountType: string) {
     const query = this.accounts.query(
       Q.where('account_type', accountType),

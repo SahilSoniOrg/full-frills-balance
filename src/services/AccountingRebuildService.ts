@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
+import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
@@ -10,9 +11,11 @@ import { accountingService } from '@/src/utils/accountingService';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
-import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
+
+import { storage } from '@/src/utils/storage';
 
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
+const REBUILD_LOCK_PREFIX = 'rebuild_lock_';
 
 export class AccountingRebuildService {
   /**
@@ -21,9 +24,25 @@ export class AccountingRebuildService {
    * @param fromDate Optional timestamp of the change. Will find the latest checkpoint before this date.
    */
   async rebuildAccountBalances(accountId: string, fromDate?: number): Promise<void> {
-    return database.write(async () => {
-      await this.rebuildAccountBalancesInternal(accountId, fromDate);
-    });
+    const lockKey = REBUILD_LOCK_PREFIX + accountId;
+
+    // Atomic-ish check and set for RN/single-threaded JS
+    // Since storage calls are synchronous, this prevents race conditions in the same event loop.
+    if (storage.getString(lockKey)) {
+      logger.warn(
+        `[AccountingRebuildService] Rebuild already in progress for ${accountId}, skipping.`,
+      );
+      return;
+    }
+
+    storage.set(lockKey, String(Date.now()));
+    try {
+      await database.write(async () => {
+        await this.rebuildAccountBalancesInternal(accountId, fromDate);
+      });
+    } finally {
+      storage.remove(lockKey);
+    }
   }
 
   /**

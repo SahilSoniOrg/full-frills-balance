@@ -15,12 +15,13 @@ import { auditService } from '@/src/services/audit-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { EnrichedJournal, JournalEntryLine } from '@/src/types/domain';
+import { EnrichedJournal, JournalEntryLine, mapTransactionToAudit } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { safeParseJSON } from '@/src/utils/serialization';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Q } from '@nozbe/watermelondb';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
@@ -60,8 +61,8 @@ export class JournalService {
       metadata: data.metadata, // Ensure metadata is passed for persistence
     });
 
-    const mappedBeforeTransactions = originalTransactions.map(t => this.mapTransactionToAudit(t));
-    const mappedAfterTransactions = data.transactions.map(t => this.mapTransactionToAudit(t));
+    const mappedBeforeTransactions = originalTransactions.map(t => mapTransactionToAudit(t));
+    const mappedAfterTransactions = data.transactions.map(t => mapTransactionToAudit(t));
 
     await auditService.log({
       entityType: 'journal',
@@ -112,7 +113,7 @@ export class JournalService {
           description: journal.description,
           totalAmount: journal.totalAmount,
           currencyCode: journal.currencyCode,
-          transactions: transactions.map(t => this.mapTransactionToAudit(t)),
+          transactions: transactions.map(t => mapTransactionToAudit(t)),
         },
         after: { deletedAt: new Date() },
       },
@@ -268,7 +269,7 @@ export class JournalService {
     const metadata = await journalRepository.findMetadataByJournalId(journalId);
     if (metadata?.metadataJson) {
       try {
-        const json = JSON.parse(metadata.metadataJson);
+        const json = safeParseJSON<Record<string, any>>(metadata.metadataJson, {});
         if (json[MetadataKeys.ORIGINAL_PLANNED_DATE]) {
           revertTime = json[MetadataKeys.ORIGINAL_PLANNED_DATE];
         } else {
@@ -690,17 +691,6 @@ export class JournalService {
         return true;
       }),
     );
-  }
-
-  private mapTransactionToAudit(t: any) {
-    return {
-      accountId: t.accountId,
-      amount: t.amount,
-      transactionType: t.transactionType,
-      notes: t.notes || undefined,
-      exchangeRate: t.exchangeRate || undefined,
-      currencyCode: t.currencyCode || undefined,
-    };
   }
 }
 export const journalService = new JournalService();

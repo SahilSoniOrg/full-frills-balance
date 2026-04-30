@@ -1,10 +1,12 @@
 import { database } from '@/src/data/database/Database';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
+import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { JournalDisplayType } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
+import { safeParseJSON } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { map, of } from 'rxjs';
@@ -33,6 +35,12 @@ export interface CreateJournalData {
     originalSmsBody?: string;
     metadataJson?: string;
   };
+}
+
+export interface PrepareCreateJournalData extends CreateJournalData {
+  totalAmount?: number;
+  displayType?: JournalDisplayType;
+  calculatedBalances?: Map<string, number | null>;
 }
 
 export class JournalRepository {
@@ -255,9 +263,7 @@ export class JournalRepository {
     const existingMeta = await this.findMetadataByJournalId(journalId);
     if (existingMeta) {
       await existingMeta.update((record: JournalMetadata) => {
-        const currentJson = record.metadataJson
-          ? (JSON.parse(record.metadataJson) as Record<string, unknown>)
-          : {};
+        const currentJson = safeParseJSON<Record<string, unknown>>(record.metadataJson, {});
         record.metadataJson = JSON.stringify({ ...currentJson, ...partialMetadata });
         if (source) record.importSource = source;
         record.updatedAt = new Date();
@@ -282,33 +288,87 @@ export class JournalRepository {
     return this.find(metadata[0].journalId);
   }
 
-  async findJournalBySmsFingerprint(smsFingerprint: string): Promise<Journal | null> {
+  async findJournalsByOriginalSmsIds(smsIds: string[]): Promise<Map<string, Journal>> {
+    if (smsIds.length === 0) return new Map();
     const metadataRecords = await this.journalMetadata
-      .query(Q.where('import_source', 'sms'))
+      .query(Q.where('original_sms_id', Q.oneOf(smsIds)))
       .fetch();
 
+    if (metadataRecords.length === 0) return new Map();
+
+    const journalIds = metadataRecords.map(m => m.journalId);
+    const journals = await this.findByIds(journalIds);
+    const journalMap = new Map(journals.map(j => [j.id, j]));
+
+    const resultMap = new Map<string, Journal>();
     for (const metadata of metadataRecords) {
-      try {
-        const parsed = metadata.metadataJson ? JSON.parse(metadata.metadataJson) : {};
-        if (parsed?.smsFingerprint === smsFingerprint) {
-          return this.find(metadata.journal.id);
-        }
-      } catch {
-        continue;
+      const journal = journalMap.get(metadata.journalId);
+      if (journal && metadata.originalSmsId) {
+        resultMap.set(metadata.originalSmsId, journal);
+      }
+    }
+    return resultMap;
+  }
+
+  async findJournalBySmsFingerprint(smsFingerprint: string): Promise<Journal | null> {
+    // Optimized: Query indexed inbox records instead of scanning metadata JSON
+    const inboxRecords = await database.collections
+      .get<SmsInboxRecord>('sms_inbox_records')
+      .query(Q.where('sms_fingerprint', smsFingerprint))
+      .fetch();
+
+    const record = inboxRecords.find(r => r.linkedJournalId);
+    if (!record || !record.linkedJournalId) return null;
+
+    return this.find(record.linkedJournalId);
+  }
+
+  async findJournalsBySmsFingerprints(fingerprints: string[]): Promise<Map<string, Journal>> {
+    if (fingerprints.length === 0) return new Map();
+
+    // Optimized: Use indexed sms_inbox_records to find linked journals in O(Log N)
+    const inboxRecords = await database.collections
+      .get<SmsInboxRecord>('sms_inbox_records')
+      .query(Q.where('sms_fingerprint', Q.oneOf(fingerprints)))
+      .fetch();
+
+    const fingerprintToJournalId = new Map<string, string>();
+    const journalIds: string[] = [];
+
+    for (const record of inboxRecords) {
+      const linkedJournalId = record.linkedJournalId;
+      const smsFingerprint = record.smsFingerprint;
+      if (linkedJournalId && smsFingerprint) {
+        journalIds.push(linkedJournalId);
+        fingerprintToJournalId.set(smsFingerprint, linkedJournalId);
       }
     }
 
-    return null;
+    if (journalIds.length === 0) return new Map();
+
+    const journals = await this.findByIds(journalIds);
+    const journalMap = new Map(journals.map(j => [j.id, j]));
+    const resultMap = new Map<string, Journal>();
+
+    for (const [fingerprint, journalId] of fingerprintToJournalId) {
+      const journal = journalMap.get(journalId);
+      if (journal) {
+        resultMap.set(fingerprint, journal);
+      }
+    }
+
+    return resultMap;
   }
 
   async findNearbyJournals(params: {
     centerDate: number;
     windowMs: number;
     amount?: number;
+    amounts?: number[];
     excludeJournalId?: string;
     limit?: number;
   }): Promise<Journal[]> {
-    const { centerDate, windowMs, amount, excludeJournalId, limit = 10 } = params;
+    const { centerDate, windowMs, amount, amounts, excludeJournalId, limit = 10 } = params;
     const clauses: Q.Clause[] = [
       Q.where('deleted_at', Q.eq(null)),
       Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
@@ -320,6 +380,8 @@ export class JournalRepository {
 
     if (typeof amount === 'number') {
       clauses.unshift(Q.where('total_amount', amount));
+    } else if (amounts && amounts.length > 0) {
+      clauses.unshift(Q.where('total_amount', Q.oneOf(amounts)));
     }
 
     if (excludeJournalId) {
@@ -333,13 +395,15 @@ export class JournalRepository {
     return this.journals.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
   }
 
-  async createJournalWithTransactions(
-    journalData: CreateJournalData & {
-      totalAmount?: number;
-      displayType?: JournalDisplayType;
-      calculatedBalances?: Map<string, number | null>;
-    },
-  ): Promise<Journal> {
+  /**
+   * Prepares creation of a journal and its transactions.
+   * Returns an array of prepared models that can be used in a database.batch() call.
+   */
+  prepareCreateJournalWithTransactions(journalData: PrepareCreateJournalData): {
+    journal: Journal;
+    transactions: Transaction[];
+    metadataRecord?: JournalMetadata;
+  } {
     const {
       transactions: transactionData,
       totalAmount,
@@ -349,55 +413,63 @@ export class JournalRepository {
       ...journalFields
     } = journalData;
 
+    const journal = this.journals.prepareCreate(j => {
+      Object.assign(j, journalFields);
+      j.status = journalFields.status ?? JournalStatus.POSTED;
+      j.plannedPaymentId = journalFields.plannedPaymentId;
+      j.totalAmount = totalAmount ?? 0;
+      j.transactionCount = transactionData.length;
+      j.displayType = displayType ?? JournalDisplayType.TRANSFER;
+      j.createdAt = new Date();
+      j.updatedAt = new Date();
+    });
+
+    const transactions = transactionData.map(txData => {
+      return this.transactions.prepareCreate(tx => {
+        tx.journalId = journal.id;
+        tx.accountId = txData.accountId;
+        tx.amount = txData.amount;
+        tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
+        tx.transactionType = txData.transactionType;
+        tx.transactionDate = journalFields.journalDate;
+        tx.notes = txData.notes;
+        tx.exchangeRate = txData.exchangeRate;
+        tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
+        tx.createdAt = new Date();
+        tx.updatedAt = new Date();
+      });
+    });
+
+    let metadataRecord: JournalMetadata | undefined;
+    if (metadata) {
+      metadataRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
+        m.journalId = journal.id;
+        m.importSource = metadata.importSource;
+        m.originalSmsId = metadata.originalSmsId;
+        m.originalSmsSender = metadata.originalSmsSender;
+        m.originalSmsBody = metadata.originalSmsBody;
+        m.metadataJson = metadata.metadataJson;
+      });
+    }
+
+    return { journal, transactions, metadataRecord };
+  }
+
+  async createJournalWithTransactions(journalData: PrepareCreateJournalData): Promise<Journal> {
     const start = Date.now();
     return await database.write(async () => {
-      const journal = this.journals.prepareCreate(j => {
-        Object.assign(j, journalFields);
-        j.status = journalFields.status ?? JournalStatus.POSTED;
-        j.plannedPaymentId = journalFields.plannedPaymentId;
-        j.totalAmount = totalAmount ?? 0;
-        j.transactionCount = transactionData.length;
-        j.displayType = displayType ?? JournalDisplayType.TRANSFER;
-        j.createdAt = new Date();
-        j.updatedAt = new Date();
-      });
-
-      const transactions = transactionData.map(txData => {
-        return this.transactions.prepareCreate(tx => {
-          tx.journalId = journal.id;
-          tx.accountId = txData.accountId;
-          tx.amount = txData.amount;
-          tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
-          tx.transactionType = txData.transactionType;
-          tx.transactionDate = journalFields.journalDate;
-          tx.notes = txData.notes;
-          tx.exchangeRate = txData.exchangeRate;
-          tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
-          tx.createdAt = new Date();
-          tx.updatedAt = new Date();
-        });
-      });
+      const { journal, transactions, metadataRecord } =
+        this.prepareCreateJournalWithTransactions(journalData);
 
       const batchOps: Model[] = [journal, ...transactions];
-
-      if (metadata) {
-        const metaRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
-          m.journalId = journal.id;
-          m.importSource = metadata.importSource;
-          m.originalSmsId = metadata.originalSmsId;
-          m.originalSmsSender = metadata.originalSmsSender;
-          m.originalSmsBody = metadata.originalSmsBody;
-          m.metadataJson = metadata.metadataJson;
-        });
-        batchOps.push(metaRecord);
-      }
+      if (metadataRecord) batchOps.push(metadataRecord);
 
       await database.batch(...batchOps);
 
       logger.info(
         `[Trace] JournalRepository.createJournalWithTransactions: ${Date.now() - start}ms`,
         {
-          txCount: transactionData.length,
+          txCount: journalData.transactions.length,
         },
       );
 
@@ -407,11 +479,7 @@ export class JournalRepository {
 
   async updateJournalWithTransactions(
     journalId: string,
-    journalData: CreateJournalData & {
-      totalAmount?: number;
-      displayType?: JournalDisplayType;
-      calculatedBalances?: Map<string, number | null>;
-    },
+    journalData: PrepareCreateJournalData,
   ): Promise<Journal> {
     const {
       transactions: transactionData,
@@ -607,11 +675,7 @@ export class JournalRepository {
   async replaceJournalWithReversal(params: {
     originalJournal: Journal;
     originalTransactions: Transaction[];
-    replacementData: CreateJournalData & {
-      totalAmount?: number;
-      displayType?: JournalDisplayType;
-      calculatedBalances?: Map<string, number | null>;
-    };
+    replacementData: PrepareCreateJournalData;
   }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
     const { originalJournal, originalTransactions, replacementData } = params;
     const {
