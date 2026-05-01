@@ -1,85 +1,22 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import {
-  AppCard,
-  AppIcon,
-  AppText,
-  EmptyStateView,
-  FloatingActionButton,
-} from '@/src/components/core';
+import { AppCard, AppText, EmptyStateView, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Opacity, Spacing } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import { useAccounts } from '@/src/features/accounts';
+import { SmsRuleCard } from '@/src/features/settings/components/SmsRuleCard';
 import { useTheme } from '@/src/hooks/use-theme';
-import { SmsRuleCondition, smsService, SmsRuleSuggestion } from '@/src/services/sms-service';
 import { useObservable } from '@/src/hooks/useObservable';
+import { SmsRuleSuggestion, smsService } from '@/src/services/sms-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { withObservables } from '@nozbe/watermelondb/react';
 import React from 'react';
-import { from } from 'rxjs';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { from } from 'rxjs';
 
 interface Props {
   rules: SmsAutoPostRule[];
-}
-
-function getConditions(rule: SmsAutoPostRule): SmsRuleCondition[] {
-  if (!rule.conditionsJson) return [];
-  try {
-    const parsed = JSON.parse(rule.conditionsJson);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function getActionLabel(rule: SmsAutoPostRule) {
-  if (!rule.actionsJson) return 'Auto-post';
-  try {
-    const parsed = JSON.parse(rule.actionsJson);
-    if (parsed?.disposition === 'ignore') return 'Ignore';
-    if (parsed?.disposition === 'review') return 'Review';
-  } catch {
-    // fallback below
-  }
-  return 'Auto-post';
-}
-
-function getConditionSummary(rule: SmsAutoPostRule) {
-  const conditions = getConditions(rule);
-  if (conditions.length === 0) {
-    return rule.bodyMatch
-      ? `Regex: ${rule.senderMatch} / ${rule.bodyMatch}`
-      : `Regex: ${rule.senderMatch}`;
-  }
-
-  return conditions
-    .map(condition => {
-      switch (condition.field) {
-        case 'sender':
-          return `Sender contains "${condition.value}"`;
-        case 'body':
-          return `Body contains "${condition.value}"`;
-        case 'merchant':
-          return `Merchant contains "${condition.value}"`;
-        case 'account_source':
-          return `Source contains "${condition.value}"`;
-        case 'direction':
-          return `Direction is ${condition.value}`;
-        case 'currency':
-          return `Currency is ${condition.value}`;
-        case 'amount':
-          if (condition.operator === 'between') {
-            return `Amount between ${condition.minValue} and ${condition.maxValue}`;
-          }
-          return `Amount ${condition.operator} ${condition.minValue}`;
-        default:
-          return null;
-      }
-    })
-    .filter(Boolean)
-    .join(' • ');
 }
 
 function SmsRulesList({ rules }: Props) {
@@ -182,60 +119,7 @@ function SmsRulesList({ rules }: Props) {
         ) : null
       }
       contentContainerStyle={styles.list}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          activeOpacity={Opacity.heavy}
-          onPress={() => AppNavigation.toSmsRuleForm(item.id)}
-        >
-          <AppCard elevation="sm" style={styles.card}>
-            <View style={styles.cardHeader}>
-              <AppText variant="subheading" weight="semibold">
-                {getConditions(item).length > 0 ? 'Structured rule' : item.senderMatch}
-              </AppText>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor: item.isActive
-                      ? withOpacity(theme.success, Opacity.soft)
-                      : withOpacity(theme.textSecondary, Opacity.soft),
-                  },
-                ]}
-              >
-                <AppText
-                  variant="caption"
-                  style={{ color: item.isActive ? theme.success : theme.textSecondary }}
-                >
-                  {item.isActive ? 'Active' : 'Inactive'}
-                </AppText>
-              </View>
-            </View>
-            <AppText variant="body" color="secondary" style={styles.bodyMatch}>
-              {getConditionSummary(item)}
-            </AppText>
-            <AppText variant="caption" color="secondary">
-              Action: {getActionLabel(item)} | Priority: {item.priority ?? 100}
-            </AppText>
-            {getActionLabel(item) === 'Auto-post' &&
-            (!!item.sourceAccountId || !!item.categoryAccountId) ? (
-              <View style={styles.accountsRow}>
-                <AppText variant="caption" color="secondary">
-                  {accountMap.get(item.sourceAccountId) || item.sourceAccountId}
-                </AppText>
-                <AppIcon
-                  name="arrowRight"
-                  size={14}
-                  color={theme.textSecondary}
-                  style={{ marginHorizontal: Spacing.xs }}
-                />
-                <AppText variant="caption" color="secondary">
-                  {accountMap.get(item.categoryAccountId) || item.categoryAccountId}
-                </AppText>
-              </View>
-            ) : null}
-          </AppCard>
-        </TouchableOpacity>
-      )}
+      renderItem={({ item }) => <SmsRuleCard item={item} theme={theme} accountMap={accountMap} />}
     />
   );
 }

@@ -1,54 +1,62 @@
-import { AppButton, AppCard, AppText, Badge, EmptyStateView } from '@/src/components/core'
-import { Screen } from '@/src/components/layout'
-import { AppConfig } from '@/src/constants/app-config'
-import { Opacity, Spacing, withOpacity } from '@/src/constants'
-import { useAccounts } from '@/src/features/accounts'
-import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable'
-import SmsInboxRecord, { SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord'
-import { journalRepository } from '@/src/data/repositories/JournalRepository'
-import { useTheme } from '@/src/hooks/use-theme'
-import { smsService } from '@/src/services/sms-service'
-import { SmsDuplicateCandidate, SmsInboxItem } from '@/src/types/domain'
-import { alert, showErrorAlert, toast } from '@/src/utils/alerts'
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter'
-import { AppNavigation } from '@/src/utils/navigation'
-import dayjs from 'dayjs'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, Platform, StyleSheet, View } from 'react-native'
+import { AppButton, AppText, EmptyStateView } from '@/src/components/core';
+import { Screen } from '@/src/components/layout';
+import { Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
+import SmsInboxRecord, { SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { useAccounts } from '@/src/features/accounts';
+import { SmsInboxItemCard } from '@/src/features/settings/components/SmsInboxItemCard';
+import { useTheme } from '@/src/hooks/use-theme';
+import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
+import { smsService } from '@/src/services/sms-service';
+import { SmsDuplicateCandidate, SmsInboxItem } from '@/src/types/domain';
+import { showErrorAlert, toast } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/utils/navigation';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, View } from 'react-native';
 
-type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed'
+type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
 
-const PAGE_SIZE = 25
+const PAGE_SIZE = 25;
 
 function normalizeForMatch(value?: string) {
-  return (value || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  return (value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function SmsInboxContent({ accounts, theme }: { accounts: any[], theme: any }) {
-  const [filter, setFilter] = useState<InboxFilter>('pending')
-  const [scanCursor, setScanCursor] = useState(PAGE_SIZE)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [isScanningOlder, setIsScanningOlder] = useState(false)
+function SmsInboxContent({ accounts, theme }: { accounts: any[]; theme: any }) {
+  const [filter, setFilter] = useState<InboxFilter>('pending');
+  const [scanCursor, setScanCursor] = useState(PAGE_SIZE);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isScanningOlder, setIsScanningOlder] = useState(false);
 
-  const observe = useCallback((limit: number) => smsService.observeInbox(limit, { status: filter }), [filter])
+  const observe = useCallback(
+    (limit: number) => smsService.observeInbox(limit, { status: filter }),
+    [filter],
+  );
 
   const enrich = useCallback(async (records: SmsInboxRecord[]) => {
-    const linkedIds = Array.from(new Set(records.map((record) => record.linkedJournalId).filter(Boolean) as string[]))
-    const duplicateIds = Array.from(new Set(records.map((record) => record.duplicateJournalId).filter(Boolean) as string[]))
-    const journals = await journalRepository.findByIds(Array.from(new Set([...linkedIds, ...duplicateIds])))
-    const journalMap = new Map(journals.map((journal) => [journal.id, journal]))
+    const linkedIds = Array.from(
+      new Set(records.map(record => record.linkedJournalId).filter(Boolean) as string[]),
+    );
+    const duplicateIds = Array.from(
+      new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as string[]),
+    );
+    const journals = await journalRepository.findByIds(
+      Array.from(new Set([...linkedIds, ...duplicateIds])),
+    );
+    const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 
     return records.map((record): SmsInboxItem => {
-      const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {}
+      const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
       const duplicateCandidate: SmsDuplicateCandidate | undefined = record.duplicateJournalId
         ? {
-          journalId: record.duplicateJournalId,
-          journalDate: journalMap.get(record.duplicateJournalId)?.journalDate || record.smsDate,
-          description: journalMap.get(record.duplicateJournalId)?.description,
-          score: record.duplicateConfidence || 0,
-          reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
-        }
-        : undefined
+            journalId: record.duplicateJournalId,
+            journalDate: journalMap.get(record.duplicateJournalId)?.journalDate || record.smsDate,
+            description: journalMap.get(record.duplicateJournalId)?.description,
+            score: record.duplicateConfidence || 0,
+            reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
+          }
+        : undefined;
 
       return {
         id: record.id,
@@ -68,162 +76,183 @@ function SmsInboxContent({ accounts, theme }: { accounts: any[], theme: any }) {
         parseReason: record.parseReason,
         linkedJournal: record.linkedJournalId
           ? {
-            journalId: record.linkedJournalId,
-            description: journalMap.get(record.linkedJournalId)?.description,
-            journalDate: journalMap.get(record.linkedJournalId)?.journalDate || record.smsDate,
-            status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
-          }
+              journalId: record.linkedJournalId,
+              description: journalMap.get(record.linkedJournalId)?.description,
+              journalDate: journalMap.get(record.linkedJournalId)?.journalDate || record.smsDate,
+              status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
+            }
           : undefined,
         duplicateCandidate,
-      }
-    })
-  }, [])
+      };
+    });
+  }, []);
 
-  const { items, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<SmsInboxRecord, SmsInboxItem>({
+  const { items, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<
+    SmsInboxRecord,
+    SmsInboxItem
+  >({
     pageSize: PAGE_SIZE,
     observe,
     enrich,
-  })
+  });
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted = true;
     const prime = async () => {
       try {
-        const result = await smsService.scanRecentSmsPage(PAGE_SIZE * 2)
+        const result = await smsService.scanRecentSmsPage(PAGE_SIZE * 2);
         if (isMounted) {
-          setScanCursor(result.cursor)
+          setScanCursor(result.cursor);
         }
       } catch (error) {
-        showErrorAlert(error, 'SMS Inbox', true)
+        showErrorAlert(error, 'SMS Inbox', true);
       }
-    }
-    prime()
+    };
+    prime();
     return () => {
-      isMounted = false
-    }
-  }, [])
+      isMounted = false;
+    };
+  }, []);
 
   const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true)
+    setIsRefreshing(true);
     try {
-      const result = await smsService.refreshLatestSms(PAGE_SIZE * 2)
-      setScanCursor(result.cursor)
-      toast.success('SMS inbox refreshed')
+      const result = await smsService.refreshLatestSms(PAGE_SIZE * 2);
+      setScanCursor(result.cursor);
+      toast.success('SMS inbox refreshed');
     } catch (error) {
-      showErrorAlert(error, 'SMS Inbox', true)
+      showErrorAlert(error, 'SMS Inbox', true);
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
-  }, [])
+  }, []);
 
   const handleLoadOlder = useCallback(async () => {
-    if (isScanningOlder) return
-    setIsScanningOlder(true)
+    if (isScanningOlder) return;
+    setIsScanningOlder(true);
     try {
-      const result = await smsService.scanOlderSmsPage(scanCursor, PAGE_SIZE)
-      setScanCursor(result.cursor)
-      loadMore()
+      const result = await smsService.scanOlderSmsPage(scanCursor, PAGE_SIZE);
+      setScanCursor(result.cursor);
+      loadMore();
     } catch (error) {
-      showErrorAlert(error, 'SMS Inbox', true)
+      showErrorAlert(error, 'SMS Inbox', true);
     } finally {
-      setIsScanningOlder(false)
+      setIsScanningOlder(false);
     }
-  }, [isScanningOlder, loadMore, scanCursor])
+  }, [isScanningOlder, loadMore, scanCursor]);
 
   const handleDismiss = useCallback(async (item: SmsInboxItem) => {
-    await smsService.markInboxRecordStatus(item.id, SmsProcessingStatus.DISMISSED)
-    await smsService.markSmsAsProcessed(item.deviceSmsId)
-  }, [])
+    await smsService.markInboxRecordStatus(item.id, SmsProcessingStatus.DISMISSED);
+    await smsService.markSmsAsProcessed(item.deviceSmsId);
+  }, []);
 
   const handleUndismiss = useCallback(async (item: SmsInboxItem) => {
-    await smsService.markInboxRecordStatus(item.id, item.duplicateCandidate ? SmsProcessingStatus.DUPLICATE_FLAGGED : SmsProcessingStatus.PENDING)
-  }, [])
+    await smsService.markInboxRecordStatus(
+      item.id,
+      item.duplicateCandidate ? SmsProcessingStatus.DUPLICATE_FLAGGED : SmsProcessingStatus.PENDING,
+    );
+  }, []);
 
-  const handleImport = useCallback((item: SmsInboxItem) => {
-    let matchedBankAccountId: string | undefined
-    let matchedCounterpartyId: string | undefined
+  const handleImport = useCallback(
+    (item: SmsInboxItem) => {
+      let matchedBankAccountId: string | undefined;
+      let matchedCounterpartyId: string | undefined;
 
-    if (item.parsedAccountSource) {
-      const normalizedSource = normalizeForMatch(item.parsedAccountSource)
-      const sourceDigits = item.parsedAccountSource.match(/(\d{3,6})/)?.[1]
-      const bestAccount = accounts.find((account) => {
-        const name = normalizeForMatch(account.name)
-        const description = normalizeForMatch(account.description)
-        if (sourceDigits && ((account.name || '').includes(sourceDigits) || (account.description || '').includes(sourceDigits))) {
-          return true
-        }
-        return name.includes(normalizedSource) || description.includes(normalizedSource)
-      })
-      matchedBankAccountId = bestAccount?.id
-    }
-
-    if (item.parsedMerchant) {
-      const normalizedMerchant = normalizeForMatch(item.parsedMerchant)
-      const bestAccount = accounts.find((account) => {
-        const name = normalizeForMatch(account.name)
-        return name.includes(normalizedMerchant) || normalizedMerchant.includes(name)
-      })
-      if (bestAccount && bestAccount.id !== matchedBankAccountId) {
-        matchedCounterpartyId = bestAccount.id
+      if (item.parsedAccountSource) {
+        const normalizedSource = normalizeForMatch(item.parsedAccountSource);
+        const sourceDigits = item.parsedAccountSource.match(/(\d{3,6})/)?.[1];
+        const bestAccount = accounts.find(account => {
+          const name = normalizeForMatch(account.name);
+          const description = normalizeForMatch(account.description);
+          if (
+            sourceDigits &&
+            ((account.name || '').includes(sourceDigits) ||
+              (account.description || '').includes(sourceDigits))
+          ) {
+            return true;
+          }
+          return name.includes(normalizedSource) || description.includes(normalizedSource);
+        });
+        matchedBankAccountId = bestAccount?.id;
       }
-    }
 
-    let type: 'expense' | 'income' | 'transfer' = item.direction === 'credit' ? 'income' : 'expense'
-    if (matchedBankAccountId && matchedCounterpartyId) {
-      type = 'transfer'
-    }
+      if (item.parsedMerchant) {
+        const normalizedMerchant = normalizeForMatch(item.parsedMerchant);
+        const bestAccount = accounts.find(account => {
+          const name = normalizeForMatch(account.name);
+          return name.includes(normalizedMerchant) || normalizedMerchant.includes(name);
+        });
+        if (bestAccount && bestAccount.id !== matchedBankAccountId) {
+          matchedCounterpartyId = bestAccount.id;
+        }
+      }
 
-    const params: Record<string, string> = {
-      type,
-      amount: String(item.parsedAmount || ''),
-      notes: `Imported from: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${item.rawBody.substring(0, AppConfig.input.sms.previewBodyChars)}...`,
-    }
+      let type: 'expense' | 'income' | 'transfer' =
+        item.direction === 'credit' ? 'income' : 'expense';
+      if (matchedBankAccountId && matchedCounterpartyId) {
+        type = 'transfer';
+      }
 
-    if (item.direction === 'debit') {
-      if (matchedBankAccountId) params.sourceAccountId = matchedBankAccountId
-      if (matchedCounterpartyId) params.destinationAccountId = matchedCounterpartyId
-    } else {
-      if (matchedCounterpartyId) params.sourceAccountId = matchedCounterpartyId
-      if (matchedBankAccountId) params.destinationAccountId = matchedBankAccountId
-    }
+      const params: Record<string, string> = {
+        type,
+        amount: String(item.parsedAmount || ''),
+        notes: `Imported from: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${item.rawBody.substring(0, AppConfig.input.sms.previewBodyChars)}...`,
+      };
 
-    AppNavigation.toJournalEntry({
-      smsId: item.deviceSmsId,
-      smsRecordId: item.id,
-      smsSender: item.senderAddress,
-      rawSmsBody: item.rawBody,
-      initialDate: new Date(item.smsDate).toISOString(),
-      params,
-    })
-  }, [accounts])
+      if (item.direction === 'debit') {
+        if (matchedBankAccountId) params.sourceAccountId = matchedBankAccountId;
+        if (matchedCounterpartyId) params.destinationAccountId = matchedCounterpartyId;
+      } else {
+        if (matchedCounterpartyId) params.sourceAccountId = matchedCounterpartyId;
+        if (matchedBankAccountId) params.destinationAccountId = matchedBankAccountId;
+      }
 
-  const filterButtons = useMemo(() => ([
-    { key: 'pending' as InboxFilter, label: 'Pending' },
-    { key: 'processed' as InboxFilter, label: 'Processed' },
-    { key: 'auto_posted' as InboxFilter, label: 'Auto-Posted' },
-    { key: 'duplicates' as InboxFilter, label: 'Duplicates' },
-    { key: 'failed' as InboxFilter, label: 'Failed' },
-  ]), [])
+      AppNavigation.toJournalEntry({
+        smsId: item.deviceSmsId,
+        smsRecordId: item.id,
+        smsSender: item.senderAddress,
+        rawSmsBody: item.rawBody,
+        initialDate: new Date(item.smsDate).toISOString(),
+        params,
+      });
+    },
+    [accounts],
+  );
+
+  const filterButtons = useMemo(
+    () => [
+      { key: 'pending' as InboxFilter, label: 'Pending' },
+      { key: 'processed' as InboxFilter, label: 'Processed' },
+      { key: 'auto_posted' as InboxFilter, label: 'Auto-Posted' },
+      { key: 'duplicates' as InboxFilter, label: 'Duplicates' },
+      { key: 'failed' as InboxFilter, label: 'Failed' },
+    ],
+    [],
+  );
 
   return (
     <Screen
       title="SMS Inbox"
       showBack
       scrollable={false}
-      headerActions={(
+      headerActions={
         <View style={styles.headerActions}>
-          <AppButton variant="ghost" size="sm" onPress={AppNavigation.toSmsRules}>Rules</AppButton>
-          <AppButton variant="ghost" size="sm" loading={isRefreshing} onPress={handleRefresh}>Refresh</AppButton>
+          <AppButton variant="ghost" size="sm" onPress={AppNavigation.toSmsRules}>
+            Rules
+          </AppButton>
+          <AppButton variant="ghost" size="sm" loading={isRefreshing} onPress={handleRefresh}>
+            Refresh
+          </AppButton>
         </View>
-      )}
+      }
     >
       <View style={styles.container}>
         <FlatList
           data={items}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={(
+          keyExtractor={item => item.id}
+          ListHeaderComponent={
             <View style={styles.filters}>
-              {filterButtons.map((button) => (
+              {filterButtons.map(button => (
                 <AppButton
                   key={button.key}
                   size="sm"
@@ -235,145 +264,56 @@ function SmsInboxContent({ accounts, theme }: { accounts: any[], theme: any }) {
                 </AppButton>
               ))}
             </View>
-          )}
+          }
           renderItem={({ item }) => (
-            <AppCard style={styles.card}>
-              <View style={styles.cardTop}>
-                <View style={{ flex: 1 }}>
-                  <AppText variant="subheading">{item.parsedMerchant || item.senderAddress}</AppText>
-                  <AppText variant="caption" color="secondary">
-                    {dayjs(item.smsDate).format('MMM D, YYYY h:mm A')}
-                  </AppText>
-                </View>
-                <View style={styles.amountColumn}>
-                  <AppText
-                    variant="subheading"
-                    style={{ color: item.direction === 'credit' ? theme.success : theme.text }}
-                  >
-                    {item.parsedAmount != null
-                      ? `${item.direction === 'credit' ? '+' : '-'} ${CurrencyFormatter.format(item.parsedAmount, item.parsedCurrencyCode || undefined)}`
-                      : 'No amount'}
-                  </AppText>
-                  {item.parsedCurrencyCode && (
-                    <AppText variant="caption" color="secondary">{item.parsedCurrencyCode}</AppText>
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.badges}>
-                <Badge size="sm" backgroundColor={withOpacity(theme.primary, Opacity.soft)} textColor={theme.primary}>
-                  {item.processingStatus.replace(/_/g, ' ')}
-                </Badge>
-                {item.duplicateCandidate && (
-                  <Badge size="sm" backgroundColor={withOpacity(theme.warning, Opacity.soft)} textColor={theme.warning}>
-                    likely duplicate
-                  </Badge>
-                )}
-                {item.linkedJournal && (
-                  <Badge size="sm" backgroundColor={withOpacity(theme.success, Opacity.soft)} textColor={theme.success}>
-                    linked journal
-                  </Badge>
-                )}
-              </View>
-
-              <AppText variant="body" color="secondary" style={styles.bodyPreview}>
-                {item.rawBody}
-              </AppText>
-
-              {item.parseReason && (
-                <AppText variant="caption" color="secondary">
-                  {item.parseReason}
-                </AppText>
-              )}
-
-              {item.duplicateCandidate && (
-                <AppButton
-                  variant="ghost"
-                  size="sm"
-                  style={styles.inlineButton}
-                  onPress={() => AppNavigation.toTransactionDetails(item.duplicateCandidate!.journalId, {
-                    title: item.duplicateCandidate!.description || item.parsedMerchant || item.senderAddress,
-                    amount: item.parsedAmount || 0,
-                    currencyCode: item.parsedCurrencyCode || undefined,
-                    date: item.duplicateCandidate!.journalDate,
-                    displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE'
-                  })}
-                >
-                  Compare duplicate
-                </AppButton>
-              )}
-
-              <View style={styles.actions}>
-                {item.linkedJournal ? (
-                  <AppButton size="sm" variant="outline" onPress={() => AppNavigation.toTransactionDetails(item.linkedJournal!.journalId, {
-                    title: item.linkedJournal!.description || item.parsedMerchant || item.senderAddress,
-                    amount: item.parsedAmount || 0,
-                    currencyCode: item.parsedCurrencyCode || undefined,
-                    date: item.linkedJournal!.journalDate,
-                    displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE'
-                  })}>
-                    Open Journal
-                  </AppButton>
-                ) : (
-                  <AppButton
-                    size="sm"
-                    onPress={() => handleImport(item)}
-                    disabled={item.processingStatus === SmsProcessingStatus.PARSE_FAILED}
-                  >
-                    Import / Review
-                  </AppButton>
-                )}
-
-                {item.processingStatus === SmsProcessingStatus.DISMISSED ? (
-                  <AppButton size="sm" variant="secondary" onPress={() => handleUndismiss(item)}>
-                    Undo
-                  </AppButton>
-                ) : (
-                  <AppButton size="sm" variant="secondary" onPress={() => handleDismiss(item)}>
-                    Dismiss
-                  </AppButton>
-                )}
-
-                <AppButton
-                  size="sm"
-                  variant="ghost"
-                  onPress={() => alert.show({ title: item.senderAddress, message: item.rawBody })}
-                >
-                  View Raw
-                </AppButton>
-              </View>
-            </AppCard>
+            <SmsInboxItemCard
+              item={item}
+              theme={theme}
+              handleDismiss={handleDismiss}
+              handleUndismiss={handleUndismiss}
+              handleImport={handleImport}
+            />
           )}
           contentContainerStyle={styles.content}
-          ListEmptyComponent={isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={theme.primary} />
-              <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.sm }}>
-                Scanning SMS inbox...
-              </AppText>
-            </View>
-          ) : (
-            <EmptyStateView title="No SMS records" subtitle="Try refreshing or loading older messages." />
-          )}
-          ListFooterComponent={(
+          ListEmptyComponent={
+            isLoading ? (
+              <View style={styles.center}>
+                <ActivityIndicator color={theme.primary} />
+                <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.sm }}>
+                  Scanning SMS inbox...
+                </AppText>
+              </View>
+            ) : (
+              <EmptyStateView
+                title="No SMS records"
+                subtitle="Try refreshing or loading older messages."
+              />
+            )
+          }
+          ListFooterComponent={
             <View style={styles.footer}>
               {(isLoadingMore || isScanningOlder) && <ActivityIndicator color={theme.primary} />}
               {(hasMore || items.length > 0) && (
-                <AppButton variant="secondary" size="sm" onPress={handleLoadOlder} loading={isScanningOlder}>
+                <AppButton
+                  variant="secondary"
+                  size="sm"
+                  onPress={handleLoadOlder}
+                  loading={isScanningOlder}
+                >
                   Load Older Messages
                 </AppButton>
               )}
             </View>
-          )}
+          }
         />
       </View>
     </Screen>
-  )
+  );
 }
 
 export default function SmsInboxScreen() {
-  const { theme } = useTheme()
-  const { accounts } = useAccounts()
+  const { theme } = useTheme();
+  const { accounts } = useAccounts();
 
   if (Platform.OS !== 'android') {
     return (
@@ -385,10 +325,10 @@ export default function SmsInboxScreen() {
           />
         </View>
       </Screen>
-    )
+    );
   }
 
-  return <SmsInboxContent accounts={accounts} theme={theme} />
+  return <SmsInboxContent accounts={accounts} theme={theme} />;
 }
 
 const styles = StyleSheet.create({
@@ -453,4 +393,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-})
+});
