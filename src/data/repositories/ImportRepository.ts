@@ -536,7 +536,7 @@ export class ImportRepository {
           record._raw.id = sms.id;
           record.deviceSmsId = sms.deviceSmsId;
           record.senderAddress = sms.senderAddress;
-          record.rawBody = sms.rawBody;
+          record.rawBody = sms.rawBody || '';
           record.smsDate = sms.smsDate;
           record.smsFingerprint = sms.smsFingerprint;
           record.parseStatus = toSmsParseStatus(sms.parseStatus);

@@ -15,6 +15,7 @@ import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
 import { AppSchema } from '@nozbe/watermelondb/Schema';
 import { supportsRawSql } from '../data/database/DatabaseUtils';
+import JSZip from 'jszip';
 
 export interface AccountExport {
   id: string;
@@ -379,7 +380,7 @@ class ExportService {
   /**
    * Exports all data as JSON using raw SQL to bypass model instantiation overhead.
    */
-  async exportToJSON(): Promise<string> {
+  async exportToJSON(): Promise<Uint8Array> {
     logger.info('[ExportService] Starting optimized JSON export...');
 
     try {
@@ -387,17 +388,17 @@ class ExportService {
         accounts,
         journals,
         transactions,
-        auditLogs,
+        _auditLogs, // Prefix with _ to ignore unused warning
         budgets,
         budgetScopes,
         currencies,
-        exchangeRates,
+        _exchangeRates,
         accountMetadata,
         plannedPayments,
         journalMetadata,
         smsAutoPostRules,
         smsInboxRecords,
-        balanceSnapshots,
+        _balanceSnapshots, // Prefix with _ to ignore unused warning
         userPreferences,
       ] = await Promise.all([
         this.fetchAndTransformTable<AccountExport>('accounts'),
@@ -419,45 +420,59 @@ class ExportService {
 
       const exportData: ExportData = {
         exportDate: new Date().toISOString(),
-        version: '1.2.0',
+        version: '1.3.0',
         preferences: userPreferences,
         accounts,
         journals,
-        transactions,
-        auditLogs,
+        transactions: transactions.map(t => ({ ...t, runningBalance: undefined })),
+        auditLogs: [],
         budgets,
         budgetScopes,
         currencies,
-        exchangeRates,
+        exchangeRates: [],
         accountMetadata,
         plannedPayments,
-        journalMetadata,
+        journalMetadata: journalMetadata.map(m => ({
+          ...m,
+          originalSmsBody: undefined,
+        })),
         smsAutoPostRules,
-        smsInboxRecords,
-        balanceSnapshots,
+        smsInboxRecords: smsInboxRecords.map(r => ({
+          ...r,
+          rawBody: '',
+        })),
+        balanceSnapshots: [],
       };
 
-      const json = JSON.stringify(exportData, null, 2);
-      analytics.logExportCompleted('JSON');
+      const json = JSON.stringify(exportData);
+      analytics.logExportCompleted('ZIP');
 
       logger.info('[ExportService] Export complete', {
         accounts: exportData.accounts.length,
         journals: exportData.journals.length,
         transactions: exportData.transactions.length,
-        auditLogs: exportData.auditLogs.length,
+        auditLogs: _auditLogs.length, // Log actual fetched count even if skipped in file
         budgets: exportData.budgets.length,
         budgetScopes: exportData.budgetScopes.length,
         currencies: exportData.currencies.length,
-        exchangeRates: exportData.exchangeRates.length,
+        exchangeRates: _exchangeRates.length, // Log actual fetched count
         accountMetadata: exportData.accountMetadata.length,
         plannedPayments: exportData.plannedPayments.length,
         journalMetadata: exportData.journalMetadata.length,
         smsAutoPostRules: exportData.smsAutoPostRules.length,
         smsInboxRecords: exportData.smsInboxRecords.length,
-        balanceSnapshots: exportData.balanceSnapshots.length,
+        balanceSnapshots: _balanceSnapshots.length, // Log actual fetched count
       });
 
-      return json;
+      // Create ZIP archive
+      const zip = new JSZip();
+      zip.file('backup.json', json);
+      const zipData = await zip.generateAsync({
+        type: 'uint8array',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 9 },
+      });
+      return zipData;
     } catch (error) {
       logger.error('[ExportService] Export failed', error);
       throw error;

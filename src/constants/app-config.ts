@@ -420,6 +420,9 @@ export const AppConfig = {
       data: {
         exportDesc: 'Export your ledger to a JSON backup file.',
         exportBtn: 'Create Backup',
+        exportingTitle: 'Exporting Backup',
+        exportingWait: 'Optimizing and compressing data...',
+        exportingHint: 'This may take a moment for large ledgers.',
         exportFilenameLabel: 'Filename',
         exportFilenamePlaceholder: 'e.g., my-balance-backup',
         importBtn: 'Restore Backup',

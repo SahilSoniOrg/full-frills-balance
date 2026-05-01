@@ -128,8 +128,36 @@ export default function DataManagementSettingsScreen() {
         </View>
       </Modal>
 
+      {/* Exporting Data Loader */}
+      <Modal visible={isExporting} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
+            <View style={styles.modalIconRow}>
+              <AppIcon name="document" size={40} color={theme.primary} />
+            </View>
+            <AppText variant="subheading" style={styles.modalTitle}>
+              {AppConfig.strings.settings.data.exportingTitle}
+            </AppText>
+            <View style={styles.spinnerContainer}>
+              {/* Spinner would go here, but using a simple text fallback for now as per design system */}
+              <AppText variant="body" color="secondary" style={styles.modalStatus}>
+                {AppConfig.strings.settings.data.exportingWait}
+              </AppText>
+            </View>
+            <AppText variant="caption" color="secondary" style={styles.modalHint}>
+              {AppConfig.strings.settings.data.exportingHint}
+            </AppText>
+          </View>
+        </View>
+      </Modal>
+
       {/* Export Naming Modal */}
-      <Modal visible={isNamingExport} transparent animationType="slide" statusBarTranslucent>
+      <Modal
+        visible={isNamingExport && !isExporting}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
             <View style={styles.modalIconRow}>
@@ -222,6 +250,10 @@ const styles = StyleSheet.create({
   modalActionRow: {
     flexDirection: 'row',
     width: '100%',
+    alignItems: 'center',
+  },
+  spinnerContainer: {
+    paddingVertical: Spacing.md,
     alignItems: 'center',
   },
 });

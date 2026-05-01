@@ -8,6 +8,7 @@ import { alert, confirm, toast } from '@/src/utils/alerts';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
+import { bytesToBase64 } from '@/src/utils/serialization';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
@@ -109,6 +110,8 @@ export function useSettingsViewModel(): SettingsViewModel {
   const onConfirmExport = useCallback(async () => {
     setIsNamingExport(false);
     setIsExporting(true);
+    // Yield to let UI show the loader before heavy work
+    await new Promise(resolve => setTimeout(resolve, 200));
     try {
       const jsonData = await exportToJSON();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -119,8 +122,8 @@ export function useSettingsViewModel(): SettingsViewModel {
         .replace(/[^a-z0-9-_]/gi, '-')
         .substring(0, 50);
       const filename = sanitizedName
-        ? `${sanitizedName}-${timestamp}.json`
-        : `balance-export-${timestamp}.json`;
+        ? `${sanitizedName}-${timestamp}.zip`
+        : `balance-export-${timestamp}.zip`;
 
       // Track Analytics
       analytics.trackFeatureUsage('settings', 'export_data', {
@@ -130,7 +133,7 @@ export function useSettingsViewModel(): SettingsViewModel {
       });
 
       if (Platform.OS === 'web') {
-        const blob = new Blob([jsonData], { type: 'application/json' });
+        const blob = new Blob([jsonData.buffer as ArrayBuffer], { type: 'application/zip' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -142,8 +145,13 @@ export function useSettingsViewModel(): SettingsViewModel {
         return;
       }
 
+      // Convert Uint8Array to Base64 for Expo FileSystem
+      const base64Encoded = bytesToBase64(jsonData);
+
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
-      await FileSystem.writeAsStringAsync(fileUri, jsonData);
+      await FileSystem.writeAsStringAsync(fileUri, base64Encoded, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
       // On Android, provide an option to save to a user-selected location
       if (Platform.OS === 'android') {
@@ -154,9 +162,11 @@ export function useSettingsViewModel(): SettingsViewModel {
             const fileLocation = await FileSystem.StorageAccessFramework.createFileAsync(
               permissions.directoryUri,
               filename,
-              'application/json',
+              'application/zip',
             );
-            await FileSystem.writeAsStringAsync(fileLocation, jsonData);
+            await FileSystem.writeAsStringAsync(fileLocation, base64Encoded, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
             toast.success('Backup saved successfully');
           } catch (err) {
             logger.error('[onConfirmExport] SAF save failed', err);
@@ -173,7 +183,7 @@ export function useSettingsViewModel(): SettingsViewModel {
           const canShare = await Sharing.isAvailableAsync();
           if (canShare) {
             await Sharing.shareAsync(fileUri, {
-              mimeType: 'application/json',
+              mimeType: 'application/zip',
               dialogTitle: 'Export Your Balance Data',
             });
           } else {

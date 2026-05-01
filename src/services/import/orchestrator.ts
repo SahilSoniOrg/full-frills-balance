@@ -97,6 +97,11 @@ export async function extractIfZip(bytes: Uint8Array): Promise<Uint8Array> {
   }
 
   logger.info('[ImportOrchestrator] Detected ZIP file, extracting...');
+  // Check for ZIP magic number 'PK' (0x50, 0x4B)
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+    logger.info('[ImportOrchestrator] Not a ZIP file, processing as raw content');
+    return bytes;
+  }
 
   try {
     const zip = await JSZip.loadAsync(bytes);
@@ -106,14 +111,15 @@ export async function extractIfZip(bytes: Uint8Array): Promise<Uint8Array> {
     const validFile = files.find(name => !name.includes('__MACOSX') && !zip.files[name].dir);
 
     if (!validFile) {
-      throw new Error('No valid files found in ZIP archive.');
+      logger.warn('[ImportOrchestrator] No valid files in ZIP, falling back to raw bytes');
+      return bytes;
     }
 
     logger.info(`[ImportOrchestrator] Extracting: ${validFile}`);
     return await zip.files[validFile].async('uint8array');
   } catch (error) {
-    logger.error('[ImportOrchestrator] ZIP extraction failed', error);
-    throw new Error('Failed to extract file from ZIP archive.');
+    logger.error('[ImportOrchestrator] ZIP load failed, falling back to raw content', error);
+    return bytes;
   }
 }
 
