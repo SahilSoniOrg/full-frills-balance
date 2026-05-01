@@ -36,6 +36,16 @@ export async function prepareJournalData(data: CreateJournalData): Promise<Prepa
     amount: roundToPrecision(t.amount, accountPrecisions.get(t.accountId) ?? 2),
   }));
 
+  // Hard invariant: every leg must have a valid account. A null accountId produces
+  // a 1-legged journal that silently corrupts running_balance and is invisible to
+  // the integrity scanner (WHERE account_id = ? won't match NULL rows).
+  const missingAccount = roundedTransactions.find(t => !t.accountId);
+  if (missingAccount) {
+    throw new Error(
+      `[prepareJournalData] All journal transactions must have a valid accountId. Got: ${JSON.stringify(missingAccount)}`,
+    );
+  }
+
   const validation = accountingService.validateJournal(
     roundedTransactions.map(t => ({
       amount: t.amount,

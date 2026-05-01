@@ -8,7 +8,6 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace, traceService } from '@/src/utils/TraceService';
-import { hashString } from '@/src/utils/hashUtils';
 import { Money } from '../utils/money';
 import { preferences } from '../utils/preferences';
 
@@ -19,7 +18,7 @@ interface CachedHierarchy {
   depthCache: Map<string, number>;
   levelMap: Map<number, string[]>;
   maxDepth: number;
-  fingerprint: bigint; // 64-bit Structural hash for cache key
+  fingerprint: string; // 100% Deterministic string hash for cache key
 }
 
 export class BalanceService {
@@ -40,12 +39,11 @@ export class BalanceService {
       if (accounts.length === 0) return;
 
       // 1. Build/Retrieve hierarchy (Memoized)
-      // Optimization: Using 64-bit non-commutative polynomial fingerprint for elite collision resistance
-      const fingerPrint = accounts.reduce((acc, a) => {
-        // use 31n for BigInt polynomial hash
-        const idHash = BigInt(hashString(`${a.id}:${a.parentAccountId || ''}`));
-        return acc * 31n + idHash;
-      }, BigInt(accounts.length));
+      // Optimization: String serialization for absolute collision resistance
+      const fingerPrint = accounts
+        .map(a => `${a.id}:${a.parentAccountId || ''}:${a.updatedAt?.getTime() || 0}`)
+        .sort()
+        .join('|');
 
       if (!this.hierarchyCache || this.hierarchyCache.fingerprint !== fingerPrint) {
         this.rebuildHierarchyCache(accounts, fingerPrint);
@@ -255,7 +253,7 @@ export class BalanceService {
     }
   }
 
-  private rebuildHierarchyCache(accounts: Account[], fingerprint: bigint) {
+  private rebuildHierarchyCache(accounts: Account[], fingerprint: string) {
     const parentIdMap = new Map<string, string>();
     accounts.forEach(a => {
       if (a.parentAccountId) parentIdMap.set(a.id, a.parentAccountId);

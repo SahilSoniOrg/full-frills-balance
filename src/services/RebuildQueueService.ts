@@ -107,8 +107,17 @@ class RebuildQueueService {
    */
   enqueueMany(accountIds: string[] | Set<string>, fromDate: number = Date.now()): void {
     const ids = Array.isArray(accountIds) ? accountIds : Array.from(accountIds);
+    let changed = false;
     for (const id of ids) {
-      this.enqueue(id, fromDate);
+      const existingDate = this.queue.get(id);
+      if (existingDate === undefined || fromDate < existingDate) {
+        this.queue.set(id, fromDate);
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.syncQueueToDisk();
+      this.scheduleProcessing();
     }
   }
 

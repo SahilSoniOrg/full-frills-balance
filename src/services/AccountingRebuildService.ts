@@ -133,36 +133,40 @@ export class AccountingRebuildService {
       }
     }
 
-    // 4. Batch updates
+    // 4. Fetch all data needed for rebuilding asynchronously first
     if (idsNeedingUpdate.size > 0 || snapshotsToCreate.length > 0) {
-      // Fetch ONLY the models that actually need updating
       const idsArray = Array.from(idsNeedingUpdate.keys());
       const BATCH_SIZE = AppConfig.performance.rebuild.batchSize;
+      const allModelsToUpdate: Transaction[] = [];
 
       for (let i = 0; i < idsArray.length; i += BATCH_SIZE) {
         const chunkIds = idsArray.slice(i, i + BATCH_SIZE);
-        const modelsToUpdate = await database.collections
+        const models = await database.collections
           .get<Transaction>('transactions')
           .query(Q.where('id', Q.oneOf(chunkIds)))
           .fetch();
-
-        const preparedUpdates = modelsToUpdate.map(m =>
-          m.prepareUpdate((record: Transaction) => {
-            record.runningBalance = idsNeedingUpdate.get(m.id) || 0;
-          }),
-        );
-        await database.batch(...preparedUpdates);
+        allModelsToUpdate.push(...models);
       }
 
-      // 5. Finalize in a single batch: delete old snapshots, create new ones, and update account
-      const finalBatch: Model[] = [];
-
-      // Delete invalidated snapshots after the starting point
+      // Fetch invalidated snapshots after the starting point
       const invalidatedSnapshots = await database.collections
         .get('balance_snapshots')
         .query(Q.where('account_id', accountId), Q.where('transaction_date', Q.gt(startDate)))
         .fetch();
 
+      // 5. Finalize inside the existing parent write, preparing and batching SYNCHRONOUSLY to prevent diagnostic errors.
+      const finalBatch: Model[] = [];
+
+      // Prepare updates for transaction running balances
+      for (const m of allModelsToUpdate) {
+        finalBatch.push(
+          m.prepareUpdate((record: Transaction) => {
+            record.runningBalance = idsNeedingUpdate.get(m.id) || 0;
+          }),
+        );
+      }
+
+      // Delete invalidated snapshots after the starting point
       if (invalidatedSnapshots.length > 0) {
         finalBatch.push(...invalidatedSnapshots.map(s => s.prepareDestroyPermanently()));
       }

@@ -279,6 +279,37 @@ export class JournalRepository {
     }
   }
 
+  /**
+   * Prepare-only version of patchMetadata.
+   *
+   * Returns a prepareUpdate / prepareCreate model op that can be included in
+   * a parent database.batch() call WITHOUT opening its own write transaction.
+   * Use this whenever calling from inside an existing database.write() block
+   * to avoid the nested-write violation.
+   */
+  async prepareMetadataPatch(
+    journalId: string,
+    partialMetadata: Record<string, unknown>,
+    source?: string,
+  ): Promise<Model> {
+    const existingMeta = await this.findMetadataByJournalId(journalId);
+    if (existingMeta) {
+      return existingMeta.prepareUpdate((record: JournalMetadata) => {
+        const currentJson = safeParseJSON<Record<string, unknown>>(record.metadataJson, {});
+        record.metadataJson = JSON.stringify({ ...currentJson, ...partialMetadata });
+        if (source) record.importSource = source;
+        record.updatedAt = new Date();
+      });
+    }
+    return this.journalMetadata.prepareCreate((record: JournalMetadata) => {
+      record.journalId = journalId;
+      record.importSource = source || 'manual';
+      record.metadataJson = JSON.stringify(partialMetadata);
+      record.createdAt = new Date();
+      record.updatedAt = new Date();
+    });
+  }
+
   async findJournalByOriginalSmsId(originalSmsId: string): Promise<Journal | null> {
     const metadata = await this.journalMetadata
       .query(Q.where('original_sms_id', originalSmsId))
@@ -480,6 +511,7 @@ export class JournalRepository {
   async updateJournalWithTransactions(
     journalId: string,
     journalData: PrepareCreateJournalData,
+    extraOpCreator?: () => Model, // Synchronous callback to build extra op atomically
   ): Promise<Journal> {
     const {
       transactions: transactionData,
@@ -494,6 +526,7 @@ export class JournalRepository {
     if (!existingJournal) throw new Error('Journal not found');
 
     const oldTransactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch();
+    const existingMeta = metadata ? await this.findMetadataByJournalId(journalId) : null;
 
     const start = Date.now();
     // C-1 fix reverted: return database.write directly.
@@ -542,7 +575,6 @@ export class JournalRepository {
       const batchOps: Model[] = [journalUpdate, ...deleteUpdates, ...createUpdates];
 
       if (metadata) {
-        const existingMeta = await this.findMetadataByJournalId(journalId);
         if (existingMeta) {
           const metaUpdate = existingMeta.prepareUpdate((m: JournalMetadata) => {
             m.importSource = metadata.importSource;
@@ -567,6 +599,9 @@ export class JournalRepository {
           batchOps.push(metaRecord);
         }
       }
+
+      // Include any extra op synchronously (e.g. audit log callback) in the same atomic batch.
+      if (extraOpCreator) batchOps.push(extraOpCreator());
 
       await database.batch(...batchOps);
 
@@ -628,31 +663,21 @@ export class JournalRepository {
     });
   }
 
-  async recoverJournal(journalId: string): Promise<Journal> {
+  /**
+   * Fetches a journal and its transactions for soft-deletion/recovery.
+   * Does NOT call prepareUpdate synchronously, avoiding the yield/diagnostic error.
+   */
+  async fetchJournalForDeletion(
+    journalId: string,
+  ): Promise<{ journal: Journal; transactions: Transaction[] } | null> {
     const journal = await this.find(journalId);
-    if (!journal) throw new Error('Journal not found');
+    if (!journal) return null;
 
     const associatedTransactions = await this.transactions
       .query(Q.where('journal_id', journalId))
       .fetch();
 
-    await database.write(async () => {
-      const journalUpdate = journal.prepareUpdate(j => {
-        j.deletedAt = undefined;
-        j.updatedAt = new Date();
-      });
-
-      const transactionUpdates = associatedTransactions.map(tx =>
-        tx.prepareUpdate(t => {
-          t.deletedAt = undefined;
-          t.updatedAt = new Date();
-        }),
-      );
-
-      await database.batch(journalUpdate, ...transactionUpdates);
-    });
-
-    return journal;
+    return { journal, transactions: associatedTransactions };
   }
 
   async markReversed(originalJournalId: string, reversingJournalId: string): Promise<void> {

@@ -68,6 +68,12 @@ class ReactiveDataService {
       return this._dashboardCache.get(targetCurrency)!;
     }
 
+    // Cap to 1 entry: currency changes are rare; evict any stale graph immediately
+    // so we don't accumulate dangling combineLatest chains over the bridge.
+    if (this._dashboardCache.size > 0) {
+      this._dashboardCache.clear();
+    }
+
     const obs$ = combineLatest([
       accountRepository.observeAll(),
       transactionRepository.observeActiveWithColumns([

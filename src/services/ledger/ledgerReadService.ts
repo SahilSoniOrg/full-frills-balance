@@ -32,9 +32,12 @@ export class LedgerReadService {
           const ids = this.getAccountTreeIds(rootId, accounts);
           ids.forEach(id => allIds.add(id));
         }
-        return Array.from(allIds);
+        return Array.from(allIds).sort();
       }),
-      distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
+      // Use a sorted canonical string as the identity gate.
+      // This prevents the 4-subscription cascade from firing when WatermelonDB
+      // re-emits the same accounts in a different order (e.g. after a reorder op).
+      distinctUntilChanged((a, b) => a.join(',') === b.join(',')),
     );
 
     const transactions$ = descendantIds$.pipe(

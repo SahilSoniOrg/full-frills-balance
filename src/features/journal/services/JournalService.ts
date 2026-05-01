@@ -7,6 +7,7 @@ import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDateRange } from '@/src/hooks/usePaginatedObservable';
@@ -52,38 +53,45 @@ export class JournalService {
     const originalTransactions = await transactionRepository.findByJournal(journalId);
     const prepared = await prepareJournalData(data);
 
-    const journal = await journalRepository.updateJournalWithTransactions(journalId, {
-      ...data,
-      transactions: prepared.transactions,
-      totalAmount: prepared.totalAmount,
-      displayType: prepared.displayType,
-      calculatedBalances: prepared.calculatedBalances,
-      metadata: data.metadata, // Ensure metadata is passed for persistence
-    });
-
-    const mappedBeforeTransactions = originalTransactions.map(t => mapTransactionToAudit(t));
-    const mappedAfterTransactions = data.transactions.map(t => mapTransactionToAudit(t));
-
-    await auditService.log({
-      entityType: 'journal',
-      entityId: journalId,
-      action: AuditAction.UPDATE,
-      changes: {
-        before: {
-          description: originalJournal.description,
-          journalDate: originalJournal.journalDate,
-          currencyCode: originalJournal.currencyCode,
-          status: originalJournal.status,
-          totalAmount: originalJournal.totalAmount,
-          transactions: mappedBeforeTransactions,
+    // Build the audit op inside the synchronous callback creator.
+    const extraOpCreator = () => {
+      const mappedBeforeTransactions = originalTransactions.map(t => mapTransactionToAudit(t));
+      const mappedAfterTransactions = data.transactions.map(t => mapTransactionToAudit(t));
+      return auditRepository.prepareLog({
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: {
+            description: originalJournal.description,
+            journalDate: originalJournal.journalDate,
+            currencyCode: originalJournal.currencyCode,
+            status: originalJournal.status,
+            totalAmount: originalJournal.totalAmount,
+            transactions: mappedBeforeTransactions,
+          },
+          after: {
+            description: data.description,
+            journalDate: data.journalDate,
+            transactions: mappedAfterTransactions,
+          },
         },
-        after: {
-          description: data.description,
-          journalDate: data.journalDate,
-          transactions: mappedAfterTransactions,
-        },
+      });
+    };
+
+    // updateJournalWithTransactions opens its own write — pass the creator.
+    const journal = await journalRepository.updateJournalWithTransactions(
+      journalId,
+      {
+        ...data,
+        transactions: prepared.transactions,
+        totalAmount: prepared.totalAmount,
+        displayType: prepared.displayType,
+        calculatedBalances: prepared.calculatedBalances,
+        metadata: data.metadata,
       },
-    });
+      extraOpCreator,
+    );
 
     const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
     const allAccountsToRebuild = new Set<string>([
@@ -97,26 +105,40 @@ export class JournalService {
   }
 
   async deleteJournal(journalId: string): Promise<void> {
-    const journal = await journalRepository.find(journalId);
-    if (!journal) return;
+    const prepared = await journalRepository.fetchJournalForDeletion(journalId);
+    if (!prepared) return;
 
-    const transactions = await transactionRepository.findByJournal(journalId);
+    const { journal, transactions } = prepared;
 
-    await journalRepository.deleteJournal(journalId);
+    await database.write(async () => {
+      const now = new Date();
+      const journalOp = journal.prepareUpdate(j => {
+        j.deletedAt = now;
+        j.updatedAt = now;
+      });
+      const txOps = transactions.map(tx =>
+        tx.prepareUpdate(t => {
+          t.deletedAt = now;
+          t.updatedAt = now;
+        }),
+      );
 
-    await auditService.log({
-      entityType: 'journal',
-      entityId: journalId,
-      action: AuditAction.DELETE,
-      changes: {
-        before: {
-          description: journal.description,
-          totalAmount: journal.totalAmount,
-          currencyCode: journal.currencyCode,
-          transactions: transactions.map(t => mapTransactionToAudit(t)),
+      const auditOp = auditRepository.prepareLog({
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.DELETE,
+        changes: {
+          before: {
+            description: journal.description,
+            totalAmount: journal.totalAmount,
+            currencyCode: journal.currencyCode,
+            transactions: transactions.map(t => mapTransactionToAudit(t)),
+          },
+          after: { deletedAt: now },
         },
-        after: { deletedAt: new Date() },
-      },
+      });
+
+      await database.batch(journalOp, ...txOps, auditOp);
     });
 
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
@@ -124,18 +146,36 @@ export class JournalService {
   }
 
   async recoverJournal(journalId: string): Promise<Journal> {
-    const journalBefore = await journalRepository.find(journalId);
-    const journal = await journalRepository.recoverJournal(journalId);
-    const transactions = await transactionRepository.findByJournal(journalId);
+    const prepared = await journalRepository.fetchJournalForDeletion(journalId);
+    if (!prepared) throw new Error('Journal not found');
 
-    await auditService.log({
-      entityType: 'journal',
-      entityId: journalId,
-      action: AuditAction.UPDATE,
-      changes: {
-        before: { deletedAt: journalBefore?.deletedAt },
-        after: { restoredAt: new Date() },
-      },
+    const { journal, transactions } = prepared;
+    const prevDeletedAt = journal.deletedAt ? new Date(journal.deletedAt.getTime()) : undefined;
+
+    await database.write(async () => {
+      const now = new Date();
+      const journalOp = journal.prepareUpdate(j => {
+        j.deletedAt = undefined;
+        j.updatedAt = now;
+      });
+      const txOps = transactions.map(tx =>
+        tx.prepareUpdate(t => {
+          t.deletedAt = undefined;
+          t.updatedAt = now;
+        }),
+      );
+
+      const auditOp = auditRepository.prepareLog({
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { deletedAt: prevDeletedAt },
+          after: { restoredAt: now },
+        },
+      });
+
+      await database.batch(journalOp, ...txOps, auditOp);
     });
 
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
@@ -212,26 +252,30 @@ export class JournalService {
     // M-3 fix evolved: status-only patch + date propagation (F-14 fix).
     // Update both the journal date and all associated transaction dates to "now".
     const originalDate = journal.journalDate;
-    await database.write(async () => {
-      // Store original planned date in metadata for potential unposting
-      await journalRepository.patchMetadata(
-        journalId,
-        { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
-        MetadataSources.MANUAL_POST,
-      );
 
-      await journal.update((record: Journal) => {
-        record.status = JournalStatus.POSTED;
-        record.journalDate = postTime;
+    // Prepare metadata op BEFORE the write block (read-only work outside the lock).
+    const metadataOp = await journalRepository.prepareMetadataPatch(
+      journalId,
+      { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
+      MetadataSources.MANUAL_POST,
+    );
+
+    const journalOp = journal.prepareUpdate((record: Journal) => {
+      record.status = JournalStatus.POSTED;
+      record.journalDate = postTime;
+      record.updatedAt = new Date();
+    });
+
+    const txOps = transactions.map(tx =>
+      tx.prepareUpdate((record: Transaction) => {
+        record.transactionDate = postTime;
         record.updatedAt = new Date();
-      });
+      }),
+    );
 
-      for (const tx of transactions) {
-        await tx.update((record: Transaction) => {
-          record.transactionDate = postTime;
-          record.updatedAt = new Date();
-        });
-      }
+    // Single atomic write: metadata + journal status + transaction dates.
+    await database.write(async () => {
+      await database.batch(metadataOp, journalOp, ...txOps);
     });
 
     // 2. Audit log
@@ -450,7 +494,8 @@ export class JournalService {
           accountId: l.accountId,
           amount: sanitizeAmount(l.amount) || 0,
           transactionType: l.transactionType,
-          notes: l.notes.trim() || undefined,
+          notes:
+            l.notes && typeof l.notes === 'string' && l.notes.trim() ? l.notes.trim() : undefined,
           exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
           currencyCode: l.accountCurrency,
         })),

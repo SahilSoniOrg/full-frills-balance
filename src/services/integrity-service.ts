@@ -49,6 +49,24 @@ export interface IntegrityCheckResult {
 
 export class IntegrityService {
   /**
+   * Scans for any transactions with NULL/missing account_id.
+   * Fails loudly to prevent old corrupted records from lingering invisibly.
+   */
+  async scanForNullAccountTransactions(): Promise<void> {
+    const { database } = await import('@/src/data/database/Database');
+    const nullAccountTxs = await database.collections
+      .get('transactions')
+      .query(Q.where('account_id', Q.eq(null)))
+      .fetch();
+
+    if (nullAccountTxs.length > 0) {
+      throw new Error(
+        `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId!`,
+      );
+    }
+  }
+
+  /**
    * Computes account balance from scratch.
    *
    * Optimized: Uses a raw SQL aggregate (SUM) if available on the adapter,
@@ -242,6 +260,8 @@ export class IntegrityService {
     const totalStart = Date.now();
     logger.info('[IntegrityService] Force-running full balance verification (manual trigger)...');
 
+    await this.scanForNullAccountTransactions();
+
     const accounts = await accountRepository.findAll();
     const total = accounts.length;
     const results: BalanceVerificationResult[] = [];
@@ -342,6 +362,8 @@ export class IntegrityService {
    */
   async runStartupCheck(): Promise<IntegrityCheckResult> {
     logger.info('[IntegrityService] Starting startup integrity check...');
+
+    await this.scanForNullAccountTransactions();
 
     const accountsExist = await accountRepository.exists();
     if (!accountsExist) {
