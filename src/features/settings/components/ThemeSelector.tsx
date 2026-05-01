@@ -1,199 +1,172 @@
-import { AppCard, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, ThemeId, ThemeIds } from '@/src/constants';
+import { AppConfig, ThemeId, ThemeIds, ThemeSchemes } from '@/src/constants';
+import { AppIcon, AppText } from '@/src/components/core';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTheme } from '@/src/hooks/use-theme';
+import { withOpacity } from '@/src/utils/color-math';
 
-interface ThemeSelectorProps {
+type ThemeSelectorProps = {
   themeId: ThemeId;
   setThemeId: (id: ThemeId) => void;
   theme: any;
-}
+};
+
+const THEME_OPTIONS = [
+  {
+    id: ThemeIds.DEEP_SPACE,
+    label: AppConfig.strings.settings.appearance.deepSpace.label,
+    desc: AppConfig.strings.settings.appearance.deepSpace.desc,
+  },
+  {
+    id: ThemeIds.GOLD_OBSIDIAN,
+    label: AppConfig.strings.settings.appearance.goldObsidian.label,
+    desc: AppConfig.strings.settings.appearance.goldObsidian.desc,
+  },
+  {
+    id: ThemeIds.IVY,
+    label: AppConfig.strings.settings.appearance.ivy.label,
+    desc: AppConfig.strings.settings.appearance.ivy.desc,
+  },
+  {
+    id: ThemeIds.EDITORIAL,
+    label: AppConfig.strings.settings.appearance.editorial.label,
+    desc: AppConfig.strings.settings.appearance.editorial.desc,
+  },
+] as const;
 
 export function ThemeSelector({ themeId, setThemeId, theme }: ThemeSelectorProps) {
+  const { onContrast } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <AppText variant="subheading" style={styles.sectionTitle}>
-        {AppConfig.strings.settings.appearance.themeTitle}
-      </AppText>
-      <AppText variant="body" color="secondary" style={styles.sectionDesc}>
-        {AppConfig.strings.settings.appearance.themeDesc}
-      </AppText>
+    <View>
+      <View style={styles.sectionHeader}>
+        <AppText variant="subheading">{AppConfig.strings.settings.appearance.themeTitle}</AppText>
+        <AppText variant="caption" color="secondary" style={styles.sectionDesc}>
+          {AppConfig.strings.settings.appearance.themeDesc}
+        </AppText>
+      </View>
 
-      <View style={styles.optionsContainer}>
-        <Pressable onPress={() => setThemeId(ThemeIds.DEEP_SPACE)}>
-          <AppCard
-            elevation={themeId === ThemeIds.DEEP_SPACE ? 'sm' : 'none'}
-            style={[
-              styles.optionCard,
-              { borderWidth: themeId === ThemeIds.DEEP_SPACE ? 2 : 1 },
-              { borderColor: themeId === ThemeIds.DEEP_SPACE ? theme.primary : theme.border },
-            ]}
-          >
-            <View style={styles.optionContent}>
-              <View style={[styles.colorPreview, { backgroundColor: '#0F1A25' }]} />
-              <View style={{ flex: 1 }}>
-                <AppText weight="bold">
-                  {AppConfig.strings.settings.appearance.deepSpace.label}
+      <View style={styles.grid}>
+        {THEME_OPTIONS.map(option => {
+          const selected = themeId === option.id;
+          const light = ThemeSchemes[option.id].light;
+          const dark = ThemeSchemes[option.id].dark;
+
+          const bg = selected ? light.primaryLight : theme.surface;
+          const textColor = onContrast(bg);
+
+          return (
+            <Pressable
+              key={option.id}
+              onPress={() => setThemeId(option.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              style={({ pressed }) => [
+                styles.tile,
+                {
+                  backgroundColor: bg,
+                  borderColor: selected ? theme.primary : theme.border,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
+            >
+              <View style={styles.swatchRail}>
+                {[dark.background, dark.surface, dark.primary, light.background].map(
+                  (color, index) => (
+                    <View
+                      key={`${option.id}-${index}`}
+                      style={[
+                        styles.swatch,
+                        {
+                          backgroundColor: color,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                    />
+                  ),
+                )}
+              </View>
+
+              <View style={styles.tileText}>
+                <AppText
+                  variant="body"
+                  weight="semibold"
+                  numberOfLines={1}
+                  style={{ color: textColor }}
+                >
+                  {option.label}
                 </AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.settings.appearance.deepSpace.desc}
+                <AppText
+                  variant="caption"
+                  numberOfLines={1}
+                  style={{ color: withOpacity(textColor, 0.7) }}
+                >
+                  {option.desc}
                 </AppText>
               </View>
-              {themeId === ThemeIds.DEEP_SPACE && (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: theme.primary, backgroundColor: theme.primary },
-                  ]}
-                />
-              )}
-              {themeId !== ThemeIds.DEEP_SPACE && (
-                <View style={[styles.radio, { borderColor: theme.border }]} />
-              )}
-            </View>
-          </AppCard>
-        </Pressable>
 
-        <Pressable onPress={() => setThemeId(ThemeIds.GOLD_OBSIDIAN)}>
-          <AppCard
-            elevation={themeId === ThemeIds.GOLD_OBSIDIAN ? 'sm' : 'none'}
-            style={[
-              styles.optionCard,
-              { borderWidth: themeId === ThemeIds.GOLD_OBSIDIAN ? 2 : 1 },
-              { borderColor: themeId === ThemeIds.GOLD_OBSIDIAN ? theme.primary : theme.border },
-            ]}
-          >
-            <View style={styles.optionContent}>
-              <View style={[styles.colorPreview, { backgroundColor: '#C5A050' }]} />
-              <View style={{ flex: 1 }}>
-                <AppText weight="bold">
-                  {AppConfig.strings.settings.appearance.goldObsidian.label}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.settings.appearance.goldObsidian.desc}
-                </AppText>
-              </View>
-              {themeId === ThemeIds.GOLD_OBSIDIAN && (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: theme.primary, backgroundColor: theme.primary },
-                  ]}
-                />
-              )}
-              {themeId !== ThemeIds.GOLD_OBSIDIAN && (
-                <View style={[styles.radio, { borderColor: theme.border }]} />
-              )}
-            </View>
-          </AppCard>
-        </Pressable>
-
-        <Pressable onPress={() => setThemeId(ThemeIds.IVY)}>
-          <AppCard
-            elevation={themeId === ThemeIds.IVY ? 'sm' : 'none'}
-            style={[
-              styles.optionCard,
-              { borderWidth: themeId === ThemeIds.IVY ? 2 : 1 },
-              { borderColor: themeId === ThemeIds.IVY ? theme.primary : theme.border },
-            ]}
-          >
-            <View style={styles.optionContent}>
               <View
                 style={[
-                  styles.colorPreview,
-                  { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#ccc' },
+                  styles.check,
+                  {
+                    backgroundColor: selected ? theme.primary : theme.surfaceSecondary,
+                    borderColor: selected ? theme.primary : theme.border,
+                  },
                 ]}
-              />
-              <View style={{ flex: 1 }}>
-                <AppText weight="bold">{AppConfig.strings.settings.appearance.ivy.label}</AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.settings.appearance.ivy.desc}
-                </AppText>
+              >
+                {selected && <AppIcon name="check" size={13} color={theme.onPrimary} />}
               </View>
-              {themeId === ThemeIds.IVY && (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: theme.primary, backgroundColor: theme.primary },
-                  ]}
-                />
-              )}
-              {themeId !== ThemeIds.IVY && (
-                <View style={[styles.radio, { borderColor: theme.border }]} />
-              )}
-            </View>
-          </AppCard>
-        </Pressable>
-
-        <Pressable onPress={() => setThemeId(ThemeIds.EDITORIAL)}>
-          <AppCard
-            elevation={themeId === ThemeIds.EDITORIAL ? 'sm' : 'none'}
-            style={[
-              styles.optionCard,
-              { borderWidth: themeId === ThemeIds.EDITORIAL ? 2 : 1 },
-              { borderColor: themeId === ThemeIds.EDITORIAL ? theme.primary : theme.border },
-            ]}
-          >
-            <View style={styles.optionContent}>
-              <View style={[styles.colorPreview, { backgroundColor: '#2C3E50' }]} />
-              <View style={{ flex: 1 }}>
-                <AppText weight="bold">
-                  {AppConfig.strings.settings.appearance.editorial.label}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.settings.appearance.editorial.desc}
-                </AppText>
-              </View>
-              {themeId === ThemeIds.EDITORIAL && (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: theme.primary, backgroundColor: theme.primary },
-                  ]}
-                />
-              )}
-              {themeId !== ThemeIds.EDITORIAL && (
-                <View style={[styles.radio, { borderColor: theme.border }]} />
-              )}
-            </View>
-          </AppCard>
-        </Pressable>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.md,
+  sectionHeader: {
+    marginBottom: 12,
   },
   sectionDesc: {
-    marginBottom: Spacing.md,
+    marginTop: 4,
   },
-  optionsContainer: {
-    gap: Spacing.md,
-  },
-  optionCard: {
-    padding: Spacing.md,
-  },
-  optionContent: {
+  grid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  tile: {
+    width: '48%',
+    minHeight: 118,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  swatchRail: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 14,
+  },
+  swatch: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  tileText: {
+    paddingRight: 20,
+  },
+  check: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
     alignItems: 'center',
-    gap: Spacing.md,
-  },
-  colorPreview: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
+    justifyContent: 'center',
   },
 });

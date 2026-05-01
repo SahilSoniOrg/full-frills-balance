@@ -51,6 +51,10 @@ export interface SettingsViewModel {
   onPersonalizationSettings: () => void;
   onDataManagementSettings: () => void;
   onAppearanceSettings: () => void;
+  onPrivacySecuritySettings: () => void;
+  onAutomationSettings: () => void;
+  onMaintenanceSettings: () => void;
+  onAboutSupportSettings: () => void;
   onFixIntegrity: () => void;
   integrityProgress: number;
   integrityProgressMessage: string;
@@ -412,6 +416,10 @@ export function useSettingsViewModel(): SettingsViewModel {
     onPersonalizationSettings: AppNavigation.toPersonalizationSettings,
     onDataManagementSettings: AppNavigation.toDataManagementSettings,
     onAppearanceSettings: AppNavigation.toAppearanceSettings,
+    onPrivacySecuritySettings: AppNavigation.toPrivacySecuritySettings,
+    onAutomationSettings: AppNavigation.toAutomationSettings,
+    onMaintenanceSettings: AppNavigation.toMaintenanceSettings,
+    onAboutSupportSettings: AppNavigation.toAboutSupportSettings,
     onFixIntegrity,
     onCleanup,
     onFactoryReset,

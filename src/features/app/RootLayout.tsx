@@ -83,6 +83,9 @@ function getFlowContext(screenName: string): string | null {
   if (screenName.includes('import-selection')) return 'data_import';
   if (screenName.includes('audit-log')) return 'data_review';
   if (screenName.includes('appearance-settings')) return 'personalization';
+  if (screenName.includes('privacy-security-settings')) return 'privacy_security';
+  if (screenName.includes('automation-settings')) return 'automation';
+  if (screenName.includes('maintenance-settings')) return 'maintenance';
   return null;
 }
 
@@ -218,6 +221,10 @@ function AppContent() {
       />
       <Stack.Screen name="import-selection" options={{ headerShown: false }} />
       <Stack.Screen name="audit-log" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy-security-settings" options={{ headerShown: false }} />
+      <Stack.Screen name="automation-settings" options={{ headerShown: false }} />
+      <Stack.Screen name="maintenance-settings" options={{ headerShown: false }} />
+      <Stack.Screen name="about-support-settings" options={{ headerShown: false }} />
       <Stack.Screen
         name="appearance-settings"
         options={{ headerShown: false, presentation: 'modal' }}

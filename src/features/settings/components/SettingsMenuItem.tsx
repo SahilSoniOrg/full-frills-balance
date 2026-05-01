@@ -16,6 +16,7 @@ type SettingsMenuItemProps = {
   danger?: boolean;
   loading?: boolean;
   iconColor?: boolean;
+  prominent?: boolean;
 };
 
 /**
@@ -32,6 +33,7 @@ export function SettingsMenuItem({
   danger = false,
   loading = false,
   iconColor = undefined,
+  prominent = false,
 }: SettingsMenuItemProps) {
   const { theme } = useTheme();
 
@@ -41,18 +43,20 @@ export function SettingsMenuItem({
       const isActualIcon = isValidIconName(leftIcon);
       return (
         <Box
-          background={danger ? 'errorLight' : 'surfaceSecondary'}
-          borderRadius="r2"
+          background={danger ? 'errorLight' : prominent ? 'transparent' : 'surfaceSecondary'}
+          backgroundOpacity={prominent && !danger ? 'selection' : undefined}
+          borderRadius={prominent ? 'full' : 'r2'}
+          borderWidth={0}
           padding="xs"
           alignItems="center"
           justifyContent="center"
-          style={{ width: 32, height: 32 }}
+          style={{ width: prominent ? 34 : 32, height: prominent ? 34 : 32 }}
         >
           {isActualIcon ? (
             <AppIcon
               name={leftIcon}
-              size={20}
-              color={iconColor ? theme.primary : danger ? theme.error : theme.text}
+              size={prominent ? 21 : 20}
+              color={danger ? theme.error : iconColor || prominent ? theme.primary : theme.text}
             />
           ) : (
             <AppText variant="body" style={{ fontSize: 16 }}>
@@ -63,7 +67,7 @@ export function SettingsMenuItem({
       );
     }
     return (
-      <Box width={32} alignItems="center" justifyContent="center">
+      <Box width={prominent ? 34 : 32} alignItems="center" justifyContent="center">
         {leftIcon}
       </Box>
     );
@@ -78,18 +82,22 @@ export function SettingsMenuItem({
       <Inline
         align="center"
         justify="space-between"
-        paddingHorizontal="md"
-        paddingVertical="sm"
+        paddingHorizontal={prominent ? 'sm' : 'md'}
+        paddingVertical={prominent ? 'sm' : 'sm'}
         space="md"
       >
         <Inline align="center" space="md" flex={1}>
           {renderLeftIcon()}
           <Stack space={0} flex={1}>
-            <AppText variant="body" weight="medium" color={danger ? 'error' : 'text'}>
+            <AppText
+              variant="body"
+              weight={prominent ? 'semibold' : 'medium'}
+              color={danger ? 'error' : 'text'}
+            >
               {title}
             </AppText>
             {description && (
-              <AppText variant="caption" color="secondary" style={{ marginTop: 2 }}>
+              <AppText variant="caption" color="secondary" style={{ marginTop: prominent ? 3 : 2 }}>
                 {description}
               </AppText>
             )}

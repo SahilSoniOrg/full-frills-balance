@@ -1,49 +1,55 @@
-import { AppText } from '@/src/components/core';
-import { AppButton } from '@/src/components/core/AppButton';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppSegmentedControl, AppText } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-interface ModeSelectorProps {
-  themePreference: 'system' | 'light' | 'dark';
-  setThemePreference: (pref: 'system' | 'light' | 'dark') => void;
-}
+type ThemePreference = 'system' | 'light' | 'dark';
+
+type ModeSelectorProps = {
+  themePreference: ThemePreference;
+  setThemePreference: (pref: ThemePreference) => void;
+};
+
+const MODE_OPTIONS = [
+  { id: 'system', label: 'System' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+] as const;
 
 export function ModeSelector({ themePreference, setThemePreference }: ModeSelectorProps) {
   return (
-    <View style={styles.container}>
-      <AppText variant="subheading" style={styles.sectionTitle}>
-        {AppConfig.strings.settings.appearance.modeTitle}
-      </AppText>
-
-      <View style={styles.modeRow}>
-        {(['system', 'light', 'dark'] as const).map(pref => (
-          <AppButton
-            key={pref}
-            variant={themePreference === pref ? 'primary' : 'outline'}
-            size="sm"
-            onPress={() => setThemePreference(pref)}
-            style={{ flex: 1 }}
-          >
-            {pref.charAt(0).toUpperCase() + pref.slice(1)}
-          </AppButton>
-        ))}
+    <View>
+      <View style={styles.headerRow}>
+        <View style={styles.copy}>
+          <AppText variant="subheading">{AppConfig.strings.settings.appearance.modeTitle}</AppText>
+          <AppText variant="caption" color="secondary" style={styles.sectionDesc}>
+            Choose how the selected theme follows your device.
+          </AppText>
+        </View>
       </View>
+
+      <AppSegmentedControl
+        options={MODE_OPTIONS}
+        value={themePreference}
+        onChange={setThemePreference}
+        flex
+        size="md"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.md,
-  },
-  modeRow: {
+  headerRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  copy: {
+    flex: 1,
+  },
+  sectionDesc: {
+    marginTop: 4,
   },
 });

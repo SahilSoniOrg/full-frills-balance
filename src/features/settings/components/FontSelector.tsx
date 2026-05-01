@@ -1,172 +1,140 @@
-import { AppCard, AppText } from '@/src/components/core';
-import { AppConfig, FontId, FontIds, FontSchemes, Spacing } from '@/src/constants';
+import { AppConfig, FontId, FontIds, FontSchemes } from '@/src/constants';
+import { AppIcon, AppText } from '@/src/components/core';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-interface FontSelectorProps {
+type FontSelectorProps = {
   fontId: FontId;
   setFontId: (id: FontId) => void;
   theme: any;
-}
+};
+
+const FONT_OPTIONS = [
+  {
+    id: FontIds.DEEP_SPACE,
+    label: AppConfig.strings.settings.appearance.serifSans.label,
+    desc: AppConfig.strings.settings.appearance.serifSans.desc,
+  },
+  {
+    id: FontIds.IVY,
+    label: AppConfig.strings.settings.appearance.modernGeometric.label,
+    desc: AppConfig.strings.settings.appearance.modernGeometric.desc,
+  },
+  {
+    id: FontIds.EDITORIAL,
+    label: AppConfig.strings.settings.appearance.classicSerif.label,
+    desc: AppConfig.strings.settings.appearance.classicSerif.desc,
+  },
+] as const;
 
 export function FontSelector({ fontId, setFontId, theme }: FontSelectorProps) {
   return (
-    <View style={styles.container}>
-      <AppText variant="subheading" style={styles.sectionTitle}>
-        {AppConfig.strings.settings.appearance.typographyTitle}
-      </AppText>
-      <AppText variant="body" color="secondary" style={styles.sectionDesc}>
-        {AppConfig.strings.settings.appearance.typographyDesc}
-      </AppText>
+    <View>
+      <View style={styles.sectionHeader}>
+        <AppText variant="subheading">
+          {AppConfig.strings.settings.appearance.typographyTitle}
+        </AppText>
+        <AppText variant="caption" color="secondary" style={styles.sectionDesc}>
+          {AppConfig.strings.settings.appearance.typographyDesc}
+        </AppText>
+      </View>
 
-      <View style={styles.optionsContainer}>
-        <Pressable onPress={() => setFontId(FontIds.DEEP_SPACE)}>
-          <AppCard
-            elevation={fontId === FontIds.DEEP_SPACE ? 'sm' : 'none'}
-            style={[
-              styles.optionCard,
-              { borderWidth: fontId === FontIds.DEEP_SPACE ? 2 : 1 },
-              { borderColor: fontId === FontIds.DEEP_SPACE ? theme.primary : theme.border },
-            ]}
-          >
-            <View style={styles.optionContent}>
-              <View style={{ flex: 1 }}>
+      <View style={[styles.list, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+        {FONT_OPTIONS.map((option, index) => {
+          const selected = fontId === option.id;
+          const font = FontSchemes[option.id];
+
+          return (
+            <Pressable
+              key={option.id}
+              onPress={() => setFontId(option.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              style={({ pressed }) => [
+                styles.row,
+                index < FONT_OPTIONS.length - 1 && {
+                  borderBottomColor: theme.border,
+                  borderBottomWidth: 1,
+                },
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <View style={[styles.preview, { backgroundColor: theme.surfaceSecondary }]}>
                 <AppText
                   variant="heading"
-                  style={{ fontFamily: FontSchemes[FontIds.DEEP_SPACE].heading, marginBottom: 4 }}
+                  style={{
+                    fontFamily: font.heading,
+                    color: selected ? theme.primary : theme.text,
+                  }}
                 >
-                  {AppConfig.strings.settings.appearance.preview}
-                </AppText>
-                <AppText weight="bold">
-                  {AppConfig.strings.settings.appearance.serifSans.label}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.settings.appearance.serifSans.desc}
+                  Aa
                 </AppText>
               </View>
-              {fontId === FontIds.DEEP_SPACE && (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: theme.primary, backgroundColor: theme.primary },
-                  ]}
-                />
-              )}
-              {fontId !== FontIds.DEEP_SPACE && (
-                <View style={[styles.radio, { borderColor: theme.border }]} />
-              )}
-            </View>
-          </AppCard>
-        </Pressable>
 
-        <Pressable onPress={() => setFontId(FontIds.IVY)}>
-          <AppCard
-            elevation={fontId === FontIds.IVY ? 'sm' : 'none'}
-            style={[
-              styles.optionCard,
-              { borderWidth: fontId === FontIds.IVY ? 2 : 1 },
-              { borderColor: fontId === FontIds.IVY ? theme.primary : theme.border },
-            ]}
-          >
-            <View style={styles.optionContent}>
-              <View style={{ flex: 1 }}>
-                <AppText
-                  variant="heading"
-                  style={{ fontFamily: FontSchemes[FontIds.IVY].heading, marginBottom: 4 }}
-                >
-                  {AppConfig.strings.settings.appearance.preview}
+              <View style={styles.copy}>
+                <AppText variant="body" weight="semibold">
+                  {option.label}
                 </AppText>
-                <AppText weight="bold">
-                  {AppConfig.strings.settings.appearance.modernGeometric.label}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.settings.appearance.modernGeometric.desc}
+                <AppText variant="caption" color="secondary" numberOfLines={1}>
+                  {option.desc}
                 </AppText>
               </View>
-              {fontId === FontIds.IVY && (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: theme.primary, backgroundColor: theme.primary },
-                  ]}
-                />
-              )}
-              {fontId !== FontIds.IVY && (
-                <View style={[styles.radio, { borderColor: theme.border }]} />
-              )}
-            </View>
-          </AppCard>
-        </Pressable>
 
-        <Pressable onPress={() => setFontId(FontIds.EDITORIAL)}>
-          <AppCard
-            elevation={fontId === FontIds.EDITORIAL ? 'sm' : 'none'}
-            style={[
-              styles.optionCard,
-              { borderWidth: fontId === FontIds.EDITORIAL ? 2 : 1 },
-              { borderColor: fontId === FontIds.EDITORIAL ? theme.primary : theme.border },
-            ]}
-          >
-            <View style={styles.optionContent}>
-              <View style={{ flex: 1 }}>
-                <AppText
-                  variant="heading"
-                  style={{ fontFamily: FontSchemes[FontIds.EDITORIAL].heading, marginBottom: 4 }}
-                >
-                  {AppConfig.strings.settings.appearance.preview}
-                </AppText>
-                <AppText weight="bold">
-                  {AppConfig.strings.settings.appearance.classicSerif.label}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.settings.appearance.classicSerif.desc}
-                </AppText>
+              <View
+                style={[
+                  styles.check,
+                  {
+                    backgroundColor: selected ? theme.primary : theme.surfaceSecondary,
+                    borderColor: selected ? theme.primary : theme.border,
+                  },
+                ]}
+              >
+                {selected && <AppIcon name="check" size={13} color={theme.onPrimary} />}
               </View>
-              {fontId === FontIds.EDITORIAL && (
-                <View
-                  style={[
-                    styles.radio,
-                    { borderColor: theme.primary, backgroundColor: theme.primary },
-                  ]}
-                />
-              )}
-              {fontId !== FontIds.EDITORIAL && (
-                <View style={[styles.radio, { borderColor: theme.border }]} />
-              )}
-            </View>
-          </AppCard>
-        </Pressable>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    marginBottom: Spacing.xs,
-    marginTop: Spacing.md,
+  sectionHeader: {
+    marginBottom: 12,
   },
   sectionDesc: {
-    marginBottom: Spacing.md,
+    marginTop: 4,
   },
-  optionsContainer: {
-    gap: Spacing.md,
+  list: {
+    borderWidth: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  optionCard: {
-    padding: Spacing.md,
-  },
-  optionContent: {
+  row: {
+    minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 12,
   },
-  radio: {
-    width: 24,
-    height: 24,
+  preview: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  copy: {
+    flex: 1,
+  },
+  check: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

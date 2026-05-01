@@ -17,18 +17,10 @@ export default function DataManagementSettingsScreen() {
   const {
     isExporting,
     isImporting,
-    isMaintenanceMode,
-    integrityProgress,
-    integrityProgressMessage,
-    isCleaning,
-    isResetting,
     onExport,
     onConfirmExport,
     onImport,
     onAuditLog,
-    onFixIntegrity,
-    onCleanup,
-    onFactoryReset,
     isNamingExport,
     setIsNamingExport,
     exportFilename,
@@ -39,7 +31,7 @@ export default function DataManagementSettingsScreen() {
     <Screen title={AppConfig.strings.settings.sections.dataManagement} showBack={true} scrollable>
       <Inset space="md" vertical="md">
         <Stack space="xl">
-          <SettingsMenu header={AppConfig.strings.settings.sections.dataManagement}>
+          <SettingsMenu header={AppConfig.strings.settings.data.backupRestoreHeader}>
             <SettingsMenuItem
               leftIcon="document"
               title={AppConfig.strings.settings.data.exportBtn}
@@ -51,10 +43,13 @@ export default function DataManagementSettingsScreen() {
             <SettingsMenuItem
               leftIcon="refresh"
               title={AppConfig.strings.settings.data.importBtn}
-              description="Restore your data from a backup file"
+              description={AppConfig.strings.settings.data.importDesc}
               onPress={onImport}
               loading={isImporting}
             />
+          </SettingsMenu>
+
+          <SettingsMenu header={AppConfig.strings.settings.data.sharingReviewHeader}>
             <SettingsMenuItem
               leftIcon="history"
               title={AppConfig.strings.settings.data.auditBtn}
@@ -62,71 +57,8 @@ export default function DataManagementSettingsScreen() {
               onPress={onAuditLog}
             />
           </SettingsMenu>
-
-          <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
-            <SettingsMenuItem
-              leftIcon="search"
-              title={AppConfig.strings.settings.maintenance.integrityBtn}
-              description={AppConfig.strings.settings.maintenance.integrityDesc}
-              onPress={onFixIntegrity}
-              loading={isMaintenanceMode}
-            />
-            <SettingsMenuItem
-              leftIcon="delete"
-              title={AppConfig.strings.settings.danger.cleanupBtn}
-              description={AppConfig.strings.settings.danger.cleanupDesc}
-              onPress={onCleanup}
-              loading={isCleaning}
-            />
-          </SettingsMenu>
-
-          <SettingsMenu header={AppConfig.strings.settings.sections.dangerZone}>
-            <SettingsMenuItem
-              leftIcon="alert"
-              title={AppConfig.strings.settings.danger.resetBtn}
-              description={AppConfig.strings.settings.danger.resetDesc}
-              onPress={onFactoryReset}
-              loading={isResetting}
-              danger
-            />
-          </SettingsMenu>
         </Stack>
       </Inset>
-
-      {/* Blocking integrity check progress modal */}
-      <Modal visible={isMaintenanceMode} transparent animationType="fade" statusBarTranslucent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
-            <View style={styles.modalIconRow}>
-              <AppIcon name="search" size={40} color={theme.primary} />
-            </View>
-
-            <AppText variant="subheading" style={styles.modalTitle}>
-              {AppConfig.strings.settings.maintenance.integrityTitle}
-            </AppText>
-
-            <View style={[styles.progressBarBg, { backgroundColor: theme.surfaceSecondary }]}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    backgroundColor: theme.primary,
-                    width: `${Math.max(2, Math.min(100, integrityProgress * 100))}%`,
-                  },
-                ]}
-              />
-            </View>
-
-            <AppText variant="body" color="secondary" style={styles.modalStatus}>
-              {integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait}
-            </AppText>
-
-            <AppText variant="caption" color="secondary" style={styles.modalHint}>
-              {AppConfig.strings.settings.maintenance.integrityHint}
-            </AppText>
-          </View>
-        </View>
-      </Modal>
 
       {/* Exporting Data Loader */}
       <Modal visible={isExporting} transparent animationType="fade" statusBarTranslucent>
@@ -227,16 +159,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     marginBottom: Spacing.lg,
     textAlign: 'center',
-  },
-  progressBarBg: {
-    width: '100%',
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: Spacing.md,
-  },
-  progressBarFill: {
-    height: '100%',
   },
   modalStatus: {
     textAlign: 'center',
