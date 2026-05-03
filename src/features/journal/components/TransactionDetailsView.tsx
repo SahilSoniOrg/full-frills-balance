@@ -1,346 +1,156 @@
+import { EmptyStateView } from '@/src/components/common/EmptyStateView';
+import { LoadingView } from '@/src/components/common/LoadingView';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
-import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { AppButton, AppIcon, AppText, Badge } from '@/src/components/core';
-import { ListRow } from '@/src/components/core/ListRow';
-import { Size, Spacing, Typography } from '@/src/constants';
+import { NavigationBar } from '@/src/components/layout/NavigationBar';
+import { Typography } from '@/src/constants';
+import { Inset, Page, Separator, Stack } from '@/src/design-system';
 import { TransactionDetailsViewModel } from '@/src/features/journal/hooks/useTransactionDetailsViewModel';
 import React from 'react';
-import { Box, Inline, Inset, Page, Stack, Separator } from '@/src/design-system';
-import { NavigationBar } from '@/src/components/layout/NavigationBar';
+import { TransactionActions } from './details/TransactionActions';
+import { TransactionBreakdownList } from './details/TransactionBreakdownList';
+import { TransactionHero } from './details/TransactionHero';
+import { TransactionMetadata } from './details/TransactionMetadata';
+import { TransactionSMSDetails } from './details/TransactionSMSDetails';
+
+type ScreenState =
+  | { type: 'loading' }
+  | { type: 'missing' }
+  | { type: 'ready'; data: TransactionDetailsViewModel };
 
 export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
-  const {
-    theme,
-    isLoading,
-    isMissing,
-    title,
-    backIcon,
-    headerActions,
-    amountText,
-    amountColor,
-    descriptionText,
-    statusLabel,
-    statusVariant,
-    displayTypeLabel,
-    formattedDate,
-    journalIdShort,
-    onHistoryPress,
-    smsInfo,
-    onOpenSmsInbox,
-    onBack,
-    splitItems,
-  } = vm;
+  const { isLoading, isMissing, theme, onBack } = vm;
 
-  if (isLoading) {
-    return (
-      <Page header={<NavigationBar title="Details" onBack={onBack} />}>
-        <Box flex={1} justifyContent="center" alignItems="center">
-          <AppText variant="body">Loading...</AppText>
-        </Box>
-      </Page>
-    );
-  }
+  const state: ScreenState = React.useMemo(() => {
+    if (isLoading) return { type: 'loading' };
+    if (isMissing) return { type: 'missing' };
+    return { type: 'ready', data: vm };
+  }, [isLoading, isMissing, vm]);
 
-  if (isMissing) {
-    return (
-      <Page header={<NavigationBar title="Details" backIcon="close" onBack={onBack} />}>
-        <Box flex={1} justifyContent="center" alignItems="center" padding="md">
-          <AppIcon name="error" size={Size.xxl} color={theme.textSecondary} />
-          <Box marginTop="md">
-            <AppText variant="subheading">Transaction not found</AppText>
-          </Box>
-          <Box marginTop="lg">
-            <AppButton variant="ghost" onPress={onBack}>
-              Go Back
-            </AppButton>
-          </Box>
-        </Box>
-      </Page>
-    );
-  }
+  switch (state.type) {
+    case 'loading':
+      return (
+        <Page header={<NavigationBar title="Details" onBack={onBack} />}>
+          <LoadingView loading={true} />
+        </Page>
+      );
 
-  const headerActionsNode = (
-    <ScreenHeaderActions
-      actions={[
-        {
-          name: 'copy',
-          onPress: headerActions.onCopy,
-          iconColor: theme.text,
-          size: Typography.sizes.xl,
-          testID: 'copy-button',
-        },
-        {
-          name: 'edit',
-          onPress: headerActions.onEdit,
-          iconColor: theme.text,
-          size: Typography.sizes.xl,
-          testID: 'edit-button',
-        },
-        {
-          name: 'delete',
-          onPress: headerActions.onDelete,
-          iconColor: theme.error,
-          size: Typography.sizes.xl,
-          testID: 'delete-button',
-        },
-      ]}
-    />
-  );
+    case 'missing':
+      return (
+        <Page header={<NavigationBar title="Details" backIcon="close" onBack={onBack} />}>
+          <EmptyStateView
+            title="Transaction not found"
+            icon="error"
+            primaryActionLabel="Go Back"
+            onPrimaryAction={onBack}
+          />
+        </Page>
+      );
 
-  return (
-    <Page
-      scrollable
-      header={
-        <NavigationBar
-          title={title}
-          backIcon={backIcon}
-          rightActions={headerActionsNode}
-          onBack={onBack}
+    case 'ready': {
+      const readyVm = state.data;
+      const {
+        title,
+        backIcon,
+        headerActions,
+        amountText,
+        amountColor,
+        descriptionText,
+        statusLabel,
+        statusVariant,
+        displayTypeLabel,
+        formattedDate,
+        onHistoryPress,
+        smsInfo,
+        onOpenSmsInbox,
+        splitItems,
+        displayIcon,
+        onPost,
+        onSkip,
+        onRevertToScheduled,
+        revertButtonLabel,
+      } = readyVm;
+
+      const headerActionsNode = (
+        <ScreenHeaderActions
+          actions={[
+            {
+              name: 'copy',
+              onPress: headerActions.onCopy,
+              iconColor: theme.text,
+              size: Typography.sizes.xl,
+              testID: 'copy-button',
+            },
+            {
+              name: 'edit',
+              onPress: headerActions.onEdit,
+              iconColor: theme.text,
+              size: Typography.sizes.xl,
+              testID: 'edit-button',
+            },
+            {
+              name: 'delete',
+              onPress: headerActions.onDelete,
+              iconColor: theme.error,
+              size: Typography.sizes.xl,
+              testID: 'delete-button',
+            },
+          ]}
         />
-      }
-    >
-      <Inset space="md" vertical="md">
-        <Stack space="xl">
-          <Box alignItems="center" marginTop="md">
-            <Box
-              background={amountColor}
-              backgroundOpacity="soft"
-              width={Size.avatarLg}
-              height={Size.avatarLg}
-              borderRadius="full"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <AppIcon name={vm.displayIcon} size={Size.xxl} color={amountColor} />
-            </Box>
-          </Box>
+      );
 
-          <Stack space="sm" alignItems="center">
-            <AppText variant="title" color={vm.amountColor as any}>
-              {amountText}
-            </AppText>
-            <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-              {descriptionText}
-            </AppText>
-            <Inline space="sm" marginTop="md">
-              <Badge variant={statusVariant} size="sm">
-                {statusLabel}
-              </Badge>
-              {displayTypeLabel && (
-                <Badge variant="default" size="sm">
-                  {displayTypeLabel}
-                </Badge>
-              )}
-            </Inline>
-          </Stack>
-
-          <Stack space="md">
-            <ScreenSectionHeader title="Breakdown" style={{ paddingHorizontal: Spacing.md }} />
-
-            <Stack space="xs">
-              {splitItems.map((item, index) => (
-                <React.Fragment key={item.id}>
-                  <ListRow
-                    title={item.accountName}
-                    subtitle={item.transactionType}
-                    leading={
-                      <Box
-                        background={item.iconBackground}
-                        backgroundOpacity="soft"
-                        width={Size.lg}
-                        height={Size.lg}
-                        borderRadius="full"
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <AppIcon
-                          name={item.iconName as any}
-                          fallbackIcon={item.fallbackIcon}
-                          size={16}
-                          color={item.iconColor}
-                        />
-                      </Box>
-                    }
-                    trailing={
-                      <Inline space="xs" alignItems="center">
-                        <AppText variant="subheading" color={item.amountColor as any}>
-                          {item.amountText}
-                        </AppText>
-                        <AppIcon
-                          name="chevronRight"
-                          size={Typography.sizes.sm}
-                          color={theme.textSecondary}
-                        />
-                      </Inline>
-                    }
-                    onPress={item.onPress}
-                    padding="md"
-                  />
-                  {index < splitItems.length - 1 && <Separator />}
-                </React.Fragment>
-              ))}
-            </Stack>
-          </Stack>
-
-          <Separator />
-
-          <Stack space="xs">
-            <ListRow
-              title="Date"
-              trailing={<AppText variant="body">{formattedDate}</AppText>}
-              padding="sm"
+      return (
+        <Page
+          scrollable
+          header={
+            <NavigationBar
+              title={title}
+              backIcon={backIcon}
+              rightActions={headerActionsNode}
+              onBack={onBack}
             />
-            <ListRow
-              title="Journal ID"
-              trailing={<AppText variant="body">{journalIdShort}</AppText>}
-              padding="sm"
-            />
-            {vm.notesText && (
-              <ListRow
-                title="Notes"
-                trailing={
-                  <Box style={{ flex: 1, alignItems: 'flex-end', maxWidth: '65%' }}>
-                    <AppText
-                      variant="body"
-                      color="secondary"
-                      numberOfLines={3}
-                      style={{ textAlign: 'right' }}
-                    >
-                      {vm.notesText}
-                    </AppText>
-                  </Box>
-                }
-                padding="sm"
+          }
+        >
+          <Inset space="md" vertical="md">
+            <Stack space="xl">
+              <TransactionHero
+                displayIcon={displayIcon}
+                amountColor={amountColor}
+                amountText={amountText}
+                descriptionText={descriptionText}
+                statusLabel={statusLabel}
+                statusVariant={statusVariant}
+                displayTypeLabel={displayTypeLabel}
               />
-            )}
-            <ListRow
-              title="History"
-              trailing={
-                <Inline space="xs" alignItems="center">
-                  <AppText variant="body" color="primary">
-                    View Edit History
-                  </AppText>
-                  <AppIcon name="chevronRight" size={Typography.sizes.sm} color={theme.primary} />
-                </Inline>
-              }
-              onPress={onHistoryPress}
-              padding="sm"
-            />
-          </Stack>
 
-          {smsInfo && (
-            <Stack space="md">
               <Separator />
-              <ScreenSectionHeader
-                title="Imported From SMS"
-                style={{ paddingHorizontal: Spacing.md }}
+
+              <TransactionBreakdownList splitItems={splitItems} />
+
+              <Separator />
+
+              <TransactionMetadata
+                formattedDate={formattedDate}
+                notesText={readyVm.notesText}
+                onHistoryPress={onHistoryPress}
               />
-              <Stack space="xs">
-                <ListRow
-                  title="Sender"
-                  trailing={<AppText variant="body">{smsInfo.sender || '-'}</AppText>}
-                  padding="sm"
-                />
-                {smsInfo.smsDate && (
-                  <ListRow
-                    title="SMS Date"
-                    trailing={<AppText variant="body">{smsInfo.smsDate}</AppText>}
-                    padding="sm"
-                  />
-                )}
-                {smsInfo.amountText && (
-                  <ListRow
-                    title="Parsed Amount"
-                    trailing={<AppText variant="body">{smsInfo.amountText}</AppText>}
-                    padding="sm"
-                  />
-                )}
-                {smsInfo.referenceNumber && (
-                  <ListRow
-                    title="Reference"
-                    trailing={<AppText variant="body">{smsInfo.referenceNumber}</AppText>}
-                    padding="sm"
-                  />
-                )}
-                {smsInfo.accountSource && (
-                  <ListRow
-                    title="Account Source"
-                    trailing={<AppText variant="body">{smsInfo.accountSource}</AppText>}
-                    padding="sm"
-                  />
-                )}
-                {smsInfo.parseReason && (
-                  <ListRow
-                    title="Parse Note"
-                    trailing={<AppText variant="body">{smsInfo.parseReason}</AppText>}
-                    padding="sm"
-                  />
-                )}
-                {smsInfo.rawBody && (
-                  <Inset horizontal="md" vertical="sm">
-                    <AppText variant="caption" color="secondary">
-                      RAW SMS
-                    </AppText>
-                    <Box marginTop="xs">
-                      <AppText variant="body">{smsInfo.rawBody}</AppText>
-                    </Box>
-                  </Inset>
-                )}
-                {onOpenSmsInbox && (
-                  <Inset horizontal="md" top="sm">
-                    <AppButton variant="ghost" onPress={onOpenSmsInbox}>
-                      Open SMS Inbox
-                    </AppButton>
-                  </Inset>
-                )}
-              </Stack>
-            </Stack>
-          )}
 
-          {vm.onPost && (
-            <Stack space="sm" padding="md">
-              <AppButton variant="primary" onPress={vm.onPost} style={{ width: '100%' }}>
-                <Inline space="sm" alignItems="center">
-                  <AppIcon name="check" size={18} color={theme.onPrimary} />
-                  <AppText variant="body" weight="bold" style={{ color: theme.onPrimary }}>
-                    Post Transaction Now
-                  </AppText>
-                </Inline>
-              </AppButton>
-
-              {vm.onSkip && (
-                <AppButton variant="outline" onPress={vm.onSkip} style={{ width: '100%' }}>
-                  <Inline space="sm" alignItems="center">
-                    <AppIcon name="close" size={18} color={theme.text} />
-                    <AppText variant="body" weight="bold">
-                      Skip This Occurrence
-                    </AppText>
-                  </Inline>
-                </AppButton>
+              {smsInfo && (
+                <>
+                  <Separator />
+                  <TransactionSMSDetails smsInfo={smsInfo} onOpenSmsInbox={onOpenSmsInbox} />
+                </>
               )}
-            </Stack>
-          )}
 
-          {vm.onRevertToScheduled && (
-            <Stack space="sm" padding="md">
-              <AppButton
-                variant="outline"
-                onPress={vm.onRevertToScheduled}
-                style={{ width: '100%' }}
-              >
-                <Inline space="sm" alignItems="center">
-                  <AppIcon name="history" size={18} color={theme.primary} />
-                  <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
-                    {vm.revertButtonLabel}
-                  </AppText>
-                </Inline>
-              </AppButton>
+              <TransactionActions
+                onPost={onPost}
+                onSkip={onSkip}
+                onRevertToScheduled={onRevertToScheduled}
+                revertButtonLabel={revertButtonLabel}
+              />
             </Stack>
-          )}
-        </Stack>
-      </Inset>
-    </Page>
-  );
+          </Inset>
+        </Page>
+      );
+    }
+  }
 }
-
-// No styles needed as we use design system primitives
