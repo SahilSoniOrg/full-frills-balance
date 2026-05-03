@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 22,
+  version: 23,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -18,7 +18,16 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_accounts_workplace_id_check
+BEFORE INSERT ON accounts
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on accounts');
+END;`,
     }),
     tableSchema({
       name: 'balance_snapshots',
@@ -30,7 +39,16 @@ export const schema = appSchema({
         { name: 'transaction_count', type: 'number' },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_balance_snapshots_workplace_id_check
+BEFORE INSERT ON balance_snapshots
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on balance_snapshots');
+END;`,
     }),
     tableSchema({
       name: 'currencies',
@@ -62,7 +80,16 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_journals_workplace_id_check
+BEFORE INSERT ON journals
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on journals');
+END;`,
     }),
     tableSchema({
       name: 'transactions',
@@ -81,7 +108,16 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_transactions_workplace_id_check
+BEFORE INSERT ON transactions
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transactions');
+END;`,
     }),
     tableSchema({
       name: 'exchange_rates',
@@ -104,7 +140,16 @@ export const schema = appSchema({
         { name: 'changes', type: 'string' }, // JSON of before/after
         { name: 'timestamp', type: 'number', isIndexed: true },
         { name: 'created_at', type: 'number' },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_audit_logs_workplace_id_check
+BEFORE INSERT ON audit_logs
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on audit_logs');
+END;`,
     }),
     tableSchema({
       name: 'budgets',
@@ -122,7 +167,16 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'asset_account_ids', type: 'string', isOptional: true },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_budgets_workplace_id_check
+BEFORE INSERT ON budgets
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on budgets');
+END;`,
     }),
     tableSchema({
       name: 'budget_scopes',
@@ -131,7 +185,16 @@ export const schema = appSchema({
         { name: 'account_id', type: 'string', isIndexed: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_budget_scopes_workplace_id_check
+BEFORE INSERT ON budget_scopes
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on budget_scopes');
+END;`,
     }),
     tableSchema({
       name: 'account_metadata',
@@ -153,7 +216,16 @@ export const schema = appSchema({
         { name: 'notes', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_account_metadata_workplace_id_check
+BEFORE INSERT ON account_metadata
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on account_metadata');
+END;`,
     }),
     tableSchema({
       name: 'planned_payments',
@@ -176,7 +248,16 @@ export const schema = appSchema({
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_planned_payments_workplace_id_check
+BEFORE INSERT ON planned_payments
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on planned_payments');
+END;`,
     }),
     tableSchema({
       name: 'journal_metadata',
@@ -189,7 +270,16 @@ export const schema = appSchema({
         { name: 'metadata_json', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_journal_metadata_workplace_id_check
+BEFORE INSERT ON journal_metadata
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on journal_metadata');
+END;`,
     }),
     tableSchema({
       name: 'sms_auto_post_rules',
@@ -204,7 +294,16 @@ export const schema = appSchema({
         { name: 'is_active', type: 'boolean' },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_sms_auto_post_rules_workplace_id_check
+BEFORE INSERT ON sms_auto_post_rules
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on sms_auto_post_rules');
+END;`,
     }),
     tableSchema({
       name: 'sms_inbox_records',
@@ -231,6 +330,23 @@ export const schema = appSchema({
         { name: 'first_seen_at', type: 'number', isIndexed: true },
         { name: 'last_scanned_at', type: 'number', isIndexed: true },
         { name: 'processed_at', type: 'number', isOptional: true, isIndexed: true },
+        { name: 'created_at', type: 'number', isIndexed: true },
+        { name: 'updated_at', type: 'number' },
+        { name: 'workplace_id', type: 'string', isIndexed: true },
+      ],
+      unsafeSql: sql => `${sql};
+CREATE TRIGGER IF NOT EXISTS trg_sms_inbox_records_workplace_id_check
+BEFORE INSERT ON sms_inbox_records
+FOR EACH ROW
+WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+BEGIN
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on sms_inbox_records');
+END;`,
+    }),
+    tableSchema({
+      name: 'workplaces',
+      columns: [
+        { name: 'name', type: 'string' },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
       ],

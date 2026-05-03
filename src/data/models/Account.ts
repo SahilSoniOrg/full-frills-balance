@@ -1,8 +1,9 @@
-import { IconName } from '@/src/components/core/AppIcon'
-import AccountMetadata from '@/src/data/models/AccountMetadata'
-import Transaction from '@/src/data/models/Transaction'
-import { Model, Query } from '@nozbe/watermelondb'
-import { children, date, field } from '@nozbe/watermelondb/decorators'
+import { IconName } from '@/src/components/core/AppIcon';
+import AccountMetadata from '@/src/data/models/AccountMetadata';
+import Transaction from '@/src/data/models/Transaction';
+import { Query } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import { children, date, field } from '@nozbe/watermelondb/decorators';
 
 export enum AccountType {
   ASSET = 'ASSET',
@@ -113,7 +114,7 @@ export const ACCOUNT_SUBTYPES_BY_TYPE: Record<AccountType, readonly AccountSubty
     AccountSubtype.TRANSFER,
     AccountSubtype.OTHER,
   ],
-}
+};
 
 export const ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE: Record<AccountType, AccountSubtype> = {
   [AccountType.ASSET]: AccountSubtype.CASH,
@@ -121,74 +122,73 @@ export const ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE: Record<AccountType, AccountSubtype
   [AccountType.EQUITY]: AccountSubtype.OPENING_BALANCE,
   [AccountType.INCOME]: AccountSubtype.SALARY,
   [AccountType.EXPENSE]: AccountSubtype.FOOD,
-}
+};
 
 export function getAccountSubtypesForType(accountType: AccountType): readonly AccountSubtype[] {
-  return ACCOUNT_SUBTYPES_BY_TYPE[accountType]
+  return ACCOUNT_SUBTYPES_BY_TYPE[accountType];
 }
 
 export function getDefaultSubtypeForType(accountType: AccountType): AccountSubtype {
-  return ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE[accountType] ?? AccountSubtype.OTHER
+  return ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE[accountType] ?? AccountSubtype.OTHER;
 }
 
 export function getDefaultSubtypeForTypeLike(accountType: AccountType | string): AccountSubtype {
   if (isAccountType(accountType)) {
-    return getDefaultSubtypeForType(accountType)
+    return getDefaultSubtypeForType(accountType);
   }
-  return AccountSubtype.OTHER
+  return AccountSubtype.OTHER;
 }
 
 export function formatAccountSubtypeLabel(subtype: AccountSubtype): string {
   return subtype
     .toLowerCase()
     .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 export function isAccountType(value: string): value is AccountType {
-  return Object.values(AccountType).includes(value as AccountType)
+  return Object.values(AccountType).includes(value as AccountType);
 }
 
 export function isAccountSubtype(value: string): value is AccountSubtype {
-  return Object.values(AccountSubtype).includes(value as AccountSubtype)
+  return Object.values(AccountSubtype).includes(value as AccountSubtype);
 }
 
 export function isSubtypeAllowedForType(
   accountType: AccountType,
-  subtype?: AccountSubtype
+  subtype?: AccountSubtype,
 ): boolean {
-  if (!subtype) return true
-  return ACCOUNT_SUBTYPES_BY_TYPE[accountType].includes(subtype)
+  if (!subtype) return true;
+  return ACCOUNT_SUBTYPES_BY_TYPE[accountType].includes(subtype);
 }
 
-export default class Account extends Model {
-  static table = 'accounts'
+export default class Account extends BaseScopedModel {
+  static table = 'accounts';
   static associations = {
     transactions: { type: 'has_many', foreignKey: 'account_id' },
     // Self-referential association used for direct child account queries (e.g., parent.subAccounts.fetch()).
     // For deep hierarchy traversal, prefer getDescendantIdsFromList() which avoids N+1 DB queries.
     accounts: { type: 'has_many', foreignKey: 'parent_account_id' },
     account_metadata: { type: 'has_many', foreignKey: 'account_id' },
-  } as const
+  } as const;
 
-  @field('name') name!: string
-  @field('account_type') accountType!: AccountType
-  @field('account_subtype') accountSubtype?: AccountSubtype
-  @field('currency_code') currencyCode!: string
-  @field('parent_account_id') parentAccountId?: string
-  @field('description') description?: string
-  @field('icon') icon?: IconName
-  @field('order_num') orderNum?: number
-  @date('reconciled_at') reconciledAt?: Date
+  @field('name') name!: string;
+  @field('account_type') accountType!: AccountType;
+  @field('account_subtype') accountSubtype?: AccountSubtype;
+  @field('currency_code') currencyCode!: string;
+  @field('parent_account_id') parentAccountId?: string;
+  @field('description') description?: string;
+  @field('icon') icon?: IconName;
+  @field('order_num') orderNum?: number;
+  @date('reconciled_at') reconciledAt?: Date;
 
-  @date('created_at') createdAt!: Date
-  @date('updated_at') updatedAt!: Date
-  @date('deleted_at') deletedAt?: Date
+  @date('created_at') createdAt!: Date;
+  @date('updated_at') updatedAt!: Date;
+  @date('deleted_at') deletedAt?: Date;
 
   // Relations with proper types
-  @children('transactions') transactions!: Query<Transaction>
-  @children('accounts') subAccounts!: Query<Account>
-  @children('account_metadata') metadataRecords!: Query<AccountMetadata>
+  @children('transactions') transactions!: Query<Transaction>;
+  @children('accounts') subAccounts!: Query<Account>;
+  @children('account_metadata') metadataRecords!: Query<AccountMetadata>;
 }
-

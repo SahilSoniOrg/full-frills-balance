@@ -1,22 +1,22 @@
-import { Model } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Account from './Account';
 
-export default class SmsAutoPostRule extends Model {
-    static table = 'sms_auto_post_rules';
+export default class SmsAutoPostRule extends BaseScopedModel {
+  static table = 'sms_auto_post_rules';
 
-    @field('sender_match') senderMatch!: string;
-    @field('body_match') bodyMatch?: string;
-    @field('conditions_json') conditionsJson?: string;
-    @field('actions_json') actionsJson?: string;
-    @field('priority') priority?: number;
-    @field('source_account_id') sourceAccountId!: string;
-    @field('category_account_id') categoryAccountId!: string;
-    @field('is_active') isActive!: boolean;
+  @field('sender_match') senderMatch!: string;
+  @field('body_match') bodyMatch?: string;
+  @field('conditions_json') conditionsJson?: string;
+  @field('actions_json') actionsJson?: string;
+  @field('priority') priority?: number;
+  @field('source_account_id') sourceAccountId!: string;
+  @field('category_account_id') categoryAccountId!: string;
+  @field('is_active') isActive!: boolean;
 
-    @readonly @date('created_at') createdAt!: Date;
-    @readonly @date('updated_at') updatedAt!: Date;
+  @readonly @date('created_at') createdAt!: Date;
+  @readonly @date('updated_at') updatedAt!: Date;
 
-    @relation('accounts', 'source_account_id') sourceAccount!: Account;
-    @relation('accounts', 'category_account_id') categoryAccount!: Account;
+  @relation('accounts', 'source_account_id') sourceAccount!: Account;
+  @relation('accounts', 'category_account_id') categoryAccount!: Account;
 }

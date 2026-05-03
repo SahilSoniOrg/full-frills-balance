@@ -1,6 +1,7 @@
 import Transaction from '@/src/data/models/Transaction';
 import { JournalDisplayType } from '@/src/types/domain';
-import { Model, Query, Relation } from '@nozbe/watermelondb';
+import { Query, Relation } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators';
 
 export enum JournalStatus {
@@ -11,7 +12,7 @@ export enum JournalStatus {
   SKIPPED = 'SKIPPED',
 }
 
-export default class Journal extends Model {
+export default class Journal extends BaseScopedModel {
   static table = 'journals';
   static associations = {
     transactions: { type: 'has_many', foreignKey: 'journal_id' },

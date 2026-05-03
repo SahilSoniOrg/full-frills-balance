@@ -1,9 +1,10 @@
 import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
-import { Model, Relation } from '@nozbe/watermelondb';
+import { Relation } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 
-export default class BudgetScope extends Model {
+export default class BudgetScope extends BaseScopedModel {
   static table = 'budget_scopes';
   static associations = {
     budgets: { type: 'belongs_to', key: 'budget_id' },

@@ -17,6 +17,7 @@ import PlannedPayment from '@/src/data/models/PlannedPayment';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import Transaction from '@/src/data/models/Transaction';
+import Workplace from '@/src/data/models/Workplace';
 
 // Adapter (platform-specific resolution handled by Metro)
 import adapter from '@/src/data/database/adapter';
@@ -44,5 +45,6 @@ export const database = new WatermelonDB({
     SmsAutoPostRule,
     SmsInboxRecord,
     Transaction,
+    Workplace,
   ],
 });

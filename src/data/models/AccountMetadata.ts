@@ -1,8 +1,9 @@
 import Account from '@/src/data/models/Account';
-import { Model, Relation } from '@nozbe/watermelondb';
+import { Relation } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 
-export default class AccountMetadata extends Model {
+export default class AccountMetadata extends BaseScopedModel {
   static table = 'account_metadata';
   static associations = {
     accounts: { type: 'belongs_to', key: 'account_id' },

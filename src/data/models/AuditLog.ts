@@ -1,4 +1,4 @@
-import { Model } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { date, field } from '@nozbe/watermelondb/decorators';
 
 export enum AuditAction {
@@ -9,7 +9,7 @@ export enum AuditAction {
 
 export type AuditEntityType = 'account' | 'journal' | 'transaction';
 
-export default class AuditLog extends Model {
+export default class AuditLog extends BaseScopedModel {
   static table = 'audit_logs';
 
   @field('entity_type') entityType!: AuditEntityType;

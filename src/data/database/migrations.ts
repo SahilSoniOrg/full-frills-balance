@@ -5,6 +5,12 @@ import {
   unsafeExecuteSql,
 } from '@nozbe/watermelondb/Schema/migrations';
 
+const defaultWorkplaceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = (Math.random() * 16) | 0;
+  const v = c === 'x' ? r : (r & 0x3) | 0x8;
+  return v.toString(16);
+});
+
 export const migrations = schemaMigrations({
   migrations: [
     {
@@ -445,6 +451,131 @@ export const migrations = schemaMigrations({
           table: 'journals',
           columns: [{ name: 'notes', type: 'string', isOptional: true }],
         }),
+      ],
+    },
+    {
+      toVersion: 23,
+      steps: [
+        createTable({
+          name: 'workplaces',
+          columns: [
+            { name: 'name', type: 'string' },
+            { name: 'created_at', type: 'number', isIndexed: true },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+        addColumns({
+          table: 'accounts',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'balance_snapshots',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'journals',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'transactions',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'audit_logs',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'budgets',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'budget_scopes',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'account_metadata',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'planned_payments',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'journal_metadata',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'sms_auto_post_rules',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        addColumns({
+          table: 'sms_inbox_records',
+          columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
+        }),
+        unsafeExecuteSql(`
+          INSERT INTO workplaces (id, name, created_at, updated_at)
+          VALUES ('${defaultWorkplaceId}', 'Personal', ${Date.now()}, ${Date.now()});
+        `),
+        unsafeExecuteSql(`UPDATE accounts SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE balance_snapshots SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE journals SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE transactions SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE audit_logs SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE budgets SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE budget_scopes SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE account_metadata SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE planned_payments SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE journal_metadata SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE sms_auto_post_rules SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE sms_inbox_records SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_accounts_workplace_id_check
+          BEFORE INSERT ON accounts FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on accounts'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_balance_snapshots_workplace_id_check
+          BEFORE INSERT ON balance_snapshots FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on balance_snapshots'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_journals_workplace_id_check
+          BEFORE INSERT ON journals FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on journals'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_transactions_workplace_id_check
+          BEFORE INSERT ON transactions FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transactions'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_audit_logs_workplace_id_check
+          BEFORE INSERT ON audit_logs FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on audit_logs'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_budgets_workplace_id_check
+          BEFORE INSERT ON budgets FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on budgets'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_budget_scopes_workplace_id_check
+          BEFORE INSERT ON budget_scopes FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on budget_scopes'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_account_metadata_workplace_id_check
+          BEFORE INSERT ON account_metadata FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on account_metadata'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_planned_payments_workplace_id_check
+          BEFORE INSERT ON planned_payments FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on planned_payments'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_journal_metadata_workplace_id_check
+          BEFORE INSERT ON journal_metadata FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on journal_metadata'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_sms_auto_post_rules_workplace_id_check
+          BEFORE INSERT ON sms_auto_post_rules FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on sms_auto_post_rules'); END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_sms_inbox_records_workplace_id_check
+          BEFORE INSERT ON sms_inbox_records FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on sms_inbox_records'); END;
+        `),
       ],
     },
   ],

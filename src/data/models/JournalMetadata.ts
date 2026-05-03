@@ -1,8 +1,9 @@
 import Journal from '@/src/data/models/Journal';
-import { Model, Relation } from '@nozbe/watermelondb';
+import { Relation } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 
-export default class JournalMetadata extends Model {
+export default class JournalMetadata extends BaseScopedModel {
   static table = 'journal_metadata';
   static associations = {
     journals: { type: 'belongs_to', key: 'journal_id' },

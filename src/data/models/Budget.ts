@@ -1,8 +1,9 @@
 import BudgetScope from '@/src/data/models/BudgetScope';
-import { Model, Query } from '@nozbe/watermelondb';
+import { Query } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
-export default class Budget extends Model {
+export default class Budget extends BaseScopedModel {
   static table = 'budgets';
   static associations = {
     budget_scopes: { type: 'has_many', foreignKey: 'budget_id' },

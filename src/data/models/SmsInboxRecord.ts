@@ -1,6 +1,7 @@
-import Journal from '@/src/data/models/Journal'
-import { Model, Relation } from '@nozbe/watermelondb'
-import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators'
+import Journal from '@/src/data/models/Journal';
+import { Relation } from '@nozbe/watermelondb';
+import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 
 export enum SmsParseStatus {
   PARSED = 'parsed',
@@ -23,37 +24,37 @@ export enum SmsDirection {
   UNKNOWN = 'unknown',
 }
 
-export default class SmsInboxRecord extends Model {
-  static table = 'sms_inbox_records'
+export default class SmsInboxRecord extends BaseScopedModel {
+  static table = 'sms_inbox_records';
   static associations = {
     journals: { type: 'belongs_to', key: 'linked_journal_id' },
-  } as const
+  } as const;
 
-  @field('device_sms_id') deviceSmsId!: string
-  @field('sender_address') senderAddress!: string
-  @field('raw_body') rawBody!: string
-  @field('sms_date') smsDate!: number
-  @field('sms_fingerprint') smsFingerprint!: string
-  @field('parse_status') parseStatus!: SmsParseStatus
-  @field('parsed_amount') parsedAmount?: number
-  @field('parsed_currency_code') parsedCurrencyCode?: string
-  @field('parsed_merchant') parsedMerchant?: string
-  @field('parsed_account_source') parsedAccountSource?: string
-  @field('reference_number') referenceNumber?: string
-  @field('direction') direction!: SmsDirection
-  @field('processing_status') processingStatus!: SmsProcessingStatus
-  @field('linked_journal_id') linkedJournalId?: string
-  @field('duplicate_journal_id') duplicateJournalId?: string
-  @field('duplicate_confidence') duplicateConfidence?: number
-  @field('parse_confidence') parseConfidence?: number
-  @field('parse_reason') parseReason?: string
-  @field('metadata_json') metadataJson?: string
-  @field('first_seen_at') firstSeenAt!: number
-  @field('last_scanned_at') lastScannedAt!: number
-  @field('processed_at') processedAt?: number
+  @field('device_sms_id') deviceSmsId!: string;
+  @field('sender_address') senderAddress!: string;
+  @field('raw_body') rawBody!: string;
+  @field('sms_date') smsDate!: number;
+  @field('sms_fingerprint') smsFingerprint!: string;
+  @field('parse_status') parseStatus!: SmsParseStatus;
+  @field('parsed_amount') parsedAmount?: number;
+  @field('parsed_currency_code') parsedCurrencyCode?: string;
+  @field('parsed_merchant') parsedMerchant?: string;
+  @field('parsed_account_source') parsedAccountSource?: string;
+  @field('reference_number') referenceNumber?: string;
+  @field('direction') direction!: SmsDirection;
+  @field('processing_status') processingStatus!: SmsProcessingStatus;
+  @field('linked_journal_id') linkedJournalId?: string;
+  @field('duplicate_journal_id') duplicateJournalId?: string;
+  @field('duplicate_confidence') duplicateConfidence?: number;
+  @field('parse_confidence') parseConfidence?: number;
+  @field('parse_reason') parseReason?: string;
+  @field('metadata_json') metadataJson?: string;
+  @field('first_seen_at') firstSeenAt!: number;
+  @field('last_scanned_at') lastScannedAt!: number;
+  @field('processed_at') processedAt?: number;
 
-  @readonly @date('created_at') createdAt!: Date
-  @readonly @date('updated_at') updatedAt!: Date
+  @readonly @date('created_at') createdAt!: Date;
+  @readonly @date('updated_at') updatedAt!: Date;
 
-  @relation('journals', 'linked_journal_id') linkedJournal!: Relation<Journal>
+  @relation('journals', 'linked_journal_id') linkedJournal!: Relation<Journal>;
 }
