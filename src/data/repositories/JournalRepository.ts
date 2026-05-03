@@ -16,6 +16,7 @@ import { map, of } from 'rxjs';
 export interface CreateJournalData {
   journalDate: number;
   description?: string;
+  notes?: string;
   currencyCode: string;
   originalJournalId?: string;
   status?: JournalStatus;
@@ -74,6 +75,7 @@ export class JournalRepository {
       .observeWithColumns([
         'journal_date',
         'description',
+        'notes',
         'currency_code',
         'status',
         'total_amount',
@@ -141,6 +143,7 @@ export class JournalRepository {
       .observeWithColumns([
         'journal_date',
         'description',
+        'notes',
         'currency_code',
         'status',
         'total_amount',
@@ -159,6 +162,7 @@ export class JournalRepository {
       .observeWithColumns([
         'journal_date',
         'description',
+        'notes',
         'currency_code',
         'status',
         'total_amount',
@@ -563,6 +567,7 @@ export class JournalRepository {
       const journalUpdate = existingJournal.prepareUpdate((j: Journal) => {
         j.journalDate = journalFields.journalDate;
         j.description = journalFields.description;
+        j.notes = journalFields.notes;
         j.currencyCode = journalFields.currencyCode;
         j.status = journalFields.status ?? j.status;
         j.plannedPaymentId = journalFields.plannedPaymentId ?? j.plannedPaymentId;

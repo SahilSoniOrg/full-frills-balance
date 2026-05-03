@@ -94,6 +94,8 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
           setTime={vm.editor.setJournalTime}
           description={vm.editor.description}
           setDescription={vm.editor.setDescription}
+          notes={vm.editor.notes}
+          setNotes={vm.editor.setNotes}
           showBanner={showEditBanner}
           bannerText={editBannerText}
           variant={isGuidedMode ? 'minimal' : 'default'}

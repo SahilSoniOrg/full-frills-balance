@@ -377,6 +377,7 @@ export class JournalService {
   async saveJournalEntry(params: {
     lines: JournalEntryLine[];
     description: string;
+    notes?: string;
     journalDate: string | number; // support timestamp or ISO date
     journalTime?: string;
     journalId?: string;
@@ -389,6 +390,7 @@ export class JournalService {
     const {
       lines,
       description,
+      notes,
       journalDate,
       journalTime,
       journalId,
@@ -488,6 +490,7 @@ export class JournalService {
       const journalData: CreateJournalData = {
         journalDate: combinedTimestamp,
         description: finalDescription,
+        notes: notes?.trim() || undefined,
         currencyCode,
         metadata,
         transactions: lines.map(l => ({
@@ -601,6 +604,7 @@ export class JournalService {
       .observeWithColumns([
         'journal_date',
         'description',
+        'notes',
         'currency_code',
         'status',
         'total_amount',
@@ -699,6 +703,7 @@ export class JournalService {
             id: j.id,
             journalDate: j.journalDate,
             description: j.description,
+            notes: j.notes,
             currencyCode: j.currencyCode,
             status: j.status,
             totalAmount: j.totalAmount || 0,
@@ -721,6 +726,8 @@ export class JournalService {
           if (
             p.id !== c.id ||
             p.status !== c.status ||
+            p.description !== c.description ||
+            p.notes !== c.notes ||
             p.totalAmount !== c.totalAmount ||
             p.transactionCount !== c.transactionCount ||
             p.accounts.length !== c.accounts.length

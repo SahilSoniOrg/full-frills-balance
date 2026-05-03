@@ -1,7 +1,7 @@
-import Transaction from '@/src/data/models/Transaction'
-import { JournalDisplayType } from '@/src/types/domain'
-import { Model, Query, Relation } from '@nozbe/watermelondb'
-import { children, date, field, relation } from '@nozbe/watermelondb/decorators'
+import Transaction from '@/src/data/models/Transaction';
+import { JournalDisplayType } from '@/src/types/domain';
+import { Model, Query, Relation } from '@nozbe/watermelondb';
+import { children, date, field, relation } from '@nozbe/watermelondb/decorators';
 
 export enum JournalStatus {
   DRAFT = 'DRAFT',
@@ -12,33 +12,34 @@ export enum JournalStatus {
 }
 
 export default class Journal extends Model {
-  static table = 'journals'
+  static table = 'journals';
   static associations = {
     transactions: { type: 'has_many', foreignKey: 'journal_id' },
     journal_metadata: { type: 'has_many', foreignKey: 'journal_id' },
-  } as const
+  } as const;
 
-  @field('journal_date') journalDate!: number
-  @field('description') description?: string
-  @field('currency_code') currencyCode!: string
-  @field('status') status!: JournalStatus
-  @field('original_journal_id') originalJournalId?: string
-  @field('reversing_journal_id') reversingJournalId?: string
-  @field('planned_payment_id') plannedPaymentId?: string
+  @field('journal_date') journalDate!: number;
+  @field('description') description?: string;
+  @field('notes') notes?: string;
+  @field('currency_code') currencyCode!: string;
+  @field('status') status!: JournalStatus;
+  @field('original_journal_id') originalJournalId?: string;
+  @field('reversing_journal_id') reversingJournalId?: string;
+  @field('planned_payment_id') plannedPaymentId?: string;
 
   // Denormalized fields for list performance
   // totalAmount is the magnitude of the journal (sum of all debits)
-  @field('total_amount') totalAmount!: number
-  @field('transaction_count') transactionCount!: number
-  @field('display_type') displayType!: JournalDisplayType // INCOME, EXPENSE, TRANSFER, MIXED
+  @field('total_amount') totalAmount!: number;
+  @field('transaction_count') transactionCount!: number;
+  @field('display_type') displayType!: JournalDisplayType; // INCOME, EXPENSE, TRANSFER, MIXED
 
-  @date('created_at') createdAt!: Date
-  @date('updated_at') updatedAt!: Date
-  @date('deleted_at') deletedAt?: Date
+  @date('created_at') createdAt!: Date;
+  @date('updated_at') updatedAt!: Date;
+  @date('deleted_at') deletedAt?: Date;
 
   // Relations with proper types
-  @children('transactions') transactions!: Query<Transaction>
-  @children('journal_metadata') metadata!: Query<any> // Typings can be tricky with circular deps, we'll cast at point of use or keep generic for 1-to-1
-  @relation('journals', 'original_journal_id') originalJournal!: Relation<Journal>
-  @relation('journals', 'reversing_journal_id') reversingJournal!: Relation<Journal>
+  @children('transactions') transactions!: Query<Transaction>;
+  @children('journal_metadata') metadata!: Query<any>; // Typings can be tricky with circular deps, we'll cast at point of use or keep generic for 1-to-1
+  @relation('journals', 'original_journal_id') originalJournal!: Relation<Journal>;
+  @relation('journals', 'reversing_journal_id') reversingJournal!: Relation<Journal>;
 }

@@ -11,10 +11,10 @@ jest.mock('@/src/features/journal/services/TransactionService');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('expo-router', () => ({
-    useRouter: jest.fn()
+  useRouter: jest.fn(),
 }));
 jest.mock('@/src/utils/alerts', () => ({
-    showErrorAlert: jest.fn()
+  showErrorAlert: jest.fn(),
 }));
 
 const mockBack = jest.fn();
@@ -22,107 +22,128 @@ const mockBack = jest.fn();
 
 // Mock useUI
 jest.mock('@/src/contexts/UIContext', () => ({
-    useUI: jest.fn(() => ({
-        advancedMode: false,
-        setAdvancedMode: jest.fn()
-    }))
+  useUI: jest.fn(() => ({
+    advancedMode: false,
+    setAdvancedMode: jest.fn(),
+  })),
 }));
 
 // Mock useExchangeRate
 jest.mock('@/src/hooks/useExchangeRate', () => ({
-    useExchangeRate: jest.fn(() => ({
-        fetchRate: jest.fn()
-    }))
+  useExchangeRate: jest.fn(() => ({
+    fetchRate: jest.fn(),
+  })),
 }));
 
 describe('useJournalEditor', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        (useRouter as jest.Mock).mockReturnValue({ back: mockBack });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue({ back: mockBack });
+  });
+
+  it('should initialize with default lines', () => {
+    const { result } = renderHook(() => useJournalEditor());
+
+    expect(result.current.lines).toHaveLength(2);
+    expect(result.current.isGuidedMode).toBe(true);
+    expect(result.current.transactionType).toBe('expense');
+  });
+
+  it('should initialize with initialNotes', () => {
+    const { result } = renderHook(() => useJournalEditor({ initialNotes: 'Custom Notes' }));
+
+    expect(result.current.notes).toBe('Custom Notes');
+  });
+
+  it('should update notes state using setNotes', () => {
+    const { result } = renderHook(() => useJournalEditor());
+
+    act(() => {
+      result.current.setNotes('New note value');
     });
 
-    it('should initialize with default lines', () => {
-        const { result } = renderHook(() => useJournalEditor());
+    expect(result.current.notes).toBe('New note value');
+  });
 
-        expect(result.current.lines).toHaveLength(2);
-        expect(result.current.isGuidedMode).toBe(true);
-        expect(result.current.transactionType).toBe('expense');
+  it('should add lines', () => {
+    const { result } = renderHook(() => useJournalEditor());
+
+    act(() => {
+      result.current.addLine();
     });
 
-    it('should add lines', () => {
-        const { result } = renderHook(() => useJournalEditor());
+    expect(result.current.lines).toHaveLength(3);
+  });
 
-        act(() => {
-            result.current.addLine();
-        });
+  it('should remove lines but keep minimum 2', () => {
+    const { result } = renderHook(() => useJournalEditor());
 
-        expect(result.current.lines).toHaveLength(3);
+    act(() => {
+      result.current.removeLine(result.current.lines[0].id);
     });
 
-    it('should remove lines but keep minimum 2', () => {
-        const { result } = renderHook(() => useJournalEditor());
+    expect(result.current.lines).toHaveLength(2); // Should not go below 2
 
-        act(() => {
-            result.current.removeLine(result.current.lines[0].id);
-        });
-
-        expect(result.current.lines).toHaveLength(2); // Should not go below 2
-
-        act(() => {
-            result.current.addLine(); // Now 3
-            result.current.removeLine(result.current.lines[0].id);
-        });
-
-        expect(result.current.lines).toHaveLength(2);
+    act(() => {
+      result.current.addLine(); // Now 3
+      result.current.removeLine(result.current.lines[0].id);
     });
 
-    it('should fail submission if service fails', async () => {
-        const mockOnSuccess = jest.fn();
-        const { result } = renderHook(() => useJournalEditor({ onSuccess: mockOnSuccess }));
+    expect(result.current.lines).toHaveLength(2);
+  });
 
-        (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: false, error: 'fail' });
+  it('should fail submission if service fails', async () => {
+    const mockOnSuccess = jest.fn();
+    const { result } = renderHook(() => useJournalEditor({ onSuccess: mockOnSuccess }));
 
-        await act(async () => {
-            await result.current.submit();
-        });
-
-        expect(journalService.saveJournalEntry).toHaveBeenCalled();
-        expect(mockOnSuccess).not.toHaveBeenCalled();
+    (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({
+      success: false,
+      error: 'fail',
     });
 
-    it('should succeed submission and call onSuccess', async () => {
-        const mockOnSuccess = jest.fn();
-        const { result } = renderHook(() => useJournalEditor({ onSuccess: mockOnSuccess }));
-
-        (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: true });
-
-        await act(async () => {
-            await result.current.submit();
-        });
-
-        expect(mockOnSuccess).toHaveBeenCalled();
+    await act(async () => {
+      await result.current.submit();
     });
 
-    it('should load journal data on edit', async () => {
-        const mockJournal = {
-            journalDate: '2024-01-01T12:00:00.000Z',
-            description: 'Test Load'
-        };
-        const mockTxs = [
-            { id: '1', accountId: 'a1', amount: 10, currencyCode: 'USD', transactionType: 'DEBIT' },
-            { id: '2', accountId: 'a2', amount: 10, currencyCode: 'USD', transactionType: 'CREDIT' }
-        ];
+    expect(journalService.saveJournalEntry).toHaveBeenCalled();
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
 
-        (journalRepository.find as jest.Mock).mockResolvedValue(mockJournal);
-        (transactionService.getEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
+  it('should succeed submission and call onSuccess', async () => {
+    const mockOnSuccess = jest.fn();
+    const { result } = renderHook(() => useJournalEditor({ onSuccess: mockOnSuccess }));
 
-        const { result } = renderHook(() => useJournalEditor({ journalId: 'j1' }));
+    (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: true });
 
-        expect(result.current.isLoading).toBe(true);
-
-        await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-        expect(result.current.description).toBe('Test Load');
-        expect(result.current.lines).toHaveLength(2);
+    await act(async () => {
+      await result.current.submit();
     });
+
+    expect(mockOnSuccess).toHaveBeenCalled();
+  });
+
+  it('should load journal data on edit', async () => {
+    const mockJournal = {
+      journalDate: '2024-01-01T12:00:00.000Z',
+      description: 'Test Load',
+      notes: 'Test Notes Loaded',
+    };
+    const mockTxs = [
+      { id: '1', accountId: 'a1', amount: 10, currencyCode: 'USD', transactionType: 'DEBIT' },
+      { id: '2', accountId: 'a2', amount: 10, currencyCode: 'USD', transactionType: 'CREDIT' },
+    ];
+
+    (journalRepository.find as jest.Mock).mockResolvedValue(mockJournal);
+    (transactionService.getEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
+
+    const { result } = renderHook(() => useJournalEditor({ journalId: 'j1' }));
+
+    expect(result.current.isLoading).toBe(true);
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.description).toBe('Test Load');
+    expect(result.current.notes).toBe('Test Notes Loaded');
+    expect(result.current.lines).toHaveLength(2);
+  });
 });

@@ -14,6 +14,8 @@ interface JournalMetaCardProps {
   setTime: (time: string) => void;
   description: string;
   setDescription: (desc: string) => void;
+  notes?: string;
+  setNotes?: (notes: string) => void;
   style?: StyleProp<ViewStyle>;
   showBanner?: boolean;
   bannerText?: string;
@@ -27,6 +29,8 @@ export function JournalMetaCard({
   setTime,
   description,
   setDescription,
+  notes = '',
+  setNotes,
   style,
   showBanner,
   bannerText,
@@ -34,7 +38,14 @@ export function JournalMetaCard({
 }: JournalMetaCardProps) {
   const { theme } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showNotes, setShowNotes] = useState(!!notes);
   const isMinimal = variant === 'minimal';
+
+  React.useEffect(() => {
+    if (notes) {
+      setShowNotes(true);
+    }
+  }, [notes]);
 
   const content = (
     <View style={{ gap: Spacing.md }}>
@@ -46,14 +57,86 @@ export function JournalMetaCard({
         value={description}
         onChangeText={setDescription}
         placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-        multiline
         variant="minimal"
         style={{
-          textAlignVertical: 'top',
           fontSize: isMinimal ? 16 : 18,
           fontWeight: isMinimal ? '500' : '600',
         }}
       />
+
+      {setNotes && showNotes && (
+        <View
+          style={{
+            backgroundColor: theme.surfaceSecondary,
+            borderRadius: Shape.radius.md,
+            padding: Spacing.sm,
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: Spacing.sm,
+            marginTop: -Spacing.xs,
+            borderWidth: 1,
+            borderColor: theme.border,
+            position: 'relative',
+          }}
+        >
+          <AppIcon
+            name="document"
+            size={Size.iconXs}
+            color={theme.textTertiary}
+            style={{ marginTop: 4 }}
+          />
+          <AppInput
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Add any extra journal details..."
+            multiline
+            variant="minimal"
+            style={{
+              flex: 1,
+              textAlignVertical: 'top',
+              fontSize: isMinimal ? 13 : 14,
+              fontWeight: '400',
+              color: theme.textSecondary,
+              padding: 0,
+              margin: 0,
+              marginRight: Spacing.lg,
+            }}
+          />
+          <TouchableOpacity
+            onPress={() => {
+              setNotes('');
+              setShowNotes(false);
+            }}
+            style={{
+              position: 'absolute',
+              top: Spacing.xs,
+              right: Spacing.xs,
+              padding: 6,
+              zIndex: 1,
+            }}
+          >
+            <AppIcon name="x" size={14} color={theme.textTertiary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {setNotes && !showNotes && (
+        <TouchableOpacity
+          onPress={() => setShowNotes(true)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Spacing.xs,
+            alignSelf: 'flex-end',
+            marginTop: -Spacing.xs,
+          }}
+        >
+          <AppIcon name="plus" size={14} color={theme.primary} />
+          <AppText variant="caption" color="primary" weight="medium">
+            Add Notes
+          </AppText>
+        </TouchableOpacity>
+      )}
 
       <View
         style={{

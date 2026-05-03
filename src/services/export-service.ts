@@ -47,6 +47,7 @@ export interface JournalExport {
   id: string;
   journalDate: string;
   description?: string;
+  notes?: string;
   currencyCode: string;
   status: string;
   originalJournalId?: string;

@@ -195,6 +195,24 @@ export function TransactionDetailsView(vm: TransactionDetailsViewModel) {
               trailing={<AppText variant="body">{journalIdShort}</AppText>}
               padding="sm"
             />
+            {vm.notesText && (
+              <ListRow
+                title="Notes"
+                trailing={
+                  <Box style={{ flex: 1, alignItems: 'flex-end', maxWidth: '65%' }}>
+                    <AppText
+                      variant="body"
+                      color="secondary"
+                      numberOfLines={3}
+                      style={{ textAlign: 'right' }}
+                    >
+                      {vm.notesText}
+                    </AppText>
+                  </Box>
+                }
+                padding="sm"
+              />
+            )}
             <ListRow
               title="History"
               trailing={

@@ -438,5 +438,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 22,
+      steps: [
+        addColumns({
+          table: 'journals',
+          columns: [{ name: 'notes', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

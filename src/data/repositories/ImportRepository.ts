@@ -49,6 +49,7 @@ export interface ImportedJournal {
   id: string;
   journalDate: number;
   description?: string;
+  notes?: string;
   currencyCode: string;
   status: string;
   totalAmount: number;
@@ -354,6 +355,7 @@ export class ImportRepository {
           record._raw.id = j.id;
           record.journalDate = j.journalDate;
           record.description = j.description;
+          record.notes = j.notes;
           record.currencyCode = j.currencyCode;
           record.status = toJournalStatus(j.status);
           record.originalJournalId = j.originalJournalId;
@@ -700,6 +702,7 @@ export class ImportRepository {
         (record: Journal, j: ImportedJournal) => {
           record.journalDate = j.journalDate;
           record.description = j.description;
+          record.notes = j.notes;
           record.currencyCode = j.currencyCode;
           record.status = toJournalStatus(j.status);
           record.originalJournalId = j.originalJournalId;

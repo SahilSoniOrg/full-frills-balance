@@ -9,7 +9,6 @@ import { AppConfig } from '@/src/constants';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
-import { JournalDisplayType } from '@/src/types/domain';
 import { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { TransactionType } from '@/src/data/models/Transaction';
 import {
@@ -23,6 +22,7 @@ import {
 } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
+import { JournalDisplayType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
@@ -487,8 +487,9 @@ export const ivyPlugin: ImportPlugin = {
 
       const journalId = tx.id;
       const timestamp = tx.dateTime ? new Date(tx.dateTime).getTime() : Date.now();
-      const description =
-        tx.title || tx.description || (tx.type === 'TRANSFER' ? 'Transfer' : 'Transaction');
+
+      const description = tx.title || (tx.type === 'TRANSFER' ? 'Transfer' : 'Transaction');
+      const notes = tx.description;
 
       // Check for special system transactions
       const descLower = description.toLowerCase();
@@ -606,6 +607,7 @@ export const ivyPlugin: ImportPlugin = {
         id: journalId,
         journalDate: timestamp,
         description,
+        notes,
         currencyCode,
         status: JournalStatus.POSTED,
         totalAmount: amount,

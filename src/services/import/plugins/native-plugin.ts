@@ -7,21 +7,21 @@
 
 import { AppConfig } from '@/src/constants';
 import {
-    ImportedAccount,
-    ImportedAccountMetadata,
-    ImportedAuditLog,
-    ImportedBalanceSnapshot,
-    ImportedBudget,
-    ImportedBudgetScope,
-    ImportedCurrency,
-    ImportedExchangeRate,
-    ImportedJournal,
-    ImportedJournalMetadata,
-    ImportedPlannedPayment,
-    ImportedSmsAutoPostRule,
-    ImportedSmsInboxRecord,
-    ImportedTransaction,
-    importRepository
+  ImportedAccount,
+  ImportedAccountMetadata,
+  ImportedAuditLog,
+  ImportedBalanceSnapshot,
+  ImportedBudget,
+  ImportedBudgetScope,
+  ImportedCurrency,
+  ImportedExchangeRate,
+  ImportedJournal,
+  ImportedJournalMetadata,
+  ImportedPlannedPayment,
+  ImportedSmsAutoPostRule,
+  ImportedSmsInboxRecord,
+  ImportedTransaction,
+  importRepository,
 } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
@@ -29,296 +29,305 @@ import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
 
 interface NativeImportData {
-    version: string;
-    preferences?: Partial<UIPreferences>;
-    accounts: ImportedAccount[];
-    journals: ImportedJournal[];
-    transactions: ImportedTransaction[];
-    auditLogs?: ImportedAuditLog[];
-    budgets?: ImportedBudget[];
-    budgetScopes?: ImportedBudgetScope[];
-    currencies?: ImportedCurrency[];
-    exchangeRates?: ImportedExchangeRate[];
-    accountMetadata?: ImportedAccountMetadata[];
-    plannedPayments?: ImportedPlannedPayment[];
-    journalMetadata?: ImportedJournalMetadata[];
-    smsAutoPostRules?: ImportedSmsAutoPostRule[];
-    smsInboxRecords?: ImportedSmsInboxRecord[];
-    balanceSnapshots?: ImportedBalanceSnapshot[];
+  version: string;
+  preferences?: Partial<UIPreferences>;
+  accounts: ImportedAccount[];
+  journals: ImportedJournal[];
+  transactions: ImportedTransaction[];
+  auditLogs?: ImportedAuditLog[];
+  budgets?: ImportedBudget[];
+  budgetScopes?: ImportedBudgetScope[];
+  currencies?: ImportedCurrency[];
+  exchangeRates?: ImportedExchangeRate[];
+  accountMetadata?: ImportedAccountMetadata[];
+  plannedPayments?: ImportedPlannedPayment[];
+  journalMetadata?: ImportedJournalMetadata[];
+  smsAutoPostRules?: ImportedSmsAutoPostRule[];
+  smsInboxRecords?: ImportedSmsInboxRecord[];
+  balanceSnapshots?: ImportedBalanceSnapshot[];
 }
 
 function parseTimestamp(value?: number | string): number | undefined {
-    if (value === undefined || value === null) return undefined;
-    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
 
-    const parsed = new Date(value).getTime();
-    return Number.isNaN(parsed) ? undefined : parsed;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 export const nativePlugin: ImportPlugin = {
-    id: 'native',
-    name: 'Full Frills Backup',
-    description: 'Restore from a JSON backup file created by this app.',
-    icon: '⚡️',
+  id: 'native',
+  name: 'Full Frills Backup',
+  description: 'Restore from a JSON backup file created by this app.',
+  icon: '⚡️',
 
-    detect(context: ImportFileContext): boolean {
-        if (!context.json || typeof context.json !== 'object') return false;
+  detect(context: ImportFileContext): boolean {
+    if (!context.json || typeof context.json !== 'object') return false;
 
-        const obj = context.json as Record<string, unknown>;
+    const obj = context.json as Record<string, unknown>;
 
-        // Native format has journals (not categories) and a version field
-        const hasJournals = Array.isArray(obj.journals);
-        const hasAccounts = Array.isArray(obj.accounts);
-        const hasTransactions = Array.isArray(obj.transactions);
-        const hasVersion = typeof obj.version === 'string';
+    // Native format has journals (not categories) and a version field
+    const hasJournals = Array.isArray(obj.journals);
+    const hasAccounts = Array.isArray(obj.accounts);
+    const hasTransactions = Array.isArray(obj.transactions);
+    const hasVersion = typeof obj.version === 'string';
 
-        // Categories is the hallmark of Ivy format, not native
-        const hasCategories = Array.isArray(obj.categories);
+    // Categories is the hallmark of Ivy format, not native
+    const hasCategories = Array.isArray(obj.categories);
 
-        return hasJournals && hasAccounts && hasTransactions && hasVersion && !hasCategories;
-    },
+    return hasJournals && hasAccounts && hasTransactions && hasVersion && !hasCategories;
+  },
 
-    async import(context: ImportFileContext, onProgress?: (message: string, progress: number) => void): Promise<ImportStats> {
-        logger.info('[NativePlugin] Starting import...');
+  async import(
+    context: ImportFileContext,
+    onProgress?: (message: string, progress: number) => void,
+  ): Promise<ImportStats> {
+    logger.info('[NativePlugin] Starting import...');
 
-        if (!context.json) {
-            logger.error('[NativePlugin] No parsed JSON found in context');
-            throw new Error('Invalid JSON file format');
-        }
-        const data: NativeImportData = context.json as NativeImportData;
-
-        // Basic validation
-        if (!data.accounts || !data.journals || !data.transactions) {
-            throw new Error('Invalid export file: missing required data sections');
-        }
-
-        logger.info(`[NativePlugin] Validated file. Found ${data.accounts.length} accounts, ${data.journals.length} journals, ${data.transactions.length} transactions.`);
-        const defaultCurrencyCode = data.preferences?.defaultCurrencyCode || AppConfig.defaultCurrency;
-
-        try {
-            // 1. Wipe existing data
-            onProgress?.('Wiping database...', 0.1);
-            logger.warn('[NativePlugin] Wiping database for import...');
-            await integrityService.resetDatabase();
-
-            // 2. Clear and restore preferences
-            onProgress?.('Restoring preferences...', 0.2);
-            await preferences.restorePreferences(data.preferences);
-
-            // 3. Import Data in Batch
-            onProgress?.('Saving data to database (this may take a while)...', 0.4);
-            // Yield UI
-            await new Promise(resolve => setTimeout(resolve, 0));
-            logger.info('[NativePlugin] Executing batch insert...');
-            await importRepository.batchInsert({
-                accounts: data.accounts.map(acc => ({
-                    id: acc.id,
-                    name: acc.name,
-                    accountType: acc.accountType,
-                    accountSubtype: acc.accountSubtype,
-                    currencyCode: acc.currencyCode || defaultCurrencyCode,
-                    parentAccountId: acc.parentAccountId,
-                    description: acc.description,
-                    icon: acc.icon,
-                    orderNum: acc.orderNum,
-                    createdAt: parseTimestamp(acc.createdAt),
-                    updatedAt: parseTimestamp(acc.updatedAt),
-                    deletedAt: parseTimestamp(acc.deletedAt),
-                })),
-                journals: data.journals.map(j => ({
-                    id: j.id,
-                    journalDate: parseTimestamp(j.journalDate) ?? Date.now(),
-                    description: j.description,
-                    currencyCode: j.currencyCode,
-                    status: j.status,
-                    originalJournalId: j.originalJournalId,
-                    reversingJournalId: j.reversingJournalId,
-                    totalAmount: j.totalAmount,
-                    transactionCount: j.transactionCount,
-                    displayType: j.displayType,
-                    plannedPaymentId: j.plannedPaymentId,
-                    createdAt: parseTimestamp(j.createdAt),
-                    updatedAt: parseTimestamp(j.updatedAt),
-                    deletedAt: parseTimestamp(j.deletedAt),
-                })),
-                transactions: data.transactions.map(t => ({
-                    id: t.id,
-                    journalId: t.journalId,
-                    accountId: t.accountId,
-                    amount: t.amount,
-                    transactionType: t.transactionType,
-                    currencyCode: t.currencyCode || data.accounts.find(a => a.id === t.accountId)?.currencyCode || defaultCurrencyCode,
-                    transactionDate: parseTimestamp(t.transactionDate) ?? Date.now(),
-                    notes: t.notes,
-                    exchangeRate: t.exchangeRate,
-                    createdAt: parseTimestamp(t.createdAt),
-                    updatedAt: parseTimestamp(t.updatedAt),
-                    deletedAt: parseTimestamp(t.deletedAt),
-                })),
-                auditLogs: (data.auditLogs || []).map((log) => ({
-                    id: log.id,
-                    entityType: log.entityType,
-                    entityId: log.entityId,
-                    action: log.action,
-                    changes: log.changes,
-                    timestamp: log.timestamp,
-                    createdAt: parseTimestamp(log.createdAt),
-                })),
-                budgets: (data.budgets || []).map((budget) => ({
-                    id: budget.id,
-                    name: budget.name,
-                    amount: budget.amount,
-                    currencyCode: budget.currencyCode || defaultCurrencyCode,
-                    startMonth: budget.startMonth,
-                    active: budget.active,
-                    createdAt: parseTimestamp(budget.createdAt),
-                    updatedAt: parseTimestamp(budget.updatedAt),
-                })),
-                budgetScopes: (data.budgetScopes || []).map((scope) => ({
-                    id: scope.id,
-                    budgetId: scope.budgetId,
-                    accountId: scope.accountId,
-                    createdAt: parseTimestamp(scope.createdAt),
-                    updatedAt: parseTimestamp(scope.updatedAt),
-                })),
-                currencies: (data.currencies || []).map((currency) => ({
-                    id: currency.id,
-                    code: currency.code,
-                    symbol: currency.symbol,
-                    name: currency.name,
-                    precision: currency.precision,
-                    createdAt: parseTimestamp(currency.createdAt),
-                    updatedAt: parseTimestamp(currency.updatedAt),
-                    deletedAt: parseTimestamp(currency.deletedAt),
-                })),
-                exchangeRates: (data.exchangeRates || []).map((rate) => ({
-                    id: rate.id,
-                    fromCurrency: rate.fromCurrency,
-                    toCurrency: rate.toCurrency,
-                    rate: rate.rate,
-                    effectiveDate: parseTimestamp(rate.effectiveDate) ?? Date.now(),
-                    source: rate.source,
-                    createdAt: parseTimestamp(rate.createdAt),
-                    updatedAt: parseTimestamp(rate.updatedAt),
-                })),
-                accountMetadata: (data.accountMetadata || []).map((metadata) => ({
-                    id: metadata.id,
-                    accountId: metadata.accountId,
-                    statementDay: metadata.statementDay,
-                    dueDay: metadata.dueDay,
-                    minimumPaymentAmount: metadata.minimumPaymentAmount,
-                    minimumBalanceAmount: metadata.minimumBalanceAmount,
-                    creditLimitAmount: metadata.creditLimitAmount,
-                    aprBps: metadata.aprBps,
-                    emiDay: metadata.emiDay,
-                    loanTenureMonths: metadata.loanTenureMonths,
-                    autopayEnabled: metadata.autopayEnabled,
-                    gracePeriodDays: metadata.gracePeriodDays,
-                    notes: metadata.notes,
-                    createdAt: parseTimestamp(metadata.createdAt),
-                    updatedAt: parseTimestamp(metadata.updatedAt),
-                })),
-                plannedPayments: (data.plannedPayments || []).map((pp) => ({
-                    id: pp.id,
-                    name: pp.name,
-                    description: pp.description,
-                    amount: pp.amount,
-                    currencyCode: pp.currencyCode,
-                    fromAccountId: pp.fromAccountId,
-                    toAccountId: pp.toAccountId,
-                    intervalN: pp.intervalN,
-                    intervalType: pp.intervalType,
-                    startDate: parseTimestamp(pp.startDate) ?? Date.now(),
-                    endDate: parseTimestamp(pp.endDate),
-                    nextOccurrence: parseTimestamp(pp.nextOccurrence) ?? Date.now(),
-                    status: pp.status,
-                    isAutoPost: pp.isAutoPost,
-                    recurrenceDay: pp.recurrenceDay,
-                    recurrenceMonth: pp.recurrenceMonth,
-                    createdAt: parseTimestamp(pp.createdAt),
-                    updatedAt: parseTimestamp(pp.updatedAt),
-                    deletedAt: parseTimestamp(pp.deletedAt),
-                })),
-                journalMetadata: (data.journalMetadata || []).map((meta) => ({
-                    id: meta.id,
-                    journalId: meta.journalId,
-                    importSource: meta.importSource,
-                    originalSmsId: meta.originalSmsId,
-                    originalSmsSender: meta.originalSmsSender,
-                    originalSmsBody: meta.originalSmsBody,
-                    metadataJson: meta.metadataJson,
-                    createdAt: parseTimestamp(meta.createdAt),
-                    updatedAt: parseTimestamp(meta.updatedAt),
-                })),
-                smsAutoPostRules: (data.smsAutoPostRules || []).map((rule) => ({
-                    id: rule.id,
-                    senderMatch: rule.senderMatch,
-                    bodyMatch: rule.bodyMatch,
-                    conditionsJson: rule.conditionsJson,
-                    actionsJson: rule.actionsJson,
-                    priority: rule.priority,
-                    sourceAccountId: rule.sourceAccountId,
-                    categoryAccountId: rule.categoryAccountId,
-                    isActive: rule.isActive,
-                    createdAt: parseTimestamp(rule.createdAt),
-                    updatedAt: parseTimestamp(rule.updatedAt),
-                })),
-                smsInboxRecords: (data.smsInboxRecords || []).map((sms) => ({
-                    id: sms.id,
-                    deviceSmsId: sms.deviceSmsId,
-                    senderAddress: sms.senderAddress,
-                    rawBody: sms.rawBody,
-                    smsDate: parseTimestamp(sms.smsDate) ?? Date.now(),
-                    smsFingerprint: sms.smsFingerprint,
-                    parseStatus: sms.parseStatus,
-                    parsedAmount: sms.parsedAmount,
-                    parsedCurrencyCode: sms.parsedCurrencyCode,
-                    parsedMerchant: sms.parsedMerchant,
-                    parsedAccountSource: sms.parsedAccountSource,
-                    referenceNumber: sms.referenceNumber,
-                    direction: sms.direction,
-                    processingStatus: sms.processingStatus,
-                    linkedJournalId: sms.linkedJournalId,
-                    duplicateJournalId: sms.duplicateJournalId,
-                    duplicateConfidence: sms.duplicateConfidence,
-                    parseConfidence: sms.parseConfidence,
-                    parseReason: sms.parseReason,
-                    metadataJson: sms.metadataJson,
-                    firstSeenAt: parseTimestamp(sms.firstSeenAt) ?? Date.now(),
-                    lastScannedAt: parseTimestamp(sms.lastScannedAt) ?? Date.now(),
-                    processedAt: parseTimestamp(sms.processedAt),
-                    createdAt: parseTimestamp(sms.createdAt),
-                    updatedAt: parseTimestamp(sms.updatedAt),
-                })),
-                balanceSnapshots: (data.balanceSnapshots || []).map((snapshot) => ({
-                    id: snapshot.id,
-                    accountId: snapshot.accountId,
-                    transactionId: snapshot.transactionId as string,
-                    transactionDate: parseTimestamp(snapshot.transactionDate as any) ?? Date.now(),
-                    absoluteBalance: snapshot.absoluteBalance as number,
-                    transactionCount: snapshot.transactionCount as number,
-                    createdAt: parseTimestamp(snapshot.createdAt as any),
-                    updatedAt: parseTimestamp(snapshot.updatedAt as any),
-                })),
-            });
-
-            logger.info('[NativePlugin] Triggering integrity checks...');
-            await integrityService.forceRunCheck(onProgress);
-
-            onProgress?.('Finalizing import...', 0.95);
-            logger.info('[NativePlugin] Import successful.');
-            return {
-                accounts: data.accounts.length,
-                journals: data.journals.length,
-                transactions: data.transactions.length,
-                budgets: data.budgets?.length || 0,
-                auditLogs: data.auditLogs?.length || 0,
-                plannedPayments: data.plannedPayments?.length || 0,
-                skippedTransactions: 0
-            };
-        } catch (error) {
-            logger.error('[NativePlugin] Import failed mid-process', error);
-            throw new Error('Failed to import data into database');
-        }
+    if (!context.json) {
+      logger.error('[NativePlugin] No parsed JSON found in context');
+      throw new Error('Invalid JSON file format');
     }
+    const data: NativeImportData = context.json as NativeImportData;
+
+    // Basic validation
+    if (!data.accounts || !data.journals || !data.transactions) {
+      throw new Error('Invalid export file: missing required data sections');
+    }
+
+    logger.info(
+      `[NativePlugin] Validated file. Found ${data.accounts.length} accounts, ${data.journals.length} journals, ${data.transactions.length} transactions.`,
+    );
+    const defaultCurrencyCode = data.preferences?.defaultCurrencyCode || AppConfig.defaultCurrency;
+
+    try {
+      // 1. Wipe existing data
+      onProgress?.('Wiping database...', 0.1);
+      logger.warn('[NativePlugin] Wiping database for import...');
+      await integrityService.resetDatabase();
+
+      // 2. Clear and restore preferences
+      onProgress?.('Restoring preferences...', 0.2);
+      await preferences.restorePreferences(data.preferences);
+
+      // 3. Import Data in Batch
+      onProgress?.('Saving data to database (this may take a while)...', 0.4);
+      // Yield UI
+      await new Promise(resolve => setTimeout(resolve, 0));
+      logger.info('[NativePlugin] Executing batch insert...');
+      await importRepository.batchInsert({
+        accounts: data.accounts.map(acc => ({
+          id: acc.id,
+          name: acc.name,
+          accountType: acc.accountType,
+          accountSubtype: acc.accountSubtype,
+          currencyCode: acc.currencyCode || defaultCurrencyCode,
+          parentAccountId: acc.parentAccountId,
+          description: acc.description,
+          icon: acc.icon,
+          orderNum: acc.orderNum,
+          createdAt: parseTimestamp(acc.createdAt),
+          updatedAt: parseTimestamp(acc.updatedAt),
+          deletedAt: parseTimestamp(acc.deletedAt),
+        })),
+        journals: data.journals.map(j => ({
+          id: j.id,
+          journalDate: parseTimestamp(j.journalDate) ?? Date.now(),
+          description: j.description,
+          notes: j.notes,
+          currencyCode: j.currencyCode,
+          status: j.status,
+          originalJournalId: j.originalJournalId,
+          reversingJournalId: j.reversingJournalId,
+          totalAmount: j.totalAmount,
+          transactionCount: j.transactionCount,
+          displayType: j.displayType,
+          plannedPaymentId: j.plannedPaymentId,
+          createdAt: parseTimestamp(j.createdAt),
+          updatedAt: parseTimestamp(j.updatedAt),
+          deletedAt: parseTimestamp(j.deletedAt),
+        })),
+        transactions: data.transactions.map(t => ({
+          id: t.id,
+          journalId: t.journalId,
+          accountId: t.accountId,
+          amount: t.amount,
+          transactionType: t.transactionType,
+          currencyCode:
+            t.currencyCode ||
+            data.accounts.find(a => a.id === t.accountId)?.currencyCode ||
+            defaultCurrencyCode,
+          transactionDate: parseTimestamp(t.transactionDate) ?? Date.now(),
+          notes: t.notes,
+          exchangeRate: t.exchangeRate,
+          createdAt: parseTimestamp(t.createdAt),
+          updatedAt: parseTimestamp(t.updatedAt),
+          deletedAt: parseTimestamp(t.deletedAt),
+        })),
+        auditLogs: (data.auditLogs || []).map(log => ({
+          id: log.id,
+          entityType: log.entityType,
+          entityId: log.entityId,
+          action: log.action,
+          changes: log.changes,
+          timestamp: log.timestamp,
+          createdAt: parseTimestamp(log.createdAt),
+        })),
+        budgets: (data.budgets || []).map(budget => ({
+          id: budget.id,
+          name: budget.name,
+          amount: budget.amount,
+          currencyCode: budget.currencyCode || defaultCurrencyCode,
+          startMonth: budget.startMonth,
+          active: budget.active,
+          createdAt: parseTimestamp(budget.createdAt),
+          updatedAt: parseTimestamp(budget.updatedAt),
+        })),
+        budgetScopes: (data.budgetScopes || []).map(scope => ({
+          id: scope.id,
+          budgetId: scope.budgetId,
+          accountId: scope.accountId,
+          createdAt: parseTimestamp(scope.createdAt),
+          updatedAt: parseTimestamp(scope.updatedAt),
+        })),
+        currencies: (data.currencies || []).map(currency => ({
+          id: currency.id,
+          code: currency.code,
+          symbol: currency.symbol,
+          name: currency.name,
+          precision: currency.precision,
+          createdAt: parseTimestamp(currency.createdAt),
+          updatedAt: parseTimestamp(currency.updatedAt),
+          deletedAt: parseTimestamp(currency.deletedAt),
+        })),
+        exchangeRates: (data.exchangeRates || []).map(rate => ({
+          id: rate.id,
+          fromCurrency: rate.fromCurrency,
+          toCurrency: rate.toCurrency,
+          rate: rate.rate,
+          effectiveDate: parseTimestamp(rate.effectiveDate) ?? Date.now(),
+          source: rate.source,
+          createdAt: parseTimestamp(rate.createdAt),
+          updatedAt: parseTimestamp(rate.updatedAt),
+        })),
+        accountMetadata: (data.accountMetadata || []).map(metadata => ({
+          id: metadata.id,
+          accountId: metadata.accountId,
+          statementDay: metadata.statementDay,
+          dueDay: metadata.dueDay,
+          minimumPaymentAmount: metadata.minimumPaymentAmount,
+          minimumBalanceAmount: metadata.minimumBalanceAmount,
+          creditLimitAmount: metadata.creditLimitAmount,
+          aprBps: metadata.aprBps,
+          emiDay: metadata.emiDay,
+          loanTenureMonths: metadata.loanTenureMonths,
+          autopayEnabled: metadata.autopayEnabled,
+          gracePeriodDays: metadata.gracePeriodDays,
+          notes: metadata.notes,
+          createdAt: parseTimestamp(metadata.createdAt),
+          updatedAt: parseTimestamp(metadata.updatedAt),
+        })),
+        plannedPayments: (data.plannedPayments || []).map(pp => ({
+          id: pp.id,
+          name: pp.name,
+          description: pp.description,
+          amount: pp.amount,
+          currencyCode: pp.currencyCode,
+          fromAccountId: pp.fromAccountId,
+          toAccountId: pp.toAccountId,
+          intervalN: pp.intervalN,
+          intervalType: pp.intervalType,
+          startDate: parseTimestamp(pp.startDate) ?? Date.now(),
+          endDate: parseTimestamp(pp.endDate),
+          nextOccurrence: parseTimestamp(pp.nextOccurrence) ?? Date.now(),
+          status: pp.status,
+          isAutoPost: pp.isAutoPost,
+          recurrenceDay: pp.recurrenceDay,
+          recurrenceMonth: pp.recurrenceMonth,
+          createdAt: parseTimestamp(pp.createdAt),
+          updatedAt: parseTimestamp(pp.updatedAt),
+          deletedAt: parseTimestamp(pp.deletedAt),
+        })),
+        journalMetadata: (data.journalMetadata || []).map(meta => ({
+          id: meta.id,
+          journalId: meta.journalId,
+          importSource: meta.importSource,
+          originalSmsId: meta.originalSmsId,
+          originalSmsSender: meta.originalSmsSender,
+          originalSmsBody: meta.originalSmsBody,
+          metadataJson: meta.metadataJson,
+          createdAt: parseTimestamp(meta.createdAt),
+          updatedAt: parseTimestamp(meta.updatedAt),
+        })),
+        smsAutoPostRules: (data.smsAutoPostRules || []).map(rule => ({
+          id: rule.id,
+          senderMatch: rule.senderMatch,
+          bodyMatch: rule.bodyMatch,
+          conditionsJson: rule.conditionsJson,
+          actionsJson: rule.actionsJson,
+          priority: rule.priority,
+          sourceAccountId: rule.sourceAccountId,
+          categoryAccountId: rule.categoryAccountId,
+          isActive: rule.isActive,
+          createdAt: parseTimestamp(rule.createdAt),
+          updatedAt: parseTimestamp(rule.updatedAt),
+        })),
+        smsInboxRecords: (data.smsInboxRecords || []).map(sms => ({
+          id: sms.id,
+          deviceSmsId: sms.deviceSmsId,
+          senderAddress: sms.senderAddress,
+          rawBody: sms.rawBody,
+          smsDate: parseTimestamp(sms.smsDate) ?? Date.now(),
+          smsFingerprint: sms.smsFingerprint,
+          parseStatus: sms.parseStatus,
+          parsedAmount: sms.parsedAmount,
+          parsedCurrencyCode: sms.parsedCurrencyCode,
+          parsedMerchant: sms.parsedMerchant,
+          parsedAccountSource: sms.parsedAccountSource,
+          referenceNumber: sms.referenceNumber,
+          direction: sms.direction,
+          processingStatus: sms.processingStatus,
+          linkedJournalId: sms.linkedJournalId,
+          duplicateJournalId: sms.duplicateJournalId,
+          duplicateConfidence: sms.duplicateConfidence,
+          parseConfidence: sms.parseConfidence,
+          parseReason: sms.parseReason,
+          metadataJson: sms.metadataJson,
+          firstSeenAt: parseTimestamp(sms.firstSeenAt) ?? Date.now(),
+          lastScannedAt: parseTimestamp(sms.lastScannedAt) ?? Date.now(),
+          processedAt: parseTimestamp(sms.processedAt),
+          createdAt: parseTimestamp(sms.createdAt),
+          updatedAt: parseTimestamp(sms.updatedAt),
+        })),
+        balanceSnapshots: (data.balanceSnapshots || []).map(snapshot => ({
+          id: snapshot.id,
+          accountId: snapshot.accountId,
+          transactionId: snapshot.transactionId as string,
+          transactionDate: parseTimestamp(snapshot.transactionDate as any) ?? Date.now(),
+          absoluteBalance: snapshot.absoluteBalance as number,
+          transactionCount: snapshot.transactionCount as number,
+          createdAt: parseTimestamp(snapshot.createdAt as any),
+          updatedAt: parseTimestamp(snapshot.updatedAt as any),
+        })),
+      });
+
+      logger.info('[NativePlugin] Triggering integrity checks...');
+      await integrityService.forceRunCheck(onProgress);
+
+      onProgress?.('Finalizing import...', 0.95);
+      logger.info('[NativePlugin] Import successful.');
+      return {
+        accounts: data.accounts.length,
+        journals: data.journals.length,
+        transactions: data.transactions.length,
+        budgets: data.budgets?.length || 0,
+        auditLogs: data.auditLogs?.length || 0,
+        plannedPayments: data.plannedPayments?.length || 0,
+        skippedTransactions: 0,
+      };
+    } catch (error) {
+      logger.error('[NativePlugin] Import failed mid-process', error);
+      throw new Error('Failed to import data into database');
+    }
+  },
 };

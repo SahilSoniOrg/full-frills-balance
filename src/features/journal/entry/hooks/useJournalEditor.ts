@@ -20,6 +20,7 @@ export interface UseJournalEditorOptions {
   initialType?: 'expense' | 'income' | 'transfer';
   initialAmount?: string;
   initialDescription?: string;
+  initialNotes?: string;
   initialDate?: string; // ISO string format
   initialSourceId?: string;
   initialDestinationId?: string;
@@ -48,6 +49,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     initialType = 'expense',
     initialAmount,
     initialDescription,
+    initialNotes,
     initialDate,
     initialSourceId,
     initialDestinationId,
@@ -130,6 +132,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
     setIsGuidedMode(mode);
   }, []);
   const [description, setDescription] = useState(initialDescription || '');
+  const [notes, setNotes] = useState(initialNotes || '');
   const [journalDate, setJournalDate] = useState(() =>
     initialDate ? dayjs(initialDate).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
   );
@@ -149,6 +152,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
           if (journal) {
             const dateObj = new Date(journal.journalDate);
             setDescription(journal.description || '');
+            setNotes(journal.notes || '');
             setJournalDate(dayjs(dateObj).format('YYYY-MM-DD'));
             setJournalTime(dayjs(dateObj).format('HH:mm'));
 
@@ -330,6 +334,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
       const result = await journalService.saveJournalEntry({
         lines,
         description: finalDescription,
+        notes: notes.trim(),
         journalDate,
         journalTime,
         journalId: isEdit ? journalId : undefined,
@@ -386,6 +391,8 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
       setLines,
       description,
       setDescription,
+      notes,
+      setNotes,
       journalDate,
       setJournalDate,
       journalTime,
@@ -409,6 +416,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
       isLoading,
       lines,
       description,
+      notes,
       journalDate,
       journalTime,
       isSubmitting,

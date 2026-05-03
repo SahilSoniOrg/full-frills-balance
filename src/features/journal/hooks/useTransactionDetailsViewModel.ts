@@ -49,6 +49,7 @@ export interface TransactionDetailsViewModel {
   amountText: string;
   amountColor: ColorKey;
   descriptionText: string;
+  notesText?: string;
   statusLabel: string;
   statusVariant: 'income' | 'expense';
   displayTypeLabel?: string;
@@ -102,7 +103,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     journalId,
     true,
   );
-  const { journal, isLoading: isLoadingJournal } = useJournal(journalId, true);
+  const { journal, isLoading: isLoadingJournal, version } = useJournal(journalId, true);
 
   const { data: smsInfo } = useObservable(
     () => {
@@ -145,7 +146,10 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
   const journalInfo = useMemo(() => {
     if (journal) {
       return {
+        id: journal.id,
+        version,
         description: journal.description,
+        notes: journal.notes,
         date: journal.journalDate,
         status: journal.status,
         currency: journal.currencyCode,
@@ -171,7 +175,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     }
 
     return null;
-  }, [journal, paramTitle, paramAmount, paramDate, paramCurrency, paramDisplayType]);
+  }, [journal, version, paramTitle, paramAmount, paramDate, paramCurrency, paramDisplayType]);
 
   const isLoading = (isLoadingTransactions || isLoadingJournal) && !journalInfo;
 
@@ -360,6 +364,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     amountText,
     amountColor,
     descriptionText,
+    notesText: journalInfo?.notes || undefined,
     statusLabel: journalInfo?.status || '',
     statusVariant: statusVariant as any,
     displayTypeLabel: journalInfo?.displayType,
