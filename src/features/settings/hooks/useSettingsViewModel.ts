@@ -55,6 +55,7 @@ export interface SettingsViewModel {
   onAutomationSettings: () => void;
   onMaintenanceSettings: () => void;
   onAboutSupportSettings: () => void;
+  onWorkplaceSettings: () => void;
   onFixIntegrity: () => void;
   integrityProgress: number;
   integrityProgressMessage: string;
@@ -420,6 +421,7 @@ export function useSettingsViewModel(): SettingsViewModel {
     onAutomationSettings: AppNavigation.toAutomationSettings,
     onMaintenanceSettings: AppNavigation.toMaintenanceSettings,
     onAboutSupportSettings: AppNavigation.toAboutSupportSettings,
+    onWorkplaceSettings: AppNavigation.toWorkplaceSettings,
     onFixIntegrity,
     onCleanup,
     onFactoryReset,

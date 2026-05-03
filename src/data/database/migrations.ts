@@ -578,5 +578,14 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 24,
+      steps: [
+        addColumns({
+          table: 'workplaces',
+          columns: [{ name: 'icon', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

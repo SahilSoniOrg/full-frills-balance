@@ -82,6 +82,7 @@ interface UIState {
   appPhase: AppPhase;
   defaultShareFormat: ShareFormat;
   safeToSpendDays: number;
+  activeWorkplaceId: string;
 }
 
 interface UIContextType extends UIState {
@@ -124,6 +125,7 @@ interface UIContextType extends UIState {
       skippedItems?: { id: string; reason: string; description?: string }[];
     };
   }) => void;
+  setActiveWorkplaceId: (workplaceId: string) => Promise<void>;
 }
 
 export const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -161,6 +163,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     appPhase: AppPhase.BOOTING,
     defaultShareFormat: ShareFormat.TEXT,
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
+    activeWorkplaceId: '',
   });
 
   // Load preferences on mount
@@ -200,6 +203,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
           defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
           safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
+          activeWorkplaceId: loadedPreferences.activeWorkplaceId || '',
         }));
       } catch (error) {
         logger.warn('Failed to load preferences', { error });
@@ -213,10 +217,10 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const completeOnboarding = useCallback(
     async (name: string, currency: string, archetype?: string) => {
       try {
-        await preferences.setUserName(name);
-        await preferences.setDefaultCurrencyCode(currency);
-        if (archetype) await preferences.setArchetype(archetype);
-        await preferences.setOnboardingCompleted(true);
+        preferences.setUserName(name);
+        preferences.setDefaultCurrencyCode(currency);
+        if (archetype) preferences.setArchetype(archetype);
+        preferences.setOnboardingCompleted(true);
         setUIState(prev => ({
           ...prev,
           hasCompletedOnboarding: true,
@@ -449,6 +453,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setActiveWorkplaceId = useCallback(async (workplaceId: string) => {
+    try {
+      await preferences.setActiveWorkplaceId(workplaceId);
+      setUIState(prev => ({ ...prev, activeWorkplaceId: workplaceId }));
+    } catch (error) {
+      logger.warn('Failed to save active workplace id', { error });
+      setUIState(prev => ({ ...prev, activeWorkplaceId: workplaceId }));
+    }
+  }, []);
+
   const requireRestart = useCallback(
     (options: {
       type: 'IMPORT' | 'RESET';
@@ -529,6 +543,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setSafeToSpendDays,
       dispatchBootEvent,
       requireRestart,
+      setActiveWorkplaceId,
     }),
     [
       uiState,
@@ -555,6 +570,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setSafeToSpendDays,
       dispatchBootEvent,
       requireRestart,
+      setActiveWorkplaceId,
     ],
   );
 
@@ -577,5 +593,14 @@ export function useUI() {
   if (context === undefined) {
     throw new Error('useUI must be used within a UIProvider');
   }
-  return context;
+  return new Proxy(context, {
+    get(target, prop) {
+      if (prop === 'activeWorkplaceId' && target.isInitialized && !target.isLoading) {
+        if (!target.activeWorkplaceId) {
+          throw new Error('activeWorkplaceId is null or empty');
+        }
+      }
+      return target[prop as keyof typeof target];
+    },
+  });
 }

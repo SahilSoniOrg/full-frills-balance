@@ -8,6 +8,7 @@ type ConfirmDialogAction = {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  disabled?: boolean;
 };
 
 interface ConfirmDialogProps {
@@ -16,6 +17,7 @@ interface ConfirmDialogProps {
   onClose: () => void;
   message?: React.ReactNode;
   children?: React.ReactNode;
+  prefix?: React.ReactNode;
   primaryAction: ConfirmDialogAction;
   secondaryAction?: ConfirmDialogAction;
   accessibilityCloseLabel?: string;
@@ -29,6 +31,7 @@ export function ConfirmDialog({
   onClose,
   message,
   children,
+  prefix,
   primaryAction,
   secondaryAction,
   accessibilityCloseLabel,
@@ -73,6 +76,7 @@ export function ConfirmDialog({
               variant={secondaryAction.variant || 'outline'}
               onPress={secondaryAction.onPress}
               style={styles.actionButton}
+              disabled={secondaryAction.disabled}
             >
               {secondaryAction.label}
             </AppButton>
@@ -81,7 +85,7 @@ export function ConfirmDialog({
             variant={primaryAction.variant || 'primary'}
             onPress={handleConfirm}
             style={styles.actionButton}
-            disabled={!isConfirmed}
+            disabled={!isConfirmed || primaryAction.disabled}
           >
             {primaryAction.label}
           </AppButton>
@@ -114,8 +118,10 @@ export function ConfirmDialog({
             />
           </View>
         )}
-
-        {children}
+        <View style={styles.childrenContainer}>
+          {prefix}
+          {children}
+        </View>
       </View>
     </ModalSurface>
   );
@@ -123,6 +129,11 @@ export function ConfirmDialog({
 
 const styles = StyleSheet.create({
   content: {
+    gap: Spacing.md,
+  },
+  childrenContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.md,
   },
   footer: {

@@ -363,6 +363,13 @@ export const AppNavigation = {
   },
 
   /**
+   * Navigate to workplace settings.
+   */
+  toWorkplaceSettings: () => {
+    router.push('/workplace-settings' as any);
+  },
+
+  /**
    * Navigate to the Audit Log screen.
    */
   toAuditLog: (options?: { entityType?: string; entityId?: string }) => {

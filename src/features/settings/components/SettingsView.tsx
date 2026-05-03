@@ -25,6 +25,13 @@ export function SettingsView(vm: SettingsViewModel) {
               onPress={vm.onPersonalizationSettings}
               prominent
             />
+            <SettingsMenuItem
+              leftIcon="briefcase"
+              title="Workplace"
+              description="Create and switch between workplaces"
+              onPress={vm.onWorkplaceSettings}
+              prominent
+            />
           </SettingsMenu>
 
           <SettingsMenu header={AppConfig.strings.settings.sections.experience}>

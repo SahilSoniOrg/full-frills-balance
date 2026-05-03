@@ -37,6 +37,7 @@ export interface UIPreferences {
   isSmsImportEnabled: boolean;
   defaultShareFormat?: ShareFormat;
   safeToSpendDays: number;
+  activeWorkplaceId?: string;
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -60,6 +61,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   isSmsImportEnabled: false,
   defaultShareFormat: ShareFormat.TEXT,
   safeToSpendDays: AppConfig.defaults.safeToSpendDays,
+  activeWorkplaceId: undefined,
 };
 
 class PreferencesHelper {
@@ -375,6 +377,14 @@ class PreferencesHelper {
 
   setSafeToSpendDays(days: number): void {
     this.updatePreferences({ safeToSpendDays: days });
+  }
+
+  get activeWorkplaceId(): string | undefined {
+    return this.preferences.activeWorkplaceId;
+  }
+
+  setActiveWorkplaceId(workplaceId: string): void {
+    this.updatePreferences({ activeWorkplaceId: workplaceId });
   }
 
   get dismissedPatternIds(): string[] {

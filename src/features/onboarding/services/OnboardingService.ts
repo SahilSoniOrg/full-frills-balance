@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AccountType } from '@/src/data/models/Account';
 import { accountService } from '@/src/features/accounts';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
@@ -19,7 +20,7 @@ export class OnboardingService {
    * Completes the onboarding process by persisting user preferences,
    * creating system accounts, selected default accounts, and categories.
    */
-  async completeOnboarding(data: OnboardingData): Promise<void> {
+  async completeOnboarding(data: OnboardingData): Promise<string> {
     const {
       name,
       selectedCurrency,
@@ -28,6 +29,9 @@ export class OnboardingService {
       selectedCategories,
       customCategories,
     } = data;
+
+    const workplace = await workplaceService.createWorkplace('Personal', 'briefcase');
+    const targetWorkplaceId = workplace.id;
 
     logger.info(`Starting onboarding completion for user: ${name}`);
 
@@ -59,6 +63,7 @@ export class OnboardingService {
         currencyCode: selectedCurrency,
         initialBalance: 0,
         icon,
+        workplaceId: targetWorkplaceId!,
       });
     }
 
@@ -90,6 +95,7 @@ export class OnboardingService {
         currencyCode: selectedCurrency,
         initialBalance: 0,
         icon,
+        workplaceId: targetWorkplaceId!,
       });
     }
 
@@ -108,6 +114,7 @@ export class OnboardingService {
     });
 
     logger.info('Onboarding completion logic finished successfully');
+    return targetWorkplaceId!;
   }
 }
 
