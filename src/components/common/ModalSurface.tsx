@@ -19,6 +19,8 @@ interface ModalSurfaceProps {
    * Useful for avoiding iOS native Modal deadlocks during transitions.
    */
   useNativeModal?: boolean;
+  position?: 'center' | 'bottomSheet';
+  animationType?: 'fade' | 'slide';
 }
 
 export function ModalSurface({
@@ -32,11 +34,20 @@ export function ModalSurface({
   fixedHeight = true,
   scrollable = true,
   useNativeModal = true,
+  position = 'center',
+  animationType,
 }: ModalSurfaceProps) {
   const { theme } = useTheme();
+  const isBottomSheet = position === 'bottomSheet';
 
   const content = (
-    <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
+    <View
+      style={[
+        styles.overlay,
+        isBottomSheet ? styles.overlayBottomSheet : styles.overlayCenter,
+        { backgroundColor: theme.overlay },
+      ]}
+    >
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={onClose}
@@ -45,7 +56,7 @@ export function ModalSurface({
       />
       <View
         style={[
-          styles.modalContainer,
+          isBottomSheet ? styles.modalContainerBottomSheet : styles.modalContainerCenter,
           fixedHeight ? { height: `${maxHeightPercent}%` } : { maxHeight: `${maxHeightPercent}%` },
         ]}
       >
@@ -55,6 +66,7 @@ export function ModalSurface({
           radius="r2"
           style={[
             styles.modalCard,
+            isBottomSheet ? styles.modalCardBottomSheet : styles.modalCardCenter,
             fixedHeight ? styles.modalCardFixed : styles.modalCardFit,
             { backgroundColor: theme.surface },
           ]}
@@ -92,7 +104,12 @@ export function ModalSurface({
 
   if (useNativeModal) {
     return (
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Modal
+        visible={visible}
+        transparent
+        animationType={animationType ?? (isBottomSheet ? 'slide' : 'fade')}
+        onRequestClose={onClose}
+      >
         {content}
       </Modal>
     );
@@ -106,18 +123,38 @@ export function ModalSurface({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+  },
+  overlayCenter: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.lg,
   },
-  modalContainer: {
+  overlayBottomSheet: {
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    padding: 0,
+  },
+  modalContainerCenter: {
     width: '100%',
     maxWidth: AppConfig.layout.popupModalMaxWidth,
     flexShrink: 1,
   },
+  modalContainerBottomSheet: {
+    width: '100%',
+    maxWidth: '100%',
+    flexShrink: 1,
+  },
   modalCard: {
     width: '100%',
+  },
+  modalCardCenter: {
     borderRadius: Shape.radius.lg,
+  },
+  modalCardBottomSheet: {
+    borderTopLeftRadius: Shape.radius.r2,
+    borderTopRightRadius: Shape.radius.r2,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   modalCardFixed: {
     height: '100%',

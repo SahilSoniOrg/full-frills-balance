@@ -2,12 +2,12 @@ import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/common/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { FormField } from '@/src/components/common/FormField';
 import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
-import { SectionLabel } from '@/src/components/common/SectionLabel';
 import { AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
-import { Box, FadeIn, Stack } from '@/src/design-system';
+import { FadeIn, Stack } from '@/src/design-system';
 import { CurrencySelector } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { toast } from '@/src/utils/alerts';
@@ -115,8 +115,7 @@ export default function BudgetEditScreen() {
         <Stack space="xl" padding="lg">
           <FormSectionGroup title="Schedule">
             <Stack space="lg" paddingHorizontal="md">
-              <Box>
-                <SectionLabel label="Interval" marginTop="none" />
+              <FormField label="Interval">
                 <AppSegmentedControl
                   flex
                   variant="minimal"
@@ -128,12 +127,11 @@ export default function BudgetEditScreen() {
                   value={intervalType}
                   onChange={setIntervalType}
                 />
-              </Box>
+              </FormField>
 
               {intervalType === 'WEEKLY' && (
                 <FadeIn fromY={5} duration={300}>
-                  <Box>
-                    <SectionLabel label="Budget Start Day" marginTop="none" />
+                  <FormField label="Budget Start Day">
                     <AppSegmentedControl<number>
                       scrollable
                       variant="minimal"
@@ -145,14 +143,13 @@ export default function BudgetEditScreen() {
                       value={recurrenceDay}
                       onChange={setRecurrenceDay}
                     />
-                  </Box>
+                  </FormField>
                 </FadeIn>
               )}
 
               {intervalType === 'MONTHLY' && (
                 <FadeIn fromY={5} duration={300}>
-                  <Box>
-                    <SectionLabel label="Budget Start Day" marginTop="none" />
+                  <FormField label="Budget Start Day">
                     <AppSegmentedControl<number>
                       scrollable
                       variant="minimal"
@@ -164,15 +161,14 @@ export default function BudgetEditScreen() {
                       value={recurrenceDay}
                       onChange={setRecurrenceDay}
                     />
-                  </Box>
+                  </FormField>
                 </FadeIn>
               )}
 
               {intervalType === 'YEARLY' && (
                 <FadeIn fromY={5} duration={300}>
                   <Stack space="lg">
-                    <Box>
-                      <SectionLabel label="Month" marginTop="none" />
+                    <FormField label="Month">
                       <AppSegmentedControl<number>
                         scrollable
                         variant="minimal"
@@ -186,10 +182,9 @@ export default function BudgetEditScreen() {
                         value={recurrenceMonth}
                         onChange={setRecurrenceMonth}
                       />
-                    </Box>
+                    </FormField>
 
-                    <Box>
-                      <SectionLabel label="Budget Start Date" marginTop="none" />
+                    <FormField label="Budget Start Date">
                       <AppSegmentedControl<number>
                         scrollable
                         variant="minimal"
@@ -201,7 +196,7 @@ export default function BudgetEditScreen() {
                         value={recurrenceDay}
                         onChange={setRecurrenceDay}
                       />
-                    </Box>
+                    </FormField>
                   </Stack>
                 </FadeIn>
               )}

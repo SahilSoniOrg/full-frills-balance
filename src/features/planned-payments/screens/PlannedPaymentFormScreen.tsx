@@ -2,12 +2,12 @@ import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
 import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/common/FormHeroSection';
+import { FormField } from '@/src/components/common/FormField';
 import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
-import { SectionLabel } from '@/src/components/common/SectionLabel';
 import { AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
-import { Box, FadeIn, Stack, Text } from '@/src/design-system';
+import { FadeIn, Stack } from '@/src/design-system';
 import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useLocalSearchParams } from 'expo-router';
@@ -74,8 +74,7 @@ export default function PlannedPaymentFormScreen() {
 
           <FormSectionGroup title={AppConfig.strings.plannedPayments.recurrenceTitle}>
             <Stack space="lg" paddingHorizontal="md">
-              <Box>
-                <SectionLabel label="Interval" marginTop="none" />
+              <FormField label="Interval">
                 <AppSegmentedControl
                   flex
                   variant="minimal"
@@ -88,16 +87,11 @@ export default function PlannedPaymentFormScreen() {
                   value={vm.form.intervalType}
                   onChange={val => vm.setField('intervalType', val)}
                 />
-              </Box>
+              </FormField>
 
               {vm.form.intervalType === PlannedPaymentInterval.WEEKLY && (
                 <FadeIn fromY={5} duration={300}>
-                  <Box>
-                    <SectionLabel
-                      label="Day of Week"
-                      style={{ marginLeft: Spacing.md }}
-                      marginTop="none"
-                    />
+                  <FormField label="Day of Week">
                     <AppSegmentedControl<number>
                       scrollable
                       variant="minimal"
@@ -109,18 +103,13 @@ export default function PlannedPaymentFormScreen() {
                       value={vm.form.recurrenceDay ?? 0}
                       onChange={val => vm.setField('recurrenceDay', val)}
                     />
-                  </Box>
+                  </FormField>
                 </FadeIn>
               )}
 
               {vm.form.intervalType === PlannedPaymentInterval.MONTHLY && (
                 <FadeIn fromY={5} duration={300}>
-                  <Box>
-                    <SectionLabel
-                      label="Day of Month"
-                      style={{ marginLeft: Spacing.md }}
-                      marginTop="none"
-                    />
+                  <FormField label="Day of Month">
                     <AppSegmentedControl<number>
                       scrollable
                       variant="minimal"
@@ -132,19 +121,14 @@ export default function PlannedPaymentFormScreen() {
                       value={vm.form.recurrenceDay ?? 1}
                       onChange={val => vm.setField('recurrenceDay', val)}
                     />
-                  </Box>
+                  </FormField>
                 </FadeIn>
               )}
 
               {vm.form.intervalType === PlannedPaymentInterval.YEARLY && (
                 <FadeIn fromY={5} duration={300}>
                   <Stack space="lg">
-                    <Box>
-                      <SectionLabel
-                        label="Month"
-                        style={{ marginLeft: Spacing.md }}
-                        marginTop="none"
-                      />
+                    <FormField label="Month">
                       <AppSegmentedControl<number>
                         scrollable
                         variant="minimal"
@@ -158,14 +142,9 @@ export default function PlannedPaymentFormScreen() {
                         value={vm.form.recurrenceMonth ?? 1}
                         onChange={val => vm.setField('recurrenceMonth', val)}
                       />
-                    </Box>
+                    </FormField>
 
-                    <Box>
-                      <SectionLabel
-                        label="Day of Month"
-                        style={{ marginLeft: Spacing.md }}
-                        marginTop="none"
-                      />
+                    <FormField label="Day of Month">
                       <AppSegmentedControl<number>
                         scrollable
                         variant="minimal"
@@ -177,27 +156,24 @@ export default function PlannedPaymentFormScreen() {
                         value={vm.form.recurrenceDay ?? 1}
                         onChange={val => vm.setField('recurrenceDay', val)}
                       />
-                    </Box>
+                    </FormField>
                   </Stack>
                 </FadeIn>
               )}
 
-              <ListRow
-                padding="sm"
-                title={
-                  <Box>
-                    <SectionLabel label="Auto-Post" marginTop="none" style={{ marginBottom: 4 }} />
-                    <Text weight="medium">Post Automatically</Text>
-                  </Box>
-                }
-                subtitle="To ledger on due date"
-                trailing={
-                  <AppToggle
-                    value={vm.form.isAutoPost}
-                    onValueChange={val => vm.setField('isAutoPost', val)}
-                  />
-                }
-              />
+              <FormField label="Auto-Post">
+                <ListRow
+                  padding="sm"
+                  title="Post Automatically"
+                  subtitle="To ledger on due date"
+                  trailing={
+                    <AppToggle
+                      value={vm.form.isAutoPost}
+                      onValueChange={val => vm.setField('isAutoPost', val)}
+                    />
+                  }
+                />
+              </FormField>
             </Stack>
           </FormSectionGroup>
         </Stack>
