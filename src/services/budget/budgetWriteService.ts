@@ -6,8 +6,12 @@ export class BudgetWriteService {
   /**
    * Creates a new budget with the specified scope accounts.
    */
-  async createBudget(data: BudgetInput, accountIds: string[]): Promise<Budget> {
-    const budget = await budgetRepository.create(data, accountIds);
+  async createBudget(
+    workplaceId: string,
+    data: BudgetInput,
+    accountIds: string[],
+  ): Promise<Budget> {
+    const budget = await budgetRepository.create(workplaceId, data, accountIds);
 
     // Track Analytics
     analytics.trackFeatureUsage('budget', 'create', {
@@ -24,11 +28,12 @@ export class BudgetWriteService {
    * Updates a budget and replaces its scopes with the new account IDs.
    */
   async updateBudget(
+    workplaceId: string,
     budget: Budget,
     data: Partial<BudgetInput>,
     accountIds: string[],
   ): Promise<Budget> {
-    const updatedBudget = await budgetRepository.update(budget, data, accountIds);
+    const updatedBudget = await budgetRepository.update(workplaceId, budget, data, accountIds);
 
     // Track Analytics
     analytics.trackFeatureUsage('budget', 'update', {
@@ -43,8 +48,8 @@ export class BudgetWriteService {
   /**
    * Hard-deletes a budget and all its scopes.
    */
-  async deleteBudget(budget: Budget): Promise<void> {
-    await budgetRepository.delete(budget);
+  async deleteBudget(workplaceId: string, budget: Budget): Promise<void> {
+    await budgetRepository.delete(workplaceId, budget);
 
     // Track Analytics
     analytics.trackFeatureUsage('budget', 'delete', {

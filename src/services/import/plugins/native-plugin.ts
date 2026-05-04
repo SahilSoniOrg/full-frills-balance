@@ -80,6 +80,7 @@ export const nativePlugin: ImportPlugin = {
 
   async import(
     context: ImportFileContext,
+    workplaceId: string,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
     logger.info('[NativePlugin] Starting import...');
@@ -101,21 +102,24 @@ export const nativePlugin: ImportPlugin = {
     const defaultCurrencyCode = data.preferences?.defaultCurrencyCode || AppConfig.defaultCurrency;
 
     try {
-      // 1. Wipe existing data
-      onProgress?.('Wiping database...', 0.1);
-      logger.warn('[NativePlugin] Wiping database for import...');
-      await integrityService.resetDatabase();
+      // 1. Wipe existing data for this workplace
+      onProgress?.('Wiping workplace data...', 0.1);
+      logger.warn(`[NativePlugin] Wiping workplace ${workplaceId} for import...`);
+      await integrityService.resetWorkplace(workplaceId);
 
       // 2. Clear and restore preferences
       onProgress?.('Restoring preferences...', 0.2);
       await preferences.restorePreferences(data.preferences);
+      // Ensure the app stays locked to the workplace we are currently importing into
+      preferences.setActiveWorkplaceId(workplaceId);
 
       // 3. Import Data in Batch
       onProgress?.('Saving data to database (this may take a while)...', 0.4);
       // Yield UI
       await new Promise(resolve => setTimeout(resolve, 0));
       logger.info('[NativePlugin] Executing batch insert...');
-      await importRepository.batchInsert({
+      // We use the provided workplaceId instead of ensuring a default one
+      await importRepository.batchInsert(workplaceId, {
         accounts: data.accounts.map(acc => ({
           id: acc.id,
           name: acc.name,
@@ -312,7 +316,7 @@ export const nativePlugin: ImportPlugin = {
       });
 
       logger.info('[NativePlugin] Triggering integrity checks...');
-      await integrityService.forceRunCheck(onProgress);
+      await integrityService.forceRunCheck(workplaceId, onProgress);
 
       onProgress?.('Finalizing import...', 0.95);
       logger.info('[NativePlugin] Import successful.');

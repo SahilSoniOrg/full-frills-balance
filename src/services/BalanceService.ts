@@ -306,12 +306,17 @@ export class BalanceService {
    */
   async getAccountBalance(
     accountId: string,
+    workplaceId: string,
     cutoffDate: number = Number.MAX_SAFE_INTEGER,
   ): Promise<AccountBalance> {
-    const account = await accountRepository.find(accountId);
+    const account = await accountRepository.find(accountId, workplaceId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
-    const latestTx = await transactionRepository.findLatestForAccount(accountId, cutoffDate);
+    const latestTx = await transactionRepository.findLatestForAccount(
+      accountId,
+      workplaceId,
+      cutoffDate,
+    );
 
     if (!latestTx) {
       return {
@@ -328,7 +333,11 @@ export class BalanceService {
       };
     }
 
-    const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, cutoffDate);
+    const snapshot = await balanceSnapshotRepository.findLatestForAccount(
+      workplaceId,
+      accountId,
+      cutoffDate,
+    );
     let baseCount = 0;
     if (snapshot) {
       baseCount = snapshot.transactionCount;
@@ -365,13 +374,14 @@ export class BalanceService {
    * Gets balances for all active accounts in batch.
    */
   async getAccountBalances(
+    workplaceId: string,
     asOfDate?: number,
     targetDefaultCurrency: string = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
     parentTrace?: Trace,
   ): Promise<AccountBalance[]> {
     const trace = parentTrace || traceService.startTrace('BalanceService.getAccountBalances');
     try {
-      const accounts = await accountRepository.findAll();
+      const accounts = await accountRepository.findAll(workplaceId);
       if (accounts.length === 0) return [];
       trace.metric('fetchAccounts');
 
@@ -380,7 +390,7 @@ export class BalanceService {
 
       // Phase 1: Metadata & Snapshots (Parallel)
       const [latestSnapshotsMap, currencyPrecisionMap] = await Promise.all([
-        balanceSnapshotRepository.findLatestForAccountsRaw(accountIds, cutoffDate),
+        balanceSnapshotRepository.findLatestForAccountsRaw(workplaceId, accountIds, cutoffDate),
         currencyRepository.getAllPrecisions(),
       ]);
       trace.metric('fetchMetadata');
@@ -405,7 +415,7 @@ export class BalanceService {
 
       // Phase 2: Latest Balances & Transaction Counts (Parallel)
       const [latestBalancesMap, deltaCountsMap] = await Promise.all([
-        transactionRawRepository.getLatestBalancesRaw(accountIds, cutoffDate),
+        transactionRawRepository.getLatestBalancesRaw(workplaceId, accountIds, cutoffDate),
         transactionRawRepository.getAccountTransactionCountsRaw(
           countInput,
           cutoffDate,

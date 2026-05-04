@@ -5,32 +5,35 @@ import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback } from 'react';
 
-export function useSettingsActions() {
-    const { requireRestart } = useUI();
+export function useSettingsActions(workplaceId: string) {
+  const { requireRestart } = useUI();
 
-    const exportToJSON = useCallback(async () => {
-        return exportService.exportToJSON();
-    }, []);
+  const exportToJSON = useCallback(async () => {
+    return exportService.exportToJSON(workplaceId);
+  }, [workplaceId]);
 
-    const runIntegrityCheck = useCallback(async (onProgress?: (message: string, progress: number) => void) => {
-        return integrityService.forceRunCheck(onProgress);
-    }, []);
+  const runIntegrityCheck = useCallback(
+    async (onProgress?: (message: string, progress: number) => void) => {
+      return integrityService.forceRunCheck(workplaceId, onProgress);
+    },
+    [workplaceId],
+  );
 
-    const cleanupDatabase = useCallback(async () => {
-        return integrityService.cleanupDatabase();
-    }, []);
+  const cleanupDatabase = useCallback(async () => {
+    return integrityService.cleanupDatabase();
+  }, []);
 
-    const resetApp = useCallback(async () => {
-        analytics.logFactoryReset();
-        await integrityService.resetDatabase();
-        await preferences.clearPreferences();
-        requireRestart({ type: 'RESET' });
-    }, [requireRestart]);
+  const resetApp = useCallback(async () => {
+    analytics.logFactoryReset();
+    await integrityService.resetDatabase();
+    await preferences.clearPreferences();
+    requireRestart({ type: 'RESET' });
+  }, [requireRestart]);
 
-    return {
-        exportToJSON,
-        runIntegrityCheck,
-        cleanupDatabase,
-        resetApp,
-    };
+  return {
+    exportToJSON,
+    runIntegrityCheck,
+    cleanupDatabase,
+    resetApp,
+  };
 }

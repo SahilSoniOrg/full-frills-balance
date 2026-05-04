@@ -26,6 +26,13 @@ const DEFAULT_CONFIG: RebuildQueueConfig = {
     process.env.NODE_ENV === 'test' ? 0 : AppConfig.performance.rebuild.queue.retryDelayMs,
 };
 
+function createQueueKey(accountId: string, workplaceId: string): string {
+  return `${workplaceId}__${accountId}`;
+}
+function parseQueueKey(key: string): [string, string] {
+  const [workplaceId, accountId] = key.split('__');
+  return [workplaceId, accountId];
+}
 class RebuildQueueService {
   private static readonly STORAGE_KEY = 'rebuild_queue_v1';
   private static readonly PROCESSING_KEY = 'rebuild_processing_batch_v1';
@@ -67,7 +74,11 @@ class RebuildQueueService {
         if (Array.isArray(entries) && entries.length > 0) {
           logger.warn(`[RebuildQueue] Recovering ${entries.length} items from interrupted batch`);
           for (const [id, date] of entries) {
-            this.enqueue(id, date);
+            if (!id.includes('__')) {
+              continue;
+            }
+            const [workplaceId, accountId] = parseQueueKey(id);
+            this.enqueue(accountId, date, workplaceId);
           }
           storage.remove(RebuildQueueService.PROCESSING_KEY);
         }
@@ -91,10 +102,10 @@ class RebuildQueueService {
    * @param accountId Account ID
    * @param fromDate Optional earliest date of change. Defaults to current time.
    */
-  enqueue(accountId: string, fromDate: number = Date.now()): void {
-    const existingDate = this.queue.get(accountId);
+  enqueue(accountId: string, fromDate: number = Date.now(), workplaceId: string): void {
+    const existingDate = this.queue.get(createQueueKey(accountId, workplaceId));
     if (existingDate === undefined || fromDate < existingDate) {
-      this.queue.set(accountId, fromDate);
+      this.queue.set(createQueueKey(accountId, workplaceId), fromDate);
       this.syncQueueToDisk();
     }
     this.scheduleProcessing();
@@ -105,13 +116,17 @@ class RebuildQueueService {
    * @param accountIds List of account IDs
    * @param fromDate Optional earliest date of change for all accounts.
    */
-  enqueueMany(accountIds: string[] | Set<string>, fromDate: number = Date.now()): void {
+  enqueueMany(
+    accountIds: string[] | Set<string>,
+    fromDate: number = Date.now(),
+    workplaceId: string,
+  ): void {
     const ids = Array.isArray(accountIds) ? accountIds : Array.from(accountIds);
     let changed = false;
     for (const id of ids) {
-      const existingDate = this.queue.get(id);
+      const existingDate = this.queue.get(createQueueKey(id, workplaceId));
       if (existingDate === undefined || fromDate < existingDate) {
-        this.queue.set(id, fromDate);
+        this.queue.set(createQueueKey(id, workplaceId), fromDate);
         changed = true;
       }
     }
@@ -218,7 +233,12 @@ class RebuildQueueService {
         const results: { status: 'fulfilled' | 'rejected'; reason?: any }[] = [];
         for (const item of batch) {
           try {
-            await accountingRebuildService.rebuildAccountBalances(item.id, item.fromDate);
+            const [workplaceId, accountId] = parseQueueKey(item.id);
+            await accountingRebuildService.rebuildAccountBalances(
+              workplaceId,
+              accountId,
+              item.fromDate,
+            );
             results.push({ status: 'fulfilled' });
           } catch (error) {
             results.push({ status: 'rejected', reason: error });
@@ -241,7 +261,8 @@ class RebuildQueueService {
             if (retryCount <= this.config.retryLimit) {
               const delay = this.config.retryDelayMs * retryCount;
               setTimeout(() => {
-                this.enqueue(item.id, item.fromDate);
+                const [workplaceId, accountId] = parseQueueKey(item.id);
+                this.enqueue(accountId, item.fromDate, workplaceId);
               }, delay);
             } else {
               logger.error(

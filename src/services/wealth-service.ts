@@ -125,6 +125,7 @@ export const wealthService = {
    * 5. Record snapshots for the requested range.
    */
   async getNetWorthHistory(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -137,14 +138,14 @@ export const wealthService = {
     const now = dayjs().endOf('day');
 
     // 1. Get current balances and filter for leaf accounts to prevent double-counting
-    const allAccounts = await accountRepository.findAll();
+    const allAccounts = await accountRepository.findAll(workplaceId);
     const parentIds = new Set(
       allAccounts
         .map((a: { parentAccountId?: string }) => a.parentAccountId)
         .filter(Boolean) as string[],
     );
 
-    const allBalances = await balanceService.getAccountBalances();
+    const allBalances = await balanceService.getAccountBalances(workplaceId);
     let relevantBalances = allBalances.filter(
       (a: AccountBalance) =>
         !parentIds.has(a.accountId) &&
@@ -204,6 +205,7 @@ export const wealthService = {
     if (deltas.length === 0) {
       const accountTypeById = new Map(relevantBalances.map(a => [a.accountId, a.accountType]));
       const transactions = await transactionRepository.findByAccountsAndDateRange(
+        workplaceId,
         activeIds,
         start.valueOf(),
         now.valueOf(),

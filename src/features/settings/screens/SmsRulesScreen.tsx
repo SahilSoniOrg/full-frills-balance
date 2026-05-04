@@ -2,6 +2,7 @@ import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader
 import { AppCard, AppText, EmptyStateView, FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Spacing } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
 import { useAccounts } from '@/src/features/accounts';
@@ -10,6 +11,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import { SmsRuleSuggestion, smsService } from '@/src/services/sms-service';
 import { AppNavigation } from '@/src/utils/navigation';
+import { Q } from '@nozbe/watermelondb';
 import { withObservables } from '@nozbe/watermelondb/react';
 import React from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -21,11 +23,12 @@ interface Props {
 
 function SmsRulesList({ rules }: Props) {
   const { theme } = useTheme();
-  const { accounts } = useAccounts();
+  const { workplaceId } = useWorkplace();
+  const { accounts } = useAccounts(workplaceId);
   const accountMap = new Map(accounts.map(account => [account.id, account.name]));
   const { data: suggestions = [] } = useObservable(
-    () => from(smsService.getRuleSuggestions()),
-    [rules.length],
+    () => from(smsService.getRuleSuggestions(workplaceId)),
+    [workplaceId, rules.length],
     [] as SmsRuleSuggestion[],
   );
 
@@ -124,14 +127,21 @@ function SmsRulesList({ rules }: Props) {
   );
 }
 
-const EnhancedSmsRulesList = withObservables([], () => ({
-  rules: database.collections.get<SmsAutoPostRule>('sms_auto_post_rules').query().observe(),
-}))(SmsRulesList);
+const EnhancedSmsRulesList = withObservables(
+  ['workplaceId'],
+  ({ workplaceId }: { workplaceId: string }) => ({
+    rules: database.collections
+      .get<SmsAutoPostRule>('sms_auto_post_rules')
+      .query(Q.where('workplace_id', workplaceId))
+      .observe(),
+  }),
+)(SmsRulesList);
 
 export default function SmsRulesScreen() {
+  const { workplaceId } = useWorkplace();
   return (
     <Screen title="SMS Rules" showBack={true} scrollable={false}>
-      <EnhancedSmsRulesList />
+      <EnhancedSmsRulesList workplaceId={workplaceId} />
       <FloatingActionButton
         onPress={() => AppNavigation.toSmsRuleForm()}
         label="Create Rule"

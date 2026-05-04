@@ -1,6 +1,6 @@
+import { IconName } from '@/src/components/core/AppIcon';
 import { generator } from '@/src/data/database/idGenerator';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { IconName } from '@/src/components/core/AppIcon';
 import { BatchImportData, importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
@@ -193,6 +193,7 @@ export const cashewPlugin: ImportPlugin = {
 
   async import(
     context: ImportFileContext,
+    workplaceId: string,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
     logger.info('[CashewPlugin] Starting import...');
@@ -723,12 +724,11 @@ export const cashewPlugin: ImportPlugin = {
         }
       }
 
-      await integrityService.resetDatabase();
-
-      await importRepository.batchInsert(data);
+      await integrityService.resetWorkplace(workplaceId);
+      await importRepository.batchInsert(workplaceId, data);
 
       onProgress?.('Verifying integrity...', 0.95);
-      await integrityService.forceRunCheck();
+      await integrityService.forceRunCheck(workplaceId);
 
       // Cleanup
       await db.closeAsync();

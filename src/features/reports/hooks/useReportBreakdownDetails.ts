@@ -21,6 +21,7 @@ interface UseReportBreakdownDetailsProps {
   selectedIncomeExpenseIndex: number | undefined;
   targetCurrency: string;
   theme: Theme;
+  workplaceId: string;
 }
 
 /**
@@ -35,6 +36,7 @@ export function useReportBreakdownDetails({
   selectedIncomeExpenseIndex,
   targetCurrency,
   theme,
+  workplaceId,
 }: UseReportBreakdownDetailsProps) {
   const [expandedExpenses, setExpandedExpenses] = useState(false);
   const [expandedIncome, setExpandedIncome] = useState(false);
@@ -71,11 +73,13 @@ export function useReportBreakdownDetails({
 
       return combineLatest([
         reportService.observeExpenseBreakdown(
+          workplaceId,
           selectedPeriod.start,
           selectedPeriod.end,
           targetCurrency,
         ),
         reportService.observeIncomeBreakdown(
+          workplaceId,
           selectedPeriod.start,
           selectedPeriod.end,
           targetCurrency,
@@ -93,7 +97,7 @@ export function useReportBreakdownDetails({
         })),
       );
     },
-    [selectedPeriod, targetCurrency, expensePalette, incomePalette],
+    [selectedPeriod, targetCurrency, expensePalette, incomePalette, workplaceId],
     { expenses: [] as ExpenseCategory[], income: [] as ExpenseCategory[] },
   );
 

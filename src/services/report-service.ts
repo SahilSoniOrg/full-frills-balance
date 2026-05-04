@@ -112,6 +112,7 @@ export class ReportService {
    * Aggregates expenses by account for a period.
    */
   async getExpenseBreakdown(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -119,6 +120,7 @@ export class ReportService {
   ): Promise<ExpenseCategory[]> {
     return this.getBreakdownInternal(
       AccountType.EXPENSE,
+      workplaceId,
       startDate,
       endDate,
       targetCurrency,
@@ -130,6 +132,7 @@ export class ReportService {
    * Aggregates income by account for a period.
    */
   async getIncomeBreakdown(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -137,6 +140,7 @@ export class ReportService {
   ): Promise<ExpenseCategory[]> {
     return this.getBreakdownInternal(
       AccountType.INCOME,
+      workplaceId,
       startDate,
       endDate,
       targetCurrency,
@@ -148,16 +152,19 @@ export class ReportService {
    * Reactive version of getExpenseBreakdown.
    */
   observeExpenseBreakdown(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     accountIds?: string[],
   ): Observable<ExpenseCategory[]> {
     return journalRepository
-      .observeStatusMeta()
+      .observeStatusMeta(workplaceId)
       .pipe(
         switchMap(() =>
-          from(this.getExpenseBreakdown(startDate, endDate, targetCurrency, accountIds)),
+          from(
+            this.getExpenseBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds),
+          ),
         ),
       );
   }
@@ -166,29 +173,35 @@ export class ReportService {
    * Reactive version of getIncomeBreakdown.
    */
   observeIncomeBreakdown(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     accountIds?: string[],
   ): Observable<ExpenseCategory[]> {
     return journalRepository
-      .observeStatusMeta()
+      .observeStatusMeta(workplaceId)
       .pipe(
         switchMap(() =>
-          from(this.getIncomeBreakdown(startDate, endDate, targetCurrency, accountIds)),
+          from(
+            this.getIncomeBreakdown(workplaceId, startDate, endDate, targetCurrency, accountIds),
+          ),
         ),
       );
   }
 
   private async getBreakdownInternal(
     type: AccountType,
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<ExpenseCategory[]> {
-    const { currency, incomeAccounts, expenseAccounts } =
-      await this.getReportAccounts(targetCurrency);
+    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
+      workplaceId,
+      targetCurrency,
+    );
     let accounts = type === AccountType.INCOME ? incomeAccounts : expenseAccounts;
 
     if (filterAccountIds && filterAccountIds.length > 0) {
@@ -199,12 +212,14 @@ export class ReportService {
     if (accountIds.length === 0) return [];
 
     const normalizedDeltas = await this.getScopedDeltas<AccountDelta>(
+      workplaceId,
       accountIds,
       startDate,
       endDate,
       currency,
       accounts,
-      (ids, start, end) => transactionRawRepository.getAccountDeltasGroupedRaw(ids, start, end),
+      (ids, start, end) =>
+        transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, ids, start, end),
     );
 
     return this.calculateBreakdownFromDeltas(accounts, normalizedDeltas, currency);
@@ -232,13 +247,16 @@ export class ReportService {
    */
   async getCategoryBreakdown(
     type: AccountType,
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<CategoryBreakdown[]> {
-    const { currency, incomeAccounts, expenseAccounts } =
-      await this.getReportAccounts(targetCurrency);
+    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
+      workplaceId,
+      targetCurrency,
+    );
     let accounts = type === AccountType.INCOME ? incomeAccounts : expenseAccounts;
 
     if (filterAccountIds && filterAccountIds.length > 0) {
@@ -249,12 +267,14 @@ export class ReportService {
     if (accountIds.length === 0) return [];
 
     const normalizedDeltas = await this.getScopedDeltas<AccountDelta>(
+      workplaceId,
       accountIds,
       startDate,
       endDate,
       currency,
       accounts,
-      (ids, start, end) => transactionRawRepository.getAccountDeltasGroupedRaw(ids, start, end),
+      (ids, start, end) =>
+        transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, ids, start, end),
     );
 
     return this.calculateCategoryBreakdownFromDeltas(accounts, normalizedDeltas, currency);
@@ -297,13 +317,16 @@ export class ReportService {
    * Calculates Income vs Expense for the period.
    */
   async getIncomeVsExpense(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<{ income: number; expense: number }> {
-    const { currency, incomeAccounts, expenseAccounts } =
-      await this.getReportAccounts(targetCurrency);
+    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
+      workplaceId,
+      targetCurrency,
+    );
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
 
     if (filterAccountIds && filterAccountIds.length > 0) {
@@ -314,12 +337,14 @@ export class ReportService {
     if (allIds.length === 0) return { income: 0, expense: 0 };
 
     const normalizedDeltas = await this.getScopedDeltas<AccountDelta>(
+      workplaceId,
       allIds,
       startDate,
       endDate,
       currency,
       allAccounts,
-      (ids, start, end) => transactionRawRepository.getAccountDeltasGroupedRaw(ids, start, end),
+      (ids, start, end) =>
+        transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, ids, start, end),
     );
 
     return this.calculateIncomeVsExpenseFromDeltas(normalizedDeltas, allAccounts, currency);
@@ -407,13 +432,16 @@ export class ReportService {
    * Calculates Income vs Expense history bucketed by month or day.
    */
   async getIncomeVsExpenseHistory(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<IncomeVsExpense[]> {
-    const { currency, incomeAccounts, expenseAccounts } =
-      await this.getReportAccounts(targetCurrency);
+    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
+      workplaceId,
+      targetCurrency,
+    );
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
 
     if (filterAccountIds && filterAccountIds.length > 0) {
@@ -424,6 +452,7 @@ export class ReportService {
     if (allIds.length === 0) return [];
 
     const normalizedDeltas = await this.getScopedDeltas<DailyDelta>(
+      workplaceId,
       allIds,
       startDate,
       endDate,
@@ -464,13 +493,16 @@ export class ReportService {
    * Calculates Daily Income vs Expense for the period.
    */
   async getDailyIncomeVsExpense(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<{ date: number; income: number; expense: number }[]> {
-    const { currency, incomeAccounts, expenseAccounts } =
-      await this.getReportAccounts(targetCurrency);
+    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
+      workplaceId,
+      targetCurrency,
+    );
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
 
     if (filterAccountIds && filterAccountIds.length > 0) {
@@ -481,6 +513,7 @@ export class ReportService {
     if (allIds.length === 0) return [];
 
     const normalizedDeltas = await this.getScopedDeltas<DailyDelta>(
+      workplaceId,
       allIds,
       startDate,
       endDate,
@@ -575,6 +608,7 @@ export class ReportService {
   private async getScopedDeltas<
     T extends { currencyCode: string; delta: number; dayStart?: number; accountId?: string },
   >(
+    workplaceId: string,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -594,6 +628,7 @@ export class ReportService {
       });
 
       const converted = await this.getConvertedReportTransactions(
+        workplaceId,
         startDate,
         endDate,
         targetCurrency,
@@ -621,13 +656,16 @@ export class ReportService {
   }
 
   async getReportSnapshot(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<ReportSnapshot> {
-    const { currency, incomeAccounts, expenseAccounts } =
-      await this.getReportAccounts(targetCurrency);
+    const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
+      workplaceId,
+      targetCurrency,
+    );
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
     if (filterAccountIds && filterAccountIds.length > 0) {
       allAccounts = allAccounts.filter(a => filterAccountIds.includes(a.id));
@@ -635,6 +673,7 @@ export class ReportService {
 
     const allIds = allAccounts.map(a => a.id);
     const transactions = await transactionRepository.findByAccountsAndDateRange(
+      workplaceId,
       allIds,
       startDate,
       endDate,
@@ -765,9 +804,12 @@ export class ReportService {
 
     // 2. Pre-fetch all required rates in parallel
     await Promise.all(
-      Array.from(sourceCurrencies).map(base =>
-        exchangeRateService.fetchRatesForBase(base).catch(() => {}),
-      ),
+      Array.from(sourceCurrencies).map(base => {
+        const promise = exchangeRateService.fetchRatesForBase?.(base);
+        return promise && typeof promise.catch === 'function'
+          ? promise.catch(() => {})
+          : Promise.resolve();
+      }),
     );
 
     const accountMap = new Map(accounts.map(a => [a.id, a]));
@@ -793,15 +835,17 @@ export class ReportService {
    * Income Sources -> Total Income -> Expense Categories -> Surplus.
    */
   async getSankeyData(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<SankeyData> {
     const [incomeSummary, expenseCategorySummary] = await Promise.all([
-      this.getIncomeBreakdown(startDate, endDate, targetCurrency, filterAccountIds),
+      this.getIncomeBreakdown(workplaceId, startDate, endDate, targetCurrency, filterAccountIds),
       this.getCategoryBreakdown(
         AccountType.EXPENSE,
+        workplaceId,
         startDate,
         endDate,
         targetCurrency,
@@ -816,12 +860,13 @@ export class ReportService {
    * Aggregates spending density by day and hour.
    */
   async getSpendingHeatmapData(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<HeatmapPoint[]> {
-    const { currency, expenseAccounts } = await this.getReportAccounts(targetCurrency);
+    const { currency, expenseAccounts } = await this.getReportAccounts(workplaceId, targetCurrency);
     let accounts = expenseAccounts;
     if (filterAccountIds && filterAccountIds.length > 0) {
       accounts = accounts.filter(a => filterAccountIds.includes(a.id));
@@ -829,6 +874,7 @@ export class ReportService {
 
     const accountIds = accounts.map(a => a.id);
     const transactions = await transactionRepository.findByAccountsAndDateRange(
+      workplaceId,
       accountIds,
       startDate,
       endDate,
@@ -869,29 +915,41 @@ export class ReportService {
    * Reactive version of getReportSnapshot.
    */
   observeReportSnapshot(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Observable<ReportSnapshot> {
     return journalRepository
-      .observeStatusMeta()
+      .observeStatusMeta(workplaceId)
       .pipe(
         switchMap(() =>
-          from(this.getReportSnapshot(startDate, endDate, targetCurrency, filterAccountIds)),
+          from(
+            this.getReportSnapshot(
+              workplaceId,
+              startDate,
+              endDate,
+              targetCurrency,
+              filterAccountIds,
+            ),
+          ),
         ),
       );
   }
 
-  private async getReportAccounts(targetCurrency?: string): Promise<{
+  private async getReportAccounts(
+    workplaceId: string,
+    targetCurrency?: string,
+  ): Promise<{
     currency: string;
     incomeAccounts: ReportAccount[];
     expenseAccounts: ReportAccount[];
   }> {
     const currency = targetCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
     const [rawIncomeAccounts, rawExpenseAccounts] = await Promise.all([
-      accountRepository.findByType(AccountType.INCOME),
-      accountRepository.findByType(AccountType.EXPENSE),
+      accountRepository.findByType(AccountType.INCOME, workplaceId),
+      accountRepository.findByType(AccountType.EXPENSE, workplaceId),
     ]);
 
     const incomeAccounts = rawIncomeAccounts.map(account => ({
@@ -913,6 +971,7 @@ export class ReportService {
   }
 
   private async getConvertedReportTransactions(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     currency: string,
@@ -926,6 +985,7 @@ export class ReportService {
       accounts.map(account => [account.id, account.currencyCode]),
     );
     const transactions = await transactionRepository.findByAccountsAndDateRange(
+      workplaceId,
       accountIds,
       startDate,
       endDate,
@@ -942,9 +1002,12 @@ export class ReportService {
 
     // 2. Pre-fetch all required rates
     await Promise.all(
-      Array.from(sourceCurrencies).map(base =>
-        exchangeRateService.fetchRatesForBase(base).catch(() => {}),
-      ),
+      Array.from(sourceCurrencies).map(base => {
+        const promise = exchangeRateService.fetchRatesForBase?.(base);
+        return promise && typeof promise.catch === 'function'
+          ? promise.catch(() => {})
+          : Promise.resolve();
+      }),
     );
 
     // 3. Synchronous conversion
@@ -1028,12 +1091,13 @@ export class ReportService {
    * Aggregates spending by day of week and week of month (Calendar view).
    */
   async getCalendarHeatmapData(
+    workplaceId: string,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
   ): Promise<HeatmapPoint[]> {
-    const { currency, expenseAccounts } = await this.getReportAccounts(targetCurrency);
+    const { currency, expenseAccounts } = await this.getReportAccounts(workplaceId, targetCurrency);
     let accounts = expenseAccounts;
     if (filterAccountIds && filterAccountIds.length > 0) {
       accounts = accounts.filter(a => filterAccountIds.includes(a.id));
@@ -1042,6 +1106,7 @@ export class ReportService {
     if (accountIds.length === 0) return [];
 
     const transactions = await transactionRepository.findByAccountsAndDateRange(
+      workplaceId,
       accountIds,
       startDate,
       endDate,

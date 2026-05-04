@@ -1,3 +1,4 @@
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -142,6 +143,7 @@ export interface ReportsViewModel {
 
 export function useReportsViewModel(): ReportsViewModel {
   const { theme } = useTheme();
+  const { workplaceId } = useWorkplace();
 
   const {
     accounts,
@@ -162,7 +164,7 @@ export function useReportsViewModel(): ReportsViewModel {
     sankeyData,
     spendingHeatmap,
     calendarHeatmap,
-  } = useReports();
+  } = useReports(workplaceId);
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
@@ -176,6 +178,7 @@ export function useReportsViewModel(): ReportsViewModel {
     spendingHeatmap,
     calendarHeatmap,
     theme,
+    workplaceId: workplaceId,
   });
 
   const breakdownDetails = useReportBreakdownDetails({
@@ -187,6 +190,7 @@ export function useReportsViewModel(): ReportsViewModel {
     selectedIncomeExpenseIndex: chartData.selectedIncomeExpenseIndex,
     targetCurrency,
     theme,
+    workplaceId: workplaceId,
   });
 
   const resetSelections = useCallback(() => {
@@ -197,6 +201,7 @@ export function useReportsViewModel(): ReportsViewModel {
   }, [chartData, breakdownDetails]);
 
   const dateFilter = useReportDateFilter({
+    workplaceId,
     dateRange,
     accountIds,
     updateFilter,

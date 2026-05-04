@@ -1,9 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 
 jest.mock('@/src/services/ledger');
 jest.mock('@/src/services/RebuildQueueService');
@@ -17,6 +17,7 @@ jest.mock('@/src/data/repositories/TransactionRepository', () => ({
 jest.mock('@/src/data/database/Database', () => ({
   database: {
     write: jest.fn().mockImplementation(async (fn: any) => fn()),
+    batch: jest.fn().mockResolvedValue(undefined),
     collections: {
       get: jest.fn().mockReturnValue({
         query: jest.fn().mockReturnThis(),
@@ -255,12 +256,14 @@ describe('PlannedPaymentService', () => {
         id: 'existing-j-1',
         journalDate: new Date(2024, 0, 1).getTime(),
         update: jest.fn().mockImplementation(async (fn: any) => fn(mockJournal)),
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => fn(mockJournal)),
       };
       const mockTransaction = {
         id: 'tx-1',
         journalId: 'existing-j-1',
         transactionDate: new Date(2024, 0, 1).getTime(),
         update: jest.fn().mockImplementation(async (fn: any) => fn(mockTransaction)),
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => fn(mockTransaction)),
       };
 
       const queryFetchSpy = jest.fn().mockResolvedValue([mockJournal]);
@@ -276,12 +279,12 @@ describe('PlannedPaymentService', () => {
         .spyOn(plannedPaymentRepository, 'update')
         .mockResolvedValue({} as any);
 
-      await plannedPaymentService.postOccurrence(mockPP as any, mockPP.nextOccurrence);
+      await plannedPaymentService.postOccurrence('wp-1', mockPP as any, mockPP.nextOccurrence);
 
       // Should use database.write to patch status, NOT ledgerWriteService.createJournal
       expect(database.write).toHaveBeenCalled();
-      expect(mockJournal.update).toHaveBeenCalled();
-      expect(mockTransaction.update).toHaveBeenCalled();
+      expect(mockJournal.prepareUpdate).toHaveBeenCalled();
+      expect(mockTransaction.prepareUpdate).toHaveBeenCalled();
       expect(ledgerWriteService.createJournal).not.toHaveBeenCalled();
       expect(updatePpSpy).toHaveBeenCalled();
 
@@ -304,7 +307,7 @@ describe('PlannedPaymentService', () => {
         .spyOn(plannedPaymentRepository, 'update')
         .mockResolvedValue({} as any);
 
-      await plannedPaymentService.postOccurrence(mockPP as any, mockPP.nextOccurrence);
+      await plannedPaymentService.postOccurrence('wp-1', mockPP as any, mockPP.nextOccurrence);
 
       expect(createJournalSpy).toHaveBeenCalled();
       expect(updatePpSpy).toHaveBeenCalled();
@@ -336,7 +339,7 @@ describe('PlannedPaymentService', () => {
         fetch: queryFetchSpy,
       });
 
-      await plannedPaymentService.skipOccurrence(mockPP as any, mockPP.nextOccurrence);
+      await plannedPaymentService.skipOccurrence('wp-1', mockPP as any, mockPP.nextOccurrence);
 
       expect(mockJournal.update).toHaveBeenCalled();
       expect(mockJournal.status).toBe('SKIPPED');

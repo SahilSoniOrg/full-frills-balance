@@ -132,6 +132,7 @@ export class TransactionRawRepository {
    * Returns a Map of accountId -> latest runningBalance.
    */
   async getLatestBalancesRaw(
+    workplaceId: string,
     accountIds: string[],
     cutoffDate: number = Number.MAX_SAFE_INTEGER,
   ): Promise<Map<string, number>> {
@@ -154,6 +155,7 @@ export class TransactionRawRepository {
         WHERE t.account_id IN (${accountPlaceholders})
           AND t.transaction_date <= ?
           AND t.deleted_at IS NULL
+          AND j.workplace_id = ?
           AND j.deleted_at IS NULL
           AND j.status IN (${placeholders})
       )
@@ -165,6 +167,7 @@ export class TransactionRawRepository {
     const raws = await this.queryRaw<{ accountId: string; runningBalance: number }>(sql, [
       ...accountIds,
       cutoffDate,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
@@ -184,6 +187,7 @@ export class TransactionRawRepository {
       const txs = await database.collections
         .get<Transaction>('transactions')
         .query(
+          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', accountId),
@@ -204,6 +208,7 @@ export class TransactionRawRepository {
    * Used for balance verification and recomputation.
    */
   async getAccountSumRaw(
+    workplaceId: string,
     accountId: string,
     cutoffDate: number,
     isAssetOrExpense: boolean = true,
@@ -223,6 +228,7 @@ export class TransactionRawRepository {
       WHERE t.account_id = ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
+        AND j.workplace_id = ?
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
         ${
@@ -246,7 +252,7 @@ export class TransactionRawRepository {
             : ''
         }
     `;
-    const args: RawSQLArg[] = [accountId, cutoffDate, ...ACTIVE_JOURNAL_STATUSES];
+    const args: RawSQLArg[] = [accountId, cutoffDate, workplaceId, ...ACTIVE_JOURNAL_STATUSES];
     if (upToTransactionId) {
       args.push(
         upToTransactionId,
@@ -276,6 +282,7 @@ export class TransactionRawRepository {
     const filterClauses: Q.Clause[] = [
       Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
       Q.on('journals', 'deleted_at', Q.eq(null)),
+      Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
       Q.where('account_id', accountId),
       Q.where('transaction_date', Q.lte(cutoffDate)),
       Q.where('deleted_at', Q.eq(null)),
@@ -446,6 +453,7 @@ export class TransactionRawRepository {
    * Optimized for breakdown reports.
    */
   async getAccountDeltasGroupedRaw(
+    workplaceId: string,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -474,6 +482,7 @@ export class TransactionRawRepository {
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
+        AND j.workplace_id = ?
         AND j.status IN (${placeholders})
       GROUP BY t.account_id, t.currency_code
     `;
@@ -482,6 +491,7 @@ export class TransactionRawRepository {
       ...accountIds,
       startDate,
       endDate,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
@@ -505,6 +515,7 @@ export class TransactionRawRepository {
       database.collections
         .get<Transaction>('transactions')
         .query(
+          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', Q.oneOf(accountIds)),
@@ -825,12 +836,14 @@ export class TransactionRawRepository {
    * Returns { totalIncrease: number, totalDecrease: number }
    */
   async getAccountPeriodMetricsRaw(
+    workplaceId: string,
     accountId: string,
     startDate: number,
     endDate: number,
     isAssetOrExpense: boolean = true,
   ): Promise<{ totalIncrease: number; totalDecrease: number }> {
     const results = await this.getBulkAccountPeriodMetricsRaw(
+      workplaceId,
       [{ accountId, isAssetOrExpense }],
       startDate,
       endDate,
@@ -847,6 +860,7 @@ export class TransactionRawRepository {
    * Bulk version of getAccountPeriodMetricsRaw.
    */
   async getBulkAccountPeriodMetricsRaw(
+    workplaceId: string,
     accountConfigs: { accountId: string; isAssetOrExpense: boolean }[],
     startDate: number,
     endDate: number,
@@ -864,7 +878,8 @@ export class TransactionRawRepository {
         SUM(CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END) as totalCredit
       FROM transactions t
       JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id IN (${accountPlaceholders})
+      WHERE t.workplace_id = ?
+        AND t.account_id IN (${accountPlaceholders})
         AND t.transaction_date >= ?
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
@@ -876,6 +891,7 @@ export class TransactionRawRepository {
     const results = new Map<string, AccountPeriodMetrics>();
     try {
       const raws = await this.queryRaw<RawPeriodMetricsRow>(sql, [
+        workplaceId,
         ...accountIds,
         startDate,
         endDate,
@@ -912,14 +928,23 @@ export class TransactionRawRepository {
    * Uses a lightweight count observer as a trigger to avoid bridge congestion.
    */
   observeAccountPeriodMetricsRaw(
+    workplaceId: string,
     accountId: string,
     startDate: number,
     endDate: number,
     isAssetOrExpense: boolean = true,
   ): Observable<AccountPeriodMetrics> {
-    return transactionRepository.observeActiveCount().pipe(
+    return transactionRepository.observeActiveCount(workplaceId).pipe(
       switchMap(() =>
-        from(this.getAccountPeriodMetricsRaw(accountId, startDate, endDate, isAssetOrExpense)),
+        from(
+          this.getAccountPeriodMetricsRaw(
+            workplaceId,
+            accountId,
+            startDate,
+            endDate,
+            isAssetOrExpense,
+          ),
+        ),
       ),
       distinctUntilChanged(
         (prev, curr) =>
@@ -933,19 +958,25 @@ export class TransactionRawRepository {
    * Emits whenever active transactions change.
    */
   observeAccountDeltasGroupedRaw(
+    workplaceId: string,
     accountIds: string[],
     startDate: number,
     endDate: number,
   ): Observable<AccountDelta[]> {
     return transactionRepository
-      .observeActiveCount()
-      .pipe(switchMap(() => from(this.getAccountDeltasGroupedRaw(accountIds, startDate, endDate))));
+      .observeActiveCount(workplaceId)
+      .pipe(
+        switchMap(() =>
+          from(this.getAccountDeltasGroupedRaw(workplaceId, accountIds, startDate, endDate)),
+        ),
+      );
   }
 
   /**
    * Reactive version of unreconciled metrics.
    */
   observeUnreconciledMetricsRaw(
+    workplaceId: string,
     accountId: string,
     reconciledAt: number | null,
     isAssetOrExpense: boolean = true,
@@ -955,7 +986,7 @@ export class TransactionRawRepository {
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
 
-    return transactionRepository.observeActiveCount().pipe(
+    return transactionRepository.observeActiveCount(workplaceId).pipe(
       switchMap(() => {
         const sql = `
           SELECT COUNT(*) as count, SUM(${multiplierSql}) as total
@@ -965,6 +996,7 @@ export class TransactionRawRepository {
             AND (t.transaction_date > ? OR ? IS NULL)
             AND t.deleted_at IS NULL
             AND j.deleted_at IS NULL
+            AND j.workplace_id = ?
             AND j.status IN (${activeStatusesStr})
         `;
         return from(
@@ -972,6 +1004,7 @@ export class TransactionRawRepository {
             accountId,
             reconciledAt || 0,
             reconciledAt ?? 0,
+            workplaceId,
           ]),
         );
       }),

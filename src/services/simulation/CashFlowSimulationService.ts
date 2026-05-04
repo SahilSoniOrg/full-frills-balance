@@ -39,6 +39,7 @@ export class CashFlowSimulationService {
     usages: BudgetUsage[],
     allAccounts: Account[],
     resultCurrency: string,
+    workplaceId: string,
     simulationDays: number = AppConfig.defaults.safeToSpendDays,
     trace?: Trace,
   ): Promise<SimulationRunResult> {
@@ -55,8 +56,8 @@ export class CashFlowSimulationService {
 
     // Execute independent fetches in parallel
     const [journalTxsMap, metadataMap] = await Promise.all([
-      this.fetchJournalTransactions(plannedJournals),
-      this.fetchMetadata(liabilityAccountBalances),
+      this.fetchJournalTransactions(plannedJournals, workplaceId),
+      this.fetchMetadata(liabilityAccountBalances, workplaceId),
     ]);
 
     // P1 Perf: Pre-warm rates per unique base currency, then read sync
@@ -99,8 +100,9 @@ export class CashFlowSimulationService {
         time,
         resultCurrency,
         rateMap, // Pass rateMap to avoid extra fetches
+        workplaceId,
       ),
-      this.fetchBudgetCategoryMap(budgets, allAccounts),
+      this.fetchBudgetCategoryMap(budgets, allAccounts, workplaceId),
     ]);
 
     // Currency Normalization using explicit mapping (avoiding class spread)
@@ -396,12 +398,12 @@ export class CashFlowSimulationService {
 
   // --- Normalization Helpers ---
 
-  private async fetchMetadata(lbs: { account: Account }[]) {
+  private async fetchMetadata(lbs: { account: Account }[], workplaceId: string) {
     const map = new Map<string, any>();
     if (lbs.length === 0) return map;
 
     const ids = lbs.map(lb => lb.account.id);
-    const metadataRecords = await accountRepository.findMetadataByAccountIds(ids);
+    const metadataRecords = await accountRepository.findMetadataByAccountIds(ids, workplaceId);
 
     metadataRecords.forEach(meta => {
       map.set(meta.accountId, meta);
@@ -416,6 +418,7 @@ export class CashFlowSimulationService {
     time: TimeContext,
     toCurrency: string,
     rateMap: Map<string, number>,
+    workplaceId: string,
   ) {
     const balances = new Map<string, number>();
     const settledAmounts = new Map<string, number>();
@@ -434,8 +437,13 @@ export class CashFlowSimulationService {
           const s1Date = getCorrespondingStatementDate(d1Date, metadata.statementDay, dueDay);
 
           const [latestBalances, metrics] = await Promise.all([
-            transactionRawRepository.getLatestBalancesRaw([lb.account.id], s1Date.valueOf()),
+            transactionRawRepository.getLatestBalancesRaw(
+              workplaceId,
+              [lb.account.id],
+              s1Date.valueOf(),
+            ),
             transactionRawRepository.getAccountPeriodMetricsRaw(
+              workplaceId,
               lb.account.id,
               s1Date.valueOf(),
               now.endOf('day').valueOf(),
@@ -456,9 +464,9 @@ export class CashFlowSimulationService {
     return { statementBalances: balances, settledSinceStatement: settledAmounts };
   }
 
-  private async fetchJournalTransactions(journals: Journal[]) {
+  private async fetchJournalTransactions(journals: Journal[], workplaceId: string) {
     const ids = journals.map(j => j.id);
-    const txs = ids.length > 0 ? await transactionRepository.findByJournals(ids) : [];
+    const txs = ids.length > 0 ? await transactionRepository.findByJournals(ids, workplaceId) : [];
     const map = new Map<string, Transaction[]>();
     for (const tx of txs) {
       const list = map.get(tx.journalId) || [];
@@ -468,7 +476,11 @@ export class CashFlowSimulationService {
     return map;
   }
 
-  private async fetchBudgetCategoryMap(budgets: Budget[], allAccounts: Account[]) {
+  private async fetchBudgetCategoryMap(
+    budgets: Budget[],
+    allAccounts: Account[],
+    workplaceId: string,
+  ) {
     const map = new Map<string, Set<string>>();
     if (budgets.length === 0) return map;
 
@@ -503,7 +515,10 @@ export class CashFlowSimulationService {
     };
 
     // Batch fetch all scopes
-    const allScopes = await budgetRepository.getScopesByBudgetIds(budgets.map(b => b.id));
+    const allScopes = await budgetRepository.getScopesByBudgetIds(
+      workplaceId,
+      budgets.map(b => b.id),
+    );
     const scopesByBudget = new Map<string, BudgetScope[]>();
     allScopes.forEach(s => {
       const list = scopesByBudget.get(s.budgetId) || [];

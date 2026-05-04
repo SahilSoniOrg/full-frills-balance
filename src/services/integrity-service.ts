@@ -72,14 +72,19 @@ export class IntegrityService {
    * Optimized: Uses a raw SQL aggregate (SUM) if available on the adapter,
    * otherwise falls back to the ORM-based iteration.
    */
-  async computeBalanceFromTransactions(accountId: string, cutoffDate?: number): Promise<number> {
-    const account = await accountRepository.find(accountId);
+  async computeBalanceFromTransactions(
+    accountId: string,
+    workplaceId: string,
+    cutoffDate?: number,
+  ): Promise<number> {
+    const account = await accountRepository.find(accountId, workplaceId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const effectiveCutoff = cutoffDate ?? Date.now();
 
     // Try to find the latest snapshot as a checkpoint
     const snapshot = await balanceSnapshotRepository.findLatestForAccount(
+      workplaceId,
       accountId,
       effectiveCutoff,
     );
@@ -90,6 +95,7 @@ export class IntegrityService {
     // Optimization: Bypasses ORM bridge deserialization (O(1) Memory, O(N) DB Scan)
     const isAssetOrExpense = ['ASSET', 'EXPENSE'].includes(account.accountType);
     const deltaResult = await transactionRawRepository.getAccountSumRaw(
+      workplaceId,
       accountId,
       effectiveCutoff,
       isAssetOrExpense,
@@ -108,10 +114,11 @@ export class IntegrityService {
    */
   async verifyAccountBalance(
     accountId: string,
+    workplaceId: string,
     cutoffDate: number = Date.now(),
   ): Promise<BalanceVerificationResult> {
     const start = Date.now();
-    const account = await accountRepository.find(accountId);
+    const account = await accountRepository.find(accountId, workplaceId);
     if (!account) {
       throw new Error(`Account ${accountId} not found`);
     }
@@ -120,23 +127,33 @@ export class IntegrityService {
 
     // 1. Get the "Cached" balance (the actual running_balance column of the latest transaction)
     const latestBalances = await transactionRawRepository.getLatestBalancesRaw(
+      workplaceId,
       [accountId],
       cutoffDate,
     );
     const cachedBalance = latestBalances.get(accountId) || 0;
 
     // 2. Compute the "Real" balance using the snapshot-optimized path
-    const computedBalance = await this.computeBalanceFromTransactions(accountId, cutoffDate);
+    const computedBalance = await this.computeBalanceFromTransactions(
+      accountId,
+      workplaceId,
+      cutoffDate,
+    );
     const matches = amountsAreEqual(cachedBalance, computedBalance, precision);
     const discrepancy = matches ? 0 : Math.abs(cachedBalance - computedBalance);
 
     // 3. Check if the snapshot itself is corrupt (cross-check)
     let snapshotCorrupted: boolean | undefined = undefined;
-    const snapshot = await balanceSnapshotRepository.findLatestForAccount(accountId, cutoffDate);
+    const snapshot = await balanceSnapshotRepository.findLatestForAccount(
+      workplaceId,
+      accountId,
+      cutoffDate,
+    );
     if (snapshot && snapshot.transactionId) {
       // Recompute from scratch (no snapshot) up to the snapshot's exact transaction
       const snapshotRecomputed = await this.computeBalanceFromScratch(
         accountId,
+        workplaceId,
         snapshot.transactionDate,
         snapshot.transactionId,
       );
@@ -177,15 +194,17 @@ export class IntegrityService {
    */
   private async computeBalanceFromScratch(
     accountId: string,
+    workplaceId: string,
     cutoffDate: number,
     limitTransactionId?: string,
   ): Promise<number> {
-    const account = await accountRepository.find(accountId);
+    const account = await accountRepository.find(accountId, workplaceId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     // HIGH PERFORMANCE: Use raw SQL aggregate (SUM) from scratch (no snapshot)
     const isAssetOrExpense = ['ASSET', 'EXPENSE'].includes(account.accountType);
     return transactionRawRepository.getAccountSumRaw(
+      workplaceId,
       accountId,
       cutoffDate,
       isAssetOrExpense,
@@ -197,14 +216,14 @@ export class IntegrityService {
   /**
    * Verifies all account balances.
    */
-  async verifyAllAccountBalances(): Promise<BalanceVerificationResult[]> {
-    const accounts = await accountRepository.findAll();
+  async verifyAllAccountBalances(workplaceId: string): Promise<BalanceVerificationResult[]> {
+    const accounts = await accountRepository.findAll(workplaceId);
 
     const results: BalanceVerificationResult[] = [];
 
     for (const account of accounts) {
       try {
-        const result = await this.verifyAccountBalance(account.id);
+        const result = await this.verifyAccountBalance(account.id, workplaceId);
         results.push(result);
       } catch (error) {
         logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
@@ -217,9 +236,9 @@ export class IntegrityService {
   /**
    * Repairs a single account's running balances.
    */
-  async repairAccountBalance(accountId: string): Promise<boolean> {
+  async repairAccountBalance(workplaceId: string, accountId: string): Promise<boolean> {
     try {
-      await accountingRebuildService.rebuildAccountBalances(accountId);
+      await accountingRebuildService.rebuildAccountBalances(workplaceId, accountId);
       logger.info(`[IntegrityService] Repaired running balances for account ${accountId}`);
       return true;
     } catch (error) {
@@ -255,6 +274,7 @@ export class IntegrityService {
    * Unlike runStartupCheck(), this always scans every account.
    */
   async forceRunCheck(
+    workplaceId: string,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<IntegrityCheckResult> {
     const totalStart = Date.now();
@@ -262,14 +282,14 @@ export class IntegrityService {
 
     await this.scanForNullAccountTransactions();
 
-    const accounts = await accountRepository.findAll();
+    const accounts = await accountRepository.findAll(workplaceId);
     const total = accounts.length;
     const results: BalanceVerificationResult[] = [];
 
     for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i];
       try {
-        const result = await this.verifyAccountBalance(account.id);
+        const result = await this.verifyAccountBalance(account.id, workplaceId);
         results.push(result);
       } catch (error) {
         logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
@@ -302,6 +322,7 @@ export class IntegrityService {
         // This prevents UI lockup and allows reactive system to breathe
         await database.write(async () => {
           await accountingRebuildService.rebuildAccountBalancesInternal(
+            workplaceId,
             discrepancy.accountId,
             undefined,
             true,
@@ -323,7 +344,7 @@ export class IntegrityService {
             .fetch();
 
           await database.batch(
-            ...accountsToNotify.map(a =>
+            accountsToNotify.map(a =>
               a.prepareUpdate((record: Account) => {
                 record.updatedAt = new Date();
               }),
@@ -360,12 +381,12 @@ export class IntegrityService {
    *  - When a crash flag was written by the previous session.
    * Normal warm starts skip it entirely.
    */
-  async runStartupCheck(): Promise<IntegrityCheckResult> {
+  async runStartupCheck(workplaceId: string): Promise<IntegrityCheckResult> {
     logger.info('[IntegrityService] Starting startup integrity check...');
 
     await this.scanForNullAccountTransactions();
 
-    const accountsExist = await accountRepository.exists();
+    const accountsExist = await accountRepository.exists(workplaceId);
     if (!accountsExist) {
       logger.info(
         '[IntegrityService] No accounts found. Skipping default seeding (onboarding handles data creation).',
@@ -388,7 +409,7 @@ export class IntegrityService {
     }
 
     logger.info('[IntegrityService] Running full balance verification...');
-    const results = await this.verifyAllAccountBalances();
+    const results = await this.verifyAllAccountBalances(workplaceId);
     const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted);
 
     let repairsAttempted = 0;
@@ -402,7 +423,7 @@ export class IntegrityService {
       );
 
       repairsAttempted++;
-      const success = await this.repairAccountBalance(discrepancy.accountId);
+      const success = await this.repairAccountBalance(workplaceId, discrepancy.accountId);
       if (success) {
         repairsSuccessful++;
       }
@@ -418,6 +439,39 @@ export class IntegrityService {
     };
 
     return summary;
+  }
+
+  /**
+   * Clears all data for a specific workplace.
+   */
+  async resetWorkplace(workplaceId: string): Promise<void> {
+    logger.warn(`[IntegrityService] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
+    try {
+      const scopedTables = [
+        'accounts',
+        'journals',
+        'transactions',
+        'audit_logs',
+        'budgets',
+        'budget_scopes',
+        'account_metadata',
+        'planned_payments',
+        'journal_metadata',
+        'sms_auto_post_rules',
+        'sms_inbox_records',
+        'balance_snapshots',
+      ];
+
+      await databaseRepository.purgeWorkplaceData(workplaceId, scopedTables);
+
+      // Note: we don't clear processed SMS IDs here as they are global in the SMS service's internal state
+      // but the records themselves are deleted from the database.
+
+      logger.info(`[IntegrityService] Workplace ${workplaceId} reset successful.`);
+    } catch (error) {
+      logger.error(`[IntegrityService] Failed to reset workplace ${workplaceId}:`, error);
+      throw error;
+    }
   }
 
   /**

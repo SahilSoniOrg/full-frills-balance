@@ -14,32 +14,41 @@ import { AccountAuditState, JournalAuditState } from '@/src/types/domain';
 // Journal Handler
 revertRegistry.register(
   'journal',
-  async (entityId, changes: { before?: JournalAuditState; after?: JournalAuditState }, action) => {
+  async (
+    entityId,
+    changes: { before?: JournalAuditState; after?: JournalAuditState },
+    action,
+    workplaceId: string,
+  ) => {
     if (action === AuditAction.CREATE) {
-      await journalService.deleteJournal(entityId);
+      await journalService.deleteJournal(entityId, workplaceId);
     } else if (action === AuditAction.DELETE) {
-      await journalService.recoverJournal(entityId);
+      await journalService.recoverJournal(entityId, workplaceId);
     } else if (action === AuditAction.UPDATE) {
       if (changes.before) {
         if ('deletedAt' in changes.before) {
-          await journalService.deleteJournal(entityId);
+          await journalService.deleteJournal(entityId, workplaceId);
         } else if ('status' in changes.before && !changes.before.transactions) {
           if (changes.before.status === JournalStatus.PLANNED) {
-            await journalService.revertToPlanned(entityId);
+            await journalService.revertToPlanned(entityId, workplaceId);
           } else if (changes.before.status === JournalStatus.POSTED) {
-            await journalService.postJournal(entityId);
+            await journalService.postJournal(entityId, workplaceId);
           }
         } else {
           const before = changes.before;
           // Map JournalAuditState to CreateJournalData
           // If these fields are missing, the revert will fail (which is appropriate for a data-driven revert)
-          await journalService.updateJournal(entityId, {
-            journalDate: before.journalDate!,
-            description: before.description,
-            currencyCode: before.currencyCode!,
-            status: before.status as JournalStatus,
-            transactions: before.transactions || [],
-          });
+          await journalService.updateJournal(
+            entityId,
+            {
+              journalDate: before.journalDate!,
+              description: before.description,
+              currencyCode: before.currencyCode!,
+              status: before.status as JournalStatus,
+              transactions: before.transactions || [],
+            },
+            workplaceId,
+          );
         }
       }
     }
@@ -49,18 +58,23 @@ revertRegistry.register(
 // Account Handler
 revertRegistry.register(
   'account',
-  async (entityId, changes: { before?: AccountAuditState; after?: AccountAuditState }, action) => {
+  async (
+    entityId,
+    changes: { before?: AccountAuditState; after?: AccountAuditState },
+    action,
+    workplaceId: string,
+  ) => {
     if (action === AuditAction.CREATE) {
-      await accountService.deleteAccount(entityId);
+      await accountService.deleteAccount(entityId, workplaceId);
     } else if (action === AuditAction.DELETE) {
-      await accountService.recoverAccount(entityId);
+      await accountService.recoverAccount(entityId, workplaceId);
     } else if (action === AuditAction.UPDATE) {
       if (changes.before) {
         if ('deletedAt' in changes.before) {
-          await accountService.deleteAccount(entityId);
+          await accountService.deleteAccount(entityId, workplaceId);
         } else {
           // Partial<CreateAccountData> is already accepted by updateAccount
-          await accountService.updateAccount(entityId, changes.before);
+          await accountService.updateAccount(entityId, changes.before, workplaceId);
         }
       }
     }

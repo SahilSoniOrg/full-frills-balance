@@ -1,11 +1,15 @@
-import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
 import { AppConfig } from '@/src/constants';
+import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
 import { AuditLogEntry } from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
 import { useObservable } from '@/src/hooks/useObservable';
 import { auditService } from '@/src/services/audit-service';
 
-export function useAuditLogs(params: { entityType?: AuditEntityType; entityId?: string }) {
-  const { entityType, entityId } = params;
+export function useAuditLogs(params: {
+  entityType?: AuditEntityType;
+  entityId?: string;
+  workplaceId: string;
+}) {
+  const { entityType, entityId, workplaceId } = params;
   const isFiltered = !!(entityType && entityId);
 
   const {
@@ -16,9 +20,9 @@ export function useAuditLogs(params: { entityType?: AuditEntityType; entityId?: 
   } = useObservable(
     () =>
       isFiltered
-        ? auditService.observeAuditTrail(entityType!, entityId!)
-        : auditService.observeRecentLogs(AppConfig.pagination.auditScreenLimit),
-    [entityType, entityId, isFiltered],
+        ? auditService.observeAuditTrail(entityType!, entityId!, workplaceId)
+        : auditService.observeRecentLogs(AppConfig.pagination.auditScreenLimit, workplaceId),
+    [entityType, entityId, isFiltered, workplaceId],
     [] as AuditLog[],
   );
 

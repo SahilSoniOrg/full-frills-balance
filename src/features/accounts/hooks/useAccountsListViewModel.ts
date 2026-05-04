@@ -1,6 +1,7 @@
+import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
-import { IconName } from '@/src/components/core/AppIcon';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -9,6 +10,7 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { of } from 'rxjs';
 
 export interface AccountCardViewModel {
   id: string;
@@ -61,6 +63,8 @@ export interface AccountsListViewModel {
 
 export function useAccountsListViewModel(): AccountsListViewModel {
   const { theme, onContrast } = useTheme();
+  const { workplaceId } = useWorkplace();
+
   const { defaultCurrency, showAccountMonthlyStats, isPrivacyMode } = useUI();
 
   const [isLocalPrivacyMode, setIsLocalPrivacyMode] = useState(isPrivacyMode);
@@ -77,8 +81,22 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     isLoading,
     version,
   } = useObservable(
-    () => reactiveDataService.observeOptimizedAccountList(targetCurrency),
-    [targetCurrency],
+    () =>
+      workplaceId
+        ? reactiveDataService.observeOptimizedAccountList(targetCurrency, workplaceId)
+        : of({
+            accounts: [],
+            balances: [],
+            wealthSummary: {
+              netWorth: 0,
+              totalAssets: 0,
+              totalLiabilities: 0,
+              totalEquity: 0,
+              totalIncome: 0,
+              totalExpense: 0,
+            },
+          }),
+    [targetCurrency, workplaceId],
     {
       accounts: [],
       balances: [],

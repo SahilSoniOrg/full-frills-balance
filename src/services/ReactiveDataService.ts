@@ -54,18 +54,17 @@ export interface MonthlyFlowData {
  * Uses RxJS shareReplay(1) to multicast emissions to all subscribers.
  */
 class ReactiveDataService {
-  // M-1 fix: cache dashboard observables per currency so multiple hook subscribers
-  // share a single combineLatest chain. Currency changes are rare and a new entry is
-  // created on demand — old entries are GC'd when the Map grows stale.
+  // M-1 fix: cache dashboard observables per currency and workplace so multiple hook subscribers
+  // share a single combineLatest chain.
   private _dashboardCache = new Map<string, Observable<DashboardData>>();
 
   /**
-   * Get or create the shared dashboard data observable for the given currency.
-   * Successive calls with the same currency return the SAME shareReplay'd stream.
+   * Get or create the shared dashboard data observable for the given currency and workplace.
    */
-  observeDashboardData(targetCurrency: string): Observable<DashboardData> {
-    if (this._dashboardCache.has(targetCurrency)) {
-      return this._dashboardCache.get(targetCurrency)!;
+  observeDashboardData(targetCurrency: string, workplaceId: string): Observable<DashboardData> {
+    const cacheKey = `${targetCurrency}_${workplaceId}`;
+    if (this._dashboardCache.has(cacheKey)) {
+      return this._dashboardCache.get(cacheKey)!;
     }
 
     // Cap to 1 entry: currency changes are rare; evict any stale graph immediately
@@ -75,8 +74,8 @@ class ReactiveDataService {
     }
 
     const obs$ = combineLatest([
-      accountRepository.observeAll(),
-      transactionRepository.observeActiveWithColumns([
+      accountRepository.observeAll(workplaceId),
+      transactionRepository.observeActiveWithColumns(workplaceId, [
         'amount',
         'transaction_type',
         'transaction_date',
@@ -86,17 +85,19 @@ class ReactiveDataService {
         'updated_at',
       ]),
       currencyRepository.observeAll(),
-      journalRepository.observeStatusMeta(),
+      journalRepository.observeStatusMeta(workplaceId),
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
       switchMap(async ([accounts, transactions]) => {
         const trace = traceService.startTrace('DashboardData');
         try {
           const balances = await balanceService.getAccountBalances(
+            workplaceId,
             undefined,
             targetCurrency,
             trace,
           );
+
           const parentIds = new Set(
             accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
           );
@@ -126,7 +127,7 @@ class ReactiveDataService {
       shareReplay({ bufferSize: 1, refCount: true }),
     );
 
-    this._dashboardCache.set(targetCurrency, obs$);
+    this._dashboardCache.set(cacheKey, obs$);
     return obs$;
   }
 
@@ -134,8 +135,11 @@ class ReactiveDataService {
    * Specialized lightweight observable for the Accounts List.
    * Excludes raw transactions to minimize JS thread serialization overhead.
    */
-  observeAccountsSummary(targetCurrency: string): Observable<DashboardSummaryData> {
-    return this.observeDashboardData(targetCurrency).pipe(
+  observeAccountsSummary(
+    targetCurrency: string,
+    workplaceId: string,
+  ): Observable<DashboardSummaryData> {
+    return this.observeDashboardData(targetCurrency, workplaceId).pipe(
       // We map out the transactions to avoid cloning/serialization overhead for this subscriber
       switchMap(async data => {
         const { transactions, ...summary } = data;
@@ -149,8 +153,8 @@ class ReactiveDataService {
    * Observe monthly income and expense flow.
    * Derives data from the shared dashboard observable.
    */
-  observeMonthlyFlow(targetCurrency: string): Observable<MonthlyFlowData> {
-    return this.observeDashboardData(targetCurrency).pipe(
+  observeMonthlyFlow(targetCurrency: string, workplaceId: string): Observable<MonthlyFlowData> {
+    return this.observeDashboardData(targetCurrency, workplaceId).pipe(
       switchMap(async ({ accounts, transactions }) => {
         try {
           const now = new Date();
@@ -180,15 +184,19 @@ class ReactiveDataService {
       shareReplay({ bufferSize: 1, refCount: true }),
     );
   }
+
   /**
    * Optimized lightweight observable for the Accounts List.
    * Uses raw SQL for heavy lifting and minimizes JS thread overhead.
    */
-  observeOptimizedAccountList(targetCurrency: string): Observable<DashboardSummaryData> {
+  observeOptimizedAccountList(
+    targetCurrency: string,
+    workplaceId: string,
+  ): Observable<DashboardSummaryData> {
     return combineLatest([
-      accountRepository.observeAll(),
-      journalRepository.observeStatusMeta(),
-      transactionRepository.observeActiveCount(),
+      accountRepository.observeAll(workplaceId),
+      journalRepository.observeStatusMeta(workplaceId),
+      transactionRepository.observeActiveCount(workplaceId),
       exchangeRateRepository.observeAll(), // Snap to accuracy when background rates arrive
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
@@ -221,14 +229,20 @@ class ReactiveDataService {
           const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
             startOfMonth,
             endOfMonth,
+            workplaceId,
             false,
           );
+
           trace.metric('fetchRaw');
 
           let finalBalances: AccountBalance[] = [];
 
           if (rawItemsResponse === null) {
-            finalBalances = await balanceService.getAccountBalances(undefined, targetCurrency);
+            finalBalances = await balanceService.getAccountBalances(
+              workplaceId,
+              undefined,
+              targetCurrency,
+            );
           } else {
             const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
               ? (rawItemsResponse as unknown as RawSQLRow[])
@@ -303,6 +317,7 @@ class ReactiveDataService {
   observeAccountDashboard(
     accountId: string,
     targetCurrency: string,
+    workplaceId: string,
   ): Observable<{
     account: Account | null;
     balance: AccountBalance | null;
@@ -310,9 +325,9 @@ class ReactiveDataService {
     allAccounts: Account[];
   }> {
     return combineLatest([
-      accountRepository.observeAll(), // structural + all accounts for tree
-      journalRepository.observeStatusMeta(),
-      transactionRepository.observeActiveCount(), // Efficient trigger for balance changes
+      accountRepository.observeAll(workplaceId), // structural + all accounts for tree
+      journalRepository.observeStatusMeta(workplaceId),
+      transactionRepository.observeActiveCount(workplaceId), // Efficient trigger for balance changes
     ]).pipe(
       debounceTime(Animation.dataRefreshDebounce),
       switchMap(async ([accounts]) => {
@@ -323,7 +338,7 @@ class ReactiveDataService {
         const targetAccount = accounts.find(a => a.id === accountId);
         if (!targetAccount) {
           // If not found in active, try to find in deleted (one-shot find for efficiency)
-          const deletedAccount = await accountRepository.findWithDeleted(accountId);
+          const deletedAccount = await accountRepository.findWithDeleted(accountId, workplaceId);
           if (!deletedAccount)
             return { account: null, balance: null, subAccounts: [], allAccounts: accounts };
 
@@ -350,6 +365,7 @@ class ReactiveDataService {
           const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
             startOfMonth,
             endOfMonth,
+            workplaceId,
             true, // includeTotalCount: true for detail view
             true, // includeDeleted: true
           );
@@ -357,7 +373,11 @@ class ReactiveDataService {
           let finalBalances: AccountBalance[] = [];
 
           if (rawItemsResponse === null) {
-            finalBalances = await balanceService.getAccountBalances(undefined, targetCurrency);
+            finalBalances = await balanceService.getAccountBalances(
+              workplaceId,
+              undefined,
+              targetCurrency,
+            );
           } else {
             const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
               ? (rawItemsResponse as unknown as RawSQLRow[])

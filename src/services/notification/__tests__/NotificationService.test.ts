@@ -44,7 +44,6 @@ describe('NotificationService', () => {
     (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeAll as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
-    (journalRepository.observePlannedForMonth as jest.Mock).mockReturnValue(of([]));
     (journalRepository.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
     (journalRepository.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
     (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
@@ -132,7 +131,7 @@ describe('NotificationService', () => {
         accountMap: new Map(),
       });
 
-      notificationService.observeSafeToSpend().subscribe(result => {
+      notificationService.observeSafeToSpend('test-wp').subscribe(result => {
         // Expected:
         // Liquid Assets = a1 (5000)
         // Liquid Liabilities = l1 (1000)

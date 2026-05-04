@@ -42,8 +42,14 @@ describe('OnboardingService', () => {
     // Verify preferences were set
 
     // Verify system accounts were ensured
-    expect(accountService.getOpeningBalancesAccountId).toHaveBeenCalledWith('USD');
-    expect(accountService.findOrCreateBalanceCorrectionAccount).toHaveBeenCalledWith('USD');
+    expect(accountService.getOpeningBalancesAccountId).toHaveBeenCalledWith(
+      'USD',
+      'mock-workplace-id',
+    );
+    expect(accountService.findOrCreateBalanceCorrectionAccount).toHaveBeenCalledWith(
+      'USD',
+      'mock-workplace-id',
+    );
 
     // Verify account creation
     expect(accountService.createAccount).toHaveBeenCalledWith(

@@ -13,15 +13,18 @@ export class AuditService {
   /**
    * Log an audit entry
    */
-  async log<T>(entry: AuditEntry<T>): Promise<void> {
-    return auditRepository.log(entry);
+  async log<T>(entry: AuditEntry<T>, workplaceId: string): Promise<void> {
+    return auditRepository.log(entry, workplaceId);
   }
 
   /**
    * Revert an audit entry
    */
-  async revertEntry(logId: string): Promise<{ success: boolean; error?: string }> {
-    const log = await auditRepository.find(logId);
+  async revertEntry(
+    logId: string,
+    workplaceId: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const log = await auditRepository.find(logId, workplaceId);
     if (!log) return { success: false, error: AppConfig.strings.audit.errors.notFound(logId) };
     if (!log.canRevert)
       return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
@@ -35,7 +38,7 @@ export class AuditService {
     }
 
     try {
-      await handler(log.entityId, log.parsedChanges, log.action);
+      await handler(log.entityId, log.parsedChanges, log.action, workplaceId);
       return { success: true };
     } catch (error: any) {
       return {
@@ -48,37 +51,44 @@ export class AuditService {
   /**
    * Get audit trail for a specific entity
    */
-  async getAuditTrail(entityType: AuditEntityType, entityId: string): Promise<AuditLog[]> {
-    return auditRepository.findByEntity(entityType, entityId);
+  async getAuditTrail(
+    entityType: AuditEntityType,
+    entityId: string,
+    workplaceId: string,
+  ): Promise<AuditLog[]> {
+    return auditRepository.findByEntity(entityType, entityId, workplaceId);
   }
 
   /**
    * Get recent audit logs (for audit viewer)
    */
-  async getRecentLogs(limit: number = AppConfig.pagination.auditRecentLimit): Promise<AuditLog[]> {
-    return auditRepository.fetchRecent(limit);
+  async getRecentLogs(
+    limit: number = AppConfig.pagination.auditRecentLimit,
+    workplaceId: string,
+  ): Promise<AuditLog[]> {
+    return auditRepository.fetchRecent(limit, workplaceId);
   }
 
   /**
    * Observe audit trail for a specific entity
    */
-  observeAuditTrail(entityType: AuditEntityType, entityId: string) {
-    return auditRepository.observeByEntity(entityType, entityId);
+  observeAuditTrail(entityType: AuditEntityType, entityId: string, workplaceId: string) {
+    return auditRepository.observeByEntity(entityType, entityId, workplaceId);
   }
 
   /**
    * Observe recent audit logs
    */
-  observeRecentLogs(limit: number = AppConfig.pagination.auditRecentLimit) {
-    return auditRepository.observeRecent(limit);
+  observeRecentLogs(limit: number = AppConfig.pagination.auditRecentLimit, workplaceId: string) {
+    return auditRepository.observeRecent(limit, workplaceId);
   }
 
   /**
    * Cleanup legacy entity types (convert to lowercase)
    * This is an idempotent one-time migration.
    */
-  async cleanupLegacyEntityTypes(): Promise<number> {
-    const allLogs = await auditRepository.findAll();
+  async cleanupLegacyEntityTypes(workplaceId: string): Promise<number> {
+    const allLogs = await auditRepository.findAll(workplaceId);
     const uppercaseLogs = allLogs.filter(log => log.entityType !== log.entityType.toLowerCase());
 
     if (uppercaseLogs.length === 0) return 0;

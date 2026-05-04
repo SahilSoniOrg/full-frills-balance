@@ -166,7 +166,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
     if (isCompleting) return;
     setIsCompleting(true);
     try {
-      // First perform DB operations
+      // Perform DB operations
       await onboardingService.completeOnboarding({
         name,
         selectedCurrency,

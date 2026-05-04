@@ -1,11 +1,13 @@
 import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
+import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -21,9 +23,9 @@ import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
-import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 
 export function useBudgetDetailViewModel() {
+  const { workplaceId } = useWorkplace();
   const params = useLocalSearchParams();
   const budgetId = params.id as string;
 
@@ -40,21 +42,21 @@ export function useBudgetDetailViewModel() {
   }, []);
 
   const budgetData$ = useMemo(() => {
-    return budgetRepository.observeById(budgetId).pipe(
+    return budgetRepository.observeById(workplaceId, budgetId).pipe(
       switchMap(budget => {
         if (!budget) return of(null);
         return combineLatest([
           of(budget),
-          budgetReadService.observeBudgetUsage(budget as any, refTimestamp),
-          budgetReadService.observeBudgetDisplayTransactions(budget as any, refTimestamp),
+          budgetReadService.observeBudgetUsage(workplaceId, budget, refTimestamp),
+          budgetReadService.observeBudgetDisplayTransactions(workplaceId, budget, refTimestamp),
         ]);
       }),
     );
-  }, [budgetId, refTimestamp]);
+  }, [workplaceId, budgetId, refTimestamp]);
 
   const { data: dbBudgetData, isLoading: dbLoading } = useObservable(
     () => budgetData$,
-    [budgetId, refTimestamp],
+    [workplaceId, budgetId, refTimestamp],
     null,
   );
 
@@ -76,7 +78,7 @@ export function useBudgetDetailViewModel() {
       } as any;
     }
     return null;
-  }, [dbBudgetData, pName, pAmount, pCurrency, pPeriod, budgetId, baseCurrency]);
+  }, [dbBudgetData, pName, pAmount, pCurrency, pPeriod, budgetId, workplaceId, baseCurrency]);
 
   const usage = useMemo(() => {
     if (dbBudgetData) return dbBudgetData[1];
@@ -306,7 +308,7 @@ export function useBudgetDetailViewModel() {
       destructive: true,
       onConfirm: async () => {
         try {
-          await budgetWriteService.deleteBudget(budget);
+          await budgetWriteService.deleteBudget(workplaceId, budget);
           AppNavigation.back();
         } catch (e: any) {
           logger.error('Failed to delete budget', e);

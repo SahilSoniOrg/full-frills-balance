@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 
 export function useLedgerTransactionsForAccount(
   accountId: string,
+  workplaceId: string,
   pageSize: number = AppConfig.defaults.journalPageSize,
   dateRange?: { startDate: number; endDate: number },
 ) {
@@ -13,11 +14,12 @@ export function useLedgerTransactionsForAccount(
     (limit: number, range?: AccountDateRange) => {
       return ledgerReadService.observeEnrichedForAccount(
         accountId,
+        workplaceId,
         limit,
         range as { startDate: number; endDate: number } | undefined,
       );
     },
-    [accountId],
+    [accountId, workplaceId],
   );
 
   const {

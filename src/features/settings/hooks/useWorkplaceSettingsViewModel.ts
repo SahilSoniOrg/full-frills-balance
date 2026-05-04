@@ -1,11 +1,11 @@
-import { useWorkspace } from '@/src/contexts/WorkspaceContext';
-import Workplace from '@/src/data/models/Workplace';
-import { useCallback, useState } from 'react';
-import { useObservable } from '@/src/hooks/useObservable';
-import { of as observableOf } from 'rxjs';
-import { toast } from '@/src/utils/alerts';
 import { IconName } from '@/src/components/core';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import Workplace from '@/src/data/models/Workplace';
+import { useObservable } from '@/src/hooks/useObservable';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { toast } from '@/src/utils/alerts';
+import { useCallback, useState } from 'react';
+import { of as observableOf } from 'rxjs';
 
 export interface WorkplaceSettingsViewModel {
   workplaces: Workplace[];
@@ -20,7 +20,7 @@ export interface WorkplaceSettingsViewModel {
 }
 
 export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
-  const { workplaceId: activeWorkplaceId, setWorkplaceId: setActiveWorkplaceId } = useWorkspace();
+  const { workplaceId: activeWorkplaceId, setWorkplaceId: setActiveWorkplaceId } = useWorkplace();
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingWorkplace, setIsCreatingWorkplace] = useState(false);
 

@@ -1,6 +1,7 @@
 import { DateRangeFilter } from '@/src/components/common/DateRangeFilter';
 import { IconButton } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalListScreen } from '@/src/features/journal/hooks/useJournalListScreen';
 import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJournalRouteDateRange';
@@ -11,19 +12,23 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {
+  const { workplaceId } = useWorkplace();
   const initialDateRange = useJournalRouteDateRange();
   const canGoBack = router.canGoBack();
 
-  const { listViewProps, vm } = useJournalListScreen({
-    pageSize: AppConfig.pagination.dashboardPageSize,
-    emptyState: {
-      title: AppConfig.strings.journal.emptyTitle,
-      subtitle: AppConfig.strings.journal.emptySubtitle,
+  const { listViewProps, vm } = useJournalListScreen(
+    {
+      pageSize: AppConfig.pagination.dashboardPageSize,
+      emptyState: {
+        title: AppConfig.strings.journal.emptyTitle,
+        subtitle: AppConfig.strings.journal.emptySubtitle,
+      },
+      loadingText: AppConfig.strings.common.loading,
+      loadingMoreText: AppConfig.strings.common.loading,
+      initialDateRange: initialDateRange ?? null,
     },
-    loadingText: AppConfig.strings.common.loading,
-    loadingMoreText: AppConfig.strings.common.loading,
-    initialDateRange: initialDateRange ?? null,
-  });
+    workplaceId,
+  );
 
   const handleFabPress = useCallback(() => {
     analytics.logEntrypointOpened('activity', 'bottom_action');

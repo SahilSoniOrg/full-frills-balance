@@ -3,14 +3,14 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
-export interface WorkspaceContextType {
+export interface WorkplaceContextType {
   readonly workplaceId: string;
   setWorkplaceId: (id: string) => void;
 }
 
-const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
+const WorkplaceContext = createContext<WorkplaceContextType | null>(null);
 
-export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
   const [workplaceId, setWorkplaceIdState] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -18,7 +18,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    const initializeWorkspace = async () => {
+    const initializeWorkplace = async () => {
       try {
         const activeWorkplace = await workplaceService.ensureDefaultWorkplace();
         if (isMounted) {
@@ -26,7 +26,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           setIsLoaded(true);
         }
       } catch (err) {
-        logger.error('[WorkspaceProvider] Error initializing workspace context', err);
+        logger.error('[WorkplaceProvider] Error initializing Workplace context', err);
 
         if (isMounted) {
           setError(err as Error);
@@ -35,13 +35,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    initializeWorkspace();
+    initializeWorkplace();
 
     const subscription = preferences.observe('activeWorkplaceId').subscribe(id => {
       if (!isMounted) return;
 
       if (!id) {
-        setError(new Error('activeWorkplaceId became empty'));
+        logger.warn('[WorkplaceProvider] activeWorkplaceId became empty, attempting recovery...');
+        workplaceService
+          .ensureDefaultWorkplace()
+          .then(activeWorkplace => {
+            if (isMounted) {
+              setWorkplaceIdState(activeWorkplace.id);
+            }
+          })
+          .catch(err => {
+            logger.error('[WorkplaceProvider] Critical recovery failure', err);
+            if (isMounted) {
+              setError(new Error('Workplace context lost and recovery failed'));
+            }
+          });
         return;
       }
 
@@ -67,7 +80,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }
 
   if (!workplaceId) {
-    throw new Error('Workspace failed to initialize');
+    throw new Error('Workplace failed to initialize');
   }
 
   const value = {
@@ -84,13 +97,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+  return <WorkplaceContext.Provider value={value}>{children}</WorkplaceContext.Provider>;
 }
 
-export function useWorkspace(): WorkspaceContextType {
-  const context = useContext(WorkspaceContext);
+export function useWorkplace(): WorkplaceContextType {
+  const context = useContext(WorkplaceContext);
   if (!context) {
-    throw new Error('useWorkspace must be used within a WorkspaceProvider');
+    throw new Error('useWorkplace must be used within a WorkplaceProvider');
   }
   return context;
 }

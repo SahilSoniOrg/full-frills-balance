@@ -1,11 +1,15 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
+import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
+import { sharingService } from '@/src/services/SharingService';
 import { analytics } from '@/src/services/analytics-service';
+import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -13,11 +17,8 @@ import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
-import { useSelection } from '@/src/hooks/useSelection';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { sharingService } from '@/src/services/SharingService';
-import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { useJournals } from '../../hooks/useJournals';
 import { mapJournalToCardProps } from '../../utils/journalUiUtils';
 
@@ -67,10 +68,11 @@ export interface JournalSearchViewModel {
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
   const params = useLocalSearchParams();
+  const { workplaceId } = useWorkplace();
   const { defaultCurrency: baseCurrency, defaultShareFormat } = useUI();
   const { rateMap: exchangeRateMap } = useExchangeRates(baseCurrency);
   const { precision } = useCurrencyPrecision(baseCurrency);
-  const { accounts } = useAccounts();
+  const { accounts } = useAccounts(workplaceId);
 
   // Route Params
   const qParam = params.q as string;
@@ -205,6 +207,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
 
   // Data Fetching
   const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
+    workplaceId,
     AppConfig.defaults.journalPageSize,
     queryDateRange as any,
     searchQuery,

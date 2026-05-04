@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -12,7 +13,9 @@ import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
+import { sharingService } from '@/src/services/SharingService';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
+import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { AccountBalance, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
@@ -21,15 +24,13 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
+import { preferences } from '@/src/utils/preferences';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { sharingService } from '@/src/services/SharingService';
-import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { map, of } from 'rxjs';
 
 export interface PeriodMetrics {
@@ -123,6 +124,7 @@ export interface AccountDetailsViewModel {
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
+  const { workplaceId } = useWorkplace();
   const { defaultCurrency, defaultShareFormat } = useUI();
   const params = useLocalSearchParams();
   const accountId = params.accountId as string;
@@ -163,9 +165,13 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     subAccounts: rawSubBalances,
     allAccounts: accounts,
     isLoading: dashboardLoading,
-  } = useAccountDashboard(accountId);
+  } = useAccountDashboard(workplaceId, accountId);
 
-  const { deleteAccount, recoverAccount: recoverAction, reconcileAccount } = useAccountActions();
+  const {
+    deleteAccount,
+    recoverAccount: recoverAction,
+    reconcileAccount,
+  } = useAccountActions(workplaceId);
 
   const {
     transactions,
@@ -175,6 +181,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     loadMore,
   } = useLedgerTransactionsForAccount(
     accountId,
+    workplaceId,
     AppConfig.defaults.journalPageSize,
     dateRange || undefined,
   );
@@ -283,6 +290,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       }
       return transactionRawRepository
         .observeAccountPeriodMetricsRaw(
+          workplaceId,
           accountId,
           dateRange.startDate,
           dateRange.endDate,
@@ -306,7 +314,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
           }),
         );
     },
-    [accountId, dateRange, accountType, isAssetOrExpense],
+    [accountId, dateRange, accountType, isAssetOrExpense, workplaceId],
     { totalIncrease: 0, totalDecrease: 0, netChange: 0, dailyAverage: null, isLoading: true },
   );
 
@@ -677,12 +685,13 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     () => {
       if (!accountId) return of({ count: 0, total: 0 });
       return transactionRawRepository.observeUnreconciledMetricsRaw(
+        workplaceId,
         accountId,
         reconciledAt?.getTime() || null,
         isAssetOrExpense,
       );
     },
-    [accountId, reconciledAt, isAssetOrExpense],
+    [workplaceId, accountId, reconciledAt, isAssetOrExpense],
     { count: 0, total: 0 },
   );
 
@@ -697,6 +706,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         (dateRange ? dateRange.endDate : dayjs().endOf('month').valueOf()) + 7 * MS_PER_DAY;
       return transactionRepository
         .transactionsQuery(
+          Q.where('workplace_id', workplaceId),
           Q.where('account_id', accountId),
           Q.where('deleted_at', Q.eq(null)),
           Q.where('transaction_date', Q.gte(start)),
@@ -705,7 +715,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         )
         .observeWithColumns(['running_balance', 'transaction_date']);
     },
-    [accountId, dateRange],
+    [workplaceId, accountId, dateRange],
     [],
   );
 

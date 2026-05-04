@@ -33,23 +33,26 @@ export class InsightService {
    * Triggers heavy SQL queries and pattern analysis during the splash screen
    * phase without blocking the first render.
    */
-  preWarm(): void {
+  preWarm(workplaceId: string): void {
     // Trigger the pattern matching chain.
-    const sub = this.observePatterns().subscribe();
+    const sub = this.observePatterns(workplaceId).subscribe();
 
     // Keep alive long enough to prime repository and SQLite caches.
     setTimeout(() => sub.unsubscribe(), 15000);
   }
 
-  observeDismissedPatterns(): Observable<Insight[]> {
-    return this.observePatternsInternal(true);
+  observeDismissedPatterns(workplaceId: string): Observable<Insight[]> {
+    return this.observePatternsInternal(workplaceId, true);
   }
 
-  observePatterns(): Observable<Insight[]> {
-    return this.observePatternsInternal(false);
+  observePatterns(workplaceId: string): Observable<Insight[]> {
+    return this.observePatternsInternal(workplaceId, false);
   }
 
-  private observePatternsInternal(onlyDismissed: boolean): Observable<Insight[]> {
+  private observePatternsInternal(
+    workplaceId: string,
+    onlyDismissed: boolean,
+  ): Observable<Insight[]> {
     const insightsConfig = AppConfig.insights;
     const lookbackDays = insightsConfig.lookbackDays;
 
@@ -60,9 +63,9 @@ export class InsightService {
         const ninetyDaysAgo = Date.now() - lookbackDays * AppConfig.time.msPerDay;
 
         return combineLatest([
-          transactionRepository.observeByDateRange(ninetyDaysAgo),
-          accountRepository.observeAll(),
-          plannedPaymentRepository.observeActive(),
+          transactionRepository.observeByDateRange(workplaceId, ninetyDaysAgo),
+          accountRepository.observeAll(workplaceId),
+          plannedPaymentRepository.observeActive(workplaceId),
           this.refreshTrigger,
           of(ninetyDaysAgo),
         ]);
@@ -81,7 +84,7 @@ export class InsightService {
           if (acc?.accountType !== AccountType.EXPENSE) continue;
 
           const journalIds = (candidate.journalIds || '').split(',');
-          const transactions = await transactionRepository.findByJournals(journalIds);
+          const transactions = await transactionRepository.findByJournals(journalIds, workplaceId);
 
           // Group by description to handle case where two different subscriptions have same amount
           const byDescription = new Map<string, typeof transactions>();
@@ -141,6 +144,7 @@ export class InsightService {
         const last7Days = Date.now() - spikeWindow * AppConfig.time.msPerDay;
 
         const expenseTransactions = await transactionRepository.findByAccountsAndDateRange(
+          workplaceId,
           (accounts as Account[])
             .filter((a: Account) => a.accountType === AccountType.EXPENSE)
             .map((a: Account) => a.id),
@@ -211,7 +215,7 @@ export class InsightService {
               .replace(/\b\w/g, l => l.toUpperCase());
             const percentIncrease = Math.round((spikeMultiplier - 1) * 100);
             finalPatterns.push({
-              id: `leak_${subtype}`,
+              id: `leak_${workplaceId}_${subtype}`,
               type: 'slow-leak',
               severity: 'low',
               message: AppConfig.strings.dashboard.hub.spendingSpike.message,
@@ -239,7 +243,7 @@ export class InsightService {
           if (!hasEmergencyFund && hasSignificantAssets) {
             const { insight: strings } = AppConfig.strings.dashboard.hub.emergencyFund;
             finalPatterns.push({
-              id: `no_emergency_fund`,
+              id: `no_emergency_fund_${workplaceId}`,
               type: 'lifestyle-drift',
               severity: 'medium',
               message: strings.message,

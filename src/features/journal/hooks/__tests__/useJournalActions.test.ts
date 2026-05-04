@@ -8,70 +8,70 @@ import { act, renderHook } from '@testing-library/react-native';
 jest.mock('@/src/features/journal/services/JournalService');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/services/ledger', () => ({
-    ledgerWriteService: { createJournal: jest.fn() },
+  ledgerWriteService: { createJournal: jest.fn() },
 }));
 jest.mock('@/src/data/database/Database', () => ({
-    database: {
-        write: jest.fn(),
-        collections: { get: jest.fn() }
-    }
+  database: {
+    write: jest.fn(),
+    collections: { get: jest.fn() },
+  },
 }));
 
 describe('useJournalActions', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should delegate createJournal to ledgerWriteService', async () => {
+    const { result } = renderHook(() => useJournalActions('test-wp'));
+    const data = { description: 'test', currencyCode: 'USD', transactions: [] } as any;
+
+    await act(async () => {
+      await result.current.createJournal(data);
     });
 
-    it('should delegate createJournal to journalService', async () => {
-        const { result } = renderHook(() => useJournalActions());
-        const data = { description: 'test', currencyCode: 'USD', transactions: [] } as any;
+    expect(ledgerWriteService.createJournal).toHaveBeenCalledWith(data, 'test-wp');
+  });
 
-        await act(async () => {
-            await result.current.createJournal(data);
-        });
+  it('should delegate updateJournal to journalService', async () => {
+    const { result } = renderHook(() => useJournalActions('test-wp'));
+    const data = { description: 'update' } as any;
 
-        expect(ledgerWriteService.createJournal).toHaveBeenCalledWith(data);
+    await act(async () => {
+      await result.current.updateJournal('id1', data);
     });
 
-    it('should delegate updateJournal to journalService', async () => {
-        const { result } = renderHook(() => useJournalActions());
-        const data = { description: 'update' } as any;
+    expect(journalService.updateJournal).toHaveBeenCalledWith('id1', data, 'test-wp');
+  });
 
-        await act(async () => {
-            await result.current.updateJournal('id1', data);
-        });
+  it('should delegate deleteJournal to journalService', async () => {
+    const { result } = renderHook(() => useJournalActions('test-wp'));
+    const journal = { id: 'id1' } as any;
 
-        expect(journalService.updateJournal).toHaveBeenCalledWith('id1', data);
+    await act(async () => {
+      await result.current.deleteJournal(journal);
     });
 
-    it('should delegate deleteJournal to journalService', async () => {
-        const { result } = renderHook(() => useJournalActions());
-        const journal = { id: 'id1' } as any;
+    expect(journalService.deleteJournal).toHaveBeenCalledWith('id1', 'test-wp');
+  });
 
-        await act(async () => {
-            await result.current.deleteJournal(journal);
-        });
+  it('should delegate duplicateJournal to journalService', async () => {
+    const { result } = renderHook(() => useJournalActions('test-wp'));
 
-        expect(journalService.deleteJournal).toHaveBeenCalledWith('id1');
+    await act(async () => {
+      await result.current.duplicateJournal('id1');
     });
 
-    it('should delegate duplicateJournal to journalService', async () => {
-        const { result } = renderHook(() => useJournalActions());
+    expect(journalService.duplicateJournal).toHaveBeenCalledWith('id1', 'test-wp');
+  });
 
-        await act(async () => {
-            await result.current.duplicateJournal('id1');
-        });
+  it('should delegate findJournal to journalRepository', async () => {
+    const { result } = renderHook(() => useJournalActions('test-wp'));
 
-        expect(journalService.duplicateJournal).toHaveBeenCalledWith('id1');
+    await act(async () => {
+      await result.current.findJournal('id1');
     });
 
-    it('should delegate findJournal to journalRepository', async () => {
-        const { result } = renderHook(() => useJournalActions());
-
-        await act(async () => {
-            await result.current.findJournal('id1');
-        });
-
-        expect(journalRepository.find).toHaveBeenCalledWith('id1');
-    });
+    expect(journalRepository.find).toHaveBeenCalledWith('id1', 'test-wp');
+  });
 });

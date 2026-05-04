@@ -7,7 +7,9 @@ import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
+import { sharingService } from '@/src/services/SharingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
@@ -16,8 +18,6 @@ import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { sharingService } from '@/src/services/SharingService';
-import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
 export interface JournalListEmptyState {
@@ -69,14 +69,17 @@ interface UseJournalListViewModelParams {
 
 const PLANNED_STATUS = [JournalStatus.PLANNED];
 
-export function useJournalListViewModel({
-  pageSize = AppConfig.defaults.journalPageSize,
-  emptyState,
-  loadingText = AppConfig.strings.common.loading,
-  loadingMoreText = AppConfig.strings.common.loading,
-  initialDateRange,
-  defaultToCurrentMonth = true,
-}: UseJournalListViewModelParams): JournalListViewModel {
+export function useJournalListViewModel(
+  {
+    pageSize = AppConfig.defaults.journalPageSize,
+    emptyState,
+    loadingText = AppConfig.strings.common.loading,
+    loadingMoreText = AppConfig.strings.common.loading,
+    initialDateRange,
+    defaultToCurrentMonth = true,
+  }: UseJournalListViewModelParams,
+  workplaceId: string,
+): JournalListViewModel {
   const { defaultCurrency: baseCurrency, isInitialized, defaultShareFormat } = useUI();
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
 
@@ -101,12 +104,14 @@ export function useJournalListViewModel({
   }, [searchQuery, isSearchGlobal, dateRange]);
 
   const { journals, isLoading, isLoadingMore, hasMore, loadMore } = useJournals(
+    workplaceId,
     pageSize,
     effectiveDateRange,
     searchQuery,
   );
 
   const { journals: plannedJournals } = useJournals(
+    workplaceId,
     AppConfig.defaults.plannedJournalLimit,
     undefined,
     undefined,

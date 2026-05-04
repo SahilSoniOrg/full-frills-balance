@@ -88,6 +88,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
+      'test-wp',
     );
 
     expect(result.simulationResult.summary.safeToSpend).toBe(1000);
@@ -118,6 +119,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
+      'test-wp',
     );
 
     // Initial 1000.
@@ -161,6 +163,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, otherAccount],
       'USD',
+      'test-wp',
     );
 
     // Global balance should remain 1000
@@ -204,6 +207,7 @@ describe('CashFlowSimulationService', () => {
       [usage],
       [liquidAccount],
       'USD',
+      'test-wp',
     );
 
     // Budget is 300/month.
@@ -244,6 +248,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, expenseAccount],
       'USD',
+      'test-wp',
     );
 
     // Initial 1000.
@@ -295,6 +300,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, ccAccount],
       'USD',
+      'test-wp',
     );
 
     // CC starting balance 500.
@@ -352,6 +358,7 @@ describe('CashFlowSimulationService', () => {
       [usage],
       [liquidAccount, expenseAccount],
       'USD',
+      'test-wp',
     );
 
     // Initial 2000.
@@ -432,6 +439,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, ccAccount],
       'USD',
+      'test-wp',
     );
 
     // CC starting balance 500.
@@ -484,6 +492,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, ccAccount],
       'USD',
+      'test-wp',
     );
 
     // Calculation:
@@ -540,6 +549,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
+      'test-wp',
     );
 
     // Initial 5000.
@@ -588,6 +598,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
+      'test-wp',
     );
 
     // Should generate a flow for "today" (offset 0) even though it was due in the past
@@ -632,6 +643,7 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
+      'test-wp',
     );
 
     // Should project for 5th, 6th, 7th, 8th, 9th, 10th.

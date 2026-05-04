@@ -1,5 +1,6 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
 import { analytics } from '@/src/services/analytics-service';
@@ -66,6 +67,7 @@ export interface SettingsViewModel {
 }
 
 export function useSettingsViewModel(): SettingsViewModel {
+  const { workplaceId } = useWorkplace();
   const ui = useUI();
   const {
     userName,
@@ -83,7 +85,8 @@ export function useSettingsViewModel(): SettingsViewModel {
     defaultShareFormat,
     setDefaultShareFormat,
   } = ui;
-  const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } = useSettingsActions();
+  const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } =
+    useSettingsActions(workplaceId);
   const { isImporting: isImportingData } = useImport();
   const [isExporting, setIsExporting] = useState(false);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);

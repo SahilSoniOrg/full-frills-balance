@@ -8,8 +8,12 @@ export interface EntityStatus {
   isDeleted: boolean;
 }
 
-export function useAuditAccounts() {
-  const { data: accounts, isLoading } = useObservable(() => accountRepository.observeAll(), [], []);
+export function useAuditAccounts(wokrplaceId: string) {
+  const { data: accounts, isLoading } = useObservable(
+    () => accountRepository.observeAll(wokrplaceId),
+    [wokrplaceId],
+    [],
+  );
 
   const accountMap = React.useMemo(() => {
     const map: Record<string, { name: string; currency: string }> = {};
@@ -22,7 +26,10 @@ export function useAuditAccounts() {
   return { accountMap, isLoading };
 }
 
-export function useAuditEntityStatus(idsByEntityType: Record<string, string[]>) {
+export function useAuditEntityStatus(
+  workplaceId: string,
+  idsByEntityType: Record<string, string[]>,
+) {
   const accountIds = useMemo(
     () => Array.from(new Set(idsByEntityType.account || [])),
     [idsByEntityType.account],
@@ -33,14 +40,14 @@ export function useAuditEntityStatus(idsByEntityType: Record<string, string[]>) 
   );
 
   const { data: accounts } = useObservable(
-    () => accountRepository.observeByIdsWithDeleted(accountIds),
-    [accountIds],
+    () => accountRepository.observeByIdsWithDeleted(accountIds, workplaceId),
+    [accountIds, workplaceId],
     [],
   );
 
   const { data: journals } = useObservable(
-    () => journalRepository.observeByIdsWithDeleted(journalIds),
-    [journalIds],
+    () => journalRepository.observeByIdsWithDeleted(workplaceId, journalIds),
+    [workplaceId, journalIds],
     [],
   );
 

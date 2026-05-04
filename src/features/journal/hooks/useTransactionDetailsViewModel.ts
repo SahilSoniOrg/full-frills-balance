@@ -1,5 +1,6 @@
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
@@ -97,19 +98,26 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     displayType?: string;
   }>();
   const { theme } = useTheme();
+  const { workplaceId } = useWorkplace();
+
   const { deleteJournal, findJournal, duplicateJournal, postJournal, revertToPlanned } =
-    useJournalActions();
+    useJournalActions(workplaceId);
   const { transactions, isLoading: isLoadingTransactions } = useJournalTransactions(
+    workplaceId,
     journalId,
     true,
   );
-  const { journal, isLoading: isLoadingJournal, version } = useJournal(journalId, true);
+  const {
+    journal,
+    isLoading: isLoadingJournal,
+    version,
+  } = useJournal(workplaceId, journalId, true);
 
   const { data: smsInfo } = useObservable(
     () => {
       if (!journalId) return of(undefined);
 
-      return from(journalRepository.findMetadataByJournalId(journalId)).pipe(
+      return from(journalRepository.findMetadataByJournalId(journalId, workplaceId)).pipe(
         switchMap(metadata => {
           if (!metadata) return of(undefined);
 
@@ -305,9 +313,12 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
       `Are you sure you want to skip this planned transaction for ${amountText}? The schedule will advance to the next occurrence.`,
       async () => {
         try {
-          const pp = await plannedPaymentRepository.find(journalInfo.plannedPaymentId!);
+          const pp = await plannedPaymentRepository.find(
+            workplaceId,
+            journalInfo.plannedPaymentId!,
+          );
           if (!pp) throw new Error('Planned payment rule not found.');
-          await plannedPaymentService.skipOccurrence(pp, journalInfo.journalDate);
+          await plannedPaymentService.skipOccurrence(workplaceId, pp, journalInfo.journalDate);
           toast.success('Transaction has been skipped.');
           AppNavigation.back();
         } catch (error) {

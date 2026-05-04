@@ -1,5 +1,5 @@
 import { JournalStatus } from '@/src/data/models/Journal';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
+import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useJournals } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -9,9 +9,9 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 import { of } from 'rxjs';
 
-export function usePlannedPaymentDetails(id: string) {
+export function usePlannedPaymentDetails(id: string, workplaceId: string) {
   const { data: item, isLoading: isItemLoading } = useObservable<PlannedPayment | null>(
-    () => (id ? plannedPaymentRepository.observeById(id) : of(null)),
+    () => (id ? plannedPaymentRepository.observeById(id, workplaceId) : of(null)),
     [id],
     null,
   );
@@ -19,6 +19,7 @@ export function usePlannedPaymentDetails(id: string) {
   // Fetch history (linked journals)
   // We use a separate status filter to show both POSTED (past) and PLANNED (future generated) journals
   const { journals: history, isLoading: isHistoryLoading } = useJournals(
+    workplaceId,
     20,
     undefined,
     undefined,
@@ -43,8 +44,11 @@ export function usePlannedPaymentDetails(id: string) {
 
   const handleToggleStatus = useCallback(async () => {
     if (!item) return;
-    const newStatus = item.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-    await plannedPaymentRepository.update(item as any, { status: newStatus as any });
+    const newStatus =
+      item.status === PlannedPaymentStatus.ACTIVE
+        ? PlannedPaymentStatus.PAUSED
+        : PlannedPaymentStatus.ACTIVE;
+    await plannedPaymentRepository.update(workplaceId, item, { status: newStatus });
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'toggle_status', {
@@ -56,7 +60,7 @@ export function usePlannedPaymentDetails(id: string) {
 
   const handleDelete = useCallback(async () => {
     if (!item) return;
-    await plannedPaymentRepository.delete(item as any);
+    await plannedPaymentRepository.delete(workplaceId, item);
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'delete', {
@@ -66,12 +70,12 @@ export function usePlannedPaymentDetails(id: string) {
     });
 
     AppNavigation.back();
-  }, [item]);
+  }, [item, workplaceId]);
 
   const handlePostNow = useCallback(async () => {
     if (!item) return;
     try {
-      await plannedPaymentService.postOccurrence(item as any, item.nextOccurrence);
+      await plannedPaymentService.postOccurrence(workplaceId, item, item.nextOccurrence);
 
       // Track Analytics
       analytics.trackFeatureUsage('planned_payment', 'post_now', {
@@ -85,12 +89,12 @@ export function usePlannedPaymentDetails(id: string) {
     } catch {
       // Error logged in service
     }
-  }, [item]);
+  }, [item, workplaceId]);
 
   const handleSkip = useCallback(async () => {
     if (!item) return;
     try {
-      await plannedPaymentService.skipOccurrence(item as any, item.nextOccurrence);
+      await plannedPaymentService.skipOccurrence(workplaceId, item, item.nextOccurrence);
 
       // Track Analytics
       analytics.trackFeatureUsage('planned_payment', 'skip', {
@@ -103,7 +107,7 @@ export function usePlannedPaymentDetails(id: string) {
     } catch {
       // Error logged in service
     }
-  }, [item]);
+  }, [item, workplaceId]);
 
   return {
     item,

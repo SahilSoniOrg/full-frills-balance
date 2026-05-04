@@ -23,7 +23,7 @@ export interface PlannedPaymentFormState {
   recurrenceMonth?: number;
 }
 
-export function usePlannedPaymentForm(id?: string) {
+export function usePlannedPaymentForm(workplaceId: string, id?: string) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState<PlannedPaymentFormState>({
@@ -43,7 +43,7 @@ export function usePlannedPaymentForm(id?: string) {
   // Load initial values if editing
   useEffect(() => {
     if (id) {
-      plannedPaymentRepository.find(id).then(pp => {
+      plannedPaymentRepository.find(workplaceId, id).then(pp => {
         if (pp) {
           setForm({
             name: pp.name,
@@ -95,14 +95,14 @@ export function usePlannedPaymentForm(id?: string) {
       };
 
       if (id) {
-        const pp = await plannedPaymentRepository.find(id);
+        const pp = await plannedPaymentRepository.find(workplaceId, id);
         if (pp) {
           const schedulingChanged =
             pp.startDate !== data.startDate ||
             pp.intervalType !== data.intervalType ||
             pp.intervalN !== data.intervalN;
 
-          await plannedPaymentRepository.update(pp, {
+          await plannedPaymentRepository.update(workplaceId, pp, {
             ...data,
             nextOccurrence: schedulingChanged ? data.startDate : pp.nextOccurrence,
           });
@@ -122,14 +122,14 @@ export function usePlannedPaymentForm(id?: string) {
           recurrenceDay: form.recurrenceDay,
           recurrenceMonth: form.recurrenceMonth,
         });
-        const newPayment = await plannedPaymentRepository.create({
+        const newPayment = await plannedPaymentRepository.create(workplaceId, {
           ...data,
           status: PlannedPaymentStatus.ACTIVE,
           nextOccurrence: firstOccurrence,
         });
         // Bug 1 fix: immediately generate journals for the new planned payment
         // without requiring an app restart.
-        await plannedPaymentService.processDuePayments();
+        await plannedPaymentService.processDuePayments(workplaceId);
 
         // Track Analytics
         analytics.trackFeatureUsage('planned_payment', 'create', {
@@ -147,7 +147,7 @@ export function usePlannedPaymentForm(id?: string) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, id, isValid]);
+  }, [form, id, isValid, workplaceId]);
 
   return {
     form,

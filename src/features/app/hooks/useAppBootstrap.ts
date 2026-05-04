@@ -21,7 +21,7 @@ import { sharingService } from '@/src/services/SharingService';
  * Bootstraps app-wide side effects that must not live in UI context.
  * Hardened to follow a 4-phase adaptive hydration pipeline.
  */
-export function useAppBootstrap() {
+export function useAppBootstrap(workplaceId: string) {
   const { isAppCurrentlyLocked, appPhase, dispatchBootEvent } = useUI();
 
   // SAFETY: phaseRef prevents stale closure captures in watchdog and ghost blocks
@@ -117,7 +117,7 @@ export function useAppBootstrap() {
               await Promise.allSettled([
                 exchangeRateService.preWarmCache(),
                 currencyRepository.getAllPrecisions(),
-                accountRepository.findAll(),
+                accountRepository.findAll(workplaceId),
               ]);
 
               // Step 3: Heavy computational services (Adaptive Gating)
@@ -127,9 +127,9 @@ export function useAppBootstrap() {
 
               if (!isActive || phaseRef.current >= AppPhase.STABILIZED || isLowEnd) return;
               await yieldToUI();
-              balanceService.getAccountBalances().catch(() => {});
-              notificationService.preWarm();
-              insightService.preWarm();
+              balanceService.getAccountBalances(workplaceId).catch(() => {});
+              notificationService.preWarm(workplaceId);
+              insightService.preWarm(workplaceId);
 
               logger.info('[Bootstrap] Ghost hydration pass complete.');
             } catch (err) {
@@ -163,14 +163,14 @@ export function useAppBootstrap() {
         // Run non-critical background checks with DYNAMIC IMPORTS
         try {
           const { integrityService } = await import('@/src/services/integrity-service');
-          await integrityService.runStartupCheck();
+          await integrityService.runStartupCheck(workplaceId);
         } catch (error) {
           if (isActive) logger.warn('[Bootstrap] Integrity check failed', { error });
         }
 
         try {
           const { plannedPaymentService } = await import('@/src/services/PlannedPaymentService');
-          await plannedPaymentService.processDuePayments();
+          await plannedPaymentService.processDuePayments(workplaceId);
         } catch (error) {
           if (isActive) logger.error('[Bootstrap] Planned payments processing failed', error);
         }
@@ -193,9 +193,9 @@ export function useAppBootstrap() {
         }
 
         try {
-          if (Platform.OS === 'android' && preferences.isSmsImportEnabled) {
+          if (Platform.OS === 'android' && preferences.isSmsImportEnabled && workplaceId) {
             const { smsService } = await import('@/src/services/sms-service');
-            await smsService.processUnprocessedSms();
+            await smsService.processUnprocessedSms(workplaceId);
           }
         } catch (error) {
           if (isActive) logger.warn('[Bootstrap] SMS check failed', { error });
@@ -213,5 +213,5 @@ export function useAppBootstrap() {
     return () => {
       isActive = false;
     };
-  }, [isAppCurrentlyLocked, appPhase, dispatchBootEvent]);
+  }, [isAppCurrentlyLocked, appPhase, dispatchBootEvent, workplaceId]);
 }

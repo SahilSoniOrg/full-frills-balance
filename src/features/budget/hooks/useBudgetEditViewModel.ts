@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -15,16 +16,17 @@ import { useCallback, useEffect, useState } from 'react';
 
 export function useBudgetEditViewModel() {
   const params = useLocalSearchParams();
+  const { workplaceId } = useWorkplace();
   const budgetId = params.id as string;
   const { defaultCurrency } = useUI();
   const { data: expenseAccounts = [] } = useObservable(
-    () => accountRepository.observeByType(AccountType.EXPENSE),
-    [],
+    () => accountRepository.observeByType(AccountType.EXPENSE, workplaceId),
+    [workplaceId],
     [],
   );
   const { data: assetAccounts = [] } = useObservable(
-    () => accountRepository.observeByType(AccountType.ASSET),
-    [],
+    () => accountRepository.observeByType(AccountType.ASSET, workplaceId),
+    [workplaceId],
     [],
   );
   const liquidAssetAccounts = assetAccounts.filter(a => isLiquidAssetSubtype(a.accountSubtype));
@@ -57,7 +59,7 @@ export function useBudgetEditViewModel() {
     if (!budgetId) return;
 
     budgetRepository
-      .find(budgetId)
+      .find(workplaceId, budgetId)
       .then(async b => {
         if (!b) return;
         setBudget(b);
@@ -72,7 +74,7 @@ export function useBudgetEditViewModel() {
         setRecurrenceMonth(b.recurrenceMonth || 1);
         setStartDate(b.startDate);
 
-        const scopes = await budgetRepository.getScopes(budgetId);
+        const scopes = await budgetRepository.getScopes(workplaceId, budgetId);
         setSelectedAccountIds(scopes.map(s => s.account.id));
 
         if (b.assetAccountIds) {
@@ -85,7 +87,7 @@ export function useBudgetEditViewModel() {
         logger.error('Failed to load budget', e);
         setLoading(false);
       });
-  }, [budgetId, defaultCurrency]);
+  }, [workplaceId, budgetId, defaultCurrency]);
 
   const save = useCallback(async () => {
     if (!name.trim() || !amount || selectedAccountIds.length === 0) {
@@ -112,9 +114,9 @@ export function useBudgetEditViewModel() {
       };
 
       if (budget) {
-        await budgetWriteService.updateBudget(budget, input, selectedAccountIds);
+        await budgetWriteService.updateBudget(workplaceId, budget, input, selectedAccountIds);
       } else {
-        await budgetWriteService.createBudget(input, selectedAccountIds);
+        await budgetWriteService.createBudget(workplaceId, input, selectedAccountIds);
       }
       AppNavigation.back();
     } finally {

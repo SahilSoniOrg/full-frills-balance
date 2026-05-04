@@ -260,6 +260,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       usages,
       allAccounts,
       'USD',
+      'test-wp',
     );
 
     expect(result.simulationResult.projections).toHaveLength(AppConfig.defaults.safeToSpendDays);
@@ -353,6 +354,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       [],
       [cash, ...expenseAccounts],
       'USD',
+      'test-wp',
     );
 
     const plannedFlows = result.allFlows!.filter(
@@ -393,6 +395,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       [],
       [cash],
       'USD',
+      'test-wp',
     );
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);

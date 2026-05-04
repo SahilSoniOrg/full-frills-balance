@@ -1,12 +1,13 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
+import { insightService } from '@/src/services/insight/InsightService';
 import {
   notificationService,
   SafeToSpendResult,
 } from '@/src/services/notification/NotificationService';
-import { insightService } from '@/src/services/insight/InsightService';
 import { smsService } from '@/src/services/sms-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import React, { useCallback, useMemo } from 'react';
@@ -53,6 +54,7 @@ export interface DashboardViewModel {
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
+  const { workplaceId } = useWorkplace();
   const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode } = useUI();
 
   const [isLocalPrivacyMode, setIsLocalPrivacyMode] = React.useState(isPrivacyMode);
@@ -67,16 +69,20 @@ export function useDashboardViewModel(): DashboardViewModel {
   }, []);
 
   const { data: safeToSpendData } = useObservable(
-    () => notificationService.observeSafeToSpend(),
-    [],
+    () => notificationService.observeSafeToSpend(workplaceId),
+    [workplaceId],
     null,
   );
 
-  const { data: insights } = useObservable(() => insightService.observePatterns(), [], []);
+  const { data: insights } = useObservable(
+    () => insightService.observePatterns(workplaceId),
+    [workplaceId],
+    [],
+  );
 
   const { data: unreadSmsCount } = useObservable(
-    () => (Platform.OS === 'android' ? smsService.observeUnprocessedCount() : of(0)),
-    [],
+    () => (Platform.OS === 'android' ? smsService.observeUnprocessedCount(workplaceId) : of(0)),
+    [workplaceId],
     0,
   );
 
@@ -93,14 +99,17 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const { strings } = AppConfig;
 
-  const { listViewProps, vm } = useJournalListScreen({
-    pageSize: AppConfig.pagination.dashboardPageSize,
-    emptyState: {
-      title: strings.dashboard.emptyTitle,
-      subtitle: strings.dashboard.emptySubtitle,
+  const { listViewProps, vm } = useJournalListScreen(
+    {
+      pageSize: AppConfig.pagination.dashboardPageSize,
+      emptyState: {
+        title: strings.dashboard.emptyTitle,
+        subtitle: strings.dashboard.emptySubtitle,
+      },
+      defaultToCurrentMonth: false,
     },
-    defaultToCurrentMonth: false,
-  });
+    workplaceId,
+  );
 
   const onAddPress = useCallback(() => {
     AppNavigation.toJournalEntry();

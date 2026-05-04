@@ -41,7 +41,7 @@ export interface UseJournalEditorOptions {
  * useJournalEditor - Controller hook for the Journal Entry screen.
  * Consolidates state management and business logic for both simple and advanced modes.
  */
-export function useJournalEditor(options: UseJournalEditorOptions = {}) {
+export function useJournalEditor(workplaceId: string, options: UseJournalEditorOptions = {}) {
   const { advancedMode, setAdvancedMode } = useUI();
   const {
     journalId,
@@ -148,7 +148,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
       const loadData = async () => {
         setIsLoading(true);
         try {
-          const journal = await journalRepository.find(journalId);
+          const journal = await journalRepository.find(workplaceId, journalId);
           if (journal) {
             const dateObj = new Date(journal.journalDate);
             setDescription(journal.description || '');
@@ -156,7 +156,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
             setJournalDate(dayjs(dateObj).format('YYYY-MM-DD'));
             setJournalTime(dayjs(dateObj).format('HH:mm'));
 
-            const txs = await transactionService.getEnrichedByJournal(journalId);
+            const txs = await transactionService.getEnrichedByJournal(workplaceId, journalId);
             if (txs.length > 0) {
               // 1. Force Advanced Mode for multi-leg transactions
               if (txs.length > 2) {
@@ -211,7 +211,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
       };
       loadData();
     }
-  }, [journalId, setGuidedModeInternal]);
+  }, [journalId, setGuidedModeInternal, workplaceId]);
 
   const addLine = useCallback(() => {
     setLines(prev => {
@@ -343,6 +343,7 @@ export function useJournalEditor(options: UseJournalEditorOptions = {}) {
         smsRecordId: options.smsRecordId,
         smsSender: options.smsSender,
         rawSmsBody: options.rawSmsBody,
+        workplaceId: workplaceId,
       });
 
       if (!result.success) {

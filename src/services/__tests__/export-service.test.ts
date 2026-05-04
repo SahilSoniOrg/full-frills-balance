@@ -188,7 +188,7 @@ describe('ExportService', () => {
       mockGet.mockImplementation((tableName: string) => mockCollections.get(tableName));
       (preferences.loadPreferences as jest.Mock).mockResolvedValue({ theme: 'dark' });
 
-      const zipData = await exportService.exportToJSON();
+      const zipData = await exportService.exportToJSON('test-workplace');
       expect(zipData).toBeInstanceOf(Uint8Array);
 
       const zip = await JSZip.loadAsync(zipData);
@@ -217,7 +217,7 @@ describe('ExportService', () => {
         throw new Error('DB Fail');
       });
 
-      await expect(exportService.exportToJSON()).rejects.toThrow('DB Fail');
+      await expect(exportService.exportToJSON('test-workplace')).rejects.toThrow('DB Fail');
       expect(logger.error).toHaveBeenCalled();
     });
   });

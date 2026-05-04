@@ -209,14 +209,17 @@ export class PlannedPaymentService {
 
       const normalizedDate = this.normalizeToStartOfDay(occurrenceDate);
 
-      await ledgerWriteService.createJournal({
-        journalDate: normalizedDate,
-        description: pp.name,
-        currencyCode: pp.currencyCode,
-        transactions,
-        status: pp.isAutoPost ? JournalStatus.POSTED : JournalStatus.PLANNED,
-        plannedPaymentId: pp.id,
-      });
+      await ledgerWriteService.createJournal(
+        {
+          journalDate: normalizedDate,
+          description: pp.name,
+          currencyCode: pp.currencyCode,
+          transactions,
+          status: pp.isAutoPost ? JournalStatus.POSTED : JournalStatus.PLANNED,
+          plannedPaymentId: pp.id,
+        },
+        pp.workplaceId,
+      );
     } catch (error) {
       const message =
         error instanceof Error
@@ -231,13 +234,18 @@ export class PlannedPaymentService {
     }
   }
 
-  async postOccurrence(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
+  async postOccurrence(
+    workplaceId: string,
+    pp: PlannedPayment,
+    occurrenceDate: number,
+  ): Promise<void> {
     try {
       // normalizedDate is midnight of the occurrence day — used only for day-window queries.
       const earliestPlanned = await database.collections
         .get<Journal>('journals')
         .query(
           Q.where('planned_payment_id', pp.id),
+          Q.where('workplace_id', workplaceId),
           Q.where('status', JournalStatus.PLANNED),
           Q.where('deleted_at', Q.eq(null)),
           Q.sortBy('journal_date', Q.asc),
@@ -258,6 +266,7 @@ export class PlannedPaymentService {
         .get<Journal>('journals')
         .query(
           Q.where('planned_payment_id', pp.id),
+          Q.where('workplace_id', workplaceId),
           Q.where('journal_date', Q.between(normalizedDate, dayEnd)),
           Q.where('status', JournalStatus.PLANNED),
           Q.where('deleted_at', Q.eq(null)),
@@ -268,11 +277,12 @@ export class PlannedPaymentService {
         // Promote to POSTED by patching status and updating the journal date
         // to the current time so the post timestamp is accurate.
         const j = existingPlanned[0];
-        const txs = await transactionRepository.findByJournal(j.id);
+        const txs = await transactionRepository.findByJournal(j.id, workplaceId);
         const originalDate = j.journalDate;
 
         // Prepare ops outside the write lock (reads are safe before write).
         const metadataOp = await journalRepository.prepareMetadataPatch(
+          workplaceId,
           j.id,
           { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
           MetadataSources.MANUAL_POST,
@@ -299,6 +309,7 @@ export class PlannedPaymentService {
         rebuildQueueService.enqueueMany(
           new Set(txs.map((t: Transaction) => t.accountId)),
           postTime,
+          workplaceId,
         );
       } else {
         // Fallback: Create new POSTED journal if none existed
@@ -324,14 +335,17 @@ export class PlannedPaymentService {
           },
         ];
 
-        await ledgerWriteService.createJournal({
-          journalDate: postTime,
-          description: pp.name,
-          currencyCode: pp.currencyCode,
-          transactions,
-          status: JournalStatus.POSTED,
-          plannedPaymentId: pp.id,
-        });
+        await ledgerWriteService.createJournal(
+          {
+            journalDate: postTime,
+            description: pp.name,
+            currencyCode: pp.currencyCode,
+            transactions,
+            status: JournalStatus.POSTED,
+            plannedPaymentId: pp.id,
+          },
+          pp.workplaceId,
+        );
       }
 
       // 2. Advance the next occurrence
@@ -341,12 +355,12 @@ export class PlannedPaymentService {
       // Only advance if the new next occurrence is actually later than the current one.
       if (nextOcc > pp.nextOccurrence) {
         if (pp.endDate && nextOcc > pp.endDate) {
-          await plannedPaymentRepository.update(pp, {
+          await plannedPaymentRepository.update(workplaceId, pp, {
             nextOccurrence: nextOcc,
             status: PlannedPaymentStatus.COMPLETED,
           });
         } else {
-          await plannedPaymentRepository.update(pp, {
+          await plannedPaymentRepository.update(workplaceId, pp, {
             nextOccurrence: nextOcc,
           });
         }
@@ -366,7 +380,11 @@ export class PlannedPaymentService {
    * Skips a specific occurrence of a planned payment.
    * Deletes any existing PLANNED journal for that occurrence and advances the schedule.
    */
-  async skipOccurrence(pp: PlannedPayment, occurrenceDate: number): Promise<void> {
+  async skipOccurrence(
+    workplaceId: string,
+    pp: PlannedPayment,
+    occurrenceDate: number,
+  ): Promise<void> {
     try {
       // 1. Target the earliest scheduled journal if one exists, otherwise use the provided occurrenceDate
       const earliestPlanned = await database.collections
@@ -426,14 +444,17 @@ export class PlannedPaymentService {
             },
           ];
 
-          await ledgerWriteService.createJournal({
-            journalDate: normalizedDate,
-            description: pp.name,
-            currencyCode: pp.currencyCode,
-            transactions,
-            status: JournalStatus.SKIPPED,
-            plannedPaymentId: pp.id,
-          });
+          await ledgerWriteService.createJournal(
+            {
+              journalDate: normalizedDate,
+              description: pp.name,
+              currencyCode: pp.currencyCode,
+              transactions,
+              status: JournalStatus.SKIPPED,
+              plannedPaymentId: pp.id,
+            },
+            pp.workplaceId,
+          );
         }
       }
 
@@ -444,12 +465,12 @@ export class PlannedPaymentService {
       // Only advance if the new next occurrence is actually later than the current one.
       if (nextOcc > pp.nextOccurrence) {
         if (pp.endDate && nextOcc > pp.endDate) {
-          await plannedPaymentRepository.update(pp, {
+          await plannedPaymentRepository.update(workplaceId, pp, {
             nextOccurrence: nextOcc,
             status: PlannedPaymentStatus.COMPLETED,
           });
         } else {
-          await plannedPaymentRepository.update(pp, {
+          await plannedPaymentRepository.update(workplaceId, pp, {
             nextOccurrence: nextOcc,
           });
         }
@@ -469,8 +490,8 @@ export class PlannedPaymentService {
    * Process all active planned payments and generate journals for any due occurrences.
    * Typically called on app start.
    */
-  async processDuePayments(): Promise<void> {
-    const activePayments = await plannedPaymentRepository.findAllActive();
+  async processDuePayments(workplaceId: string): Promise<void> {
+    const activePayments = await plannedPaymentRepository.findAllActive(workplaceId);
     const nowTime = this.normalizeToStartOfDay(Date.now());
     const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;
 
@@ -541,7 +562,9 @@ export class PlannedPaymentService {
         nextOcc = this.calculateNextOccurrence(nextOcc, pp);
 
         if (pp.endDate && nextOcc > pp.endDate) {
-          await plannedPaymentRepository.update(pp, { status: PlannedPaymentStatus.COMPLETED });
+          await plannedPaymentRepository.update(workplaceId, pp, {
+            status: PlannedPaymentStatus.COMPLETED,
+          });
           break;
         }
       }
@@ -553,7 +576,7 @@ export class PlannedPaymentService {
       }
 
       if (nextOcc !== pp.nextOccurrence) {
-        await plannedPaymentRepository.update(pp, { nextOccurrence: nextOcc });
+        await plannedPaymentRepository.update(workplaceId, pp, { nextOccurrence: nextOcc });
       }
     }
   }

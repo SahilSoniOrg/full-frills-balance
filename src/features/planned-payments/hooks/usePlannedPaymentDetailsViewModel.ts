@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccount } from '@/src/features/accounts';
 import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -13,6 +14,7 @@ import { useMemo } from 'react';
 
 export function usePlannedPaymentDetailsViewModel(id: string) {
   const { theme } = useTheme();
+  const { workplaceId } = useWorkplace();
   const params = useLocalSearchParams();
 
   // Initial Data Injection: Extract preview data from params
@@ -30,10 +32,10 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
     handleToggleStatus,
     handlePostNow,
     handleSkip,
-  } = usePlannedPaymentDetails(id);
+  } = usePlannedPaymentDetails(id, workplaceId);
 
-  const { account: fromAccount } = useAccount(item?.fromAccountId || null);
-  const { account: toAccount } = useAccount(item?.toAccountId || null);
+  const { account: fromAccount } = useAccount(item?.fromAccountId || null, workplaceId);
+  const { account: toAccount } = useAccount(item?.toAccountId || null, workplaceId);
 
   const isMissing = !isLoading && !item;
 

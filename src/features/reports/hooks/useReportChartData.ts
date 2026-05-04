@@ -22,6 +22,7 @@ interface UseReportChartDataProps {
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[];
   theme: any;
+  workplaceId: string;
 }
 
 /**
@@ -36,6 +37,7 @@ export function useReportChartData({
   spendingHeatmap,
   calendarHeatmap,
   theme,
+  workplaceId: _workplaceId,
 }: UseReportChartDataProps) {
   const [selectedNetWorthIndex, setSelectedNetWorthIndex] = useState<number | undefined>();
   const [selectedIncomeExpenseIndex, setSelectedIncomeExpenseIndex] = useState<

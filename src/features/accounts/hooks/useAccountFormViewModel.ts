@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, {
   AccountSubtype,
   AccountType,
@@ -98,6 +99,7 @@ export interface AccountFormViewModel {
 
 export function useAccountFormViewModel(): AccountFormViewModel {
   const params = useLocalSearchParams();
+  const { workplaceId } = useWorkplace();
   const { defaultCurrency } = useUI();
 
   const accountId = params.accountId as string | undefined;
@@ -108,13 +110,16 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     account: existingAccount,
     version: accountVersion,
     isLoading: isAccountLoading,
-  } = useAccount(accountId || null);
-  const { balanceData, isLoading: isBalanceLoading } = useAccountBalance(accountId || null);
-  const { accounts } = useAccounts();
+  } = useAccount(accountId || null, workplaceId);
+  const { balanceData, isLoading: isBalanceLoading } = useAccountBalance(
+    workplaceId,
+    accountId || null,
+  );
+  const { accounts } = useAccounts(workplaceId);
 
   const { data: isParent } = useObservable(
-    () => (accountId ? accountRepository.observeHasChildren(accountId) : of(false)),
-    [accountId],
+    () => (accountId ? accountRepository.observeHasChildren(accountId, workplaceId) : of(false)),
+    [accountId, workplaceId],
     false,
   );
 
@@ -227,7 +232,12 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const validation = useAccountValidation(accountName, accounts, accountId);
 
-  const persistence = useAccountPersistence(existingAccount, accountId, accounts.length > 0);
+  const persistence = useAccountPersistence(
+    workplaceId,
+    existingAccount,
+    accountId,
+    accounts.length > 0,
+  );
 
   const onAccountTypeChange = (value: AccountType) => {
     setAccountType(value);

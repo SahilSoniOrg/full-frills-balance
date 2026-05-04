@@ -494,7 +494,7 @@ export const AppConfig = {
       },
       importTitle: 'Import',
       importIntro: 'Choose a backup format to replace the data on this device.',
-      importNote: 'Import replaces all existing data on this device.',
+      importNote: 'Import replaces all data for the active workplace.',
       selectFile: (name: string) => `Select ${name} File`,
       currency: {
         title: 'Default Currency',

@@ -1,3 +1,4 @@
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
@@ -114,7 +115,8 @@ function getConditionValue(
 }
 
 export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleFormViewModel {
-  const { accounts } = useAccounts();
+  const { workplaceId } = useWorkplace();
+  const { accounts } = useAccounts(workplaceId);
 
   const [mode, setMode] = useState<SmsRuleMode>('builder');
   const [legacySenderMatch, setLegacySenderMatch] = useState(seed?.senderMatch || '');

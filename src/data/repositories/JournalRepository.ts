@@ -8,7 +8,6 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
-import dayjs from 'dayjs';
 import { map, of } from 'rxjs';
 // Imported here so the flush runs synchronously outside the write block —
 // before any observer sees the new transaction rows.
@@ -61,17 +60,13 @@ export class JournalRepository {
     return this.journals.query(Q.where('deleted_at', Q.eq(null)), ...clauses);
   }
 
-  journalsQueryWithDeleted(...clauses: Q.Clause[]) {
-    return this.journals.query(...clauses);
-  }
-
-  observeByIdsWithDeleted(journalIds: string[]) {
+  observeByIdsWithDeleted(workplaceId: string, journalIds: string[]) {
     if (journalIds.length === 0) {
       return of([] as Journal[]);
     }
 
     return this.journals
-      .query(Q.where('id', Q.oneOf(journalIds)))
+      .query(Q.where('id', Q.oneOf(journalIds)), Q.where('workplace_id', workplaceId))
       .observeWithColumns([
         'journal_date',
         'description',
@@ -86,15 +81,12 @@ export class JournalRepository {
       ]);
   }
 
-  transactionsQuery(...clauses: Q.Clause[]) {
-    return this.transactions.query(...clauses);
-  }
-
   /**
    * Reactive Observation Methods
    */
 
   observeAccountTransactions(
+    workplaceId: string,
     accountId: string,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
@@ -102,6 +94,7 @@ export class JournalRepository {
     const clauses: Q.Clause[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('account_id', accountId),
+      Q.where('workplace_id', workplaceId),
       Q.where('deleted_at', Q.eq(null)),
       Q.on('journals', [
         Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
@@ -132,8 +125,8 @@ export class JournalRepository {
       ]);
   }
 
-  observeById(journalId: string, includeDeleted: boolean = false) {
-    const clauses = [Q.where('id', journalId)];
+  observeById(journalId: string, workplaceId: string, includeDeleted: boolean = false) {
+    const clauses = [Q.where('id', journalId), Q.where('workplace_id', workplaceId)];
     if (!includeDeleted) {
       clauses.push(Q.where('deleted_at', Q.eq(null)));
     }
@@ -155,10 +148,14 @@ export class JournalRepository {
       .pipe(map(journals => journals[0] || null));
   }
 
-  observeByIds(journalIds: string[]) {
+  observeByIds(journalIds: string[], workplaceId: string) {
     if (journalIds.length === 0) return of([] as Journal[]);
     return this.journals
-      .query(Q.where('id', Q.oneOf(journalIds)), Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('id', Q.oneOf(journalIds)),
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
       .observeWithColumns([
         'journal_date',
         'description',
@@ -172,29 +169,16 @@ export class JournalRepository {
       ]);
   }
 
-  observeStatusMeta() {
+  observeStatusMeta(workplaceId: string) {
     return this.journals
-      .query(Q.where('deleted_at', Q.eq(null)))
+      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
       .observeWithColumns(['status', 'deleted_at', 'journal_date', 'updated_at', 'total_amount']);
   }
 
-  observePlannedForMonth(targetMonth: string) {
-    const startOfMonth = dayjs(`${targetMonth}-01`).startOf('month').valueOf();
-    const endOfMonth = dayjs(`${targetMonth}-01`).endOf('month').valueOf();
-
+  observePlannedInRange(workplaceId: string, startDate: number, endDate: number) {
     return this.journals
       .query(
-        Q.where('status', JournalStatus.PLANNED),
-        Q.where('journal_date', Q.gte(startOfMonth)),
-        Q.where('journal_date', Q.lte(endOfMonth)),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .observe();
-  }
-
-  observePlannedInRange(startDate: number, endDate: number) {
-    return this.journals
-      .query(
+        Q.where('workplace_id', workplaceId),
         Q.where('status', JournalStatus.PLANNED),
         Q.where('journal_date', Q.gte(startDate)),
         Q.where('journal_date', Q.lte(endDate)),
@@ -207,25 +191,31 @@ export class JournalRepository {
    * PURE PERSISTENCE METHODS
    */
 
-  async find(id: string): Promise<Journal | null> {
+  async find(id: string, workplaceId: string): Promise<Journal | null> {
     try {
-      return await this.journals.find(id);
+      const journals = await this.journals
+        .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
+        .fetch();
+      return journals[0] ?? null;
     } catch {
       return null;
     }
   }
 
-  async findByIds(ids: string[]): Promise<Journal[]> {
+  async findByIds(ids: string[], workplaceId: string): Promise<Journal[]> {
     if (ids.length === 0) return [];
-    return this.journals.query(Q.where('id', Q.oneOf(ids))).fetch();
+    return this.journals
+      .query(Q.where('id', Q.oneOf(ids)), Q.where('workplace_id', workplaceId))
+      .fetch();
   }
 
-  async findAll(): Promise<Journal[]> {
+  async findAll(workplaceId: string): Promise<Journal[]> {
     const start = Date.now();
     const results = await this.journals
       .query(
         Q.where('deleted_at', Q.eq(null)),
         Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+        Q.where('workplace_id', workplaceId),
       )
       .extend(Q.sortBy('journal_date', 'desc'))
       .fetch();
@@ -236,21 +226,31 @@ export class JournalRepository {
     return results;
   }
 
-  async findAllPlanned(): Promise<Journal[]> {
+  async findAllPlanned(workplaceId: string): Promise<Journal[]> {
     return this.journalsQuery(
       Q.where('status', JournalStatus.PLANNED),
       Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
     ).fetch();
   }
 
-  async findAllNonDeleted(): Promise<Journal[]> {
+  async findAllNonDeleted(workplaceId: string): Promise<Journal[]> {
     return this.journals
-      .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('journal_date', 'desc'))
+      .query(
+        Q.where('deleted_at', Q.eq(null)),
+        Q.sortBy('journal_date', 'desc'),
+        Q.where('workplace_id', workplaceId),
+      )
       .fetch();
   }
 
-  async findMetadataByJournalId(journalId: string): Promise<JournalMetadata | null> {
-    const records = await this.journalMetadata.query(Q.where('journal_id', journalId)).fetch();
+  async findMetadataByJournalId(
+    journalId: string,
+    workplaceId: string,
+  ): Promise<JournalMetadata | null> {
+    const records = await this.journalMetadata
+      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
+      .fetch();
 
     return records[0] || null;
   }
@@ -260,11 +260,12 @@ export class JournalRepository {
    * Assumes it's being called inside a database.write() block.
    */
   async patchMetadata(
+    workplaceId: string,
     journalId: string,
     partialMetadata: Record<string, unknown>,
     source?: string,
   ): Promise<void> {
-    const existingMeta = await this.findMetadataByJournalId(journalId);
+    const existingMeta = await this.findMetadataByJournalId(journalId, workplaceId);
     if (existingMeta) {
       await existingMeta.update((record: JournalMetadata) => {
         const currentJson = safeParseJSON<Record<string, unknown>>(record.metadataJson, {});
@@ -275,6 +276,7 @@ export class JournalRepository {
     } else {
       await this.journalMetadata.create((record: JournalMetadata) => {
         record.journalId = journalId;
+        record.workplaceId = workplaceId;
         record.importSource = source || 'manual';
         record.metadataJson = JSON.stringify(partialMetadata);
         record.createdAt = new Date();
@@ -292,11 +294,12 @@ export class JournalRepository {
    * to avoid the nested-write violation.
    */
   async prepareMetadataPatch(
+    workplaceId: string,
     journalId: string,
     partialMetadata: Record<string, unknown>,
     source?: string,
   ): Promise<Model> {
-    const existingMeta = await this.findMetadataByJournalId(journalId);
+    const existingMeta = await this.findMetadataByJournalId(journalId, workplaceId);
     if (existingMeta) {
       return existingMeta.prepareUpdate((record: JournalMetadata) => {
         const currentJson = safeParseJSON<Record<string, unknown>>(record.metadataJson, {});
@@ -307,6 +310,7 @@ export class JournalRepository {
     }
     return this.journalMetadata.prepareCreate((record: JournalMetadata) => {
       record.journalId = journalId;
+      record.workplaceId = workplaceId;
       record.importSource = source || 'manual';
       record.metadataJson = JSON.stringify(partialMetadata);
       record.createdAt = new Date();
@@ -314,25 +318,31 @@ export class JournalRepository {
     });
   }
 
-  async findJournalByOriginalSmsId(originalSmsId: string): Promise<Journal | null> {
+  async findJournalByOriginalSmsId(
+    originalSmsId: string,
+    workplaceId: string,
+  ): Promise<Journal | null> {
     const metadata = await this.journalMetadata
-      .query(Q.where('original_sms_id', originalSmsId))
+      .query(Q.where('original_sms_id', originalSmsId), Q.where('workplace_id', workplaceId))
       .fetch();
 
     if (metadata.length === 0) return null;
-    return this.find(metadata[0].journalId);
+    return this.find(metadata[0].journalId, workplaceId);
   }
 
-  async findJournalsByOriginalSmsIds(smsIds: string[]): Promise<Map<string, Journal>> {
+  async findJournalsByOriginalSmsIds(
+    smsIds: string[],
+    workplaceId: string,
+  ): Promise<Map<string, Journal>> {
     if (smsIds.length === 0) return new Map();
     const metadataRecords = await this.journalMetadata
-      .query(Q.where('original_sms_id', Q.oneOf(smsIds)))
+      .query(Q.where('original_sms_id', Q.oneOf(smsIds)), Q.where('workplace_id', workplaceId))
       .fetch();
 
     if (metadataRecords.length === 0) return new Map();
 
     const journalIds = metadataRecords.map(m => m.journalId);
-    const journals = await this.findByIds(journalIds);
+    const journals = await this.findByIds(journalIds, workplaceId);
     const journalMap = new Map(journals.map(j => [j.id, j]));
 
     const resultMap = new Map<string, Journal>();
@@ -345,26 +355,35 @@ export class JournalRepository {
     return resultMap;
   }
 
-  async findJournalBySmsFingerprint(smsFingerprint: string): Promise<Journal | null> {
+  async findJournalBySmsFingerprint(
+    smsFingerprint: string,
+    workplaceId: string,
+  ): Promise<Journal | null> {
     // Optimized: Query indexed inbox records instead of scanning metadata JSON
     const inboxRecords = await database.collections
       .get<SmsInboxRecord>('sms_inbox_records')
-      .query(Q.where('sms_fingerprint', smsFingerprint))
+      .query(Q.where('sms_fingerprint', smsFingerprint), Q.where('workplace_id', workplaceId))
       .fetch();
 
     const record = inboxRecords.find(r => r.linkedJournalId);
     if (!record || !record.linkedJournalId) return null;
 
-    return this.find(record.linkedJournalId);
+    return this.find(record.linkedJournalId, workplaceId);
   }
 
-  async findJournalsBySmsFingerprints(fingerprints: string[]): Promise<Map<string, Journal>> {
+  async findJournalsBySmsFingerprints(
+    fingerprints: string[],
+    workplaceId: string,
+  ): Promise<Map<string, Journal>> {
     if (fingerprints.length === 0) return new Map();
 
     // Optimized: Use indexed sms_inbox_records to find linked journals in O(Log N)
     const inboxRecords = await database.collections
       .get<SmsInboxRecord>('sms_inbox_records')
-      .query(Q.where('sms_fingerprint', Q.oneOf(fingerprints)))
+      .query(
+        Q.where('sms_fingerprint', Q.oneOf(fingerprints)),
+        Q.where('workplace_id', workplaceId),
+      )
       .fetch();
 
     const fingerprintToJournalId = new Map<string, string>();
@@ -381,7 +400,7 @@ export class JournalRepository {
 
     if (journalIds.length === 0) return new Map();
 
-    const journals = await this.findByIds(journalIds);
+    const journals = await this.findByIds(journalIds, workplaceId);
     const journalMap = new Map(journals.map(j => [j.id, j]));
     const resultMap = new Map<string, Journal>();
 
@@ -395,20 +414,24 @@ export class JournalRepository {
     return resultMap;
   }
 
-  async findNearbyJournals(params: {
-    centerDate: number;
-    windowMs: number;
-    amount?: number;
-    amounts?: number[];
-    excludeJournalId?: string;
-    limit?: number;
-  }): Promise<Journal[]> {
+  async findNearbyJournals(
+    params: {
+      centerDate: number;
+      windowMs: number;
+      amount?: number;
+      amounts?: number[];
+      excludeJournalId?: string;
+      limit?: number;
+    },
+    workplaceId: string,
+  ): Promise<Journal[]> {
     const { centerDate, windowMs, amount, amounts, excludeJournalId, limit = 10 } = params;
     const clauses: Q.Clause[] = [
       Q.where('deleted_at', Q.eq(null)),
       Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
       Q.where('journal_date', Q.gte(centerDate - windowMs)),
       Q.where('journal_date', Q.lte(centerDate + windowMs)),
+      Q.where('workplace_id', workplaceId),
       Q.sortBy('journal_date', 'desc'),
       Q.take(limit),
     ];
@@ -426,15 +449,20 @@ export class JournalRepository {
     return this.journals.query(...clauses).fetch();
   }
 
-  async countNonDeleted(): Promise<number> {
-    return this.journals.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
+  async countNonDeleted(workplaceId: string): Promise<number> {
+    return this.journals
+      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
+      .fetchCount();
   }
 
   /**
    * Prepares creation of a journal and its transactions.
    * Returns an array of prepared models that can be used in a database.batch() call.
    */
-  prepareCreateJournalWithTransactions(journalData: PrepareCreateJournalData): {
+  prepareCreateJournalWithTransactions(
+    journalData: PrepareCreateJournalData,
+    workplaceId: string,
+  ): {
     journal: Journal;
     transactions: Transaction[];
     metadataRecord?: JournalMetadata;
@@ -450,6 +478,7 @@ export class JournalRepository {
 
     const journal = this.journals.prepareCreate(j => {
       Object.assign(j, journalFields);
+      j.workplaceId = workplaceId;
       j.status = journalFields.status ?? JournalStatus.POSTED;
       j.plannedPaymentId = journalFields.plannedPaymentId;
       j.totalAmount = totalAmount ?? 0;
@@ -490,16 +519,21 @@ export class JournalRepository {
     return { journal, transactions, metadataRecord };
   }
 
-  async createJournalWithTransactions(journalData: PrepareCreateJournalData): Promise<Journal> {
+  async createJournalWithTransactions(
+    journalData: PrepareCreateJournalData,
+    workplaceId: string,
+  ): Promise<Journal> {
     const start = Date.now();
     return await database.write(async () => {
-      const { journal, transactions, metadataRecord } =
-        this.prepareCreateJournalWithTransactions(journalData);
+      const { journal, transactions, metadataRecord } = this.prepareCreateJournalWithTransactions(
+        journalData,
+        workplaceId,
+      );
 
       const batchOps: Model[] = [journal, ...transactions];
       if (metadataRecord) batchOps.push(metadataRecord);
 
-      await database.batch(...batchOps);
+      await database.batch(batchOps);
 
       logger.info(
         `[Trace] JournalRepository.createJournalWithTransactions: ${Date.now() - start}ms`,
@@ -513,6 +547,7 @@ export class JournalRepository {
   }
 
   async updateJournalWithTransactions(
+    workplaceId: string,
     journalId: string,
     journalData: PrepareCreateJournalData,
     extraOpCreator?: () => Model, // Synchronous callback to build extra op atomically
@@ -526,11 +561,15 @@ export class JournalRepository {
       ...journalFields
     } = journalData;
 
-    const existingJournal = await this.find(journalId);
+    const existingJournal = await this.find(journalId, workplaceId);
     if (!existingJournal) throw new Error('Journal not found');
 
-    const oldTransactions = await this.transactions.query(Q.where('journal_id', journalId)).fetch();
-    const existingMeta = metadata ? await this.findMetadataByJournalId(journalId) : null;
+    const oldTransactions = await this.transactions
+      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
+      .fetch();
+    const existingMeta = metadata
+      ? await this.findMetadataByJournalId(journalId, workplaceId)
+      : null;
 
     const start = Date.now();
     // C-1 fix reverted: return database.write directly.
@@ -554,6 +593,7 @@ export class JournalRepository {
           tx.currencyCode = txData.currencyCode || journalFields.currencyCode;
           tx.transactionType = txData.transactionType;
           tx.journalId = journalId;
+          tx.workplaceId = workplaceId;
           tx.transactionDate = journalFields.journalDate;
           tx.notes = txData.notes;
           tx.exchangeRate = txData.exchangeRate;
@@ -587,12 +627,14 @@ export class JournalRepository {
             m.originalSmsSender = metadata.originalSmsSender;
             m.originalSmsBody = metadata.originalSmsBody;
             m.metadataJson = metadata.metadataJson;
+            m.workplaceId = workplaceId;
             m.updatedAt = now;
           });
           batchOps.push(metaUpdate);
         } else {
           const metaRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
             m.journalId = journalId;
+            m.workplaceId = workplaceId;
             m.importSource = metadata.importSource;
             m.originalSmsId = metadata.originalSmsId;
             m.originalSmsSender = metadata.originalSmsSender;
@@ -608,7 +650,7 @@ export class JournalRepository {
       // Include any extra op synchronously (e.g. audit log callback) in the same atomic batch.
       if (extraOpCreator) batchOps.push(extraOpCreator());
 
-      await database.batch(...batchOps);
+      await database.batch(batchOps);
 
       logger.info(
         `[Trace] JournalRepository.updateJournalWithTransactions: ${Date.now() - start}ms`,
@@ -627,8 +669,12 @@ export class JournalRepository {
    * Cheaper than updateJournalWithTransactions — no transaction soft-delete/re-create,
    * no balance churn. Use this whenever only the status needs to change.
    */
-  async updateJournalStatus(journalId: string, status: JournalStatus): Promise<Journal> {
-    const journal = await this.find(journalId);
+  async updateJournalStatus(
+    journalId: string,
+    status: JournalStatus,
+    workplaceId: string,
+  ): Promise<Journal> {
+    const journal = await this.find(journalId, workplaceId);
     if (!journal) throw new Error(`Journal ${journalId} not found`);
 
     await database.write(async () => {
@@ -641,12 +687,12 @@ export class JournalRepository {
     return journal;
   }
 
-  async deleteJournal(journalId: string): Promise<void> {
-    const journal = await this.find(journalId);
+  async deleteJournal(journalId: string, workplaceId: string): Promise<void> {
+    const journal = await this.find(journalId, workplaceId);
     if (!journal) return;
 
     const associatedTransactions = await this.transactions
-      .query(Q.where('journal_id', journalId))
+      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
       .fetch();
 
     await database.write(async () => {
@@ -664,7 +710,7 @@ export class JournalRepository {
         }),
       );
 
-      await database.batch(journalUpdate, ...transactionUpdates);
+      await database.batch([journalUpdate, ...transactionUpdates]);
     });
   }
 
@@ -674,19 +720,24 @@ export class JournalRepository {
    */
   async fetchJournalForDeletion(
     journalId: string,
+    workplaceId: string,
   ): Promise<{ journal: Journal; transactions: Transaction[] } | null> {
-    const journal = await this.find(journalId);
+    const journal = await this.find(journalId, workplaceId);
     if (!journal) return null;
 
     const associatedTransactions = await this.transactions
-      .query(Q.where('journal_id', journalId))
+      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
       .fetch();
 
     return { journal, transactions: associatedTransactions };
   }
 
-  async markReversed(originalJournalId: string, reversingJournalId: string): Promise<void> {
-    const journal = await this.find(originalJournalId);
+  async markReversed(
+    originalJournalId: string,
+    reversingJournalId: string,
+    workplaceId: string,
+  ): Promise<void> {
+    const journal = await this.find(originalJournalId, workplaceId);
     if (!journal) return;
 
     await database.write(async () => {
@@ -695,7 +746,7 @@ export class JournalRepository {
         record.status = JournalStatus.REVERSED;
         record.updatedAt = new Date();
       });
-      await database.batch(update);
+      await database.batch([update]);
     });
   }
 
@@ -706,8 +757,9 @@ export class JournalRepository {
     originalJournal: Journal;
     originalTransactions: Transaction[];
     replacementData: PrepareCreateJournalData;
+    workplaceId: string;
   }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
-    const { originalJournal, originalTransactions, replacementData } = params;
+    const { originalJournal, originalTransactions, replacementData, workplaceId } = params;
     const {
       transactions: replacementTransactions,
       totalAmount,
@@ -731,6 +783,7 @@ export class JournalRepository {
         j.totalAmount = originalJournal.totalAmount;
         j.transactionCount = originalTransactions.length;
         j.displayType = originalJournal.displayType;
+        j.workplaceId = workplaceId;
         j.createdAt = now;
         j.updatedAt = now;
       });
@@ -749,6 +802,7 @@ export class JournalRepository {
           t.notes = `Reversal: ${tx.notes || ''}`;
           t.exchangeRate = tx.exchangeRate || 1;
           t.runningBalance = null; // F-13 Fix: Let rebuild queue handle balance
+          t.workplaceId = workplaceId;
           t.createdAt = now;
           t.updatedAt = now;
         });
@@ -768,6 +822,7 @@ export class JournalRepository {
         j.totalAmount = totalAmount ?? 0;
         j.transactionCount = replacementTransactions.length;
         j.displayType = displayType ?? JournalDisplayType.TRANSFER;
+        j.workplaceId = workplaceId;
         j.createdAt = now;
         j.updatedAt = now;
       });
@@ -783,18 +838,19 @@ export class JournalRepository {
           tx.notes = txData.notes;
           tx.exchangeRate = txData.exchangeRate;
           tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
+          tx.workplaceId = workplaceId;
           tx.createdAt = now;
           tx.updatedAt = new Date();
         });
       });
 
-      await database.batch(
+      await database.batch([
         reversalJournal,
         ...reversalTransactions,
         originalJournalUpdate,
         replacementJournal,
         ...newTransactions,
-      );
+      ]);
 
       logger.info(`[Trace] JournalRepository.replaceJournalWithReversal: ${Date.now() - start}ms`, {
         newTxCount: replacementTransactions.length,

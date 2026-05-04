@@ -194,6 +194,7 @@ export const ivyPlugin: ImportPlugin = {
 
   async import(
     context: ImportFileContext,
+    workplaceId: string,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
     const targetDefaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
@@ -254,9 +255,9 @@ export const ivyPlugin: ImportPlugin = {
     }
 
     // 2. Wipe existing data for clean import
-    logger.warn('[IvyPlugin] Wiping database before import...');
-    onProgress?.('Wiping database...', 0.05);
-    await integrityService.resetDatabase();
+    logger.warn(`[IvyPlugin] Wiping workplace ${workplaceId} before import...`);
+    onProgress?.('Wiping workplace data...', 0.05);
+    await integrityService.resetWorkplace(workplaceId);
     const accountImports: ImportedAccount[] = [];
 
     // 2. Pre-Scan Transactions for Category Usage (Per Currency)
@@ -350,6 +351,8 @@ export const ivyPlugin: ImportPlugin = {
     const accountMap = new Map<string, string>();
     const accountCurrencyMap = new Map<string, string>();
     const categoryAccountMap = new Map<string, string>();
+    const journalMap = new Map<string, string>();
+    const plannedPaymentMap = new Map<string, string>();
 
     data.accounts.forEach(a => {
       const balanceId = generateId();
@@ -455,7 +458,122 @@ export const ivyPlugin: ImportPlugin = {
       });
     });
 
-    // 5. Create Journals & Transactions
+    // 5. Map Planned Payments (Pre-pass to establish ID mappings for journals)
+    onProgress?.('Mapping planned payments...', 0.18);
+    const plannedPaymentImports: ImportedPlannedPayment[] = [];
+    const mapIvyInterval = (ivyInterval?: string): string => {
+      switch (ivyInterval) {
+        case 'DAY':
+          return 'DAILY';
+        case 'WEEK':
+          return 'WEEKLY';
+        case 'MONTH':
+          return 'MONTHLY';
+        case 'YEAR':
+          return 'YEARLY';
+        default:
+          return 'MONTHLY';
+      }
+    };
+
+    const allRules = data.plannedPaymentRules || [];
+    if (allRules.length > 0) {
+      allRules.forEach(rule => {
+        if (rule.isDeleted) return;
+
+        const fromAccountId = accountMap.get(rule.accountId);
+        if (!fromAccountId) return;
+
+        const newRuleId = generateId();
+        plannedPaymentMap.set(rule.id, newRuleId);
+
+        let currencyCode = accountCurrencyMap.get(fromAccountId) || targetDefaultCurrency;
+        let toAccountId = rule.toAccountId ? accountMap.get(rule.toAccountId) : undefined;
+        const intervalType = mapIvyInterval(rule.intervalType);
+        const startDate = rule.startDate ? new Date(rule.startDate).getTime() : Date.now();
+        const startLocalDate = new Date(startDate);
+        const recurrenceDay = startLocalDate.getDate();
+        const recurrenceMonth = startLocalDate.getMonth() + 1; // 1-indexed
+
+        // Normalize occurrence date to midnight to align with PlannedPaymentService expectations
+        const normalizedNextOcc = new Date(startDate);
+        normalizedNextOcc.setHours(0, 0, 0, 0);
+        let finalNextOcc = normalizedNextOcc.getTime();
+
+        // Advance to future logic
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const today = now.getTime();
+
+        if (rule.oneTime) {
+          if (finalNextOcc < today) return;
+        } else if (finalNextOcc < today) {
+          let safetyCap = 0;
+          while (finalNextOcc < today && safetyCap < 1000) {
+            finalNextOcc = advanceOccurrence(
+              finalNextOcc,
+              rule.intervalN || 1,
+              intervalType,
+              recurrenceDay,
+              recurrenceMonth,
+            );
+            safetyCap++;
+          }
+        }
+
+        if (rule.categoryId) {
+          const key = `${rule.categoryId}:::${currencyCode}`;
+          const catAccId = categoryAccountMap.get(key);
+          if (catAccId) {
+            if (rule.type === 'INCOME') {
+              const catFrom = catAccId;
+              plannedPaymentImports.push({
+                id: newRuleId,
+                name: rule.title || 'Income Rule',
+                description: rule.description,
+                amount: Math.abs(rule.amount),
+                currencyCode,
+                fromAccountId: catFrom,
+                toAccountId: fromAccountId,
+                intervalN: rule.intervalN || 1,
+                intervalType,
+                startDate,
+                nextOccurrence: finalNextOcc,
+                status: PlannedPaymentStatus.ACTIVE,
+                isAutoPost: false,
+                recurrenceDay,
+                recurrenceMonth,
+                endDate: rule.oneTime ? finalNextOcc : undefined,
+              });
+              return;
+            } else if (rule.type === 'EXPENSE') {
+              toAccountId = catAccId;
+            }
+          }
+        }
+
+        plannedPaymentImports.push({
+          id: newRuleId,
+          name: rule.title || (rule.type === 'TRANSFER' ? 'Transfer Rule' : 'Payment Rule'),
+          description: rule.description,
+          amount: Math.abs(rule.amount),
+          currencyCode,
+          fromAccountId,
+          toAccountId: toAccountId || '',
+          intervalN: rule.intervalN || 1,
+          intervalType,
+          startDate,
+          nextOccurrence: finalNextOcc,
+          status: PlannedPaymentStatus.ACTIVE,
+          isAutoPost: false,
+          recurrenceDay,
+          recurrenceMonth,
+          endDate: rule.oneTime ? finalNextOcc : undefined,
+        });
+      });
+    }
+
+    // 6. Create Journals & Transactions
     onProgress?.('Mapping transactions...', 0.2);
     const journalImports: ImportedJournal[] = [];
     const transactionImports: ImportedTransaction[] = [];
@@ -485,7 +603,8 @@ export const ivyPlugin: ImportPlugin = {
         continue;
       }
 
-      const journalId = tx.id;
+      const journalId = generateId();
+      journalMap.set(tx.id, journalId);
       const timestamp = tx.dateTime ? new Date(tx.dateTime).getTime() : Date.now();
 
       const description = tx.title || (tx.type === 'TRANSFER' ? 'Transfer' : 'Transaction');
@@ -613,7 +732,9 @@ export const ivyPlugin: ImportPlugin = {
         totalAmount: amount,
         transactionCount: 2,
         displayType,
-        plannedPaymentId: tx.recurringRuleId,
+        plannedPaymentId: tx.recurringRuleId
+          ? plannedPaymentMap.get(tx.recurringRuleId)
+          : undefined,
       });
 
       // Transaction 1: SOURCE (Credit)
@@ -711,129 +832,10 @@ export const ivyPlugin: ImportPlugin = {
       });
     }
 
-    // 7. Map Planned Payments
-    onProgress?.('Mapping planned payments...', 0.73);
-    const plannedPaymentImports: ImportedPlannedPayment[] = [];
-    const mapIvyInterval = (ivyInterval?: string): string => {
-      switch (ivyInterval) {
-        case 'DAY':
-          return 'DAILY';
-        case 'WEEK':
-          return 'WEEKLY';
-        case 'MONTH':
-          return 'MONTHLY';
-        case 'YEAR':
-          return 'YEARLY';
-        default:
-          return 'MONTHLY';
-      }
-    };
-
-    const allRules = data.plannedPaymentRules || [];
-    if (allRules.length > 0) {
-      allRules.forEach(rule => {
-        if (rule.isDeleted) return;
-
-        const fromAccountId = accountMap.get(rule.accountId);
-        if (!fromAccountId) return;
-
-        let currencyCode = accountCurrencyMap.get(fromAccountId) || targetDefaultCurrency;
-        let toAccountId = rule.toAccountId ? accountMap.get(rule.toAccountId) : undefined;
-        const intervalType = mapIvyInterval(rule.intervalType);
-        const startDate = rule.startDate ? new Date(rule.startDate).getTime() : Date.now();
-        const startLocalDate = new Date(startDate);
-        const recurrenceDay = startLocalDate.getDate();
-        const recurrenceMonth = startLocalDate.getMonth() + 1; // 1-indexed
-
-        // Normalize occurrence date to midnight to align with PlannedPaymentService expectations
-        const normalizedNextOcc = new Date(startDate);
-        normalizedNextOcc.setHours(0, 0, 0, 0);
-        let finalNextOcc = normalizedNextOcc.getTime();
-
-        // Advance to future logic:
-        // We want to skip past occurrences so the app doesn't try to catch up
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const today = now.getTime();
-
-        if (rule.oneTime) {
-          // Skip one-time payments that are in the past
-          if (finalNextOcc < today) {
-            return;
-          }
-        } else if (finalNextOcc < today) {
-          // For recurring payments, advance until we reach today or the future
-          let safetyCap = 0;
-          while (finalNextOcc < today && safetyCap < 1000) {
-            finalNextOcc = advanceOccurrence(
-              finalNextOcc,
-              rule.intervalN || 1,
-              intervalType,
-              recurrenceDay,
-              recurrenceMonth,
-            );
-            safetyCap++;
-          }
-        }
-
-        // If it's a category rule, find the category account for the respective currency
-        if (rule.categoryId) {
-          const key = `${rule.categoryId}:::${currencyCode}`;
-          const catAccId = categoryAccountMap.get(key);
-          if (catAccId) {
-            if (rule.type === 'INCOME') {
-              const originalFrom = fromAccountId;
-              const catFrom = catAccId;
-              plannedPaymentImports.push({
-                id: rule.id,
-                name: rule.title || 'Income Rule',
-                description: rule.description,
-                amount: Math.abs(rule.amount),
-                currencyCode,
-                fromAccountId: catFrom,
-                toAccountId: originalFrom,
-                intervalN: rule.intervalN || 1,
-                intervalType,
-                startDate,
-                nextOccurrence: finalNextOcc,
-                status: PlannedPaymentStatus.ACTIVE,
-                isAutoPost: false,
-                recurrenceDay,
-                recurrenceMonth,
-                endDate: rule.oneTime ? finalNextOcc : undefined,
-              });
-              return;
-            } else if (rule.type === 'EXPENSE') {
-              toAccountId = catAccId;
-            }
-          }
-        }
-
-        plannedPaymentImports.push({
-          id: rule.id,
-          name: rule.title || (rule.type === 'TRANSFER' ? 'Transfer Rule' : 'Payment Rule'),
-          description: rule.description,
-          amount: Math.abs(rule.amount),
-          currencyCode,
-          fromAccountId,
-          toAccountId: toAccountId || '',
-          intervalN: rule.intervalN || 1,
-          intervalType,
-          startDate,
-          nextOccurrence: finalNextOcc,
-          status: PlannedPaymentStatus.ACTIVE,
-          isAutoPost: false,
-          recurrenceDay,
-          recurrenceMonth,
-          endDate: rule.oneTime ? finalNextOcc : undefined,
-        });
-      });
-    }
-
     // 8. Write to DB
     onProgress?.('Saving to database...', 0.75);
     logger.info('[IvyPlugin] Writing mapped data to database...');
-    await importRepository.batchInsert({
+    await importRepository.batchInsert(workplaceId, {
       accounts: accountImports,
       journals: journalImports,
       transactions: transactionImports,
@@ -845,7 +847,7 @@ export const ivyPlugin: ImportPlugin = {
     // 7. Run integrity check to repair account balances
     onProgress?.('Running integrity check...', 0.85);
     logger.info('[IvyPlugin] Running integrity check to fix account balances...');
-    const integrityResult = await integrityService.forceRunCheck();
+    const integrityResult = await integrityService.forceRunCheck(workplaceId);
     logger.info('[IvyPlugin] Integrity check complete', {
       discrepanciesFound: integrityResult.discrepanciesFound,
       repairsSuccessful: integrityResult.repairsSuccessful,

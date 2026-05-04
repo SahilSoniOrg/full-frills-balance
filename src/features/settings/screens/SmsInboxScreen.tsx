@@ -2,6 +2,7 @@ import { AppButton, AppText, EmptyStateView } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import SmsInboxRecord, { SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useAccounts } from '@/src/features/accounts';
@@ -23,69 +24,76 @@ function normalizeForMatch(value?: string) {
   return (value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function SmsInboxContent({ accounts, theme }: { accounts: any[]; theme: any }) {
+function SmsInboxContent() {
+  const { theme } = useTheme();
+  const { workplaceId } = useWorkplace();
+  const { accounts } = useAccounts(workplaceId);
+
   const [filter, setFilter] = useState<InboxFilter>('pending');
   const [scanCursor, setScanCursor] = useState(PAGE_SIZE);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScanningOlder, setIsScanningOlder] = useState(false);
-
   const observe = useCallback(
-    (limit: number) => smsService.observeInbox(limit, { status: filter }),
-    [filter],
+    (limit: number) => smsService.observeInbox(workplaceId, limit, { status: filter }),
+    [filter, workplaceId],
   );
 
-  const enrich = useCallback(async (records: SmsInboxRecord[]) => {
-    const linkedIds = Array.from(
-      new Set(records.map(record => record.linkedJournalId).filter(Boolean) as string[]),
-    );
-    const duplicateIds = Array.from(
-      new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as string[]),
-    );
-    const journals = await journalRepository.findByIds(
-      Array.from(new Set([...linkedIds, ...duplicateIds])),
-    );
-    const journalMap = new Map(journals.map(journal => [journal.id, journal]));
+  const enrich = useCallback(
+    async (records: SmsInboxRecord[]) => {
+      const linkedIds = Array.from(
+        new Set(records.map(record => record.linkedJournalId).filter(Boolean) as string[]),
+      );
+      const duplicateIds = Array.from(
+        new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as string[]),
+      );
+      const journals = await journalRepository.findByIds(
+        Array.from(new Set([...linkedIds, ...duplicateIds])),
+        workplaceId,
+      );
+      const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 
-    return records.map((record): SmsInboxItem => {
-      const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
-      const duplicateCandidate: SmsDuplicateCandidate | undefined = record.duplicateJournalId
-        ? {
-            journalId: record.duplicateJournalId,
-            journalDate: journalMap.get(record.duplicateJournalId)?.journalDate || record.smsDate,
-            description: journalMap.get(record.duplicateJournalId)?.description,
-            score: record.duplicateConfidence || 0,
-            reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
-          }
-        : undefined;
-
-      return {
-        id: record.id,
-        deviceSmsId: record.deviceSmsId,
-        senderAddress: record.senderAddress,
-        rawBody: record.rawBody,
-        smsDate: record.smsDate,
-        parseStatus: record.parseStatus,
-        processingStatus: record.processingStatus,
-        parsedAmount: record.parsedAmount,
-        parsedCurrencyCode: record.parsedCurrencyCode,
-        parsedMerchant: record.parsedMerchant,
-        parsedAccountSource: record.parsedAccountSource,
-        referenceNumber: record.referenceNumber,
-        direction: record.direction,
-        parseConfidence: record.parseConfidence,
-        parseReason: record.parseReason,
-        linkedJournal: record.linkedJournalId
+      return records.map((record): SmsInboxItem => {
+        const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
+        const duplicateCandidate: SmsDuplicateCandidate | undefined = record.duplicateJournalId
           ? {
-              journalId: record.linkedJournalId,
-              description: journalMap.get(record.linkedJournalId)?.description,
-              journalDate: journalMap.get(record.linkedJournalId)?.journalDate || record.smsDate,
-              status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
+              journalId: record.duplicateJournalId,
+              journalDate: journalMap.get(record.duplicateJournalId)?.journalDate || record.smsDate,
+              description: journalMap.get(record.duplicateJournalId)?.description,
+              score: record.duplicateConfidence || 0,
+              reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
             }
-          : undefined,
-        duplicateCandidate,
-      };
-    });
-  }, []);
+          : undefined;
+
+        return {
+          id: record.id,
+          deviceSmsId: record.deviceSmsId,
+          senderAddress: record.senderAddress,
+          rawBody: record.rawBody,
+          smsDate: record.smsDate,
+          parseStatus: record.parseStatus,
+          processingStatus: record.processingStatus,
+          parsedAmount: record.parsedAmount,
+          parsedCurrencyCode: record.parsedCurrencyCode,
+          parsedMerchant: record.parsedMerchant,
+          parsedAccountSource: record.parsedAccountSource,
+          referenceNumber: record.referenceNumber,
+          direction: record.direction,
+          parseConfidence: record.parseConfidence,
+          parseReason: record.parseReason,
+          linkedJournal: record.linkedJournalId
+            ? {
+                journalId: record.linkedJournalId,
+                description: journalMap.get(record.linkedJournalId)?.description,
+                journalDate: journalMap.get(record.linkedJournalId)?.journalDate || record.smsDate,
+                status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
+              }
+            : undefined,
+          duplicateCandidate,
+        };
+      });
+    },
+    [workplaceId],
+  );
 
   const { items, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<
     SmsInboxRecord,
@@ -100,7 +108,7 @@ function SmsInboxContent({ accounts, theme }: { accounts: any[]; theme: any }) {
     let isMounted = true;
     const prime = async () => {
       try {
-        const result = await smsService.scanRecentSmsPage(PAGE_SIZE * 2);
+        const result = await smsService.scanRecentSmsPage(workplaceId, PAGE_SIZE * 2);
         if (isMounted) {
           setScanCursor(result.cursor);
         }
@@ -112,12 +120,12 @@ function SmsInboxContent({ accounts, theme }: { accounts: any[]; theme: any }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [workplaceId]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const result = await smsService.refreshLatestSms(PAGE_SIZE * 2);
+      const result = await smsService.refreshLatestSms(workplaceId, PAGE_SIZE * 2);
       setScanCursor(result.cursor);
       toast.success('SMS inbox refreshed');
     } catch (error) {
@@ -125,13 +133,13 @@ function SmsInboxContent({ accounts, theme }: { accounts: any[]; theme: any }) {
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [workplaceId]);
 
   const handleLoadOlder = useCallback(async () => {
     if (isScanningOlder) return;
     setIsScanningOlder(true);
     try {
-      const result = await smsService.scanOlderSmsPage(scanCursor, PAGE_SIZE);
+      const result = await smsService.scanOlderSmsPage(scanCursor, workplaceId, PAGE_SIZE);
       setScanCursor(result.cursor);
       loadMore();
     } catch (error) {
@@ -139,7 +147,7 @@ function SmsInboxContent({ accounts, theme }: { accounts: any[]; theme: any }) {
     } finally {
       setIsScanningOlder(false);
     }
-  }, [isScanningOlder, loadMore, scanCursor]);
+  }, [isScanningOlder, loadMore, scanCursor, workplaceId]);
 
   const handleDismiss = useCallback(async (item: SmsInboxItem) => {
     await smsService.markInboxRecordStatus(item.id, SmsProcessingStatus.DISMISSED);
@@ -312,9 +320,6 @@ function SmsInboxContent({ accounts, theme }: { accounts: any[]; theme: any }) {
 }
 
 export default function SmsInboxScreen() {
-  const { theme } = useTheme();
-  const { accounts } = useAccounts();
-
   if (Platform.OS !== 'android') {
     return (
       <Screen title="SMS Inbox" showBack scrollable={false}>
@@ -328,7 +333,7 @@ export default function SmsInboxScreen() {
     );
   }
 
-  return <SmsInboxContent accounts={accounts} theme={theme} />;
+  return <SmsInboxContent />;
 }
 
 const styles = StyleSheet.create({

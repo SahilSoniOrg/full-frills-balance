@@ -32,6 +32,7 @@ export interface AccountPersistenceInput {
   orderNum?: number;
   reconciledAt?: Date;
   parentAccountId?: string;
+  workplaceId: string;
   metadata?: Partial<{
     statementDay: number;
     dueDay: number;
@@ -62,8 +63,6 @@ export interface AccountListItemRaw {
   periodDecrease: number;
 }
 
-// RawAccountRow is now imported from TransactionTypes; local interface removed to fix lint warnings bit.
-
 export class AccountRepository {
   private get db() {
     return database;
@@ -77,16 +76,18 @@ export class AccountRepository {
     return this.db.collections.get<AccountMetadata>('account_metadata');
   }
 
-  // Memoization cache for child list lookups (O(N) -> O(1) on repeat calls)
-  private descendantMapCache = new WeakMap<Account[], Map<string, string[]>>();
-
   /**
    * Reactive Observation Methods
    */
 
-  observeAll() {
+  observeAll(workplaceId: string) {
+    const clauses: Q.Clause[] = [
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+      Q.sortBy('order_num', Q.asc),
+    ];
     return this.accounts
-      .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
+      .query(...clauses)
       .observeWithColumns([
         'account_type',
         'account_subtype',
@@ -101,37 +102,48 @@ export class AccountRepository {
       ]);
   }
 
-  observeHierarchy() {
-    return this.accounts
-      .query(Q.where('deleted_at', Q.eq(null)))
-      .observeWithColumns(['parent_account_id', 'deleted_at']);
+  observeHierarchy(workplaceId: string) {
+    const clauses: Q.Clause[] = [
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    return this.accounts.query(...clauses).observeWithColumns(['parent_account_id', 'deleted_at']);
   }
 
-  observeByType(accountType: string) {
-    const query = this.accounts.query(
+  observeByType(accountType: string, workplaceId: string) {
+    const clauses: Q.Clause[] = [
       Q.where('account_type', accountType),
       Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
       Q.sortBy('order_num', Q.asc),
-    );
-    return query.observeWithColumns([
-      'name',
-      'account_subtype',
-      'order_num',
-      'currency_code',
-      'icon',
-      'description',
-      'parent_account_id',
-      'deleted_at',
-    ]);
+    ];
+    return this.accounts
+      .query(...clauses)
+      .observeWithColumns([
+        'name',
+        'account_subtype',
+        'order_num',
+        'currency_code',
+        'icon',
+        'description',
+        'parent_account_id',
+        'deleted_at',
+      ]);
   }
 
-  observeByIds(accountIds: string[]) {
+  observeByIds(accountIds: string[], workplaceId: string) {
     if (accountIds.length === 0) {
       return of([] as Account[]);
     }
 
+    const clauses: Q.Clause[] = [
+      Q.where('id', Q.oneOf(accountIds)),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+
     return this.accounts
-      .query(Q.where('id', Q.oneOf(accountIds)), Q.where('deleted_at', Q.eq(null)))
+      .query(...clauses)
       .observeWithColumns([
         'name',
         'account_type',
@@ -145,28 +157,36 @@ export class AccountRepository {
       ]);
   }
 
-  observeById(accountId: string) {
+  observeById(accountId: string, workplaceId: string) {
     return this.accounts
       .findAndObserve(accountId)
-      .pipe(map(account => (account.deletedAt ? null : account)));
+      .pipe(
+        map(account => (account.deletedAt || account.workplaceId !== workplaceId ? null : account)),
+      );
   }
 
   /**
    * Observe all active transactions for an account.
    * Used for reactive in-memory balance calculation.
    */
-  observeTransactionsForBalance(accountId: string) {
+  observeTransactionsForBalance(accountId: string, workplaceId: string) {
+    const clauses: Q.Clause[] = [
+      Q.experimentalJoinTables(['journals']),
+      Q.where('account_id', accountId),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    const journalClauses: Q.Clause[] = [
+      Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+
+    clauses.push(Q.on('journals', journalClauses as any));
+
     return database.collections
       .get<Transaction>('transactions')
-      .query(
-        Q.experimentalJoinTables(['journals']),
-        Q.where('account_id', accountId),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.where('deleted_at', Q.eq(null)),
-        ]),
-      )
+      .query(...clauses)
       .observe();
   }
 
@@ -174,83 +194,134 @@ export class AccountRepository {
    * PURE PERSISTENCE METHODS
    */
 
-  async find(id: string): Promise<Account | null> {
+  async findByIdRaw(id: string): Promise<Account | null> {
     try {
       const account = await this.accounts.find(id);
-      return account.deletedAt ? null : account;
+      return account;
     } catch {
       return null;
     }
   }
 
-  async findWithDeleted(id: string): Promise<Account | null> {
+  async find(id: string, workplaceId: string): Promise<Account | null> {
     try {
-      return await this.accounts.find(id);
+      const account = await this.accounts.find(id);
+      if (account.deletedAt) return null;
+      if (account.workplaceId !== workplaceId) return null;
+      return account;
     } catch {
       return null;
     }
   }
 
-  async findMetadata(accountId: string): Promise<AccountMetadata | null> {
+  async findWithDeleted(id: string, workplaceId: string): Promise<Account | null> {
     try {
-      const records = await this.metadata.query(Q.where('account_id', accountId)).fetch();
+      const account = await this.accounts.find(id);
+      if (account.workplaceId !== workplaceId) return null;
+      return account;
+    } catch {
+      return null;
+    }
+  }
+
+  async findMetadata(accountId: string, workplaceId: string): Promise<AccountMetadata | null> {
+    try {
+      const clauses: Q.Clause[] = [
+        Q.where('account_id', accountId),
+        Q.where('workplace_id', workplaceId),
+      ];
+      const records = await this.metadata.query(...clauses).fetch();
       return records[0] || null;
     } catch {
       return null;
     }
   }
 
-  async findMetadataByAccountIds(accountIds: string[]): Promise<AccountMetadata[]> {
+  async findMetadataByAccountIds(
+    accountIds: string[],
+    workplaceId: string,
+  ): Promise<AccountMetadata[]> {
     if (accountIds.length === 0) return [];
-    return await this.metadata.query(Q.where('account_id', Q.oneOf(accountIds))).fetch();
+    const clauses: Q.Clause[] = [
+      Q.where('account_id', Q.oneOf(accountIds)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    return await this.metadata.query(...clauses).fetch();
   }
 
-  async findAllByIds(ids: string[]): Promise<Account[]> {
+  async findAllByIdsRaw(ids: string[]): Promise<Account[]> {
     if (ids.length === 0) return [];
-    return this.accounts
-      .query(Q.where('id', Q.oneOf(ids)), Q.where('deleted_at', Q.eq(null)))
-      .fetch();
+    const clauses: Q.Clause[] = [Q.where('id', Q.oneOf(ids)), Q.where('deleted_at', Q.eq(null))];
+    return this.accounts.query(...clauses).fetch();
   }
 
-  async findByName(name: string): Promise<Account | null> {
-    const accounts = await this.accounts
-      .query(Q.and(Q.where('name', name), Q.where('deleted_at', Q.eq(null))))
-      .fetch();
+  async findAllByIds(ids: string[], workplaceId: string): Promise<Account[]> {
+    if (ids.length === 0) return [];
+    const clauses: Q.Clause[] = [
+      Q.where('id', Q.oneOf(ids)),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    return this.accounts.query(...clauses).fetch();
+  }
+
+  async findByName(name: string, workplaceId: string): Promise<Account | null> {
+    const clauses: Q.Clause[] = [
+      Q.where('name', name),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    const accounts = await this.accounts.query(...clauses).fetch();
     return accounts[0] || null;
   }
 
-  async findAll(): Promise<Account[]> {
-    return this.accounts
-      .query(Q.where('deleted_at', Q.eq(null)), Q.sortBy('order_num', Q.asc))
-      .fetch();
+  async findAll(workplaceId: string): Promise<Account[]> {
+    const clauses: Q.Clause[] = [
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    clauses.push(Q.sortBy('order_num', Q.asc));
+    return this.accounts.query(...clauses).fetch();
   }
 
-  async findByType(accountType: AccountType): Promise<Account[]> {
-    return this.accounts
-      .query(
-        Q.where('account_type', accountType),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('order_num', Q.asc),
-      )
-      .fetch();
+  async findByType(accountType: AccountType, workplaceId: string): Promise<Account[]> {
+    const clauses: Q.Clause[] = [
+      Q.where('account_type', accountType),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    clauses.push(Q.sortBy('order_num', Q.asc));
+    return this.accounts.query(...clauses).fetch();
   }
 
-  async exists(): Promise<boolean> {
-    const count = await this.accounts.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
+  async exists(workplaceId: string): Promise<boolean> {
+    const clauses: Q.Clause[] = [Q.where('deleted_at', Q.eq(null))];
+    if (workplaceId) {
+      clauses.push(Q.where('workplace_id', workplaceId));
+    }
+    const count = await this.accounts.query(...clauses).fetchCount();
     return count > 0;
   }
 
-  async countNonDeleted(): Promise<number> {
-    return this.accounts.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
+  async countNonDeleted(workplaceId: string): Promise<number> {
+    const clauses: Q.Clause[] = [
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('workplace_id', workplaceId),
+    ];
+    return this.accounts.query(...clauses).fetchCount();
   }
 
-  observeByIdsWithDeleted(accountIds: string[]) {
+  observeByIdsWithDeleted(accountIds: string[], workplaceId: string) {
     if (accountIds.length === 0) {
       return of([] as Account[]);
     }
 
+    const clauses: Q.Clause[] = [
+      Q.where('id', Q.oneOf(accountIds)),
+      Q.where('workplace_id', workplaceId),
+    ];
     return this.accounts
-      .query(Q.where('id', Q.oneOf(accountIds)))
+      .query(...clauses)
       .observeWithColumns([
         'name',
         'account_type',
@@ -262,30 +333,8 @@ export class AccountRepository {
       ]);
   }
 
-  async seedDefaults(defaults: AccountPersistenceInput[]): Promise<void> {
-    const normalizedDefaults = defaults.map(entry => ({
-      ...entry,
-      accountSubtype: entry.accountSubtype ?? getDefaultSubtypeForType(entry.accountType),
-    }));
-    normalizedDefaults.forEach(entry =>
-      this.validateSubtype(entry.accountType, entry.accountSubtype),
-    );
-    await this.db.write(async () => {
-      const creates = normalizedDefaults.map(data =>
-        this.accounts.prepareCreate(account => {
-          Object.assign(account, data);
-          account.createdAt = new Date();
-          account.updatedAt = new Date();
-        }),
-      );
-      if (creates.length > 0) {
-        await this.db.batch(...creates);
-      }
-    });
-  }
-
   async create(data: AccountPersistenceInput): Promise<Account> {
-    await this.ensureUniqueName(data.name);
+    await this.ensureUniqueName(data.name, data.workplaceId, undefined);
     const payload: AccountPersistenceInput = {
       ...data,
       accountSubtype: data.accountSubtype ?? getDefaultSubtypeForType(data.accountType),
@@ -296,7 +345,6 @@ export class AccountRepository {
       const account = await this.accounts.create(acc => {
         const { metadata, ...accountData } = payload;
         Object.assign(acc, accountData);
-        // metadata is not a field on Account model
         acc.createdAt = new Date();
         acc.updatedAt = new Date();
       });
@@ -305,6 +353,9 @@ export class AccountRepository {
         await this.metadata.create(meta => {
           Object.assign(meta, data.metadata);
           meta.account.set(account);
+          if (payload.workplaceId) {
+            meta.workplaceId = payload.workplaceId;
+          }
           meta.createdAt = new Date();
           meta.updatedAt = new Date();
         });
@@ -314,9 +365,13 @@ export class AccountRepository {
     });
   }
 
-  async update(account: Account, updates: Partial<AccountPersistenceInput>): Promise<Account> {
+  async update(
+    account: Account,
+    updates: Partial<AccountPersistenceInput>,
+    workplaceId: string,
+  ): Promise<Account> {
     if (updates.name && updates.name !== account.name) {
-      await this.ensureUniqueName(updates.name, account.id);
+      await this.ensureUniqueName(updates.name, workplaceId, account.id);
     }
     const normalizedUpdates: Partial<AccountPersistenceInput> = { ...updates };
     if (normalizedUpdates.accountType && normalizedUpdates.accountSubtype === undefined) {
@@ -340,7 +395,7 @@ export class AccountRepository {
       });
 
       if (updates.metadata) {
-        const existingMetadata = await this.findMetadata(account.id);
+        const existingMetadata = await this.findMetadata(account.id, account.workplaceId);
         if (existingMetadata) {
           await existingMetadata.update(meta => {
             Object.assign(meta, updates.metadata);
@@ -350,6 +405,9 @@ export class AccountRepository {
           await this.metadata.create(meta => {
             Object.assign(meta, updates.metadata);
             meta.account.set(account);
+            if (account.workplaceId) {
+              meta.workplaceId = account.workplaceId;
+            }
             meta.createdAt = new Date();
             meta.updatedAt = new Date();
           });
@@ -360,7 +418,17 @@ export class AccountRepository {
     });
   }
 
-  async delete(account: Account): Promise<void> {
+  async delete(workplaceId: string, account: Account): Promise<void> {
+    //get account by id
+    const existingAccount = await this.find(account.id, workplaceId);
+    if (!existingAccount) {
+      throw new Error('Cannot delete account. Account not found in workplace provided.');
+    }
+    const children = await this.queryByParentId(existingAccount.id, workplaceId).fetch();
+    //if no exits, throw error
+    if (children.length > 0) {
+      throw new Error('Cannot delete account with children. Please delete or move children first.');
+    }
     await this.db.write(async () => {
       await account.update(record => {
         record.deletedAt = new Date();
@@ -369,108 +437,54 @@ export class AccountRepository {
     });
   }
 
-  /**
-   * Returns all descendant account IDs for the given account.
-   *
-   * M-5 fix: pass `allAccounts` if you already have the full list to avoid N+1 DB
-   * queries. When omitted the old recursive-fetch behaviour is preserved.
-   */
-  async getDescendantIds(accountId: string, allAccounts?: Account[]): Promise<string[]> {
-    if (allAccounts) {
-      // In-memory BFS — O(n), zero DB round-trips.
-      return this.getDescendantIdsFromList(accountId, allAccounts);
-    }
-
-    // Legacy path: fetch each level from the DB (retained for backward compat).
-    const children = await this.accounts
-      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
-      .fetch();
-
-    let ids = children.map(c => c.id);
-    for (const child of children) {
-      const descendantIds = await this.getDescendantIds(child.id);
-      ids = [...ids, ...descendantIds];
-    }
-    return ids;
-  }
-
-  /**
-   * Pure in-memory BFS traversal given a pre-fetched flat account list.
-   * Zero DB queries — call this whenever you already have all accounts in memory.
-   */
-  getDescendantIdsFromList(accountId: string, allAccounts: Account[]): string[] {
-    let childrenMap = this.descendantMapCache.get(allAccounts);
-
-    if (!childrenMap) {
-      childrenMap = new Map<string, string[]>();
-      for (const acc of allAccounts) {
-        if (acc.parentAccountId && !acc.deletedAt) {
-          const arr = childrenMap.get(acc.parentAccountId) ?? [];
-          arr.push(acc.id);
-          childrenMap.set(acc.parentAccountId, arr);
-        }
-      }
-      this.descendantMapCache.set(allAccounts, childrenMap);
-    }
-
-    const result: string[] = [];
-    const queue: string[] = [accountId];
-    const visited = new Set<string>([accountId]); // Cycle protection
-    let head = 0; // O(1) queue processing
-
-    while (head < queue.length) {
-      const current = queue[head++]!;
-      const children = childrenMap.get(current) ?? [];
-      for (const childId of children) {
-        if (!visited.has(childId)) {
-          visited.add(childId);
-          result.push(childId);
-          queue.push(childId);
-        }
-      }
-    }
-    return result;
-  }
-
-  async hasChildren(accountId: string): Promise<boolean> {
-    const count = await this.accounts
-      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
-      .fetchCount();
-    return count > 0;
-  }
-
-  observeHasChildren(accountId: string) {
+  observeHasChildren(accountId: string, workplaceId: string) {
     return this.accounts
-      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('parent_account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
       .observe()
       .pipe(map(children => children.length > 0));
   }
 
-  observeSubAccountCount(accountId: string) {
+  observeSubAccountCount(accountId: string, workplaceId: string) {
     return this.accounts
-      .query(Q.where('parent_account_id', accountId), Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('parent_account_id', accountId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
       .observeCount();
   }
 
-  queryByParentId(parentId: string) {
+  queryByParentId(parentId: string, workplaceId: string) {
     return this.accounts.query(
+      Q.where('workplace_id', workplaceId),
       Q.where('parent_account_id', parentId),
       Q.where('deleted_at', Q.eq(null)),
       Q.sortBy('order_num', Q.asc),
     );
   }
 
-  private async ensureUniqueName(name: string, excludeId?: string): Promise<void> {
+  private async ensureUniqueName(
+    name: string,
+    workplaceId: string,
+    excludeId?: string,
+  ): Promise<void> {
     const sanitizedName = name.trim();
 
     // App-level secondary check for user convenience.
     // Note: Database integrity should still be enforced by unique indices where possible.
-    const potentialDuplicates = await this.accounts
-      .query(
-        Q.where('name', Q.like(Q.sanitizeLikeString(sanitizedName))),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
+    const clauses: Q.Clause[] = [
+      Q.where('name', Q.like(Q.sanitizeLikeString(sanitizedName))),
+      Q.where('deleted_at', Q.eq(null)),
+    ];
+    if (workplaceId) {
+      clauses.push(Q.where('workplace_id', workplaceId));
+    }
+
+    const potentialDuplicates = await this.accounts.query(...clauses).fetch();
 
     const duplicate = potentialDuplicates.find(account => {
       if (excludeId && account.id === excludeId) return false;
@@ -495,6 +509,7 @@ export class AccountRepository {
   async getAccountListItemsRaw(
     startOfMonth: number,
     endOfMonth: number,
+    workplaceId: string,
     includeTotalCount: boolean = false,
     includeDeleted: boolean = false,
   ): Promise<AccountListItemRaw[] | null> {
@@ -524,7 +539,7 @@ export class AccountRepository {
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
         WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${placeholders})
-          AND t.account_id IN (SELECT id FROM accounts WHERE deleted_at IS NULL)
+          AND t.account_id IN (SELECT id FROM accounts WHERE deleted_at IS NULL AND workplace_id = ?)
       ),
       LatestBalance AS (
         SELECT account_id, running_balance
@@ -575,15 +590,17 @@ export class AccountRepository {
       LEFT JOIN LatestBalance lb ON a.id = lb.account_id
       LEFT JOIN MonthlyAggregates ma ON a.id = ma.account_id
       ${includeTotalCount ? 'LEFT JOIN TotalCounts tc ON a.id = tc.account_id' : ''}
-      WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'}
+      WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'} AND a.workplace_id = ?
       ORDER BY a.order_num ASC
     `;
 
-    const args: RawSQLArg[] = [...statusArgs, ...statusArgs, startOfMonth, endOfMonth];
-
+    const args: RawSQLArg[] = [...statusArgs];
+    args.push(workplaceId);
+    args.push(...statusArgs, startOfMonth, endOfMonth);
     if (includeTotalCount) {
       args.push(...statusArgs);
     }
+    args.push(workplaceId);
 
     const start = Date.now();
     const results = await transactionRawRepository.queryRaw<RawAccountRow>(sql, args);
@@ -613,19 +630,5 @@ export class AccountRepository {
     });
   }
 }
-
-/**
- * PRODUCTION INDEX REQUIREMENTS
- *
- * To ensure the above raw queries remain performant at scale (>10k transactions),
- * the following composite indices must be present in the database:
- *
- * 1. (account_id, transaction_date DESC, created_at DESC, id DESC)
- *    - Optimizes RankedTransactions/LatestBalance lookup.
- * 2. (journal_id)
- *    - Optimizes transaction-journal joins.
- * 3. (status, deleted_at)
- *    - Optimizes journal status filtering.
- */
 
 export const accountRepository = new AccountRepository();

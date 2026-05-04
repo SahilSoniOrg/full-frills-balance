@@ -9,21 +9,27 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Model } from '@nozbe/watermelondb';
 
 export class LedgerWriteService {
-  async prepareCreateJournal(data: CreateJournalData): Promise<{
+  async prepareCreateJournal(
+    data: CreateJournalData,
+    workplaceId: string,
+  ): Promise<{
     journal: Journal;
     ops: Model[];
     accountsToRebuild: Set<string>;
   }> {
-    const prepared = await prepareJournalData(data);
+    const prepared = await prepareJournalData(data, workplaceId);
 
     const { journal, transactions, metadataRecord } =
-      journalRepository.prepareCreateJournalWithTransactions({
-        ...data,
-        transactions: prepared.transactions,
-        totalAmount: prepared.totalAmount,
-        displayType: prepared.displayType,
-        calculatedBalances: prepared.calculatedBalances,
-      });
+      journalRepository.prepareCreateJournalWithTransactions(
+        {
+          ...data,
+          transactions: prepared.transactions,
+          totalAmount: prepared.totalAmount,
+          displayType: prepared.displayType,
+          calculatedBalances: prepared.calculatedBalances,
+        },
+        workplaceId,
+      );
 
     const ops: Model[] = [journal, ...transactions];
     if (metadataRecord) ops.push(metadataRecord);
@@ -40,18 +46,18 @@ export class LedgerWriteService {
     return { journal, ops, accountsToRebuild: prepared.accountsToRebuild };
   }
 
-  async createJournal(data: CreateJournalData): Promise<Journal> {
-    const { journal, ops, accountsToRebuild } = await this.prepareCreateJournal(data);
+  async createJournal(data: CreateJournalData, workplaceId: string): Promise<Journal> {
+    const { journal, ops, accountsToRebuild } = await this.prepareCreateJournal(data, workplaceId);
 
     await database.write(async () => {
-      await database.batch(...ops);
+      await database.batch(ops);
 
       // Move enqueue inside write block for better atomicity.
       // Even though it writes to storage, calling it here ensures that if the DB write succeeds,
       // the rebuild request is also issued before the transaction completes and observers are notified.
       const activeStatus = !data.status || ACTIVE_JOURNAL_STATUSES.includes(data.status as any);
       if (activeStatus && accountsToRebuild.size > 0) {
-        rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate);
+        rebuildQueueService.enqueueMany(accountsToRebuild, data.journalDate, workplaceId);
       }
     });
 

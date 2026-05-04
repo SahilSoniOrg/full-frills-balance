@@ -180,11 +180,20 @@ class PreferencesHelper {
   }
 
   restorePreferences(data?: Partial<UIPreferences>): void {
+    const currentActiveId = this.preferences.activeWorkplaceId;
     this.preferences = {
       ...DEFAULT_UI_PREFERENCES,
       ...(data ? this.sanitizePreferences(data) : {}),
     };
+
+    // Preserve activeWorkplaceId if it was already set and the new data doesn't have one.
+    // This prevents the app from losing its workplace context during a settings restore.
+    if (!this.preferences.activeWorkplaceId && currentActiveId) {
+      this.preferences.activeWorkplaceId = currentActiveId;
+    }
+
     this.savePreferences();
+    this.preferencesSubject.next(this.preferences);
   }
 
   savePreferences(): void {

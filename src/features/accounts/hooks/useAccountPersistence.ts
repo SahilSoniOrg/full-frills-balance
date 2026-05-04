@@ -2,8 +2,8 @@ import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account'
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
-import { sanitizeInput } from '@/src/utils/validation';
 import { AppNavigation } from '@/src/utils/navigation';
+import { sanitizeInput } from '@/src/utils/validation';
 import { useRef, useState } from 'react';
 
 interface PersistenceResult {
@@ -23,11 +23,12 @@ interface PersistenceResult {
 }
 
 export function useAccountPersistence(
+  workplaceId: string,
   existingAccount: Account | null | undefined,
   currentAccountId: string | undefined,
   hasExistingAccounts: boolean,
 ): PersistenceResult {
-  const { createAccount, updateAccount, adjustBalance } = useAccountActions();
+  const { createAccount, updateAccount, adjustBalance } = useAccountActions(workplaceId);
   const [isCreating, setIsCreating] = useState(false);
   const isSubmitting = useRef(false);
 

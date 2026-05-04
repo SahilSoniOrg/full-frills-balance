@@ -8,14 +8,14 @@
 import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { Model, TableSchema } from '@nozbe/watermelondb';
 import { analytics } from '@/src/services/analytics-service';
 import { JournalDisplayType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
+import { Model, TableSchema } from '@nozbe/watermelondb';
 import { AppSchema } from '@nozbe/watermelondb/Schema';
-import { supportsRawSql } from '../data/database/DatabaseUtils';
 import JSZip from 'jszip';
+import { supportsRawSql } from '../data/database/DatabaseUtils';
 
 export interface AccountExport {
   id: string;
@@ -301,7 +301,10 @@ class ExportService {
    * Universal fetch and transform helper derived from database schema.
    * Generates SQL with aliasing and handles value conversions centrally.
    */
-  private async fetchAndTransformTable<T extends object>(tableName: string): Promise<T[]> {
+  private async fetchAndTransformTable<T extends object>(
+    workplaceId: string,
+    tableName: string,
+  ): Promise<T[]> {
     const tableSchema = this.getTableSchema(tableName);
     if (!tableSchema) throw new Error(`Missing schema for table: ${tableName}`);
 
@@ -327,10 +330,14 @@ class ExportService {
       const selectFields = columnNames
         .map(snake => `${snake} AS ${snakeToCamel(snake)}`)
         .join(', ');
-      const sql = `SELECT ${selectFields} FROM ${tableName}`;
+      //if columns contain workplaceId then add where workplace_id = ?
+      let sql = `SELECT ${selectFields} FROM ${tableName}`;
+      if (columnNames.includes('workplace_id')) {
+        sql += ` WHERE workplace_id = ?`;
+      }
       const results = await transactionRawRepository.queryRaw<Record<string, unknown>>(
         sql,
-        [],
+        columnNames.includes('workplace_id') ? [workplaceId] : [],
         tableName,
       );
       if (results !== null) {
@@ -381,7 +388,7 @@ class ExportService {
   /**
    * Exports all data as JSON using raw SQL to bypass model instantiation overhead.
    */
-  async exportToJSON(): Promise<Uint8Array> {
+  async exportToJSON(workplaceId: string): Promise<Uint8Array> {
     logger.info('[ExportService] Starting optimized JSON export...');
 
     try {
@@ -402,20 +409,20 @@ class ExportService {
         _balanceSnapshots, // Prefix with _ to ignore unused warning
         userPreferences,
       ] = await Promise.all([
-        this.fetchAndTransformTable<AccountExport>('accounts'),
-        this.fetchAndTransformTable<JournalExport>('journals'),
-        this.fetchAndTransformTable<TransactionExport>('transactions'),
-        this.fetchAndTransformTable<AuditLogExport>('audit_logs'),
-        this.fetchAndTransformTable<BudgetExport>('budgets'),
-        this.fetchAndTransformTable<BudgetScopeExport>('budget_scopes'),
-        this.fetchAndTransformTable<CurrencyExport>('currencies'),
-        this.fetchAndTransformTable<ExchangeRateExport>('exchange_rates'),
-        this.fetchAndTransformTable<AccountMetadataExport>('account_metadata'),
-        this.fetchAndTransformTable<PlannedPaymentExport>('planned_payments'),
-        this.fetchAndTransformTable<JournalMetadataExport>('journal_metadata'),
-        this.fetchAndTransformTable<SmsAutoPostRuleExport>('sms_auto_post_rules'),
-        this.fetchAndTransformTable<SmsInboxRecordExport>('sms_inbox_records'),
-        this.fetchAndTransformTable<BalanceSnapshotExport>('balance_snapshots'),
+        this.fetchAndTransformTable<AccountExport>(workplaceId, 'accounts'),
+        this.fetchAndTransformTable<JournalExport>(workplaceId, 'journals'),
+        this.fetchAndTransformTable<TransactionExport>(workplaceId, 'transactions'),
+        this.fetchAndTransformTable<AuditLogExport>(workplaceId, 'audit_logs'),
+        this.fetchAndTransformTable<BudgetExport>(workplaceId, 'budgets'),
+        this.fetchAndTransformTable<BudgetScopeExport>(workplaceId, 'budget_scopes'),
+        this.fetchAndTransformTable<CurrencyExport>(workplaceId, 'currencies'),
+        this.fetchAndTransformTable<ExchangeRateExport>(workplaceId, 'exchange_rates'),
+        this.fetchAndTransformTable<AccountMetadataExport>(workplaceId, 'account_metadata'),
+        this.fetchAndTransformTable<PlannedPaymentExport>(workplaceId, 'planned_payments'),
+        this.fetchAndTransformTable<JournalMetadataExport>(workplaceId, 'journal_metadata'),
+        this.fetchAndTransformTable<SmsAutoPostRuleExport>(workplaceId, 'sms_auto_post_rules'),
+        this.fetchAndTransformTable<SmsInboxRecordExport>(workplaceId, 'sms_inbox_records'),
+        this.fetchAndTransformTable<BalanceSnapshotExport>(workplaceId, 'balance_snapshots'),
         preferences.loadPreferences(),
       ]);
 

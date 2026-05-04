@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AuditEntityType } from '@/src/data/models/AuditLog';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
 import { useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
@@ -25,10 +26,11 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     entityType?: AuditEntityType;
     entityId?: string;
   }>();
+  const { workplaceId } = useWorkplace();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  const { accountMap, isLoading: accountsLoading } = useAuditAccounts();
-  const { logs, isLoading } = useAuditLogs({ entityType, entityId });
+  const { accountMap, isLoading: accountsLoading } = useAuditAccounts(workplaceId);
+  const { logs, isLoading } = useAuditLogs({ entityType, entityId, workplaceId });
 
   const idsByEntityType = useMemo(() => {
     const groups: Record<string, string[]> = { account: [], journal: [] };
@@ -38,7 +40,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     return groups;
   }, [logs]);
 
-  const entityStatusMap = useAuditEntityStatus(idsByEntityType);
+  const entityStatusMap = useAuditEntityStatus(workplaceId, idsByEntityType);
 
   const isFiltered = !!entityId;
 
@@ -67,7 +69,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
       AppConfig.strings.audit.revertConfirmTitle,
       AppConfig.strings.audit.revertConfirmMessage,
       async () => {
-        const result = await auditService.revertEntry(logId);
+        const result = await auditService.revertEntry(logId, workplaceId);
         if (result.success) {
           Alerts.toast.success(AppConfig.strings.audit.revertSuccess);
         } else {

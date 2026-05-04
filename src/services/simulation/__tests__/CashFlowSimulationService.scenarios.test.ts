@@ -121,6 +121,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       [],
       [cash],
       'USD',
+      'test-wp',
     ];
 
     for (const [index, value] of Object.entries(overrides ?? {})) {

@@ -90,12 +90,12 @@ function buildWidgetThemeSnapshot(
   };
 }
 
-export function useWidgetSync() {
+export function useWidgetSync(workplaceId: string) {
   const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked } = useUI();
   const { theme, themeMode } = useTheme();
   const { data: safeToSpendData } = useObservable(
-    () => notificationService.observeSafeToSpend(),
-    [],
+    () => notificationService.observeSafeToSpend(workplaceId),
+    [workplaceId],
     null,
   );
 

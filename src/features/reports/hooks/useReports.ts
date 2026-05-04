@@ -8,11 +8,11 @@ import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
 import { wealthService } from '@/src/services/wealth-service';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
+import { logger } from '@/src/utils/logger';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
-import { logger } from '@/src/utils/logger';
 
-export function useReports() {
+export function useReports(workplaceId: string) {
   const { theme } = useTheme();
   const { defaultCurrency } = useUI();
   const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
@@ -29,10 +29,10 @@ export function useReports() {
 
   const triggerObservable = useMemo(() => {
     return combineLatest([
-      accountRepository.observeAll(),
-      journalRepository.observeStatusMeta(), // Changed from transactionRepository to journalStatusMeta for performance
+      accountRepository.observeAll(workplaceId),
+      journalRepository.observeStatusMeta(workplaceId), // Changed from transactionRepository to journalStatusMeta for performance
     ]).pipe(map(() => 0));
-  }, []);
+  }, [workplaceId]);
 
   // Load net worth history (faster, independent)
   const {
@@ -43,9 +43,15 @@ export function useReports() {
     () => triggerObservable,
     async () => {
       const { startDate, endDate } = dateRange;
-      return await wealthService.getNetWorthHistory(startDate, endDate, targetCurrency, accountIds);
+      return await wealthService.getNetWorthHistory(
+        workplaceId,
+        startDate,
+        endDate,
+        targetCurrency,
+        accountIds,
+      );
     },
-    [dateRange, triggerObservable, defaultCurrency, accountIds],
+    [workplaceId, dateRange, triggerObservable, defaultCurrency, accountIds],
     [],
   );
 
@@ -65,9 +71,15 @@ export function useReports() {
           accountIds,
         });
       }
-      return await reportService.getReportSnapshot(startDate, endDate, targetCurrency, accountIds);
+      return await reportService.getReportSnapshot(
+        workplaceId,
+        startDate,
+        endDate,
+        targetCurrency,
+        accountIds,
+      );
     },
-    [dateRange, triggerObservable, defaultCurrency, accountIds],
+    [workplaceId, dateRange, triggerObservable, defaultCurrency, accountIds],
     {
       expenseBreakdown: [],
       incomeBreakdown: [],
@@ -131,9 +143,9 @@ export function useReports() {
   );
 
   const { data: accounts = [] } = useObservableWithEnrichment(
-    () => accountRepository.observeAll(),
-    async () => await accountRepository.findAll(),
-    [],
+    () => accountRepository.observeAll(workplaceId),
+    async () => await accountRepository.findAll(workplaceId),
+    [workplaceId],
     [],
   );
 

@@ -2,7 +2,7 @@ import { AlertContainer } from '@/src/components/common/AlertContainer';
 import { ToastContainer } from '@/src/components/common/Toast';
 import { ErrorBoundary } from '@/src/components/core';
 import { UIProvider, useUI } from '@/src/contexts/UIContext';
-import { WorkspaceProvider } from '@/src/contexts/WorkspaceContext';
+import { useWorkplace, WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { AppLockInterceptor } from '@/src/features/app/components/AppLockInterceptor';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
@@ -132,7 +132,7 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <DatabaseProvider database={database}>
-              <WorkspaceProvider>
+              <WorkplaceProvider>
                 <UIProvider>
                   <BootManager />
                   <FontManager>
@@ -155,7 +155,7 @@ export default function RootLayout() {
                     </PostHogProvider>
                   </FontManager>
                 </UIProvider>
-              </WorkspaceProvider>
+              </WorkplaceProvider>
             </DatabaseProvider>
           </ErrorBoundary>
         </SafeAreaProvider>
@@ -167,10 +167,11 @@ export default function RootLayout() {
 function AppContent() {
   const { isRestartRequired } = useUI();
 
+  const { workplaceId } = useWorkplace();
   // Sync app data with native widgets
-  useWidgetSync();
+  useWidgetSync(workplaceId);
 
-  useAppBootstrap();
+  useAppBootstrap(workplaceId);
 
   if (isRestartRequired) {
     return <RestartRequiredScreen />;

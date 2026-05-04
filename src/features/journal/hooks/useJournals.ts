@@ -3,7 +3,6 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { DisplayTransaction, EnrichedJournal } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
@@ -24,6 +23,7 @@ export interface JournalFilterRange {
  * Hook to reactively get journals with pagination and account enrichment
  */
 export function useJournals(
+  workplaceId: string,
   pageSize: number = AppConfig.defaults.journalPageSize,
   dateRange?: { startDate: number; endDate: number },
   searchQuery?: string,
@@ -82,6 +82,7 @@ export function useJournals(
         displayType: range?.displayType,
       };
       return journalService.observeEnrichedJournals(
+        workplaceId,
         limit,
         range as any,
         query,
@@ -89,7 +90,7 @@ export function useJournals(
         effectiveOptions,
       );
     },
-    [stableStatus],
+    [stableStatus, workplaceId],
   );
 
   const {
@@ -114,20 +115,11 @@ export function useJournals(
   return { journals, isLoading, isLoadingMore, hasMore, loadMore, version };
 }
 
-/**
- * Custom hook to get reactively updated transactions for an account
- *
- * Note: This hook uses repository-owned enriched observables to react to account changes.
- */
-export function useAccountTransactions(
-  accountId: string,
-  pageSize: number = AppConfig.defaults.journalPageSize,
-  dateRange?: { startDate: number; endDate: number },
+export function useJournalTransactions(
+  workplaceId: string,
+  journalId: string | null,
+  includeDeleted: boolean = false,
 ) {
-  return useLedgerTransactionsForAccount(accountId, pageSize, dateRange);
-}
-
-export function useJournalTransactions(journalId: string | null, includeDeleted: boolean = false) {
   const {
     data: transactions,
     isLoading,
@@ -135,9 +127,13 @@ export function useJournalTransactions(journalId: string | null, includeDeleted:
   } = useObservable(
     () =>
       journalId
-        ? transactionService.observeTransactionsWithAccountInfo(journalId, includeDeleted)
+        ? transactionService.observeTransactionsWithAccountInfo(
+            workplaceId,
+            journalId,
+            includeDeleted,
+          )
         : of([] as DisplayTransaction[]),
-    [journalId, includeDeleted],
+    [workplaceId, journalId, includeDeleted],
     [] as DisplayTransaction[],
   );
 

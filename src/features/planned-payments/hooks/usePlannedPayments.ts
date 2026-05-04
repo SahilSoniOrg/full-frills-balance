@@ -3,17 +3,17 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { useObservable } from '@/src/hooks/useObservable';
 import { useMemo } from 'react';
 
-export function usePlannedPayments() {
-    const observable = useMemo(() => plannedPaymentRepository.observeAll(), []);
+export function usePlannedPayments(workplaceId: string) {
+  const observable = useMemo(() => plannedPaymentRepository.observeAll(workplaceId), [workplaceId]);
 
-    const { data: items, isLoading } = useObservable<PlannedPayment[]>(
-        () => observable,
-        [],
-        [] as PlannedPayment[]
-    );
+  const { data: items, isLoading } = useObservable<PlannedPayment[]>(
+    () => observable,
+    [workplaceId],
+    [] as PlannedPayment[],
+  );
 
-    return {
-        items,
-        isLoading,
-    };
+  return {
+    items,
+    isLoading,
+  };
 }

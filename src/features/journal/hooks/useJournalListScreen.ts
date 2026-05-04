@@ -1,8 +1,8 @@
-import { useCallback, useMemo } from 'react';
-import { AppNavigation } from '@/src/utils/navigation';
-import { useJournalListViewModel } from './useJournalListViewModel';
-import { mapJournalToCardProps } from '../utils/journalUiUtils';
 import { EnrichedJournal } from '@/src/types/domain';
+import { AppNavigation } from '@/src/utils/navigation';
+import { useCallback, useMemo } from 'react';
+import { mapJournalToCardProps } from '../utils/journalUiUtils';
+import { useJournalListViewModel } from './useJournalListViewModel';
 
 /**
  * Helper hook that encapsulates the common pattern of using JournalListViewModel
@@ -10,8 +10,11 @@ import { EnrichedJournal } from '@/src/types/domain';
  *
  * Eliminates duplication between Dashboard and Journal screens.
  */
-export function useJournalListScreen(config: Parameters<typeof useJournalListViewModel>[0]) {
-  const vm = useJournalListViewModel(config);
+export function useJournalListScreen(
+  config: Parameters<typeof useJournalListViewModel>[0],
+  workplaceId: string,
+) {
+  const vm = useJournalListViewModel(config, workplaceId);
 
   const onPlannedJournalPress = useCallback((item: EnrichedJournal) => {
     if (item.plannedPaymentId) {

@@ -108,6 +108,7 @@ describe('liability flow issue', () => {
       [],
       [cashAccount, creditCardAccount],
       'USD',
+      'test-wp',
     );
 
     console.log(

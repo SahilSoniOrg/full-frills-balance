@@ -46,12 +46,16 @@ export interface SubmitJournalResult {
 }
 
 export class JournalService {
-  async updateJournal(journalId: string, data: CreateJournalData): Promise<Journal> {
-    const originalJournal = await journalRepository.find(journalId);
+  async updateJournal(
+    journalId: string,
+    data: CreateJournalData,
+    workplaceId: string,
+  ): Promise<Journal> {
+    const originalJournal = await journalRepository.find(journalId, workplaceId);
     if (!originalJournal) throw new Error('Journal not found');
 
-    const originalTransactions = await transactionRepository.findByJournal(journalId);
-    const prepared = await prepareJournalData(data);
+    const originalTransactions = await transactionRepository.findByJournal(journalId, workplaceId);
+    const prepared = await prepareJournalData(data, workplaceId);
 
     // Build the audit op inside the synchronous callback creator.
     const extraOpCreator = () => {
@@ -81,6 +85,7 @@ export class JournalService {
 
     // updateJournalWithTransactions opens its own write — pass the creator.
     const journal = await journalRepository.updateJournalWithTransactions(
+      workplaceId,
       journalId,
       {
         ...data,
@@ -99,13 +104,13 @@ export class JournalService {
       ...originalAccountIds,
     ]);
     const rebuildFromDate = Math.min(originalJournal.journalDate, data.journalDate);
-    rebuildQueueService.enqueueMany(allAccountsToRebuild, rebuildFromDate);
+    rebuildQueueService.enqueueMany(allAccountsToRebuild, rebuildFromDate, workplaceId);
 
     return journal;
   }
 
-  async deleteJournal(journalId: string): Promise<void> {
-    const prepared = await journalRepository.fetchJournalForDeletion(journalId);
+  async deleteJournal(journalId: string, workplaceId: string): Promise<void> {
+    const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) return;
 
     const { journal, transactions } = prepared;
@@ -142,11 +147,11 @@ export class JournalService {
     });
 
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
+    rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
   }
 
-  async recoverJournal(journalId: string): Promise<Journal> {
-    const prepared = await journalRepository.fetchJournalForDeletion(journalId);
+  async recoverJournal(journalId: string, workplaceId: string): Promise<Journal> {
+    const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) throw new Error('Journal not found');
 
     const { journal, transactions } = prepared;
@@ -179,39 +184,46 @@ export class JournalService {
     });
 
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, journal.journalDate);
+    rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
 
     return journal;
   }
 
-  async duplicateJournal(journalId: string): Promise<Journal> {
-    const journal = await journalRepository.find(journalId);
+  async duplicateJournal(journalId: string, workplaceId: string): Promise<Journal> {
+    const journal = await journalRepository.find(journalId, workplaceId);
     if (!journal) throw new Error('Journal not found');
 
-    const transactions = await transactionRepository.findByJournal(journalId);
+    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
 
-    return ledgerWriteService.createJournal({
-      journalDate: Date.now(),
-      description: journal.description ? `${journal.description}` : undefined,
-      currencyCode: journal.currencyCode,
-      transactions: transactions.map(tx => ({
-        accountId: tx.accountId,
-        amount: tx.amount,
-        transactionType: tx.transactionType as TransactionType,
-        notes: tx.notes,
-        exchangeRate: tx.exchangeRate,
-      })),
-    });
+    return ledgerWriteService.createJournal(
+      {
+        journalDate: Date.now(),
+        description: journal.description ? `${journal.description}` : undefined,
+        currencyCode: journal.currencyCode,
+        transactions: transactions.map(tx => ({
+          accountId: tx.accountId,
+          amount: tx.amount,
+          transactionType: tx.transactionType as TransactionType,
+          notes: tx.notes,
+          exchangeRate: tx.exchangeRate,
+        })),
+      },
+      journal.workplaceId,
+    );
   }
 
   async createReversalJournal(
     originalJournalId: string,
     reason: string = 'Reversal',
+    workplaceId: string,
   ): Promise<Journal> {
-    const originalJournal = await journalRepository.find(originalJournalId);
+    const originalJournal = await journalRepository.find(originalJournalId, workplaceId);
     if (!originalJournal) throw new Error('Original journal not found');
 
-    const originalTransactions = await transactionRepository.findByJournal(originalJournalId);
+    const originalTransactions = await transactionRepository.findByJournal(
+      originalJournalId,
+      workplaceId,
+    );
     const reversedTxs = originalTransactions.map(tx => ({
       accountId: tx.accountId,
       amount: tx.amount,
@@ -223,22 +235,25 @@ export class JournalService {
       exchangeRate: tx.exchangeRate || 1,
     }));
 
-    const reversalJournal = await ledgerWriteService.createJournal({
-      journalDate: Date.now(),
-      description: `Reversal of: ${originalJournal.description || originalJournalId} (${reason})`,
-      currencyCode: originalJournal.currencyCode,
-      transactions: reversedTxs,
-      originalJournalId,
-    });
+    const reversalJournal = await ledgerWriteService.createJournal(
+      {
+        journalDate: Date.now(),
+        description: `Reversal of: ${originalJournal.description || originalJournalId} (${reason})`,
+        currencyCode: originalJournal.currencyCode,
+        transactions: reversedTxs,
+        originalJournalId,
+      },
+      originalJournal.workplaceId,
+    );
 
     // Link them
-    await journalRepository.markReversed(originalJournalId, reversalJournal.id);
+    await journalRepository.markReversed(originalJournalId, reversalJournal.id, workplaceId);
 
     return reversalJournal;
   }
 
-  async postJournal(journalId: string): Promise<Journal> {
-    const journal = await journalRepository.find(journalId);
+  async postJournal(journalId: string, workplaceId: string): Promise<Journal> {
+    const journal = await journalRepository.find(journalId, workplaceId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.PLANNED) {
       throw new Error(
@@ -247,7 +262,7 @@ export class JournalService {
     }
 
     const postTime = Date.now();
-    const transactions = await transactionRepository.findByJournal(journalId);
+    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
 
     // M-3 fix evolved: status-only patch + date propagation (F-14 fix).
     // Update both the journal date and all associated transaction dates to "now".
@@ -255,6 +270,7 @@ export class JournalService {
 
     // Prepare metadata op BEFORE the write block (read-only work outside the lock).
     const metadataOp = await journalRepository.prepareMetadataPatch(
+      workplaceId,
       journalId,
       { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
       MetadataSources.MANUAL_POST,
@@ -279,26 +295,29 @@ export class JournalService {
     });
 
     // 2. Audit log
-    await auditService.log({
-      entityType: 'journal',
-      entityId: journalId,
-      action: AuditAction.UPDATE,
-      changes: {
-        before: { status: JournalStatus.PLANNED, journalDate: originalDate },
-        after: { status: JournalStatus.POSTED, journalDate: postTime },
+    await auditService.log(
+      {
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { status: JournalStatus.PLANNED, journalDate: originalDate },
+          after: { status: JournalStatus.POSTED, journalDate: postTime },
+        },
       },
-    });
+      workplaceId,
+    );
 
     // 3. Rebuild balances for the accounts involved in this journal
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, postTime);
+    rebuildQueueService.enqueueMany(accountIds, postTime, workplaceId);
 
     logger.info(`Manually posted journal ${journalId} at ${new Date(postTime).toLocaleString()}`);
     return journal;
   }
 
-  async revertToPlanned(journalId: string): Promise<Journal> {
-    const journal = await journalRepository.find(journalId);
+  async revertToPlanned(journalId: string, workplaceId: string): Promise<Journal> {
+    const journal = await journalRepository.find(journalId, workplaceId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.POSTED && journal.status !== JournalStatus.SKIPPED) {
       throw new Error(
@@ -310,7 +329,7 @@ export class JournalService {
     let revertTime: number;
 
     // Try to recover original scheduled date from metadata
-    const metadata = await journalRepository.findMetadataByJournalId(journalId);
+    const metadata = await journalRepository.findMetadataByJournalId(journalId, workplaceId);
     if (metadata?.metadataJson) {
       try {
         const json = safeParseJSON<Record<string, any>>(metadata.metadataJson, {});
@@ -333,7 +352,7 @@ export class JournalService {
       revertTime = date.getTime();
     }
 
-    const transactions = await transactionRepository.findByJournal(journalId);
+    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
 
     await database.write(async () => {
       await journal.update((record: Journal) => {
@@ -351,19 +370,26 @@ export class JournalService {
     });
 
     // 2. Audit log
-    await auditService.log({
-      entityType: 'journal',
-      entityId: journalId,
-      action: AuditAction.UPDATE,
-      changes: {
-        before: { status: JournalStatus.POSTED, journalDate: currentJournalDate },
-        after: { status: JournalStatus.PLANNED, journalDate: revertTime },
+    await auditService.log(
+      {
+        entityType: 'journal',
+        entityId: journalId,
+        action: AuditAction.UPDATE,
+        changes: {
+          before: { status: JournalStatus.POSTED, journalDate: currentJournalDate },
+          after: { status: JournalStatus.PLANNED, journalDate: revertTime },
+        },
       },
-    });
+      workplaceId,
+    );
 
     // 3. Rebuild balances for the accounts involved (for both old and new dates)
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
-    rebuildQueueService.enqueueMany(accountIds, Math.min(currentJournalDate, revertTime));
+    rebuildQueueService.enqueueMany(
+      accountIds,
+      Math.min(currentJournalDate, revertTime),
+      workplaceId,
+    );
 
     logger.info(
       `Unposted journal ${journalId}, reverted to PLANNED at ${new Date(revertTime).toLocaleDateString()}`,
@@ -386,6 +412,7 @@ export class JournalService {
     smsSender?: string;
     rawSmsBody?: string;
     mode?: 'simple' | 'advanced' | 'import';
+    workplaceId: string;
   }): Promise<SubmitJournalResult> {
     const {
       lines,
@@ -399,6 +426,7 @@ export class JournalService {
       smsSender,
       rawSmsBody,
       mode = 'advanced',
+      workplaceId,
     } = params;
 
     // 1. Basic Content Validation
@@ -505,7 +533,7 @@ export class JournalService {
       };
 
       if (journalId) {
-        const updatedJournal = await this.updateJournal(journalId, journalData);
+        const updatedJournal = await this.updateJournal(journalId, journalData, workplaceId);
         analytics.logTransactionCreated(mode, 'update', currencyCode);
         analytics.trackFeatureUsage('journal', 'update', {
           mode,
@@ -514,7 +542,7 @@ export class JournalService {
         });
         return { success: true, action: 'updated', journalId: updatedJournal.id };
       } else {
-        const createdJournal = await ledgerWriteService.createJournal(journalData);
+        const createdJournal = await ledgerWriteService.createJournal(journalData, workplaceId);
         analytics.logTransactionCreated(mode, 'create', currencyCode);
         analytics.trackFeatureUsage('journal', 'create', {
           mode,
@@ -543,6 +571,7 @@ export class JournalService {
    * Uses a reactive pipeline to enrich journals with account info without manual caching.
    */
   observeEnrichedJournals(
+    workplaceId: string,
     limit: number,
     dateRange?: AccountDateRange & { accountIds?: string[] },
     searchQuery?: string,
@@ -550,6 +579,7 @@ export class JournalService {
     options?: { minAmount?: number; maxAmount?: number; displayType?: string },
   ) {
     const clauses: any[] = [
+      Q.where('workplace_id', workplaceId),
       Q.where('deleted_at', Q.eq(null)),
       Q.where('status', Q.oneOf(status || [...ACTIVE_JOURNAL_STATUSES])),
       Q.sortBy('journal_date', 'desc'),
@@ -626,6 +656,7 @@ export class JournalService {
 
         return transactionRepository
           .transactionsQuery(
+            Q.where('workplace_id', workplaceId),
             Q.where('journal_id', Q.oneOf(journalIds)),
             Q.where('deleted_at', Q.eq(null)),
           )
@@ -643,7 +674,7 @@ export class JournalService {
     const accounts$ = accountIds$.pipe(
       switchMap(accountIds => {
         if (accountIds.length === 0) return of([] as Account[]);
-        return accountRepository.observeByIds(accountIds);
+        return accountRepository.observeByIds(accountIds, workplaceId);
       }),
     );
 

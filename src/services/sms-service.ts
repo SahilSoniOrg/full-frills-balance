@@ -163,34 +163,41 @@ class SmsService {
   }
 
   async scanRecentSmsPage(
+    workplaceId: string,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
-    const importedCount = await this.scanInbox(pageSize);
+    const importedCount = await this.scanInbox(workplaceId, pageSize);
     return { cursor: pageSize, importedCount };
   }
 
   async scanOlderSmsPage(
     cursor: number,
+    workplaceId: string,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
     const nextCursor = cursor + pageSize;
-    const importedCount = await this.scanInbox(nextCursor);
+    const importedCount = await this.scanInbox(workplaceId, nextCursor);
     return { cursor: nextCursor, importedCount };
   }
 
   async refreshLatestSms(
+    workplaceId: string,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
-    const importedCount = await this.scanInbox(pageSize);
+    const importedCount = await this.scanInbox(workplaceId, pageSize);
     return { cursor: pageSize, importedCount };
   }
 
-  async processUnprocessedSms(): Promise<number> {
-    return this.scanInbox(AppConfig.pagination.smsImportScanLimit);
+  async processUnprocessedSms(workplaceId: string): Promise<number> {
+    return this.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
   }
 
-  observeInbox(limit: number, filter?: SmsInboxFilterOptions) {
-    const clauses: any[] = [Q.sortBy('sms_date', Q.desc), Q.take(limit)];
+  observeInbox(workplaceId: string, limit: number, filter?: SmsInboxFilterOptions) {
+    const clauses: any[] = [
+      Q.where('workplace_id', workplaceId),
+      Q.sortBy('sms_date', Q.desc),
+      Q.take(limit),
+    ];
     const statuses = this.getProcessingStatusesForFilter(filter?.status);
     if (statuses.length > 0) {
       clauses.unshift(Q.where('processing_status', Q.oneOf(statuses)));
@@ -213,9 +220,12 @@ class SmsService {
       ]);
   }
 
-  observeUnprocessedCount(): Observable<number> {
+  observeUnprocessedCount(workplaceId: string): Observable<number> {
     return this.inbox
-      .query(Q.where('processing_status', SmsProcessingStatus.PENDING))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('processing_status', SmsProcessingStatus.PENDING),
+      )
       .observeCount();
   }
 
@@ -284,7 +294,7 @@ class SmsService {
     return items.filter(item => this.matchesPreviewRule(item, previewInput)).slice(0, 5);
   }
 
-  async getRuleSuggestions(): Promise<SmsRuleSuggestion[]> {
+  async getRuleSuggestions(workplaceId: string): Promise<SmsRuleSuggestion[]> {
     const existingRules = await this.rules.query().fetch();
     const records = await this.inbox
       .query(
@@ -329,7 +339,7 @@ class SmsService {
     const suggestions: SmsRuleSuggestion[] = [];
     for (const group of grouped.values()) {
       if (group.count < 2 || group.journalIds.length < 2) continue;
-      const suggestion = await this.buildSuggestionFromHistory(group);
+      const suggestion = await this.buildSuggestionFromHistory(group, workplaceId);
       if (!suggestion) continue;
 
       const alreadyExists = existingRules.some(
@@ -475,7 +485,7 @@ class SmsService {
     });
   }
 
-  private async scanInbox(limit: number): Promise<number> {
+  private async scanInbox(workplaceId: string, limit: number): Promise<number> {
     const start = Date.now();
     const messages = await this.getLatestMessages(limit);
     if (messages.length === 0) {
@@ -500,15 +510,18 @@ class SmsService {
     const fingerprints = parsedMessages.map(m => m.fingerprint);
 
     const [journalsById, journalsByFingerprint] = await Promise.all([
-      journalRepository.findJournalsByOriginalSmsIds(messageIds),
-      journalRepository.findJournalsBySmsFingerprints(fingerprints),
+      journalRepository.findJournalsByOriginalSmsIds(messageIds, workplaceId),
+      journalRepository.findJournalsBySmsFingerprints(fingerprints, workplaceId),
     ]);
 
     const parsedWithAmounts = parsedMessages.filter(
       m => m.parsed.parseStatus === SmsParseStatus.PARSED && m.parsed.amount,
     );
 
-    const allCandidateJournals = await this.findManyDuplicateCandidates(parsedWithAmounts);
+    const allCandidateJournals = await this.findManyDuplicateCandidates(
+      parsedWithAmounts,
+      workplaceId,
+    );
 
     let importedCount = 0;
     const allOps: Model[] = [];
@@ -540,6 +553,7 @@ class SmsService {
         fingerprint,
         existingRecord,
         nextStatus,
+        workplaceId,
         exactJournal?.id || fingerprintJournal?.id,
         duplicate,
       );
@@ -564,14 +578,14 @@ class SmsService {
       await database.write(async () => {
         for (let i = 0; i < allOps.length; i += SMS_CONFIG.batchOpChunkSize) {
           const chunk = allOps.slice(i, i + SMS_CONFIG.batchOpChunkSize);
-          await database.batch(...chunk);
+          await database.batch(chunk);
         }
       });
 
       if (allAccountsToRebuild.size > 0) {
         // We use the latest message date as a heuristic for rebuild start
         const latestDate = Math.max(...messages.map(m => m.date));
-        rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate);
+        rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate, workplaceId);
       }
     }
 
@@ -586,6 +600,7 @@ class SmsService {
 
   private async findManyDuplicateCandidates(
     parsedItems: { message: SmsMessage; parsed: ParsedTransaction }[],
+    workplaceId: string,
   ): Promise<Map<string, DuplicateMatch>> {
     if (parsedItems.length === 0) return new Map();
 
@@ -597,12 +612,15 @@ class SmsService {
       Math.max(...parsedItems.map(p => p.message.date)) + DUPLICATE_CONFIG.dayWindowMs;
 
     // Fetch all journals that match any of the amounts and are within the date range
-    const journals = await journalRepository.findNearbyJournals({
-      centerDate: (minDate + maxDate) / 2,
-      windowMs: (maxDate - minDate) / 2,
-      amounts,
-      limit: 100,
-    });
+    const journals = await journalRepository.findNearbyJournals(
+      {
+        centerDate: (minDate + maxDate) / 2,
+        windowMs: (maxDate - minDate) / 2,
+        amounts,
+        limit: 100,
+      },
+      workplaceId,
+    );
 
     if (journals.length === 0) return results;
 
@@ -686,42 +704,45 @@ class SmsService {
       const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
       const isExpense = parsed.type === 'debit';
 
-      const { journal, ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal({
-        journalDate: parsed.date || Date.now(),
-        description: parsed.merchant
-          ? `Auto-Posted: ${parsed.merchant}`
-          : 'Auto-Posted SMS Transaction',
-        currencyCode,
-        status: JournalStatus.POSTED,
-        metadata: {
-          importSource: 'sms',
-          originalSmsId: parsed.id,
-          originalSmsSender: parsed.address,
-          originalSmsBody: parsed.rawBody,
-          metadataJson: JSON.stringify({
-            smsFingerprint: record.smsFingerprint,
-            parsedAmount: parsed.amount,
-            parsedCurrencyCode: parsed.currencyCode || null,
-            parsedMerchant: parsed.merchant || null,
-            referenceNumber: parsed.referenceNumber || null,
-            accountSource: parsed.accountSource || null,
-          }),
+      const { journal, ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal(
+        {
+          journalDate: parsed.date || Date.now(),
+          description: parsed.merchant
+            ? `Auto-Posted: ${parsed.merchant}`
+            : 'Auto-Posted SMS Transaction',
+          currencyCode,
+          status: JournalStatus.POSTED,
+          metadata: {
+            importSource: 'sms',
+            originalSmsId: parsed.id,
+            originalSmsSender: parsed.address,
+            originalSmsBody: parsed.rawBody,
+            metadataJson: JSON.stringify({
+              smsFingerprint: record.smsFingerprint,
+              parsedAmount: parsed.amount,
+              parsedCurrencyCode: parsed.currencyCode || null,
+              parsedMerchant: parsed.merchant || null,
+              referenceNumber: parsed.referenceNumber || null,
+              accountSource: parsed.accountSource || null,
+            }),
+          },
+          transactions: [
+            {
+              accountId: definition.actions.sourceAccountId,
+              amount: parsed.amount,
+              transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
+              currencyCode,
+            },
+            {
+              accountId: definition.actions.categoryAccountId,
+              amount: parsed.amount,
+              transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
+              currencyCode,
+            },
+          ],
         },
-        transactions: [
-          {
-            accountId: definition.actions.sourceAccountId,
-            amount: parsed.amount,
-            transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
-            currencyCode,
-          },
-          {
-            accountId: definition.actions.categoryAccountId,
-            amount: parsed.amount,
-            transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
-            currencyCode,
-          },
-        ],
-      });
+        rule.workplaceId,
+      );
 
       // Link SMS to Journal
       const linkOp = record.prepareUpdate(entry => {
@@ -743,6 +764,7 @@ class SmsService {
     smsFingerprint: string,
     existing: SmsInboxRecord | null,
     processingStatus: SmsProcessingStatus,
+    workplaceId: string,
     linkedJournalId?: string,
     duplicate?: DuplicateMatch,
   ): { record: SmsInboxRecord; ops: Model[] } {
@@ -777,6 +799,7 @@ class SmsService {
         entry.parseConfidence = parsed.confidence;
         entry.parseReason = parsed.parseReason;
         entry.metadataJson = metadataJson;
+        entry.workplaceId = workplaceId;
         entry.lastScannedAt = now;
         entry.processedAt = this.isProcessedStatus(processingStatus) ? now : existing.processedAt;
       });
@@ -784,6 +807,7 @@ class SmsService {
     }
 
     const created = this.inbox.prepareCreate(entry => {
+      entry.workplaceId = workplaceId;
       entry.deviceSmsId = sms.id;
       entry.senderAddress = sms.address;
       entry.rawBody = sms.body;
@@ -1209,14 +1233,17 @@ class SmsService {
     return `${normalizedSender}::${normalizedBody.slice(0, 160)}::${dateBucket}`;
   }
 
-  private async buildSuggestionFromHistory(group: {
-    senderAddress: string;
-    merchant?: string;
-    accountSource?: string;
-    journalIds: string[];
-    count: number;
-  }): Promise<SmsRuleSuggestion | null> {
-    const journals = await journalRepository.findByIds(group.journalIds.slice(0, 10));
+  private async buildSuggestionFromHistory(
+    group: {
+      senderAddress: string;
+      merchant?: string;
+      accountSource?: string;
+      journalIds: string[];
+      count: number;
+    },
+    workplaceId: string,
+  ): Promise<SmsRuleSuggestion | null> {
+    const journals = await journalRepository.findByIds(group.journalIds.slice(0, 10), workplaceId);
     const accountIds = new Set<string>();
     const journalTransactions = new Map<string, any[]>();
 
@@ -1229,7 +1256,7 @@ class SmsService {
       transactions.forEach((tx: Transaction) => accountIds.add(tx.accountId));
     }
 
-    const accounts = await accountRepository.findAllByIds(Array.from(accountIds));
+    const accounts = await accountRepository.findAllByIds(Array.from(accountIds), workplaceId);
     const accountMap = new Map(accounts.map(account => [account.id, account]));
     const sourceCounts = new Map<string, number>();
     const categoryCounts = new Map<string, number>();

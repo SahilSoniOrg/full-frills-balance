@@ -16,7 +16,6 @@ import Currency from '@/src/data/models/Currency';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import { JournalDisplayType } from '@/src/types/domain';
 import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
@@ -28,6 +27,7 @@ import SmsInboxRecord, {
   SmsProcessingStatus,
 } from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import { JournalDisplayType } from '@/src/types/domain';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
 export interface ImportedAccount {
@@ -312,7 +312,7 @@ function toSmsDirection(value: string): SmsDirection {
 }
 
 export class ImportRepository {
-  async batchInsert(data: BatchImportData): Promise<void> {
+  async batchInsert(workplaceId: string, data: BatchImportData): Promise<void> {
     await database.write(async () => {
       const accountsCollection = database.collections.get<Account>('accounts');
       const journalsCollection = database.collections.get<Journal>('journals');
@@ -335,6 +335,7 @@ export class ImportRepository {
       const accountPrepares = data.accounts.map(acc =>
         accountsCollection.prepareCreate(record => {
           record._raw.id = acc.id;
+          record.workplaceId = workplaceId;
           record.name = acc.name;
           record.accountType = toAccountType(acc.accountType);
           record.accountSubtype = pickImportedSubtype(acc);
@@ -353,6 +354,7 @@ export class ImportRepository {
       const journalPrepares = data.journals.map(j =>
         journalsCollection.prepareCreate(record => {
           record._raw.id = j.id;
+          record.workplaceId = workplaceId;
           record.journalDate = j.journalDate;
           record.description = j.description;
           record.notes = j.notes;
@@ -374,6 +376,7 @@ export class ImportRepository {
       const transactionPrepares = data.transactions.map(t =>
         transactionsCollection.prepareCreate(record => {
           record._raw.id = t.id;
+          record.workplaceId = workplaceId;
           record.journalId = t.journalId;
           record.accountId = t.accountId;
           record.amount = t.amount;
@@ -392,6 +395,7 @@ export class ImportRepository {
       const auditLogPrepares = (data.auditLogs || []).map(log =>
         auditLogsCollection.prepareCreate(record => {
           record._raw.id = log.id;
+          record.workplaceId = workplaceId;
           record.entityType = log.entityType;
           record.entityId = log.entityId;
           record.action = toAuditAction(log.action);
@@ -405,6 +409,7 @@ export class ImportRepository {
       const budgetPrepares = (data.budgets || []).map(b =>
         database.collections.get<Budget>('budgets').prepareCreate(record => {
           record._raw.id = b.id;
+          record.workplaceId = workplaceId;
           record.name = b.name;
           record.amount = b.amount;
           record.currencyCode = b.currencyCode;
@@ -419,6 +424,7 @@ export class ImportRepository {
       const budgetScopePrepares = (data.budgetScopes || []).map(bs =>
         database.collections.get<BudgetScope>('budget_scopes').prepareCreate(record => {
           record._raw.id = bs.id;
+          record.workplaceId = workplaceId;
           (record as any)._raw.budget_id = bs.budgetId;
           (record as any)._raw.account_id = bs.accountId;
           record._raw._status = 'synced';
@@ -427,8 +433,26 @@ export class ImportRepository {
         }),
       );
 
-      const currencyPrepares = (data.currencies || []).map(c =>
-        currenciesCollection.prepareCreate(record => {
+      // Global tables (currencies, exchange_rates) require upsert logic to avoid UNIQUE constraint violations.
+      const existingCurrencies = await currenciesCollection.query().fetch();
+      const existingRates = await exchangeRatesCollection.query().fetch();
+      const currencyMap = new Map(existingCurrencies.map(c => [c.id, c]));
+      const rateMap = new Map(existingRates.map(r => [r.id, r]));
+
+      const currencyPrepares = (data.currencies || []).map(c => {
+        const existing = currencyMap.get(c.id);
+        if (existing) {
+          return existing.prepareUpdate(record => {
+            record.code = c.code;
+            record.symbol = c.symbol;
+            record.name = c.name;
+            record.precision = c.precision;
+            record._raw._status = 'synced';
+            if (c.updatedAt) (record as any)._raw.updated_at = c.updatedAt;
+            if (c.deletedAt) (record as any)._raw.deleted_at = c.deletedAt;
+          });
+        }
+        return currenciesCollection.prepareCreate(record => {
           record._raw.id = c.id;
           record.code = c.code;
           record.symbol = c.symbol;
@@ -438,11 +462,23 @@ export class ImportRepository {
           if (c.createdAt) (record as any)._raw.created_at = c.createdAt;
           if (c.updatedAt) (record as any)._raw.updated_at = c.updatedAt;
           if (c.deletedAt) (record as any)._raw.deleted_at = c.deletedAt;
-        }),
-      );
+        });
+      });
 
-      const exchangeRatePrepares = (data.exchangeRates || []).map(er =>
-        exchangeRatesCollection.prepareCreate(record => {
+      const exchangeRatePrepares = (data.exchangeRates || []).map(er => {
+        const existing = rateMap.get(er.id);
+        if (existing) {
+          return existing.prepareUpdate(record => {
+            record.fromCurrency = er.fromCurrency;
+            record.toCurrency = er.toCurrency;
+            record.rate = er.rate;
+            record.effectiveDate = er.effectiveDate;
+            record.source = er.source;
+            record._raw._status = 'synced';
+            if (er.updatedAt) (record as any)._raw.updated_at = er.updatedAt;
+          });
+        }
+        return exchangeRatesCollection.prepareCreate(record => {
           record._raw.id = er.id;
           record.fromCurrency = er.fromCurrency;
           record.toCurrency = er.toCurrency;
@@ -452,12 +488,13 @@ export class ImportRepository {
           record._raw._status = 'synced';
           if (er.createdAt) (record as any)._raw.created_at = er.createdAt;
           if (er.updatedAt) (record as any)._raw.updated_at = er.updatedAt;
-        }),
-      );
+        });
+      });
 
       const accountMetadataPrepares = (data.accountMetadata || []).map(metadata =>
         accountMetadataCollection.prepareCreate(record => {
           record._raw.id = metadata.id;
+          record.workplaceId = workplaceId;
           (record as any)._raw.account_id = metadata.accountId;
           record.statementDay = metadata.statementDay;
           record.dueDay = metadata.dueDay;
@@ -479,6 +516,7 @@ export class ImportRepository {
       const plannedPaymentPrepares = (data.plannedPayments || []).map(pp =>
         plannedPaymentsCollection.prepareCreate(record => {
           record._raw.id = pp.id;
+          record.workplaceId = workplaceId;
           record.name = pp.name;
           record.description = pp.description;
           record.amount = pp.amount;
@@ -504,6 +542,7 @@ export class ImportRepository {
       const journalMetadataPrepares = (data.journalMetadata || []).map(meta =>
         journalMetadataCollection.prepareCreate(record => {
           record._raw.id = meta.id;
+          record.workplaceId = workplaceId;
           (record as any)._raw.journal_id = meta.journalId;
           record.importSource = meta.importSource;
           record.originalSmsId = meta.originalSmsId;
@@ -519,6 +558,7 @@ export class ImportRepository {
       const smsAutoPostRulePrepares = (data.smsAutoPostRules || []).map(rule =>
         smsAutoPostRulesCollection.prepareCreate(record => {
           record._raw.id = rule.id;
+          record.workplaceId = workplaceId;
           record.senderMatch = rule.senderMatch;
           record.bodyMatch = rule.bodyMatch;
           record.conditionsJson = rule.conditionsJson;
@@ -536,6 +576,7 @@ export class ImportRepository {
       const smsInboxPrepares = (data.smsInboxRecords || []).map(sms =>
         smsInboxCollection.prepareCreate(record => {
           record._raw.id = sms.id;
+          record.workplaceId = workplaceId;
           record.deviceSmsId = sms.deviceSmsId;
           record.senderAddress = sms.senderAddress;
           record.rawBody = sms.rawBody || '';
@@ -567,6 +608,7 @@ export class ImportRepository {
       const balanceSnapshotPrepares = (data.balanceSnapshots || []).map(bs =>
         balanceSnapshotsCollection.prepareCreate(record => {
           record._raw.id = bs.id;
+          record.workplaceId = workplaceId;
           (record as any)._raw.account_id = bs.accountId;
           (record as any)._raw.transaction_id = bs.transactionId;
           record.transactionDate = bs.transactionDate;
@@ -596,7 +638,7 @@ export class ImportRepository {
       ];
 
       if (operations.length > 0) {
-        await database.batch(...operations);
+        await database.batch(operations);
       }
     });
   }
@@ -605,12 +647,15 @@ export class ImportRepository {
    * Apply incremental changes (created/updated/deleted) for sync.
    * Preserves tombstones by soft-deleting records.
    */
-  async applyChanges(data: {
-    accounts: ChangeSet<ImportedAccount>;
-    journals: ChangeSet<ImportedJournal>;
-    transactions: ChangeSet<ImportedTransaction>;
-    auditLogs?: ChangeSet<ImportedAuditLog>;
-  }): Promise<void> {
+  async applyChanges(
+    workplaceId: string,
+    data: {
+      accounts: ChangeSet<ImportedAccount>;
+      journals: ChangeSet<ImportedJournal>;
+      transactions: ChangeSet<ImportedTransaction>;
+      auditLogs?: ChangeSet<ImportedAuditLog>;
+    },
+  ): Promise<void> {
     await database.write(async () => {
       const accountsCollection = database.collections.get<Account>('accounts');
       const journalsCollection = database.collections.get<Journal>('journals');
@@ -626,7 +671,9 @@ export class ImportRepository {
       ) => {
         if (records.length === 0) return;
         const ids = records.map(r => r.id);
-        const existing = await collection.query(Q.where('id', Q.oneOf(ids))).fetch();
+        const existing = await collection
+          .query(Q.where('id', Q.oneOf(ids)), Q.where('workplace_id', workplaceId))
+          .fetch();
         const existingById = new Map(existing.map(r => [r.id, r]));
 
         for (const rec of records) {
@@ -642,6 +689,7 @@ export class ImportRepository {
             ops.push(
               collection.prepareCreate((record: T) => {
                 record._raw.id = rec.id;
+                (record as any).workplaceId = workplaceId;
                 prepare(record, rec);
                 record._raw._status = 'synced';
               }) as T,
@@ -652,7 +700,9 @@ export class ImportRepository {
 
       const softDelete = async <T extends Model>(collection: Collection<T>, ids: string[]) => {
         if (ids.length === 0) return;
-        const existing = await collection.query(Q.where('id', Q.oneOf(ids))).fetch();
+        const existing = await collection
+          .query(Q.where('id', Q.oneOf(ids)), Q.where('workplace_id', workplaceId))
+          .fetch();
         const now = Date.now();
         for (const record of existing) {
           ops.push(
@@ -668,7 +718,9 @@ export class ImportRepository {
 
       const hardDelete = async <T extends Model>(collection: Collection<T>, ids: string[]) => {
         if (ids.length === 0) return;
-        const existing = await collection.query(Q.where('id', Q.oneOf(ids))).fetch();
+        const existing = await collection
+          .query(Q.where('id', Q.oneOf(ids)), Q.where('workplace_id', workplaceId))
+          .fetch();
         for (const record of existing) {
           ops.push(record.prepareDestroyPermanently());
         }

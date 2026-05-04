@@ -1,5 +1,6 @@
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
 import { usePlannedPayments } from '@/src/features/planned-payments/hooks/usePlannedPayments';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -8,7 +9,8 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function PlannedPaymentListView() {
-  const { items, isLoading } = usePlannedPayments();
+  const { workplaceId } = useWorkplace();
+  const { items, isLoading } = usePlannedPayments(workplaceId);
 
   if (isLoading && items.length === 0) {
     return (

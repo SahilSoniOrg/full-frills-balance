@@ -1,10 +1,10 @@
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
-import { JournalDisplayType } from '@/src/types/domain';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { JournalDisplayType } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
@@ -17,9 +17,12 @@ export interface PreparedJournalData {
   accountsToRebuild: Set<string>;
 }
 
-export async function prepareJournalData(data: CreateJournalData): Promise<PreparedJournalData> {
+export async function prepareJournalData(
+  data: CreateJournalData,
+  workplaceId: string,
+): Promise<PreparedJournalData> {
   const accountIds = [...new Set(data.transactions.map(t => t.accountId))];
-  const accounts = await accountRepository.findAllByIds(accountIds);
+  const accounts = await accountRepository.findAllByIds(accountIds, workplaceId);
   const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]));
 
   const accountPrecisions = new Map<string, number>();
@@ -67,6 +70,7 @@ export async function prepareJournalData(data: CreateJournalData): Promise<Prepa
   if (!isInactive) {
     for (const tx of roundedTransactions) {
       const latestTx = await transactionRepository.findLatestForAccountBeforeDate(
+        workplaceId,
         tx.accountId,
         data.journalDate,
       );

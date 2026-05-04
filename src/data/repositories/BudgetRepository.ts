@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { Q } from '@nozbe/watermelondb';
+import { map } from 'rxjs/operators';
 
 export interface BudgetInput {
   name: string;
@@ -30,40 +31,57 @@ export class BudgetRepository {
     return this.db.collections.get<BudgetScope>('budget_scopes');
   }
 
-  observeAllActive() {
+  observeAllActive(workplaceId: string) {
     return this.budgets
-      .query(Q.where('active', true), Q.sortBy('start_month', Q.desc))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('active', true),
+        Q.sortBy('start_month', Q.desc),
+      )
       .observeWithColumns(['name', 'amount', 'currency_code', 'start_month', 'active']);
   }
 
-  observeScopes(budgetId: string) {
-    return this.budgetScopes.query(Q.where('budget_id', budgetId)).observe();
+  observeScopes(workplaceId: string, budgetId: string) {
+    return this.budgetScopes
+      .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))
+      .observe();
   }
 
-  async getScopes(budgetId: string): Promise<BudgetScope[]> {
-    return await this.budgetScopes.query(Q.where('budget_id', budgetId)).fetch();
+  async getScopes(workplaceId: string, budgetId: string): Promise<BudgetScope[]> {
+    return await this.budgetScopes
+      .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))
+      .fetch();
   }
 
-  async getScopesByBudgetIds(budgetIds: string[]): Promise<BudgetScope[]> {
+  async getScopesByBudgetIds(workplaceId: string, budgetIds: string[]): Promise<BudgetScope[]> {
     if (budgetIds.length === 0) return [];
-    return await this.budgetScopes.query(Q.where('budget_id', Q.oneOf(budgetIds))).fetch();
+    return await this.budgetScopes
+      .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', Q.oneOf(budgetIds)))
+      .fetch();
   }
 
-  observeById(id: string) {
-    return this.budgets.findAndObserve(id);
+  observeById(workplaceId: string, id: string) {
+    return this.budgets
+      .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
+      .observe()
+      .pipe(map(budgets => budgets[0] || null));
   }
 
-  async find(id: string): Promise<Budget | null> {
+  async find(workplaceId: string, id: string): Promise<Budget | null> {
     try {
-      return await this.budgets.find(id);
+      const budgets = await this.budgets
+        .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
+        .fetch();
+      return budgets[0] || null;
     } catch {
       return null;
     }
   }
 
-  async create(data: BudgetInput, accountIds: string[]): Promise<Budget> {
+  async create(workplaceId: string, data: BudgetInput, accountIds: string[]): Promise<Budget> {
     return await this.db.write(async () => {
       const budget = await this.budgets.create(record => {
+        record.workplaceId = workplaceId;
         record.name = data.name;
         record.amount = data.amount;
         record.currencyCode = data.currencyCode;
@@ -81,6 +99,7 @@ export class BudgetRepository {
 
       const scopeCreates = accountIds.map(accountId =>
         this.budgetScopes.prepareCreate(scope => {
+          scope.workplaceId = workplaceId;
           scope.budget.set(budget);
           scope.account.id = accountId;
           scope.createdAt = new Date();
@@ -94,14 +113,22 @@ export class BudgetRepository {
   }
 
   async update(
+    workplaceId: string,
     budget: Budget,
     updates: Partial<BudgetInput>,
     accountIds: string[],
   ): Promise<Budget> {
     return await this.db.write(async () => {
-      const existingScopes = await this.budgetScopes.query(Q.where('budget_id', budget.id)).fetch();
+      const existingScopes = await this.budgetScopes
+        .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budget.id))
+        .fetch();
 
-      const updateOp = budget.prepareUpdate(record => {
+      //get budget to check it belongs to current workplaceId
+      const existingBudget = await this.find(workplaceId, budget.id);
+      if (!existingBudget) {
+        throw new Error('Budget not found');
+      }
+      const updateOp = existingBudget.prepareUpdate(record => {
         if (updates.name !== undefined) record.name = updates.name;
         if (updates.amount !== undefined) record.amount = updates.amount;
         if (updates.currencyCode !== undefined) record.currencyCode = updates.currencyCode;
@@ -123,6 +150,7 @@ export class BudgetRepository {
 
       const addOps = toAdd.map(accountId =>
         this.budgetScopes.prepareCreate(scope => {
+          scope.workplaceId = workplaceId;
           scope.budget.set(budget);
           scope.account.id = accountId;
           scope.createdAt = new Date();
@@ -137,8 +165,13 @@ export class BudgetRepository {
     });
   }
 
-  async delete(budget: Budget): Promise<void> {
+  async delete(workplaceId: string, budget: Budget): Promise<void> {
     return await this.db.write(async () => {
+      //get budget to check it belongs to current workplaceId
+      const existingBudget = await this.find(workplaceId, budget.id);
+      if (!existingBudget) {
+        throw new Error('Budget not found');
+      }
       const scopes = await this.budgetScopes.query(Q.where('budget_id', budget.id)).fetch();
       const removeScopes = scopes.map(s => s.prepareDestroyPermanently());
       const removeBudget = budget.prepareDestroyPermanently();

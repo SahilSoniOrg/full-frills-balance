@@ -10,22 +10,24 @@ import { auditTime, combineLatest, distinctUntilChanged, map, of, switchMap } fr
 export class LedgerReadService {
   observeEnrichedForAccount(
     accountId: string,
+    workplaceId: string,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
   ) {
     if (!accountId) return of([] as DisplayTransaction[]);
 
-    return this.observeEnrichedForAccounts([accountId], limit, dateRange);
+    return this.observeEnrichedForAccounts([accountId], workplaceId, limit, dateRange);
   }
 
   observeEnrichedForAccounts(
     rootAccountIds: string[],
+    workplaceId: string,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
   ) {
     if (!rootAccountIds || rootAccountIds.length === 0) return of([] as DisplayTransaction[]);
 
-    const descendantIds$ = accountRepository.observeHierarchy().pipe(
+    const descendantIds$ = accountRepository.observeHierarchy(workplaceId).pipe(
       map(accounts => {
         const allIds = new Set<string>();
         for (const rootId of rootAccountIds) {
@@ -41,7 +43,7 @@ export class LedgerReadService {
     );
 
     const transactions$ = descendantIds$.pipe(
-      switchMap(ids => transactionRepository.observeByAccounts(ids, limit, dateRange)),
+      switchMap(ids => transactionRepository.observeByAccounts(workplaceId, ids, limit, dateRange)),
     );
 
     const journalIds$ = transactions$.pipe(
@@ -52,11 +54,11 @@ export class LedgerReadService {
     );
 
     const journals$ = journalIds$.pipe(
-      switchMap(journalIds => journalRepository.observeByIds(journalIds)),
+      switchMap(journalIds => journalRepository.observeByIds(journalIds, workplaceId)),
     );
 
     const allJournalTransactions$ = journalIds$.pipe(
-      switchMap(ids => transactionRepository.observeByJournals(ids)),
+      switchMap(ids => transactionRepository.observeByJournals(ids, workplaceId)),
     );
 
     const allAccountIds$ = allJournalTransactions$.pipe(
@@ -66,7 +68,7 @@ export class LedgerReadService {
     );
 
     const allAccounts$ = allAccountIds$.pipe(
-      switchMap((ids: string[]) => accountRepository.observeByIds(ids)),
+      switchMap((ids: string[]) => accountRepository.observeByIds(ids, workplaceId)),
     );
 
     return combineLatest([transactions$, journals$, allAccounts$, allJournalTransactions$]).pipe(

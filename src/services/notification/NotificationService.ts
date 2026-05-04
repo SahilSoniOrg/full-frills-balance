@@ -115,11 +115,11 @@ export class NotificationService {
    * This triggers the heavy data observation and cache hydration during the
    * splash screen phase without blocking the first render.
    */
-  preWarm(): void {
+  preWarm(workplaceId: string): void {
     if (Platform.OS === 'web') return;
     // Trigger the simulation chain. The shareReplay(1) in observeSafeToSpend
     // will ensure the first screen to subscribe gets the result instantly.
-    const sub = this.observeSafeToSpend().subscribe();
+    const sub = this.observeSafeToSpend(workplaceId).subscribe();
 
     // We keep the subscription alive for at least 10s to ensure the first results
     // are calculated and cached in the shareReplay buffer.
@@ -229,27 +229,29 @@ export class NotificationService {
   /**
    * Calculates "Safe-to-Spend" based on liquid assets minus remaining budgets for the month.
    */
-  private safeToSpend$?: Observable<SafeToSpendResult>;
+  private safeToSpendByWorkplace = new Map<string, Observable<SafeToSpendResult>>();
 
-  observeSafeToSpend(): Observable<SafeToSpendResult> {
-    if (this.safeToSpend$) {
-      return this.safeToSpend$;
+  observeSafeToSpend(workplaceId: string): Observable<SafeToSpendResult> {
+    const cached = this.safeToSpendByWorkplace.get(workplaceId);
+    if (cached) {
+      return cached;
     }
 
-    this.safeToSpend$ = preferences.observe('safeToSpendDays').pipe(
+    const obs = preferences.observe('safeToSpendDays').pipe(
       switchMap(safeToSpendDays => {
         return combineLatest([
-          accountRepository.observeByType(AccountType.ASSET),
-          accountRepository.observeByType(AccountType.LIABILITY),
-          budgetRepository.observeAllActive(),
-          plannedPaymentRepository.observeActive(),
-          accountRepository.observeAll(),
+          accountRepository.observeByType(AccountType.ASSET, workplaceId),
+          accountRepository.observeByType(AccountType.LIABILITY, workplaceId),
+          budgetRepository.observeAllActive(workplaceId),
+          plannedPaymentRepository.observeActive(workplaceId),
+          accountRepository.observeAll(workplaceId),
           journalRepository.observePlannedInRange(
+            workplaceId,
             dayjs().subtract(safeToSpendDays, 'day').startOf('day').valueOf(),
             dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
           ),
-          transactionRepository.observeActiveWithColumns(['running_balance']),
-          journalRepository.observeStatusMeta(),
+          transactionRepository.observeActiveWithColumns(workplaceId, ['running_balance']),
+          journalRepository.observeStatusMeta(workplaceId),
         ] as [
           Observable<Account[]>,
           Observable<Account[]>,
@@ -363,7 +365,9 @@ export class NotificationService {
             return of(empty);
           }
 
-          const budgetUsageObservables = budgets.map(b => budgetReadService.observeBudgetUsage(b));
+          const budgetUsageObservables = budgets.map(b =>
+            budgetReadService.observeBudgetUsage(workplaceId, b),
+          );
 
           const budgetUsage$ =
             budgetUsageObservables.length > 0
@@ -374,6 +378,7 @@ export class NotificationService {
             switchMap(async ([usages, rawDeltas]) => {
               // Phase 1: Normalized balance fetch (includes hierarchy rollups and exclusions)
               const allBalances = await balanceService.getAccountBalances(
+                workplaceId,
                 now.valueOf(),
                 resultCurrency,
               );
@@ -435,6 +440,7 @@ export class NotificationService {
                 usages,
                 allAccounts,
                 resultCurrency,
+                workplaceId,
                 safeToSpendDays,
               );
 
@@ -559,7 +565,8 @@ export class NotificationService {
       shareReplay({ bufferSize: 1, refCount: true }),
     );
 
-    return this.safeToSpend$;
+    this.safeToSpendByWorkplace.set(workplaceId, obs);
+    return obs;
   }
 
   private getEmptySafeToSpendResult(resultCurrency: string): SafeToSpendResult {

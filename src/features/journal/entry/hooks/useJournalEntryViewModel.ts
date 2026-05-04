@@ -1,5 +1,6 @@
 import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import { AppConfig } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
 import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
@@ -67,6 +68,7 @@ export interface JournalEntryViewModel {
  */
 export function useJournalEntryViewModel(): JournalEntryViewModel {
   const params = useLocalSearchParams();
+  const { workplaceId } = useWorkplace();
   const initialMode =
     params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
   const initialType =
@@ -86,12 +88,12 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         ? params.destinationId
         : undefined;
 
-  const { accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { accounts, isLoading: isLoadingAccounts } = useAccounts(workplaceId);
 
   const smsId = params.smsId as string | undefined;
   const smsRecordId = params.smsRecordId as string | undefined;
 
-  const editor = useJournalEditor({
+  const editor = useJournalEditor(workplaceId, {
     journalId: params.journalId as string,
     initialMode,
     initialType,

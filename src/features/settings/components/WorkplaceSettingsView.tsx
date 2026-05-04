@@ -37,7 +37,7 @@ export function WorkplaceSettingsView(vm: WorkplaceSettingsViewModel) {
                     <SettingsMenuItem
                       key={workplace.id}
                       title={workplace.name}
-                      description={isActive ? 'Current active workspace' : undefined}
+                      description={isActive ? 'Current active Workplace' : undefined}
                       onPress={() => {
                         if (!isActive) {
                           vm.setActiveWorkplace(workplace);

@@ -71,6 +71,7 @@ const simulate = (overrides: OverrideMap = {} as any, planned: SimulateArgs[1] =
     [],
     [checkingAccount, creditCardAccount],
     'USD',
+    'test-wp',
   ];
 
   Object.entries(overrides).forEach(([index, value]) => {

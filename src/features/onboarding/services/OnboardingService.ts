@@ -36,12 +36,12 @@ export class OnboardingService {
     logger.info(`Starting onboarding completion for user: ${name}`);
 
     // 2. Ensure system accounts exist for the selected currency
-    await accountService.getOpeningBalancesAccountId(selectedCurrency);
-    await accountService.findOrCreateBalanceCorrectionAccount(selectedCurrency);
+    await accountService.getOpeningBalancesAccountId(selectedCurrency, targetWorkplaceId!);
+    await accountService.findOrCreateBalanceCorrectionAccount(selectedCurrency, targetWorkplaceId!);
 
     // 3. Create selected default and custom accounts
     for (const accountName of selectedAccounts) {
-      const existing = await accountService.findAccountByName(accountName);
+      const existing = await accountService.findAccountByName(accountName, targetWorkplaceId!);
       if (existing) continue;
 
       let type = AccountType.ASSET;
@@ -57,13 +57,17 @@ export class OnboardingService {
         icon = custom.icon;
       }
 
-      await accountService.createAccount({
-        name: accountName,
-        accountType: type,
-        currencyCode: selectedCurrency,
-        initialBalance: 0,
-        icon,
-      });
+      await accountService.createAccount(
+        {
+          name: accountName,
+          accountType: type,
+          currencyCode: selectedCurrency,
+          initialBalance: 0,
+          icon,
+          workplaceId: targetWorkplaceId,
+        },
+        targetWorkplaceId,
+      );
     }
 
     // 4. Create selected default and custom categories (stored as accounts)
@@ -71,7 +75,7 @@ export class OnboardingService {
       // Avoid creating an account if it was already created as an asset/liability
       if (selectedAccounts.includes(categoryName)) continue;
 
-      const existing = await accountService.findAccountByName(categoryName);
+      const existing = await accountService.findAccountByName(categoryName, targetWorkplaceId!);
       if (existing) continue;
 
       let type = AccountType.EXPENSE;
@@ -88,13 +92,17 @@ export class OnboardingService {
         icon = custom.icon;
       }
 
-      await accountService.createAccount({
-        name: categoryName,
-        accountType: type,
-        currencyCode: selectedCurrency,
-        initialBalance: 0,
-        icon,
-      });
+      await accountService.createAccount(
+        {
+          name: categoryName,
+          accountType: type,
+          currencyCode: selectedCurrency,
+          initialBalance: 0,
+          icon,
+          workplaceId: targetWorkplaceId,
+        },
+        targetWorkplaceId,
+      );
     }
 
     // 5. Complete basic onboarding (sets name and default currency)

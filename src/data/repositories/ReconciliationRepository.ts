@@ -1,65 +1,66 @@
-import { database } from '@/src/data/database/Database'
-import Journal from '@/src/data/models/Journal'
-import { AccountRepository } from '@/src/data/repositories/AccountRepository'
-import { balanceService } from '@/src/services/BalanceService'
-import { Q } from '@nozbe/watermelondb'
+import { database } from '@/src/data/database/Database';
+import Journal from '@/src/data/models/Journal';
+import { AccountRepository } from '@/src/data/repositories/AccountRepository';
+import { balanceService } from '@/src/services/BalanceService';
+import { Q } from '@nozbe/watermelondb';
 
 export interface ReconciliationResult {
-  accountId: string
-  accountName: string
-  systemBalance: number
-  expectedBalance?: number
-  variance: number
-  isReconciled: boolean
-  lastJournalDate?: number
-  transactionCount: number
+  accountId: string;
+  accountName: string;
+  systemBalance: number;
+  expectedBalance?: number;
+  variance: number;
+  isReconciled: boolean;
+  lastJournalDate?: number;
+  transactionCount: number;
 }
 
 export interface PeriodReconciliation {
-  startDate: number
-  endDate: number
-  totalAccounts: number
-  reconciledAccounts: number
-  totalVariance: number
-  requiresAttention: boolean
+  startDate: number;
+  endDate: number;
+  totalAccounts: number;
+  reconciledAccounts: number;
+  totalVariance: number;
+  requiresAttention: boolean;
 }
 
 export class ReconciliationRepository {
-  private accountRepository = new AccountRepository()
+  private accountRepository = new AccountRepository();
   /**
    * Reconciles a single account against an expected balance
-   * 
+   *
    * @param accountId Account to reconcile
    * @param expectedBalance Expected balance for verification
    * @returns Reconciliation result with variance analysis
    */
   async reconcileAccount(
     accountId: string,
-    expectedBalance?: number
+    workplaceId: string,
+    expectedBalance?: number,
   ): Promise<ReconciliationResult> {
-    // Get system balance
-    const systemBalanceData = await balanceService.getAccountBalance(accountId)
-
     // Get account details
-    const account = await this.accountRepository.find(accountId)
+    const account = await this.accountRepository.find(accountId, workplaceId);
     if (!account) {
-      throw new Error(`Account ${accountId} not found`)
+      throw new Error(`Account ${accountId} not found`);
     }
 
+    // Get system balance
+    const systemBalanceData = await balanceService.getAccountBalance(accountId, workplaceId);
+
     // Get latest journal date for this account
-    const journals = await database.collections.get<Journal>('journals')
+    const journals = await database.collections
+      .get<Journal>('journals')
       .query(
         Q.experimentalJoinTables(['transactions']),
         Q.on('transactions', Q.where('account_id', accountId)),
         Q.where('deleted_at', Q.eq(null)),
-        Q.where('status', Q.eq('POSTED'))
+        Q.where('status', Q.eq('POSTED')),
       )
       .extend(Q.sortBy('journal_date', 'desc'))
-      .fetch()
+      .fetch();
 
-    const variance = expectedBalance !== undefined
-      ? systemBalanceData.balance - expectedBalance
-      : 0
+    const variance =
+      expectedBalance !== undefined ? systemBalanceData.balance - expectedBalance : 0;
 
     return {
       accountId,
@@ -69,32 +70,33 @@ export class ReconciliationRepository {
       variance,
       isReconciled: Math.abs(variance) < 0.01, // Within 1 cent
       lastJournalDate: journals[0]?.journalDate,
-      transactionCount: systemBalanceData.transactionCount
-    }
+      transactionCount: systemBalanceData.transactionCount,
+    };
   }
 
   /**
    * Reconciles all accounts for a specific period
-   * 
+   *
    * @param startDate Period start date
-   * @param endDate Period end date  
+   * @param endDate Period end date
    * @returns Period reconciliation summary
    */
   async reconcilePeriod(
     startDate: number,
-    endDate: number
+    endDate: number,
+    workplaceId: string,
   ): Promise<PeriodReconciliation> {
     // Get all accounts
-    const accounts = await this.accountRepository.findAll()
+    const accounts = await this.accountRepository.findAll(workplaceId);
 
     // Reconcile each account
     const reconciliations = await Promise.all(
-      accounts.map(account => this.reconcileAccount(account.id))
-    )
+      accounts.map(account => this.reconcileAccount(account.id, workplaceId)),
+    );
 
     // Calculate period summary
-    const reconciledAccounts = reconciliations.filter(r => r.isReconciled).length
-    const totalVariance = reconciliations.reduce((sum, r) => sum + Math.abs(r.variance), 0)
+    const reconciledAccounts = reconciliations.filter(r => r.isReconciled).length;
+    const totalVariance = reconciliations.reduce((sum, r) => sum + Math.abs(r.variance), 0);
 
     return {
       startDate,
@@ -102,28 +104,29 @@ export class ReconciliationRepository {
       totalAccounts: accounts.length,
       reconciledAccounts,
       totalVariance,
-      requiresAttention: totalVariance > 0.01 || reconciledAccounts < accounts.length
-    }
+      requiresAttention: totalVariance > 0.01 || reconciledAccounts < accounts.length,
+    };
   }
 
   /**
    * Gets accounts that require attention (unreconciled or high variance)
-   * 
+   *
    * @param varianceThreshold Minimum variance to flag
    * @returns Array of accounts needing review
    */
-  async getAccountsNeedingAttention(varianceThreshold: number = 0.01): Promise<ReconciliationResult[]> {
-    const accounts = await this.accountRepository.findAll()
+  async getAccountsNeedingAttention(
+    varianceThreshold: number = 0.01,
+    workplaceId: string,
+  ): Promise<ReconciliationResult[]> {
+    const accounts = await this.accountRepository.findAll(workplaceId);
 
     const reconciliations = await Promise.all(
-      accounts.map(account => this.reconcileAccount(account.id))
-    )
+      accounts.map(account => this.reconcileAccount(account.id, workplaceId)),
+    );
 
-    return reconciliations.filter(r =>
-      !r.isReconciled || Math.abs(r.variance) > varianceThreshold
-    )
+    return reconciliations.filter(r => !r.isReconciled || Math.abs(r.variance) > varianceThreshold);
   }
 }
 
 // Export singleton instance
-export const reconciliationRepository = new ReconciliationRepository()
+export const reconciliationRepository = new ReconciliationRepository();

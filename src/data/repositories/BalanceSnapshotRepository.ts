@@ -17,11 +17,13 @@ export class BalanceSnapshotRepository {
    * Finds the latest snapshot for an account as of a given date.
    */
   async findLatestForAccount(
+    workplaceId: string,
     accountId: string,
     date: number = Date.now(),
   ): Promise<BalanceSnapshot | null> {
     const snapshots = await this.snapshots
       .query(
+        Q.where('workplace_id', workplaceId),
         Q.where('account_id', accountId),
         Q.where('transaction_date', Q.lte(date)),
         Q.sortBy('transaction_date', Q.desc),
@@ -34,15 +36,19 @@ export class BalanceSnapshotRepository {
   /**
    * Creates a new balance snapshot.
    */
-  async create(data: {
-    accountId: string;
-    transactionId: string;
-    transactionDate: number;
-    absoluteBalance: number;
-    transactionCount: number;
-  }): Promise<BalanceSnapshot> {
+  async create(
+    workplaceId: string,
+    data: {
+      accountId: string;
+      transactionId: string;
+      transactionDate: number;
+      absoluteBalance: number;
+      transactionCount: number;
+    },
+  ): Promise<BalanceSnapshot> {
     return database.write(async () => {
       return this.snapshots.create(snapshot => {
+        snapshot.workplaceId = workplaceId;
         snapshot.accountId = data.accountId;
         snapshot.transactionId = data.transactionId;
         snapshot.transactionDate = data.transactionDate;
@@ -57,6 +63,7 @@ export class BalanceSnapshotRepository {
    * Returns a Map of accountId -> SnapshotData.
    */
   async findLatestForAccountsRaw(
+    workplaceId: string,
     accountIds: string[],
     date: number = Date.now(),
   ): Promise<Map<string, SnapshotData>> {
@@ -89,7 +96,8 @@ export class BalanceSnapshotRepository {
           ) as rn
         FROM balance_snapshots bs
         LEFT JOIN transactions t ON bs.transaction_id = t.id
-        WHERE bs.account_id IN (${accountIds.map(() => '?').join(',')})
+        WHERE bs.workplace_id = ?
+          AND bs.account_id IN (${accountIds.map(() => '?').join(',')})
           AND bs.transaction_date <= ?
       )
       SELECT 
@@ -100,7 +108,7 @@ export class BalanceSnapshotRepository {
     `;
 
     try {
-      const rows = await sqlAdapter.queryRaw(sql, [...accountIds, date]);
+      const rows = await sqlAdapter.queryRaw(sql, [workplaceId, ...accountIds, date]);
       const data = Array.isArray(rows) ? rows : rows?.rows || [];
       for (const row of data) {
         result.set(row.accountId, row as SnapshotData);
@@ -116,9 +124,13 @@ export class BalanceSnapshotRepository {
    * Deletes all snapshots for an account after a certain date.
    * Useful when segments are invalidated.
    */
-  async deleteAfterDate(accountId: string, date: number): Promise<void> {
+  async deleteAfterDate(workplaceId: string, accountId: string, date: number): Promise<void> {
     const snapshotsToDelete = await this.snapshots
-      .query(Q.where('account_id', accountId), Q.where('transaction_date', Q.gt(date)))
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('account_id', accountId),
+        Q.where('transaction_date', Q.gt(date)),
+      )
       .fetch();
 
     if (snapshotsToDelete.length > 0) {

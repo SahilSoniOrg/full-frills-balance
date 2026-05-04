@@ -54,6 +54,7 @@ export class TransactionRepository {
     >,
     precision: number = 2,
     enforcePositiveAmount = true,
+    workplaceId: string,
   ): Promise<Transaction> {
     // Enforce positive amount invariant
     if (
@@ -64,6 +65,10 @@ export class TransactionRepository {
       throw new Error(
         'Transaction amount must be positive. Sign is determined by transactionType.',
       );
+    }
+
+    if (!transactionData.workplaceId) {
+      transactionData.workplaceId = workplaceId;
     }
 
     if (!transactionData.transactionType) {
@@ -106,21 +111,31 @@ export class TransactionRepository {
   /**
    * Finds a transaction by ID
    */
-  async find(id: string): Promise<Transaction | null> {
-    return this.transactions.find(id);
+  async find(id: string, workplaceId: string): Promise<Transaction | null> {
+    return (
+      (
+        await this.transactions
+          .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
+          .fetch()
+      )[0] || null
+    );
   }
 
   /**
    * Gets all transactions for an account
    */
   async findByAccount(
+    workplaceId: string,
     accountId: string,
     limit?: number,
     dateRange?: { startDate: number; endDate: number },
     sortOrder: 'asc' | 'desc' = 'desc',
   ): Promise<Transaction[]> {
     const qSort = sortOrder === 'asc' ? Q.asc : Q.desc;
-    const clauses = this.buildActiveClauses([Q.where('account_id', accountId)]);
+    const clauses = this.buildActiveClauses([
+      Q.where('account_id', accountId),
+      Q.where('workplace_id', workplaceId),
+    ]);
 
     if (dateRange) {
       clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
@@ -145,11 +160,15 @@ export class TransactionRepository {
   }
 
   observeByAccounts(
+    workplaceId: string,
     accountIds: string[],
     limit: number = AppConfig.pagination.dashboardPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): import('rxjs').Observable<Transaction[]> {
-    const clauses = this.buildActiveClauses([Q.where('account_id', Q.oneOf(accountIds))]);
+    const clauses = this.buildActiveClauses([
+      Q.where('account_id', Q.oneOf(accountIds)),
+      Q.where('workplace_id', workplaceId),
+    ]);
 
     if (dateRange) {
       clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
@@ -171,17 +190,28 @@ export class TransactionRepository {
       ]);
   }
 
-  async findByJournals(journalIds: string[]): Promise<Transaction[]> {
+  async findByJournals(journalIds: string[], workplaceId: string): Promise<Transaction[]> {
     if (journalIds.length === 0) return [];
     return this.transactions
-      .query(Q.where('journal_id', Q.oneOf(journalIds)), Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
       .fetch();
   }
 
-  observeByJournals(journalIds: string[]): import('rxjs').Observable<Transaction[]> {
+  observeByJournals(
+    journalIds: string[],
+    workplaceId: string,
+  ): import('rxjs').Observable<Transaction[]> {
     if (journalIds.length === 0) return of([] as Transaction[]);
     return this.transactions
-      .query(Q.where('journal_id', Q.oneOf(journalIds)), Q.where('deleted_at', Q.eq(null)))
+      .query(
+        Q.where('journal_id', Q.oneOf(journalIds)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
       .observeWithColumns([
         'amount',
         'currency_code',
@@ -195,10 +225,11 @@ export class TransactionRepository {
       ]);
   }
 
-  observeByJournal(journalId: string, includeDeleted: boolean = false) {
+  observeByJournal(journalId: string, workplaceId: string, includeDeleted: boolean = false) {
     const clauses: any[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('journal_id', journalId),
+      Q.where('workplace_id', workplaceId),
     ];
 
     if (!includeDeleted) {
@@ -207,6 +238,7 @@ export class TransactionRepository {
         Q.on('journals', [
           Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES, 'PLANNED'])),
           Q.where('deleted_at', Q.eq(null)),
+          Q.where('workplace_id', workplaceId),
         ]),
       );
     }
@@ -229,11 +261,15 @@ export class TransactionRepository {
   }
 
   async findTransactionsByAccounts(
+    workplaceId: string,
     accountIds: string[],
     limit: number = AppConfig.pagination.dashboardPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): Promise<Transaction[]> {
-    const clauses = this.buildActiveClauses([Q.where('account_id', Q.oneOf(accountIds))]);
+    const clauses = this.buildActiveClauses([
+      Q.where('account_id', Q.oneOf(accountIds)),
+      Q.where('workplace_id', workplaceId),
+    ]);
 
     if (dateRange) {
       clauses.push(Q.where('transaction_date', Q.gte(dateRange.startDate)));
@@ -261,26 +297,19 @@ export class TransactionRepository {
   }
 
   /**
-   * Observe all active (non-deleted) transactions.
-   *
-   * @deprecated USE WITH EXTREME CAUTION. Loading ALL historical transactions causes
-   * massive bridge congestion and OOM at scale. Prefer observeByDateRange() or
-   * observeByAccounts() whenever possible.
-   */
-  observeAllActive_UNSAFE() {
-    return this.transactions.query(...this.buildActiveClauses()).observe();
-  }
-
-  /**
    * Observe the COUNT of active transactions.
    * Efficient trigger: Signals changes without loading full models into memory.
    */
-  observeActiveCount(shouldThrottle: boolean = true) {
-    return this.transactions.query(...this.buildActiveClauses()).observeCount(shouldThrottle);
+  observeActiveCount(workplaceId: string, shouldThrottle: boolean = true) {
+    return this.transactions
+      .query(...this.buildActiveClauses([Q.where('workplace_id', workplaceId)]))
+      .observeCount(shouldThrottle);
   }
 
-  observeActiveWithColumns(columns: string[]) {
-    return this.transactions.query(...this.buildActiveClauses()).observeWithColumns(columns);
+  observeActiveWithColumns(workplaceId: string, columns: string[]) {
+    return this.transactions
+      .query(...this.buildActiveClauses([Q.where('workplace_id', workplaceId)]))
+      .observeWithColumns(columns);
   }
 
   /**
@@ -288,8 +317,11 @@ export class TransactionRepository {
    * Use this instead of observeActive() when you only need a bounded window —
    * avoids deserializing the entire transaction history across the bridge.
    */
-  observeByDateRange(startDate: number, endDate?: number) {
-    const extra: any[] = [Q.where('transaction_date', Q.gte(startDate))];
+  observeByDateRange(workplaceId: string, startDate: number, endDate?: number) {
+    const extra: any[] = [
+      Q.where('transaction_date', Q.gte(startDate)),
+      Q.where('workplace_id', workplaceId),
+    ];
     if (endDate !== undefined) {
       extra.push(Q.where('transaction_date', Q.lte(endDate)));
     }
@@ -313,26 +345,45 @@ export class TransactionRepository {
    * @param journalId Journal ID to fetch transactions for
    * @returns Array of transactions for the journal
    */
-  async findByJournal(journalId: string): Promise<Transaction[]> {
+  async findByJournal(journalId: string, workplaceId: string): Promise<Transaction[]> {
     return this.transactions
-      .query(Q.and(Q.where('journal_id', journalId), Q.where('deleted_at', Q.eq(null))))
+      .query(
+        Q.and(
+          Q.where('journal_id', journalId),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('workplace_id', workplaceId),
+        ),
+      )
       .extend(Q.sortBy('transaction_date', Q.asc))
       .extend(Q.sortBy('created_at', Q.asc))
       .fetch();
   }
 
-  async findAllNonDeleted(): Promise<Transaction[]> {
-    return this.transactions.query(Q.where('deleted_at', Q.eq(null))).fetch();
+  async findAllNonDeleted(workplaceId: string): Promise<Transaction[]> {
+    return this.transactions
+      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
+      .fetch();
   }
 
-  async countNonDeleted(): Promise<number> {
-    return this.transactions.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
+  async countNonDeleted(workplaceId: string): Promise<number> {
+    return this.transactions
+      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
+      .fetchCount();
   }
 
   /**
    * Updates a transaction
    */
-  async update(transaction: Transaction, updates: Partial<Transaction>): Promise<Transaction> {
+  async update(
+    transaction: Transaction,
+    updates: Partial<Transaction>,
+    workplaceId: string,
+  ): Promise<Transaction> {
+    //get txn to verify that it beliongs to the workplaceid
+    const txn = await this.findByJournal(transaction.journalId, workplaceId);
+    if (!txn || txn.length === 0) {
+      throw new Error('Transaction not found or does not belong to the workplace');
+    }
     return database.write(async () => {
       const updated = await transaction.update(tx => {
         Object.assign(tx, updates);
@@ -346,8 +397,13 @@ export class TransactionRepository {
   /**
    * Soft deletes a transaction
    */
-  async delete(transaction: Transaction): Promise<void> {
-    await database.write(async () => {
+  async delete(workplaceId: string, transaction: Transaction): Promise<void> {
+    //get txn to verify that it beliongs to the workplaceid
+    const txn = await this.findByJournal(transaction.journalId, workplaceId);
+    if (!txn || txn.length === 0) {
+      throw new Error('Transaction not found or does not belong to the workplace');
+    }
+    return database.write(async () => {
       await transaction.update(t => {
         t.deletedAt = new Date();
       });
@@ -360,9 +416,10 @@ export class TransactionRepository {
    */
   async findLatestForAccountBeforeDate(
     accountId: string,
+    workplaceId: string,
     date: number,
   ): Promise<Transaction | null> {
-    return this.findLatestForAccount(accountId, date, false);
+    return this.findLatestForAccount(accountId, workplaceId, date, false);
   }
 
   /**
@@ -373,6 +430,7 @@ export class TransactionRepository {
    */
   async findLatestForAccount(
     accountId: string,
+    workplaceId: string,
     date: number,
     inclusive: boolean = true,
   ): Promise<Transaction | null> {
@@ -381,6 +439,7 @@ export class TransactionRepository {
         ...this.buildActiveClauses([
           Q.where('account_id', accountId),
           Q.where('transaction_date', inclusive ? Q.lte(date) : Q.lt(date)),
+          Q.where('workplace_id', workplaceId),
         ]),
         Q.take(1),
       ),
@@ -393,6 +452,7 @@ export class TransactionRepository {
    * Optimized for bulk reporting.
    */
   async findByAccountsAndDateRange(
+    workplaceId: string,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -402,6 +462,7 @@ export class TransactionRepository {
       Q.where('account_id', Q.oneOf(accountIds)),
       Q.where('transaction_date', Q.gte(startDate)),
       Q.where('transaction_date', Q.lte(endDate)),
+      Q.where('workplace_id', workplaceId),
     ]);
 
     // Batching logic: For large account sets, we chunk the query to prevent SQLite performance collapse.

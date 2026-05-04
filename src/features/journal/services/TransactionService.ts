@@ -12,12 +12,15 @@ export class TransactionService {
   /**
    * Gets transactions for a journal with account information.
    */
-  async getTransactionsWithAccountInfo(journalId: string): Promise<DisplayTransaction[]> {
-    const journal = await journalRepository.find(journalId);
-    const transactions = await transactionRepository.findByJournal(journalId);
+  async getTransactionsWithAccountInfo(
+    workplaceId: string,
+    journalId: string,
+  ): Promise<DisplayTransaction[]> {
+    const journal = await journalRepository.find(journalId, workplaceId);
+    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-    const accounts = await accountRepository.findAllByIds(accountIds);
+    const accounts = await accountRepository.findAllByIds(accountIds, workplaceId);
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     return transactions.map(tx => {
@@ -48,12 +51,15 @@ export class TransactionService {
   /**
    * Gets enriched transactions for a journal.
    */
-  async getEnrichedByJournal(journalId: string): Promise<DisplayTransaction[]> {
-    const journal = await journalRepository.find(journalId);
-    const transactions = await transactionRepository.findByJournal(journalId);
+  async getEnrichedByJournal(
+    workplaceId: string,
+    journalId: string,
+  ): Promise<DisplayTransaction[]> {
+    const journal = await journalRepository.find(workplaceId, journalId);
+    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-    const accounts = await accountRepository.findAllByIds(accountIds);
+    const accounts = await accountRepository.findAllByIds(accountIds, workplaceId);
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     return transactions.map(tx => this.mapToEnriched(tx, transactions, accountMap, journal));
@@ -63,24 +69,35 @@ export class TransactionService {
    * Reactive version of getTransactionsWithAccountInfo.
    * Replaces TransactionRepository.observeByJournalWithAccountInfo
    */
-  observeTransactionsWithAccountInfo(journalId: string, includeDeleted: boolean = false) {
+  observeTransactionsWithAccountInfo(
+    workplaceId: string,
+    journalId: string,
+    includeDeleted: boolean = false,
+  ) {
     if (!journalId) return of([] as DisplayTransaction[]);
 
-    const journal$ = journalRepository.observeById(journalId, includeDeleted);
-    const transactions$ = transactionRepository.observeByJournal(journalId, includeDeleted);
+    const journal$ = journalRepository.observeById(journalId, workplaceId, includeDeleted);
+    const transactions$ = transactionRepository.observeByJournal(
+      journalId,
+      workplaceId,
+      includeDeleted,
+    );
 
     const accountIds$ = transactions$.pipe(
       map(transactions => Array.from(new Set(transactions.map(t => t.accountId))).sort()),
       distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
     );
 
-    const accounts$ = accountIds$.pipe(
-      switchMap(accountIds => accountRepository.observeByIds(accountIds)),
+    const accounts$ = combineLatest([accountIds$, journal$]).pipe(
+      switchMap(([accountIds, journal]) => {
+        if (!journal) return of([] as any[]);
+        return accountRepository.observeByIds(accountIds, journal.workplaceId);
+      }),
     );
 
     return combineLatest([transactions$, journal$, accounts$]).pipe(
       map(([transactions, journal, accounts]) => {
-        const accountMap = new Map(accounts.map(a => [a.id, a]));
+        const accountMap = new Map(accounts.map(a => [a.id, a as any]));
         const isJournalDeleted = !!(journal && journal.deletedAt);
         const validTransactions = transactions.filter(tx => isJournalDeleted || !tx.deletedAt);
 
@@ -111,24 +128,35 @@ export class TransactionService {
     );
   }
 
-  observeEnrichedByJournal(journalId: string, includeDeleted: boolean = false) {
+  observeEnrichedByJournal(
+    workplaceId: string,
+    journalId: string,
+    includeDeleted: boolean = false,
+  ) {
     if (!journalId) return of([] as DisplayTransaction[]);
 
-    const journal$ = journalRepository.observeById(journalId, includeDeleted);
-    const transactions$ = transactionRepository.observeByJournal(journalId, includeDeleted);
+    const journal$ = journalRepository.observeById(journalId, workplaceId, includeDeleted);
+    const transactions$ = transactionRepository.observeByJournal(
+      journalId,
+      workplaceId,
+      includeDeleted,
+    );
 
     const accountIds$ = transactions$.pipe(
       map(transactions => Array.from(new Set(transactions.map(t => t.accountId))).sort()),
       distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
     );
 
-    const accounts$ = accountIds$.pipe(
-      switchMap(accountIds => accountRepository.observeByIds(accountIds)),
+    const accounts$ = combineLatest([accountIds$, journal$]).pipe(
+      switchMap(([accountIds, journal]) => {
+        if (!journal) return of([] as any[]);
+        return accountRepository.observeByIds(accountIds, journal.workplaceId);
+      }),
     );
 
     return combineLatest([transactions$, journal$, accounts$]).pipe(
       map(([transactions, journal, accounts]) => {
-        const accountMap = new Map(accounts.map(a => [a.id, a]));
+        const accountMap = new Map(accounts.map(a => [a.id, a as any]));
         const isJournalDeleted = !!(journal && journal.deletedAt);
         const validTransactions = transactions.filter(tx => isJournalDeleted || !tx.deletedAt);
 

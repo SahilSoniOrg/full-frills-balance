@@ -31,16 +31,20 @@ export class BudgetReadService {
    * @param budget The budget record
    * @param targetMonth Optional YYYY-MM string to evaluate. Defaults to current month.
    */
-  observeBudgetUsage(budget: Budget, referenceDate?: number | string): Observable<BudgetUsage> {
+  observeBudgetUsage(
+    workplaceId: string,
+    budget: Budget,
+    referenceDate?: number | string,
+  ): Observable<BudgetUsage> {
     return combineLatest([
       budget.observe(),
-      budgetRepository.observeScopes(budget.id).pipe(
+      budgetRepository.observeScopes(workplaceId, budget.id).pipe(
         switchMap(scopes => {
           if (scopes.length === 0) return of([]);
           return combineLatest(scopes.map(s => s.account.observe()));
         }),
       ),
-      accountRepository.observeByType(AccountType.EXPENSE),
+      accountRepository.observeByType(AccountType.EXPENSE, budget.workplaceId),
     ]).pipe(
       switchMap(([observedBudget, scopeAccounts, allExpenses]) => {
         let ref: number;
@@ -150,10 +154,11 @@ export class BudgetReadService {
    * transactions within the budget's targeted month bounds.
    */
   observeBudgetDisplayTransactions(
+    workplaceId: string,
     budget: Budget,
     referenceDate?: number | string,
   ): Observable<DisplayTransaction[]> {
-    return budgetRepository.observeScopes(budget.id).pipe(
+    return budgetRepository.observeScopes(workplaceId, budget.id).pipe(
       switchMap(scopes => {
         if (scopes.length === 0) return of([]);
 
@@ -174,6 +179,7 @@ export class BudgetReadService {
 
         return ledgerReadService.observeEnrichedForAccounts(
           rootAccountIds,
+          workplaceId,
           AppConfig.pagination.budgetDetailsTransactionsPageSize,
           { startDate: startOfMonth, endDate: endOfMonth },
         );
