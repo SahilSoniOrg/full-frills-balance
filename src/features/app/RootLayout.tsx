@@ -2,6 +2,7 @@ import { AlertContainer } from '@/src/components/common/AlertContainer';
 import { ToastContainer } from '@/src/components/common/Toast';
 import { ErrorBoundary } from '@/src/components/core';
 import { UIProvider, useUI } from '@/src/contexts/UIContext';
+import { WorkspaceProvider } from '@/src/contexts/WorkspaceContext';
 import { database } from '@/src/data/database/Database';
 import { AppLockInterceptor } from '@/src/features/app/components/AppLockInterceptor';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
@@ -131,26 +132,30 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <DatabaseProvider database={database}>
-              <UIProvider>
-                <BootManager />
-                <FontManager>
-                  <PostHogProvider
-                    client={analytics.posthog ?? undefined}
-                    apiKey={analytics.posthog ? undefined : POSTHOG_API_KEY}
-                    options={analytics.posthog ? undefined : { host: POSTHOG_HOST, disabled: true }}
-                    debug={__DEV__}
-                  >
-                    <PostHogScreenTracker />
-                    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                      <AppLockInterceptor>
-                        <AppContent />
-                      </AppLockInterceptor>
-                      <AlertContainer />
-                      <ToastContainer />
-                    </ThemeProvider>
-                  </PostHogProvider>
-                </FontManager>
-              </UIProvider>
+              <WorkspaceProvider>
+                <UIProvider>
+                  <BootManager />
+                  <FontManager>
+                    <PostHogProvider
+                      client={analytics.posthog ?? undefined}
+                      apiKey={analytics.posthog ? undefined : POSTHOG_API_KEY}
+                      options={
+                        analytics.posthog ? undefined : { host: POSTHOG_HOST, disabled: true }
+                      }
+                      debug={__DEV__}
+                    >
+                      <PostHogScreenTracker />
+                      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                        <AppLockInterceptor>
+                          <AppContent />
+                        </AppLockInterceptor>
+                        <AlertContainer />
+                        <ToastContainer />
+                      </ThemeProvider>
+                    </PostHogProvider>
+                  </FontManager>
+                </UIProvider>
+              </WorkspaceProvider>
             </DatabaseProvider>
           </ErrorBoundary>
         </SafeAreaProvider>

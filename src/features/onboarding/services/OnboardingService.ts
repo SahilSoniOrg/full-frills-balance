@@ -30,7 +30,7 @@ export class OnboardingService {
       customCategories,
     } = data;
 
-    const workplace = await workplaceService.createWorkplace('Personal', 'briefcase');
+    const workplace = await workplaceService.ensureDefaultWorkplace();
     const targetWorkplaceId = workplace.id;
 
     logger.info(`Starting onboarding completion for user: ${name}`);
@@ -63,7 +63,6 @@ export class OnboardingService {
         currencyCode: selectedCurrency,
         initialBalance: 0,
         icon,
-        workplaceId: targetWorkplaceId!,
       });
     }
 
@@ -95,7 +94,6 @@ export class OnboardingService {
         currencyCode: selectedCurrency,
         initialBalance: 0,
         icon,
-        workplaceId: targetWorkplaceId!,
       });
     }
 

@@ -1,4 +1,4 @@
-import { useUI } from '@/src/contexts/UIContext';
+import { useWorkspace } from '@/src/contexts/WorkspaceContext';
 import Workplace from '@/src/data/models/Workplace';
 import { useCallback, useState } from 'react';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -20,7 +20,7 @@ export interface WorkplaceSettingsViewModel {
 }
 
 export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
-  const { activeWorkplaceId, setActiveWorkplaceId } = useUI();
+  const { workplaceId: activeWorkplaceId, setWorkplaceId: setActiveWorkplaceId } = useWorkspace();
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingWorkplace, setIsCreatingWorkplace] = useState(false);
 

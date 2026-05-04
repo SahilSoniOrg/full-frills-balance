@@ -111,26 +111,6 @@ export function useAppBootstrap() {
               if (!isActive || phaseRef.current >= AppPhase.STABILIZED) return;
               await yieldToUI();
               await currencyInitService.initialize();
-
-              // Ensure at least one default workplace exists
-              try {
-                const { database } = await import('@/src/data/database/Database');
-                const Workplace = (await import('@/src/data/models/Workplace')).default;
-                const workplaceCount = await database.get(Workplace.table).query().fetchCount();
-                if (workplaceCount === 0) {
-                  logger.info('[Bootstrap] No workplaces found. Seeding default workplace.');
-                  await database.write(async () => {
-                    const defaultWorkplace = await database.get<any>(Workplace.table).create(w => {
-                      w.name = 'Personal';
-                      w.icon = 'briefcase';
-                    });
-                    await preferences.setActiveWorkplaceId(defaultWorkplace.id);
-                  });
-                }
-              } catch (error) {
-                logger.error('[Bootstrap] Failed to seed default workplace', error);
-              }
-
               // Step 2: High-traffic metadata caches
               if (!isActive || phaseRef.current >= AppPhase.STABILIZED) return;
               await yieldToUI();
