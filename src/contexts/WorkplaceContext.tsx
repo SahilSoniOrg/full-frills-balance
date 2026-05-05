@@ -104,7 +104,12 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
     if (!id) {
       throw new Error('Invalid workplaceId');
     }
+    const oldId = preferences.activeWorkplaceId;
     preferences.setActiveWorkplaceId(id);
+    if (oldId && oldId !== id) {
+      const { analytics } = require('@/src/services/analytics-service');
+      analytics.logWorkplaceSwitched(oldId, id);
+    }
   }, []);
 
   if (error) {

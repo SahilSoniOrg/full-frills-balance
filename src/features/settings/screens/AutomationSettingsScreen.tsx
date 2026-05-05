@@ -1,15 +1,17 @@
 import { Screen } from '@/src/components/layout';
 import { AppConfig } from '@/src/constants';
+import { useUI } from '@/src/contexts/UIContext';
 import { Inset, Stack } from '@/src/design-system';
 import { NotificationPreference } from '@/src/features/settings/components/NotificationPreference';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, Switch } from 'react-native';
 
 export default function AutomationSettingsScreen() {
   const vm = useSettingsViewModel();
+  const { isSmsImportEnabled, setIsSmsImportEnabled } = useUI();
 
   return (
     <Screen title={AppConfig.strings.settings.sections.remindersAndAutomation} showBack scrollable>
@@ -30,15 +32,28 @@ export default function AutomationSettingsScreen() {
               <SettingsMenuItem
                 leftIcon="messageSquare"
                 title={AppConfig.strings.settings.personalization.smsInboxTitle}
-                description={AppConfig.strings.settings.personalization.smsInboxDesc}
-                onPress={vm.onSmsInbox}
+                description="Import transactions from SMS messages"
+                hasArrow={false}
+                rightContent={
+                  <Switch value={isSmsImportEnabled} onValueChange={setIsSmsImportEnabled} />
+                }
               />
-              <SettingsMenuItem
-                leftIcon="messageSquare"
-                title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
-                description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
-                onPress={vm.onManageSmsRules}
-              />
+              {isSmsImportEnabled && (
+                <>
+                  <SettingsMenuItem
+                    leftIcon="inbox"
+                    title={AppConfig.strings.settings.personalization.smsInboxTitle}
+                    description={AppConfig.strings.settings.personalization.smsInboxDesc}
+                    onPress={vm.onSmsInbox}
+                  />
+                  <SettingsMenuItem
+                    leftIcon="terminal"
+                    title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
+                    description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
+                    onPress={vm.onManageSmsRules}
+                  />
+                </>
+              )}
             </SettingsMenu>
           )}
         </Stack>

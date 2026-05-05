@@ -3,6 +3,7 @@ import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
+import { analytics } from '@/src/services/analytics-service';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 
@@ -83,7 +84,7 @@ export class PlannedPaymentRepository {
   }
 
   async create(workplaceId: string, data: PlannedPaymentPersistenceInput): Promise<PlannedPayment> {
-    return await this.db.write(async () => {
+    const result = await this.db.write(async () => {
       return this.plannedPayments.create(pp => {
         Object.assign(pp, data);
         pp.createdAt = new Date();
@@ -91,6 +92,8 @@ export class PlannedPaymentRepository {
         pp.workplaceId = workplaceId;
       });
     });
+    analytics.logPlannedPaymentCreated(data.intervalType, data.isAutoPost ? 'auto' : 'manual');
+    return result;
   }
 
   async update(

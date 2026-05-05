@@ -4,6 +4,7 @@ import { AccountType } from '@/src/data/models/Account';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { accountService } from '@/src/features/accounts';
+import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { preferences, preferencesMigration } from '@/src/utils/preferences';
 import { distinctUntilChanged, map, Observable } from 'rxjs';
@@ -25,7 +26,7 @@ export class WorkplaceService {
     });
 
     await this.bootstrapWorkplace(workplace.id, options);
-
+    analytics.logWorkplaceCreated(name, icon);
     return workplace;
   }
 
@@ -141,6 +142,7 @@ export class WorkplaceService {
 
     const { integrityService } = await import('@/src/services/integrity-service');
     await integrityService.resetWorkplace(id);
+    analytics.logWorkplaceDeleted();
 
     // If we just deleted the active one, switch to another
     if (preferences.activeWorkplaceId === id) {

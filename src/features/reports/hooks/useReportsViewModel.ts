@@ -2,6 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
+import { analytics } from '@/src/services/analytics-service';
 import { HeatmapPoint, SankeyData } from '@/src/services/report-service';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';
@@ -230,7 +231,10 @@ export function useReportsViewModel(): ReportsViewModel {
   return {
     // Tab State
     activeTab,
-    setActiveTab,
+    setActiveTab: (tab: ReportTab) => {
+      setActiveTab(tab);
+      analytics.trackFeatureUsage('reports', 'change_tab', { tab });
+    },
 
     // Account Filter
     showAccountPicker,
@@ -261,9 +265,20 @@ export function useReportsViewModel(): ReportsViewModel {
     expenseBarFlex: incomeVsExpense.expense || 1,
     barChartData: chartData.barChartData,
     selectedNetWorthIndex: chartData.selectedNetWorthIndex,
-    onNetWorthPointSelect: chartData.onNetWorthPointSelect,
+    onNetWorthPointSelect: (index: number) => {
+      chartData.onNetWorthPointSelect(index);
+      if (index !== undefined) {
+        const point = chartData.netWorthSeries[index];
+        if (point) analytics.logChartInteracted('net_worth', 'point_select');
+      }
+    },
     selectedIncomeExpenseIndex: chartData.selectedIncomeExpenseIndex,
-    onIncomeExpensePointSelect: chartData.onIncomeExpensePointSelect,
+    onIncomeExpensePointSelect: (index: number) => {
+      chartData.onIncomeExpensePointSelect(index);
+      if (index !== undefined) {
+        analytics.logChartInteracted('income_expense', 'point_select');
+      }
+    },
     displayedNetWorthText: chartData.displayedNetWorthText,
     displayedIncomeText: chartData.displayedIncomeText,
     displayedExpenseText: chartData.displayedExpenseText,
@@ -288,7 +303,12 @@ export function useReportsViewModel(): ReportsViewModel {
     // Advanced charts
     wealthAreaSeries: chartData.wealthAreaSeries,
     selectedWealthIndex: chartData.selectedWealthIndex,
-    onWealthPointSelect: chartData.onWealthPointSelect,
+    onWealthPointSelect: (index: number) => {
+      chartData.onWealthPointSelect(index);
+      if (index !== undefined) {
+        analytics.logChartInteracted('wealth', 'point_select');
+      }
+    },
     sankeyData: chartData.sankeyData,
     spendingHeatmap: chartData.spendingHeatmap,
     calendarHeatmap: chartData.calendarHeatmap,

@@ -60,6 +60,7 @@ export function useAppBootstrap(workplaceId: string, defaultCurrencyCode: string
           const prefs = await preferences.loadPreferences();
 
           analytics.initialize();
+          analytics.logAppOpened();
 
           if (watchdogRef.current) {
             clearTimeout(watchdogRef.current);

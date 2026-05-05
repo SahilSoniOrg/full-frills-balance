@@ -13,6 +13,7 @@
  */
 
 import { AppConfig, FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants';
+import { analytics } from '@/src/services/analytics-service';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -81,6 +82,7 @@ interface UIState {
   appPhase: AppPhase;
   defaultShareFormat: ShareFormat;
   safeToSpendDays: number;
+  isSmsImportEnabled: boolean;
 }
 
 interface UIContextType extends UIState {
@@ -110,6 +112,7 @@ interface UIContextType extends UIState {
   setNotificationWeekday: (weekday: number) => Promise<void>;
   setDefaultShareFormat: (format: ShareFormat) => void;
   setSafeToSpendDays: (days: number) => Promise<void>;
+  setIsSmsImportEnabled: (enabled: boolean) => Promise<void>;
   requireRestart: (options: {
     type: 'IMPORT' | 'RESET';
     stats?: {
@@ -159,6 +162,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     appPhase: AppPhase.BOOTING,
     defaultShareFormat: ShareFormat.TEXT,
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
+    isSmsImportEnabled: false,
   });
 
   // Load preferences on mount
@@ -197,6 +201,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           notificationWeekday: loadedPreferences.notificationWeekday ?? 1,
           defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
           safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
+          isSmsImportEnabled: loadedPreferences.isSmsImportEnabled || false,
         }));
       } catch (error) {
         logger.warn('Failed to load preferences', { error });
@@ -238,40 +243,53 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setThemePreference = useCallback(async (theme: 'light' | 'dark' | 'system') => {
-    try {
-      await preferences.setTheme(theme);
-      setUIState(prev => ({ ...prev, themePreference: theme }));
-    } catch (error) {
-      logger.warn('Failed to save theme preference', { error });
-      setUIState(prev => ({ ...prev, themePreference: theme }));
-    }
-  }, []);
+  const setThemePreference = useCallback(
+    async (theme: 'light' | 'dark' | 'system') => {
+      try {
+        await preferences.setTheme(theme);
+        setUIState(prev => ({ ...prev, themePreference: theme }));
+        analytics.logThemeChanged(theme, uiState.themeId, uiState.fontId);
+      } catch (error) {
+        logger.warn('Failed to save theme preference', { error });
+        setUIState(prev => ({ ...prev, themePreference: theme }));
+      }
+    },
+    [uiState.themeId, uiState.fontId],
+  );
 
-  const setThemeId = useCallback(async (themeId: ThemeId) => {
-    try {
-      await preferences.setThemeId(themeId);
-      setUIState(prev => ({ ...prev, themeId }));
-    } catch (error) {
-      logger.warn('Failed to save theme ID', { error });
-      setUIState(prev => ({ ...prev, themeId }));
-    }
-  }, []);
+  const setThemeId = useCallback(
+    async (themeId: ThemeId) => {
+      try {
+        await preferences.setThemeId(themeId);
+        setUIState(prev => ({ ...prev, themeId }));
+        analytics.logThemeChanged(uiState.themePreference, themeId, uiState.fontId);
+      } catch (error) {
+        logger.warn('Failed to save theme ID', { error });
+        setUIState(prev => ({ ...prev, themeId }));
+      }
+    },
+    [uiState.themePreference, uiState.fontId],
+  );
 
-  const setFontId = useCallback(async (fontId: FontId) => {
-    try {
-      await preferences.setFontId(fontId);
-      setUIState(prev => ({ ...prev, fontId }));
-    } catch (error) {
-      logger.warn('Failed to save font ID', { error });
-      setUIState(prev => ({ ...prev, fontId }));
-    }
-  }, []);
+  const setFontId = useCallback(
+    async (fontId: FontId) => {
+      try {
+        await preferences.setFontId(fontId);
+        setUIState(prev => ({ ...prev, fontId }));
+        analytics.logThemeChanged(uiState.themePreference, uiState.themeId, fontId);
+      } catch (error) {
+        logger.warn('Failed to save font ID', { error });
+        setUIState(prev => ({ ...prev, fontId }));
+      }
+    },
+    [uiState.themePreference, uiState.themeId],
+  );
 
   const setPrivacyMode = useCallback(async (isPrivacyMode: boolean) => {
     try {
       await preferences.setIsPrivacyMode(isPrivacyMode);
       setUIState(prev => ({ ...prev, isPrivacyMode }));
+      analytics.trackFeatureUsage('settings', 'toggle_privacy_mode', { isPrivacyMode });
     } catch (error) {
       logger.warn('Failed to save privacy mode', { error });
       setUIState(prev => ({ ...prev, isPrivacyMode }));
@@ -382,15 +400,19 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setNotificationCadence = useCallback(async (cadence: 'none' | 'daily' | 'weekly') => {
-    try {
-      await preferences.setNotificationCadence(cadence);
-      setUIState(prev => ({ ...prev, notificationCadence: cadence }));
-    } catch (error) {
-      logger.warn('Failed to save notification cadence', { error });
-      setUIState(prev => ({ ...prev, notificationCadence: cadence }));
-    }
-  }, []);
+  const setNotificationCadence = useCallback(
+    async (cadence: 'none' | 'daily' | 'weekly') => {
+      try {
+        await preferences.setNotificationCadence(cadence);
+        setUIState(prev => ({ ...prev, notificationCadence: cadence }));
+        analytics.logNotificationPreferenceChanged(cadence, uiState.notificationHour);
+      } catch (error) {
+        logger.warn('Failed to save notification cadence', { error });
+        setUIState(prev => ({ ...prev, notificationCadence: cadence }));
+      }
+    },
+    [uiState.notificationHour],
+  );
 
   const setNotificationTime = useCallback(async (hour: number, minute: number) => {
     try {
@@ -433,6 +455,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       logger.warn('Failed to save safe to spend days', { error });
       setUIState(prev => ({ ...prev, safeToSpendDays: days }));
+    }
+  }, []);
+
+  const setIsSmsImportEnabled = useCallback(async (enabled: boolean) => {
+    try {
+      await preferences.setIsSmsImportEnabled(enabled);
+      setUIState(prev => ({ ...prev, isSmsImportEnabled: enabled }));
+      analytics.logSmsImportSettingsChanged(enabled);
+    } catch (error) {
+      logger.warn('Failed to save SMS import preference', { error });
     }
   }, []);
 
@@ -514,6 +546,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setNotificationWeekday,
       setDefaultShareFormat,
       setSafeToSpendDays,
+      setIsSmsImportEnabled,
       dispatchBootEvent,
       requireRestart,
     }),
@@ -540,6 +573,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setNotificationWeekday,
       setDefaultShareFormat,
       setSafeToSpendDays,
+      setIsSmsImportEnabled,
       dispatchBootEvent,
       requireRestart,
     ],

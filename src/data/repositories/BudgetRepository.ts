@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
+import { analytics } from '@/src/services/analytics-service';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 
@@ -108,6 +109,7 @@ export class BudgetRepository {
       );
 
       await this.db.batch(...scopeCreates);
+      analytics.logBudgetCreated(data.amount, data.currencyCode);
       return budget;
     });
   }

@@ -146,7 +146,9 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
       if (queryKey === lastTrackedQueryRef.current) return;
       lastTrackedQueryRef.current = queryKey;
 
-      analytics.trackFeatureUsage('journal_search', 'query', {
+      analytics.logSearchPerformed('journal', searchQuery.length);
+      // Keep detailed tracking for research
+      analytics.trackFeatureUsage('journal_search', 'query_details', {
         query_length: searchQuery.length,
         has_account_filter: accountIds.length > 0,
         account_count: accountIds.length,

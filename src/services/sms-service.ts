@@ -1,5 +1,5 @@
-import { AppConfig } from '@/src/constants';
 import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
+import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
@@ -12,8 +12,9 @@ import SmsInboxRecord, {
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { workplaceService } from '@/src/services/WorkplaceService';
+import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
@@ -750,7 +751,7 @@ class SmsService {
         entry.processingStatus = SmsProcessingStatus.AUTO_POSTED;
         entry.processedAt = Date.now();
       });
-
+      analytics.logSmsRuleTriggered(rule.id, true);
       this.markSmsAsProcessed(record.deviceSmsId);
       return { ops: [...ops, linkOp], status: 'auto_posted', accountsToRebuild };
     }

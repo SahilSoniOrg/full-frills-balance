@@ -3,6 +3,7 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
+import { analytics } from '@/src/services/analytics-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import {
   notificationService,
@@ -149,9 +150,15 @@ export function useDashboardViewModel(): DashboardViewModel {
   const explanationModalState = useMemo(
     () => ({
       visible: isExplanationVisible,
-      setVisible: setExplanationVisible,
+      setVisible: (v: boolean) => {
+        setExplanationVisible(v);
+        if (v) analytics.logChartInteracted('safe_to_spend', 'explanation_open');
+      },
       expandedSection,
-      setExpandedSection,
+      setExpandedSection: (s: any) => {
+        setExpandedSection(s);
+        if (s) analytics.logChartInteracted('safe_to_spend', `explanation_expand_${s}`);
+      },
     }),
     [isExplanationVisible, expandedSection],
   );

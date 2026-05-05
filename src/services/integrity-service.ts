@@ -17,6 +17,7 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
+import { analytics } from '@/src/services/analytics-service';
 import { smsService } from '@/src/services/sms-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
@@ -61,6 +62,7 @@ export class IntegrityService {
       .fetch();
 
     if (nullAccountTxs.length > 0) {
+      analytics.logIntegrityIssue('transactions', 'null_account_id');
       throw new Error(
         `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId!`,
       );
@@ -425,6 +427,10 @@ export class IntegrityService {
 
       repairsAttempted++;
       const success = await this.repairAccountBalance(workplaceId, discrepancy.accountId);
+      analytics.logIntegrityIssue(
+        'accounts',
+        `discrepancy_${discrepancy.snapshotCorrupted ? 'corrupted_snapshot' : 'running_balance'}`,
+      );
       if (success) {
         repairsSuccessful++;
       }

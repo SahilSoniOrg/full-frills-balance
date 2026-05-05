@@ -1,6 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { schema } from '@/src/data/database/schema';
 import { ImportStats } from '@/src/services/import';
 import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import PostHog from 'posthog-react-native';
@@ -56,6 +58,27 @@ export class AnalyticsService {
       logger.warn('[Analytics] No PostHog API key configured — analytics disabled');
     }
   }
+  /**
+   * Enrich properties with global metadata
+   */
+  private enrichProps(props?: Record<string, any>): Record<string, any> {
+    return {
+      ...props,
+      $app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
+      $app_build_number: Application.nativeBuildVersion || '1',
+      $device_name: Device.deviceName,
+      $device_model: Device.modelName,
+      $os_name: Platform.OS,
+      $os_version: Device.osVersion,
+      $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
+      $is_dev: __DEV__ || !Device.isDevice,
+      $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
+      $build_type: BUILD_TYPE,
+      $active_workplace_id: preferences.activeWorkplaceId || 'none',
+      $db_schema_version: schema.version,
+      is_test_build: BUILD_TYPE !== 'production',
+    };
+  }
 
   /**
    * Track a custom event
@@ -64,20 +87,7 @@ export class AnalyticsService {
     if (!this.posthog) return;
 
     try {
-      const enrichedProps = {
-        ...props,
-        $app_version: AppConfig.appVersion,
-        $device_name: Device.deviceName,
-        $device_model: Device.modelName,
-        $os_name: Platform.OS,
-        $os_version: Device.osVersion,
-        $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
-        $is_dev: __DEV__ || !Device.isDevice,
-        $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
-        $build_type: BUILD_TYPE,
-        is_test_build: BUILD_TYPE !== 'production',
-      };
-
+      const enrichedProps = this.enrichProps(props);
       this.posthog.capture(eventName, enrichedProps);
       if (__DEV__) {
         logger.debug(`[Analytics] Tracked: ${eventName}`, enrichedProps);
@@ -94,25 +104,14 @@ export class AnalyticsService {
     if (!this.posthog) return;
 
     try {
-      const enhancedProperties = {
+      const enrichedProps = this.enrichProps({
         ...properties,
-        $app_version: AppConfig.appVersion,
-        $device_name: Device.deviceName,
-        $device_model: Device.modelName,
-        $os_name: Platform.OS,
-        $os_version: Device.osVersion,
-        $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
-        $is_dev: __DEV__ || !Device.isDevice,
-        $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
-        $app_build_number: Application.nativeBuildVersion || 'unknown',
         $app_id: Application.applicationId || 'unknown',
-        $build_type: BUILD_TYPE,
-        is_test_build: BUILD_TYPE !== 'production',
-      };
+      });
 
-      this.posthog.identify(distinctId, enhancedProperties);
+      this.posthog.identify(distinctId, enrichedProps);
       if (__DEV__) {
-        logger.debug(`[Analytics] Identified: ${distinctId}`, enhancedProperties);
+        logger.debug(`[Analytics] Identified: ${distinctId}`, enrichedProps);
       }
     } catch (error) {
       logger.error(`[Analytics] Failed to identify user: ${distinctId}`, error);
@@ -126,9 +125,10 @@ export class AnalyticsService {
     if (!this.posthog) return;
 
     try {
-      this.posthog.screen(screenName, props);
+      const enrichedProps = this.enrichProps(props);
+      this.posthog.screen(screenName, enrichedProps);
       if (__DEV__) {
-        logger.debug(`[Analytics] Screen: ${screenName}`, props);
+        logger.debug(`[Analytics] Screen: ${screenName}`, enrichedProps);
       }
     } catch (error) {
       logger.error(`[Analytics] Failed to track screen: ${screenName}`, error);
@@ -136,8 +136,16 @@ export class AnalyticsService {
   }
 
   /**
+
    * Specialized events
    */
+  logAppOpened() {
+    this.track('app_opened', {
+      version: Application.nativeApplicationVersion || AppConfig.appVersion,
+      build: Application.nativeBuildVersion || '1',
+    });
+  }
+
   logAccountCreated(type: string, currency: string) {
     this.track('account_created', { type, currency });
   }
@@ -152,6 +160,58 @@ export class AnalyticsService {
 
   logCurrencyChanged(oldCurrency: string, newCurrency: string) {
     this.track('currency_changed', { from: oldCurrency, to: newCurrency });
+  }
+
+  logThemeChanged(theme: string, themeId: string, fontId: string) {
+    this.track('theme_changed', { theme, themeId, fontId });
+  }
+
+  logNotificationPreferenceChanged(cadence: string, hour: number) {
+    this.track('notification_preference_changed', { cadence, hour });
+  }
+
+  logWorkplaceCreated(name: string, icon: string) {
+    this.track('workplace_created', { name_length: name.length, icon });
+  }
+
+  logWorkplaceSwitched(fromId: string, toId: string) {
+    this.track('workplace_switched', { fromId, toId });
+  }
+
+  logWorkplaceDeleted() {
+    this.track('workplace_deleted');
+  }
+
+  logBudgetCreated(amount: number, currency: string) {
+    this.track('budget_created', { amount, currency });
+  }
+
+  logPlannedPaymentCreated(interval: string, type: string) {
+    this.track('planned_payment_created', { interval, type });
+  }
+
+  logSmsRuleTriggered(ruleId: string, isAutoPosted: boolean) {
+    this.track('sms_rule_triggered', { ruleId, isAutoPosted });
+  }
+
+  logSmsImportSettingsChanged(enabled: boolean) {
+    this.track('sms_import_settings_changed', { enabled });
+  }
+
+  logChartInteracted(chartName: string, interactionType: string) {
+    this.track('chart_interacted', { chartName, interactionType });
+  }
+
+  logSearchPerformed(scope: string, queryLength: number) {
+    this.track('search_performed', { scope, queryLength });
+  }
+
+  logDatabaseMigration(version: number, durationMs: number) {
+    this.track('database_migration', { version, duration_ms: durationMs });
+  }
+
+  logIntegrityIssue(table: string, issueType: string) {
+    this.track('integrity_issue', { table, issueType });
   }
 
   logImportCompleted(pluginId: string, stats: ImportStats) {
