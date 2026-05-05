@@ -96,7 +96,7 @@ export class WorkplaceService {
     }
 
     // 3. Create a default one if none exist
-    const defaultWorkplace = await this.createWorkplace('Personal', 'briefcase', {
+    const defaultWorkplace = await this.createWorkplace('Personal workplace', 'briefcase', {
       currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
     });
     preferences.setActiveWorkplaceId(defaultWorkplace.id);

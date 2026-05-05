@@ -5,6 +5,7 @@ import { accountService } from '@/src/features/accounts';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/utils/preferences';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
 
 export interface OnboardingData {
@@ -31,18 +32,38 @@ export class OnboardingService {
       customCategories,
     } = data;
 
-    // 1. Create the target workplace with selected currency
-    const targetWorkplace = await workplaceService.createWorkplace(
-      name || 'Personal',
-      'briefcase',
-      {
+    // 1. Determine if we should reuse the existing "Personal" workplace (created on boot)
+    // or create a new one. Reuse avoids "ghost" workplaces on fresh installs.
+    const workplaces = await workplaceService.getAllWorkplaces();
+    let targetWorkplace;
+
+    const defaultName = name ? `${name}'s Personal workplace` : 'Personal workplace';
+
+    if (
+      workplaces.length === 1 &&
+      (workplaces[0].name === 'Personal' || workplaces[0].name === 'Personal workplace')
+    ) {
+      targetWorkplace = workplaces[0];
+      await workplaceService.updateWorkplace(targetWorkplace.id, {
+        name: defaultName,
+        defaultCurrencyCode: selectedCurrency,
+      });
+      logger.info(
+        `[Onboarding] Reusing and updating existing default workplace: ${targetWorkplace.id}`,
+      );
+    } else {
+      targetWorkplace = await workplaceService.createWorkplace(defaultName, 'briefcase', {
         currencyCode: selectedCurrency,
-      },
-    );
+      });
+      logger.info(`[Onboarding] Created new target workplace: ${targetWorkplace.id}`);
+    }
 
     const targetWorkplaceId = targetWorkplace.id;
 
-    logger.info(`Starting onboarding completion for user: ${name}`);
+    // IMPORTANT: Set the newly created/updated workplace as the active one so the rest of the app points to it.
+    preferences.setActiveWorkplaceId(targetWorkplaceId);
+
+    logger.info(`[Onboarding] Active workplace set to: ${targetWorkplaceId}`);
 
     // 1. Truly deduplicate input lists case-insensitively
     const deduplicate = (list: string[]) => {
@@ -158,6 +179,9 @@ export class OnboardingService {
       onboarding_date: new Date().toISOString(),
     });
 
+    logger.info(
+      `[Onboarding] Successfully created ${uniqueAccounts.length} accounts and ${uniqueCategories.length} categories`,
+    );
     logger.info('Onboarding completion logic finished successfully');
     return targetWorkplaceId!;
   }

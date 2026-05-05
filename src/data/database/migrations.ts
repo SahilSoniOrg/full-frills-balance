@@ -517,20 +517,39 @@ export const migrations = schemaMigrations({
         }),
         unsafeExecuteSql(`
           INSERT INTO workplaces (id, name, icon, default_currency_code, created_at, updated_at)
-          VALUES ('${defaultWorkplaceId}', 'Personal', 'briefcase', '${AppConfig.defaultCurrency}', ${Date.now()}, ${Date.now()});
+          SELECT '${defaultWorkplaceId}', 'Personal workplace', 'briefcase', '${AppConfig.defaultCurrency}', ${Date.now()}, ${Date.now()}
+          WHERE (SELECT COUNT(*) FROM workplaces) = 0;
         `),
-        unsafeExecuteSql(`UPDATE accounts SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE balance_snapshots SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE journals SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE transactions SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE audit_logs SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE budgets SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE budget_scopes SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE account_metadata SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE planned_payments SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE journal_metadata SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE sms_auto_post_rules SET workplace_id = '${defaultWorkplaceId}';`),
-        unsafeExecuteSql(`UPDATE sms_inbox_records SET workplace_id = '${defaultWorkplaceId}';`),
+        unsafeExecuteSql(`UPDATE accounts SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`),
+        unsafeExecuteSql(
+          `UPDATE balance_snapshots SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(`UPDATE journals SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`),
+        unsafeExecuteSql(
+          `UPDATE transactions SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(
+          `UPDATE audit_logs SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(`UPDATE budgets SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`),
+        unsafeExecuteSql(
+          `UPDATE budget_scopes SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(
+          `UPDATE account_metadata SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(
+          `UPDATE planned_payments SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(
+          `UPDATE journal_metadata SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(
+          `UPDATE sms_auto_post_rules SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
+        unsafeExecuteSql(
+          `UPDATE sms_inbox_records SET workplace_id = (SELECT id FROM workplaces LIMIT 1);`,
+        ),
         unsafeExecuteSql(`
           CREATE TRIGGER IF NOT EXISTS trg_accounts_workplace_id_check
           BEFORE INSERT ON accounts FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on accounts'); END;
