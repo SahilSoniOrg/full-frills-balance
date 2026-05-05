@@ -5,7 +5,18 @@ import { logger } from '@/src/utils/logger';
 
 export class DatabaseRepository {
   async resetDatabase(): Promise<void> {
+    // unsafeResetDatabase MUST be wrapped in a write() block (Writer)
     await database.write(async () => {
+      // Manual purge of workplaces as a safety measure before full reset
+      try {
+        const workplaces = await database.collections.get('workplaces').query().fetch();
+        if (workplaces.length > 0) {
+          await database.batch(workplaces.map(w => w.prepareDestroyPermanently()));
+        }
+      } catch (err) {
+        logger.error('[DatabaseRepository] Pre-reset workplace purge failed', err);
+      }
+
       await database.unsafeResetDatabase();
     });
   }

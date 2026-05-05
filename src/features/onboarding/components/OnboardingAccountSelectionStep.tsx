@@ -26,7 +26,7 @@ export function OnboardingAccountSelectionStep({
 }: OnboardingAccountSelectionStepProps) {
   const items: SelectableItem[] = [
     ...DEFAULT_ACCOUNTS.map(account => ({
-      id: account.id,
+      id: account.name, // Use name as ID to match state
       name: account.name,
       icon: account.icon,
     })),
@@ -38,16 +38,10 @@ export function OnboardingAccountSelectionStep({
   ];
 
   const handleToggle = (id: string) => {
-    const account = items.find(candidate => candidate.id === id);
-    if (account && !selectedAccounts.includes(id)) {
-      if (
-        !DEFAULT_ACCOUNTS.some(candidate => candidate.name === id) &&
-        !customAccounts.some(candidate => candidate.name === id)
-      ) {
-        onAddCustomAccount(id, 'EXPENSE', account.icon || 'wallet');
-      }
+    const item = items.find(candidate => candidate.id === id);
+    if (item) {
+      onToggleAccount(item.name);
     }
-    onToggleAccount(id);
   };
 
   return (
@@ -60,6 +54,7 @@ export function OnboardingAccountSelectionStep({
       onContinue={onContinue}
       onBack={onBack}
       isCompleting={isCompleting}
+      disableAnimation={true}
       bottomContent={
         <CategoryCreationBar
           placeholder={AppConfig.strings.onboarding.accounts.placeholder}

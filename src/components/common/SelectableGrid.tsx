@@ -3,7 +3,7 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { Layout, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
-import { FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { MotiView } from 'moti';
@@ -32,6 +32,7 @@ export interface SelectableGridProps {
   accentColor?: string;
   footerActionLabel?: string;
   bottomContent?: React.ReactNode;
+  disableAnimation?: boolean;
 }
 
 interface SelectableGridItemProps {
@@ -47,6 +48,7 @@ interface SelectableGridItemProps {
   onToggle: (id: string) => void;
   renderIcon?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
   renderSubtitle?: (item: SelectableItem, isSelected: boolean) => React.ReactNode;
+  disableAnimation?: boolean;
 }
 
 const SelectableGridItem = React.memo(
@@ -63,8 +65,88 @@ const SelectableGridItem = React.memo(
     onToggle,
     renderIcon,
     renderSubtitle,
+    disableAnimation,
   }: SelectableGridItemProps) => {
     const { id, name, icon, symbol, subtitle } = item;
+
+    const content = (
+      <TouchableOpacity
+        onPress={() => onToggle(id)}
+        disabled={isAtMax}
+        activeOpacity={Opacity.heavy}
+        accessibilityLabel={`${name}, ${isSelected ? 'selected' : 'not selected'}`}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected, disabled: isAtMax }}
+      >
+        <Box
+          borderRadius="r3"
+          style={[
+            styles.itemContainer,
+            {
+              borderWidth: 1.5,
+              borderColor,
+            },
+          ]}
+          unsafe_backgroundRaw={backgroundColor}
+          padding="md"
+          justifyContent="space-between"
+        >
+          <Inline justify="space-between" align="flex-start" marginBottom="md">
+            <Box
+              width={Size.xl}
+              height={Size.xl}
+              borderRadius="full"
+              justifyContent="center"
+              alignItems="center"
+              unsafe_backgroundRaw={isSelected ? withOpacity(accentColor, Opacity.soft) : undefined}
+              style={!isSelected && styles.iconCircleBase}
+            >
+              {renderIcon ? (
+                renderIcon(item, isSelected)
+              ) : icon ? (
+                <AppIcon
+                  name={icon}
+                  size={Size.iconMd}
+                  color={isSelected ? accentColor : textColor}
+                />
+              ) : symbol ? (
+                <AppText variant="heading" style={{ color: isSelected ? accentColor : textColor }}>
+                  {symbol}
+                </AppText>
+              ) : null}
+            </Box>
+            {isSelected && <AppIcon name="checkCircle" size={Size.iconMd} color={accentColor} />}
+          </Inline>
+
+          <Stack space="xs">
+            <AppText
+              variant="subheading"
+              style={{ color: isSelected ? accentColor : textColor }}
+              numberOfLines={1}
+            >
+              {name}
+            </AppText>
+            {renderSubtitle ? (
+              renderSubtitle(item, isSelected)
+            ) : subtitle ? (
+              <AppText
+                variant="caption"
+                color="secondary"
+                style={{
+                  color: isSelected ? withOpacity(accentColor, Opacity.strong) : secondaryTextColor,
+                }}
+              >
+                {subtitle}
+              </AppText>
+            ) : null}
+          </Stack>
+        </Box>
+      </TouchableOpacity>
+    );
+
+    if (disableAnimation) {
+      return <View style={styles.itemWrapper}>{content}</View>;
+    }
 
     return (
       <MotiView
@@ -78,85 +160,7 @@ const SelectableGridItem = React.memo(
         }}
         style={styles.itemWrapper}
       >
-        <TouchableOpacity
-          onPress={() => onToggle(id)}
-          disabled={isAtMax}
-          activeOpacity={Opacity.heavy}
-          accessibilityLabel={`${name}, ${isSelected ? 'selected' : 'not selected'}`}
-          accessibilityRole="button"
-          accessibilityState={{ selected: isSelected, disabled: isAtMax }}
-        >
-          <Box
-            borderRadius="r3"
-            style={[
-              styles.itemContainer,
-              {
-                borderWidth: 1.5,
-                borderColor,
-              },
-            ]}
-            unsafe_backgroundRaw={backgroundColor}
-            padding="md"
-            justifyContent="space-between"
-          >
-            <Inline justify="space-between" align="flex-start" marginBottom="md">
-              <Box
-                width={Size.xl}
-                height={Size.xl}
-                borderRadius="full"
-                justifyContent="center"
-                alignItems="center"
-                unsafe_backgroundRaw={
-                  isSelected ? withOpacity(accentColor, Opacity.soft) : undefined
-                }
-                style={!isSelected && styles.iconCircleBase}
-              >
-                {renderIcon ? (
-                  renderIcon(item, isSelected)
-                ) : icon ? (
-                  <AppIcon
-                    name={icon}
-                    size={Size.iconMd}
-                    color={isSelected ? accentColor : textColor}
-                  />
-                ) : symbol ? (
-                  <AppText
-                    variant="heading"
-                    style={{ color: isSelected ? accentColor : textColor }}
-                  >
-                    {symbol}
-                  </AppText>
-                ) : null}
-              </Box>
-              {isSelected && <AppIcon name="checkCircle" size={Size.iconMd} color={accentColor} />}
-            </Inline>
-
-            <Stack space="xs">
-              <AppText
-                variant="subheading"
-                style={{ color: isSelected ? accentColor : textColor }}
-                numberOfLines={1}
-              >
-                {name}
-              </AppText>
-              {renderSubtitle ? (
-                renderSubtitle(item, isSelected)
-              ) : subtitle ? (
-                <AppText
-                  variant="caption"
-                  color="secondary"
-                  style={{
-                    color: isSelected
-                      ? withOpacity(accentColor, Opacity.strong)
-                      : secondaryTextColor,
-                  }}
-                >
-                  {subtitle}
-                </AppText>
-              ) : null}
-            </Stack>
-          </Box>
-        </TouchableOpacity>
+        {content}
       </MotiView>
     );
   },
@@ -197,6 +201,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
   accentColor,
   footerActionLabel = 'Continue',
   bottomContent,
+  disableAnimation = false,
 }) => {
   const { theme } = useTheme();
   const effectiveAccentColor = accentColor || theme.primary;
@@ -236,6 +241,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
           onToggle={handleToggle}
           renderIcon={renderIcon}
           renderSubtitle={renderSubtitle}
+          disableAnimation={disableAnimation}
         />
       );
     },

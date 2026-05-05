@@ -63,6 +63,7 @@ export function OnboardingCurrencyStep({
       onContinue={onContinue}
       onBack={onBack}
       isCompleting={isCompleting}
+      disableAnimation={true}
       bottomContent={
         <Box>
           <AppInput

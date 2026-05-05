@@ -33,7 +33,7 @@ export function OnboardingCategorySelectionStep({
     () => [
       ...DEFAULT_CATEGORIES.map(category => ({
         ...category,
-        id: category.id,
+        id: category.name, // Use name as ID to match state
         subtitle: category.type === 'INCOME' ? incomeLabel : expenseLabel,
       })),
       ...customCategories.map(category => ({
@@ -71,16 +71,24 @@ export function OnboardingCategorySelectionStep({
     );
   };
 
+  const handleToggle = (id: string) => {
+    const item = categoryItems.find(candidate => candidate.id === id);
+    if (item) {
+      onToggleCategory(item.name);
+    }
+  };
+
   return (
     <SelectableGrid
       title={AppConfig.strings.onboarding.categories.title}
       subtitle={AppConfig.strings.onboarding.categories.subtitle}
       items={categoryItems}
       selectedIds={selectedCategories}
-      onToggle={onToggleCategory}
+      onToggle={handleToggle}
       onContinue={onContinue}
       onBack={onBack}
       isCompleting={isCompleting}
+      disableAnimation={true}
       bottomContent={
         <CategoryCreationBar
           placeholder={AppConfig.strings.onboarding.categories.placeholder}

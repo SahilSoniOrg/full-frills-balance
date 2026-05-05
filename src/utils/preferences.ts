@@ -429,6 +429,7 @@ class PreferencesHelper {
   // Clear all preferences (useful for testing or reset)
   clearPreferences(): void {
     this.preferences = { ...DEFAULT_UI_PREFERENCES };
+    this.preferencesSubject.next(this.preferences);
     try {
       storage.remove(PREFERENCES_KEY);
     } catch (error) {

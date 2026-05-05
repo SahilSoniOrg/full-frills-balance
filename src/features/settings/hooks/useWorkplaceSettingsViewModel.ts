@@ -1,5 +1,6 @@
 import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { AccountType } from '@/src/data/models/Account';
 import Workplace from '@/src/data/models/Workplace';
 import { useObservable } from '@/src/hooks/useObservable';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -13,7 +14,14 @@ export interface WorkplaceSettingsViewModel {
   isCreating: boolean;
   isCreatingWorkplace: boolean;
   setActiveWorkplace: (workplace: Workplace) => void;
-  createWorkplace: (name: string, icon: IconName) => Promise<boolean>;
+  createWorkplace: (
+    name: string,
+    icon: IconName,
+    options?: {
+      initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
+      initialCategories?: { name: string; type: AccountType; icon: IconName }[];
+    },
+  ) => Promise<boolean>;
   updateWorkplaceIcon: (workplace: Workplace, icon: IconName) => Promise<void>;
   startCreateWorkplace: () => void;
   cancelCreateWorkplace: () => void;
@@ -56,13 +64,20 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
   }, []);
 
   const createWorkplace = useCallback(
-    async (name: string, icon: IconName) => {
+    async (
+      name: string,
+      icon: IconName,
+      options?: {
+        initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
+        initialCategories?: { name: string; type: AccountType; icon: IconName }[];
+      },
+    ) => {
       if (!name.trim()) {
         return false;
       }
       setIsCreatingWorkplace(true);
       try {
-        const newWorkplace = await workplaceService.createWorkplace(name.trim(), icon);
+        const newWorkplace = await workplaceService.createWorkplace(name.trim(), icon, options);
         setActiveWorkplace(newWorkplace);
         cancelCreateWorkplace();
         return true;

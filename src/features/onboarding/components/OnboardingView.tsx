@@ -5,7 +5,7 @@ import { OnboardingCategorySelectionStep } from '@/src/features/onboarding/compo
 import { OnboardingCurrencyStep } from '@/src/features/onboarding/components/OnboardingCurrencyStep';
 import { OnboardingThemeStep } from '@/src/features/onboarding/components/OnboardingThemeStep';
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
-import { StepIndicator } from '@/src/features/onboarding/components/StepIndicator';
+import { StepIndicator } from '@/src/components/common/StepIndicator';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
 import React from 'react';

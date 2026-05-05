@@ -57,11 +57,48 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
         if (data.step) setStep(data.step);
         if (data.name) setName(data.name);
         if (data.selectedCurrency) setSelectedCurrency(data.selectedCurrency);
-        if (data.selectedAccounts) setSelectedAccounts(data.selectedAccounts);
-        if (data.customAccounts) setCustomAccounts(data.customAccounts);
-        if (data.selectedCategories) setSelectedCategories(data.selectedCategories);
-        if (data.customCategories) setCustomCategories(data.customCategories);
-        logger.info('[Onboarding] Rehydrated draft from disk');
+        if (data.selectedAccounts) {
+          // Normalize selectedAccounts: Map lowercase IDs to capitalized names if they exist in defaults
+          const normalized = data.selectedAccounts.map((id: string) => {
+            const def = DEFAULT_ACCOUNTS.find(da => da.id.toLowerCase() === id.toLowerCase());
+            return def ? def.name : id;
+          });
+          // Unique set
+          setSelectedAccounts(Array.from(new Set(normalized)));
+        }
+        if (data.customAccounts) {
+          // Deduplicate custom accounts against defaults
+          const filtered = data.customAccounts.filter(
+            (ca: any) =>
+              !DEFAULT_ACCOUNTS.some(
+                da =>
+                  da.name.toLowerCase() === ca.name.toLowerCase() ||
+                  da.id.toLowerCase() === ca.name.toLowerCase(),
+              ),
+          );
+          setCustomAccounts(filtered);
+        }
+        if (data.selectedCategories) {
+          // Normalize selectedCategories
+          const normalized = data.selectedCategories.map((id: string) => {
+            const def = DEFAULT_CATEGORIES.find(dc => dc.id.toLowerCase() === id.toLowerCase());
+            return def ? def.name : id;
+          });
+          setSelectedCategories(Array.from(new Set(normalized)));
+        }
+        if (data.customCategories) {
+          // Deduplicate custom categories against defaults
+          const filtered = data.customCategories.filter(
+            (cc: any) =>
+              !DEFAULT_CATEGORIES.some(
+                dc =>
+                  dc.name.toLowerCase() === cc.name.toLowerCase() ||
+                  dc.id.toLowerCase() === cc.name.toLowerCase(),
+              ),
+          );
+          setCustomCategories(filtered);
+        }
+        logger.info('[Onboarding] Rehydrated and cleaned draft from disk');
       }
     } catch (error) {
       logger.error('[Onboarding] Failed to rehydrate draft', error);
@@ -124,8 +161,12 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
       });
       setCustomAccounts(prev => {
         if (
-          prev.some(a => a.name === accountName) ||
-          DEFAULT_ACCOUNTS.some(a => a.name === accountName)
+          prev.some(a => a.name.toLowerCase() === accountName.toLowerCase()) ||
+          DEFAULT_ACCOUNTS.some(
+            a =>
+              a.name.toLowerCase() === accountName.toLowerCase() ||
+              a.id.toLowerCase() === accountName.toLowerCase(),
+          )
         )
           return prev;
         return [...prev, { name: accountName, icon }];
@@ -151,8 +192,12 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
       });
       setCustomCategories(prev => {
         if (
-          prev.some(c => c.name === categoryName) ||
-          DEFAULT_CATEGORIES.some(c => c.name === categoryName)
+          prev.some(c => c.name.toLowerCase() === categoryName.toLowerCase()) ||
+          DEFAULT_CATEGORIES.some(
+            c =>
+              c.name.toLowerCase() === categoryName.toLowerCase() ||
+              c.id.toLowerCase() === categoryName.toLowerCase(),
+          )
         )
           return prev;
         return [...prev, { name: categoryName, type, icon }];

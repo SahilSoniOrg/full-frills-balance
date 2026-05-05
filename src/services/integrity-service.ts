@@ -22,6 +22,7 @@ import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
+import { workplaceRepository } from '../data/repositories/WorkplaceRepository';
 
 export interface BalanceVerificationResult {
   accountId: string;
@@ -442,7 +443,7 @@ export class IntegrityService {
   }
 
   /**
-   * Clears all data for a specific workplace.
+   * Clears all data for a specific workplace and deletes the workplace itself.
    */
   async resetWorkplace(workplaceId: string): Promise<void> {
     logger.warn(`[IntegrityService] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
@@ -462,12 +463,19 @@ export class IntegrityService {
         'balance_snapshots',
       ];
 
+      // 1. Purge all data scoped to this workplace
       await databaseRepository.purgeWorkplaceData(workplaceId, scopedTables);
 
-      // Note: we don't clear processed SMS IDs here as they are global in the SMS service's internal state
-      // but the records themselves are deleted from the database.
+      // 2. Delete the workplace record itself
+      const { database } = await import('@/src/data/database/Database');
+      await database.write(async () => {
+        const workplace = await workplaceRepository.find(workplaceId);
+        if (workplace) {
+          await workplace.destroyPermanently();
+        }
+      });
 
-      logger.info(`[IntegrityService] Workplace ${workplaceId} reset successful.`);
+      logger.info(`[IntegrityService] Workplace ${workplaceId} reset and deletion successful.`);
     } catch (error) {
       logger.error(`[IntegrityService] Failed to reset workplace ${workplaceId}:`, error);
       throw error;
