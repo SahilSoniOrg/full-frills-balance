@@ -23,16 +23,19 @@ jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/simulation/CashFlowSimulationService');
-jest.mock('@/src/utils/preferences', () => ({
-  preferences: {
-    defaultCurrencyCode: 'USD',
-    dismissedPatternIds: [],
-    dismissPattern: jest.fn(),
-    undismissPattern: jest.fn(),
-    observe: jest.fn(() => of(60)),
-    safeToSpendDays: 60,
-  },
-}));
+jest.mock('@/src/utils/preferences', () => {
+  const { of } = require('rxjs');
+  return {
+    preferences: {
+      defaultCurrencyCode: 'USD',
+      dismissedPatternIds: [],
+      dismissPattern: jest.fn(),
+      undismissPattern: jest.fn(),
+      observe: jest.fn(() => of(60)),
+      safeToSpendDays: 60,
+    },
+  };
+});
 
 describe('NotificationService', () => {
   beforeEach(() => {

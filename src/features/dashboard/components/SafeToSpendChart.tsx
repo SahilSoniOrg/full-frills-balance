@@ -139,7 +139,7 @@ export const SafeToSpendChart = ({
           color={isOverCommitted ? theme.error : theme.primary}
           xTicks={xTicks}
           formatXTick={x => dayjs(x).format('MMM D')}
-          todayX={dayjs().startOf('day').valueOf()}
+          todayX={dayjs().endOf('day').valueOf()}
           hideLabels={isPrivacyMode}
           extraHorizontalLines={extraHorizontalLines}
           avoidPointVertical={true}

@@ -100,7 +100,9 @@ export class Simulator {
           roundedAccountBalances.set(id, Math.round((bal ?? 0) * 100) / 100);
         }
 
-        const timestamp = startDayTimestamp + todayOffset * 24 * 60 * 60 * 1000;
+        // Set timestamp to the end of the day (23:59:59)
+        const timestamp =
+          startDayTimestamp + todayOffset * 24 * 60 * 60 * 1000 + (24 * 60 * 60 * 1000 - 1000);
 
         projections.push({
           dayOffset: todayOffset,

@@ -470,25 +470,20 @@ export class NotificationService {
 
               const historyPoints: SafeToSpendDataPoint[] = [];
               let runningBalance = totalLiquidMoney.amount;
-              historyPoints.push({
-                timestamp: now.valueOf(),
-                value: runningBalance,
-                isProjected: false,
-              });
-
               for (let i = 0; i < safeToSpendDays; i++) {
                 const targetDay = startOfToday.subtract(i, 'day').valueOf();
                 const flowThatDay = netCashFlowByDay.get(targetDay) || 0;
                 runningBalance -= flowThatDay;
+                // Points are at the END of each day (Start of targetDay is the same as End of targetDay - 1)
                 historyPoints.push({
-                  timestamp: startOfToday.subtract(i + 1, 'day').valueOf(),
+                  timestamp: targetDay - 1000, // 23:59:59 of the previous day
                   value: runningBalance,
                   isProjected: false,
                 });
               }
               historyPoints.reverse();
 
-              const points = runResult.simulationResult.projections.map(p => {
+              const projectionPoints = runResult.simulationResult.projections.map(p => {
                 const details = p.flows.map(f => ({
                   name: f.label,
                   amount: f.amount,
@@ -511,7 +506,7 @@ export class NotificationService {
                   accountBalances: p.accountBalances,
                   details,
                   dailyBurn: dailyBurn > 0 ? dailyBurn : undefined,
-                };
+                } as SafeToSpendDataPoint & { dayOffset: number };
               });
 
               const safeDaysCount = (function () {
@@ -542,7 +537,7 @@ export class NotificationService {
                 dailyBudgetBurn: runResult.report.budget.currentMonthRemaining / safeToSpendDays,
                 projection: {
                   history: historyPoints,
-                  projection: points as any,
+                  projection: projectionPoints as any,
                   safeDaysCount,
                   safeToSpend: runResult.simulationResult.summary.safeToSpend,
                 },
