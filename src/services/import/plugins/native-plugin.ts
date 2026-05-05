@@ -6,6 +6,8 @@
  */
 
 import { AppConfig } from '@/src/constants';
+import { generator as generateId } from '@/src/data/database/idGenerator';
+import { AuditEntityType } from '@/src/data/models/AuditLog';
 import {
   ImportedAccount,
   ImportedAccountMetadata,
@@ -13,13 +15,10 @@ import {
   ImportedBalanceSnapshot,
   ImportedBudget,
   ImportedBudgetScope,
-  ImportedCurrency,
-  ImportedExchangeRate,
   ImportedJournal,
   ImportedJournalMetadata,
   ImportedPlannedPayment,
   ImportedSmsAutoPostRule,
-  ImportedSmsInboxRecord,
   ImportedTransaction,
   importRepository,
 } from '@/src/data/repositories/ImportRepository';
@@ -37,13 +36,10 @@ interface NativeImportData {
   auditLogs?: ImportedAuditLog[];
   budgets?: ImportedBudget[];
   budgetScopes?: ImportedBudgetScope[];
-  currencies?: ImportedCurrency[];
-  exchangeRates?: ImportedExchangeRate[];
   accountMetadata?: ImportedAccountMetadata[];
   plannedPayments?: ImportedPlannedPayment[];
   journalMetadata?: ImportedJournalMetadata[];
   smsAutoPostRules?: ImportedSmsAutoPostRule[];
-  smsInboxRecords?: ImportedSmsInboxRecord[];
   balanceSnapshots?: ImportedBalanceSnapshot[];
 }
 
@@ -101,6 +97,20 @@ export const nativePlugin: ImportPlugin = {
     );
     const defaultCurrencyCode = data.preferences?.defaultCurrencyCode || AppConfig.defaultCurrency;
 
+    // ID Remapping Maps
+    const accountMap = new Map<string, string>();
+    const journalMap = new Map<string, string>();
+    const transactionMap = new Map<string, string>();
+    const budgetMap = new Map<string, string>();
+    const plannedPaymentMap = new Map<string, string>();
+
+    // Pre-populate maps with new IDs
+    data.accounts.forEach(acc => accountMap.set(acc.id, generateId()));
+    data.journals.forEach(j => journalMap.set(j.id, generateId()));
+    data.transactions.forEach(t => transactionMap.set(t.id, generateId()));
+    (data.budgets || []).forEach(b => budgetMap.set(b.id, generateId()));
+    (data.plannedPayments || []).forEach(pp => plannedPaymentMap.set(pp.id, generateId()));
+
     try {
       // 1. Wipe existing data for this workplace
       onProgress?.('Wiping workplace data...', 0.1);
@@ -121,12 +131,12 @@ export const nativePlugin: ImportPlugin = {
       // We use the provided workplaceId instead of ensuring a default one
       await importRepository.batchInsert(workplaceId, {
         accounts: data.accounts.map(acc => ({
-          id: acc.id,
+          id: accountMap.get(acc.id)!,
           name: acc.name,
           accountType: acc.accountType,
           accountSubtype: acc.accountSubtype,
           currencyCode: acc.currencyCode || defaultCurrencyCode,
-          parentAccountId: acc.parentAccountId,
+          parentAccountId: acc.parentAccountId ? accountMap.get(acc.parentAccountId) : undefined,
           description: acc.description,
           icon: acc.icon,
           orderNum: acc.orderNum,
@@ -135,26 +145,30 @@ export const nativePlugin: ImportPlugin = {
           deletedAt: parseTimestamp(acc.deletedAt),
         })),
         journals: data.journals.map(j => ({
-          id: j.id,
+          id: journalMap.get(j.id)!,
           journalDate: parseTimestamp(j.journalDate) ?? Date.now(),
           description: j.description,
           notes: j.notes,
           currencyCode: j.currencyCode,
           status: j.status,
-          originalJournalId: j.originalJournalId,
-          reversingJournalId: j.reversingJournalId,
+          originalJournalId: j.originalJournalId ? journalMap.get(j.originalJournalId) : undefined,
+          reversingJournalId: j.reversingJournalId
+            ? journalMap.get(j.reversingJournalId)
+            : undefined,
           totalAmount: j.totalAmount,
           transactionCount: j.transactionCount,
           displayType: j.displayType,
-          plannedPaymentId: j.plannedPaymentId,
+          plannedPaymentId: j.plannedPaymentId
+            ? plannedPaymentMap.get(j.plannedPaymentId)
+            : undefined,
           createdAt: parseTimestamp(j.createdAt),
           updatedAt: parseTimestamp(j.updatedAt),
           deletedAt: parseTimestamp(j.deletedAt),
         })),
         transactions: data.transactions.map(t => ({
-          id: t.id,
-          journalId: t.journalId,
-          accountId: t.accountId,
+          id: transactionMap.get(t.id)!,
+          journalId: journalMap.get(t.journalId)!,
+          accountId: accountMap.get(t.accountId)!,
           amount: t.amount,
           transactionType: t.transactionType,
           currencyCode:
@@ -168,17 +182,27 @@ export const nativePlugin: ImportPlugin = {
           updatedAt: parseTimestamp(t.updatedAt),
           deletedAt: parseTimestamp(t.deletedAt),
         })),
-        auditLogs: (data.auditLogs || []).map(log => ({
-          id: log.id,
-          entityType: log.entityType,
-          entityId: log.entityId,
-          action: log.action,
-          changes: log.changes,
-          timestamp: log.timestamp,
-          createdAt: parseTimestamp(log.createdAt),
-        })),
+        auditLogs: (data.auditLogs || []).map(log => {
+          let mappedEntityId = log.entityId;
+          const type = log.entityType as AuditEntityType;
+          if (type === 'account') mappedEntityId = accountMap.get(log.entityId) || log.entityId;
+          else if (type === 'journal')
+            mappedEntityId = journalMap.get(log.entityId) || log.entityId;
+          else if (type === 'transaction')
+            mappedEntityId = transactionMap.get(log.entityId) || log.entityId;
+
+          return {
+            id: generateId(),
+            entityType: log.entityType,
+            entityId: mappedEntityId,
+            action: log.action,
+            changes: log.changes,
+            timestamp: log.timestamp,
+            createdAt: parseTimestamp(log.createdAt),
+          };
+        }),
         budgets: (data.budgets || []).map(budget => ({
-          id: budget.id,
+          id: budgetMap.get(budget.id)!,
           name: budget.name,
           amount: budget.amount,
           currencyCode: budget.currencyCode || defaultCurrencyCode,
@@ -188,35 +212,15 @@ export const nativePlugin: ImportPlugin = {
           updatedAt: parseTimestamp(budget.updatedAt),
         })),
         budgetScopes: (data.budgetScopes || []).map(scope => ({
-          id: scope.id,
-          budgetId: scope.budgetId,
-          accountId: scope.accountId,
+          id: generateId(),
+          budgetId: budgetMap.get(scope.budgetId)!,
+          accountId: accountMap.get(scope.accountId)!,
           createdAt: parseTimestamp(scope.createdAt),
           updatedAt: parseTimestamp(scope.updatedAt),
         })),
-        currencies: (data.currencies || []).map(currency => ({
-          id: currency.id,
-          code: currency.code,
-          symbol: currency.symbol,
-          name: currency.name,
-          precision: currency.precision,
-          createdAt: parseTimestamp(currency.createdAt),
-          updatedAt: parseTimestamp(currency.updatedAt),
-          deletedAt: parseTimestamp(currency.deletedAt),
-        })),
-        exchangeRates: (data.exchangeRates || []).map(rate => ({
-          id: rate.id,
-          fromCurrency: rate.fromCurrency,
-          toCurrency: rate.toCurrency,
-          rate: rate.rate,
-          effectiveDate: parseTimestamp(rate.effectiveDate) ?? Date.now(),
-          source: rate.source,
-          createdAt: parseTimestamp(rate.createdAt),
-          updatedAt: parseTimestamp(rate.updatedAt),
-        })),
         accountMetadata: (data.accountMetadata || []).map(metadata => ({
-          id: metadata.id,
-          accountId: metadata.accountId,
+          id: generateId(),
+          accountId: accountMap.get(metadata.accountId)!,
           statementDay: metadata.statementDay,
           dueDay: metadata.dueDay,
           minimumPaymentAmount: metadata.minimumPaymentAmount,
@@ -232,13 +236,13 @@ export const nativePlugin: ImportPlugin = {
           updatedAt: parseTimestamp(metadata.updatedAt),
         })),
         plannedPayments: (data.plannedPayments || []).map(pp => ({
-          id: pp.id,
+          id: plannedPaymentMap.get(pp.id)!,
           name: pp.name,
           description: pp.description,
           amount: pp.amount,
           currencyCode: pp.currencyCode,
-          fromAccountId: pp.fromAccountId,
-          toAccountId: pp.toAccountId,
+          fromAccountId: accountMap.get(pp.fromAccountId)!,
+          toAccountId: accountMap.get(pp.toAccountId)!,
           intervalN: pp.intervalN,
           intervalType: pp.intervalType,
           startDate: parseTimestamp(pp.startDate) ?? Date.now(),
@@ -253,8 +257,8 @@ export const nativePlugin: ImportPlugin = {
           deletedAt: parseTimestamp(pp.deletedAt),
         })),
         journalMetadata: (data.journalMetadata || []).map(meta => ({
-          id: meta.id,
-          journalId: meta.journalId,
+          id: generateId(),
+          journalId: journalMap.get(meta.journalId)!,
           importSource: meta.importSource,
           originalSmsId: meta.originalSmsId,
           originalSmsSender: meta.originalSmsSender,
@@ -264,49 +268,22 @@ export const nativePlugin: ImportPlugin = {
           updatedAt: parseTimestamp(meta.updatedAt),
         })),
         smsAutoPostRules: (data.smsAutoPostRules || []).map(rule => ({
-          id: rule.id,
+          id: generateId(),
           senderMatch: rule.senderMatch,
           bodyMatch: rule.bodyMatch,
           conditionsJson: rule.conditionsJson,
           actionsJson: rule.actionsJson,
           priority: rule.priority,
-          sourceAccountId: rule.sourceAccountId,
-          categoryAccountId: rule.categoryAccountId,
+          sourceAccountId: accountMap.get(rule.sourceAccountId)!,
+          categoryAccountId: accountMap.get(rule.categoryAccountId)!,
           isActive: rule.isActive,
           createdAt: parseTimestamp(rule.createdAt),
           updatedAt: parseTimestamp(rule.updatedAt),
         })),
-        smsInboxRecords: (data.smsInboxRecords || []).map(sms => ({
-          id: sms.id,
-          deviceSmsId: sms.deviceSmsId,
-          senderAddress: sms.senderAddress,
-          rawBody: sms.rawBody,
-          smsDate: parseTimestamp(sms.smsDate) ?? Date.now(),
-          smsFingerprint: sms.smsFingerprint,
-          parseStatus: sms.parseStatus,
-          parsedAmount: sms.parsedAmount,
-          parsedCurrencyCode: sms.parsedCurrencyCode,
-          parsedMerchant: sms.parsedMerchant,
-          parsedAccountSource: sms.parsedAccountSource,
-          referenceNumber: sms.referenceNumber,
-          direction: sms.direction,
-          processingStatus: sms.processingStatus,
-          linkedJournalId: sms.linkedJournalId,
-          duplicateJournalId: sms.duplicateJournalId,
-          duplicateConfidence: sms.duplicateConfidence,
-          parseConfidence: sms.parseConfidence,
-          parseReason: sms.parseReason,
-          metadataJson: sms.metadataJson,
-          firstSeenAt: parseTimestamp(sms.firstSeenAt) ?? Date.now(),
-          lastScannedAt: parseTimestamp(sms.lastScannedAt) ?? Date.now(),
-          processedAt: parseTimestamp(sms.processedAt),
-          createdAt: parseTimestamp(sms.createdAt),
-          updatedAt: parseTimestamp(sms.updatedAt),
-        })),
         balanceSnapshots: (data.balanceSnapshots || []).map(snapshot => ({
-          id: snapshot.id,
-          accountId: snapshot.accountId,
-          transactionId: snapshot.transactionId as string,
+          id: generateId(),
+          accountId: accountMap.get(snapshot.accountId)!,
+          transactionId: transactionMap.get(snapshot.transactionId as string)!,
           transactionDate: parseTimestamp(snapshot.transactionDate as any) ?? Date.now(),
           absoluteBalance: snapshot.absoluteBalance as number,
           transactionCount: snapshot.transactionCount as number,

@@ -21,12 +21,13 @@ jest.mock('@/src/services/integrity-service', () => ({
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     restorePreferences: jest.fn().mockResolvedValue(true),
+    setActiveWorkplaceId: jest.fn(),
   },
 }));
 
 describe('NativeImportPlugin', () => {
   const validNativeData = {
-    version: '1.2.0',
+    version: '1.4.0',
     preferences: { userName: 'Test User' },
     accounts: [{ id: 'a1', name: 'Acc 1', accountType: 'ASSET', currencyCode: 'USD' }],
     journals: [
@@ -132,8 +133,6 @@ describe('NativeImportPlugin', () => {
         expect.objectContaining({
           budgets: expect.any(Array),
           budgetScopes: expect.any(Array),
-          currencies: expect.any(Array),
-          exchangeRates: expect.any(Array),
           accountMetadata: expect.any(Array),
           balanceSnapshots: expect.any(Array),
         }),
@@ -157,6 +156,37 @@ describe('NativeImportPlugin', () => {
       const incompleteData = { version: '1.0' };
       const context = { json: incompleteData } as ImportFileContext;
       await expect(nativePlugin.import(context, 'w1')).rejects.toThrow(/missing required data/);
+    });
+
+    it('remaps IDs correctly and maintains references', async () => {
+      const context = { json: validNativeData } as ImportFileContext;
+      await nativePlugin.import(context, 'w1');
+
+      const batchInsertCall = (importRepository.batchInsert as jest.Mock).mock.calls[0];
+      const data = batchInsertCall[1];
+
+      // Check account ID remapping
+      const oldAccountId = validNativeData.accounts[0].id; // 'a1'
+      const newAccountId = data.accounts[0].id;
+      expect(newAccountId).not.toBe(oldAccountId);
+      expect(newAccountId).toBeDefined();
+
+      // Check transaction -> account reference
+      expect(data.transactions[0].accountId).toBe(newAccountId);
+      expect(data.transactions[0].id).not.toBe(validNativeData.transactions[0].id);
+
+      // Check journal -> transaction reference
+      const newJournalId = data.journals[0].id;
+      expect(data.transactions[0].journalId).toBe(newJournalId);
+      expect(newJournalId).not.toBe(validNativeData.journals[0].id);
+
+      // Check budget scope references
+      expect(data.budgetScopes[0].budgetId).toBe(data.budgets[0].id);
+      expect(data.budgetScopes[0].accountId).toBe(newAccountId);
+
+      // Check audit log reference
+      expect(data.auditLogs[0].entityId).toBe(newAccountId);
+      expect(data.auditLogs[0].id).not.toBe(validNativeData.auditLogs[0].id);
     });
   });
 });

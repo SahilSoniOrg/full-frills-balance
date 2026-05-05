@@ -243,13 +243,10 @@ export interface ExportData {
   auditLogs: AuditLogExport[];
   budgets: BudgetExport[];
   budgetScopes: BudgetScopeExport[];
-  currencies: CurrencyExport[];
-  exchangeRates: ExchangeRateExport[];
   accountMetadata: AccountMetadataExport[];
   plannedPayments: PlannedPaymentExport[];
   journalMetadata: JournalMetadataExport[];
   smsAutoPostRules: SmsAutoPostRuleExport[];
-  smsInboxRecords: SmsInboxRecordExport[];
   balanceSnapshots: BalanceSnapshotExport[];
 }
 
@@ -396,16 +393,16 @@ class ExportService {
         accounts,
         journals,
         transactions,
-        _auditLogs, // Prefix with _ to ignore unused warning
+        auditLogs,
         budgets,
         budgetScopes,
-        currencies,
+        _currencies,
         _exchangeRates,
         accountMetadata,
         plannedPayments,
         journalMetadata,
         smsAutoPostRules,
-        smsInboxRecords,
+        _smsInboxRecords,
         _balanceSnapshots, // Prefix with _ to ignore unused warning
         userPreferences,
       ] = await Promise.all([
@@ -428,16 +425,14 @@ class ExportService {
 
       const exportData: ExportData = {
         exportDate: new Date().toISOString(),
-        version: '1.3.0',
+        version: '1.4.0',
         preferences: userPreferences,
         accounts,
         journals,
         transactions: transactions.map(t => ({ ...t, runningBalance: undefined })),
-        auditLogs: [],
+        auditLogs,
         budgets,
         budgetScopes,
-        currencies,
-        exchangeRates: [],
         accountMetadata,
         plannedPayments,
         journalMetadata: journalMetadata.map(m => ({
@@ -445,10 +440,6 @@ class ExportService {
           originalSmsBody: undefined,
         })),
         smsAutoPostRules,
-        smsInboxRecords: smsInboxRecords.map(r => ({
-          ...r,
-          rawBody: '',
-        })),
         balanceSnapshots: [],
       };
 
@@ -459,17 +450,13 @@ class ExportService {
         accounts: exportData.accounts.length,
         journals: exportData.journals.length,
         transactions: exportData.transactions.length,
-        auditLogs: _auditLogs.length, // Log actual fetched count even if skipped in file
+        auditLogs: exportData.auditLogs.length,
         budgets: exportData.budgets.length,
         budgetScopes: exportData.budgetScopes.length,
-        currencies: exportData.currencies.length,
-        exchangeRates: _exchangeRates.length, // Log actual fetched count
         accountMetadata: exportData.accountMetadata.length,
         plannedPayments: exportData.plannedPayments.length,
         journalMetadata: exportData.journalMetadata.length,
         smsAutoPostRules: exportData.smsAutoPostRules.length,
-        smsInboxRecords: exportData.smsInboxRecords.length,
-        balanceSnapshots: _balanceSnapshots.length, // Log actual fetched count
       });
 
       // Create ZIP archive
