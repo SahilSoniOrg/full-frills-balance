@@ -1,5 +1,5 @@
-import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -10,7 +10,6 @@ import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -43,6 +42,7 @@ export interface UseJournalEditorOptions {
  */
 export function useJournalEditor(workplaceId: string, options: UseJournalEditorOptions = {}) {
   const { advancedMode, setAdvancedMode } = useUI();
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const {
     journalId,
     initialMode,
@@ -255,7 +255,7 @@ export function useJournalEditor(workplaceId: string, options: UseJournalEditorO
       if (!line || !line.accountCurrency) return;
 
       try {
-        const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+        const defaultCurrency = workplaceCurrency;
         if (line.accountCurrency === defaultCurrency) {
           updateLine(id, { exchangeRate: '' });
           return;
@@ -284,11 +284,12 @@ export function useJournalEditor(workplaceId: string, options: UseJournalEditorO
           exchangeRate: l.exchangeRate,
           accountCurrency: l.accountCurrency,
         })),
+        workplaceCurrency,
       );
 
       if (Math.abs(imbalance) < 0.001) return;
 
-      const currentBase = JournalCalculator.getLineBaseAmount(line);
+      const currentBase = JournalCalculator.getLineBaseAmount(line, workplaceCurrency);
       const nominal = typeof line.amount === 'string' ? parseFloat(line.amount) : line.amount;
 
       if (!nominal || nominal === 0) return;
@@ -302,16 +303,11 @@ export function useJournalEditor(workplaceId: string, options: UseJournalEditorO
       const roundedRate = Math.round(newRate * 1000000) / 1000000; // 6 decimal precision for rates
 
       // Sync to all lines with same currency
-      const lineCurrency =
-        line.accountCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+      const lineCurrency = line.accountCurrency || workplaceCurrency;
       setLines(prev =>
         prev.map(l => {
-          const lCurrency =
-            l.accountCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-          if (
-            lCurrency === lineCurrency &&
-            lCurrency !== (preferences.defaultCurrencyCode || AppConfig.defaultCurrency)
-          ) {
+          const lCurrency = l.accountCurrency || workplaceCurrency;
+          if (lCurrency === lineCurrency && lCurrency !== workplaceCurrency) {
             return { ...l, exchangeRate: roundedRate.toString() };
           }
           return l.id === id ? { ...l, exchangeRate: roundedRate.toString() } : l;

@@ -3,8 +3,7 @@
  */
 import { IconName } from '@/src/components/core';
 import { Animation } from '@/src/constants';
-import { AppConfig } from '@/src/constants/app-config';
-import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
@@ -76,7 +75,7 @@ export function useAccount(accountId: string | null, workplaceId: string) {
  * Calculates sum in-memory for instant consistency.
  */
 export function useAccountBalance(workplaceId: string, accountId: string | null) {
-  const { defaultCurrency } = useUI();
+  const { defaultCurrencyCode } = useWorkplace();
   const {
     data: balanceData,
     isLoading,
@@ -103,7 +102,7 @@ export function useAccountBalance(workplaceId: string, accountId: string | null)
         switchMap(async ([account]) => {
           if (!account) return null;
 
-          const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
+          const targetCurrency = defaultCurrencyCode;
 
           // If it's a leaf account (no children), we can just get its direct balance
           // But for consistency with parent accounts, we use the optimized getAccountBalances
@@ -117,7 +116,7 @@ export function useAccountBalance(workplaceId: string, accountId: string | null)
         }),
       );
     },
-    [accountId, defaultCurrency, workplaceId],
+    [accountId, defaultCurrencyCode, workplaceId],
     null as AccountBalance | null,
   );
 
@@ -163,7 +162,7 @@ export function useAccountSubAccountCount(accountId: string | null, workplaceId:
  * Supports async balance aggregation with currency conversion.
  */
 export function useAccountBalances(workplaceId: string, accounts: Account[]) {
-  const { defaultCurrency } = useUI();
+  const { defaultCurrencyCode } = useWorkplace();
 
   const {
     data: balancesByAccountId,
@@ -191,7 +190,7 @@ export function useAccountBalances(workplaceId: string, accounts: Account[]) {
       ]).pipe(
         debounceTime(Animation.dataRefreshDebounce),
         switchMap(async () => {
-          const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
+          const targetCurrency = defaultCurrencyCode;
           const balances = await balanceService.getAccountBalances(
             workplaceId,
             undefined,
@@ -201,7 +200,7 @@ export function useAccountBalances(workplaceId: string, accounts: Account[]) {
         }),
       );
     },
-    [accounts, defaultCurrency, workplaceId],
+    [accounts, defaultCurrencyCode, workplaceId],
     new Map<string, AccountBalance>(),
   );
 
@@ -307,8 +306,8 @@ export function useAccountActions(workplaceId: string) {
  * Uses the high-performance raw SQL + consolidated optimization from ReactiveDataService.
  */
 export function useAccountDashboard(workplaceId: string, accountId: string | null) {
-  const { defaultCurrency } = useUI();
-  const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
+  const { defaultCurrencyCode } = useWorkplace();
+  const targetCurrency = defaultCurrencyCode;
 
   const { data, isLoading, version, error } = useObservable(
     () =>

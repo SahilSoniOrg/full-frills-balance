@@ -5,7 +5,6 @@
  * Refactored from import-service.ts to implement ImportPlugin interface.
  */
 
-import { AppConfig } from '@/src/constants';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { AuditEntityType } from '@/src/data/models/AuditLog';
 import {
@@ -22,6 +21,7 @@ import {
   ImportedTransaction,
   importRepository,
 } from '@/src/data/repositories/ImportRepository';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
@@ -95,7 +95,6 @@ export const nativePlugin: ImportPlugin = {
     logger.info(
       `[NativePlugin] Validated file. Found ${data.accounts.length} accounts, ${data.journals.length} journals, ${data.transactions.length} transactions.`,
     );
-    const defaultCurrencyCode = data.preferences?.defaultCurrencyCode || AppConfig.defaultCurrency;
 
     // ID Remapping Maps
     const accountMap = new Map<string, string>();
@@ -116,6 +115,14 @@ export const nativePlugin: ImportPlugin = {
       onProgress?.('Wiping workplace data...', 0.1);
       logger.warn(`[NativePlugin] Wiping workplace ${workplaceId} for import...`);
       await integrityService.resetWorkplace(workplaceId);
+
+      // Update workplace currency from imported preferences if available
+      if (data.preferences?.defaultCurrencyCode) {
+        await workplaceService.updateWorkplace(workplaceId, {
+          defaultCurrencyCode: data.preferences.defaultCurrencyCode,
+        });
+      }
+      const defaultCurrencyCode = await workplaceService.getCurrency(workplaceId);
 
       // 2. Clear and restore preferences
       onProgress?.('Restoring preferences...', 0.2);

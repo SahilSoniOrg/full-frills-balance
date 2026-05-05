@@ -1,6 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
@@ -107,6 +108,7 @@ export const LineChart = <T extends DataPoint>({
   tooltipHeight,
 }: LineChartProps<T>) => {
   const { theme } = useTheme();
+  const { defaultCurrencyCode } = useWorkplace();
   const chartColor = resolveThemeColor(theme, color) || theme.primary;
   const resolvedSecondaryColor = resolveThemeColor(theme, secondaryColor);
   const { width: windowWidth } = Dimensions.get('window');
@@ -364,7 +366,9 @@ export const LineChart = <T extends DataPoint>({
                       fill={theme.textSecondary}
                       textAnchor="end"
                     >
-                      {hideLabels ? '••••' : CurrencyFormatter.formatShort(val)}
+                      {hideLabels
+                        ? '••••'
+                        : CurrencyFormatter.formatShort(val, defaultCurrencyCode)}
                     </SvgText>
                   </React.Fragment>
                 );
@@ -456,7 +460,7 @@ export const LineChart = <T extends DataPoint>({
                               fill={chartColor}
                               textAnchor="start"
                             >
-                              {CurrencyFormatter.formatShort(todayPoint.y)}
+                              {CurrencyFormatter.formatShort(todayPoint.y, defaultCurrencyCode)}
                             </SvgText>
                           </React.Fragment>
                         );

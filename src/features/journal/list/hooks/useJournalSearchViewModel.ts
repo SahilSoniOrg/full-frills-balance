@@ -16,7 +16,6 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useJournals } from '../../hooks/useJournals';
@@ -68,8 +67,9 @@ export interface JournalSearchViewModel {
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
   const params = useLocalSearchParams();
-  const { workplaceId } = useWorkplace();
-  const { defaultCurrency: baseCurrency, defaultShareFormat } = useUI();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
+  const baseCurrency = defaultCurrencyCode;
+  const { defaultShareFormat } = useUI();
   const { rateMap: exchangeRateMap } = useExchangeRates(baseCurrency);
   const { precision } = useCurrencyPrecision(baseCurrency);
   const { accounts } = useAccounts(workplaceId);
@@ -330,7 +330,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
           includeTime: true,
           sort: 'desc',
           showEmojis: true,
-          defaultCurrency: preferences.defaultCurrencyCode,
+          defaultCurrency: defaultCurrencyCode,
         },
       );
       await sharingService.share(provider, defaultShareFormat);

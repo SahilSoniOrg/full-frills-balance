@@ -54,7 +54,7 @@ export interface DashboardViewModel {
 }
 
 export function useDashboardViewModel(): DashboardViewModel {
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode } = useUI();
 
   const [isLocalPrivacyMode, setIsLocalPrivacyMode] = React.useState(isPrivacyMode);
@@ -69,7 +69,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   }, []);
 
   const { data: safeToSpendData } = useObservable(
-    () => notificationService.observeSafeToSpend(workplaceId),
+    () => notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode),
     [workplaceId],
     null,
   );

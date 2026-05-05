@@ -1,6 +1,7 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight, insightService } from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -16,6 +17,7 @@ interface HubWidgetProps {
 
 export const HubWidget = ({ insights, hideManageDismissed = false }: HubWidgetProps) => {
   const { theme, fonts } = useTheme();
+  const { defaultCurrencyCode } = useWorkplace();
   const [isEmergencyFundInfoVisible, setEmergencyFundInfoVisible] = React.useState(false);
 
   const handleDismiss = async (id: string) => {
@@ -200,7 +202,10 @@ export const HubWidget = ({ insights, hideManageDismissed = false }: HubWidgetPr
                           { color: severity.color, fontFamily: fonts.bold },
                         ]}
                       >
-                        {CurrencyFormatter.format(insight.amount, insight.currencyCode)}
+                        {CurrencyFormatter.format(
+                          insight.amount,
+                          insight.currencyCode || defaultCurrencyCode,
+                        )}
                       </AppText>
                     </View>
                   ) : null}

@@ -4,24 +4,27 @@ import { AccountType } from '@/src/data/models/Account';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { accountService } from '@/src/features/accounts';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { Observable } from 'rxjs';
+import { distinctUntilChanged, map, Observable } from 'rxjs';
 
 export class WorkplaceService {
   async createWorkplace(
     name: string,
     icon: string,
-    options?: {
+    options: {
       initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
       initialCategories?: { name: string; type: AccountType; icon: IconName }[];
-      currencyCode?: string;
+      currencyCode: string;
     },
   ): Promise<Workplace> {
-    const workplace = await workplaceRepository.create({ name, icon });
+    const workplace = await workplaceRepository.create({
+      name,
+      icon,
+      defaultCurrencyCode: options.currencyCode,
+    });
 
-    if (options) {
-      await this.bootstrapWorkplace(workplace.id, options);
-    }
+    await this.bootstrapWorkplace(workplace.id, options);
 
     return workplace;
   }
@@ -31,16 +34,14 @@ export class WorkplaceService {
     options: {
       initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
       initialCategories?: { name: string; type: AccountType; icon: IconName }[];
-      currencyCode?: string;
+      currencyCode: string;
     },
   ): Promise<void> {
     const { initialAccounts = [], initialCategories = [], currencyCode } = options;
-    const targetCurrency =
-      currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
 
     // 1. Ensure system accounts exist
-    await accountService.getOpeningBalancesAccountId(targetCurrency, workplaceId);
-    await accountService.findOrCreateBalanceCorrectionAccount(targetCurrency, workplaceId);
+    await accountService.getOpeningBalancesAccountId(currencyCode, workplaceId);
+    await accountService.findOrCreateBalanceCorrectionAccount(currencyCode, workplaceId);
 
     // 2. Create initial accounts
     for (const acc of initialAccounts) {
@@ -48,7 +49,7 @@ export class WorkplaceService {
         {
           name: acc.name,
           accountType: acc.type,
-          currencyCode: targetCurrency,
+          currencyCode: currencyCode,
           initialBalance: 0,
           icon: acc.icon,
           workplaceId,
@@ -67,7 +68,7 @@ export class WorkplaceService {
         {
           name: cat.name,
           accountType: cat.type,
-          currencyCode: targetCurrency,
+          currencyCode: currencyCode,
           initialBalance: 0,
           icon: cat.icon,
           workplaceId,
@@ -92,10 +93,15 @@ export class WorkplaceService {
 
     // If none exist, create a default one
     if (workplaces.length === 0) {
-      const defaultWorkplace = await this.createWorkplace('Personal', 'briefcase');
+      const defaultWorkplace = await this.createWorkplace('Personal', 'briefcase', {
+        currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+      });
       workplaces = [defaultWorkplace];
       preferences.setActiveWorkplaceId(defaultWorkplace.id);
     }
+
+    // Migration: If there is a legacy currency in preferences, apply it to all workplaces
+    await this.migrateLegacyCurrency();
 
     return workplaces[0];
   }
@@ -108,7 +114,10 @@ export class WorkplaceService {
     return await workplaceRepository.findAll();
   }
 
-  async updateWorkplace(id: string, data: Partial<{ name: string; icon: string }>): Promise<void> {
+  async updateWorkplace(
+    id: string,
+    data: Partial<{ name: string; icon: string; defaultCurrencyCode: string }>,
+  ): Promise<void> {
     const workplace = await workplaceRepository.find(id);
     if (!workplace) {
       throw new Error('Workplace not found');
@@ -140,6 +149,37 @@ export class WorkplaceService {
 
   observeWorkplace(id: string): Observable<Workplace | undefined> {
     return workplaceRepository.observeById(id);
+  }
+
+  async getCurrency(id: string): Promise<string> {
+    const workplace = await workplaceRepository.find(id);
+    if (!workplace) {
+      throw new Error(`Could not find workplace with ID ${id}`);
+    }
+    return workplace.defaultCurrencyCode;
+  }
+  observeCurrency(id: string): Observable<string> {
+    return workplaceRepository.observeById(id).pipe(
+      map(w => {
+        if (!w) throw new Error(`Could not find workplace with ID ${id}`);
+        return w.defaultCurrencyCode;
+      }),
+      distinctUntilChanged(),
+    );
+  }
+
+  async migrateLegacyCurrency(): Promise<void> {
+    const legacyCurrency = preferences.defaultCurrencyCode;
+    if (legacyCurrency) {
+      logger.info(
+        `[WorkplaceService] Migrating legacy currency ${legacyCurrency} to all workplaces`,
+      );
+      const workplaces = await this.getAllWorkplaces();
+      for (const workplace of workplaces) {
+        await workplaceRepository.update(workplace, { defaultCurrencyCode: legacyCurrency });
+      }
+      preferences.clearDefaultCurrencyCode();
+    }
   }
 }
 

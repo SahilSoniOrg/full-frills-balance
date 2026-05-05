@@ -115,11 +115,11 @@ export class NotificationService {
    * This triggers the heavy data observation and cache hydration during the
    * splash screen phase without blocking the first render.
    */
-  preWarm(workplaceId: string): void {
+  preWarm(workplaceId: string, defaultCurrencyCode: string): void {
     if (Platform.OS === 'web') return;
     // Trigger the simulation chain. The shareReplay(1) in observeSafeToSpend
     // will ensure the first screen to subscribe gets the result instantly.
-    const sub = this.observeSafeToSpend(workplaceId).subscribe();
+    const sub = this.observeSafeToSpend(workplaceId, defaultCurrencyCode).subscribe();
 
     // We keep the subscription alive for at least 10s to ensure the first results
     // are calculated and cached in the shareReplay buffer.
@@ -231,14 +231,17 @@ export class NotificationService {
    */
   private safeToSpendByWorkplace = new Map<string, Observable<SafeToSpendResult>>();
 
-  observeSafeToSpend(workplaceId: string): Observable<SafeToSpendResult> {
+  observeSafeToSpend(
+    workplaceId: string,
+    defaultCurrencyCode: string,
+  ): Observable<SafeToSpendResult> {
     const cached = this.safeToSpendByWorkplace.get(workplaceId);
     if (cached) {
       return cached;
     }
 
-    const obs = preferences.observe('safeToSpendDays').pipe(
-      switchMap(safeToSpendDays => {
+    const obs = combineLatest([preferences.observe('safeToSpendDays')]).pipe(
+      switchMap(([safeToSpendDays]) => {
         return combineLatest([
           accountRepository.observeByType(AccountType.ASSET, workplaceId),
           accountRepository.observeByType(AccountType.LIABILITY, workplaceId),
@@ -270,6 +273,8 @@ export class NotificationService {
             allAccounts,
             plannedJournals,
             safeToSpendDays,
+            defaultCurrencyCode,
+            workplaceId,
           })),
         );
       }),
@@ -283,6 +288,8 @@ export class NotificationService {
           allAccounts,
           plannedJournals,
           safeToSpendDays,
+          defaultCurrencyCode,
+          workplaceId,
         }) => {
           const now = dayjs();
           const startOfToday = now.startOf('day');
@@ -304,13 +311,14 @@ export class NotificationService {
           // Fetch historical deltas as part of the simulation flow
           const history$ = from(
             transactionRawRepository.getDailyDeltasGroupedRaw(
+              workplaceId,
               liquidAssetIds,
               lookbackDate,
               startOfToday.valueOf() + AppConfig.time.msPerDay,
             ),
           );
 
-          const resultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+          // Use injected resultCurrency
 
           if (liquidAssets.length === 0) {
             const empty: SafeToSpendResult = {
@@ -350,7 +358,7 @@ export class NotificationService {
               },
               accountSummaries: [],
               totalLiquidAssets: 0,
-              currencyCode: resultCurrency,
+              currencyCode: defaultCurrencyCode,
               liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
               dailyBudgetBurn: 0,
               projection: {
@@ -380,7 +388,7 @@ export class NotificationService {
               const allBalances = await balanceService.getAccountBalances(
                 workplaceId,
                 now.valueOf(),
-                resultCurrency,
+                defaultCurrencyCode,
               );
               const balancesMapByAccountId = new Map(
                 allBalances.map(b => [b.accountId, b.balance]),
@@ -389,14 +397,14 @@ export class NotificationService {
               // P0 Perf: Pre-warm exchange rates once, then use sync getRateSafe()
               // Replaces N sequential await convert() calls across RN bridge
               const uniqueBaseCurrencies = new Set<string>();
-              uniqueBaseCurrencies.add(resultCurrency);
+              uniqueBaseCurrencies.add(defaultCurrencyCode);
               for (const a of liquidAssets) {
-                if (a.currencyCode && a.currencyCode !== resultCurrency) {
+                if (a.currencyCode && a.currencyCode !== defaultCurrencyCode) {
                   uniqueBaseCurrencies.add(a.currencyCode);
                 }
               }
               for (const l of liquidLiabilities) {
-                if (l.currencyCode && l.currencyCode !== resultCurrency) {
+                if (l.currencyCode && l.currencyCode !== defaultCurrencyCode) {
                   uniqueBaseCurrencies.add(l.currencyCode);
                 }
               }
@@ -417,7 +425,7 @@ export class NotificationService {
                 startingBalances.set(a.id, balance);
               }
 
-              const totalLiquidMoney = Money.from(totalLiquidAssetsAmount, resultCurrency);
+              const totalLiquidMoney = Money.from(totalLiquidAssetsAmount, defaultCurrencyCode);
 
               const liquidLiabilityAccounts: { name: string; amount: number }[] = [];
               const liabilityAccountBalances = liquidLiabilities.map(l => {
@@ -439,7 +447,7 @@ export class NotificationService {
                 budgets,
                 usages,
                 allAccounts,
-                resultCurrency,
+                defaultCurrencyCode,
                 workplaceId,
                 safeToSpendDays,
               );
@@ -450,11 +458,11 @@ export class NotificationService {
               const deltas = rawDeltas || [];
               for (const delta of deltas) {
                 let amount = delta.delta;
-                if (delta.currencyCode !== resultCurrency) {
+                if (delta.currencyCode !== defaultCurrencyCode) {
                   try {
                     const rate = exchangeRateService.getRateSafe(
                       delta.currencyCode,
-                      resultCurrency,
+                      defaultCurrencyCode,
                     );
                     amount = roundToPrecision(amount * rate, 2);
                   } catch (e) {
@@ -532,7 +540,7 @@ export class NotificationService {
                 report: runResult.report,
                 accountSummaries: runResult.accountSummaries,
                 totalLiquidAssets: totalLiquidMoney.amount,
-                currencyCode: resultCurrency,
+                currencyCode: defaultCurrencyCode,
                 liquidAssetSubtypes: [...LIQUID_ASSET_SUBTYPES],
                 dailyBudgetBurn: runResult.report.budget.currentMonthRemaining / safeToSpendDays,
                 projection: {
@@ -548,14 +556,14 @@ export class NotificationService {
             catchError(err => {
               logger.error('[SafeToSpend] Error in simulation pipeline:', err);
               // Return an empty/fallback result instead of letting the observable die
-              return of(this.getEmptySafeToSpendResult(resultCurrency));
+              return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
             }),
           );
         },
       ),
       catchError(err => {
         logger.error('[SafeToSpend] Outer pipeline error:', err);
-        return of(this.getEmptySafeToSpendResult(AppConfig.defaultCurrency));
+        return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
       }),
       shareReplay({ bufferSize: 1, refCount: true }),
     );

@@ -9,7 +9,7 @@ import { AccountBalance } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace, traceService } from '@/src/utils/TraceService';
 import { Money } from '../utils/money';
-import { preferences } from '../utils/preferences';
+import { workplaceService } from '@/src/services/WorkplaceService';
 
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 
@@ -31,12 +31,16 @@ export class BalanceService {
     accounts: Account[],
     balancesMap: Map<string, AccountBalance>,
     currencyPrecisionMap: Map<string, number>,
-    targetDefaultCurrency: string = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+    targetDefaultCurrency?: string,
     parentTrace?: Trace,
   ) {
     const trace = parentTrace || traceService.startTrace('BalanceService.aggregateBalances');
     try {
       if (accounts.length === 0) return;
+
+      if (!targetDefaultCurrency) {
+        targetDefaultCurrency = await workplaceService.getCurrency(accounts[0].workplaceId);
+      }
 
       // 1. Build/Retrieve hierarchy (Memoized)
       // Optimization: String serialization for absolute collision resistance
@@ -376,7 +380,7 @@ export class BalanceService {
   async getAccountBalances(
     workplaceId: string,
     asOfDate?: number,
-    targetDefaultCurrency: string = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+    targetDefaultCurrency?: string,
     parentTrace?: Trace,
   ): Promise<AccountBalance[]> {
     const trace = parentTrace || traceService.startTrace('BalanceService.getAccountBalances');
@@ -387,6 +391,10 @@ export class BalanceService {
 
       const cutoffDate = asOfDate ?? Number.MAX_SAFE_INTEGER;
       const accountIds = accounts.map(a => a.id);
+
+      if (!targetDefaultCurrency) {
+        targetDefaultCurrency = await workplaceService.getCurrency(workplaceId);
+      }
 
       // Phase 1: Metadata & Snapshots (Parallel)
       const [latestSnapshotsMap, currencyPrecisionMap] = await Promise.all([

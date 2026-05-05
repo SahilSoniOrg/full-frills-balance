@@ -11,6 +11,7 @@ import {
 } from '@/src/components/core';
 import { Box, Inset, Page, Stack } from '@/src/design-system';
 import { StepIndicator } from '@/src/components/common/StepIndicator';
+import { AppConfig } from '@/src/constants';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerHaptic } from '@/src/utils/haptics';
@@ -23,15 +24,16 @@ interface CreateWorkplaceDialogProps {
   onCreate: (
     name: string,
     icon: IconName,
-    options?: {
+    options: {
       initialAccounts?: { name: string; type: any; icon: IconName }[];
       initialCategories?: { name: string; type: any; icon: IconName }[];
+      currencyCode: string;
     },
   ) => void;
   isCreating: boolean;
 }
 
-type Step = 'basic' | 'accounts' | 'categories';
+type Step = 'basic' | 'currency' | 'accounts' | 'categories';
 
 export function CreateWorkplaceDialog({
   visible,
@@ -58,11 +60,17 @@ export function CreateWorkplaceDialog({
     { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[]
   >([]);
 
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(AppConfig.defaultCurrency);
+  const [currencySearchQuery, setCurrencySearchQuery] = useState('');
+  const { currencies } = require('@/src/hooks/use-currencies').useCurrencies();
+
   useEffect(() => {
     if (visible) {
       setStep('basic');
       setName('');
       setIcon('briefcase');
+      setSelectedCurrency(AppConfig.defaultCurrency);
+      setCurrencySearchQuery('');
       setSelectedAccounts(['Cash', 'Bank']);
       setCustomAccounts([]);
       setSelectedCategories(['Salary', 'Food & Drink', 'Groceries', 'Bills']);
@@ -95,6 +103,34 @@ export function CreateWorkplaceDialog({
     ],
     [customCategories],
   );
+
+  const currencyItems: SelectableItem[] = useMemo(() => {
+    const uniqueCurrencies = Array.from(new Map(currencies.map((c: any) => [c.code, c])).values());
+
+    let mappedItems = uniqueCurrencies.map((currency: any) => ({
+      id: currency.code,
+      name: currency.code,
+      symbol: currency.symbol,
+      subtitle: currency.name,
+    }));
+
+    if (currencySearchQuery.trim()) {
+      const query = currencySearchQuery.toLowerCase();
+      mappedItems = mappedItems.filter(
+        (i: any) =>
+          i.name.toLowerCase().includes(query) ||
+          (i.subtitle && i.subtitle.toLowerCase().includes(query)),
+      );
+    } else if (selectedCurrency) {
+      return [...mappedItems].sort((a, b) => {
+        if (a.id === selectedCurrency) return -1;
+        if (b.id === selectedCurrency) return 1;
+        return 0;
+      });
+    }
+
+    return mappedItems;
+  }, [currencies, currencySearchQuery, selectedCurrency]);
 
   const renderCategoryIcon = (item: SelectableItem, isSelected: boolean) => {
     const isIncome = item.subtitle === 'Income';
@@ -164,13 +200,15 @@ export function CreateWorkplaceDialog({
 
   const handleNext = () => {
     void triggerHaptic('medium');
-    if (step === 'basic') setStep('accounts');
+    if (step === 'basic') setStep('currency');
+    else if (step === 'currency') setStep('accounts');
     else if (step === 'accounts') setStep('categories');
   };
 
   const handleBack = () => {
     void triggerHaptic('light');
-    if (step === 'accounts') setStep('basic');
+    if (step === 'currency') setStep('basic');
+    else if (step === 'accounts') setStep('currency');
     else if (step === 'categories') setStep('accounts');
   };
 
@@ -196,7 +234,11 @@ export function CreateWorkplaceDialog({
         };
       });
 
-      onCreate(name.trim(), icon, { initialAccounts, initialCategories });
+      onCreate(name.trim(), icon, {
+        initialAccounts,
+        initialCategories,
+        currencyCode: selectedCurrency,
+      });
     }
   };
 
@@ -268,6 +310,43 @@ export function CreateWorkplaceDialog({
             </ScrollView>
           </Box>
         );
+      case 'currency':
+        return (
+          <Box flex={1}>
+            <SelectableGrid
+              title="Workplace Currency"
+              subtitle="Select the primary currency for this workplace."
+              items={currencyItems}
+              selectedIds={[selectedCurrency]}
+              onToggle={setSelectedCurrency}
+              onContinue={handleNext}
+              onBack={handleBack}
+              isCompleting={false}
+              disableAnimation={true}
+              bottomContent={
+                <Box>
+                  <AppInput
+                    placeholder="Search currency..."
+                    value={currencySearchQuery}
+                    onChangeText={setCurrencySearchQuery}
+                    accessibilityLabel="Search currency"
+                  />
+                </Box>
+              }
+              renderSubtitle={(item, isSelected) => (
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  style={{
+                    color: isSelected ? theme.primary : theme.textSecondary,
+                  }}
+                >
+                  {item.subtitle}
+                </AppText>
+              )}
+            />
+          </Box>
+        );
       case 'accounts':
         return (
           <Box flex={1}>
@@ -333,8 +412,10 @@ export function CreateWorkplaceDialog({
           <Inset horizontal="lg" top="md" bottom={0} flex={1}>
             <Box flex={1} style={{ alignSelf: 'center', width: '100%' }}>
               <StepIndicator
-                currentStep={step === 'basic' ? 1 : step === 'accounts' ? 2 : 3}
-                totalSteps={3}
+                currentStep={
+                  step === 'basic' ? 1 : step === 'currency' ? 2 : step === 'accounts' ? 3 : 4
+                }
+                totalSteps={4}
               />
               {renderStep()}
             </Box>

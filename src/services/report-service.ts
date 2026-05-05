@@ -8,10 +8,10 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDelta, DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
-import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -382,7 +382,10 @@ export class ReportService {
     endDate: number,
     targetCurrency?: string,
   ): Promise<{ income: number; expense: number }> {
-    const currency = targetCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    let currency = targetCurrency;
+    if (!currency) {
+      currency = await workplaceService.getCurrency(accounts[0]?.workplaceId);
+    }
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     let income = Money.from(0, currency);
@@ -458,7 +461,8 @@ export class ReportService {
       endDate,
       currency,
       allAccounts,
-      (ids, start, end) => transactionRawRepository.getDailyDeltasGroupedRaw(ids, start, end),
+      (ids, start, end) =>
+        transactionRawRepository.getDailyDeltasGroupedRaw(workplaceId, ids, start, end),
     );
 
     return this.calculateHistoryFromDeltas(normalizedDeltas, startDate, endDate, currency);
@@ -519,7 +523,8 @@ export class ReportService {
       endDate,
       currency,
       allAccounts,
-      (ids, start, end) => transactionRawRepository.getDailyDeltasGroupedRaw(ids, start, end),
+      (ids, start, end) =>
+        transactionRawRepository.getDailyDeltasGroupedRaw(workplaceId, ids, start, end),
     );
 
     return this.calculateDailyVsDeltas(normalizedDeltas, startDate, endDate, currency);
@@ -946,7 +951,10 @@ export class ReportService {
     incomeAccounts: ReportAccount[];
     expenseAccounts: ReportAccount[];
   }> {
-    const currency = targetCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    let currency = targetCurrency;
+    if (!currency) {
+      currency = await workplaceService.getCurrency(workplaceId);
+    }
     const [rawIncomeAccounts, rawExpenseAccounts] = await Promise.all([
       accountRepository.findByType(AccountType.INCOME, workplaceId),
       accountRepository.findByType(AccountType.EXPENSE, workplaceId),

@@ -1,3 +1,4 @@
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { HeatmapPoint, SankeyData } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useCallback, useMemo, useState } from 'react';
@@ -39,6 +40,7 @@ export function useReportChartData({
   theme,
   workplaceId: _workplaceId,
 }: UseReportChartDataProps) {
+  const { defaultCurrencyCode } = useWorkplace();
   const [selectedNetWorthIndex, setSelectedNetWorthIndex] = useState<number | undefined>();
   const [selectedIncomeExpenseIndex, setSelectedIncomeExpenseIndex] = useState<
     number | undefined
@@ -63,7 +65,7 @@ export function useReportChartData({
   }, [netWorthHistory]);
 
   const displayedNetWorthText = useMemo(() => {
-    return CurrencyFormatter.formatWithPreference(currentNetWorth);
+    return CurrencyFormatter.format(currentNetWorth, defaultCurrencyCode);
   }, [currentNetWorth]);
 
   const displayedIncome = useMemo(() => {
@@ -135,8 +137,8 @@ export function useReportChartData({
     onNetWorthPointSelect,
     onIncomeExpensePointSelect,
     displayedNetWorthText,
-    displayedIncomeText: CurrencyFormatter.formatWithPreference(displayedIncome),
-    displayedExpenseText: CurrencyFormatter.formatWithPreference(displayedExpense),
+    displayedIncomeText: CurrencyFormatter.format(displayedIncome, defaultCurrencyCode),
+    displayedExpenseText: CurrencyFormatter.format(displayedExpense, defaultCurrencyCode),
     netWorthSeries,
     wealthAreaSeries,
     selectedWealthIndex,

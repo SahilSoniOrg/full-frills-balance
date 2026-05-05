@@ -445,7 +445,7 @@ class ReactiveDataService {
     // Optimization: Direct access for known SQL aliases instead of expensive regex loop
     const accountId = item.id || item.accountId || item.account_id;
     const balance = Number(item.direct_balance || item.directBalance || 0);
-    const currencyCode = item.currency_code || item.currencyCode || 'USD';
+    const currencyCode = item.currency_code || item.currencyCode;
     const accountType = item.account_type || item.accountType;
     const income = Number(item.monthly_income || item.monthlyIncome || 0);
     const expenses = Number(item.monthly_expenses || item.monthlyExpenses || 0);

@@ -1,6 +1,5 @@
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
-import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, {
   AccountSubtype,
@@ -99,8 +98,7 @@ export interface AccountFormViewModel {
 
 export function useAccountFormViewModel(): AccountFormViewModel {
   const params = useLocalSearchParams();
-  const { workplaceId } = useWorkplace();
-  const { defaultCurrency } = useUI();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
   const accountId = params.accountId as string | undefined;
   const typeParam = params.type as string | undefined;
@@ -159,9 +157,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [accountSubtype, setAccountSubtype] = useState<AccountSubtype>(
     getDefaultSubtypeForType(getInitialAccountType()),
   );
-  const [selectedCurrency, setSelectedCurrency] = useState<string>(
-    pCurrency || defaultCurrency || AppConfig.defaultCurrency,
-  );
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || workplaceCurrency);
   const [selectedIcon, setSelectedIcon] = useState<IconName>((pIcon as IconName) || 'wallet');
   const [initialBalance, setInitialBalance] = useState('');
   const [parentAccountId, setParentAccountId] = useState('');

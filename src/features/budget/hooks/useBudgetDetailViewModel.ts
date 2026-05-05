@@ -18,20 +18,19 @@ import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
 
 export function useBudgetDetailViewModel() {
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const params = useLocalSearchParams();
   const budgetId = params.id as string;
 
   const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
   const missingCurrenciesCache = useRef(new Set<string>());
-  const baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+  const baseCurrency = workplaceCurrency;
 
   const { rateMap: ratesMap = {} } = useExchangeRates(baseCurrency);
   const { precision } = useCurrencyPrecision(baseCurrency);

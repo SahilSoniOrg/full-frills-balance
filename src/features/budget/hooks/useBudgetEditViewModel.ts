@@ -1,5 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
-import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
@@ -16,9 +14,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 export function useBudgetEditViewModel() {
   const params = useLocalSearchParams();
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const budgetId = params.id as string;
-  const { defaultCurrency } = useUI();
   const { data: expenseAccounts = [] } = useObservable(
     () => accountRepository.observeByType(AccountType.EXPENSE, workplaceId),
     [workplaceId],
@@ -41,9 +38,7 @@ export function useBudgetEditViewModel() {
   const [budget, setBudget] = useState<Budget | null>(null);
   const [name, setName] = useState(pName || '');
   const [amount, setAmount] = useState(pAmount || '');
-  const [currencyCode, setCurrencyCode] = useState<string>(
-    pCurrency || defaultCurrency || AppConfig.defaultCurrency,
-  );
+  const [currencyCode, setCurrencyCode] = useState<string>(pCurrency || workplaceCurrency);
   const [startMonth, setStartMonth] = useState(new Date());
   const [intervalType, setIntervalType] = useState('MONTHLY');
   const [intervalN, setIntervalN] = useState(1);
@@ -65,7 +60,7 @@ export function useBudgetEditViewModel() {
         setBudget(b);
         setName(b.name);
         setAmount(b.amount.toString());
-        setCurrencyCode(b.currencyCode || defaultCurrency || AppConfig.defaultCurrency);
+        setCurrencyCode(b.currencyCode || workplaceCurrency);
         const [year, month] = b.startMonth.split('-');
         setStartMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
         setIntervalType(b.intervalType || 'MONTHLY');
@@ -87,7 +82,7 @@ export function useBudgetEditViewModel() {
         logger.error('Failed to load budget', e);
         setLoading(false);
       });
-  }, [workplaceId, budgetId, defaultCurrency]);
+  }, [workplaceId, budgetId, workplaceCurrency]);
 
   const save = useCallback(async () => {
     if (!name.trim() || !amount || selectedAccountIds.length === 0) {

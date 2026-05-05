@@ -1,5 +1,4 @@
 import { IconName } from '@/src/components/core/AppIcon';
-import { AppConfig } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import Account from '@/src/data/models/Account';
 import {
@@ -45,7 +44,7 @@ interface BalancesByAccountId {
 
 interface TransformOptions {
   balancesByAccountId: Map<string, BalancesByAccountId | null>;
-  defaultCurrency: string | null;
+  defaultCurrency: string;
   showAccountMonthlyStats: boolean;
   isPrivacyMode: boolean;
   isLoading: boolean;
@@ -114,7 +113,7 @@ export function transformAccountsToSections(
 
     const totalDisplay = isPrivacyMode
       ? '••••'
-      : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency || AppConfig.defaultCurrency);
+      : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency);
 
     const typeAccounts = section.data;
     const accountsByParent = new Map<string, Account[]>();

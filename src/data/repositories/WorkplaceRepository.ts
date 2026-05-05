@@ -6,11 +6,16 @@ export class WorkplaceRepository {
     return database.get<Workplace>('workplaces');
   }
 
-  async create(data: { name: string; icon: string }): Promise<Workplace> {
+  async create(data: {
+    name: string;
+    icon: string;
+    defaultCurrencyCode: string;
+  }): Promise<Workplace> {
     return await database.write(async () => {
       return await this.workplaces.create(w => {
         w.name = data.name.trim();
         w.icon = data.icon;
+        w.defaultCurrencyCode = data.defaultCurrencyCode;
         w.createdAt = new Date();
         w.updatedAt = new Date();
       });
@@ -29,11 +34,16 @@ export class WorkplaceRepository {
     return await this.workplaces.query().fetch();
   }
 
-  async update(workplace: Workplace, data: Partial<{ name: string; icon: string }>): Promise<void> {
+  async update(
+    workplace: Workplace,
+    data: Partial<{ name: string; icon: string; defaultCurrencyCode: string }>,
+  ): Promise<void> {
     await database.write(async () => {
       await workplace.update(w => {
         if (data.name !== undefined) w.name = data.name;
         if (data.icon !== undefined) w.icon = data.icon;
+        if (data.defaultCurrencyCode !== undefined)
+          w.defaultCurrencyCode = data.defaultCurrencyCode;
         w.updatedAt = new Date();
       });
     });

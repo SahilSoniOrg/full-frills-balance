@@ -9,7 +9,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountBalance } from '@/src/types/domain';
 import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { Money } from '@/src/utils/money';
-import { preferences } from '@/src/utils/preferences';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import dayjs from 'dayjs';
 
 export interface WealthSummary {
@@ -131,7 +131,10 @@ export const wealthService = {
     targetCurrency?: string,
     accountIds?: string[],
   ): Promise<DailyNetWorth[]> {
-    const currency = targetCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    let currency = targetCurrency;
+    if (!currency) {
+      currency = await workplaceService.getCurrency(workplaceId);
+    }
 
     const start = dayjs(startDate).startOf('day');
     const end = dayjs(endDate).endOf('day');
@@ -183,6 +186,7 @@ export const wealthService = {
     // 3. BULK FETCH daily deltas grouped by currency and type (O(1) round-trip, O(M) rows)
     const activeIds = relevantBalances.map(b => b.accountId);
     const deltas: DailyDelta[] = await transactionRawRepository.getDailyDeltasGroupedRaw(
+      workplaceId,
       activeIds,
       start.valueOf(),
       now.valueOf(),

@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
 import Account, { AccountType } from '@/src/data/models/Account';
@@ -17,11 +16,11 @@ import { ledgerWriteService } from '@/src/services/ledger';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { EnrichedJournal, JournalEntryLine, mapTransactionToAudit } from '@/src/types/domain';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Q } from '@nozbe/watermelondb';
@@ -513,7 +512,7 @@ export class JournalService {
             }
           : undefined;
 
-      const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+      const currencyCode = await workplaceService.getCurrency(workplaceId);
 
       const journalData: CreateJournalData = {
         journalDate: combinedTimestamp,

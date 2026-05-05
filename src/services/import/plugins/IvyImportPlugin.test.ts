@@ -21,8 +21,14 @@ jest.mock('@/src/services/integrity-service', () => ({
 jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     setOnboardingCompleted: jest.fn().mockResolvedValue(true),
-    setDefaultCurrencyCode: jest.fn().mockResolvedValue(true),
     setUserName: jest.fn().mockResolvedValue(true),
+  },
+}));
+
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    getWorkplace: jest.fn().mockResolvedValue({ name: 'Default Workplace' }),
+    updateWorkplace: jest.fn().mockResolvedValue(true),
   },
 }));
 
@@ -129,7 +135,6 @@ describe('IvyImportPlugin', () => {
       expect(lastBatch.budgetScopes).toHaveLength(2);
 
       expect(preferences.setUserName).toHaveBeenCalledWith('Sahil');
-      expect(preferences.setDefaultCurrencyCode).toHaveBeenCalledWith('INR');
     });
 
     it('handles multi-currency transfers correctly', async () => {

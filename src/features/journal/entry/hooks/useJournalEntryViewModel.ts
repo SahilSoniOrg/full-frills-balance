@@ -1,5 +1,5 @@
-import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import { AppConfig } from '@/src/constants';
+import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
@@ -12,7 +12,6 @@ import { AccountRole } from '@/src/types/domain';
 import { getAllowedAccountTypes, getInferredAccountType } from '@/src/utils/accountCategory';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Keyboard } from 'react-native';
@@ -68,7 +67,7 @@ export interface JournalEntryViewModel {
  */
 export function useJournalEntryViewModel(): JournalEntryViewModel {
   const params = useLocalSearchParams();
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const initialMode =
     params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
   const initialType =
@@ -264,15 +263,15 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     if (lineWithCurrency?.accountCurrency) return lineWithCurrency.accountCurrency;
 
     // Final fallback
-    return preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-  }, [editor.isGuidedMode, editor.lines, simpleEditor.displayCurrency]);
+    return workplaceCurrency;
+  }, [editor.isGuidedMode, editor.lines, simpleEditor.displayCurrency, workplaceCurrency]);
 
   const primaryDisplayAmount = useMemo(() => {
     if (editor.isGuidedMode) return simpleEditor.amount;
 
     // In Advanced Mode, we calculate the footer amount in primaryDisplayCurrency
     // This keeps the footer stable while the user toggles the summary box.
-    const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    const defaultCurrency = workplaceCurrency;
 
     // Hoist primaryCurrencyLine lookup out of reduce to be O(1) inside loop
     const primaryCurrencyLine = editor.lines.find(
@@ -287,11 +286,14 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     const debitTotalInPrimary = editor.lines
       .filter(l => l.transactionType === 'DEBIT')
       .reduce((sum, line) => {
-        const baseAmount = JournalCalculator.getLineBaseAmount({
-          amount: line.amount,
-          exchangeRate: line.exchangeRate,
-          accountCurrency: line.accountCurrency,
-        });
+        const baseAmount = JournalCalculator.getLineBaseAmount(
+          {
+            amount: line.amount,
+            exchangeRate: line.exchangeRate,
+            accountCurrency: line.accountCurrency,
+          },
+          defaultCurrency,
+        );
 
         if (primaryDisplayCurrency === defaultCurrency) return sum + baseAmount;
 

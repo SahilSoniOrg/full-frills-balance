@@ -1,7 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
+import { useWorkplaceCurrency } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import { preferences } from '@/src/utils/preferences';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -23,7 +23,8 @@ export function JournalSummary({
   onSelectCurrency,
 }: JournalSummaryProps) {
   const { theme } = useTheme();
-  const currency = selectedCurrency || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+  const workplaceCurrency = useWorkplaceCurrency();
+  const currency = selectedCurrency || workplaceCurrency;
   const difference = Math.abs(totalDebits - totalCredits);
   const showSelector = availableCurrencies.length > 1;
 

@@ -1,5 +1,5 @@
-import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
+import ExpoSmsInboxModule, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
@@ -12,9 +12,9 @@ import SmsInboxRecord, {
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
 import { Model, Q } from '@nozbe/watermelondb';
@@ -701,7 +701,7 @@ class SmsService {
         return null;
       }
 
-      const currencyCode = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+      const currencyCode = await workplaceService.getCurrency(rule.workplaceId);
       const isExpense = parsed.type === 'debit';
 
       const { journal, ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal(

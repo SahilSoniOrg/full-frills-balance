@@ -1,5 +1,6 @@
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SankeyLink, SankeyNode } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -21,6 +22,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
   width: customWidth,
 }) => {
   const { theme } = useTheme();
+  const { defaultCurrencyCode } = useWorkplace();
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
 
@@ -202,7 +204,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
                 textAnchor={isRightSide ? 'end' : 'start'}
                 opacity={h < 8 ? 0.7 : 1}
               >
-                {n.name} {h > 12 ? CurrencyFormatter.formatShort(val) : ''}
+                {n.name} {h > 12 ? CurrencyFormatter.formatShort(val, defaultCurrencyCode) : ''}
               </SvgText>
             </React.Fragment>
           );

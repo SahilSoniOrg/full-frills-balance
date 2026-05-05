@@ -4,9 +4,9 @@ import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { BatchImportData, importRepository } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { JournalDisplayType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 
@@ -197,6 +197,7 @@ export const cashewPlugin: ImportPlugin = {
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
     logger.info('[CashewPlugin] Starting import...');
+    const workplaceCurrency = await workplaceService.getCurrency(workplaceId);
     onProgress?.('Initializing database...', 0.1);
 
     if (!context.rawBytes) {
@@ -272,7 +273,7 @@ export const cashewPlugin: ImportPlugin = {
       for (const w of wallets) {
         const newId = generator();
         accountsMap.set(w.wallet_pk, newId);
-        const currency = (w.currency || preferences.defaultCurrencyCode || 'USD').toUpperCase();
+        const currency = (w.currency || workplaceCurrency).toUpperCase();
         walletCurrencies.set(w.wallet_pk, currency);
         currencyMap.set(w.wallet_pk, currency);
 
@@ -297,8 +298,7 @@ export const cashewPlugin: ImportPlugin = {
             name: `Loan: ${objective.name}`,
             accountType: isLent ? AccountType.ASSET : AccountType.LIABILITY,
             accountSubtype: AccountSubtype.LOAN,
-            currencyCode:
-              currencyMap.get(objective.wallet_fk) || preferences.defaultCurrencyCode || 'USD',
+            currencyCode: currencyMap.get(objective.wallet_fk) || workplaceCurrency,
             icon: (objective.icon_name as IconName) || 'handshake',
             orderNum: objective.order,
             createdAt: new Date(objective.date_created).getTime(),
@@ -333,7 +333,7 @@ export const cashewPlugin: ImportPlugin = {
           id: newId,
           name: c.name || (c.category_pk === '0' ? 'Transfer / Correction' : 'Uncategorized'),
           accountType: c.income === 1 ? 'INCOME' : 'EXPENSE',
-          currencyCode: preferences.defaultCurrencyCode || 'USD',
+          currencyCode: workplaceCurrency,
           icon: getAppIconFromCashewIcon(c.icon_name),
         });
       }
@@ -372,8 +372,7 @@ export const cashewPlugin: ImportPlugin = {
         const journalDate = new Date(t.date_created * 1000).getTime();
         const absoluteAmount = Math.abs(t.amount);
         const isIncome = t.income === 1;
-        const walletCurrency =
-          walletCurrencies.get(t.wallet_fk) || preferences.defaultCurrencyCode || 'USD';
+        const walletCurrency = walletCurrencies.get(t.wallet_fk) || workplaceCurrency;
 
         // Case A: Transfer (category_fk === '0' AND paired_transaction_fk != null)
         if (t.category_fk === correctionCategoryPk && t.paired_transaction_fk) {
@@ -607,7 +606,7 @@ export const cashewPlugin: ImportPlugin = {
             id: budgetId,
             name: b.name,
             amount: Math.abs(b.amount),
-            currencyCode: preferences.defaultCurrencyCode || 'USD',
+            currencyCode: workplaceCurrency,
             startMonth,
             active: b.archived === 0,
           });
@@ -691,7 +690,7 @@ export const cashewPlugin: ImportPlugin = {
           const settings = JSON.parse(appSettings[0].settings_json);
           const cachedRates = settings.cachedCurrencyExchange; // Map<String, double>
           if (cachedRates) {
-            const baseCurrency = preferences.defaultCurrencyCode || 'USD';
+            const baseCurrency = workplaceCurrency;
             for (const [targetCurrency, rate] of Object.entries(cachedRates)) {
               data.exchangeRates.push({
                 id: generator(),

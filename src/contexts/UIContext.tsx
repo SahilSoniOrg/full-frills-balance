@@ -43,7 +43,6 @@ interface UIState {
 
   // User details
   userName: string;
-  defaultCurrency: string;
 
   // Privacy
   isPrivacyMode: boolean;
@@ -91,11 +90,11 @@ interface UIContextType extends UIState {
   isAppCurrentlyLocked: boolean; // BULLETPROOF: blocking logic unified for UI and services
 
   // Actions for UI state only
-  completeOnboarding: (name: string, currency: string, archetype?: string) => Promise<void>;
+  completeOnboarding: (name: string, archetype?: string) => Promise<void>;
   setThemePreference: (theme: 'light' | 'dark' | 'system') => Promise<void>;
   setThemeId: (themeId: ThemeId) => Promise<void>;
   setFontId: (fontId: FontId) => Promise<void>;
-  updateUserDetails: (name: string, currency: string, archetype?: string) => Promise<void>;
+  updateUserDetails: (name: string, archetype?: string) => Promise<void>;
   setPrivacyMode: (isPrivacyMode: boolean) => Promise<void>;
   setWidgetPrivacyEnabled: (enabled: boolean) => Promise<void>;
   setAppLockEnabled: (enabled: boolean) => Promise<void>;
@@ -139,7 +138,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     isLoading: false,
     isInitialized: false,
     userName: '',
-    defaultCurrency: AppConfig.defaultCurrency,
     isPrivacyMode: false,
     isWidgetPrivacyEnabled: false,
     isAppLockEnabled: false,
@@ -181,7 +179,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           themeId,
           fontId,
           userName: loadedPreferences.userName || '',
-          defaultCurrency: loadedPreferences.defaultCurrencyCode || AppConfig.defaultCurrency,
           isPrivacyMode: loadedPreferences.isPrivacyMode || false,
           isWidgetPrivacyEnabled: loadedPreferences.isWidgetPrivacyEnabled || false,
           isAppLockEnabled: loadedPreferences.isAppLockEnabled || false,
@@ -210,46 +207,36 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     loadPreferences();
   }, []);
 
-  const completeOnboarding = useCallback(
-    async (name: string, currency: string, archetype?: string) => {
-      try {
-        preferences.setUserName(name);
-        preferences.setDefaultCurrencyCode(currency);
-        if (archetype) preferences.setArchetype(archetype);
-        preferences.setOnboardingCompleted(true);
-        setUIState(prev => ({
-          ...prev,
-          hasCompletedOnboarding: true,
-          userName: name,
-          defaultCurrency: currency,
-          archetype: archetype || prev.archetype,
-        }));
-      } catch (error) {
-        logger.warn('Failed to save onboarding state', { error });
-        setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }));
-      }
-    },
-    [],
-  );
+  const completeOnboarding = useCallback(async (name: string, archetype?: string) => {
+    try {
+      preferences.setUserName(name);
+      if (archetype) preferences.setArchetype(archetype);
+      preferences.setOnboardingCompleted(true);
+      setUIState(prev => ({
+        ...prev,
+        hasCompletedOnboarding: true,
+        userName: name,
+        archetype: archetype || prev.archetype,
+      }));
+    } catch (error) {
+      logger.warn('Failed to save onboarding state', { error });
+      setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }));
+    }
+  }, []);
 
-  const updateUserDetails = useCallback(
-    async (name: string, currency: string, archetype?: string) => {
-      try {
-        if (name) await preferences.setUserName(name);
-        if (currency) await preferences.setDefaultCurrencyCode(currency);
-        if (archetype) await preferences.setArchetype(archetype);
-        setUIState(prev => ({
-          ...prev,
-          userName: name || prev.userName,
-          defaultCurrency: currency || prev.defaultCurrency,
-          archetype: archetype || prev.archetype,
-        }));
-      } catch (error) {
-        logger.warn('Failed to update user details', { error });
-      }
-    },
-    [],
-  );
+  const updateUserDetails = useCallback(async (name: string, archetype?: string) => {
+    try {
+      if (name) await preferences.setUserName(name);
+      if (archetype) await preferences.setArchetype(archetype);
+      setUIState(prev => ({
+        ...prev,
+        userName: name || prev.userName,
+        archetype: archetype || prev.archetype,
+      }));
+    } catch (error) {
+      logger.warn('Failed to update user details', { error });
+    }
+  }, []);
 
   const setThemePreference = useCallback(async (theme: 'light' | 'dark' | 'system') => {
     try {

@@ -1,5 +1,6 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -145,6 +146,7 @@ export const NetWorthTooltipContent = ({
   backgroundColor,
 }: NetWorthTooltipContentProps) => {
   const { onContrast } = useTheme();
+  const { defaultCurrencyCode } = useWorkplace();
   const contrastColor = onContrast(backgroundColor);
 
   return (
@@ -154,7 +156,7 @@ export const NetWorthTooltipContent = ({
       </AppText>
 
       <AppText variant="body" weight="bold" style={styles.tooltipNetWorth}>
-        {CurrencyFormatter.formatWithPreference(netWorth)}
+        {CurrencyFormatter.format(netWorth, defaultCurrencyCode)}
       </AppText>
 
       <View style={[styles.tooltipRow, { borderTopColor: borderColor }]}>
@@ -163,7 +165,7 @@ export const NetWorthTooltipContent = ({
             {incomeLabel}
           </AppText>
           <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {CurrencyFormatter.formatShort(income)}
+            {CurrencyFormatter.formatShort(income, defaultCurrencyCode)}
           </AppText>
         </View>
         <View style={styles.tooltipItem}>
@@ -171,7 +173,7 @@ export const NetWorthTooltipContent = ({
             {expenseLabel}
           </AppText>
           <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {CurrencyFormatter.formatShort(expense)}
+            {CurrencyFormatter.formatShort(expense, defaultCurrencyCode)}
           </AppText>
         </View>
       </View>
@@ -263,6 +265,7 @@ export const IncomeExpenseTooltipContent = ({
   backgroundColor,
 }: IncomeExpenseTooltipContentProps) => {
   const { onContrast } = useTheme();
+  const { defaultCurrencyCode } = useWorkplace();
   const contrastColor = onContrast(backgroundColor);
 
   return (
@@ -277,7 +280,7 @@ export const IncomeExpenseTooltipContent = ({
             {incomeLabel}
           </AppText>
           <AppText variant="caption" style={{ color: successColor }} weight="bold">
-            {CurrencyFormatter.formatShort(income)}
+            {CurrencyFormatter.formatShort(income, defaultCurrencyCode)}
           </AppText>
         </View>
         <View style={styles.tooltipItem}>
@@ -285,7 +288,7 @@ export const IncomeExpenseTooltipContent = ({
             {expenseLabel}
           </AppText>
           <AppText variant="caption" style={{ color: errorColor }} weight="bold">
-            {CurrencyFormatter.formatShort(expense)}
+            {CurrencyFormatter.formatShort(expense, defaultCurrencyCode)}
           </AppText>
         </View>
       </View>

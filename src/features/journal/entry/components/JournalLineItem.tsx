@@ -1,10 +1,10 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { useWorkplaceCurrency } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalEntryLine } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { preferences } from '@/src/utils/preferences';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -17,7 +17,7 @@ interface JournalLineItemProps {
   onSelectAccount: () => void;
   onAutoFetchRate?: () => void;
   onBalanceLine?: () => void;
-  getLineBaseAmount: (line: JournalEntryLine) => number;
+  getLineBaseAmount: (line: JournalEntryLine, baseCurrency: string) => number;
 }
 
 export const JournalLineItem = React.memo(
@@ -32,6 +32,7 @@ export const JournalLineItem = React.memo(
     getLineBaseAmount,
   }: JournalLineItemProps) => {
     const { theme } = useTheme();
+    const workplaceCurrency = useWorkplaceCurrency();
 
     return (
       <View style={styles.container}>
@@ -64,7 +65,7 @@ export const JournalLineItem = React.memo(
           >
             <View style={{ flex: 1, paddingLeft: Spacing.md }}>
               <AppText variant="caption" color="tertiary" weight="bold" style={styles.fieldLabel}>
-                {line.accountCurrency || AppConfig.defaultCurrency}
+                {line.accountCurrency || workplaceCurrency}
               </AppText>
               <AppInput
                 value={line.amount}
@@ -165,55 +166,55 @@ export const JournalLineItem = React.memo(
         </View>
 
         {/* Exchange Rate (Conditional) */}
-        {line.accountCurrency &&
-          line.accountCurrency !==
-            (preferences.defaultCurrencyCode || AppConfig.defaultCurrency) && (
-            <View
-              style={[
-                styles.exchangeRateRow,
-                { backgroundColor: withOpacity(theme.primary, Opacity.soft) },
-              ]}
-            >
-              <View
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
-              >
-                <AppIcon name="refresh" size={12} color={theme.primary} />
-                <AppText variant="caption" color="primary" weight="medium">
-                  ≈ {CurrencyFormatter.format(getLineBaseAmount(line))}
-                </AppText>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <AppText variant="caption" color="secondary">
-                  Rate:
-                </AppText>
-                <AppInput
-                  value={line.exchangeRate || ''}
-                  onChangeText={(value: string) => onUpdate('exchangeRate', value)}
-                  placeholder="1.0"
-                  keyboardType="decimal-pad"
-                  variant="minimal"
-                  containerStyle={{ width: 60, minHeight: 0 }}
-                  style={{ fontSize: 13, textAlign: 'right', fontWeight: 'bold' }}
-                />
-                <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                  {onBalanceLine && (
-                    <TouchableOpacity onPress={onBalanceLine} style={styles.fetchButton}>
-                      <AppText variant="caption" color="primary" weight="bold">
-                        Balance
-                      </AppText>
-                    </TouchableOpacity>
-                  )}
-                  {onAutoFetchRate && (
-                    <TouchableOpacity onPress={onAutoFetchRate} style={styles.fetchButton}>
-                      <AppText variant="caption" color="secondary" weight="bold">
-                        Fetch
-                      </AppText>
-                    </TouchableOpacity>
-                  )}
-                </View>
+        {line.accountCurrency && line.accountCurrency !== workplaceCurrency && (
+          <View
+            style={[
+              styles.exchangeRateRow,
+              { backgroundColor: withOpacity(theme.primary, Opacity.soft) },
+            ]}
+          >
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+              <AppIcon name="refresh" size={12} color={theme.primary} />
+              <AppText variant="caption" color="primary" weight="medium">
+                ≈{' '}
+                {CurrencyFormatter.format(
+                  getLineBaseAmount(line, workplaceCurrency),
+                  workplaceCurrency,
+                )}
+              </AppText>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+              <AppText variant="caption" color="secondary">
+                Rate:
+              </AppText>
+              <AppInput
+                value={line.exchangeRate || ''}
+                onChangeText={(value: string) => onUpdate('exchangeRate', value)}
+                placeholder="1.0"
+                keyboardType="decimal-pad"
+                variant="minimal"
+                containerStyle={{ width: 60, minHeight: 0 }}
+                style={{ fontSize: 13, textAlign: 'right', fontWeight: 'bold' }}
+              />
+              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
+                {onBalanceLine && (
+                  <TouchableOpacity onPress={onBalanceLine} style={styles.fetchButton}>
+                    <AppText variant="caption" color="primary" weight="bold">
+                      Balance
+                    </AppText>
+                  </TouchableOpacity>
+                )}
+                {onAutoFetchRate && (
+                  <TouchableOpacity onPress={onAutoFetchRate} style={styles.fetchButton}>
+                    <AppText variant="caption" color="secondary" weight="bold">
+                      Fetch
+                    </AppText>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-          )}
+          </View>
+        )}
 
         <View style={[styles.divider, { backgroundColor: theme.divider }]} />
       </View>

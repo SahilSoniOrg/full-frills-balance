@@ -1,6 +1,4 @@
-import { AppConfig } from '@/src/constants';
 import { CURRENCY_PRECISIONS, CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { preferences } from '@/src/utils/preferences';
 
 /**
  * Formatting options for CurrencyFormatter
@@ -91,26 +89,18 @@ export const CurrencyFormatter = {
   },
 
   /**
-   * Formats an amount using the user's default currency preference.
+   * Formats an amount with a fallback to the application default if currencyCode is missing.
    */
-  formatWithPreference(amount: number, options?: CurrencyFormatOptions): string {
-    const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-    return this.formatAmount(amount, defaultCurrency, options);
-  },
-
-  /**
-   * Formats an amount with a fallback to the user's preference if currencyCode is missing.
-   */
-  format(amount: number, currencyCode?: string, options?: CurrencyFormatOptions): string {
-    const code = currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+  format(amount: number, currencyCode: string, options?: CurrencyFormatOptions): string {
+    const code = currencyCode;
     return this.formatAmount(amount, code, options);
   },
 
   /**
    * Formats an amount in short form (e.g., 1K, 1M, 1L, 1Cr).
    */
-  formatShort(amount: number, currencyCode?: string): string {
-    const code = currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+  formatShort(amount: number, currencyCode: string): string {
+    const code = currencyCode;
     const absAmount = Math.abs(amount);
     const sign = amount < 0 ? '-' : '';
 

@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domain';
@@ -35,6 +36,7 @@ export function useSimpleJournalEditor({
   editor,
   onSelectAccountRequest,
 }: UseSimpleJournalEditorProps) {
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { fetchRate } = useExchangeRate();
 
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -111,7 +113,7 @@ export function useSimpleJournalEditor({
     if (!editor.isGuidedMode || !sourceLine || !destinationLine) return;
 
     const updates: Record<string, Partial<JournalEntryLine>> = {};
-    const baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    const baseCurrency = workplaceCurrency;
 
     if (isCrossCurrency && exchangeRate) {
       const formattedConverted = convertedAmount.toFixed(2);
@@ -448,11 +450,7 @@ export function useSimpleJournalEditor({
       allAccounts: accounts,
       sourceCurrency,
       destCurrency,
-      displayCurrency:
-        sourceCurrency ||
-        destCurrency ||
-        preferences.defaultCurrencyCode ||
-        AppConfig.defaultCurrency,
+      displayCurrency: sourceCurrency || destCurrency || workplaceCurrency,
       handleSave,
       openAccountPicker,
       isValidAmount: numAmount > 0,

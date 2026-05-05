@@ -24,6 +24,7 @@ import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/imp
 import { integrityService } from '@/src/services/integrity-service';
 import { JournalDisplayType } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/utils/preferences';
 
 // Ivy Wallet Interfaces
@@ -197,7 +198,7 @@ export const ivyPlugin: ImportPlugin = {
     workplaceId: string,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
-    const targetDefaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    const targetDefaultCurrency = await workplaceService.getCurrency(workplaceId);
 
     if (!this.detect(context)) {
       throw new Error('Invalid Ivy Wallet backup format');
@@ -859,14 +860,19 @@ export const ivyPlugin: ImportPlugin = {
 
     if (ivyUserName) {
       await preferences.setUserName(ivyUserName);
+      // Also update workplace name if it's currently a default
+      const workplace = await workplaceService.getWorkplace(workplaceId);
+      if (workplace && workplace.name.includes('Workplace')) {
+        await workplaceService.updateWorkplace(workplaceId, { name: `${ivyUserName}'s Workplace` });
+      }
     }
 
     if (ivyBaseCurrency) {
-      await preferences.setDefaultCurrencyCode(ivyBaseCurrency);
+      await workplaceService.updateWorkplace(workplaceId, { defaultCurrencyCode: ivyBaseCurrency });
     } else {
       const firstCurrency = accountCurrencyMap.values().next().value;
       if (firstCurrency) {
-        await preferences.setDefaultCurrencyCode(firstCurrency);
+        await workplaceService.updateWorkplace(workplaceId, { defaultCurrencyCode: firstCurrency });
       }
     }
 

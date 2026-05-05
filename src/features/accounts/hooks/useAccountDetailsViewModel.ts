@@ -26,7 +26,6 @@ import { journalPresenter } from '@/src/utils/journalPresenter';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
@@ -124,8 +123,8 @@ export interface AccountDetailsViewModel {
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
-  const { workplaceId } = useWorkplace();
-  const { defaultCurrency, defaultShareFormat } = useUI();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { defaultShareFormat } = useUI();
   const params = useLocalSearchParams();
   const accountId = params.accountId as string;
   const startDateParam = params.startDate as string;
@@ -214,13 +213,13 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             id: accountId,
             name: pName,
             accountType: pType || 'ASSET',
-            currencyCode: pCurrency || defaultCurrency || 'USD',
+            currencyCode: pCurrency || workplaceCurrency,
             icon: pIcon || 'wallet',
             colorKey: pColor,
             deletedAt: null,
           }
         : null) as Account | null),
-    [dbAccount, pName, accountId, pType, pCurrency, defaultCurrency, pIcon, pColor],
+    [dbAccount, pName, accountId, pType, pCurrency, workplaceCurrency, pIcon, pColor],
   );
 
   const balanceData = useMemo(
@@ -230,11 +229,11 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         ? {
             accountId,
             balance: parseFloat(pBalance),
-            currencyCode: pCurrency || account?.currencyCode || defaultCurrency || 'USD',
+            currencyCode: pCurrency || account?.currencyCode || workplaceCurrency,
             transactionCount: 0,
           }
         : null) as AccountBalance | null),
-    [dbBalanceData, pBalance, accountId, pCurrency, account?.currencyCode, defaultCurrency],
+    [dbBalanceData, pBalance, accountId, pCurrency, account?.currencyCode, workplaceCurrency],
   );
 
   // --- Derived State ---
@@ -252,7 +251,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     [accounts, accountId],
   );
 
-  const balanceCurrency = balanceData?.currencyCode || account?.currencyCode || defaultCurrency;
+  const balanceCurrency = balanceData?.currencyCode || account?.currencyCode || workplaceCurrency;
   const balance = dbBalanceData?.balance || 0;
   const transactionCount = balanceData?.transactionCount || 0;
   const isDeleted = account?.deletedAt != null;
@@ -381,14 +380,14 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         icon: child.icon || 'wallet',
         balanceText: CurrencyFormatter.format(
           subBalance?.balance ?? 0,
-          subBalance?.currencyCode || child.currencyCode || defaultCurrency,
+          subBalance?.currencyCode || child.currencyCode || workplaceCurrency,
         ),
         color,
         level,
         isGroup,
       };
     });
-  }, [descendants, subBalances, defaultCurrency, theme, accounts]);
+  }, [descendants, subBalances, workplaceCurrency, theme, accounts]);
 
   // --- Handlers ---
   const onDelete = useCallback(() => {
@@ -657,7 +656,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
           includeTime: true,
           sort: 'desc',
           showEmojis: true,
-          defaultCurrency: preferences.defaultCurrencyCode,
+          defaultCurrency: workplaceCurrency,
         },
       );
       await sharingService.share(provider, defaultShareFormat);

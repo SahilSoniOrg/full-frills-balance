@@ -25,6 +25,13 @@ jest.mock('@/src/utils/preferences', () => ({
   },
 }));
 
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    getWorkplace: jest.fn().mockResolvedValue({ name: 'Default Workplace' }),
+    updateWorkplace: jest.fn().mockResolvedValue(true),
+  },
+}));
+
 describe('NativeImportPlugin', () => {
   const validNativeData = {
     version: '1.4.0',

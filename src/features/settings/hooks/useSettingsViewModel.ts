@@ -100,7 +100,7 @@ export function useSettingsViewModel(): SettingsViewModel {
   const setUserName = useCallback(
     (newName: string) => {
       if (newName.trim() && newName !== userName) {
-        updateUserDetails(newName.trim(), ui.defaultCurrency, ui.archetype);
+        updateUserDetails(newName.trim(), ui.archetype);
 
         // Track Analytics
         analytics.trackFeatureUsage('settings', 'change_name', {
@@ -108,7 +108,7 @@ export function useSettingsViewModel(): SettingsViewModel {
         });
       }
     },
-    [ui.defaultCurrency, ui.archetype, updateUserDetails, userName],
+    [ui.archetype, updateUserDetails, userName],
   );
 
   const onExport = useCallback(() => {

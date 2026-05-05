@@ -17,9 +17,10 @@ export interface WorkplaceSettingsViewModel {
   createWorkplace: (
     name: string,
     icon: IconName,
-    options?: {
+    options: {
       initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
       initialCategories?: { name: string; type: AccountType; icon: IconName }[];
+      currencyCode: string;
     },
   ) => Promise<boolean>;
   updateWorkplaceIcon: (workplace: Workplace, icon: IconName) => Promise<void>;
@@ -67,9 +68,10 @@ export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
     async (
       name: string,
       icon: IconName,
-      options?: {
+      options: {
         initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
         initialCategories?: { name: string; type: AccountType; icon: IconName }[];
+        currencyCode: string;
       },
     ) => {
       if (!name.trim()) {

@@ -1,5 +1,4 @@
 import { IconName } from '@/src/components/core/AppIcon';
-import { AppConfig } from '@/src/constants/app-config';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account from '@/src/data/models/Account';
@@ -65,16 +64,17 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { theme, onContrast } = useTheme();
   const { workplaceId } = useWorkplace();
 
-  const { defaultCurrency, showAccountMonthlyStats, isPrivacyMode } = useUI();
+  const { showAccountMonthlyStats, isPrivacyMode } = useUI();
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
-  const [isLocalPrivacyMode, setIsLocalPrivacyMode] = useState(isPrivacyMode);
+  const [isLocalPrivacyMode, setIsLocalPrivacyMode] = useState<boolean>(isPrivacyMode);
 
   // Sync with global privacy mode when it changes (e.g. from settings)
   useEffect(() => {
     setIsLocalPrivacyMode(isPrivacyMode);
   }, [isPrivacyMode]);
 
-  const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
+  const targetCurrency = workplaceCurrency;
 
   const {
     data: dashboardData,
@@ -208,7 +208,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const transformOptions = useMemo(
     () => ({
       balancesByAccountId,
-      defaultCurrency,
+      defaultCurrency: workplaceCurrency,
       showAccountMonthlyStats,
       isPrivacyMode: isLocalPrivacyMode,
       isLoading,
@@ -224,7 +224,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     }),
     [
       balancesByAccountId,
-      defaultCurrency,
+      workplaceCurrency,
       showAccountMonthlyStats,
       isLocalPrivacyMode,
       isLoading,

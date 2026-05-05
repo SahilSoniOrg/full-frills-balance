@@ -167,11 +167,11 @@ export default function RootLayout() {
 function AppContent() {
   const { isRestartRequired } = useUI();
 
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
   // Sync app data with native widgets
-  useWidgetSync(workplaceId);
+  useWidgetSync(workplaceId, defaultCurrencyCode);
 
-  useAppBootstrap(workplaceId);
+  useAppBootstrap(workplaceId, defaultCurrencyCode);
 
   if (isRestartRequired) {
     return <RestartRequiredScreen />;

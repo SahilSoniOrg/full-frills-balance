@@ -134,7 +134,7 @@ describe('NotificationService', () => {
         accountMap: new Map(),
       });
 
-      notificationService.observeSafeToSpend('test-wp').subscribe(result => {
+      notificationService.observeSafeToSpend('test-wp', 'USD').subscribe(result => {
         // Expected:
         // Liquid Assets = a1 (5000)
         // Liquid Liabilities = l1 (1000)

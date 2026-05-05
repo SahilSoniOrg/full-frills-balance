@@ -98,7 +98,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     displayType?: string;
   }>();
   const { theme } = useTheme();
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
   const { deleteJournal, findJournal, duplicateJournal, postJournal, revertToPlanned } =
     useJournalActions(workplaceId);
@@ -174,7 +174,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         description: paramTitle || 'Loading...',
         date: paramDate ? Number(paramDate) : Date.now(),
         status: 'DRAFT', // Default to draft until loaded
-        currency: paramCurrency || 'USD',
+        currency: paramCurrency || workplaceCurrency,
         displayType: paramDisplayType || 'EXPENSE',
         totalAmount: paramAmount ? Number(paramAmount) : 0,
         plannedPaymentId: null,

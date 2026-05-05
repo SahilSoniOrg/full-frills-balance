@@ -18,7 +18,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { getEpsilon, roundToPrecision } from '@/src/utils/money';
-import { preferences } from '@/src/utils/preferences';
+import { workplaceService } from '@/src/services/WorkplaceService';
 
 export interface CreateAccountData {
   name: string;
@@ -54,8 +54,10 @@ export class AccountService {
     // Default order to end of list
     const orderNum = data.orderNum ?? (await accountRepository.countNonDeleted(workplaceId));
 
-    const currencyCode =
-      data.currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    let currencyCode = data.currencyCode;
+    if (!currencyCode) {
+      currencyCode = await workplaceService.getCurrency(workplaceId);
+    }
 
     // 0. Validate parent account if provided
     if (data.parentAccountId) {
@@ -466,18 +468,16 @@ export class AccountService {
     workplaceId: string,
   ): Promise<string> {
     const { balanceCorrections } = AppConfig.systemAccounts;
-    const targetCurrency =
-      currencyCode || preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
+    let targetCurrency = currencyCode;
+    if (!targetCurrency) {
+      targetCurrency = await workplaceService.getCurrency(workplaceId);
+    }
 
     // 1. Check legacy names with matching currency
     for (const legacyName of balanceCorrections.legacyNames) {
       const legacy = await this.findAccountByName(legacyName, workplaceId);
       // Match if currency is correct, OR if we're looking for default currency and the legacy one has NO currency
-      if (
-        legacy &&
-        (legacy.currencyCode === targetCurrency ||
-          (!legacy.currencyCode && targetCurrency === preferences.defaultCurrencyCode))
-      ) {
+      if (legacy && (legacy.currencyCode === targetCurrency || !legacy.currencyCode)) {
         return legacy.id;
       }
     }

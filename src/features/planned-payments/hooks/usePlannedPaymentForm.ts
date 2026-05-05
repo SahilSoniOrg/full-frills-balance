@@ -1,11 +1,10 @@
-import { AppConfig } from '@/src/constants';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export interface PlannedPaymentFormState {
@@ -26,10 +25,12 @@ export interface PlannedPaymentFormState {
 export function usePlannedPaymentForm(workplaceId: string, id?: string) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+
   const [form, setForm] = useState<PlannedPaymentFormState>({
     name: '',
     amount: '',
-    currencyCode: preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+    currencyCode: workplaceCurrency,
     fromAccountId: '',
     toAccountId: '',
     intervalN: 1,

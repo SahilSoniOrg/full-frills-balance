@@ -21,7 +21,7 @@ import { sharingService } from '@/src/services/SharingService';
  * Bootstraps app-wide side effects that must not live in UI context.
  * Hardened to follow a 4-phase adaptive hydration pipeline.
  */
-export function useAppBootstrap(workplaceId: string) {
+export function useAppBootstrap(workplaceId: string, defaultCurrencyCode: string) {
   const { isAppCurrentlyLocked, appPhase, dispatchBootEvent } = useUI();
 
   // SAFETY: phaseRef prevents stale closure captures in watchdog and ghost blocks
@@ -128,7 +128,7 @@ export function useAppBootstrap(workplaceId: string) {
               if (!isActive || phaseRef.current >= AppPhase.STABILIZED || isLowEnd) return;
               await yieldToUI();
               balanceService.getAccountBalances(workplaceId).catch(() => {});
-              notificationService.preWarm(workplaceId);
+              notificationService.preWarm(workplaceId, defaultCurrencyCode);
               insightService.preWarm(workplaceId);
 
               logger.info('[Bootstrap] Ghost hydration pass complete.');

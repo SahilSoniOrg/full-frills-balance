@@ -22,7 +22,7 @@ import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
-import { workplaceRepository } from '../data/repositories/WorkplaceRepository';
+import { workplaceService } from '@/src/services/WorkplaceService';
 
 export interface BalanceVerificationResult {
   accountId: string;
@@ -469,7 +469,7 @@ export class IntegrityService {
       // 2. Delete the workplace record itself
       const { database } = await import('@/src/data/database/Database');
       await database.write(async () => {
-        const workplace = await workplaceRepository.find(workplaceId);
+        const workplace = await workplaceService.getWorkplace(workplaceId);
         if (workplace) {
           await workplace.destroyPermanently();
         }

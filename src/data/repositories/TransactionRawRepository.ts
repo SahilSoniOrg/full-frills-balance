@@ -354,6 +354,7 @@ export class TransactionRawRepository {
    * Optimized for bulk currency conversion in wealth history.
    */
   async getDailyDeltasGroupedRaw(
+    workplaceId: string,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -383,6 +384,7 @@ export class TransactionRawRepository {
         AND t.transaction_date <= ?
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
+        AND j.workplace_id = ?
         AND j.status IN (${placeholders})
       GROUP BY dayStartStr, t.currency_code, a.account_type
       ORDER BY dayStartStr ASC
@@ -392,6 +394,7 @@ export class TransactionRawRepository {
       ...accountIds,
       startDate,
       endDate,
+      workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
     ]);
 
@@ -411,6 +414,7 @@ export class TransactionRawRepository {
       database.collections
         .get<Transaction>('transactions')
         .query(
+          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
           Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
           Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', Q.oneOf(accountIds)),

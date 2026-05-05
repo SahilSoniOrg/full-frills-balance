@@ -1,115 +1,133 @@
-import { AppConfig } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
-import { preferences } from '@/src/utils/preferences';
 import { useEffect, useMemo, useState } from 'react';
 
 interface AdvancedJournalLineLike {
-    amount: number | string;
-    exchangeRate?: number | string;
-    transactionType: JournalLineInput['type'];
-    accountCurrency?: string;
+  amount: number | string;
+  exchangeRate?: number | string;
+  transactionType: JournalLineInput['type'];
+  accountCurrency?: string;
 }
 
 export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
-    const defaultCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency;
-    const firstLineCurrency = lines[0]?.accountCurrency;
+  const { defaultCurrencyCode: defaultCurrency } = useWorkplace();
+  const firstLineCurrency = lines[0]?.accountCurrency;
 
-    // Identify all unique currencies present in the lines
-    const availableCurrencies = useMemo(() => {
-        const currencies = new Set<string>();
-        lines.forEach(line => {
-            if (line.accountCurrency) {
-                currencies.add(line.accountCurrency);
-            }
-        });
-        // Always include default currency as a fallback/option
-        currencies.add(defaultCurrency);
-        return Array.from(currencies).sort();
-    }, [lines, defaultCurrency]);
-
-    // Default to first line currency when available, otherwise app default.
-    const [selectedCurrency, setSelectedCurrency] = useState<string>(() => {
-        return lines[0]?.accountCurrency || defaultCurrency;
+  // Identify all unique currencies present in the lines
+  const availableCurrencies = useMemo(() => {
+    const currencies = new Set<string>();
+    lines.forEach(line => {
+      if (line.accountCurrency) {
+        currencies.add(line.accountCurrency);
+      }
     });
-    const [isCurrencyManuallySelected, setIsCurrencyManuallySelected] = useState(false);
+    // Always include default currency as a fallback/option
+    currencies.add(defaultCurrency);
+    return Array.from(currencies).sort();
+  }, [lines, defaultCurrency]);
 
-    // If user has not manually chosen a currency, keep summary currency aligned with first line.
-    useEffect(() => {
-        if (!isCurrencyManuallySelected && firstLineCurrency && firstLineCurrency !== selectedCurrency) {
-            setSelectedCurrency(firstLineCurrency);
-        }
-    }, [firstLineCurrency, isCurrencyManuallySelected, selectedCurrency]);
+  // Default to first line currency when available, otherwise app default.
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(() => {
+    return lines[0]?.accountCurrency || defaultCurrency;
+  });
+  const [isCurrencyManuallySelected, setIsCurrencyManuallySelected] = useState(false);
 
-    // Keep selected currency valid if available currencies change.
-    useEffect(() => {
-        if (!availableCurrencies.includes(selectedCurrency)) {
-            setSelectedCurrency(availableCurrencies[0] || defaultCurrency);
-            setIsCurrencyManuallySelected(false);
-        }
-    }, [availableCurrencies, selectedCurrency, defaultCurrency]);
+  // If user has not manually chosen a currency, keep summary currency aligned with first line.
+  useEffect(() => {
+    if (
+      !isCurrencyManuallySelected &&
+      firstLineCurrency &&
+      firstLineCurrency !== selectedCurrency
+    ) {
+      setSelectedCurrency(firstLineCurrency);
+    }
+  }, [firstLineCurrency, isCurrencyManuallySelected, selectedCurrency]);
 
-    const selectedCurrencyRate = useMemo(() => {
-        const line = lines.find(l => l.accountCurrency === selectedCurrency);
-        if (!line) return 1;
-        const rate = typeof line.exchangeRate === 'string' ? parseFloat(line.exchangeRate) : line.exchangeRate;
-        return rate && rate > 0 ? rate : 1;
-    }, [lines, selectedCurrency]);
+  // Keep selected currency valid if available currencies change.
+  useEffect(() => {
+    if (!availableCurrencies.includes(selectedCurrency)) {
+      setSelectedCurrency(availableCurrencies[0] || defaultCurrency);
+      setIsCurrencyManuallySelected(false);
+    }
+  }, [availableCurrencies, selectedCurrency, defaultCurrency]);
 
-    // Totals in currently selected display currency.
-    const displayLines = useMemo<JournalLineInput[]>(() => {
-        return lines.map((line) => {
-            const lineCurrency = line.accountCurrency || defaultCurrency;
-            const baseAmount = JournalCalculator.getLineBaseAmount({
-                amount: line.amount,
-                exchangeRate: line.exchangeRate,
-                accountCurrency: lineCurrency
-            });
+  const selectedCurrencyRate = useMemo(() => {
+    const line = lines.find(l => l.accountCurrency === selectedCurrency);
+    if (!line) return 1;
+    const rate =
+      typeof line.exchangeRate === 'string' ? parseFloat(line.exchangeRate) : line.exchangeRate;
+    return rate && rate > 0 ? rate : 1;
+  }, [lines, selectedCurrency]);
 
-            const displayAmount = selectedCurrency === defaultCurrency
-                ? baseAmount
-                : baseAmount / selectedCurrencyRate;
+  // Totals in currently selected display currency.
+  const displayLines = useMemo<JournalLineInput[]>(() => {
+    return lines.map(line => {
+      const lineCurrency = line.accountCurrency || defaultCurrency;
+      const baseAmount = JournalCalculator.getLineBaseAmount(
+        {
+          amount: line.amount,
+          exchangeRate: line.exchangeRate,
+          accountCurrency: lineCurrency,
+        },
+        defaultCurrency,
+      );
 
-            return {
-                amount: JournalCalculator.roundAmount(displayAmount),
-                type: line.transactionType,
-            };
-        });
-    }, [lines, selectedCurrency, defaultCurrency, selectedCurrencyRate]);
+      const displayAmount =
+        selectedCurrency === defaultCurrency ? baseAmount : baseAmount / selectedCurrencyRate;
 
-    // Canonical validation in base currency (independent of display currency).
-    const baseLines = useMemo<JournalLineInput[]>(() => {
-        return lines.map((line) => ({
-            amount: JournalCalculator.getLineBaseAmount({
-                amount: line.amount,
-                exchangeRate: line.exchangeRate,
-                accountCurrency: line.accountCurrency || defaultCurrency
-            }),
-            type: line.transactionType,
-        }));
-    }, [lines, defaultCurrency]);
+      return {
+        amount: JournalCalculator.roundAmount(displayAmount),
+        type: line.transactionType,
+      };
+    });
+  }, [lines, selectedCurrency, defaultCurrency, selectedCurrencyRate]);
 
-    const totalDebits = useMemo(() => JournalCalculator.calculateTotalDebits(displayLines), [displayLines]);
-    const totalCredits = useMemo(() => JournalCalculator.calculateTotalCredits(displayLines), [displayLines]);
-    const isBalanced = useMemo(() => {
-        const baseDebits = JournalCalculator.calculateTotalDebits(baseLines);
-        const baseCredits = JournalCalculator.calculateTotalCredits(baseLines);
-        return Math.abs(baseDebits - baseCredits) < 0.0001;
-    }, [baseLines]);
+  // Canonical validation in base currency (independent of display currency).
+  const baseLines = useMemo<JournalLineInput[]>(() => {
+    return lines.map(line => ({
+      amount: JournalCalculator.getLineBaseAmount(
+        {
+          amount: line.amount,
+          exchangeRate: line.exchangeRate,
+          accountCurrency: line.accountCurrency || defaultCurrency,
+        },
+        defaultCurrency,
+      ),
+      type: line.transactionType,
+    }));
+  }, [lines, defaultCurrency]);
 
-    const imbalance = useMemo(() => JournalCalculator.calculateImbalance(baseLines), [baseLines]);
+  const totalDebits = useMemo(
+    () => JournalCalculator.calculateTotalDebits(displayLines, defaultCurrency),
+    [displayLines, defaultCurrency],
+  );
+  const totalCredits = useMemo(
+    () => JournalCalculator.calculateTotalCredits(displayLines, defaultCurrency),
+    [displayLines, defaultCurrency],
+  );
+  const isBalanced = useMemo(() => {
+    const baseDebits = JournalCalculator.calculateTotalDebits(baseLines, defaultCurrency);
+    const baseCredits = JournalCalculator.calculateTotalCredits(baseLines, defaultCurrency);
+    return Math.abs(baseDebits - baseCredits) < 0.0001;
+  }, [baseLines, defaultCurrency]);
 
-    const onSelectCurrency = (currency: string) => {
-        setIsCurrencyManuallySelected(true);
-        setSelectedCurrency(currency);
-    };
+  const imbalance = useMemo(
+    () => JournalCalculator.calculateImbalance(baseLines, defaultCurrency),
+    [baseLines, defaultCurrency],
+  );
 
-    return {
-        totalDebits,
-        totalCredits,
-        isBalanced,
-        imbalance,
-        availableCurrencies,
-        selectedCurrency,
-        setSelectedCurrency: onSelectCurrency
-    };
+  const onSelectCurrency = (currency: string) => {
+    setIsCurrencyManuallySelected(true);
+    setSelectedCurrency(currency);
+  };
+
+  return {
+    totalDebits,
+    totalCredits,
+    isBalanced,
+    imbalance,
+    availableCurrencies,
+    selectedCurrency,
+    setSelectedCurrency: onSelectCurrency,
+  };
 }

@@ -1,4 +1,5 @@
 import { IconName } from '@/src/components/core/AppIcon';
+import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
@@ -34,7 +35,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
   const ui = useUI();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [selectedCurrency, setSelectedCurrency] = useState(ui.defaultCurrency);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(AppConfig.defaultCurrency);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>(['Cash', 'Bank']);
   const [customAccounts, setCustomAccounts] = useState<{ name: string; icon: IconName }[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
@@ -222,7 +223,7 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
       });
 
       // Then update UI state & preferences via Context
-      await ui.completeOnboarding(name, selectedCurrency, 'balance-glancer');
+      await ui.completeOnboarding(name, 'balance-glancer');
 
       // Clear draft
       storage.remove(ONBOARDING_DRAFT_KEY);

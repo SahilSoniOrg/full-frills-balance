@@ -1,5 +1,6 @@
 import { AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, ColorKey, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -54,6 +55,7 @@ export function useAuditLogDiffViewModel({
   entityStatusMap,
 }: UseAuditLogDiffViewModelParams) {
   const { theme } = useTheme();
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
   const actionColor = useMemo((): ColorKey => {
     switch (item.action) {
@@ -104,7 +106,7 @@ export function useAuditLogDiffViewModel({
     ) {
       return (
         <AppText variant="caption" color="secondary">
-          {CurrencyFormatter.format(value, currencyCode)}
+          {CurrencyFormatter.format(value, currencyCode || workplaceCurrency)}
         </AppText>
       );
     }
@@ -148,7 +150,8 @@ export function useAuditLogDiffViewModel({
                   )}
                   <View style={shouldShowName ? { marginLeft: Spacing.md } : {}}>
                     <AppText variant="caption" color="secondary">
-                      {CurrencyFormatter.format(snapshot.amount, itemCurrency)} ({snapshot.type})
+                      {CurrencyFormatter.format(snapshot.amount, itemCurrency || workplaceCurrency)}{' '}
+                      ({snapshot.type})
                     </AppText>
                   </View>
                 </View>
@@ -437,7 +440,7 @@ export function useAuditLogDiffViewModel({
             <AppText variant="caption" weight="bold">
               {key}:{' '}
             </AppText>
-            {renderChangeValue(key, value)}
+            {renderChangeValue(key, value, workplaceCurrency)}
           </View>
         ))}
       </View>

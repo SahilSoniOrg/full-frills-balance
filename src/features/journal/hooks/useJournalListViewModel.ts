@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
@@ -16,7 +17,6 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
@@ -80,7 +80,9 @@ export function useJournalListViewModel(
   }: UseJournalListViewModelParams,
   workplaceId: string,
 ): JournalListViewModel {
-  const { defaultCurrency: baseCurrency, isInitialized, defaultShareFormat } = useUI();
+  const { isInitialized, defaultShareFormat } = useUI();
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const baseCurrency = workplaceCurrency;
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -234,7 +236,7 @@ export function useJournalListViewModel(
           includeTime: true,
           sort: 'desc',
           showEmojis: true,
-          defaultCurrency: preferences.defaultCurrencyCode,
+          defaultCurrency: baseCurrency,
         },
       );
       await sharingService.share(provider, defaultShareFormat);

@@ -11,6 +11,7 @@ const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 export interface UIPreferences {
   onboardingCompleted: boolean;
   userName?: string;
+  /** @deprecated Use workplace.defaultCurrencyCode instead */
   defaultCurrencyCode?: string;
   lastSelectedAccountId?: string;
   lastDateRange?: {
@@ -43,7 +44,6 @@ export interface UIPreferences {
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
   onboardingCompleted: false,
   userName: '',
-  defaultCurrencyCode: AppConfig.defaultCurrency,
   isPrivacyMode: false,
   isWidgetPrivacyEnabled: false,
   isAppLockEnabled: false,
@@ -220,6 +220,14 @@ class PreferencesHelper {
     this.updatePreferences({ userName: name });
   }
 
+  get defaultCurrencyCode(): string | undefined {
+    return this.preferences.defaultCurrencyCode;
+  }
+
+  clearDefaultCurrencyCode(): void {
+    this.updatePreferences({ defaultCurrencyCode: undefined });
+  }
+
   get lastSelectedAccountId(): string | undefined {
     return this.preferences.lastSelectedAccountId;
   }
@@ -258,14 +266,6 @@ class PreferencesHelper {
 
   setFontId(fontId: FontId): void {
     this.updatePreferences({ fontId });
-  }
-
-  get defaultCurrencyCode(): string | undefined {
-    return this.preferences.defaultCurrencyCode;
-  }
-
-  setDefaultCurrencyCode(currencyCode: string): void {
-    this.updatePreferences({ defaultCurrencyCode: currencyCode });
   }
 
   get lastUsedSourceAccountId(): string | undefined {

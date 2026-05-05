@@ -1,6 +1,6 @@
+import { AppConfig } from '@/src/constants';
 import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { journalService } from '@/src/features/journal';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
@@ -10,7 +10,6 @@ import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
-import { preferences } from '@/src/utils/preferences';
 import { useMemo } from 'react';
 import { of } from 'rxjs';
 
@@ -21,9 +20,10 @@ interface UseInsightDetailsViewModelParams {
 
 export function useInsightDetailsViewModel({
   journalIds,
-  baseCurrency = preferences.defaultCurrencyCode || AppConfig.defaultCurrency,
+  baseCurrency: manualBaseCurrency,
 }: UseInsightDetailsViewModelParams) {
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const baseCurrency = manualBaseCurrency || workplaceCurrency;
   const journals$ = useMemo(() => {
     if (journalIds.length === 0) return of([]);
 

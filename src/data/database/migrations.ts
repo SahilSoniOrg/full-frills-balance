@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import {
   addColumns,
   createTable,
@@ -585,6 +586,18 @@ export const migrations = schemaMigrations({
           table: 'workplaces',
           columns: [{ name: 'icon', type: 'string', isOptional: true }],
         }),
+      ],
+    },
+    {
+      toVersion: 25,
+      steps: [
+        addColumns({
+          table: 'workplaces',
+          columns: [{ name: 'default_currency_code', type: 'string', isOptional: false }],
+        }),
+        unsafeExecuteSql(
+          `UPDATE workplaces SET default_currency_code = '${AppConfig.defaultCurrency}' WHERE default_currency_code IS NULL OR default_currency_code = '';`,
+        ),
       ],
     },
   ],

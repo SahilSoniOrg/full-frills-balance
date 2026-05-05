@@ -90,12 +90,12 @@ function buildWidgetThemeSnapshot(
   };
 }
 
-export function useWidgetSync(workplaceId: string) {
+export function useWidgetSync(workplaceId: string, defaultCurrencyCode: string) {
   const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked } = useUI();
   const { theme, themeMode } = useTheme();
   const { data: safeToSpendData } = useObservable(
-    () => notificationService.observeSafeToSpend(workplaceId),
-    [workplaceId],
+    () => notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode),
+    [workplaceId, defaultCurrencyCode],
     null,
   );
 
@@ -107,7 +107,7 @@ export function useWidgetSync(workplaceId: string) {
 
   // Bulletproof data presence check: ensure both summary and currency exist
   const isDataPresent = !!safeToSpendData?.summary && !!rawCurrencyCode;
-  const currencyCode = rawCurrencyCode || AppConfig.defaultCurrency;
+  const currencyCode = rawCurrencyCode || defaultCurrencyCode;
 
   React.useEffect(() => {
     if (Platform.OS === 'web' || isAppCurrentlyLocked) {

@@ -1,5 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
-import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
@@ -27,9 +25,8 @@ const EMPTY_WEALTH_SUMMARY: Omit<WealthSummaryResult, 'isLoading' | 'version'> =
  * Provides a single source of truth for wealth calculations.
  */
 export function useWealthSummary(): WealthSummaryResult {
-  const { workplaceId } = useWorkplace();
-  const { defaultCurrency } = useUI();
-  const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
+  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const targetCurrency = workplaceCurrency;
 
   const { data, isLoading, version } = useObservable(
     () =>

@@ -31,8 +31,16 @@ export class OnboardingService {
       customCategories,
     } = data;
 
-    const workplace = await workplaceService.ensureDefaultWorkplace();
-    const targetWorkplaceId = workplace.id;
+    // 1. Create the target workplace with selected currency
+    const targetWorkplace = await workplaceService.createWorkplace(
+      name || 'Personal',
+      'briefcase',
+      {
+        currencyCode: selectedCurrency,
+      },
+    );
+
+    const targetWorkplaceId = targetWorkplace.id;
 
     logger.info(`Starting onboarding completion for user: ${name}`);
 

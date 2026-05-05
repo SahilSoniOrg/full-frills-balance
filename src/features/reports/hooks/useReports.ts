@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
-import { useUI } from '@/src/contexts/UIContext';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -14,8 +14,8 @@ import { combineLatest, map } from 'rxjs';
 
 export function useReports(workplaceId: string) {
   const { theme } = useTheme();
-  const { defaultCurrency } = useUI();
-  const targetCurrency = defaultCurrency || AppConfig.defaultCurrency;
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const targetCurrency = workplaceCurrency;
 
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
     type: 'LAST_N',
@@ -51,7 +51,7 @@ export function useReports(workplaceId: string) {
         accountIds,
       );
     },
-    [workplaceId, dateRange, triggerObservable, defaultCurrency, accountIds],
+    [workplaceId, dateRange, triggerObservable, targetCurrency, accountIds],
     [],
   );
 
@@ -79,7 +79,7 @@ export function useReports(workplaceId: string) {
         accountIds,
       );
     },
-    [workplaceId, dateRange, triggerObservable, defaultCurrency, accountIds],
+    [workplaceId, dateRange, triggerObservable, targetCurrency, accountIds],
     {
       expenseBreakdown: [],
       incomeBreakdown: [],

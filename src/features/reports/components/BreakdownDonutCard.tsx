@@ -1,6 +1,7 @@
 import { DonutChart } from '@/src/components/charts/DonutChart';
 import { AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
@@ -45,6 +46,7 @@ export function BreakdownDonutCard({
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
 }: BreakdownDonutCardProps) {
   const { theme } = useTheme();
+  const { defaultCurrencyCode } = useWorkplace();
 
   return (
     <View style={styles.donutContainer}>
@@ -73,7 +75,7 @@ export function BreakdownDonutCard({
                 {row.percentage}%
               </AppText>
               <AppText variant="caption" color="secondary" style={styles.amountText}>
-                {CurrencyFormatter.formatWithPreference(row.amount)}
+                {CurrencyFormatter.format(row.amount, defaultCurrencyCode)}
               </AppText>
             </View>
           </TouchableOpacity>
