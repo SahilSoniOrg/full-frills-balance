@@ -461,6 +461,8 @@ export const migrations = schemaMigrations({
           name: 'workplaces',
           columns: [
             { name: 'name', type: 'string' },
+            { name: 'icon', type: 'string', isOptional: true },
+            { name: 'default_currency_code', type: 'string', isOptional: false },
             { name: 'created_at', type: 'number', isIndexed: true },
             { name: 'updated_at', type: 'number' },
           ],
@@ -514,8 +516,8 @@ export const migrations = schemaMigrations({
           columns: [{ name: 'workplace_id', type: 'string', isIndexed: true }],
         }),
         unsafeExecuteSql(`
-          INSERT INTO workplaces (id, name, created_at, updated_at)
-          VALUES ('${defaultWorkplaceId}', 'Personal', ${Date.now()}, ${Date.now()});
+          INSERT INTO workplaces (id, name, icon, default_currency_code, created_at, updated_at)
+          VALUES ('${defaultWorkplaceId}', 'Personal', 'briefcase', '${AppConfig.defaultCurrency}', ${Date.now()}, ${Date.now()});
         `),
         unsafeExecuteSql(`UPDATE accounts SET workplace_id = '${defaultWorkplaceId}';`),
         unsafeExecuteSql(`UPDATE balance_snapshots SET workplace_id = '${defaultWorkplaceId}';`),
@@ -577,27 +579,6 @@ export const migrations = schemaMigrations({
           CREATE TRIGGER IF NOT EXISTS trg_sms_inbox_records_workplace_id_check
           BEFORE INSERT ON sms_inbox_records FOR EACH ROW WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = '' BEGIN SELECT RAISE(ABORT, 'Workplace ID cannot be empty on sms_inbox_records'); END;
         `),
-      ],
-    },
-    {
-      toVersion: 24,
-      steps: [
-        addColumns({
-          table: 'workplaces',
-          columns: [{ name: 'icon', type: 'string', isOptional: true }],
-        }),
-      ],
-    },
-    {
-      toVersion: 25,
-      steps: [
-        addColumns({
-          table: 'workplaces',
-          columns: [{ name: 'default_currency_code', type: 'string', isOptional: false }],
-        }),
-        unsafeExecuteSql(
-          `UPDATE workplaces SET default_currency_code = '${AppConfig.defaultCurrency}' WHERE default_currency_code IS NULL OR default_currency_code = '';`,
-        ),
       ],
     },
   ],

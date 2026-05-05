@@ -41,6 +41,11 @@ interface NativeImportData {
   journalMetadata?: ImportedJournalMetadata[];
   smsAutoPostRules?: ImportedSmsAutoPostRule[];
   balanceSnapshots?: ImportedBalanceSnapshot[];
+  workplace?: {
+    name: string;
+    icon: string;
+    defaultCurrencyCode: string;
+  };
 }
 
 function parseTimestamp(value?: number | string): number | undefined {
@@ -112,21 +117,35 @@ export const nativePlugin: ImportPlugin = {
 
     try {
       // 1. Wipe existing data for this workplace
+      // We always keep the shell record to prevent the app from crashing if this is the active workplace.
       onProgress?.('Wiping workplace data...', 0.1);
       logger.warn(`[NativePlugin] Wiping workplace ${workplaceId} for import...`);
-      await integrityService.resetWorkplace(workplaceId);
+      await integrityService.resetWorkplace(workplaceId, true);
 
-      // Update workplace currency from imported preferences if available
-      if (data.preferences?.defaultCurrencyCode) {
-        await workplaceService.updateWorkplace(workplaceId, {
-          defaultCurrencyCode: data.preferences.defaultCurrencyCode,
-        });
-      }
+      // Update workplace identity from imported data
+      // Priority: 1. data.workplace (new format) 2. data.preferences (legacy format)
+      const currencyCode =
+        data.workplace?.defaultCurrencyCode || (data.preferences as any)?.defaultCurrencyCode;
+
+      await workplaceService.updateWorkplace(workplaceId, {
+        name: data.workplace?.name || 'Personal',
+        icon: (data.workplace?.icon as any) || 'briefcase',
+        defaultCurrencyCode: currencyCode,
+      });
+
       const defaultCurrencyCode = await workplaceService.getCurrency(workplaceId);
 
       // 2. Clear and restore preferences
       onProgress?.('Restoring preferences...', 0.2);
-      await preferences.restorePreferences(data.preferences);
+
+      // Sanitize preferences to prevent legacy currency from polluting the global state
+      const importedPrefs = { ...data.preferences };
+      if (importedPrefs) {
+        delete (importedPrefs as any).defaultCurrencyCode;
+      }
+
+      await preferences.restorePreferences(importedPrefs);
+
       // Ensure the app stays locked to the workplace we are currently importing into
       preferences.setActiveWorkplaceId(workplaceId);
 

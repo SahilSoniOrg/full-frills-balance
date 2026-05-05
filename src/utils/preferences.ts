@@ -11,8 +11,6 @@ const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 export interface UIPreferences {
   onboardingCompleted: boolean;
   userName?: string;
-  /** @deprecated Use workplace.defaultCurrencyCode instead */
-  defaultCurrencyCode?: string;
   lastSelectedAccountId?: string;
   lastDateRange?: {
     startDate: number;
@@ -64,8 +62,11 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   activeWorkplaceId: undefined,
 };
 
+const LEGACY_PREFERENCE_KEYS = ['defaultCurrencyCode'] as const;
+
 class PreferencesHelper {
   private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
+  private legacyData: Record<string, any> = {};
   private preferencesSubject = new BehaviorSubject<UIPreferences>(DEFAULT_UI_PREFERENCES);
 
   constructor() {
@@ -86,6 +87,14 @@ class PreferencesHelper {
         try {
           const parsed = JSON.parse(stored);
           if (typeof parsed === 'object' && parsed !== null) {
+            // Extract all legacy fields if present
+            LEGACY_PREFERENCE_KEYS.forEach(key => {
+              if (key in parsed) {
+                this.legacyData[key] = parsed[key];
+                delete parsed[key];
+              }
+            });
+
             this.preferences = { ...DEFAULT_UI_PREFERENCES, ...this.sanitizePreferences(parsed) };
             this.preferencesSubject.next(this.preferences);
           }
@@ -179,8 +188,18 @@ class PreferencesHelper {
     this.savePreferences();
   }
 
-  restorePreferences(data?: Partial<UIPreferences>): void {
+  restorePreferences(data?: any): void {
     const currentActiveId = this.preferences.activeWorkplaceId;
+
+    // Extract legacy fields from imported data
+    if (data && typeof data === 'object') {
+      LEGACY_PREFERENCE_KEYS.forEach(key => {
+        if (key in data) {
+          this.legacyData[key] = data[key];
+        }
+      });
+    }
+
     this.preferences = {
       ...DEFAULT_UI_PREFERENCES,
       ...(data ? this.sanitizePreferences(data) : {}),
@@ -198,7 +217,11 @@ class PreferencesHelper {
 
   savePreferences(): void {
     try {
-      storage.set(PREFERENCES_KEY, JSON.stringify(this.preferences));
+      const toStore = {
+        ...this.preferences,
+        ...this.legacyData,
+      };
+      storage.set(PREFERENCES_KEY, JSON.stringify(toStore));
     } catch (error) {
       logger.error('Failed to save preferences to MMKV', { error });
     }
@@ -220,12 +243,15 @@ class PreferencesHelper {
     this.updatePreferences({ userName: name });
   }
 
-  get defaultCurrencyCode(): string | undefined {
-    return this.preferences.defaultCurrencyCode;
+  // Internal accessors for migration only - DO NOT USE in application code
+  /** @internal */
+  get _legacyData(): Record<string, any> {
+    return this.legacyData;
   }
 
-  clearDefaultCurrencyCode(): void {
-    this.updatePreferences({ defaultCurrencyCode: undefined });
+  /** @internal */
+  _save(): void {
+    this.savePreferences();
   }
 
   get lastSelectedAccountId(): string | undefined {
@@ -429,6 +455,7 @@ class PreferencesHelper {
   // Clear all preferences (useful for testing or reset)
   clearPreferences(): void {
     this.preferences = { ...DEFAULT_UI_PREFERENCES };
+    this.legacyData = {};
     this.preferencesSubject.next(this.preferences);
     try {
       storage.remove(PREFERENCES_KEY);
@@ -440,3 +467,17 @@ class PreferencesHelper {
 
 // Export singleton instance
 export const preferences = new PreferencesHelper();
+
+/**
+ * Specialized accessor for legacy preference migration.
+ * Only use this in migration services (e.g. WorkplaceService).
+ */
+export const preferencesMigration = {
+  get legacyCurrencyCode(): string | undefined {
+    return (preferences as any)._legacyData.defaultCurrencyCode;
+  },
+  clearLegacyCurrencyCode(): void {
+    delete (preferences as any)._legacyData.defaultCurrencyCode;
+    (preferences as any)._save();
+  },
+};

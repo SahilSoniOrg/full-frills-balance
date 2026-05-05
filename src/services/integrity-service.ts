@@ -18,11 +18,11 @@ import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { smsService } from '@/src/services/sms-service';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
-import { workplaceService } from '@/src/services/WorkplaceService';
 
 export interface BalanceVerificationResult {
   accountId: string;
@@ -443,9 +443,9 @@ export class IntegrityService {
   }
 
   /**
-   * Clears all data for a specific workplace and deletes the workplace itself.
+   * Clears all data for a specific workplace and optionally deletes the workplace itself.
    */
-  async resetWorkplace(workplaceId: string): Promise<void> {
+  async resetWorkplace(workplaceId: string, keepWorkplaceRecord: boolean = false): Promise<void> {
     logger.warn(`[IntegrityService] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
     try {
       const scopedTables = [
@@ -466,16 +466,19 @@ export class IntegrityService {
       // 1. Purge all data scoped to this workplace
       await databaseRepository.purgeWorkplaceData(workplaceId, scopedTables);
 
-      // 2. Delete the workplace record itself
-      const { database } = await import('@/src/data/database/Database');
-      await database.write(async () => {
-        const workplace = await workplaceService.getWorkplace(workplaceId);
-        if (workplace) {
-          await workplace.destroyPermanently();
-        }
-      });
-
-      logger.info(`[IntegrityService] Workplace ${workplaceId} reset and deletion successful.`);
+      // 2. Delete the workplace record itself if requested
+      if (!keepWorkplaceRecord) {
+        const { database } = await import('@/src/data/database/Database');
+        await database.write(async () => {
+          const workplace = await workplaceService.getWorkplace(workplaceId);
+          if (workplace) {
+            await workplace.destroyPermanently();
+          }
+        });
+        logger.info(`[IntegrityService] Workplace ${workplaceId} reset and deletion successful.`);
+      } else {
+        logger.info(`[IntegrityService] Workplace ${workplaceId} data reset (shell preserved).`);
+      }
     } catch (error) {
       logger.error(`[IntegrityService] Failed to reset workplace ${workplaceId}:`, error);
       throw error;

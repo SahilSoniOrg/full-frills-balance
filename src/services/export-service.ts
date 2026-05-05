@@ -220,6 +220,15 @@ export interface SmsAutoPostRuleExport {
   updatedAt: string;
 }
 
+export interface WorkplaceExport {
+  id: string;
+  name: string;
+  icon: string;
+  defaultCurrencyCode: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const snakeToCamel = (str: string) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
 const DATE_COLUMN_NAMES = [
   'created_at',
@@ -248,6 +257,7 @@ export interface ExportData {
   journalMetadata: JournalMetadataExport[];
   smsAutoPostRules: SmsAutoPostRuleExport[];
   balanceSnapshots: BalanceSnapshotExport[];
+  workplace?: WorkplaceExport;
 }
 
 interface ExportSummary {
@@ -405,6 +415,7 @@ class ExportService {
         _smsInboxRecords,
         _balanceSnapshots, // Prefix with _ to ignore unused warning
         userPreferences,
+        workplace,
       ] = await Promise.all([
         this.fetchAndTransformTable<AccountExport>(workplaceId, 'accounts'),
         this.fetchAndTransformTable<JournalExport>(workplaceId, 'journals'),
@@ -421,6 +432,7 @@ class ExportService {
         this.fetchAndTransformTable<SmsInboxRecordExport>(workplaceId, 'sms_inbox_records'),
         this.fetchAndTransformTable<BalanceSnapshotExport>(workplaceId, 'balance_snapshots'),
         preferences.loadPreferences(),
+        database.collections.get('workplaces').find(workplaceId),
       ]);
 
       const exportData: ExportData = {
@@ -441,6 +453,16 @@ class ExportService {
         })),
         smsAutoPostRules,
         balanceSnapshots: [],
+        workplace: workplace
+          ? {
+              id: workplace.id,
+              name: (workplace as any).name,
+              icon: (workplace as any).icon,
+              defaultCurrencyCode: (workplace as any).defaultCurrencyCode,
+              createdAt: (workplace as any).createdAt.toISOString(),
+              updatedAt: (workplace as any).updatedAt.toISOString(),
+            }
+          : undefined,
       };
 
       const json = JSON.stringify(exportData);

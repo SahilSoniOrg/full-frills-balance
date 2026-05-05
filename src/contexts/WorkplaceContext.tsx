@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -13,8 +12,10 @@ export interface WorkplaceContextType {
 const WorkplaceContext = createContext<WorkplaceContextType | null>(null);
 
 export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
-  const [workplaceId, setWorkplaceIdState] = useState<string | null>(null);
-  const [defaultCurrencyCode, setDefaultCurrencyCode] = useState<string>(AppConfig.defaultCurrency);
+  const [state, setState] = useState<{
+    workplaceId: string;
+    defaultCurrencyCode: string;
+  } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -22,15 +23,34 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
     let workplaceSubscription: any = null;
 
-    const initializeWorkplace = async () => {
+    const setupWorkplaceSubscription = async (id: string) => {
+      if (workplaceSubscription) workplaceSubscription.unsubscribe();
+
       try {
-        const activeWorkplace = await workplaceService.ensureDefaultWorkplace();
+        const workplace = await workplaceService.getWorkplace(id);
+        if (!workplace) {
+          throw new Error(`Workplace ${id} not found`);
+        }
+
         if (isMounted) {
-          setWorkplaceIdState(activeWorkplace.id);
+          // Set initial state from the workplace model
+          setState({
+            workplaceId: workplace.id,
+            defaultCurrencyCode: workplace.defaultCurrencyCode,
+          });
           setIsLoaded(true);
         }
+
+        workplaceSubscription = workplace.observe().subscribe(w => {
+          if (isMounted && w) {
+            setState({
+              workplaceId: w.id,
+              defaultCurrencyCode: w.defaultCurrencyCode,
+            });
+          }
+        });
       } catch (err) {
-        logger.error('[WorkplaceProvider] Error initializing Workplace context', err);
+        logger.error('[WorkplaceProvider] Error setting up workplace subscription', err);
         if (isMounted) {
           setError(err as Error);
           setIsLoaded(true);
@@ -38,7 +58,22 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    initializeWorkplace();
+    const initialize = async () => {
+      try {
+        const activeWorkplace = await workplaceService.ensureDefaultWorkplace();
+        if (isMounted) {
+          await setupWorkplaceSubscription(activeWorkplace.id);
+        }
+      } catch (err) {
+        logger.error('[WorkplaceProvider] Critical initialization failure', err);
+        if (isMounted) {
+          setError(err as Error);
+          setIsLoaded(true);
+        }
+      }
+    };
+
+    initialize();
 
     const prefsSubscription = preferences.observe('activeWorkplaceId').subscribe(async id => {
       if (!isMounted) return;
@@ -47,7 +82,7 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
         logger.warn('[WorkplaceProvider] activeWorkplaceId became empty, attempting recovery...');
         try {
           const recovered = await workplaceService.ensureDefaultWorkplace();
-          if (isMounted) setWorkplaceIdState(recovered.id);
+          if (isMounted) await setupWorkplaceSubscription(recovered.id);
         } catch (err) {
           logger.error('[WorkplaceProvider] Critical recovery failure', err);
           if (isMounted) setError(new Error('Workplace context lost and recovery failed'));
@@ -55,18 +90,7 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setWorkplaceIdState(id);
-
-      // Observe the workplace model for currency changes
-      if (workplaceSubscription) workplaceSubscription.unsubscribe();
-      const workplace = await workplaceService.getWorkplace(id);
-      if (workplace) {
-        workplaceSubscription = workplace.observe().subscribe(w => {
-          if (isMounted && w.defaultCurrencyCode) {
-            setDefaultCurrencyCode(w.defaultCurrencyCode);
-          }
-        });
-      }
+      await setupWorkplaceSubscription(id);
     });
 
     return () => {
@@ -80,32 +104,22 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
     if (!id) {
       throw new Error('Invalid workplaceId');
     }
-
     preferences.setActiveWorkplaceId(id);
   }, []);
 
-  if (!isLoaded) {
-    return null;
-  }
-
-  if (!workplaceId) {
-    throw new Error('Workplace failed to initialize');
-  }
-
-  const value = {
-    workplaceId,
-    defaultCurrencyCode,
-    setWorkplaceId,
-  };
-  // Surface errors properly (not inside useEffect)
   if (error) {
     throw error;
   }
 
-  // Hard gate
-  if (!isLoaded || !workplaceId) {
+  if (!isLoaded || !state) {
     return null;
   }
+
+  const value: WorkplaceContextType = {
+    workplaceId: state.workplaceId,
+    defaultCurrencyCode: state.defaultCurrencyCode,
+    setWorkplaceId,
+  };
 
   return <WorkplaceContext.Provider value={value}>{children}</WorkplaceContext.Provider>;
 }
