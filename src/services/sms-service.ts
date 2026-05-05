@@ -22,6 +22,7 @@ import { Model, Q } from '@nozbe/watermelondb';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Observable } from 'rxjs';
 import { rebuildQueueService } from './RebuildQueueService';
+import { WorkplaceId } from '@/src/types/domain';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
@@ -164,7 +165,7 @@ class SmsService {
   }
 
   async scanRecentSmsPage(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
     const importedCount = await this.scanInbox(workplaceId, pageSize);
@@ -173,7 +174,7 @@ class SmsService {
 
   async scanOlderSmsPage(
     cursor: number,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
     const nextCursor = cursor + pageSize;
@@ -182,18 +183,18 @@ class SmsService {
   }
 
   async refreshLatestSms(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
     const importedCount = await this.scanInbox(workplaceId, pageSize);
     return { cursor: pageSize, importedCount };
   }
 
-  async processUnprocessedSms(workplaceId: string): Promise<number> {
+  async processUnprocessedSms(workplaceId: WorkplaceId): Promise<number> {
     return this.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
   }
 
-  observeInbox(workplaceId: string, limit: number, filter?: SmsInboxFilterOptions) {
+  observeInbox(workplaceId: WorkplaceId, limit: number, filter?: SmsInboxFilterOptions) {
     const clauses: any[] = [
       Q.where('workplace_id', workplaceId),
       Q.sortBy('sms_date', Q.desc),
@@ -221,7 +222,7 @@ class SmsService {
       ]);
   }
 
-  observeUnprocessedCount(workplaceId: string): Observable<number> {
+  observeUnprocessedCount(workplaceId: WorkplaceId): Observable<number> {
     return this.inbox
       .query(
         Q.where('workplace_id', workplaceId),
@@ -295,7 +296,7 @@ class SmsService {
     return items.filter(item => this.matchesPreviewRule(item, previewInput)).slice(0, 5);
   }
 
-  async getRuleSuggestions(workplaceId: string): Promise<SmsRuleSuggestion[]> {
+  async getRuleSuggestions(workplaceId: WorkplaceId): Promise<SmsRuleSuggestion[]> {
     const existingRules = await this.rules.query().fetch();
     const records = await this.inbox
       .query(
@@ -430,7 +431,7 @@ class SmsService {
     };
   }
 
-  async saveAutoPostRule(data: SmsRuleDraftInput) {
+  async saveAutoPostRule(data: SmsRuleDraftInput, workplaceId: WorkplaceId) {
     const normalizedConditions = (data.conditions || []).filter(condition =>
       this.isMeaningfulCondition(condition),
     );
@@ -465,6 +466,7 @@ class SmsService {
         });
       } else {
         await this.rules.create(record => {
+          record.workplaceId = workplaceId;
           record.senderMatch = senderFallback;
           record.bodyMatch = bodyFallback;
           record.conditionsJson =
@@ -486,7 +488,7 @@ class SmsService {
     });
   }
 
-  private async scanInbox(workplaceId: string, limit: number): Promise<number> {
+  private async scanInbox(workplaceId: WorkplaceId, limit: number): Promise<number> {
     const start = Date.now();
     const messages = await this.getLatestMessages(limit);
     if (messages.length === 0) {
@@ -601,7 +603,7 @@ class SmsService {
 
   private async findManyDuplicateCandidates(
     parsedItems: { message: SmsMessage; parsed: ParsedTransaction }[],
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Map<string, DuplicateMatch>> {
     if (parsedItems.length === 0) return new Map();
 
@@ -765,7 +767,7 @@ class SmsService {
     smsFingerprint: string,
     existing: SmsInboxRecord | null,
     processingStatus: SmsProcessingStatus,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     linkedJournalId?: string,
     duplicate?: DuplicateMatch,
   ): { record: SmsInboxRecord; ops: Model[] } {
@@ -1242,9 +1244,9 @@ class SmsService {
       journalIds: string[];
       count: number;
     },
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<SmsRuleSuggestion | null> {
-    const journals = await journalRepository.findByIds(group.journalIds.slice(0, 10), workplaceId);
+    const journals = await journalRepository.findByIds(workplaceId, group.journalIds.slice(0, 10));
     const accountIds = new Set<string>();
     const journalTransactions = new Map<string, any[]>();
 
@@ -1257,7 +1259,7 @@ class SmsService {
       transactions.forEach((tx: Transaction) => accountIds.add(tx.accountId));
     }
 
-    const accounts = await accountRepository.findAllByIds(Array.from(accountIds), workplaceId);
+    const accounts = await accountRepository.findAllByIds(workplaceId, Array.from(accountIds));
     const accountMap = new Map(accounts.map(account => [account.id, account]));
     const sourceCounts = new Map<string, number>();
     const categoryCounts = new Map<string, number>();

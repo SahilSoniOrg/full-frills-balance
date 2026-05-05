@@ -7,6 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionRepository', () => {
   let accountId: string;
@@ -20,7 +21,7 @@ describe('TransactionRepository', () => {
       name: 'Test Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     accountId = account.id;
 
@@ -29,7 +30,7 @@ describe('TransactionRepository', () => {
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     equityAccountId = equity.id;
   });
@@ -50,10 +51,13 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
-      const transactions = await transactionRepository.findByJournal(journal.id, 'wp-1');
+      const transactions = await transactionRepository.findByJournal(
+        journal.id as WorkplaceId,
+        'wp-1' as WorkplaceId,
+      );
       expect(transactions).toHaveLength(2);
       expect(transactions[0].journalId).toBe(journal.id);
     });
@@ -72,7 +76,7 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       ); // +100
 
       await journalRepository.createJournalWithTransactions(
@@ -85,12 +89,15 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 50, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       ); // -50
 
-      await accountingRebuildService.rebuildAccountBalances('wp-1', accountId, 0);
+      await accountingRebuildService.rebuildAccountBalances('wp-1' as WorkplaceId, accountId, 0);
 
-      const txs = await transactionRepository.findByAccount(accountId, 'wp-1');
+      const txs = await transactionRepository.findByAccount(
+        accountId as WorkplaceId,
+        'wp-1' as WorkplaceId,
+      );
       // Sorted by date desc: T2 (2000), T1 (1000)
       expect(txs).toHaveLength(2);
       expect(txs[0].runningBalance).toBe(50); // T2: 100 - 50 = 50
@@ -109,7 +116,7 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       // T3
@@ -123,7 +130,7 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 200, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       // T2 (Inserted)
@@ -137,12 +144,15 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 50, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
-      await accountingRebuildService.rebuildAccountBalances('wp-1', accountId);
+      await accountingRebuildService.rebuildAccountBalances('wp-1' as WorkplaceId, accountId);
 
-      const txs = await transactionRepository.findByAccount(accountId, 'wp-1');
+      const txs = await transactionRepository.findByAccount(
+        accountId as WorkplaceId,
+        'wp-1' as WorkplaceId,
+      );
       // T3, T2, T1
       expect(txs[0].transactionDate).toBe(3000); // T3
       expect(txs[0].runningBalance).toBe(250); // 100 - 50 + 200 = 250
@@ -167,7 +177,7 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       await journalRepository.createJournalWithTransactions(
@@ -180,11 +190,11 @@ describe('TransactionRepository', () => {
             { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       const txs = await transactionRepository.findByAccountsAndDateRange(
-        'wp-1',
+        'wp-1' as WorkplaceId,
         [accountId],
         1000,
         3000,

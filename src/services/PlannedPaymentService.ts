@@ -12,6 +12,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -235,7 +236,7 @@ export class PlannedPaymentService {
   }
 
   async postOccurrence(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     pp: PlannedPayment,
     occurrenceDate: number,
   ): Promise<void> {
@@ -277,7 +278,7 @@ export class PlannedPaymentService {
         // Promote to POSTED by patching status and updating the journal date
         // to the current time so the post timestamp is accurate.
         const j = existingPlanned[0];
-        const txs = await transactionRepository.findByJournal(j.id, workplaceId);
+        const txs = await transactionRepository.findByJournal(workplaceId, j.id);
         const originalDate = j.journalDate;
 
         // Prepare ops outside the write lock (reads are safe before write).
@@ -381,7 +382,7 @@ export class PlannedPaymentService {
    * Deletes any existing PLANNED journal for that occurrence and advances the schedule.
    */
   async skipOccurrence(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     pp: PlannedPayment,
     occurrenceDate: number,
   ): Promise<void> {
@@ -490,7 +491,7 @@ export class PlannedPaymentService {
    * Process all active planned payments and generate journals for any due occurrences.
    * Typically called on app start.
    */
-  async processDuePayments(workplaceId: string): Promise<void> {
+  async processDuePayments(workplaceId: WorkplaceId): Promise<void> {
     const activePayments = await plannedPaymentRepository.findAllActive(workplaceId);
     const nowTime = this.normalizeToStartOfDay(Date.now());
     const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;

@@ -7,6 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {
@@ -88,7 +89,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     expect(result.simulationResult.summary.safeToSpend).toBe(1000);
@@ -119,7 +121,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Initial 1000.
@@ -163,7 +166,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, otherAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Global balance should remain 1000
@@ -207,7 +211,8 @@ describe('CashFlowSimulationService', () => {
       [usage],
       [liquidAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Budget is 300/month.
@@ -248,7 +253,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, expenseAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Initial 1000.
@@ -300,7 +306,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, ccAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // CC starting balance 500.
@@ -358,7 +365,8 @@ describe('CashFlowSimulationService', () => {
       [usage],
       [liquidAccount, expenseAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Initial 2000.
@@ -439,7 +447,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, ccAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // CC starting balance 500.
@@ -492,7 +501,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount, ccAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Calculation:
@@ -549,7 +559,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Initial 5000.
@@ -598,7 +609,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Should generate a flow for "today" (offset 0) even though it was due in the past
@@ -643,7 +655,8 @@ describe('CashFlowSimulationService', () => {
       [],
       [liquidAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     // Should project for 5th, 6th, 7th, 8th, 9th, 10th.

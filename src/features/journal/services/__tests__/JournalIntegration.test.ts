@@ -13,6 +13,7 @@ import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { journalService } from '../JournalService';
 import { transactionService } from '../TransactionService';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('JournalRepository', () => {
   let cashAccountId: string;
@@ -29,19 +30,19 @@ describe('JournalRepository', () => {
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     const expense = await accountRepository.create({
       name: 'Food',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     const income = await accountRepository.create({
       name: 'Salary',
       accountType: AccountType.INCOME,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
 
     cashAccountId = cash.id;
@@ -61,7 +62,7 @@ describe('JournalRepository', () => {
             { accountId: expenseAccountId, amount: 25, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       expect(journal).toBeDefined();
@@ -82,7 +83,7 @@ describe('JournalRepository', () => {
               { accountId: expenseAccountId, amount: 50, transactionType: TransactionType.DEBIT },
             ],
           },
-          'wp-1',
+          'wp-1' as WorkplaceId,
         ),
       ).rejects.toThrow(/Unbalanced journal/);
     });
@@ -100,7 +101,7 @@ describe('JournalRepository', () => {
             { accountId: expenseAccountId, amount: 100, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       expect(journal.transactionCount).toBe(3);
@@ -118,16 +119,22 @@ describe('JournalRepository', () => {
             { accountId: incomeAccountId, amount: 500, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       // Ensure rebuilds complete
       await rebuildQueueService.flush();
 
-      const cashBalance = await balanceService.getAccountBalance(cashAccountId, 'wp-1');
+      const cashBalance = await balanceService.getAccountBalance(
+        cashAccountId,
+        'wp-1' as WorkplaceId,
+      );
       expect(cashBalance.balance).toBe(500);
 
-      const incomeBalance = await balanceService.getAccountBalance(incomeAccountId, 'wp-1');
+      const incomeBalance = await balanceService.getAccountBalance(
+        incomeAccountId,
+        'wp-1' as WorkplaceId,
+      );
       expect(incomeBalance.balance).toBe(500);
     });
   });
@@ -144,7 +151,7 @@ describe('JournalRepository', () => {
             { accountId: expenseAccountId, amount: 100, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       await journalService.updateJournal(
@@ -158,11 +165,11 @@ describe('JournalRepository', () => {
             { accountId: expenseAccountId, amount: 200, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       // Re-fetch from database to get updated values
-      const updatedJournal = await journalRepository.find(journal.id, 'wp-1');
+      const updatedJournal = await journalRepository.find('wp-1' as WorkplaceId, journal.id);
       expect(updatedJournal).toBeDefined();
       expect(updatedJournal!.totalAmount).toBe(200);
       expect(updatedJournal!.description).toBe('Updated');
@@ -181,10 +188,13 @@ describe('JournalRepository', () => {
             { accountId: expenseAccountId, amount: 123.45, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
-      const duplicatedJournal = await journalService.duplicateJournal(originalJournal.id, 'wp-1');
+      const duplicatedJournal = await journalService.duplicateJournal(
+        originalJournal.id,
+        'wp-1' as WorkplaceId,
+      );
 
       expect(duplicatedJournal).toBeDefined();
       expect(duplicatedJournal.id).not.toBe(originalJournal.id);
@@ -194,8 +204,8 @@ describe('JournalRepository', () => {
 
       // Transactions should be duplicated faithfully
       const duplicatedTransactions = await transactionService.getEnrichedByJournal(
-        duplicatedJournal.id,
-        'wp-1',
+        duplicatedJournal.id as WorkplaceId,
+        'wp-1' as WorkplaceId,
       );
       expect(duplicatedTransactions).toHaveLength(2);
 
@@ -222,13 +232,13 @@ describe('JournalRepository', () => {
             { accountId: expenseAccountId, amount: 50, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
-      await journalRepository.deleteJournal(journal.id, 'wp-1');
+      await journalRepository.deleteJournal(journal.id, 'wp-1' as WorkplaceId);
 
       // Don't wait for rebuild queue - this test only verifies soft-delete
-      const deletedJournal = await journalRepository.find(journal.id, 'wp-1');
+      const deletedJournal = await journalRepository.find('wp-1' as WorkplaceId, journal.id);
       expect(deletedJournal?.deletedAt).toBeDefined();
     });
   });

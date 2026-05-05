@@ -5,6 +5,7 @@ import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { sanitizeInput } from '@/src/utils/validation';
 import { useRef, useState } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
 interface PersistenceResult {
   isCreating: boolean;
@@ -23,7 +24,7 @@ interface PersistenceResult {
 }
 
 export function useAccountPersistence(
-  workplaceId: string,
+  workplaceId: WorkplaceId,
   existingAccount: Account | null | undefined,
   currentAccountId: string | undefined,
   hasExistingAccounts: boolean,

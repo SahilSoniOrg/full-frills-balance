@@ -322,20 +322,23 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
 
     setIsSubmitting(true);
     try {
-      await smsService.saveAutoPostRule({
-        id,
-        mode,
-        senderMatch: legacySenderMatch.trim() || undefined,
-        bodyMatch: legacyBodyMatch.trim() || undefined,
-        conditions: mode === 'builder' ? structuredConditions : [],
-        actions: {
-          disposition,
-          sourceAccountId: showAccountMapping ? sourceAccountId : undefined,
-          categoryAccountId: showAccountMapping ? categoryAccountId : undefined,
+      await smsService.saveAutoPostRule(
+        {
+          id,
+          mode,
+          senderMatch: legacySenderMatch.trim() || undefined,
+          bodyMatch: legacyBodyMatch.trim() || undefined,
+          conditions: mode === 'builder' ? structuredConditions : [],
+          actions: {
+            disposition,
+            sourceAccountId: showAccountMapping ? sourceAccountId : undefined,
+            categoryAccountId: showAccountMapping ? categoryAccountId : undefined,
+          },
+          isActive,
+          priority: priorityNumber,
         },
-        isActive,
-        priority: priorityNumber,
-      });
+        workplaceId,
+      );
 
       // Track Analytics
       analytics.trackFeatureUsage('sms_rule', id ? 'update' : 'create', {

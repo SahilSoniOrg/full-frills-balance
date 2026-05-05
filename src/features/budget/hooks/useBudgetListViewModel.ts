@@ -5,8 +5,9 @@ import dayjs from 'dayjs';
 import { combineLatest, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { BudgetItem } from '../types';
+import { WorkplaceId } from '@/src/types/domain';
 
-export function useBudgetListViewModel(workplaceId: string) {
+export function useBudgetListViewModel(workplaceId: WorkplaceId) {
   const budgetsObservable = budgetRepository.observeAllActive(workplaceId).pipe(
     switchMap(budgets => {
       if (budgets.length === 0) return of([]);

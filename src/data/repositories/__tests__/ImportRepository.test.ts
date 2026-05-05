@@ -5,6 +5,7 @@ import Currency from '@/src/data/models/Currency';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('ImportRepository', () => {
   beforeEach(async () => {
@@ -15,7 +16,7 @@ describe('ImportRepository', () => {
 
   describe('batchInsert account subtype defaults', () => {
     it('should use type defaults when accountSubtype is missing', async () => {
-      await importRepository.batchInsert('test-wp', {
+      await importRepository.batchInsert('test-wp' as WorkplaceId, {
         accounts: [
           { id: 'a_asset', name: 'Asset A', accountType: AccountType.ASSET, currencyCode: 'USD' },
           {
@@ -47,11 +48,11 @@ describe('ImportRepository', () => {
         transactions: [],
       });
 
-      const asset = await accountRepository.find('a_asset', 'test-wp');
-      const liability = await accountRepository.find('a_liability', 'test-wp');
-      const equity = await accountRepository.find('a_equity', 'test-wp');
-      const income = await accountRepository.find('a_income', 'test-wp');
-      const expense = await accountRepository.find('a_expense', 'test-wp');
+      const asset = await accountRepository.find('test-wp' as WorkplaceId, 'a_asset');
+      const liability = await accountRepository.find('test-wp' as WorkplaceId, 'a_liability');
+      const equity = await accountRepository.find('test-wp' as WorkplaceId, 'a_equity');
+      const income = await accountRepository.find('test-wp' as WorkplaceId, 'a_income');
+      const expense = await accountRepository.find('test-wp' as WorkplaceId, 'a_expense');
 
       expect(asset?.accountSubtype).toBe(AccountSubtype.CASH);
       expect(liability?.accountSubtype).toBe(AccountSubtype.CREDIT_CARD);
@@ -61,7 +62,7 @@ describe('ImportRepository', () => {
     });
 
     it('should default to OTHER for unknown imported account type', async () => {
-      await importRepository.batchInsert('test-wp', {
+      await importRepository.batchInsert('test-wp' as WorkplaceId, {
         accounts: [
           { id: 'a_unknown', name: 'Unknown A', accountType: 'UNKNOWN_TYPE', currencyCode: 'USD' },
         ],
@@ -69,14 +70,17 @@ describe('ImportRepository', () => {
         transactions: [],
       });
 
-      const unknown = await accountRepository.find('a_unknown', 'test-wp');
+      const unknown = await accountRepository.find(
+        'a_unknown' as WorkplaceId,
+        'test-wp' as WorkplaceId,
+      );
       expect(unknown?.accountSubtype).toBe(AccountSubtype.OTHER);
     });
   });
 
   describe('batchInsert additional entity support', () => {
     it('should import currencies, exchange rates, and account metadata', async () => {
-      await importRepository.batchInsert('test-wp', {
+      await importRepository.batchInsert('test-wp' as WorkplaceId, {
         accounts: [{ id: 'a1', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' }],
         journals: [],
         transactions: [],

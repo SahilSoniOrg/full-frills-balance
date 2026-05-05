@@ -6,6 +6,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { auditService } from '@/src/services/audit-service';
 
 import { revertRegistry } from '@/src/services/revert-registry';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AuditRepository');
@@ -38,25 +39,29 @@ describe('AuditService', () => {
   beforeAll(() => {
     // Manually register handlers since mocks don't run constructors
     revertRegistry.register('account', async (id, changes, action) => {
-      if (action === AuditAction.CREATE) await (accountService as any).deleteAccount(id, 'wp-1');
+      if (action === AuditAction.CREATE)
+        await (accountService as any).deleteAccount(id, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.DELETE)
-        await (accountService as any).recoverAccount(id, 'wp-1');
+        await (accountService as any).recoverAccount(id, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.UPDATE && changes.before) {
-        if (changes.before.deletedAt) await (accountService as any).deleteAccount(id, 'wp-1');
-        else await (accountService as any).updateAccount(id, changes.before, 'wp-1');
+        if (changes.before.deletedAt)
+          await (accountService as any).deleteAccount(id, 'wp-1' as WorkplaceId);
+        else await (accountService as any).updateAccount(id, changes.before, 'wp-1' as WorkplaceId);
       }
     });
 
     revertRegistry.register('journal', async (id, changes, action) => {
-      if (action === AuditAction.CREATE) await journalService.deleteJournal(id, 'wp-1');
-      else if (action === AuditAction.DELETE) await journalService.recoverJournal(id, 'wp-1');
+      if (action === AuditAction.CREATE)
+        await journalService.deleteJournal(id, 'wp-1' as WorkplaceId);
+      else if (action === AuditAction.DELETE)
+        await journalService.recoverJournal(id, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.UPDATE && changes.before) {
-        if (changes.before.deletedAt) await journalService.deleteJournal(id, 'wp-1');
+        if (changes.before.deletedAt) await journalService.deleteJournal(id, 'wp-1' as WorkplaceId);
         else if (changes.before.status === JournalStatus.PLANNED)
-          await journalService.revertToPlanned(id, 'wp-1');
+          await journalService.revertToPlanned(id, 'wp-1' as WorkplaceId);
         else if (changes.before.status === JournalStatus.POSTED)
-          await journalService.postJournal(id, 'wp-1');
-        else await journalService.updateJournal(id, changes.before as any, 'wp-1');
+          await journalService.postJournal(id, 'wp-1' as WorkplaceId);
+        else await journalService.updateJournal(id, changes.before as any, 'wp-1' as WorkplaceId);
       }
     });
   });
@@ -74,7 +79,7 @@ describe('AuditService', () => {
         changes: { name: 'New Name' },
       };
 
-      await auditService.log(entry, 'wp-1');
+      await auditService.log(entry, 'wp-1' as WorkplaceId);
 
       expect(auditRepository.log).toHaveBeenCalledWith(entry);
     });
@@ -85,9 +90,13 @@ describe('AuditService', () => {
       const mockLogs = [{ id: 'log1' }];
       (auditRepository.findByEntity as jest.Mock).mockResolvedValue(mockLogs);
 
-      const result = await auditService.getAuditTrail('account', 'acc1', 'wp-1');
+      const result = await auditService.getAuditTrail('account', 'acc1', 'wp-1' as WorkplaceId);
 
-      expect(auditRepository.findByEntity).toHaveBeenCalledWith('account', 'acc1', 'wp-1');
+      expect(auditRepository.findByEntity).toHaveBeenCalledWith(
+        'account',
+        'acc1',
+        'wp-1' as WorkplaceId,
+      );
       expect(result).toBe(mockLogs);
     });
   });
@@ -97,15 +106,15 @@ describe('AuditService', () => {
       const mockLogs = [{ id: 'log1' }, { id: 'log2' }];
       (auditRepository.fetchRecent as jest.Mock).mockResolvedValue(mockLogs);
 
-      const result = await auditService.getRecentLogs(50, 'wp-1');
+      const result = await auditService.getRecentLogs(50, 'wp-1' as WorkplaceId);
 
-      expect(auditRepository.fetchRecent).toHaveBeenCalledWith(50, 'wp-1');
+      expect(auditRepository.fetchRecent).toHaveBeenCalledWith(50, 'wp-1' as WorkplaceId);
       expect(result).toBe(mockLogs);
     });
 
     it('should use default limit if not provided', async () => {
-      await auditService.getRecentLogs(undefined, 'wp-1');
-      expect(auditRepository.fetchRecent).toHaveBeenCalledWith(100, 'wp-1');
+      await auditService.getRecentLogs(undefined, 'wp-1' as WorkplaceId);
+      expect(auditRepository.fetchRecent).toHaveBeenCalledWith(100, 'wp-1' as WorkplaceId);
     });
   });
 
@@ -116,7 +125,7 @@ describe('AuditService', () => {
         { entityType: 'journal' },
       ]);
 
-      const result = await auditService.cleanupLegacyEntityTypes('wp-1');
+      const result = await auditService.cleanupLegacyEntityTypes('wp-1' as WorkplaceId);
 
       expect(result).toBe(0);
     });
@@ -156,7 +165,7 @@ describe('AuditService', () => {
         { entityType: 'transaction' },
       ]);
 
-      const result = await auditService.cleanupLegacyEntityTypes('wp-1');
+      const result = await auditService.cleanupLegacyEntityTypes('wp-1' as WorkplaceId);
 
       expect(result).toBe(2);
       expect(mockPrepareUpdate).toHaveBeenCalledTimes(2);
@@ -174,21 +183,21 @@ describe('AuditService', () => {
 
     it('should return error if log is not found', async () => {
       (auditRepository.find as jest.Mock).mockResolvedValue(null);
-      const res = await auditService.revertEntry('log1', 'wp-1');
+      const res = await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
       expect(res.success).toBe(false);
       expect(res.error).toMatch(/No audit record found/i);
     });
 
     it('should return error if log cannot be reverted', async () => {
       (auditRepository.find as jest.Mock).mockResolvedValue(mockLog({ canRevert: false }));
-      const res = await auditService.revertEntry('log1', 'wp-1');
+      const res = await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
       expect(res.success).toBe(false);
       expect(res.error).toMatch(/Failed to undo change/i);
     });
 
     it('should return error for unsupported entity type', async () => {
       (auditRepository.find as jest.Mock).mockResolvedValue(mockLog({ entityType: 'transaction' }));
-      const res = await auditService.revertEntry('log1', 'wp-1');
+      const res = await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
       expect(res.success).toBe(false);
       expect(res.error).toMatch(/is not supported yet/i);
     });
@@ -198,7 +207,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'account', action: AuditAction.CREATE }),
         );
-        const res = await auditService.revertEntry('log1', 'wp-1');
+        const res = await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         console.log('Result:', res);
         expect(accountService.deleteAccount).toHaveBeenCalledWith('ent1');
       });
@@ -207,7 +216,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'account', action: AuditAction.DELETE }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(accountService.recoverAccount).toHaveBeenCalledWith('ent1');
       });
 
@@ -216,7 +225,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(accountService.updateAccount).toHaveBeenCalledWith('ent1', changes.before);
       });
 
@@ -225,7 +234,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(accountService.deleteAccount).toHaveBeenCalledWith('ent1');
       });
     });
@@ -235,7 +244,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'journal', action: AuditAction.CREATE }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(journalService.deleteJournal).toHaveBeenCalledWith('ent1');
       });
 
@@ -243,7 +252,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'journal', action: AuditAction.DELETE }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(journalService.recoverJournal).toHaveBeenCalledWith('ent1');
       });
 
@@ -252,7 +261,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(journalService.updateJournal).toHaveBeenCalledWith('ent1', changes.before);
       });
 
@@ -261,7 +270,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(journalService.deleteJournal).toHaveBeenCalledWith('ent1');
       });
 
@@ -270,7 +279,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(journalService.revertToPlanned).toHaveBeenCalledWith('ent1');
       });
 
@@ -279,7 +288,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
-        await auditService.revertEntry('log1', 'wp-1');
+        await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(journalService.postJournal).toHaveBeenCalledWith('ent1');
       });
     });

@@ -6,6 +6,7 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { IntegrityService } from '@/src/services/integrity-service';
 import { Q } from '@nozbe/watermelondb';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('IntegrityService', () => {
   let service: IntegrityService;
@@ -23,13 +24,13 @@ describe('IntegrityService', () => {
       name: 'Cash',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     const equity = await accountRepository.create({
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     cashAccountId = cash.id;
     equityAccountId = equity.id;
@@ -47,7 +48,7 @@ describe('IntegrityService', () => {
             { accountId: equityAccountId, amount: 1000, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       await journalRepository.createJournalWithTransactions(
@@ -60,10 +61,13 @@ describe('IntegrityService', () => {
             { accountId: equityAccountId, amount: 300, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
-      const balance = await service.computeBalanceFromTransactions(cashAccountId, 'wp-1');
+      const balance = await service.computeBalanceFromTransactions(
+        cashAccountId,
+        'wp-1' as WorkplaceId,
+      );
       expect(balance).toBe(700);
     });
   });
@@ -80,7 +84,7 @@ describe('IntegrityService', () => {
             { accountId: equityAccountId, amount: 500, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       // Corrupt it
@@ -94,7 +98,7 @@ describe('IntegrityService', () => {
         });
       });
 
-      const result = await service.verifyAccountBalance(cashAccountId, 'wp-1');
+      const result = await service.verifyAccountBalance(cashAccountId, 'wp-1' as WorkplaceId);
       expect(result.matches).toBe(false);
       expect(result.computedBalance).toBe(500);
     });
@@ -112,7 +116,7 @@ describe('IntegrityService', () => {
             { accountId: equityAccountId, amount: 500, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       // Corrupt it
@@ -126,9 +130,9 @@ describe('IntegrityService', () => {
         });
       });
 
-      await service.repairAccountBalance('wp-1', cashAccountId);
+      await service.repairAccountBalance('wp-1' as WorkplaceId, cashAccountId);
 
-      const result = await service.verifyAccountBalance(cashAccountId, 'wp-1');
+      const result = await service.verifyAccountBalance(cashAccountId, 'wp-1' as WorkplaceId);
       expect(result.matches).toBe(true);
       expect(result.computedBalance).toBe(500);
     });
@@ -149,7 +153,7 @@ describe('IntegrityService', () => {
             { accountId: cashAccountId, amount: 100, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
       await journalRepository.createJournalWithTransactions(
         {
@@ -160,7 +164,7 @@ describe('IntegrityService', () => {
             { accountId: cashAccountId, amount: 200, transactionType: TransactionType.DEBIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       const allTxs = await database.collections
@@ -192,7 +196,7 @@ describe('IntegrityService', () => {
       const uTx1 = await database.collections.get<Transaction>('transactions').find(tx1.id);
 
       // Create a snapshot for the FIRST transaction
-      await balanceSnapshotRepository.create('wp-1', {
+      await balanceSnapshotRepository.create('wp-1' as WorkplaceId, {
         accountId: cashAccountId,
         transactionId: uTx1!.id,
         transactionDate: uTx1!.transactionDate,
@@ -201,7 +205,10 @@ describe('IntegrityService', () => {
       });
 
       // The computed balance should be 300 (100 from snapshot + 200 from tx2)
-      const balance = await service.computeBalanceFromTransactions(cashAccountId, 'wp-1');
+      const balance = await service.computeBalanceFromTransactions(
+        cashAccountId,
+        'wp-1' as WorkplaceId,
+      );
       expect(balance).toBe(300);
     });
   });

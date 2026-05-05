@@ -6,6 +6,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
 import { of } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
@@ -101,17 +102,17 @@ describe('PatternService', () => {
       );
 
       patternService
-        .observePatterns('test-wp')
+        .observePatterns('test-wp' as WorkplaceId)
         .pipe(take(1))
         .subscribe((patterns: Insight[]) => {
           expect(patterns).toContainEqual(
             expect.objectContaining({
-              id: 'leak_FOOD',
+              id: 'leak_test-wp_FOOD',
               type: 'slow-leak',
             }),
           );
 
-          const leakPattern = patterns.find((p: Insight) => p.id === 'leak_FOOD');
+          const leakPattern = patterns.find((p: Insight) => p.id === 'leak_test-wp_FOOD');
           expect(leakPattern?.journalIds).toContain('j3');
           expect(leakPattern?.journalIds).toContain('j4');
           done();
@@ -129,12 +130,12 @@ describe('PatternService', () => {
       (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
 
       patternService
-        .observePatterns('test-wp')
+        .observePatterns('test-wp' as WorkplaceId)
         .pipe(take(1))
         .subscribe((patterns: Insight[]) => {
           expect(patterns).toContainEqual(
             expect.objectContaining({
-              id: 'no_emergency_fund',
+              id: 'no_emergency_fund_test-wp',
               type: 'lifestyle-drift',
             }),
           );
@@ -210,7 +211,7 @@ describe('PatternService', () => {
       });
 
       patternService
-        .observePatterns('test-wp')
+        .observePatterns('test-wp' as WorkplaceId)
         .pipe(take(1))
         .subscribe((patterns: Insight[]) => {
           const netflixPattern = patterns.find((p: Insight) => p.description.includes('Netflix'));
@@ -234,10 +235,12 @@ describe('PatternService', () => {
       (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
 
       patternService
-        .observePatterns('test-wp')
+        .observePatterns('test-wp' as WorkplaceId)
         .pipe(take(1))
         .subscribe((patterns: Insight[]) => {
-          const emergencyPattern = patterns.find((p: Insight) => p.id === 'no_emergency_fund');
+          const emergencyPattern = patterns.find(
+            (p: Insight) => p.id === 'no_emergency_fund_test-wp',
+          );
           expect(emergencyPattern).toBeUndefined();
           done();
         });

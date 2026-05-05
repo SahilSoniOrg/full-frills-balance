@@ -4,6 +4,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/features/journal/services/JournalService');
@@ -42,7 +43,7 @@ describe('useJournalEditor', () => {
   });
 
   it('should initialize with default lines', () => {
-    const { result } = renderHook(() => useJournalEditor('test-workplace'));
+    const { result } = renderHook(() => useJournalEditor('test-workplace' as WorkplaceId));
 
     expect(result.current.lines).toHaveLength(2);
     expect(result.current.isGuidedMode).toBe(true);
@@ -51,14 +52,14 @@ describe('useJournalEditor', () => {
 
   it('should initialize with initialNotes', () => {
     const { result } = renderHook(() =>
-      useJournalEditor('test-workplace', { initialNotes: 'Custom Notes' }),
+      useJournalEditor('test-workplace' as WorkplaceId, { initialNotes: 'Custom Notes' }),
     );
 
     expect(result.current.notes).toBe('Custom Notes');
   });
 
   it('should update notes state using setNotes', () => {
-    const { result } = renderHook(() => useJournalEditor('test-workplace'));
+    const { result } = renderHook(() => useJournalEditor('test-workplace' as WorkplaceId));
 
     act(() => {
       result.current.setNotes('New note value');
@@ -68,7 +69,7 @@ describe('useJournalEditor', () => {
   });
 
   it('should add lines', () => {
-    const { result } = renderHook(() => useJournalEditor('test-workplace'));
+    const { result } = renderHook(() => useJournalEditor('test-workplace' as WorkplaceId));
 
     act(() => {
       result.current.addLine();
@@ -78,7 +79,7 @@ describe('useJournalEditor', () => {
   });
 
   it('should remove lines but keep minimum 2', () => {
-    const { result } = renderHook(() => useJournalEditor('test-workplace'));
+    const { result } = renderHook(() => useJournalEditor('test-workplace' as WorkplaceId));
 
     act(() => {
       result.current.removeLine(result.current.lines[0].id);
@@ -97,7 +98,7 @@ describe('useJournalEditor', () => {
   it('should fail submission if service fails', async () => {
     const mockOnSuccess = jest.fn();
     const { result } = renderHook(() =>
-      useJournalEditor('test-workplace', { onSuccess: mockOnSuccess }),
+      useJournalEditor('test-workplace' as WorkplaceId, { onSuccess: mockOnSuccess }),
     );
 
     (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({
@@ -116,7 +117,7 @@ describe('useJournalEditor', () => {
   it('should succeed submission and call onSuccess', async () => {
     const mockOnSuccess = jest.fn();
     const { result } = renderHook(() =>
-      useJournalEditor('test-workplace', { onSuccess: mockOnSuccess }),
+      useJournalEditor('test-workplace' as WorkplaceId, { onSuccess: mockOnSuccess }),
     );
 
     (journalService.saveJournalEntry as jest.Mock).mockResolvedValue({ success: true });
@@ -142,7 +143,9 @@ describe('useJournalEditor', () => {
     (journalRepository.find as jest.Mock).mockResolvedValue(mockJournal);
     (transactionService.getEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
 
-    const { result } = renderHook(() => useJournalEditor('test-workplace', { journalId: 'j1' }));
+    const { result } = renderHook(() =>
+      useJournalEditor('test-workplace' as WorkplaceId, { journalId: 'j1' }),
+    );
 
     expect(result.current.isLoading).toBe(true);
 

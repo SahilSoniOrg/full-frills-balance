@@ -4,7 +4,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { DisplayTransaction } from '@/src/types/domain';
+import { DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { isBalanceIncrease, isValueEntering } from '@/src/utils/accountingHelpers';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
@@ -13,14 +13,14 @@ export class TransactionService {
    * Gets transactions for a journal with account information.
    */
   async getTransactionsWithAccountInfo(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     journalId: string,
   ): Promise<DisplayTransaction[]> {
-    const journal = await journalRepository.find(journalId, workplaceId);
-    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
+    const journal = await journalRepository.find(workplaceId, journalId);
+    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-    const accounts = await accountRepository.findAllByIds(accountIds, workplaceId);
+    const accounts = await accountRepository.findAllByIds(workplaceId, accountIds);
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     return transactions.map(tx => {
@@ -52,14 +52,14 @@ export class TransactionService {
    * Gets enriched transactions for a journal.
    */
   async getEnrichedByJournal(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     journalId: string,
   ): Promise<DisplayTransaction[]> {
     const journal = await journalRepository.find(workplaceId, journalId);
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     const accountIds = Array.from(new Set(transactions.map(t => t.accountId)));
-    const accounts = await accountRepository.findAllByIds(accountIds, workplaceId);
+    const accounts = await accountRepository.findAllByIds(workplaceId, accountIds);
     const accountMap = new Map(accounts.map(a => [a.id, a]));
 
     return transactions.map(tx => this.mapToEnriched(tx, transactions, accountMap, journal));
@@ -70,16 +70,16 @@ export class TransactionService {
    * Replaces TransactionRepository.observeByJournalWithAccountInfo
    */
   observeTransactionsWithAccountInfo(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     journalId: string,
     includeDeleted: boolean = false,
   ) {
     if (!journalId) return of([] as DisplayTransaction[]);
 
-    const journal$ = journalRepository.observeById(journalId, workplaceId, includeDeleted);
+    const journal$ = journalRepository.observeById(workplaceId, journalId, includeDeleted);
     const transactions$ = transactionRepository.observeByJournal(
-      journalId,
       workplaceId,
+      journalId,
       includeDeleted,
     );
 
@@ -91,7 +91,7 @@ export class TransactionService {
     const accounts$ = combineLatest([accountIds$, journal$]).pipe(
       switchMap(([accountIds, journal]) => {
         if (!journal) return of([] as any[]);
-        return accountRepository.observeByIds(accountIds, journal.workplaceId);
+        return accountRepository.observeByIds(journal.workplaceId, accountIds);
       }),
     );
 
@@ -129,16 +129,16 @@ export class TransactionService {
   }
 
   observeEnrichedByJournal(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     journalId: string,
     includeDeleted: boolean = false,
   ) {
     if (!journalId) return of([] as DisplayTransaction[]);
 
-    const journal$ = journalRepository.observeById(journalId, workplaceId, includeDeleted);
+    const journal$ = journalRepository.observeById(workplaceId, journalId, includeDeleted);
     const transactions$ = transactionRepository.observeByJournal(
-      journalId,
       workplaceId,
+      journalId,
       includeDeleted,
     );
 
@@ -150,7 +150,7 @@ export class TransactionService {
     const accounts$ = combineLatest([accountIds$, journal$]).pipe(
       switchMap(([accountIds, journal]) => {
         if (!journal) return of([] as any[]);
-        return accountRepository.observeByIds(accountIds, journal.workplaceId);
+        return accountRepository.observeByIds(journal.workplaceId, accountIds);
       }),
     );
 

@@ -5,6 +5,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { AppConfig } from '../constants/app-config';
 import { migrateFromAsyncStorage, storage } from './storage';
+import { WorkplaceId } from '@/src/types/domain';
 
 const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 
@@ -418,7 +419,7 @@ class PreferencesHelper {
     return this.preferences.activeWorkplaceId;
   }
 
-  setActiveWorkplaceId(workplaceId: string): void {
+  setActiveWorkplaceId(workplaceId: WorkplaceId): void {
     this.updatePreferences({ activeWorkplaceId: workplaceId });
   }
 

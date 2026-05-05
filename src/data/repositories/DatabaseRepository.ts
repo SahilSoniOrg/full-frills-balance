@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { Q } from '@nozbe/watermelondb';
 import { getRawAdapter } from '../database/DatabaseUtils';
 import { logger } from '@/src/utils/logger';
+import { WorkplaceId } from '@/src/types/domain';
 
 export class DatabaseRepository {
   async resetDatabase(): Promise<void> {
@@ -41,7 +42,7 @@ export class DatabaseRepository {
     return totalDeleted;
   }
 
-  async purgeWorkplaceData(workplaceId: string, tables: string[]): Promise<void> {
+  async purgeWorkplaceData(workplaceId: WorkplaceId, tables: string[]): Promise<void> {
     await database.write(async () => {
       // 1. Try high-performance raw SQL delete first (O(Tables) vs O(Records))
       // This ensures all records (including soft-deleted ones hidden from ORM) are purged.

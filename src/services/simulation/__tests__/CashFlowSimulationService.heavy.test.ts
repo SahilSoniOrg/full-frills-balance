@@ -7,6 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -260,7 +261,8 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       usages,
       allAccounts,
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     expect(result.simulationResult.projections).toHaveLength(AppConfig.defaults.safeToSpendDays);
@@ -354,7 +356,8 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       [],
       [cash, ...expenseAccounts],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     const plannedFlows = result.allFlows!.filter(
@@ -395,7 +398,8 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       [],
       [cash],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     expect(result.simulationResult.summary.safeToSpend).toBe(0);

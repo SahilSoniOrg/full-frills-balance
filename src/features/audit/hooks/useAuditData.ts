@@ -2,6 +2,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import React, { useMemo } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface EntityStatus {
   exists: boolean;
@@ -10,7 +11,7 @@ export interface EntityStatus {
 
 export function useAuditAccounts(wokrplaceId: string) {
   const { data: accounts, isLoading } = useObservable(
-    () => accountRepository.observeAll(wokrplaceId),
+    () => accountRepository.observeAll(wokrplaceId as WorkplaceId),
     [wokrplaceId],
     [],
   );
@@ -27,7 +28,7 @@ export function useAuditAccounts(wokrplaceId: string) {
 }
 
 export function useAuditEntityStatus(
-  workplaceId: string,
+  workplaceId: WorkplaceId,
   idsByEntityType: Record<string, string[]>,
 ) {
   const accountIds = useMemo(

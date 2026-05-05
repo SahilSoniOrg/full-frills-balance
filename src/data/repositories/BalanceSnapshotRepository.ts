@@ -3,6 +3,7 @@ import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { getRawAdapter } from '../database/DatabaseUtils';
+import { WorkplaceId } from '@/src/types/domain';
 
 /**
  * Repository for Balance Snapshots.
@@ -17,7 +18,7 @@ export class BalanceSnapshotRepository {
    * Finds the latest snapshot for an account as of a given date.
    */
   async findLatestForAccount(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     date: number = Date.now(),
   ): Promise<BalanceSnapshot | null> {
@@ -37,7 +38,7 @@ export class BalanceSnapshotRepository {
    * Creates a new balance snapshot.
    */
   async create(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     data: {
       accountId: string;
       transactionId: string;
@@ -63,7 +64,7 @@ export class BalanceSnapshotRepository {
    * Returns a Map of accountId -> SnapshotData.
    */
   async findLatestForAccountsRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountIds: string[],
     date: number = Date.now(),
   ): Promise<Map<string, SnapshotData>> {
@@ -124,7 +125,7 @@ export class BalanceSnapshotRepository {
    * Deletes all snapshots for an account after a certain date.
    * Useful when segments are invalidated.
    */
-  async deleteAfterDate(workplaceId: string, accountId: string, date: number): Promise<void> {
+  async deleteAfterDate(workplaceId: WorkplaceId, accountId: string, date: number): Promise<void> {
     const snapshotsToDelete = await this.snapshots
       .query(
         Q.where('workplace_id', workplaceId),

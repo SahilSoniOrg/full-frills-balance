@@ -1,8 +1,9 @@
+import { WorkplaceId } from '@/src/types/domain';
 export type RevertHandler<T = any> = (
   entityId: string,
   changes: { before?: Partial<T>; after?: Partial<T> },
   action: string,
-  workplaceId: string,
+  workplaceId: WorkplaceId,
 ) => Promise<void>;
 
 class RevertRegistry {

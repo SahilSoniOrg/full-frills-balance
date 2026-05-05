@@ -3,6 +3,7 @@ import { database } from '@/src/data/database/Database';
 import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
 import { AuditEntry, auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertRegistry } from '@/src/services/revert-registry';
+import { WorkplaceId } from '@/src/types/domain';
 
 /**
  * Audit Service
@@ -13,7 +14,7 @@ export class AuditService {
   /**
    * Log an audit entry
    */
-  async log<T>(entry: AuditEntry<T>, workplaceId: string): Promise<void> {
+  async log<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): Promise<void> {
     return auditRepository.log(entry, workplaceId);
   }
 
@@ -22,7 +23,7 @@ export class AuditService {
    */
   async revertEntry(
     logId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<{ success: boolean; error?: string }> {
     const log = await auditRepository.find(logId, workplaceId);
     if (!log) return { success: false, error: AppConfig.strings.audit.errors.notFound(logId) };
@@ -54,7 +55,7 @@ export class AuditService {
   async getAuditTrail(
     entityType: AuditEntityType,
     entityId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<AuditLog[]> {
     return auditRepository.findByEntity(entityType, entityId, workplaceId);
   }
@@ -64,7 +65,7 @@ export class AuditService {
    */
   async getRecentLogs(
     limit: number = AppConfig.pagination.auditRecentLimit,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<AuditLog[]> {
     return auditRepository.fetchRecent(limit, workplaceId);
   }
@@ -72,14 +73,17 @@ export class AuditService {
   /**
    * Observe audit trail for a specific entity
    */
-  observeAuditTrail(entityType: AuditEntityType, entityId: string, workplaceId: string) {
+  observeAuditTrail(entityType: AuditEntityType, entityId: string, workplaceId: WorkplaceId) {
     return auditRepository.observeByEntity(entityType, entityId, workplaceId);
   }
 
   /**
    * Observe recent audit logs
    */
-  observeRecentLogs(limit: number = AppConfig.pagination.auditRecentLimit, workplaceId: string) {
+  observeRecentLogs(
+    limit: number = AppConfig.pagination.auditRecentLimit,
+    workplaceId: WorkplaceId,
+  ) {
     return auditRepository.observeRecent(limit, workplaceId);
   }
 
@@ -87,7 +91,7 @@ export class AuditService {
    * Cleanup legacy entity types (convert to lowercase)
    * This is an idempotent one-time migration.
    */
-  async cleanupLegacyEntityTypes(workplaceId: string): Promise<number> {
+  async cleanupLegacyEntityTypes(workplaceId: WorkplaceId): Promise<number> {
     const allLogs = await auditRepository.findAll(workplaceId);
     const uppercaseLogs = allLogs.filter(log => log.entityType !== log.entityType.toLowerCase());
 

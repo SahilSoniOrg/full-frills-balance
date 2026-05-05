@@ -10,6 +10,7 @@ import { accountingRebuildService } from '@/src/services/AccountingRebuildServic
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
+import { WorkplaceId } from '@/src/types/domain';
 
 interface RebuildQueueConfig {
   debounceMs: number;
@@ -26,7 +27,7 @@ const DEFAULT_CONFIG: RebuildQueueConfig = {
     process.env.NODE_ENV === 'test' ? 0 : AppConfig.performance.rebuild.queue.retryDelayMs,
 };
 
-function createQueueKey(accountId: string, workplaceId: string): string {
+function createQueueKey(accountId: string, workplaceId: WorkplaceId): string {
   return `${workplaceId}__${accountId}`;
 }
 function parseQueueKey(key: string): [string, string] {
@@ -78,7 +79,7 @@ class RebuildQueueService {
               continue;
             }
             const [workplaceId, accountId] = parseQueueKey(id);
-            this.enqueue(accountId, date, workplaceId);
+            this.enqueue(accountId, date, workplaceId as WorkplaceId);
           }
           storage.remove(RebuildQueueService.PROCESSING_KEY);
         }
@@ -102,7 +103,7 @@ class RebuildQueueService {
    * @param accountId Account ID
    * @param fromDate Optional earliest date of change. Defaults to current time.
    */
-  enqueue(accountId: string, fromDate: number = Date.now(), workplaceId: string): void {
+  enqueue(accountId: string, fromDate: number = Date.now(), workplaceId: WorkplaceId): void {
     const existingDate = this.queue.get(createQueueKey(accountId, workplaceId));
     if (existingDate === undefined || fromDate < existingDate) {
       this.queue.set(createQueueKey(accountId, workplaceId), fromDate);
@@ -119,7 +120,7 @@ class RebuildQueueService {
   enqueueMany(
     accountIds: string[] | Set<string>,
     fromDate: number = Date.now(),
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): void {
     const ids = Array.isArray(accountIds) ? accountIds : Array.from(accountIds);
     let changed = false;
@@ -235,7 +236,7 @@ class RebuildQueueService {
           try {
             const [workplaceId, accountId] = parseQueueKey(item.id);
             await accountingRebuildService.rebuildAccountBalances(
-              workplaceId,
+              workplaceId as WorkplaceId,
               accountId,
               item.fromDate,
             );
@@ -262,7 +263,7 @@ class RebuildQueueService {
               const delay = this.config.retryDelayMs * retryCount;
               setTimeout(() => {
                 const [workplaceId, accountId] = parseQueueKey(item.id);
-                this.enqueue(accountId, item.fromDate, workplaceId);
+                this.enqueue(accountId, item.fromDate, workplaceId as WorkplaceId);
               }, delay);
             } else {
               logger.error(

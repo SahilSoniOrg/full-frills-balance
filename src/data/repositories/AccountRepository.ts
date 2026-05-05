@@ -21,6 +21,7 @@ import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
 import { supportsRawSql } from '../database/DatabaseUtils';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface AccountPersistenceInput {
   name: string;
@@ -32,7 +33,7 @@ export interface AccountPersistenceInput {
   orderNum?: number;
   reconciledAt?: Date;
   parentAccountId?: string;
-  workplaceId: string;
+  workplaceId: WorkplaceId;
   metadata?: Partial<{
     statementDay: number;
     dueDay: number;
@@ -80,7 +81,7 @@ export class AccountRepository {
    * Reactive Observation Methods
    */
 
-  observeAll(workplaceId: string) {
+  observeAll(workplaceId: WorkplaceId) {
     const clauses: Q.Clause[] = [
       Q.where('deleted_at', Q.eq(null)),
       Q.where('workplace_id', workplaceId),
@@ -102,7 +103,7 @@ export class AccountRepository {
       ]);
   }
 
-  observeHierarchy(workplaceId: string) {
+  observeHierarchy(workplaceId: WorkplaceId) {
     const clauses: Q.Clause[] = [
       Q.where('deleted_at', Q.eq(null)),
       Q.where('workplace_id', workplaceId),
@@ -110,7 +111,7 @@ export class AccountRepository {
     return this.accounts.query(...clauses).observeWithColumns(['parent_account_id', 'deleted_at']);
   }
 
-  observeByType(accountType: string, workplaceId: string) {
+  observeByType(workplaceId: WorkplaceId, accountType: AccountType) {
     const clauses: Q.Clause[] = [
       Q.where('account_type', accountType),
       Q.where('deleted_at', Q.eq(null)),
@@ -131,7 +132,7 @@ export class AccountRepository {
       ]);
   }
 
-  observeByIds(accountIds: string[], workplaceId: string) {
+  observeByIds(workplaceId: WorkplaceId, accountIds: string[]) {
     if (accountIds.length === 0) {
       return of([] as Account[]);
     }
@@ -157,7 +158,7 @@ export class AccountRepository {
       ]);
   }
 
-  observeById(accountId: string, workplaceId: string) {
+  observeById(workplaceId: WorkplaceId, accountId: string) {
     return this.accounts
       .findAndObserve(accountId)
       .pipe(
@@ -169,7 +170,7 @@ export class AccountRepository {
    * Observe all active transactions for an account.
    * Used for reactive in-memory balance calculation.
    */
-  observeTransactionsForBalance(accountId: string, workplaceId: string) {
+  observeTransactionsForBalance(workplaceId: WorkplaceId, accountId: string) {
     const clauses: Q.Clause[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('account_id', accountId),
@@ -203,7 +204,7 @@ export class AccountRepository {
     }
   }
 
-  async find(id: string, workplaceId: string): Promise<Account | null> {
+  async find(workplaceId: WorkplaceId, id: string): Promise<Account | null> {
     try {
       const account = await this.accounts.find(id);
       if (account.deletedAt) return null;
@@ -214,7 +215,7 @@ export class AccountRepository {
     }
   }
 
-  async findWithDeleted(id: string, workplaceId: string): Promise<Account | null> {
+  async findWithDeleted(workplaceId: WorkplaceId, id: string): Promise<Account | null> {
     try {
       const account = await this.accounts.find(id);
       if (account.workplaceId !== workplaceId) return null;
@@ -224,7 +225,7 @@ export class AccountRepository {
     }
   }
 
-  async findMetadata(accountId: string, workplaceId: string): Promise<AccountMetadata | null> {
+  async findMetadata(accountId: string, workplaceId: WorkplaceId): Promise<AccountMetadata | null> {
     try {
       const clauses: Q.Clause[] = [
         Q.where('account_id', accountId),
@@ -239,7 +240,7 @@ export class AccountRepository {
 
   async findMetadataByAccountIds(
     accountIds: string[],
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<AccountMetadata[]> {
     if (accountIds.length === 0) return [];
     const clauses: Q.Clause[] = [
@@ -255,7 +256,7 @@ export class AccountRepository {
     return this.accounts.query(...clauses).fetch();
   }
 
-  async findAllByIds(ids: string[], workplaceId: string): Promise<Account[]> {
+  async findAllByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Account[]> {
     if (ids.length === 0) return [];
     const clauses: Q.Clause[] = [
       Q.where('id', Q.oneOf(ids)),
@@ -265,7 +266,7 @@ export class AccountRepository {
     return this.accounts.query(...clauses).fetch();
   }
 
-  async findByName(name: string, workplaceId: string): Promise<Account | null> {
+  async findByName(workplaceId: WorkplaceId, name: string): Promise<Account | null> {
     const clauses: Q.Clause[] = [
       Q.where('name', name),
       Q.where('deleted_at', Q.eq(null)),
@@ -275,7 +276,7 @@ export class AccountRepository {
     return accounts[0] || null;
   }
 
-  async findAll(workplaceId: string): Promise<Account[]> {
+  async findAll(workplaceId: WorkplaceId): Promise<Account[]> {
     const clauses: Q.Clause[] = [
       Q.where('deleted_at', Q.eq(null)),
       Q.where('workplace_id', workplaceId),
@@ -284,7 +285,7 @@ export class AccountRepository {
     return this.accounts.query(...clauses).fetch();
   }
 
-  async findByType(accountType: AccountType, workplaceId: string): Promise<Account[]> {
+  async findByType(workplaceId: WorkplaceId, accountType: AccountType): Promise<Account[]> {
     const clauses: Q.Clause[] = [
       Q.where('account_type', accountType),
       Q.where('deleted_at', Q.eq(null)),
@@ -294,7 +295,7 @@ export class AccountRepository {
     return this.accounts.query(...clauses).fetch();
   }
 
-  async exists(workplaceId: string): Promise<boolean> {
+  async exists(workplaceId: WorkplaceId): Promise<boolean> {
     const clauses: Q.Clause[] = [Q.where('deleted_at', Q.eq(null))];
     if (workplaceId) {
       clauses.push(Q.where('workplace_id', workplaceId));
@@ -303,7 +304,7 @@ export class AccountRepository {
     return count > 0;
   }
 
-  async countNonDeleted(workplaceId: string): Promise<number> {
+  async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {
     const clauses: Q.Clause[] = [
       Q.where('deleted_at', Q.eq(null)),
       Q.where('workplace_id', workplaceId),
@@ -311,7 +312,7 @@ export class AccountRepository {
     return this.accounts.query(...clauses).fetchCount();
   }
 
-  observeByIdsWithDeleted(accountIds: string[], workplaceId: string) {
+  observeByIdsWithDeleted(accountIds: string[], workplaceId: WorkplaceId) {
     if (accountIds.length === 0) {
       return of([] as Account[]);
     }
@@ -368,7 +369,7 @@ export class AccountRepository {
   async update(
     account: Account,
     updates: Partial<AccountPersistenceInput>,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Account> {
     if (updates.name && updates.name !== account.name) {
       await this.ensureUniqueName(updates.name, workplaceId, account.id);
@@ -418,9 +419,9 @@ export class AccountRepository {
     });
   }
 
-  async delete(workplaceId: string, account: Account): Promise<void> {
+  async delete(workplaceId: WorkplaceId, account: Account): Promise<void> {
     //get account by id
-    const existingAccount = await this.find(account.id, workplaceId);
+    const existingAccount = await this.find(workplaceId, account.id);
     if (!existingAccount) {
       throw new Error('Cannot delete account. Account not found in workplace provided.');
     }
@@ -437,7 +438,7 @@ export class AccountRepository {
     });
   }
 
-  observeHasChildren(accountId: string, workplaceId: string) {
+  observeHasChildren(accountId: string, workplaceId: WorkplaceId) {
     return this.accounts
       .query(
         Q.where('workplace_id', workplaceId),
@@ -448,7 +449,7 @@ export class AccountRepository {
       .pipe(map(children => children.length > 0));
   }
 
-  observeSubAccountCount(accountId: string, workplaceId: string) {
+  observeSubAccountCount(accountId: string, workplaceId: WorkplaceId) {
     return this.accounts
       .query(
         Q.where('workplace_id', workplaceId),
@@ -458,7 +459,7 @@ export class AccountRepository {
       .observeCount();
   }
 
-  queryByParentId(parentId: string, workplaceId: string) {
+  queryByParentId(parentId: string, workplaceId: WorkplaceId) {
     return this.accounts.query(
       Q.where('workplace_id', workplaceId),
       Q.where('parent_account_id', parentId),
@@ -469,7 +470,7 @@ export class AccountRepository {
 
   private async ensureUniqueName(
     name: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     excludeId?: string,
   ): Promise<void> {
     const sanitizedName = name.trim();
@@ -509,7 +510,7 @@ export class AccountRepository {
   async getAccountListItemsRaw(
     startOfMonth: number,
     endOfMonth: number,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     includeTotalCount: boolean = false,
     includeDeleted: boolean = false,
   ): Promise<AccountListItemRaw[] | null> {

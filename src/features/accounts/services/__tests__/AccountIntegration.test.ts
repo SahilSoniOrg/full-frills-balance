@@ -9,11 +9,11 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { balanceService } from '@/src/services/BalanceService';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { accountService } from '../AccountService';
 
 describe('AccountRepository', () => {
-  const workplaceId = 'test-wp-1';
+  const workplaceId = 'test-wp-1' as WorkplaceId;
 
   beforeEach(async () => {
     await database.write(async () => {
@@ -261,7 +261,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      const assets = await accountRepository.findByType(AccountType.ASSET, workplaceId);
+      const assets = await accountRepository.findByType(workplaceId, AccountType.ASSET);
       expect(assets.length).toBe(2);
       expect(assets.every(a => a.accountType === AccountType.ASSET)).toBe(true);
     });

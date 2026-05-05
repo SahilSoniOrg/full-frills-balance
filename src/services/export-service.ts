@@ -9,7 +9,7 @@ import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
 import { Model, TableSchema } from '@nozbe/watermelondb';
@@ -309,7 +309,7 @@ class ExportService {
    * Generates SQL with aliasing and handles value conversions centrally.
    */
   private async fetchAndTransformTable<T extends object>(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     tableName: string,
   ): Promise<T[]> {
     const tableSchema = this.getTableSchema(tableName);
@@ -395,7 +395,7 @@ class ExportService {
   /**
    * Exports all data as JSON using raw SQL to bypass model instantiation overhead.
    */
-  async exportToJSON(workplaceId: string): Promise<Uint8Array> {
+  async exportToJSON(workplaceId: WorkplaceId): Promise<Uint8Array> {
     logger.info('[ExportService] Starting optimized JSON export...');
 
     try {

@@ -3,6 +3,7 @@ import { database } from '@/src/data/database/Database';
 import AuditLog, { AuditAction, AuditEntityType } from '@/src/data/models/AuditLog';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface AuditEntry<T = any> {
   entityType: AuditEntityType;
@@ -16,12 +17,11 @@ export class AuditRepository {
     return database.collections.get<AuditLog>('audit_logs');
   }
 
-  async find(id: string, workplaceId: string): Promise<AuditLog | null> {
+  async find(id: string, workplaceId: WorkplaceId): Promise<AuditLog | null> {
     try {
-      const audits = await this.auditLogs
-        .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
-        .fetch();
-      return audits[0] ?? null;
+      const auditLog = await this.auditLogs.find(id);
+      if (auditLog.workplaceId !== workplaceId) return null;
+      return auditLog;
     } catch {
       return null;
     }
@@ -30,7 +30,7 @@ export class AuditRepository {
   /**
    * Log an audit entry
    */
-  async log<T>(entry: AuditEntry<T>, workplaceId: string): Promise<void> {
+  async log<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): Promise<void> {
     await database.write(async () => {
       await this.auditLogs.create((record: AuditLog) => {
         this.applyEntryToRecord(record, entry);
@@ -42,9 +42,10 @@ export class AuditRepository {
   /**
    * Prepare an audit entry (does not write to DB)
    */
-  prepareLog<T>(entry: AuditEntry<T>): AuditLog {
+  prepareLog<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): AuditLog {
     return this.auditLogs.prepareCreate((record: AuditLog) => {
       this.applyEntryToRecord(record, entry);
+      record.workplaceId = workplaceId;
     });
   }
 
@@ -74,7 +75,7 @@ export class AuditRepository {
   async findByEntity(
     entityType: AuditEntityType,
     entityId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<AuditLog[]> {
     return this.auditLogs
       .query(
@@ -89,7 +90,7 @@ export class AuditRepository {
   /**
    * Observe audit logs for a specific entity
    */
-  observeByEntity(entityType: AuditEntityType, entityId: string, workplaceId: string) {
+  observeByEntity(entityType: AuditEntityType, entityId: string, workplaceId: WorkplaceId) {
     return this.auditLogs
       .query(
         Q.where('entity_type', entityType.toLowerCase()),
@@ -103,7 +104,7 @@ export class AuditRepository {
   /**
    * Observe recent audit logs
    */
-  observeRecent(limit: number = AppConfig.pagination.auditRecentLimit, workplaceId: string) {
+  observeRecent(limit: number = AppConfig.pagination.auditRecentLimit, workplaceId: WorkplaceId) {
     return this.auditLogs
       .query(Q.where('workplace_id', workplaceId), Q.sortBy('timestamp', Q.desc), Q.take(limit))
       .observe();
@@ -114,7 +115,7 @@ export class AuditRepository {
    */
   async fetchRecent(
     limit: number = AppConfig.pagination.auditRecentLimit,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<AuditLog[]> {
     return this.auditLogs
       .query(Q.where('workplace_id', workplaceId), Q.sortBy('timestamp', Q.desc), Q.take(limit))
@@ -124,7 +125,7 @@ export class AuditRepository {
   /**
    * Fetch all audit logs
    */
-  async findAll(workplaceId: string): Promise<AuditLog[]> {
+  async findAll(workplaceId: WorkplaceId): Promise<AuditLog[]> {
     return this.auditLogs
       .query(Q.where('workplace_id', workplaceId), Q.sortBy('timestamp', Q.desc))
       .fetch();
@@ -133,7 +134,7 @@ export class AuditRepository {
   /**
    * Count all audit logs
    */
-  async countAll(workplaceId: string): Promise<number> {
+  async countAll(workplaceId: WorkplaceId): Promise<number> {
     return this.auditLogs.query(Q.where('workplace_id', workplaceId)).fetchCount();
   }
 }

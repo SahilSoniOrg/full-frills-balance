@@ -22,7 +22,7 @@ import {
 } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/utils/preferences';
@@ -195,7 +195,7 @@ export const ivyPlugin: ImportPlugin = {
 
   async import(
     context: ImportFileContext,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
     const targetDefaultCurrency = await workplaceService.getCurrency(workplaceId);

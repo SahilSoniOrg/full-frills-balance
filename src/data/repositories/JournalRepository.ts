@@ -3,7 +3,7 @@ import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -60,7 +60,7 @@ export class JournalRepository {
     return this.journals.query(Q.where('deleted_at', Q.eq(null)), ...clauses);
   }
 
-  observeByIdsWithDeleted(workplaceId: string, journalIds: string[]) {
+  observeByIdsWithDeleted(workplaceId: WorkplaceId, journalIds: string[]) {
     if (journalIds.length === 0) {
       return of([] as Journal[]);
     }
@@ -86,7 +86,7 @@ export class JournalRepository {
    */
 
   observeAccountTransactions(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
@@ -125,7 +125,7 @@ export class JournalRepository {
       ]);
   }
 
-  observeById(journalId: string, workplaceId: string, includeDeleted: boolean = false) {
+  observeById(workplaceId: WorkplaceId, journalId: string, includeDeleted: boolean = false) {
     const clauses = [Q.where('id', journalId), Q.where('workplace_id', workplaceId)];
     if (!includeDeleted) {
       clauses.push(Q.where('deleted_at', Q.eq(null)));
@@ -148,7 +148,7 @@ export class JournalRepository {
       .pipe(map(journals => journals[0] || null));
   }
 
-  observeByIds(journalIds: string[], workplaceId: string) {
+  observeByIds(workplaceId: WorkplaceId, journalIds: string[]) {
     if (journalIds.length === 0) return of([] as Journal[]);
     return this.journals
       .query(
@@ -169,13 +169,13 @@ export class JournalRepository {
       ]);
   }
 
-  observeStatusMeta(workplaceId: string) {
+  observeStatusMeta(workplaceId: WorkplaceId) {
     return this.journals
       .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
       .observeWithColumns(['status', 'deleted_at', 'journal_date', 'updated_at', 'total_amount']);
   }
 
-  observePlannedInRange(workplaceId: string, startDate: number, endDate: number) {
+  observePlannedInRange(workplaceId: WorkplaceId, startDate: number, endDate: number) {
     return this.journals
       .query(
         Q.where('workplace_id', workplaceId),
@@ -191,25 +191,29 @@ export class JournalRepository {
    * PURE PERSISTENCE METHODS
    */
 
-  async find(id: string, workplaceId: string): Promise<Journal | null> {
+  async find(workplaceId: WorkplaceId, id: string): Promise<Journal | null> {
     try {
-      const journals = await this.journals
-        .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
-        .fetch();
-      return journals[0] ?? null;
+      const journal = await this.journals.find(id);
+      if (journal.deletedAt) return null;
+      if (journal.workplaceId !== workplaceId) return null;
+      return journal;
     } catch {
       return null;
     }
   }
 
-  async findByIds(ids: string[], workplaceId: string): Promise<Journal[]> {
+  async findByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Journal[]> {
     if (ids.length === 0) return [];
     return this.journals
-      .query(Q.where('id', Q.oneOf(ids)), Q.where('workplace_id', workplaceId))
+      .query(
+        Q.where('id', Q.oneOf(ids)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
       .fetch();
   }
 
-  async findAll(workplaceId: string): Promise<Journal[]> {
+  async findAll(workplaceId: WorkplaceId): Promise<Journal[]> {
     const start = Date.now();
     const results = await this.journals
       .query(
@@ -226,7 +230,7 @@ export class JournalRepository {
     return results;
   }
 
-  async findAllPlanned(workplaceId: string): Promise<Journal[]> {
+  async findAllPlanned(workplaceId: WorkplaceId): Promise<Journal[]> {
     return this.journalsQuery(
       Q.where('status', JournalStatus.PLANNED),
       Q.where('deleted_at', Q.eq(null)),
@@ -234,7 +238,7 @@ export class JournalRepository {
     ).fetch();
   }
 
-  async findAllNonDeleted(workplaceId: string): Promise<Journal[]> {
+  async findAllNonDeleted(workplaceId: WorkplaceId): Promise<Journal[]> {
     return this.journals
       .query(
         Q.where('deleted_at', Q.eq(null)),
@@ -246,7 +250,7 @@ export class JournalRepository {
 
   async findMetadataByJournalId(
     journalId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<JournalMetadata | null> {
     const records = await this.journalMetadata
       .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
@@ -260,7 +264,7 @@ export class JournalRepository {
    * Assumes it's being called inside a database.write() block.
    */
   async patchMetadata(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     journalId: string,
     partialMetadata: Record<string, unknown>,
     source?: string,
@@ -294,7 +298,7 @@ export class JournalRepository {
    * to avoid the nested-write violation.
    */
   async prepareMetadataPatch(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     journalId: string,
     partialMetadata: Record<string, unknown>,
     source?: string,
@@ -320,19 +324,19 @@ export class JournalRepository {
 
   async findJournalByOriginalSmsId(
     originalSmsId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Journal | null> {
     const metadata = await this.journalMetadata
       .query(Q.where('original_sms_id', originalSmsId), Q.where('workplace_id', workplaceId))
       .fetch();
 
     if (metadata.length === 0) return null;
-    return this.find(metadata[0].journalId, workplaceId);
+    return this.find(workplaceId, metadata[0].journalId);
   }
 
   async findJournalsByOriginalSmsIds(
     smsIds: string[],
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Map<string, Journal>> {
     if (smsIds.length === 0) return new Map();
     const metadataRecords = await this.journalMetadata
@@ -342,7 +346,7 @@ export class JournalRepository {
     if (metadataRecords.length === 0) return new Map();
 
     const journalIds = metadataRecords.map(m => m.journalId);
-    const journals = await this.findByIds(journalIds, workplaceId);
+    const journals = await this.findByIds(workplaceId, journalIds);
     const journalMap = new Map(journals.map(j => [j.id, j]));
 
     const resultMap = new Map<string, Journal>();
@@ -357,7 +361,7 @@ export class JournalRepository {
 
   async findJournalBySmsFingerprint(
     smsFingerprint: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Journal | null> {
     // Optimized: Query indexed inbox records instead of scanning metadata JSON
     const inboxRecords = await database.collections
@@ -368,12 +372,12 @@ export class JournalRepository {
     const record = inboxRecords.find(r => r.linkedJournalId);
     if (!record || !record.linkedJournalId) return null;
 
-    return this.find(record.linkedJournalId, workplaceId);
+    return this.find(workplaceId, record.linkedJournalId);
   }
 
   async findJournalsBySmsFingerprints(
     fingerprints: string[],
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Map<string, Journal>> {
     if (fingerprints.length === 0) return new Map();
 
@@ -400,7 +404,7 @@ export class JournalRepository {
 
     if (journalIds.length === 0) return new Map();
 
-    const journals = await this.findByIds(journalIds, workplaceId);
+    const journals = await this.findByIds(workplaceId, journalIds);
     const journalMap = new Map(journals.map(j => [j.id, j]));
     const resultMap = new Map<string, Journal>();
 
@@ -423,7 +427,7 @@ export class JournalRepository {
       excludeJournalId?: string;
       limit?: number;
     },
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Journal[]> {
     const { centerDate, windowMs, amount, amounts, excludeJournalId, limit = 10 } = params;
     const clauses: Q.Clause[] = [
@@ -449,7 +453,7 @@ export class JournalRepository {
     return this.journals.query(...clauses).fetch();
   }
 
-  async countNonDeleted(workplaceId: string): Promise<number> {
+  async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {
     return this.journals
       .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
       .fetchCount();
@@ -461,7 +465,7 @@ export class JournalRepository {
    */
   prepareCreateJournalWithTransactions(
     journalData: PrepareCreateJournalData,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): {
     journal: Journal;
     transactions: Transaction[];
@@ -499,6 +503,7 @@ export class JournalRepository {
         tx.notes = txData.notes;
         tx.exchangeRate = txData.exchangeRate;
         tx.runningBalance = calculatedBalances?.get(txData.accountId) ?? null;
+        tx.workplaceId = workplaceId;
         tx.createdAt = new Date();
         tx.updatedAt = new Date();
       });
@@ -508,6 +513,7 @@ export class JournalRepository {
     if (metadata) {
       metadataRecord = this.journalMetadata.prepareCreate((m: JournalMetadata) => {
         m.journalId = journal.id;
+        m.workplaceId = workplaceId;
         m.importSource = metadata.importSource;
         m.originalSmsId = metadata.originalSmsId;
         m.originalSmsSender = metadata.originalSmsSender;
@@ -521,7 +527,7 @@ export class JournalRepository {
 
   async createJournalWithTransactions(
     journalData: PrepareCreateJournalData,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Journal> {
     const start = Date.now();
     return await database.write(async () => {
@@ -547,7 +553,7 @@ export class JournalRepository {
   }
 
   async updateJournalWithTransactions(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     journalId: string,
     journalData: PrepareCreateJournalData,
     extraOpCreator?: () => Model, // Synchronous callback to build extra op atomically
@@ -561,7 +567,7 @@ export class JournalRepository {
       ...journalFields
     } = journalData;
 
-    const existingJournal = await this.find(journalId, workplaceId);
+    const existingJournal = await this.find(workplaceId, journalId);
     if (!existingJournal) throw new Error('Journal not found');
 
     const oldTransactions = await this.transactions
@@ -672,9 +678,9 @@ export class JournalRepository {
   async updateJournalStatus(
     journalId: string,
     status: JournalStatus,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const journal = await this.find(journalId, workplaceId);
+    const journal = await this.find(workplaceId, journalId);
     if (!journal) throw new Error(`Journal ${journalId} not found`);
 
     await database.write(async () => {
@@ -687,8 +693,8 @@ export class JournalRepository {
     return journal;
   }
 
-  async deleteJournal(journalId: string, workplaceId: string): Promise<void> {
-    const journal = await this.find(journalId, workplaceId);
+  async deleteJournal(journalId: string, workplaceId: WorkplaceId): Promise<void> {
+    const journal = await this.find(workplaceId, journalId);
     if (!journal) return;
 
     const associatedTransactions = await this.transactions
@@ -720,9 +726,9 @@ export class JournalRepository {
    */
   async fetchJournalForDeletion(
     journalId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<{ journal: Journal; transactions: Transaction[] } | null> {
-    const journal = await this.find(journalId, workplaceId);
+    const journal = await this.find(workplaceId, journalId);
     if (!journal) return null;
 
     const associatedTransactions = await this.transactions
@@ -735,9 +741,9 @@ export class JournalRepository {
   async markReversed(
     originalJournalId: string,
     reversingJournalId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<void> {
-    const journal = await this.find(originalJournalId, workplaceId);
+    const journal = await this.find(workplaceId, originalJournalId);
     if (!journal) return;
 
     await database.write(async () => {
@@ -757,7 +763,7 @@ export class JournalRepository {
     originalJournal: Journal;
     originalTransactions: Transaction[];
     replacementData: PrepareCreateJournalData;
-    workplaceId: string;
+    workplaceId: WorkplaceId;
   }): Promise<{ reversalJournal: Journal; replacementJournal: Journal }> {
     const { originalJournal, originalTransactions, replacementData, workplaceId } = params;
     const {

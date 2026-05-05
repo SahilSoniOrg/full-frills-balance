@@ -6,6 +6,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface PlannedPaymentFormState {
   name: string;
@@ -22,7 +23,7 @@ export interface PlannedPaymentFormState {
   recurrenceMonth?: number;
 }
 
-export function usePlannedPaymentForm(workplaceId: string, id?: string) {
+export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();

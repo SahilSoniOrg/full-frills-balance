@@ -3,14 +3,14 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { DisplayTransaction } from '@/src/types/domain';
+import { DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { isBalanceIncrease } from '@/src/utils/accountingHelpers';
 import { auditTime, combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class LedgerReadService {
   observeEnrichedForAccount(
     accountId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
   ) {
@@ -21,7 +21,7 @@ export class LedgerReadService {
 
   observeEnrichedForAccounts(
     rootAccountIds: string[],
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
   ) {
@@ -54,11 +54,11 @@ export class LedgerReadService {
     );
 
     const journals$ = journalIds$.pipe(
-      switchMap(journalIds => journalRepository.observeByIds(journalIds, workplaceId)),
+      switchMap(journalIds => journalRepository.observeByIds(workplaceId, journalIds)),
     );
 
     const allJournalTransactions$ = journalIds$.pipe(
-      switchMap(ids => transactionRepository.observeByJournals(ids, workplaceId)),
+      switchMap(ids => transactionRepository.observeByJournals(workplaceId, ids)),
     );
 
     const allAccountIds$ = allJournalTransactions$.pipe(
@@ -68,7 +68,7 @@ export class LedgerReadService {
     );
 
     const allAccounts$ = allAccountIds$.pipe(
-      switchMap((ids: string[]) => accountRepository.observeByIds(ids, workplaceId)),
+      switchMap((ids: string[]) => accountRepository.observeByIds(workplaceId, ids)),
     );
 
     return combineLatest([transactions$, journals$, allAccounts$, allJournalTransactions$]).pipe(

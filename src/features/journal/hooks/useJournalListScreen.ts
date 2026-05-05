@@ -1,4 +1,4 @@
-import { EnrichedJournal } from '@/src/types/domain';
+import { EnrichedJournal, WorkplaceId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo } from 'react';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
@@ -12,7 +12,7 @@ import { useJournalListViewModel } from './useJournalListViewModel';
  */
 export function useJournalListScreen(
   config: Parameters<typeof useJournalListViewModel>[0],
-  workplaceId: string,
+  workplaceId: WorkplaceId,
 ) {
   const vm = useJournalListViewModel(config, workplaceId);
 

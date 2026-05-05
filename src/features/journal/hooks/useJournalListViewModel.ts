@@ -11,7 +11,7 @@ import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
-import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import { EnrichedJournal, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
@@ -78,7 +78,7 @@ export function useJournalListViewModel(
     initialDateRange,
     defaultToCurrentMonth = true,
   }: UseJournalListViewModelParams,
-  workplaceId: string,
+  workplaceId: WorkplaceId,
 ): JournalListViewModel {
   const { isInitialized, defaultShareFormat } = useUI();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();

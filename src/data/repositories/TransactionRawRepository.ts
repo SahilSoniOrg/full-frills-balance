@@ -10,6 +10,7 @@ import { getRawAdapter } from '../database/DatabaseUtils';
 import Account, { AccountType } from '../models/Account';
 import Transaction, { TransactionType } from '../models/Transaction';
 import { transactionRepository } from './TransactionRepository';
+import { WorkplaceId } from '@/src/types/domain';
 import {
   AccountDelta,
   DailyDelta,
@@ -132,7 +133,7 @@ export class TransactionRawRepository {
    * Returns a Map of accountId -> latest runningBalance.
    */
   async getLatestBalancesRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountIds: string[],
     cutoffDate: number = Number.MAX_SAFE_INTEGER,
   ): Promise<Map<string, number>> {
@@ -208,7 +209,7 @@ export class TransactionRawRepository {
    * Used for balance verification and recomputation.
    */
   async getAccountSumRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     cutoffDate: number,
     isAssetOrExpense: boolean = true,
@@ -354,7 +355,7 @@ export class TransactionRawRepository {
    * Optimized for bulk currency conversion in wealth history.
    */
   async getDailyDeltasGroupedRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -457,7 +458,7 @@ export class TransactionRawRepository {
    * Optimized for breakdown reports.
    */
   async getAccountDeltasGroupedRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -840,7 +841,7 @@ export class TransactionRawRepository {
    * Returns { totalIncrease: number, totalDecrease: number }
    */
   async getAccountPeriodMetricsRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     startDate: number,
     endDate: number,
@@ -864,7 +865,7 @@ export class TransactionRawRepository {
    * Bulk version of getAccountPeriodMetricsRaw.
    */
   async getBulkAccountPeriodMetricsRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountConfigs: { accountId: string; isAssetOrExpense: boolean }[],
     startDate: number,
     endDate: number,
@@ -932,7 +933,7 @@ export class TransactionRawRepository {
    * Uses a lightweight count observer as a trigger to avoid bridge congestion.
    */
   observeAccountPeriodMetricsRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     startDate: number,
     endDate: number,
@@ -962,7 +963,7 @@ export class TransactionRawRepository {
    * Emits whenever active transactions change.
    */
   observeAccountDeltasGroupedRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -980,7 +981,7 @@ export class TransactionRawRepository {
    * Reactive version of unreconciled metrics.
    */
   observeUnreconciledMetricsRaw(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     reconciledAt: number | null,
     isAssetOrExpense: boolean = true,

@@ -5,11 +5,11 @@ import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { AccountBalance } from '@/src/types/domain';
+import { workplaceService } from '@/src/services/WorkplaceService';
+import { AccountBalance, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace, traceService } from '@/src/utils/TraceService';
 import { Money } from '../utils/money';
-import { workplaceService } from '@/src/services/WorkplaceService';
 
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 
@@ -310,15 +310,15 @@ export class BalanceService {
    */
   async getAccountBalance(
     accountId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     cutoffDate: number = Number.MAX_SAFE_INTEGER,
   ): Promise<AccountBalance> {
-    const account = await accountRepository.find(accountId, workplaceId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const latestTx = await transactionRepository.findLatestForAccount(
-      accountId,
       workplaceId,
+      accountId,
       cutoffDate,
     );
 
@@ -378,7 +378,7 @@ export class BalanceService {
    * Gets balances for all active accounts in batch.
    */
   async getAccountBalances(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     asOfDate?: number,
     targetDefaultCurrency?: string,
     parentTrace?: Trace,

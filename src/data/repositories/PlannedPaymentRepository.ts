@@ -6,6 +6,7 @@ import PlannedPayment, {
 import { analytics } from '@/src/services/analytics-service';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface PlannedPaymentPersistenceInput {
   name: string;
@@ -34,7 +35,7 @@ export class PlannedPaymentRepository {
     return this.db.collections.get<PlannedPayment>('planned_payments');
   }
 
-  observeAll(workplaceId: string) {
+  observeAll(workplaceId: WorkplaceId) {
     return this.plannedPayments
       .query(
         Q.where('workplace_id', workplaceId),
@@ -44,14 +45,14 @@ export class PlannedPaymentRepository {
       .observe();
   }
 
-  observeById(workplaceId: string, id: string) {
+  observeById(workplaceId: WorkplaceId, id: string) {
     return this.plannedPayments
       .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
       .observe()
       .pipe(map(results => results[0] ?? null));
   }
 
-  observeActive(workplaceId: string) {
+  observeActive(workplaceId: WorkplaceId) {
     return this.plannedPayments
       .query(
         Q.where('workplace_id', workplaceId),
@@ -62,7 +63,7 @@ export class PlannedPaymentRepository {
       .observe();
   }
 
-  async findAllActive(workplaceId: string): Promise<PlannedPayment[]> {
+  async findAllActive(workplaceId: WorkplaceId): Promise<PlannedPayment[]> {
     return this.plannedPayments
       .query(
         Q.where('workplace_id', workplaceId),
@@ -72,18 +73,21 @@ export class PlannedPaymentRepository {
       .fetch();
   }
 
-  async find(workplaceId: string, id: string): Promise<PlannedPayment | null> {
+  async find(workplaceId: WorkplaceId, id: string): Promise<PlannedPayment | null> {
     try {
-      const list = await this.plannedPayments
-        .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
-        .fetch();
-      return list[0] ?? null;
+      const plannedPayment = await this.plannedPayments.find(id);
+      if (plannedPayment.deletedAt) return null;
+      if (plannedPayment.workplaceId !== workplaceId) return null;
+      return plannedPayment;
     } catch {
       return null;
     }
   }
 
-  async create(workplaceId: string, data: PlannedPaymentPersistenceInput): Promise<PlannedPayment> {
+  async create(
+    workplaceId: WorkplaceId,
+    data: PlannedPaymentPersistenceInput,
+  ): Promise<PlannedPayment> {
     const result = await this.db.write(async () => {
       return this.plannedPayments.create(pp => {
         Object.assign(pp, data);
@@ -97,7 +101,7 @@ export class PlannedPaymentRepository {
   }
 
   async update(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     pp: PlannedPayment,
     updates: Partial<PlannedPaymentPersistenceInput>,
   ): Promise<PlannedPayment> {
@@ -115,7 +119,7 @@ export class PlannedPaymentRepository {
     });
   }
 
-  async delete(workplaceId: string, pp: PlannedPayment): Promise<void> {
+  async delete(workplaceId: WorkplaceId, pp: PlannedPayment): Promise<void> {
     const record = await this.find(workplaceId, pp.id);
     if (!record) {
       throw new Error('Planned payment not found');

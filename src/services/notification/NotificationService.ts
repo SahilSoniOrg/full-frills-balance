@@ -25,6 +25,7 @@ import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
+import { WorkplaceId } from '@/src/types/domain';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -115,7 +116,7 @@ export class NotificationService {
    * This triggers the heavy data observation and cache hydration during the
    * splash screen phase without blocking the first render.
    */
-  preWarm(workplaceId: string, defaultCurrencyCode: string): void {
+  preWarm(workplaceId: WorkplaceId, defaultCurrencyCode: string): void {
     if (Platform.OS === 'web') return;
     // Trigger the simulation chain. The shareReplay(1) in observeSafeToSpend
     // will ensure the first screen to subscribe gets the result instantly.
@@ -232,7 +233,7 @@ export class NotificationService {
   private safeToSpendByWorkplace = new Map<string, Observable<SafeToSpendResult>>();
 
   observeSafeToSpend(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
   ): Observable<SafeToSpendResult> {
     const cached = this.safeToSpendByWorkplace.get(workplaceId);
@@ -243,8 +244,8 @@ export class NotificationService {
     const obs = combineLatest([preferences.observe('safeToSpendDays')]).pipe(
       switchMap(([safeToSpendDays]) => {
         return combineLatest([
-          accountRepository.observeByType(AccountType.ASSET, workplaceId),
-          accountRepository.observeByType(AccountType.LIABILITY, workplaceId),
+          accountRepository.observeByType(workplaceId, AccountType.ASSET),
+          accountRepository.observeByType(workplaceId, AccountType.LIABILITY),
           budgetRepository.observeAllActive(workplaceId),
           plannedPaymentRepository.observeActive(workplaceId),
           accountRepository.observeAll(workplaceId),

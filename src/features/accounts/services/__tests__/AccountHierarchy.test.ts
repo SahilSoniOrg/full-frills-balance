@@ -4,9 +4,10 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { accountService } from '../AccountService';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('Account Hierarchy Integration', () => {
-  const workplaceId = 'test-wp-1';
+  const workplaceId = 'test-wp-1' as WorkplaceId;
 
   beforeEach(async () => {
     await database.write(async () => {

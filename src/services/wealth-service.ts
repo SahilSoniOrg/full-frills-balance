@@ -6,7 +6,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { AccountBalance } from '@/src/types/domain';
+import { AccountBalance, WorkplaceId } from '@/src/types/domain';
 import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { Money } from '@/src/utils/money';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -125,7 +125,7 @@ export const wealthService = {
    * 5. Record snapshots for the requested range.
    */
   async getNetWorthHistory(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,

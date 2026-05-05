@@ -10,7 +10,7 @@ import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { reportService } from '@/src/services/report-service';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
-import { AccountBalance } from '@/src/types/domain';
+import { AccountBalance, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { traceService } from '@/src/utils/TraceService';
 import {
@@ -61,7 +61,10 @@ class ReactiveDataService {
   /**
    * Get or create the shared dashboard data observable for the given currency and workplace.
    */
-  observeDashboardData(targetCurrency: string, workplaceId: string): Observable<DashboardData> {
+  observeDashboardData(
+    targetCurrency: string,
+    workplaceId: WorkplaceId,
+  ): Observable<DashboardData> {
     const cacheKey = `${targetCurrency}_${workplaceId}`;
     if (this._dashboardCache.has(cacheKey)) {
       return this._dashboardCache.get(cacheKey)!;
@@ -137,7 +140,7 @@ class ReactiveDataService {
    */
   observeAccountsSummary(
     targetCurrency: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Observable<DashboardSummaryData> {
     return this.observeDashboardData(targetCurrency, workplaceId).pipe(
       // We map out the transactions to avoid cloning/serialization overhead for this subscriber
@@ -153,7 +156,10 @@ class ReactiveDataService {
    * Observe monthly income and expense flow.
    * Derives data from the shared dashboard observable.
    */
-  observeMonthlyFlow(targetCurrency: string, workplaceId: string): Observable<MonthlyFlowData> {
+  observeMonthlyFlow(
+    targetCurrency: string,
+    workplaceId: WorkplaceId,
+  ): Observable<MonthlyFlowData> {
     return this.observeDashboardData(targetCurrency, workplaceId).pipe(
       switchMap(async ({ accounts, transactions }) => {
         try {
@@ -191,7 +197,7 @@ class ReactiveDataService {
    */
   observeOptimizedAccountList(
     targetCurrency: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Observable<DashboardSummaryData> {
     return combineLatest([
       accountRepository.observeAll(workplaceId),
@@ -317,7 +323,7 @@ class ReactiveDataService {
   observeAccountDashboard(
     accountId: string,
     targetCurrency: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Observable<{
     account: Account | null;
     balance: AccountBalance | null;
@@ -338,7 +344,7 @@ class ReactiveDataService {
         const targetAccount = accounts.find(a => a.id === accountId);
         if (!targetAccount) {
           // If not found in active, try to find in deleted (one-shot find for efficiency)
-          const deletedAccount = await accountRepository.findWithDeleted(accountId, workplaceId);
+          const deletedAccount = await accountRepository.findWithDeleted(workplaceId, accountId);
           if (!deletedAccount)
             return { account: null, balance: null, subAccounts: [], allAccounts: accounts };
 

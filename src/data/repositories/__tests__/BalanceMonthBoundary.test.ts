@@ -1,4 +1,5 @@
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('AccountRepository Month Boundary', () => {
   it('fetches correct balance', async () => {
@@ -17,7 +18,7 @@ describe('AccountRepository Month Boundary', () => {
     const rawItems = await accountRepository.getAccountListItemsRaw(
       startOfMonth,
       endOfMonth,
-      'test-wp',
+      'test-wp' as WorkplaceId,
     );
     console.log('Raw Items JSON:', JSON.stringify(rawItems, null, 2));
   });

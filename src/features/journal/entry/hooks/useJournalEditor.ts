@@ -7,7 +7,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domain';
+import { AccountRole, JournalEntryLine, TabType, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
@@ -40,7 +40,7 @@ export interface UseJournalEditorOptions {
  * useJournalEditor - Controller hook for the Journal Entry screen.
  * Consolidates state management and business logic for both simple and advanced modes.
  */
-export function useJournalEditor(workplaceId: string, options: UseJournalEditorOptions = {}) {
+export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEditorOptions = {}) {
   const { advancedMode, setAdvancedMode } = useUI();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const {

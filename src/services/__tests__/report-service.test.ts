@@ -5,6 +5,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ReportService } from '@/src/services/report-service';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
@@ -63,7 +64,7 @@ describe('ReportService', () => {
         mockTransactions,
       );
 
-      const result = await service.getExpenseBreakdown('wp-1', START_DATE, END_DATE);
+      const result = await service.getExpenseBreakdown('wp-1' as WorkplaceId, START_DATE, END_DATE);
 
       expect(result).toHaveLength(2);
       expect(result[1].accountName).toBe('Food');
@@ -95,7 +96,7 @@ describe('ReportService', () => {
         mockTransactions,
       );
 
-      const result = await service.getExpenseBreakdown('wp-1', START_DATE, END_DATE);
+      const result = await service.getExpenseBreakdown('wp-1' as WorkplaceId, START_DATE, END_DATE);
 
       // "Refunds" account has net -50, so it should be excluded from the list entirely
       expect(result).toHaveLength(1);
@@ -136,7 +137,7 @@ describe('ReportService', () => {
         mockTransactions,
       );
 
-      const result = await service.getIncomeVsExpense('wp-1', START_DATE, END_DATE);
+      const result = await service.getIncomeVsExpense('wp-1' as WorkplaceId, START_DATE, END_DATE);
 
       expect(result.income).toBe(2000);
       expect(result.expense).toBe(100);
@@ -169,7 +170,7 @@ describe('ReportService', () => {
         mockTransactions,
       );
 
-      const result = await service.getIncomeBreakdown('wp-1', START_DATE, END_DATE);
+      const result = await service.getIncomeBreakdown('wp-1' as WorkplaceId, START_DATE, END_DATE);
 
       expect(result).toHaveLength(2);
       expect(result[0].accountName).toBe('Salary');
@@ -217,7 +218,11 @@ describe('ReportService', () => {
         mockTransactions,
       );
 
-      const result = await service.getIncomeVsExpenseHistory('wp-1', START_DATE, END_DATE);
+      const result = await service.getIncomeVsExpenseHistory(
+        'wp-1' as WorkplaceId,
+        START_DATE,
+        END_DATE,
+      );
 
       expect(result.length).toBeGreaterThan(0);
 
@@ -251,7 +256,11 @@ describe('ReportService', () => {
       });
       (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
-      const result = await service.getIncomeVsExpenseHistory('wp-1', customStart, customEnd);
+      const result = await service.getIncomeVsExpenseHistory(
+        'wp-1' as WorkplaceId,
+        customStart,
+        customEnd,
+      );
 
       expect(result.length).toBeGreaterThan(0);
       expect(result[0].startDate).toBe(customStart);
@@ -293,7 +302,7 @@ describe('ReportService', () => {
         mockTransactions,
       );
 
-      const result = await service.getReportSnapshot('wp-1', START_DATE, END_DATE);
+      const result = await service.getReportSnapshot('wp-1' as WorkplaceId, START_DATE, END_DATE);
 
       expect(result.incomeVsExpense).toEqual({ income: 2000, expense: 100 });
       expect(result.expenseBreakdown[0].accountName).toBe('Food');

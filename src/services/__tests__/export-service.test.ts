@@ -3,6 +3,7 @@ import { exportService } from '@/src/services/export-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import JSZip from 'jszip';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {
@@ -188,7 +189,7 @@ describe('ExportService', () => {
       mockGet.mockImplementation((tableName: string) => mockCollections.get(tableName));
       (preferences.loadPreferences as jest.Mock).mockResolvedValue({ theme: 'dark' });
 
-      const zipData = await exportService.exportToJSON('test-workplace');
+      const zipData = await exportService.exportToJSON('test-workplace' as WorkplaceId);
       expect(zipData).toBeInstanceOf(Uint8Array);
 
       const zip = await JSZip.loadAsync(zipData);
@@ -217,7 +218,9 @@ describe('ExportService', () => {
         throw new Error('DB Fail');
       });
 
-      await expect(exportService.exportToJSON('test-workplace')).rejects.toThrow('DB Fail');
+      await expect(exportService.exportToJSON('test-workplace' as WorkplaceId)).rejects.toThrow(
+        'DB Fail',
+      );
       expect(logger.error).toHaveBeenCalled();
     });
   });

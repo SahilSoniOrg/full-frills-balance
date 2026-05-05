@@ -4,8 +4,9 @@ import { exportService } from '@/src/services/export-service';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
 import { useCallback } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
-export function useSettingsActions(workplaceId: string) {
+export function useSettingsActions(workplaceId: WorkplaceId) {
   const { requireRestart } = useUI();
 
   const exportToJSON = useCallback(async () => {

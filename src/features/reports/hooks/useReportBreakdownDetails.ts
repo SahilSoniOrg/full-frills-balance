@@ -11,6 +11,7 @@ import {
 import { useMemo, useState } from 'react';
 import { combineLatest, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { WorkplaceId } from '@/src/types/domain';
 
 interface UseReportBreakdownDetailsProps {
   globalExpenses: ExpenseCategory[];
@@ -21,7 +22,7 @@ interface UseReportBreakdownDetailsProps {
   selectedIncomeExpenseIndex: number | undefined;
   targetCurrency: string;
   theme: Theme;
-  workplaceId: string;
+  workplaceId: WorkplaceId;
 }
 
 /**

@@ -8,6 +8,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 
 // Use the types from the module
+import { WorkplaceId } from '@/src/types/domain';
 import type {
   WidgetDataSnapshot,
   WidgetThemeSnapshot,
@@ -90,7 +91,7 @@ function buildWidgetThemeSnapshot(
   };
 }
 
-export function useWidgetSync(workplaceId: string, defaultCurrencyCode: string) {
+export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked } = useUI();
   const { theme, themeMode } = useTheme();
   const { data: safeToSpendData } = useObservable(

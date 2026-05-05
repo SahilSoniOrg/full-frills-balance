@@ -3,6 +3,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { JournalService } from '@/src/features/journal/services/JournalService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { accountingService } from '@/src/utils/accountingService';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
@@ -58,7 +59,7 @@ describe('JournalService - saveJournalEntry', () => {
         description: 'Test Journal',
         journalDate: '2024-01-01',
         journalTime: '12:00:00',
-        workplaceId: 'wp-1',
+        workplaceId: 'wp-1' as WorkplaceId,
       });
 
       expect(result.success).toBe(true);
@@ -75,12 +76,16 @@ describe('JournalService - saveJournalEntry', () => {
         journalDate: '2024-01-01',
         journalTime: '12:00:00',
         journalId: 'journal123',
-        workplaceId: 'wp-1',
+        workplaceId: 'wp-1' as WorkplaceId,
       });
 
       expect(result.success).toBe(true);
       expect(result.action).toBe('updated');
-      expect(updateSpy).toHaveBeenCalledWith('journal123', expect.any(Object), 'wp-1');
+      expect(updateSpy).toHaveBeenCalledWith(
+        'journal123',
+        expect.any(Object),
+        'wp-1' as WorkplaceId,
+      );
     });
 
     it('should fail if description is empty', async () => {
@@ -89,7 +94,7 @@ describe('JournalService - saveJournalEntry', () => {
         description: '',
         journalDate: '2024-01-01',
         journalTime: '12:00:00',
-        workplaceId: 'wp-1',
+        workplaceId: 'wp-1' as WorkplaceId,
       });
 
       expect(result.success).toBe(false);
@@ -107,7 +112,7 @@ describe('JournalService - saveJournalEntry', () => {
         description: 'Test',
         journalDate: '2024-01-01',
         journalTime: '12:00:00',
-        workplaceId: 'wp-1',
+        workplaceId: 'wp-1' as WorkplaceId,
       });
 
       expect(result.success).toBe(false);
@@ -124,7 +129,7 @@ describe('JournalService - saveJournalEntry', () => {
         lines: validLines as any,
         description: 'Test Journal',
         journalDate: ts,
-        workplaceId: 'wp-1',
+        workplaceId: 'wp-1' as WorkplaceId,
       });
 
       expect(result.success).toBe(true);
@@ -132,7 +137,7 @@ describe('JournalService - saveJournalEntry', () => {
         expect.objectContaining({
           journalDate: ts,
         }),
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
     });
   });

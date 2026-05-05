@@ -4,6 +4,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { transactionService } from '../TransactionService';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionService', () => {
   let accountId: string;
@@ -18,7 +19,7 @@ describe('TransactionService', () => {
       name: 'Test Account',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     accountId = account.id;
 
@@ -26,7 +27,7 @@ describe('TransactionService', () => {
       name: 'Equity',
       accountType: AccountType.EQUITY,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     equityAccountId = equity.id;
 
@@ -34,7 +35,7 @@ describe('TransactionService', () => {
       name: 'Expense',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     expenseAccountId = expense.id;
   });
@@ -51,12 +52,12 @@ describe('TransactionService', () => {
             { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
       const transactions = await transactionService.getTransactionsWithAccountInfo(
-        journal.id,
-        'wp-1',
+        journal.id as WorkplaceId,
+        'wp-1' as WorkplaceId,
       );
 
       expect(transactions).toHaveLength(2);
@@ -90,10 +91,13 @@ describe('TransactionService', () => {
             { accountId: expenseAccountId, amount: 40, transactionType: TransactionType.CREDIT },
           ],
         },
-        'wp-1',
+        'wp-1' as WorkplaceId,
       );
 
-      const enriched = await transactionService.getEnrichedByJournal(journal.id, 'wp-1');
+      const enriched = await transactionService.getEnrichedByJournal(
+        journal.id as WorkplaceId,
+        'wp-1' as WorkplaceId,
+      );
 
       expect(enriched).toHaveLength(3);
       enriched.forEach(tx => {

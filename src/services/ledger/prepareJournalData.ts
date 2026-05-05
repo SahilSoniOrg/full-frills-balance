@@ -4,7 +4,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
@@ -19,10 +19,10 @@ export interface PreparedJournalData {
 
 export async function prepareJournalData(
   data: CreateJournalData,
-  workplaceId: string,
+  workplaceId: WorkplaceId,
 ): Promise<PreparedJournalData> {
   const accountIds = [...new Set(data.transactions.map(t => t.accountId))];
-  const accounts = await accountRepository.findAllByIds(accountIds, workplaceId);
+  const accounts = await accountRepository.findAllByIds(workplaceId, accountIds);
   const accountTypes = new Map(accounts.map(a => [a.id, a.accountType as AccountType]));
 
   const accountPrecisions = new Map<string, number>();

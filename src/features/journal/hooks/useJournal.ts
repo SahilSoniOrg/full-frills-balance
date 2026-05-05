@@ -1,9 +1,10 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import { of } from 'rxjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 export function useJournal(
-  workplaceId: string,
+  workplaceId: WorkplaceId,
   journalId: string | null,
   includeDeleted: boolean = false,
 ) {
@@ -13,7 +14,7 @@ export function useJournal(
     version,
   } = useObservable(
     () =>
-      journalId ? journalRepository.observeById(journalId, workplaceId, includeDeleted) : of(null),
+      journalId ? journalRepository.observeById(workplaceId, journalId, includeDeleted) : of(null),
     [journalId, includeDeleted],
     null,
   );

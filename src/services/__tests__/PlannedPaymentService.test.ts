@@ -4,6 +4,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/services/ledger');
 jest.mock('@/src/services/RebuildQueueService');
@@ -279,7 +280,11 @@ describe('PlannedPaymentService', () => {
         .spyOn(plannedPaymentRepository, 'update')
         .mockResolvedValue({} as any);
 
-      await plannedPaymentService.postOccurrence('wp-1', mockPP as any, mockPP.nextOccurrence);
+      await plannedPaymentService.postOccurrence(
+        'wp-1' as WorkplaceId,
+        mockPP as any,
+        mockPP.nextOccurrence,
+      );
 
       // Should use database.write to patch status, NOT ledgerWriteService.createJournal
       expect(database.write).toHaveBeenCalled();
@@ -307,7 +312,11 @@ describe('PlannedPaymentService', () => {
         .spyOn(plannedPaymentRepository, 'update')
         .mockResolvedValue({} as any);
 
-      await plannedPaymentService.postOccurrence('wp-1', mockPP as any, mockPP.nextOccurrence);
+      await plannedPaymentService.postOccurrence(
+        'wp-1' as WorkplaceId,
+        mockPP as any,
+        mockPP.nextOccurrence,
+      );
 
       expect(createJournalSpy).toHaveBeenCalled();
       expect(updatePpSpy).toHaveBeenCalled();
@@ -339,7 +348,11 @@ describe('PlannedPaymentService', () => {
         fetch: queryFetchSpy,
       });
 
-      await plannedPaymentService.skipOccurrence('wp-1', mockPP as any, mockPP.nextOccurrence);
+      await plannedPaymentService.skipOccurrence(
+        'wp-1' as WorkplaceId,
+        mockPP as any,
+        mockPP.nextOccurrence,
+      );
 
       expect(mockJournal.update).toHaveBeenCalled();
       expect(mockJournal.status).toBe('SKIPPED');

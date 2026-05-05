@@ -13,6 +13,7 @@ import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
 
 import { storage } from '@/src/utils/storage';
+import { WorkplaceId } from '@/src/types/domain';
 
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
 const REBUILD_LOCK_PREFIX = 'rebuild_lock_';
@@ -24,7 +25,7 @@ export class AccountingRebuildService {
    * @param fromDate Optional timestamp of the change. Will find the latest checkpoint before this date.
    */
   async rebuildAccountBalances(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     fromDate?: number,
   ): Promise<void> {
@@ -54,7 +55,7 @@ export class AccountingRebuildService {
    * Use this when calling from an existing transaction (e.g. IntegrityService batch).
    */
   async rebuildAccountBalancesInternal(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountId: string,
     fromDate?: number,
     silent: boolean = false,
@@ -63,7 +64,7 @@ export class AccountingRebuildService {
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
     );
 
-    const account = await accountRepository.find(accountId, workplaceId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found during running balance rebuild`);
 
     const precision = await currencyRepository.getPrecision(account.currencyCode);

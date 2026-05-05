@@ -3,7 +3,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { DisplayTransaction, EnrichedJournal } from '@/src/types/domain';
+import { DisplayTransaction, EnrichedJournal, WorkplaceId } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
 
@@ -23,7 +23,7 @@ export interface JournalFilterRange {
  * Hook to reactively get journals with pagination and account enrichment
  */
 export function useJournals(
-  workplaceId: string,
+  workplaceId: WorkplaceId,
   pageSize: number = AppConfig.defaults.journalPageSize,
   dateRange?: { startDate: number; endDate: number },
   searchQuery?: string,
@@ -116,7 +116,7 @@ export function useJournals(
 }
 
 export function useJournalTransactions(
-  workplaceId: string,
+  workplaceId: WorkplaceId,
   journalId: string | null,
   includeDeleted: boolean = false,
 ) {

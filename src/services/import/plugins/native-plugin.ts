@@ -26,6 +26,7 @@ import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/imp
 import { integrityService } from '@/src/services/integrity-service';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
+import { WorkplaceId } from '@/src/types/domain';
 
 interface NativeImportData {
   version: string;
@@ -81,7 +82,7 @@ export const nativePlugin: ImportPlugin = {
 
   async import(
     context: ImportFileContext,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
     logger.info('[NativePlugin] Starting import...');

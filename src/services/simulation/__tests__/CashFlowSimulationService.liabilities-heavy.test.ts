@@ -7,6 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
@@ -128,7 +129,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
       [],
       [cash],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
     ];
 
     for (const [index, value] of Object.entries(overrides ?? {})) {

@@ -6,6 +6,7 @@ import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { wealthService } from '@/src/services/wealth-service';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/services/exchange-rate-service');
@@ -109,7 +110,11 @@ describe('WealthService', () => {
   describe('getNetWorthHistory', () => {
     it('should return empty array if no assets/liabilities', async () => {
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([]);
-      const result = await wealthService.getNetWorthHistory('workplace-1', START_DATE, END_DATE);
+      const result = await wealthService.getNetWorthHistory(
+        'workplace-1' as WorkplaceId,
+        START_DATE,
+        END_DATE,
+      );
       expect(result).toEqual([]);
     });
 
@@ -136,7 +141,11 @@ describe('WealthService', () => {
       jest.useFakeTimers();
       jest.setSystemTime(MOCK_NOW);
 
-      const history = await wealthService.getNetWorthHistory('workplace-1', START_DATE, END_DATE);
+      const history = await wealthService.getNetWorthHistory(
+        'workplace-1' as WorkplaceId,
+        START_DATE,
+        END_DATE,
+      );
 
       // Expect Jan 31 to equal current balance (1000)
       const lastEntry = history.find(h => dayjs(h.date).isSame('2024-01-31', 'day'));
@@ -173,7 +182,11 @@ describe('WealthService', () => {
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
       (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
-      const history = await wealthService.getNetWorthHistory('workplace-1', START_DATE, END_DATE);
+      const history = await wealthService.getNetWorthHistory(
+        'workplace-1' as WorkplaceId,
+        START_DATE,
+        END_DATE,
+      );
 
       const lastEntry = history[history.length - 1];
       // Should only count child1 (1500), not parent1 + child1 (3000)

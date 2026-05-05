@@ -3,6 +3,7 @@ import Journal from '@/src/data/models/Journal';
 import { AccountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { Q } from '@nozbe/watermelondb';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface ReconciliationResult {
   accountId: string;
@@ -35,11 +36,11 @@ export class ReconciliationRepository {
    */
   async reconcileAccount(
     accountId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     expectedBalance?: number,
   ): Promise<ReconciliationResult> {
     // Get account details
-    const account = await this.accountRepository.find(accountId, workplaceId);
+    const account = await this.accountRepository.find(workplaceId, accountId);
     if (!account) {
       throw new Error(`Account ${accountId} not found`);
     }
@@ -84,7 +85,7 @@ export class ReconciliationRepository {
   async reconcilePeriod(
     startDate: number,
     endDate: number,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<PeriodReconciliation> {
     // Get all accounts
     const accounts = await this.accountRepository.findAll(workplaceId);
@@ -116,7 +117,7 @@ export class ReconciliationRepository {
    */
   async getAccountsNeedingAttention(
     varianceThreshold: number = 0.01,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<ReconciliationResult[]> {
     const accounts = await this.accountRepository.findAll(workplaceId);
 

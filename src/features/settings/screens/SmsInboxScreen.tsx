@@ -47,8 +47,8 @@ function SmsInboxContent() {
         new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as string[]),
       );
       const journals = await journalRepository.findByIds(
-        Array.from(new Set([...linkedIds, ...duplicateIds])),
         workplaceId,
+        Array.from(new Set([...linkedIds, ...duplicateIds])),
       );
       const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 

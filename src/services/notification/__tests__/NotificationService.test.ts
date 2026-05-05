@@ -11,6 +11,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { of } from 'rxjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
@@ -97,7 +98,7 @@ describe('NotificationService', () => {
         { id: 'l2', accountType: AccountType.LIABILITY, accountSubtype: AccountSubtype.MORTGAGE }, // Not liquid liability
       ];
 
-      (accountRepository.observeByType as jest.Mock).mockImplementation(type => {
+      (accountRepository.observeByType as jest.Mock).mockImplementation((_workplaceId, type) => {
         if (type === AccountType.ASSET) return of(mockAssets);
         if (type === AccountType.LIABILITY) return of(mockLiabilities);
         return of([]);
@@ -134,7 +135,7 @@ describe('NotificationService', () => {
         accountMap: new Map(),
       });
 
-      notificationService.observeSafeToSpend('test-wp', 'USD').subscribe(result => {
+      notificationService.observeSafeToSpend('test-wp' as WorkplaceId, 'USD').subscribe(result => {
         // Expected:
         // Liquid Assets = a1 (5000)
         // Liquid Liabilities = l1 (1000)

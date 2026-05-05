@@ -8,6 +8,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { preferences, preferencesMigration } from '@/src/utils/preferences';
 import { distinctUntilChanged, map, Observable } from 'rxjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 export class WorkplaceService {
   async createWorkplace(
@@ -25,13 +26,13 @@ export class WorkplaceService {
       defaultCurrencyCode: options.currencyCode,
     });
 
-    await this.bootstrapWorkplace(workplace.id, options);
+    await this.bootstrapWorkplace(workplace.id as WorkplaceId, options);
     analytics.logWorkplaceCreated(name, icon);
     return workplace;
   }
 
   private async bootstrapWorkplace(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     options: {
       initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
       initialCategories?: { name: string; type: AccountType; icon: IconName }[];
@@ -62,7 +63,7 @@ export class WorkplaceService {
     // 3. Create initial categories
     for (const cat of initialCategories) {
       // Avoid duplicates if already created as account
-      const existing = await accountService.findAccountByName(cat.name, workplaceId);
+      const existing = await accountService.findAccountByName(workplaceId, cat.name);
       if (existing) continue;
 
       await accountService.createAccount(
@@ -91,7 +92,7 @@ export class WorkplaceService {
     const workplaces = await this.getAllWorkplaces();
     if (workplaces.length > 0) {
       const first = workplaces[0];
-      preferences.setActiveWorkplaceId(first.id);
+      preferences.setActiveWorkplaceId(first.id as WorkplaceId);
       return first;
     }
 
@@ -99,7 +100,7 @@ export class WorkplaceService {
     const defaultWorkplace = await this.createWorkplace('Personal workplace', 'briefcase', {
       currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
     });
-    preferences.setActiveWorkplaceId(defaultWorkplace.id);
+    preferences.setActiveWorkplaceId(defaultWorkplace.id as WorkplaceId);
 
     // Migration: If there is a legacy currency in preferences, apply it to all workplaces
     await this.migrateLegacyCurrency();
@@ -141,14 +142,14 @@ export class WorkplaceService {
     }
 
     const { integrityService } = await import('@/src/services/integrity-service');
-    await integrityService.resetWorkplace(id);
+    await integrityService.resetWorkplace(id as WorkplaceId);
     analytics.logWorkplaceDeleted();
 
     // If we just deleted the active one, switch to another
     if (preferences.activeWorkplaceId === id) {
       const remaining = await this.getAllWorkplaces();
       if (remaining.length > 0) {
-        preferences.setActiveWorkplaceId(remaining[0].id);
+        preferences.setActiveWorkplaceId(remaining[0].id as WorkplaceId);
       }
     }
   }

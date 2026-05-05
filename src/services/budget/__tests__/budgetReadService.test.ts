@@ -6,6 +6,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('budgetReadService', () => {
   let expenseParentId: string;
@@ -20,7 +21,7 @@ describe('budgetReadService', () => {
       name: 'Checking',
       accountType: AccountType.ASSET,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     assetId = asset.id;
 
@@ -28,7 +29,7 @@ describe('budgetReadService', () => {
       name: 'Food',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     expenseParentId = parent.id;
 
@@ -37,7 +38,7 @@ describe('budgetReadService', () => {
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
       parentAccountId: parent.id,
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     expenseChildId = child.id;
   });
@@ -47,7 +48,7 @@ describe('budgetReadService', () => {
     const middleOfMonth = dayjs('2023-10-15').valueOf();
 
     const budget = await budgetRepository.create(
-      'wp-1',
+      'wp-1' as WorkplaceId,
       {
         name: 'Food Budget',
         amount: 500, // $500
@@ -68,7 +69,7 @@ describe('budgetReadService', () => {
           { accountId: assetId, amount: 150, transactionType: TransactionType.CREDIT },
         ],
       },
-      'wp-1',
+      'wp-1' as WorkplaceId,
     );
 
     // 2. Refund on child account
@@ -82,7 +83,7 @@ describe('budgetReadService', () => {
           { accountId: assetId, amount: 50, transactionType: TransactionType.DEBIT },
         ],
       },
-      'wp-1',
+      'wp-1' as WorkplaceId,
     );
 
     // 3. Out of bounds expense
@@ -96,20 +97,22 @@ describe('budgetReadService', () => {
           { accountId: assetId, amount: 100, transactionType: TransactionType.CREDIT },
         ],
       },
-      'wp-1',
+      'wp-1' as WorkplaceId,
     );
 
     // Wait briefly for DB indexing if needed
     await new Promise(r => setTimeout(r, 50));
 
     let lastUsage: any;
-    const sub = budgetReadService.observeBudgetUsage('wp-1', budget, month).subscribe(u => {
-      // We want the most recent emission.
-      // It will emit several times initially as observables resolve.
-      if (u && u.budgetAmount === 500) {
-        lastUsage = u;
-      }
-    });
+    const sub = budgetReadService
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget, month)
+      .subscribe(u => {
+        // We want the most recent emission.
+        // It will emit several times initially as observables resolve.
+        if (u && u.budgetAmount === 500) {
+          lastUsage = u;
+        }
+      });
 
     await new Promise(r => setTimeout(r, 200)); // give RxJS some ticks to evaluate
     sub.unsubscribe();
@@ -126,7 +129,7 @@ describe('budgetReadService', () => {
     const previousMonth = '2023-09';
 
     const budget = await budgetRepository.create(
-      'wp-1',
+      'wp-1' as WorkplaceId,
       {
         name: 'Food Budget',
         amount: 500,
@@ -147,18 +150,20 @@ describe('budgetReadService', () => {
           { accountId: assetId, amount: 200, transactionType: TransactionType.CREDIT },
         ],
       },
-      'wp-1',
+      'wp-1' as WorkplaceId,
     );
 
     // Wait briefly for DB indexing
     await new Promise(r => setTimeout(r, 50));
 
     let lastUsage: any;
-    const sub = budgetReadService.observeBudgetUsage('wp-1', budget, previousMonth).subscribe(u => {
-      if (u && u.budgetAmount === 500) {
-        lastUsage = u;
-      }
-    });
+    const sub = budgetReadService
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget, previousMonth)
+      .subscribe(u => {
+        if (u && u.budgetAmount === 500) {
+          lastUsage = u;
+        }
+      });
 
     await new Promise(r => setTimeout(r, 200));
     sub.unsubscribe();

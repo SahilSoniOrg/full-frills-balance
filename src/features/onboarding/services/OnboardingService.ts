@@ -4,6 +4,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { accountService } from '@/src/features/accounts';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics-service';
+import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
@@ -58,7 +59,7 @@ export class OnboardingService {
       logger.info(`[Onboarding] Created new target workplace: ${targetWorkplace.id}`);
     }
 
-    const targetWorkplaceId = targetWorkplace.id;
+    const targetWorkplaceId = targetWorkplace.id as WorkplaceId;
 
     // IMPORTANT: Set the newly created/updated workplace as the active one so the rest of the app points to it.
     preferences.setActiveWorkplaceId(targetWorkplaceId);
@@ -81,15 +82,15 @@ export class OnboardingService {
 
     // Track names we've already created or seen in this session to avoid DB collisions
     const seenNames = new Set<string>();
-    const allAccounts = await accountRepository.findAll(targetWorkplaceId!);
+    const allAccounts = await accountRepository.findAll(targetWorkplaceId);
     allAccounts.forEach(a => seenNames.add(a.name.toLowerCase()));
 
     // 2. Ensure system accounts exist for the selected currency
-    await accountService.getOpeningBalancesAccountId(selectedCurrency, targetWorkplaceId!);
-    await accountService.findOrCreateBalanceCorrectionAccount(selectedCurrency, targetWorkplaceId!);
+    await accountService.getOpeningBalancesAccountId(selectedCurrency, targetWorkplaceId);
+    await accountService.findOrCreateBalanceCorrectionAccount(selectedCurrency, targetWorkplaceId);
 
     // Refresh seen names after system accounts are created
-    const updatedAccounts = await accountRepository.findAll(targetWorkplaceId!);
+    const updatedAccounts = await accountRepository.findAll(targetWorkplaceId);
     updatedAccounts.forEach(a => seenNames.add(a.name.toLowerCase()));
 
     // 3. Create selected default and custom accounts

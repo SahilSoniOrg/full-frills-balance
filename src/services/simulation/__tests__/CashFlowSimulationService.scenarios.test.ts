@@ -8,6 +8,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -121,7 +122,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       [],
       [cash],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
     ];
 
     for (const [index, value] of Object.entries(overrides ?? {})) {

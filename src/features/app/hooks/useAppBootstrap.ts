@@ -16,12 +16,13 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { sharingService } from '@/src/services/SharingService';
+import { WorkplaceId } from '@/src/types/domain';
 
 /**
  * Bootstraps app-wide side effects that must not live in UI context.
  * Hardened to follow a 4-phase adaptive hydration pipeline.
  */
-export function useAppBootstrap(workplaceId: string, defaultCurrencyCode: string) {
+export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { isAppCurrentlyLocked, appPhase, dispatchBootEvent } = useUI();
 
   // SAFETY: phaseRef prevents stale closure captures in watchdog and ghost blocks

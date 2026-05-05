@@ -24,6 +24,7 @@ import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface BalanceVerificationResult {
   accountId: string;
@@ -77,10 +78,10 @@ export class IntegrityService {
    */
   async computeBalanceFromTransactions(
     accountId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     cutoffDate?: number,
   ): Promise<number> {
-    const account = await accountRepository.find(accountId, workplaceId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const effectiveCutoff = cutoffDate ?? Date.now();
@@ -117,11 +118,11 @@ export class IntegrityService {
    */
   async verifyAccountBalance(
     accountId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     cutoffDate: number = Date.now(),
   ): Promise<BalanceVerificationResult> {
     const start = Date.now();
-    const account = await accountRepository.find(accountId, workplaceId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) {
       throw new Error(`Account ${accountId} not found`);
     }
@@ -197,11 +198,11 @@ export class IntegrityService {
    */
   private async computeBalanceFromScratch(
     accountId: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     cutoffDate: number,
     limitTransactionId?: string,
   ): Promise<number> {
-    const account = await accountRepository.find(accountId, workplaceId);
+    const account = await accountRepository.find(workplaceId, accountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     // HIGH PERFORMANCE: Use raw SQL aggregate (SUM) from scratch (no snapshot)
@@ -219,7 +220,7 @@ export class IntegrityService {
   /**
    * Verifies all account balances.
    */
-  async verifyAllAccountBalances(workplaceId: string): Promise<BalanceVerificationResult[]> {
+  async verifyAllAccountBalances(workplaceId: WorkplaceId): Promise<BalanceVerificationResult[]> {
     const accounts = await accountRepository.findAll(workplaceId);
 
     const results: BalanceVerificationResult[] = [];
@@ -239,7 +240,7 @@ export class IntegrityService {
   /**
    * Repairs a single account's running balances.
    */
-  async repairAccountBalance(workplaceId: string, accountId: string): Promise<boolean> {
+  async repairAccountBalance(workplaceId: WorkplaceId, accountId: string): Promise<boolean> {
     try {
       await accountingRebuildService.rebuildAccountBalances(workplaceId, accountId);
       logger.info(`[IntegrityService] Repaired running balances for account ${accountId}`);
@@ -277,7 +278,7 @@ export class IntegrityService {
    * Unlike runStartupCheck(), this always scans every account.
    */
   async forceRunCheck(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<IntegrityCheckResult> {
     const totalStart = Date.now();
@@ -384,7 +385,7 @@ export class IntegrityService {
    *  - When a crash flag was written by the previous session.
    * Normal warm starts skip it entirely.
    */
-  async runStartupCheck(workplaceId: string): Promise<IntegrityCheckResult> {
+  async runStartupCheck(workplaceId: WorkplaceId): Promise<IntegrityCheckResult> {
     logger.info('[IntegrityService] Starting startup integrity check...');
 
     await this.scanForNullAccountTransactions();
@@ -451,7 +452,10 @@ export class IntegrityService {
   /**
    * Clears all data for a specific workplace and optionally deletes the workplace itself.
    */
-  async resetWorkplace(workplaceId: string, keepWorkplaceRecord: boolean = false): Promise<void> {
+  async resetWorkplace(
+    workplaceId: WorkplaceId,
+    keepWorkplaceRecord: boolean = false,
+  ): Promise<void> {
     logger.warn(`[IntegrityService] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
     try {
       const scopedTables = [

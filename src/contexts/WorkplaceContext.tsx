@@ -2,9 +2,10 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface WorkplaceContextType {
-  readonly workplaceId: string;
+  readonly workplaceId: WorkplaceId;
   readonly defaultCurrencyCode: string;
   setWorkplaceId: (id: string) => void;
 }
@@ -13,7 +14,7 @@ const WorkplaceContext = createContext<WorkplaceContextType | null>(null);
 
 export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<{
-    workplaceId: string;
+    workplaceId: WorkplaceId;
     defaultCurrencyCode: string;
   } | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -35,7 +36,7 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           // Set initial state from the workplace model
           setState({
-            workplaceId: workplace.id,
+            workplaceId: workplace.id as WorkplaceId,
             defaultCurrencyCode: workplace.defaultCurrencyCode,
           });
           setIsLoaded(true);
@@ -44,7 +45,7 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
         workplaceSubscription = workplace.observe().subscribe(w => {
           if (isMounted && w) {
             setState({
-              workplaceId: w.id,
+              workplaceId: w.id as WorkplaceId,
               defaultCurrencyCode: w.defaultCurrencyCode,
             });
           }
@@ -105,7 +106,7 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Invalid workplaceId');
     }
     const oldId = preferences.activeWorkplaceId;
-    preferences.setActiveWorkplaceId(id);
+    preferences.setActiveWorkplaceId(id as WorkplaceId);
     if (oldId && oldId !== id) {
       const { analytics } = require('@/src/services/analytics-service');
       analytics.logWorkplaceSwitched(oldId, id);

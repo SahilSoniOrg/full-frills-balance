@@ -1,6 +1,7 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -71,7 +72,7 @@ const simulate = (overrides: OverrideMap = {} as any, planned: SimulateArgs[1] =
     [],
     [checkingAccount, creditCardAccount],
     'USD',
-    'test-wp',
+    'test-wp' as WorkplaceId,
   ];
 
   Object.entries(overrides).forEach(([index, value]) => {

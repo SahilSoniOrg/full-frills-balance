@@ -3,11 +3,12 @@ import AuditLog, { AuditEntityType } from '@/src/data/models/AuditLog';
 import { AuditLogEntry } from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
 import { useObservable } from '@/src/hooks/useObservable';
 import { auditService } from '@/src/services/audit-service';
+import { WorkplaceId } from '@/src/types/domain';
 
 export function useAuditLogs(params: {
   entityType?: AuditEntityType;
   entityId?: string;
-  workplaceId: string;
+  workplaceId: WorkplaceId;
 }) {
   const { entityType, entityId, workplaceId } = params;
   const isFiltered = !!(entityType && entityId);

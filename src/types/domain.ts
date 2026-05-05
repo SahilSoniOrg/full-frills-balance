@@ -2,6 +2,18 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 
+export declare const __brand: unique symbol;
+export type Brand<T, B> = T & { readonly [__brand]: B };
+
+export type WorkplaceId = Brand<string, 'WorkplaceId'>;
+export const asWorkplaceId = (id: string): WorkplaceId => id as WorkplaceId;
+
+export type AccountId = Brand<string, 'AccountId'>;
+export type JournalId = Brand<string, 'JournalId'>;
+export type TransactionId = Brand<string, 'TransactionId'>;
+export type BudgetId = Brand<string, 'BudgetId'>;
+export type PlannedPaymentId = Brand<string, 'PlannedPaymentId'>;
+
 export type TabType = 'expense' | 'income' | 'transfer';
 export type AccountRole = 'source' | 'destination';
 

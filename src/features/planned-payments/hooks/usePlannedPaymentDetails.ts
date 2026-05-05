@@ -8,10 +8,11 @@ import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 import { of } from 'rxjs';
+import { WorkplaceId } from '@/src/types/domain';
 
-export function usePlannedPaymentDetails(id: string, workplaceId: string) {
+export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const { data: item, isLoading: isItemLoading } = useObservable<PlannedPayment | null>(
-    () => (id ? plannedPaymentRepository.observeById(id, workplaceId) : of(null)),
+    () => (id ? plannedPaymentRepository.observeById(workplaceId, id) : of(null)),
     [id],
     null,
   );

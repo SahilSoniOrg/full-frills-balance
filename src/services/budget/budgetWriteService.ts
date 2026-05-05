@@ -1,13 +1,14 @@
 import Budget from '@/src/data/models/Budget';
 import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { analytics } from '@/src/services/analytics-service';
+import { WorkplaceId } from '@/src/types/domain';
 
 export class BudgetWriteService {
   /**
    * Creates a new budget with the specified scope accounts.
    */
   async createBudget(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     data: BudgetInput,
     accountIds: string[],
   ): Promise<Budget> {
@@ -28,7 +29,7 @@ export class BudgetWriteService {
    * Updates a budget and replaces its scopes with the new account IDs.
    */
   async updateBudget(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     budget: Budget,
     data: Partial<BudgetInput>,
     accountIds: string[],
@@ -48,7 +49,7 @@ export class BudgetWriteService {
   /**
    * Hard-deletes a budget and all its scopes.
    */
-  async deleteBudget(workplaceId: string, budget: Budget): Promise<void> {
+  async deleteBudget(workplaceId: WorkplaceId, budget: Budget): Promise<void> {
     await budgetRepository.delete(workplaceId, budget);
 
     // Track Analytics

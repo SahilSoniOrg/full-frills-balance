@@ -3,6 +3,7 @@ import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -108,7 +109,8 @@ describe('liability flow issue', () => {
       [],
       [cashAccount, creditCardAccount],
       'USD',
-      'test-wp',
+      'test-wp' as WorkplaceId,
+      60,
     );
 
     console.log(

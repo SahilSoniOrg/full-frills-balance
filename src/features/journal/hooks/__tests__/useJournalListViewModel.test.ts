@@ -2,7 +2,7 @@ import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { logger } from '@/src/utils/logger';
 import { act, renderHook } from '@testing-library/react-native';
 import { useJournalListViewModel } from '../useJournalListViewModel';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 
 // Purely mock everything to avoid model compilation issues
 jest.mock('@/src/features/journal/hooks/useJournals', () => ({
@@ -132,7 +132,7 @@ describe('useJournalListViewModel', () => {
         {
           emptyState: { title: 'Empty', subtitle: 'None' },
         },
-        'test-wp',
+        'test-wp' as WorkplaceId,
       ),
     );
 
@@ -157,7 +157,7 @@ describe('useJournalListViewModel', () => {
         {
           emptyState: { title: 'Empty', subtitle: 'None' },
         },
-        'test-wp',
+        'test-wp' as WorkplaceId,
       ),
     );
 
@@ -174,7 +174,7 @@ describe('useJournalListViewModel', () => {
         {
           emptyState: { title: 'Empty', subtitle: 'None' },
         },
-        'test-wp',
+        'test-wp' as WorkplaceId,
       ),
     );
 
@@ -193,7 +193,7 @@ describe('useJournalListViewModel', () => {
         {
           emptyState: { title: 'Empty', subtitle: 'None' },
         },
-        'test-wp',
+        'test-wp' as WorkplaceId,
       ),
     );
 
@@ -209,7 +209,7 @@ describe('useJournalListViewModel', () => {
         {
           emptyState: { title: 'Empty', subtitle: 'None' },
         },
-        'test-wp',
+        'test-wp' as WorkplaceId,
       ),
     );
 

@@ -1,3 +1,4 @@
+import { WorkplaceId } from '@/src/types/domain';
 /**
  * Import Plugin Types
  *
@@ -68,7 +69,7 @@ export interface ImportPlugin {
    */
   import(
     context: ImportFileContext,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats>;
 }

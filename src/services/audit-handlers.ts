@@ -3,7 +3,7 @@ import { JournalStatus } from '@/src/data/models/Journal';
 import { accountService } from '@/src/features/accounts/services/AccountService';
 import { journalService } from '@/src/features/journal/services/JournalService';
 import { revertRegistry } from '@/src/services/revert-registry';
-import { AccountAuditState, JournalAuditState } from '@/src/types/domain';
+import { AccountAuditState, JournalAuditState, WorkplaceId } from '@/src/types/domain';
 
 /**
  * Register all audit revert handlers.
@@ -18,7 +18,7 @@ revertRegistry.register(
     entityId,
     changes: { before?: JournalAuditState; after?: JournalAuditState },
     action,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ) => {
     if (action === AuditAction.CREATE) {
       await journalService.deleteJournal(entityId, workplaceId);
@@ -62,7 +62,7 @@ revertRegistry.register(
     entityId,
     changes: { before?: AccountAuditState; after?: AccountAuditState },
     action,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ) => {
     if (action === AuditAction.CREATE) {
       await accountService.deleteAccount(entityId, workplaceId);

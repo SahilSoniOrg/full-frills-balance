@@ -15,6 +15,7 @@ import { balanceService } from '@/src/services/BalanceService';
 import { IntegrityService } from '@/src/services/integrity-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('E2E Workflows', () => {
   let integrityService: IntegrityService;
@@ -39,9 +40,9 @@ describe('E2E Workflows', () => {
           accountType: AccountType.ASSET,
           currencyCode: 'USD',
           initialBalance: 200,
-          workplaceId: 'test-workplace',
+          workplaceId: 'test-workplace' as WorkplaceId,
         },
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
       );
       // Flush the initial balance journal creation
       await rebuildQueueService.flush();
@@ -50,13 +51,13 @@ describe('E2E Workflows', () => {
         name: 'Food',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
-        workplaceId: 'test-workplace',
+        workplaceId: 'test-workplace' as WorkplaceId,
       });
       const transport = await accountRepository.create({
         name: 'Transport',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
-        workplaceId: 'test-workplace',
+        workplaceId: 'test-workplace' as WorkplaceId,
       });
 
       // Morning: Coffee
@@ -70,7 +71,7 @@ describe('E2E Workflows', () => {
             { accountId: food.id, amount: 5.5, transactionType: TransactionType.DEBIT },
           ],
         },
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
       );
 
       // Lunch
@@ -84,7 +85,7 @@ describe('E2E Workflows', () => {
             { accountId: food.id, amount: 15.0, transactionType: TransactionType.DEBIT },
           ],
         },
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
       );
 
       // Bus ride
@@ -98,7 +99,7 @@ describe('E2E Workflows', () => {
             { accountId: transport.id, amount: 2.5, transactionType: TransactionType.DEBIT },
           ],
         },
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
       );
 
       // Ensure all rebuilds complete
@@ -107,17 +108,17 @@ describe('E2E Workflows', () => {
       // Verify balances
       const walletBalance = await balanceService.getAccountBalance(
         wallet.id,
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
         Date.now() + 5000,
       );
       const foodBalance = await balanceService.getAccountBalance(
         food.id,
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
         Date.now() + 5000,
       );
       const transportBalance = await balanceService.getAccountBalance(
         transport.id,
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
         Date.now() + 5000,
       );
 
@@ -129,7 +130,7 @@ describe('E2E Workflows', () => {
       // Verify integrity
       const walletIntegrity = await integrityService.verifyAccountBalance(
         wallet.id,
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
         Date.now() + 5000,
       );
       expect(walletIntegrity.matches).toBe(true);
@@ -146,19 +147,19 @@ describe('E2E Workflows', () => {
           accountType: AccountType.ASSET,
           currencyCode: 'USD',
           initialBalance: 500,
-          workplaceId: 'test-workplace',
+          workplaceId: 'test-workplace' as WorkplaceId,
         },
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
       );
       // Reset the date of the initial balance to be in the past
-      const [initialJournal] = await journalRepository.findAll('test-workplace');
+      const [initialJournal] = await journalRepository.findAll('test-workplace' as WorkplaceId);
       await database.write(async () => {
         await initialJournal.update(j => {
           j.journalDate = FIXED_DATE;
         });
         const journalTransactions = await transactionRepository.findByJournal(
-          initialJournal.id,
-          'test-workplace',
+          initialJournal.id as WorkplaceId,
+          'test-workplace' as WorkplaceId,
         );
         for (const tx of journalTransactions) {
           await tx.update((t: any) => {
@@ -174,7 +175,7 @@ describe('E2E Workflows', () => {
         name: 'Shopping',
         accountType: AccountType.EXPENSE,
         currencyCode: 'USD',
-        workplaceId: 'test-workplace',
+        workplaceId: 'test-workplace' as WorkplaceId,
       });
 
       // Make a purchase
@@ -188,22 +189,32 @@ describe('E2E Workflows', () => {
             { accountId: expense.id, amount: 100, transactionType: TransactionType.DEBIT },
           ],
         },
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
       );
 
       // Verify balance after purchase
       await rebuildQueueService.flush();
-      let cashBalance = await balanceService.getAccountBalance(cash.id, 'test-workplace');
+      let cashBalance = await balanceService.getAccountBalance(
+        cash.id,
+        'test-workplace' as WorkplaceId,
+      );
       expect(cashBalance.balance).toBe(400);
 
       // Reverse the journal
-      await journalService.createReversalJournal(journal.id, 'Refund', 'test-workplace');
+      await journalService.createReversalJournal(
+        journal.id,
+        'Refund',
+        'test-workplace' as WorkplaceId,
+      );
 
       // Ensure rebuilds complete
       await rebuildQueueService.flush();
 
       // Verify balance is restored
-      cashBalance = await balanceService.getAccountBalance(cash.id, 'test-workplace');
+      cashBalance = await balanceService.getAccountBalance(
+        cash.id,
+        'test-workplace' as WorkplaceId,
+      );
       expect(cashBalance.balance).toBe(500);
     }, 20000);
   });
@@ -215,13 +226,13 @@ describe('E2E Workflows', () => {
         name: 'USD Cash',
         accountType: AccountType.ASSET,
         currencyCode: 'USD',
-        workplaceId: 'test-workplace',
+        workplaceId: 'test-workplace' as WorkplaceId,
       });
       const eurExpense = await accountRepository.create({
         name: 'EUR Expense',
         accountType: AccountType.EXPENSE,
         currencyCode: 'EUR',
-        workplaceId: 'test-workplace',
+        workplaceId: 'test-workplace' as WorkplaceId,
       });
 
       // Spend 100 EUR at 1.10 USD/EUR rate (= 110 USD in journal currency)
@@ -240,14 +251,20 @@ describe('E2E Workflows', () => {
             },
           ],
         },
-        'test-workplace',
+        'test-workplace' as WorkplaceId,
       );
 
       // Ensure rebuilds complete
       await rebuildQueueService.flush();
 
-      const usdBalance = await balanceService.getAccountBalance(usdCash.id, 'test-workplace');
-      const eurBalance = await balanceService.getAccountBalance(eurExpense.id, 'test-workplace');
+      const usdBalance = await balanceService.getAccountBalance(
+        usdCash.id,
+        'test-workplace' as WorkplaceId,
+      );
+      const eurBalance = await balanceService.getAccountBalance(
+        eurExpense.id,
+        'test-workplace' as WorkplaceId,
+      );
 
       expect(usdBalance.balance).toBe(-110);
       expect(eurBalance.balance).toBe(100);

@@ -7,7 +7,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
-import { DisplayTransaction } from '@/src/types/domain';
+import { DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -32,7 +32,7 @@ export class BudgetReadService {
    * @param targetMonth Optional YYYY-MM string to evaluate. Defaults to current month.
    */
   observeBudgetUsage(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     budget: Budget,
     referenceDate?: number | string,
   ): Observable<BudgetUsage> {
@@ -44,7 +44,7 @@ export class BudgetReadService {
           return combineLatest(scopes.map(s => s.account.observe()));
         }),
       ),
-      accountRepository.observeByType(AccountType.EXPENSE, budget.workplaceId),
+      accountRepository.observeByType(workplaceId, AccountType.EXPENSE),
     ]).pipe(
       switchMap(([observedBudget, scopeAccounts, allExpenses]) => {
         let ref: number;
@@ -154,7 +154,7 @@ export class BudgetReadService {
    * transactions within the budget's targeted month bounds.
    */
   observeBudgetDisplayTransactions(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     budget: Budget,
     referenceDate?: number | string,
   ): Observable<DisplayTransaction[]> {

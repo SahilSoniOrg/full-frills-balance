@@ -3,6 +3,7 @@ import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
+import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/ImportRepository', () => ({
@@ -131,7 +132,7 @@ describe('NativeImportPlugin', () => {
 
     it('performs full import process', async () => {
       const context = { json: validNativeData } as ImportFileContext;
-      const stats = await nativePlugin.import(context, 'w1');
+      const stats = await nativePlugin.import(context, 'w1' as WorkplaceId);
 
       expect(integrityService.resetWorkplace).toHaveBeenCalledWith('w1');
       expect(preferences.restorePreferences).toHaveBeenCalledWith(validNativeData.preferences);
@@ -156,18 +157,22 @@ describe('NativeImportPlugin', () => {
 
     it('throws error for missing parsed JSON', async () => {
       const context = { json: null } as unknown as ImportFileContext;
-      await expect(nativePlugin.import(context, 'w1')).rejects.toThrow(/Invalid JSON/);
+      await expect(nativePlugin.import(context, 'w1' as WorkplaceId)).rejects.toThrow(
+        /Invalid JSON/,
+      );
     });
 
     it('throws error for missing sections', async () => {
       const incompleteData = { version: '1.0' };
       const context = { json: incompleteData } as ImportFileContext;
-      await expect(nativePlugin.import(context, 'w1')).rejects.toThrow(/missing required data/);
+      await expect(nativePlugin.import(context, 'w1' as WorkplaceId)).rejects.toThrow(
+        /missing required data/,
+      );
     });
 
     it('remaps IDs correctly and maintains references', async () => {
       const context = { json: validNativeData } as ImportFileContext;
-      await nativePlugin.import(context, 'w1');
+      await nativePlugin.import(context, 'w1' as WorkplaceId);
 
       const batchInsertCall = (importRepository.batchInsert as jest.Mock).mock.calls[0];
       const data = batchInsertCall[1];

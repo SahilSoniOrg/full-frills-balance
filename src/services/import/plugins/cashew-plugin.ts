@@ -5,7 +5,7 @@ import { BatchImportData, importRepository } from '@/src/data/repositories/Impor
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
@@ -193,7 +193,7 @@ export const cashewPlugin: ImportPlugin = {
 
   async import(
     context: ImportFileContext,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     onProgress?: (message: string, progress: number) => void,
   ): Promise<ImportStats> {
     logger.info('[CashewPlugin] Starting import...');

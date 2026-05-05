@@ -4,6 +4,7 @@ import BudgetScope from '@/src/data/models/BudgetScope';
 import { analytics } from '@/src/services/analytics-service';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface BudgetInput {
   name: string;
@@ -32,7 +33,7 @@ export class BudgetRepository {
     return this.db.collections.get<BudgetScope>('budget_scopes');
   }
 
-  observeAllActive(workplaceId: string) {
+  observeAllActive(workplaceId: WorkplaceId) {
     return this.budgets
       .query(
         Q.where('workplace_id', workplaceId),
@@ -42,44 +43,46 @@ export class BudgetRepository {
       .observeWithColumns(['name', 'amount', 'currency_code', 'start_month', 'active']);
   }
 
-  observeScopes(workplaceId: string, budgetId: string) {
+  observeScopes(workplaceId: WorkplaceId, budgetId: string) {
     return this.budgetScopes
       .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))
       .observe();
   }
 
-  async getScopes(workplaceId: string, budgetId: string): Promise<BudgetScope[]> {
+  async getScopes(workplaceId: WorkplaceId, budgetId: string): Promise<BudgetScope[]> {
     return await this.budgetScopes
       .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))
       .fetch();
   }
 
-  async getScopesByBudgetIds(workplaceId: string, budgetIds: string[]): Promise<BudgetScope[]> {
+  async getScopesByBudgetIds(
+    workplaceId: WorkplaceId,
+    budgetIds: string[],
+  ): Promise<BudgetScope[]> {
     if (budgetIds.length === 0) return [];
     return await this.budgetScopes
       .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', Q.oneOf(budgetIds)))
       .fetch();
   }
 
-  observeById(workplaceId: string, id: string) {
+  observeById(workplaceId: WorkplaceId, id: string) {
     return this.budgets
       .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
       .observe()
       .pipe(map(budgets => budgets[0] || null));
   }
 
-  async find(workplaceId: string, id: string): Promise<Budget | null> {
+  async find(workplaceId: WorkplaceId, id: string): Promise<Budget | null> {
     try {
-      const budgets = await this.budgets
-        .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
-        .fetch();
-      return budgets[0] || null;
+      const budget = await this.budgets.find(id);
+      if (budget.workplaceId !== workplaceId) return null;
+      return budget;
     } catch {
       return null;
     }
   }
 
-  async create(workplaceId: string, data: BudgetInput, accountIds: string[]): Promise<Budget> {
+  async create(workplaceId: WorkplaceId, data: BudgetInput, accountIds: string[]): Promise<Budget> {
     return await this.db.write(async () => {
       const budget = await this.budgets.create(record => {
         record.workplaceId = workplaceId;
@@ -102,7 +105,7 @@ export class BudgetRepository {
         this.budgetScopes.prepareCreate(scope => {
           scope.workplaceId = workplaceId;
           scope.budget.set(budget);
-          scope.account.id = accountId;
+          scope.accountId = accountId;
           scope.createdAt = new Date();
           scope.updatedAt = new Date();
         }),
@@ -115,7 +118,7 @@ export class BudgetRepository {
   }
 
   async update(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     budget: Budget,
     updates: Partial<BudgetInput>,
     accountIds: string[],
@@ -154,7 +157,7 @@ export class BudgetRepository {
         this.budgetScopes.prepareCreate(scope => {
           scope.workplaceId = workplaceId;
           scope.budget.set(budget);
-          scope.account.id = accountId;
+          scope.accountId = accountId;
           scope.createdAt = new Date();
           scope.updatedAt = new Date();
         }),
@@ -167,7 +170,7 @@ export class BudgetRepository {
     });
   }
 
-  async delete(workplaceId: string, budget: Budget): Promise<void> {
+  async delete(workplaceId: WorkplaceId, budget: Budget): Promise<void> {
     return await this.db.write(async () => {
       //get budget to check it belongs to current workplaceId
       const existingBudget = await this.find(workplaceId, budget.id);

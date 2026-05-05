@@ -17,12 +17,12 @@ export function useBudgetEditViewModel() {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const budgetId = params.id as string;
   const { data: expenseAccounts = [] } = useObservable(
-    () => accountRepository.observeByType(AccountType.EXPENSE, workplaceId),
+    () => accountRepository.observeByType(workplaceId, AccountType.EXPENSE),
     [workplaceId],
     [],
   );
   const { data: assetAccounts = [] } = useObservable(
-    () => accountRepository.observeByType(AccountType.ASSET, workplaceId),
+    () => accountRepository.observeByType(workplaceId, AccountType.ASSET),
     [workplaceId],
     [],
   );

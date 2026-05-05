@@ -24,6 +24,7 @@ import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
 import { AccountSimulationSummary, Flow, SimulationContext, SimulationRunResult } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
+import { WorkplaceId } from '@/src/types/domain';
 
 export class CashFlowSimulationService {
   /**
@@ -39,7 +40,7 @@ export class CashFlowSimulationService {
     usages: BudgetUsage[],
     allAccounts: Account[],
     resultCurrency: string,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     simulationDays: number = AppConfig.defaults.safeToSpendDays,
     trace?: Trace,
   ): Promise<SimulationRunResult> {
@@ -398,7 +399,7 @@ export class CashFlowSimulationService {
 
   // --- Normalization Helpers ---
 
-  private async fetchMetadata(lbs: { account: Account }[], workplaceId: string) {
+  private async fetchMetadata(lbs: { account: Account }[], workplaceId: WorkplaceId) {
     const map = new Map<string, any>();
     if (lbs.length === 0) return map;
 
@@ -418,7 +419,7 @@ export class CashFlowSimulationService {
     time: TimeContext,
     toCurrency: string,
     rateMap: Map<string, number>,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ) {
     const balances = new Map<string, number>();
     const settledAmounts = new Map<string, number>();
@@ -464,9 +465,9 @@ export class CashFlowSimulationService {
     return { statementBalances: balances, settledSinceStatement: settledAmounts };
   }
 
-  private async fetchJournalTransactions(journals: Journal[], workplaceId: string) {
+  private async fetchJournalTransactions(journals: Journal[], workplaceId: WorkplaceId) {
     const ids = journals.map(j => j.id);
-    const txs = ids.length > 0 ? await transactionRepository.findByJournals(ids, workplaceId) : [];
+    const txs = ids.length > 0 ? await transactionRepository.findByJournals(workplaceId, ids) : [];
     const map = new Map<string, Transaction[]>();
     for (const tx of txs) {
       const list = map.get(tx.journalId) || [];
@@ -479,7 +480,7 @@ export class CashFlowSimulationService {
   private async fetchBudgetCategoryMap(
     budgets: Budget[],
     allAccounts: Account[],
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ) {
     const map = new Map<string, Set<string>>();
     if (budgets.length === 0) return map;

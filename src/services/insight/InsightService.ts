@@ -10,6 +10,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
+import { WorkplaceId } from '@/src/types/domain';
 
 export interface Insight {
   id: string;
@@ -33,7 +34,7 @@ export class InsightService {
    * Triggers heavy SQL queries and pattern analysis during the splash screen
    * phase without blocking the first render.
    */
-  preWarm(workplaceId: string): void {
+  preWarm(workplaceId: WorkplaceId): void {
     // Trigger the pattern matching chain.
     const sub = this.observePatterns(workplaceId).subscribe();
 
@@ -41,16 +42,16 @@ export class InsightService {
     setTimeout(() => sub.unsubscribe(), 15000);
   }
 
-  observeDismissedPatterns(workplaceId: string): Observable<Insight[]> {
+  observeDismissedPatterns(workplaceId: WorkplaceId): Observable<Insight[]> {
     return this.observePatternsInternal(workplaceId, true);
   }
 
-  observePatterns(workplaceId: string): Observable<Insight[]> {
+  observePatterns(workplaceId: WorkplaceId): Observable<Insight[]> {
     return this.observePatternsInternal(workplaceId, false);
   }
 
   private observePatternsInternal(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     onlyDismissed: boolean,
   ): Observable<Insight[]> {
     const insightsConfig = AppConfig.insights;
@@ -84,7 +85,7 @@ export class InsightService {
           if (acc?.accountType !== AccountType.EXPENSE) continue;
 
           const journalIds = (candidate.journalIds || '').split(',');
-          const transactions = await transactionRepository.findByJournals(journalIds, workplaceId);
+          const transactions = await transactionRepository.findByJournals(workplaceId, journalIds);
 
           // Group by description to handle case where two different subscriptions have same amount
           const byDescription = new Map<string, typeof transactions>();

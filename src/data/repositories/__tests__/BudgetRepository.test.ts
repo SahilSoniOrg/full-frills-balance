@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { WorkplaceId } from '@/src/types/domain';
 
 describe('BudgetRepository', () => {
   let accountId1: string;
@@ -15,7 +16,7 @@ describe('BudgetRepository', () => {
       name: 'Groceries',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     accountId1 = a1.id;
 
@@ -23,7 +24,7 @@ describe('BudgetRepository', () => {
       name: 'Dining Out',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
-      workplaceId: 'wp-1',
+      workplaceId: 'wp-1' as WorkplaceId,
     });
     accountId2 = a2.id;
   });
@@ -31,7 +32,7 @@ describe('BudgetRepository', () => {
   describe('CRUD operations', () => {
     it('should create a budget with scopes', async () => {
       const budget = await budgetRepository.create(
-        'wp-1',
+        'wp-1' as WorkplaceId,
         {
           name: 'Food',
           amount: 500,
@@ -45,7 +46,7 @@ describe('BudgetRepository', () => {
       expect(budget.name).toBe('Food');
       expect(budget.amount).toBe(500);
 
-      const scopes = await budgetRepository.getScopes('wp-1', budget.id);
+      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id);
       expect(scopes).toHaveLength(2);
       const scopeIds = scopes.map(s => s.account.id);
       expect(scopeIds).toContain(accountId1);
@@ -54,7 +55,7 @@ describe('BudgetRepository', () => {
 
     it('should update a budget and its scopes', async () => {
       const budget = await budgetRepository.create(
-        'wp-1',
+        'wp-1' as WorkplaceId,
         {
           name: 'Monthly Gas',
           amount: 500,
@@ -64,19 +65,19 @@ describe('BudgetRepository', () => {
         [accountId1],
       );
 
-      await budgetRepository.update('wp-1', budget, { amount: 600 }, [accountId2]);
+      await budgetRepository.update('wp-1' as WorkplaceId, budget, { amount: 600 }, [accountId2]);
 
-      const updated = await budgetRepository.find('wp-1', budget.id);
+      const updated = await budgetRepository.find('wp-1' as WorkplaceId, budget.id);
       expect(updated?.amount).toBe(600);
 
-      const scopes = await budgetRepository.getScopes('wp-1', budget.id);
+      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id);
       expect(scopes).toHaveLength(1);
       expect(scopes[0].account.id).toBe(accountId2);
     });
 
     it('should delete a budget and its scopes', async () => {
       const budget = await budgetRepository.create(
-        'wp-1',
+        'wp-1' as WorkplaceId,
         {
           name: 'Food',
           amount: 500,
@@ -86,12 +87,12 @@ describe('BudgetRepository', () => {
         [accountId1],
       );
 
-      await budgetRepository.delete('wp-1', budget);
+      await budgetRepository.delete('wp-1' as WorkplaceId, budget);
 
-      const deleted = await budgetRepository.find('wp-1', budget.id);
+      const deleted = await budgetRepository.find('wp-1' as WorkplaceId, budget.id);
       expect(deleted).toBeNull();
 
-      const scopes = await budgetRepository.getScopes('wp-1', budget.id);
+      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id);
       expect(scopes).toHaveLength(0);
     });
   });

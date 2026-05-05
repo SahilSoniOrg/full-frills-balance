@@ -16,6 +16,7 @@ import { withObservables } from '@nozbe/watermelondb/react';
 import React from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { from } from 'rxjs';
+import { WorkplaceId } from '@/src/types/domain';
 
 interface Props {
   rules: SmsAutoPostRule[];
@@ -129,7 +130,7 @@ function SmsRulesList({ rules }: Props) {
 
 const EnhancedSmsRulesList = withObservables(
   ['workplaceId'],
-  ({ workplaceId }: { workplaceId: string }) => ({
+  ({ workplaceId }: { workplaceId: WorkplaceId }) => ({
     rules: database.collections
       .get<SmsAutoPostRule>('sms_auto_post_rules')
       .query(Q.where('workplace_id', workplaceId))

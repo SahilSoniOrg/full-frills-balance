@@ -2,6 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { HeatmapPoint, SankeyData } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useCallback, useMemo, useState } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
 interface UseReportChartDataProps {
   netWorthHistory: {
@@ -23,7 +24,7 @@ interface UseReportChartDataProps {
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[];
   theme: any;
-  workplaceId: string;
+  workplaceId: WorkplaceId;
 }
 
 /**

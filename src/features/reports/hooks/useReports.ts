@@ -11,8 +11,9 @@ import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
+import { WorkplaceId } from '@/src/types/domain';
 
-export function useReports(workplaceId: string) {
+export function useReports(workplaceId: WorkplaceId) {
   const { theme } = useTheme();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const targetCurrency = workplaceCurrency;

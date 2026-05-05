@@ -17,6 +17,7 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import { from, Observable } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
+import { WorkplaceId } from '@/src/types/domain';
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
@@ -112,7 +113,7 @@ export class ReportService {
    * Aggregates expenses by account for a period.
    */
   async getExpenseBreakdown(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -132,7 +133,7 @@ export class ReportService {
    * Aggregates income by account for a period.
    */
   async getIncomeBreakdown(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -152,7 +153,7 @@ export class ReportService {
    * Reactive version of getExpenseBreakdown.
    */
   observeExpenseBreakdown(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -173,7 +174,7 @@ export class ReportService {
    * Reactive version of getIncomeBreakdown.
    */
   observeIncomeBreakdown(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -192,7 +193,7 @@ export class ReportService {
 
   private async getBreakdownInternal(
     type: AccountType,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -247,7 +248,7 @@ export class ReportService {
    */
   async getCategoryBreakdown(
     type: AccountType,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -317,7 +318,7 @@ export class ReportService {
    * Calculates Income vs Expense for the period.
    */
   async getIncomeVsExpense(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -435,7 +436,7 @@ export class ReportService {
    * Calculates Income vs Expense history bucketed by month or day.
    */
   async getIncomeVsExpenseHistory(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -497,7 +498,7 @@ export class ReportService {
    * Calculates Daily Income vs Expense for the period.
    */
   async getDailyIncomeVsExpense(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -613,7 +614,7 @@ export class ReportService {
   private async getScopedDeltas<
     T extends { currencyCode: string; delta: number; dayStart?: number; accountId?: string },
   >(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     accountIds: string[],
     startDate: number,
     endDate: number,
@@ -661,7 +662,7 @@ export class ReportService {
   }
 
   async getReportSnapshot(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -840,7 +841,7 @@ export class ReportService {
    * Income Sources -> Total Income -> Expense Categories -> Surplus.
    */
   async getSankeyData(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -865,7 +866,7 @@ export class ReportService {
    * Aggregates spending density by day and hour.
    */
   async getSpendingHeatmapData(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -920,7 +921,7 @@ export class ReportService {
    * Reactive version of getReportSnapshot.
    */
   observeReportSnapshot(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,
@@ -944,7 +945,7 @@ export class ReportService {
   }
 
   private async getReportAccounts(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     targetCurrency?: string,
   ): Promise<{
     currency: string;
@@ -956,8 +957,8 @@ export class ReportService {
       currency = await workplaceService.getCurrency(workplaceId);
     }
     const [rawIncomeAccounts, rawExpenseAccounts] = await Promise.all([
-      accountRepository.findByType(AccountType.INCOME, workplaceId),
-      accountRepository.findByType(AccountType.EXPENSE, workplaceId),
+      accountRepository.findByType(workplaceId, AccountType.INCOME),
+      accountRepository.findByType(workplaceId, AccountType.EXPENSE),
     ]);
 
     const incomeAccounts = rawIncomeAccounts.map(account => ({
@@ -979,7 +980,7 @@ export class ReportService {
   }
 
   private async getConvertedReportTransactions(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     currency: string,
@@ -1099,7 +1100,7 @@ export class ReportService {
    * Aggregates spending by day of week and week of month (Calendar view).
    */
   async getCalendarHeatmapData(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     startDate: number,
     endDate: number,
     targetCurrency?: string,

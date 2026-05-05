@@ -7,11 +7,12 @@ import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Model } from '@nozbe/watermelondb';
+import { WorkplaceId } from '@/src/types/domain';
 
 export class LedgerWriteService {
   async prepareCreateJournal(
     data: CreateJournalData,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<{
     journal: Journal;
     ops: Model[];
@@ -35,18 +36,21 @@ export class LedgerWriteService {
     if (metadataRecord) ops.push(metadataRecord);
 
     // Standardized audit log creation via repository
-    const auditLog = auditRepository.prepareLog({
-      entityType: 'journal',
-      entityId: journal.id,
-      action: AuditAction.CREATE,
-      changes: { description: data.description },
-    });
+    const auditLog = auditRepository.prepareLog(
+      {
+        entityType: 'journal',
+        entityId: journal.id,
+        action: AuditAction.CREATE,
+        changes: { description: data.description },
+      },
+      workplaceId,
+    );
     ops.push(auditLog);
 
     return { journal, ops, accountsToRebuild: prepared.accountsToRebuild };
   }
 
-  async createJournal(data: CreateJournalData, workplaceId: string): Promise<Journal> {
+  async createJournal(data: CreateJournalData, workplaceId: WorkplaceId): Promise<Journal> {
     const { journal, ops, accountsToRebuild } = await this.prepareCreateJournal(data, workplaceId);
 
     await database.write(async () => {

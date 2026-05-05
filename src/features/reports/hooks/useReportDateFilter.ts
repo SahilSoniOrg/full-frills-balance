@@ -8,11 +8,12 @@ import {
 } from '@/src/utils/dateUtils';
 import { Q } from '@nozbe/watermelondb';
 import { useCallback, useMemo, useState } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
 interface UseReportDateFilterProps {
   dateRange: DateRange;
   accountIds: string[];
-  workplaceId: string;
+  workplaceId: WorkplaceId;
   updateFilter: (range: DateRange, filter: PeriodFilter, accounts?: string[]) => void;
   onResetSelections: () => void;
 }

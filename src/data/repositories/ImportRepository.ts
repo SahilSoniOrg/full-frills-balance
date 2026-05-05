@@ -27,7 +27,7 @@ import SmsInboxRecord, {
   SmsProcessingStatus,
 } from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import { JournalDisplayType } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
 export interface ImportedAccount {
@@ -312,7 +312,7 @@ function toSmsDirection(value: string): SmsDirection {
 }
 
 export class ImportRepository {
-  async batchInsert(workplaceId: string, data: BatchImportData): Promise<void> {
+  async batchInsert(workplaceId: WorkplaceId, data: BatchImportData): Promise<void> {
     await database.write(async () => {
       const accountsCollection = database.collections.get<Account>('accounts');
       const journalsCollection = database.collections.get<Journal>('journals');
@@ -648,7 +648,7 @@ export class ImportRepository {
    * Preserves tombstones by soft-deleting records.
    */
   async applyChanges(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     data: {
       accounts: ChangeSet<ImportedAccount>;
       journals: ChangeSet<ImportedJournal>;

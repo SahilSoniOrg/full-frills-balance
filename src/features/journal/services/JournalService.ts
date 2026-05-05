@@ -15,8 +15,13 @@ import { auditService } from '@/src/services/audit-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { EnrichedJournal, JournalEntryLine, mapTransactionToAudit } from '@/src/types/domain';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import {
+  EnrichedJournal,
+  JournalEntryLine,
+  mapTransactionToAudit,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -48,38 +53,41 @@ export class JournalService {
   async updateJournal(
     journalId: string,
     data: CreateJournalData,
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const originalJournal = await journalRepository.find(journalId, workplaceId);
+    const originalJournal = await journalRepository.find(workplaceId, journalId);
     if (!originalJournal) throw new Error('Journal not found');
 
-    const originalTransactions = await transactionRepository.findByJournal(journalId, workplaceId);
+    const originalTransactions = await transactionRepository.findByJournal(workplaceId, journalId);
     const prepared = await prepareJournalData(data, workplaceId);
 
     // Build the audit op inside the synchronous callback creator.
     const extraOpCreator = () => {
       const mappedBeforeTransactions = originalTransactions.map(t => mapTransactionToAudit(t));
       const mappedAfterTransactions = data.transactions.map(t => mapTransactionToAudit(t));
-      return auditRepository.prepareLog({
-        entityType: 'journal',
-        entityId: journalId,
-        action: AuditAction.UPDATE,
-        changes: {
-          before: {
-            description: originalJournal.description,
-            journalDate: originalJournal.journalDate,
-            currencyCode: originalJournal.currencyCode,
-            status: originalJournal.status,
-            totalAmount: originalJournal.totalAmount,
-            transactions: mappedBeforeTransactions,
-          },
-          after: {
-            description: data.description,
-            journalDate: data.journalDate,
-            transactions: mappedAfterTransactions,
+      return auditRepository.prepareLog(
+        {
+          entityType: 'journal',
+          entityId: journalId,
+          action: AuditAction.UPDATE,
+          changes: {
+            before: {
+              description: originalJournal.description,
+              journalDate: originalJournal.journalDate,
+              currencyCode: originalJournal.currencyCode,
+              status: originalJournal.status,
+              totalAmount: originalJournal.totalAmount,
+              transactions: mappedBeforeTransactions,
+            },
+            after: {
+              description: data.description,
+              journalDate: data.journalDate,
+              transactions: mappedAfterTransactions,
+            },
           },
         },
-      });
+        workplaceId,
+      );
     };
 
     // updateJournalWithTransactions opens its own write — pass the creator.
@@ -108,7 +116,7 @@ export class JournalService {
     return journal;
   }
 
-  async deleteJournal(journalId: string, workplaceId: string): Promise<void> {
+  async deleteJournal(journalId: string, workplaceId: WorkplaceId): Promise<void> {
     const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) return;
 
@@ -127,20 +135,23 @@ export class JournalService {
         }),
       );
 
-      const auditOp = auditRepository.prepareLog({
-        entityType: 'journal',
-        entityId: journalId,
-        action: AuditAction.DELETE,
-        changes: {
-          before: {
-            description: journal.description,
-            totalAmount: journal.totalAmount,
-            currencyCode: journal.currencyCode,
-            transactions: transactions.map(t => mapTransactionToAudit(t)),
+      const auditOp = auditRepository.prepareLog(
+        {
+          entityType: 'journal',
+          entityId: journalId,
+          action: AuditAction.DELETE,
+          changes: {
+            before: {
+              description: journal.description,
+              totalAmount: journal.totalAmount,
+              currencyCode: journal.currencyCode,
+              transactions: transactions.map(t => mapTransactionToAudit(t)),
+            },
+            after: { deletedAt: now },
           },
-          after: { deletedAt: now },
         },
-      });
+        workplaceId,
+      );
 
       await database.batch(journalOp, ...txOps, auditOp);
     });
@@ -149,7 +160,7 @@ export class JournalService {
     rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
   }
 
-  async recoverJournal(journalId: string, workplaceId: string): Promise<Journal> {
+  async recoverJournal(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
     const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) throw new Error('Journal not found');
 
@@ -169,15 +180,18 @@ export class JournalService {
         }),
       );
 
-      const auditOp = auditRepository.prepareLog({
-        entityType: 'journal',
-        entityId: journalId,
-        action: AuditAction.UPDATE,
-        changes: {
-          before: { deletedAt: prevDeletedAt },
-          after: { restoredAt: now },
+      const auditOp = auditRepository.prepareLog(
+        {
+          entityType: 'journal',
+          entityId: journalId,
+          action: AuditAction.UPDATE,
+          changes: {
+            before: { deletedAt: prevDeletedAt },
+            after: { restoredAt: now },
+          },
         },
-      });
+        workplaceId,
+      );
 
       await database.batch(journalOp, ...txOps, auditOp);
     });
@@ -188,11 +202,11 @@ export class JournalService {
     return journal;
   }
 
-  async duplicateJournal(journalId: string, workplaceId: string): Promise<Journal> {
-    const journal = await journalRepository.find(journalId, workplaceId);
+  async duplicateJournal(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
+    const journal = await journalRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
 
-    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
+    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     return ledgerWriteService.createJournal(
       {
@@ -214,14 +228,14 @@ export class JournalService {
   async createReversalJournal(
     originalJournalId: string,
     reason: string = 'Reversal',
-    workplaceId: string,
+    workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const originalJournal = await journalRepository.find(originalJournalId, workplaceId);
+    const originalJournal = await journalRepository.find(workplaceId, originalJournalId);
     if (!originalJournal) throw new Error('Original journal not found');
 
     const originalTransactions = await transactionRepository.findByJournal(
-      originalJournalId,
       workplaceId,
+      originalJournalId,
     );
     const reversedTxs = originalTransactions.map(tx => ({
       accountId: tx.accountId,
@@ -251,8 +265,8 @@ export class JournalService {
     return reversalJournal;
   }
 
-  async postJournal(journalId: string, workplaceId: string): Promise<Journal> {
-    const journal = await journalRepository.find(journalId, workplaceId);
+  async postJournal(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
+    const journal = await journalRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.PLANNED) {
       throw new Error(
@@ -261,7 +275,7 @@ export class JournalService {
     }
 
     const postTime = Date.now();
-    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
+    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     // M-3 fix evolved: status-only patch + date propagation (F-14 fix).
     // Update both the journal date and all associated transaction dates to "now".
@@ -315,8 +329,8 @@ export class JournalService {
     return journal;
   }
 
-  async revertToPlanned(journalId: string, workplaceId: string): Promise<Journal> {
-    const journal = await journalRepository.find(journalId, workplaceId);
+  async revertToPlanned(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
+    const journal = await journalRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.POSTED && journal.status !== JournalStatus.SKIPPED) {
       throw new Error(
@@ -351,7 +365,7 @@ export class JournalService {
       revertTime = date.getTime();
     }
 
-    const transactions = await transactionRepository.findByJournal(journalId, workplaceId);
+    const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     await database.write(async () => {
       await journal.update((record: Journal) => {
@@ -411,7 +425,7 @@ export class JournalService {
     smsSender?: string;
     rawSmsBody?: string;
     mode?: 'simple' | 'advanced' | 'import';
-    workplaceId: string;
+    workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const {
       lines,
@@ -570,7 +584,7 @@ export class JournalService {
    * Uses a reactive pipeline to enrich journals with account info without manual caching.
    */
   observeEnrichedJournals(
-    workplaceId: string,
+    workplaceId: WorkplaceId,
     limit: number,
     dateRange?: AccountDateRange & { accountIds?: string[] },
     searchQuery?: string,
@@ -673,7 +687,7 @@ export class JournalService {
     const accounts$ = accountIds$.pipe(
       switchMap(accountIds => {
         if (accountIds.length === 0) return of([] as Account[]);
-        return accountRepository.observeByIds(accountIds, workplaceId);
+        return accountRepository.observeByIds(workplaceId, accountIds);
       }),
     );
 

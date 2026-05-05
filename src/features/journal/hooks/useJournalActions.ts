@@ -3,8 +3,9 @@ import { CreateJournalData, journalRepository } from '@/src/data/repositories/Jo
 import { journalService } from '@/src/features/journal/services/JournalService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { useCallback } from 'react';
+import { WorkplaceId } from '@/src/types/domain';
 
-export function useJournalActions(workplaceId: string) {
+export function useJournalActions(workplaceId: WorkplaceId) {
   const createJournal = useCallback(
     async (data: CreateJournalData) => {
       return ledgerWriteService.createJournal(data, workplaceId);
@@ -21,7 +22,7 @@ export function useJournalActions(workplaceId: string) {
 
   const findJournal = useCallback(
     async (journalId: string) => {
-      return journalRepository.find(journalId, workplaceId);
+      return journalRepository.find(workplaceId, journalId);
     },
     [workplaceId],
   );

@@ -13,7 +13,7 @@ import { accountService } from '@/src/features/accounts/services/AccountService'
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
-import { AccountBalance } from '@/src/types/domain';
+import { AccountBalance, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 import { combineLatest, debounceTime, of, switchMap } from 'rxjs';
 
@@ -21,7 +21,7 @@ import { combineLatest, debounceTime, of, switchMap } from 'rxjs';
  * Hook to reactively get all accounts
  * @param loadData Optional flag to delay fetching (useful for performance optimization)
  */
-export function useAccounts(workplaceId: string, loadData: boolean = true) {
+export function useAccounts(workplaceId: WorkplaceId, loadData: boolean = true) {
   const {
     data: accounts,
     isLoading,
@@ -36,33 +36,16 @@ export function useAccounts(workplaceId: string, loadData: boolean = true) {
 }
 
 /**
- * Hook to reactively get accounts by type
- */
-export function useAccountsByType(accountType: string, workplaceId: string) {
-  const {
-    data: accounts,
-    isLoading,
-    version,
-    error,
-  } = useObservable(
-    () => (workplaceId ? accountRepository.observeByType(accountType, workplaceId) : of([])),
-    [accountType, workplaceId],
-    [] as Account[],
-  );
-  return { accounts, isLoading, version, error };
-}
-
-/**
  * Hook to reactively get a single account by ID
  */
-export function useAccount(accountId: string | null, workplaceId: string) {
+export function useAccount(accountId: string | null, workplaceId: WorkplaceId) {
   const {
     data: account,
     isLoading,
     version,
     error,
   } = useObservable(
-    () => (accountId ? accountRepository.observeById(accountId, workplaceId) : of(null)),
+    () => (accountId ? accountRepository.observeById(workplaceId, accountId) : of(null)),
     [accountId, workplaceId],
     null as Account | null,
   );
@@ -74,7 +57,7 @@ export function useAccount(accountId: string | null, workplaceId: string) {
  * Uses PURE REACTIVITY: No async enrichment, no race conditions.
  * Calculates sum in-memory for instant consistency.
  */
-export function useAccountBalance(workplaceId: string, accountId: string | null) {
+export function useAccountBalance(workplaceId: WorkplaceId, accountId: string | null) {
   const { defaultCurrencyCode } = useWorkplace();
   const {
     data: balanceData,
@@ -86,7 +69,7 @@ export function useAccountBalance(workplaceId: string, accountId: string | null)
       if (!accountId || !workplaceId) return of(null);
 
       return combineLatest([
-        accountRepository.observeById(accountId, workplaceId),
+        accountRepository.observeById(workplaceId, accountId),
         transactionRepository.observeActiveWithColumns(workplaceId, [
           'amount',
           'transaction_type',
@@ -126,7 +109,7 @@ export function useAccountBalance(workplaceId: string, accountId: string | null)
 /**
  * Hook to reactively check if an account has children.
  */
-export function useAccountHasChildren(accountId: string | null, workplaceId: string) {
+export function useAccountHasChildren(accountId: string | null, workplaceId: WorkplaceId) {
   const {
     data: hasChildren,
     isLoading,
@@ -143,7 +126,7 @@ export function useAccountHasChildren(accountId: string | null, workplaceId: str
 /**
  * Hook to reactively get the number of sub-accounts for a parent.
  */
-export function useAccountSubAccountCount(accountId: string | null, workplaceId: string) {
+export function useAccountSubAccountCount(accountId: string | null, workplaceId: WorkplaceId) {
   const {
     data: subAccountCount,
     isLoading,
@@ -161,7 +144,7 @@ export function useAccountSubAccountCount(accountId: string | null, workplaceId:
  * Hook to reactively compute balances for a list of accounts.
  * Supports async balance aggregation with currency conversion.
  */
-export function useAccountBalances(workplaceId: string, accounts: Account[]) {
+export function useAccountBalances(workplaceId: WorkplaceId, accounts: Account[]) {
   const { defaultCurrencyCode } = useWorkplace();
 
   const {
@@ -211,7 +194,7 @@ export function useAccountBalances(workplaceId: string, accounts: Account[]) {
  * Hook for account actions (mutations)
  * Consolidated: provides CRUD operations and management actions
  */
-export function useAccountActions(workplaceId: string) {
+export function useAccountActions(workplaceId: WorkplaceId) {
   const createAccount = useCallback(
     async (data: {
       name: string;
@@ -270,7 +253,7 @@ export function useAccountActions(workplaceId: string) {
 
   const findAccountByName = useCallback(
     async (name: string) => {
-      return accountService.findAccountByName(name, workplaceId);
+      return accountService.findAccountByName(workplaceId, name);
     },
     [workplaceId],
   );
@@ -305,7 +288,7 @@ export function useAccountActions(workplaceId: string) {
  * Optimized hook for account details/dashboard.
  * Uses the high-performance raw SQL + consolidated optimization from ReactiveDataService.
  */
-export function useAccountDashboard(workplaceId: string, accountId: string | null) {
+export function useAccountDashboard(workplaceId: WorkplaceId, accountId: string | null) {
   const { defaultCurrencyCode } = useWorkplace();
   const targetCurrency = defaultCurrencyCode;
 
