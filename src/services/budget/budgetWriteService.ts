@@ -1,7 +1,7 @@
 import Budget from '@/src/data/models/Budget';
 import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 export class BudgetWriteService {
   /**
@@ -10,7 +10,7 @@ export class BudgetWriteService {
   async createBudget(
     workplaceId: WorkplaceId,
     data: BudgetInput,
-    accountIds: string[],
+    accountIds: AccountId[],
   ): Promise<Budget> {
     const budget = await budgetRepository.create(workplaceId, data, accountIds);
 
@@ -32,7 +32,7 @@ export class BudgetWriteService {
     workplaceId: WorkplaceId,
     budget: Budget,
     data: Partial<BudgetInput>,
-    accountIds: string[],
+    accountIds: AccountId[],
   ): Promise<Budget> {
     const updatedBudget = await budgetRepository.update(workplaceId, budget, data, accountIds);
 

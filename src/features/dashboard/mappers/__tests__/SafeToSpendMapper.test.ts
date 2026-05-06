@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
+import { AccountId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/currencyFormatter', () => ({
   CurrencyFormatter: {
@@ -33,7 +34,7 @@ describe('SafeToSpendMapper', () => {
       allFlows: [
         {
           kind: 'INFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 2000,
           dayOffset: 15,
           category: FlowCategory.INCOME,
@@ -44,7 +45,7 @@ describe('SafeToSpendMapper', () => {
         },
         {
           kind: 'OUTFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 100,
           dayOffset: 5,
           category: FlowCategory.BUDGET,
@@ -55,7 +56,7 @@ describe('SafeToSpendMapper', () => {
         },
         {
           kind: 'OUTFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 50,
           dayOffset: 10,
           category: FlowCategory.DEBT,

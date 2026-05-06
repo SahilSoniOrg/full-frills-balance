@@ -2,9 +2,9 @@ import { database } from '@/src/data/database/Database';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { analytics } from '@/src/services/analytics-service';
+import { AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface BudgetInput {
   name: string;
@@ -17,7 +17,7 @@ export interface BudgetInput {
   recurrenceDay?: number;
   recurrenceMonth?: number;
   active?: boolean;
-  assetAccountIds?: string[];
+  assetAccountIds?: AccountId[];
 }
 
 export class BudgetRepository {
@@ -43,13 +43,13 @@ export class BudgetRepository {
       .observeWithColumns(['name', 'amount', 'currency_code', 'start_month', 'active']);
   }
 
-  observeScopes(workplaceId: WorkplaceId, budgetId: string) {
+  observeScopes(workplaceId: WorkplaceId, budgetId: BudgetId) {
     return this.budgetScopes
       .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))
       .observe();
   }
 
-  async getScopes(workplaceId: WorkplaceId, budgetId: string): Promise<BudgetScope[]> {
+  async getScopes(workplaceId: WorkplaceId, budgetId: BudgetId): Promise<BudgetScope[]> {
     return await this.budgetScopes
       .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))
       .fetch();
@@ -57,7 +57,7 @@ export class BudgetRepository {
 
   async getScopesByBudgetIds(
     workplaceId: WorkplaceId,
-    budgetIds: string[],
+    budgetIds: BudgetId[],
   ): Promise<BudgetScope[]> {
     if (budgetIds.length === 0) return [];
     return await this.budgetScopes
@@ -65,14 +65,14 @@ export class BudgetRepository {
       .fetch();
   }
 
-  observeById(workplaceId: WorkplaceId, id: string) {
+  observeById(workplaceId: WorkplaceId, id: BudgetId) {
     return this.budgets
       .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
       .observe()
       .pipe(map(budgets => budgets[0] || null));
   }
 
-  async find(workplaceId: WorkplaceId, id: string): Promise<Budget | null> {
+  async find(workplaceId: WorkplaceId, id: BudgetId): Promise<Budget | null> {
     try {
       const budget = await this.budgets.find(id);
       if (budget.workplaceId !== workplaceId) return null;
@@ -82,7 +82,11 @@ export class BudgetRepository {
     }
   }
 
-  async create(workplaceId: WorkplaceId, data: BudgetInput, accountIds: string[]): Promise<Budget> {
+  async create(
+    workplaceId: WorkplaceId,
+    data: BudgetInput,
+    accountIds: AccountId[],
+  ): Promise<Budget> {
     return await this.db.write(async () => {
       const budget = await this.budgets.create(record => {
         record.workplaceId = workplaceId;
@@ -121,7 +125,7 @@ export class BudgetRepository {
     workplaceId: WorkplaceId,
     budget: Budget,
     updates: Partial<BudgetInput>,
-    accountIds: string[],
+    accountIds: AccountId[],
   ): Promise<Budget> {
     return await this.db.write(async () => {
       const existingScopes = await this.budgetScopes
@@ -129,7 +133,7 @@ export class BudgetRepository {
         .fetch();
 
       //get budget to check it belongs to current workplaceId
-      const existingBudget = await this.find(workplaceId, budget.id);
+      const existingBudget = await this.find(workplaceId, budget.id as BudgetId);
       if (!existingBudget) {
         throw new Error('Budget not found');
       }
@@ -173,7 +177,7 @@ export class BudgetRepository {
   async delete(workplaceId: WorkplaceId, budget: Budget): Promise<void> {
     return await this.db.write(async () => {
       //get budget to check it belongs to current workplaceId
-      const existingBudget = await this.find(workplaceId, budget.id);
+      const existingBudget = await this.find(workplaceId, budget.id as BudgetId);
       if (!existingBudget) {
         throw new Error('Budget not found');
       }

@@ -24,9 +24,16 @@ import {
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
+import {
+  AccountId,
+  BudgetId,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
-import { WorkplaceId } from '@/src/types/domain';
 
 interface NativeImportData {
   version: string;
@@ -103,18 +110,20 @@ export const nativePlugin: ImportPlugin = {
     );
 
     // ID Remapping Maps
-    const accountMap = new Map<string, string>();
-    const journalMap = new Map<string, string>();
-    const transactionMap = new Map<string, string>();
-    const budgetMap = new Map<string, string>();
-    const plannedPaymentMap = new Map<string, string>();
+    const accountMap = new Map<string, AccountId>();
+    const journalMap = new Map<string, JournalId>();
+    const transactionMap = new Map<string, TransactionId>();
+    const budgetMap = new Map<string, BudgetId>();
+    const plannedPaymentMap = new Map<string, PlannedPaymentId>();
 
     // Pre-populate maps with new IDs
-    data.accounts.forEach(acc => accountMap.set(acc.id, generateId()));
-    data.journals.forEach(j => journalMap.set(j.id, generateId()));
-    data.transactions.forEach(t => transactionMap.set(t.id, generateId()));
-    (data.budgets || []).forEach(b => budgetMap.set(b.id, generateId()));
-    (data.plannedPayments || []).forEach(pp => plannedPaymentMap.set(pp.id, generateId()));
+    data.accounts.forEach(acc => accountMap.set(acc.id, generateId() as AccountId));
+    data.journals.forEach(j => journalMap.set(j.id, generateId() as JournalId));
+    data.transactions.forEach(t => transactionMap.set(t.id, generateId() as TransactionId));
+    (data.budgets || []).forEach(b => budgetMap.set(b.id, generateId() as BudgetId));
+    (data.plannedPayments || []).forEach(pp =>
+      plannedPaymentMap.set(pp.id, generateId() as PlannedPaymentId),
+    );
 
     try {
       // 1. Wipe existing data for this workplace

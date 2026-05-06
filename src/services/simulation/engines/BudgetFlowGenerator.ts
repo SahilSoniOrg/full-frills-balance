@@ -1,10 +1,11 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Budget from '@/src/data/models/Budget';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { AccountId } from '@/src/types/domain';
+import dayjs from 'dayjs';
+import { BudgetPeriodUtils } from '../../budget/BudgetPeriodUtils';
 import { Flow, FlowCategory, FlowSource, SimulationContext } from '../types';
 import { assertValidFlow } from '../utils/FlowInvariants';
-import { BudgetPeriodUtils } from '../../budget/BudgetPeriodUtils';
-import dayjs from 'dayjs';
 
 export class BudgetFlowGenerator {
   /**
@@ -29,9 +30,12 @@ export class BudgetFlowGenerator {
       }
     });
 
-    const getTargetAssetAccountIds = (budget: Budget): string[] => {
+    const getTargetAssetAccountIds = (budget: Budget): AccountId[] => {
       if (budget.assetAccountIds) {
-        const ids = budget.assetAccountIds.split(',').filter((id: string) => id.trim().length > 0);
+        const ids = budget.assetAccountIds
+          .split(',')
+          .map((id: string) => id.trim())
+          .filter(Boolean) as AccountId[];
         if (ids.length > 0) return ids;
       }
       return context.orderedLiquidAccountIds.length > 0 ? [context.orderedLiquidAccountIds[0]] : [];

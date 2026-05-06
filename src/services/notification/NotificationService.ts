@@ -11,21 +11,20 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isLiquidAssetSubtype, LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { Money, roundToPrecision } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
+import dayjs from 'dayjs';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-
-import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
 import { catchError, debounceTime, map, shareReplay, switchMap } from 'rxjs/operators';
 import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
-import { WorkplaceId } from '@/src/types/domain';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -296,8 +295,8 @@ export class NotificationService {
           const startOfToday = now.startOf('day');
           const lookbackDate = startOfToday.subtract(safeToSpendDays, 'day').valueOf();
 
-          const parentIds = new Set<string>(
-            allAccounts.map(a => a.parentAccountId).filter((id): id is string => Boolean(id)),
+          const parentIds = new Set<AccountId>(
+            allAccounts.map(a => a.parentAccountId).filter((id): id is AccountId => Boolean(id)),
           );
 
           const liquidAssets = assets.filter(
@@ -415,7 +414,7 @@ export class NotificationService {
                 ),
               );
 
-              const startingBalances = new Map<string, number>();
+              const startingBalances = new Map<AccountId, number>();
               let totalLiquidAssetsAmount = 0;
 
               const liquidAssetAccounts: { name: string; amount: number }[] = [];

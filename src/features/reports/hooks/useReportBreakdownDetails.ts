@@ -8,10 +8,10 @@ import {
   IncomeVsExpense,
   reportService,
 } from '@/src/services/report-service';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { useMemo, useState } from 'react';
 import { combineLatest, of } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { WorkplaceId } from '@/src/types/domain';
 
 interface UseReportBreakdownDetailsProps {
   globalExpenses: ExpenseCategory[];
@@ -118,7 +118,7 @@ export function useReportBreakdownDetails({
   const expenseCategoryViewState = useBreakdownViewState({
     globalBreakdown: expenseCategories.map(c => ({
       ...c,
-      accountId: c.category,
+      accountId: c.category as AccountId,
       accountName: c.category,
     })),
     selectedBreakdown: null,
@@ -129,7 +129,7 @@ export function useReportBreakdownDetails({
   const incomeCategoryViewState = useBreakdownViewState({
     globalBreakdown: incomeCategories.map(c => ({
       ...c,
-      accountId: c.category,
+      accountId: c.category as AccountId,
       accountName: c.category,
     })),
     selectedBreakdown: null,

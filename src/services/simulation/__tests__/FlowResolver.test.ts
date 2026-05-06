@@ -1,11 +1,12 @@
 import { FlowResolver } from '@/src/services/simulation/FlowResolver';
 import { Flow, FlowCategory, FlowSource } from '@/src/services/simulation/types';
+import { AccountId } from '@/src/types/domain';
 
 describe('FlowResolver', () => {
   it('reconciles budget burns against planned spend', () => {
     const budgetFlow: Flow = {
       kind: 'OUTFLOW',
-      accountId: 'cash',
+      accountId: 'cash' as AccountId,
       amount: 80,
       dayOffset: 0,
       category: FlowCategory.BUDGET,
@@ -18,7 +19,7 @@ describe('FlowResolver', () => {
 
     const plannedFlow: Flow = {
       kind: 'OUTFLOW',
-      accountId: 'cash',
+      accountId: 'cash' as AccountId,
       amount: 50,
       dayOffset: 0,
       category: FlowCategory.PLANNED_EXPENSE,

@@ -7,7 +7,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
-import { DisplayTransaction, WorkplaceId } from '@/src/types/domain';
+import { BudgetId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -38,7 +38,7 @@ export class BudgetReadService {
   ): Observable<BudgetUsage> {
     return combineLatest([
       budget.observe(),
-      budgetRepository.observeScopes(workplaceId, budget.id).pipe(
+      budgetRepository.observeScopes(workplaceId, budget.id as BudgetId).pipe(
         switchMap(scopes => {
           if (scopes.length === 0) return of([]);
           return combineLatest(scopes.map(s => s.account.observe()));
@@ -158,7 +158,7 @@ export class BudgetReadService {
     budget: Budget,
     referenceDate?: number | string,
   ): Observable<DisplayTransaction[]> {
-    return budgetRepository.observeScopes(workplaceId, budget.id).pipe(
+    return budgetRepository.observeScopes(workplaceId, budget.id as BudgetId).pipe(
       switchMap(scopes => {
         if (scopes.length === 0) return of([]);
 

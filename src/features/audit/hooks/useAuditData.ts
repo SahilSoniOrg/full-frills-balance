@@ -1,8 +1,8 @@
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useObservable } from '@/src/hooks/useObservable';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import React, { useMemo } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface EntityStatus {
   exists: boolean;
@@ -32,16 +32,16 @@ export function useAuditEntityStatus(
   idsByEntityType: Record<string, string[]>,
 ) {
   const accountIds = useMemo(
-    () => Array.from(new Set(idsByEntityType.account || [])),
+    () => Array.from(new Set(idsByEntityType.account || [])) as AccountId[],
     [idsByEntityType.account],
   );
   const journalIds = useMemo(
-    () => Array.from(new Set(idsByEntityType.journal || [])),
+    () => Array.from(new Set(idsByEntityType.journal || [])) as JournalId[],
     [idsByEntityType.journal],
   );
 
   const { data: accounts } = useObservable(
-    () => accountRepository.observeByIdsWithDeleted(accountIds, workplaceId),
+    () => accountRepository.observeByIdsWithDeleted(workplaceId, accountIds),
     [accountIds, workplaceId],
     [],
   );

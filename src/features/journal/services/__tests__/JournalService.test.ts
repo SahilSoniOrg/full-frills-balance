@@ -3,7 +3,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { JournalService } from '@/src/features/journal/services/JournalService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { accountingService } from '@/src/utils/accountingService';
-import { WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
@@ -75,14 +75,14 @@ describe('JournalService - saveJournalEntry', () => {
         description: 'Updated Journal',
         journalDate: '2024-01-01',
         journalTime: '12:00:00',
-        journalId: 'journal123',
+        journalId: 'journal123' as JournalId,
         workplaceId: 'wp-1' as WorkplaceId,
       });
 
       expect(result.success).toBe(true);
       expect(result.action).toBe('updated');
       expect(updateSpy).toHaveBeenCalledWith(
-        'journal123',
+        'journal123' as JournalId,
         expect.any(Object),
         'wp-1' as WorkplaceId,
       );

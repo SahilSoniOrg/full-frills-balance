@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -10,7 +11,6 @@ import { getRawAdapter } from '../database/DatabaseUtils';
 import Account, { AccountType } from '../models/Account';
 import Transaction, { TransactionType } from '../models/Transaction';
 import { transactionRepository } from './TransactionRepository';
-import { WorkplaceId } from '@/src/types/domain';
 import {
   AccountDelta,
   DailyDelta,
@@ -24,7 +24,7 @@ import {
  * These ensure type-safety at the database-to-domain boundary.
  */
 interface RawPeriodMetricsRow {
-  accountId: string;
+  accountId: AccountId;
   totalDebit: number;
   totalCredit: number;
 }
@@ -165,7 +165,7 @@ export class TransactionRawRepository {
       WHERE rn = 1
     `;
 
-    const raws = await this.queryRaw<{ accountId: string; runningBalance: number }>(sql, [
+    const raws = await this.queryRaw<{ accountId: AccountId; runningBalance: number }>(sql, [
       ...accountIds,
       cutoffDate,
       workplaceId,
@@ -210,11 +210,11 @@ export class TransactionRawRepository {
    */
   async getAccountSumRaw(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     cutoffDate: number,
     isAssetOrExpense: boolean = true,
-    upToTransactionId?: string,
-    afterTransactionId?: string,
+    upToTransactionId?: TransactionId,
+    afterTransactionId?: TransactionId,
   ): Promise<number> {
     const multiplierSql = isAssetOrExpense
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
@@ -560,7 +560,7 @@ export class TransactionRawRepository {
    * Fetches minimal transaction data for an account rebuild.
    * Optimized for AccountingRebuildService.
    */
-  async getRebuildDataRaw(accountId: string, startDate: number): Promise<RebuildTransaction[]> {
+  async getRebuildDataRaw(accountId: AccountId, startDate: number): Promise<RebuildTransaction[]> {
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
 
     const sql = `
@@ -660,7 +660,7 @@ export class TransactionRawRepository {
       string,
       {
         amount: number;
-        accountId: string;
+        accountId: AccountId;
         currencyCode: string;
         occurrenceCount: number;
         journalIds: Set<string>;
@@ -711,7 +711,7 @@ export class TransactionRawRepository {
    */
   async getAccountTransactionCountsRaw(
     accountIdsWithBoundaries: {
-      accountId: string;
+      accountId: AccountId;
       startDate: number;
       afterTransactionId?: string;
       afterTransactionDate?: number;
@@ -775,7 +775,7 @@ export class TransactionRawRepository {
       ];
       if (minTransactionDate !== undefined) queryParams.push(minTransactionDate);
 
-      const raws = await this.queryRaw<{ accountId: string; count: number }>(sql, queryParams);
+      const raws = await this.queryRaw<{ accountId: AccountId; count: number }>(sql, queryParams);
 
       if (raws !== null) {
         for (const row of raws) results.set(row.accountId, row.count);
@@ -789,7 +789,7 @@ export class TransactionRawRepository {
   }
 
   private async getAccountTransactionCountsFallback(
-    chunk: { accountId: string; afterTransactionId?: string }[],
+    chunk: { accountId: AccountId; afterTransactionId?: string }[],
     endDate: number,
     results: Map<string, number>,
   ): Promise<Map<string, number>> {
@@ -842,7 +842,7 @@ export class TransactionRawRepository {
    */
   async getAccountPeriodMetricsRaw(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     startDate: number,
     endDate: number,
     isAssetOrExpense: boolean = true,
@@ -866,7 +866,7 @@ export class TransactionRawRepository {
    */
   async getBulkAccountPeriodMetricsRaw(
     workplaceId: WorkplaceId,
-    accountConfigs: { accountId: string; isAssetOrExpense: boolean }[],
+    accountConfigs: { accountId: AccountId; isAssetOrExpense: boolean }[],
     startDate: number,
     endDate: number,
   ): Promise<Map<string, { totalIncrease: number; totalDecrease: number }>> {
@@ -934,7 +934,7 @@ export class TransactionRawRepository {
    */
   observeAccountPeriodMetricsRaw(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     startDate: number,
     endDate: number,
     isAssetOrExpense: boolean = true,
@@ -982,7 +982,7 @@ export class TransactionRawRepository {
    */
   observeUnreconciledMetricsRaw(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     reconciledAt: number | null,
     isAssetOrExpense: boolean = true,
   ): Observable<{ count: number; total: number }> {

@@ -2,6 +2,8 @@ import { BudgetFlowGenerator } from '../BudgetFlowGenerator';
 import { SimulationContext } from '../../types';
 import Budget from '@/src/data/models/Budget';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { AccountId } from '@/src/types/domain';
+import Account from '@/src/data/models/Account';
 
 describe('BudgetFlowGenerator', () => {
   const mockContext: SimulationContext = {
@@ -9,10 +11,10 @@ describe('BudgetFlowGenerator', () => {
     simulationDays: 30,
     simulationEndMs: 1714521600000,
     resultCurrency: 'USD',
-    liquidAccountIds: new Set(['acc-1']),
-    orderedLiquidAccountIds: ['acc-1'],
-    liabilityAccountIds: new Set(),
-    accountMap: new Map(),
+    liquidAccountIds: new Set<AccountId>(['acc-1' as AccountId]),
+    orderedLiquidAccountIds: ['acc-1' as AccountId],
+    liabilityAccountIds: new Set<AccountId>(),
+    accountMap: new Map<AccountId, Account>(),
     convert: (amount: number) => amount,
   };
 
@@ -37,7 +39,7 @@ describe('BudgetFlowGenerator', () => {
     expect(flows).toHaveLength(30);
     expect(flows[0]).toMatchObject({
       kind: 'OUTFLOW',
-      accountId: 'acc-1',
+      accountId: 'acc-1' as AccountId,
       amount: 10,
       dayOffset: 0,
       origin: 'BUDGET',
@@ -51,8 +53,8 @@ describe('BudgetFlowGenerator', () => {
     ];
     const contextWithTwoAccounts = {
       ...mockContext,
-      liquidAccountIds: new Set(['acc-1', 'acc-2']),
-      orderedLiquidAccountIds: ['acc-1', 'acc-2'],
+      liquidAccountIds: new Set<AccountId>(['acc-1' as AccountId, 'acc-2' as AccountId]),
+      orderedLiquidAccountIds: ['acc-1' as AccountId, 'acc-2' as AccountId],
     };
 
     const flows = BudgetFlowGenerator.generate(
@@ -64,11 +66,13 @@ describe('BudgetFlowGenerator', () => {
 
     // 100 / 10 days = 10 per day. Split between 2 accounts = 5 each.
     // Total flows = 10 days * 2 accounts = 20 flows.
-    expect(flows.filter(f => 'accountId' in f && f.accountId === 'acc-1')).toHaveLength(30); // because simulationDays = 30
+    expect(
+      flows.filter(f => 'accountId' in f && f.accountId === ('acc-1' as AccountId)),
+    ).toHaveLength(30); // because simulationDays = 30
     // Wait, simulationDays is 30, but daysLeftInMonth is 10.
     // So days 0-9 use currentMonthDailyRate (100/10 = 10), days 10-29 use nextMonthDailyRate (100/30 = 3.33).
     const day0Acc1 = flows.find(
-      f => f.dayOffset === 0 && 'accountId' in f && f.accountId === 'acc-1',
+      f => f.dayOffset === 0 && 'accountId' in f && f.accountId === ('acc-1' as AccountId),
     );
     expect(day0Acc1 && 'amount' in day0Acc1 ? day0Acc1.amount : 0).toBeCloseTo(1.67, 2);
   });

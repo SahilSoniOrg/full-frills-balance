@@ -5,9 +5,9 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Model } from '@nozbe/watermelondb';
-import { WorkplaceId } from '@/src/types/domain';
 
 export class LedgerWriteService {
   async prepareCreateJournal(
@@ -16,7 +16,7 @@ export class LedgerWriteService {
   ): Promise<{
     journal: Journal;
     ops: Model[];
-    accountsToRebuild: Set<string>;
+    accountsToRebuild: Set<AccountId>;
   }> {
     const prepared = await prepareJournalData(data, workplaceId);
 

@@ -1,12 +1,12 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
+import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
 import { of } from 'rxjs';
-import { WorkplaceId } from '@/src/types/domain';
 
 export class TransactionRepository {
   private get transactions() {
@@ -112,7 +112,7 @@ export class TransactionRepository {
   /**
    * Finds a transaction by ID
    */
-  async find(workplaceId: WorkplaceId, id: string): Promise<Transaction | null> {
+  async find(workplaceId: WorkplaceId, id: TransactionId): Promise<Transaction | null> {
     try {
       const transaction = await this.transactions.find(id);
       if (transaction.deletedAt) return null;
@@ -128,7 +128,7 @@ export class TransactionRepository {
    */
   async findByAccount(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     limit?: number,
     dateRange?: { startDate: number; endDate: number },
     sortOrder: 'asc' | 'desc' = 'desc',
@@ -163,7 +163,7 @@ export class TransactionRepository {
 
   observeByAccounts(
     workplaceId: WorkplaceId,
-    accountIds: string[],
+    accountIds: AccountId[],
     limit: number = AppConfig.pagination.dashboardPageSize,
     dateRange?: { startDate: number; endDate: number },
   ): import('rxjs').Observable<Transaction[]> {
@@ -192,7 +192,7 @@ export class TransactionRepository {
       ]);
   }
 
-  async findByJournals(workplaceId: WorkplaceId, journalIds: string[]): Promise<Transaction[]> {
+  async findByJournals(workplaceId: WorkplaceId, journalIds: JournalId[]): Promise<Transaction[]> {
     if (journalIds.length === 0) return [];
     return this.transactions
       .query(
@@ -205,7 +205,7 @@ export class TransactionRepository {
 
   observeByJournals(
     workplaceId: WorkplaceId,
-    journalIds: string[],
+    journalIds: JournalId[],
   ): import('rxjs').Observable<Transaction[]> {
     if (journalIds.length === 0) return of([] as Transaction[]);
     return this.transactions
@@ -227,7 +227,11 @@ export class TransactionRepository {
       ]);
   }
 
-  observeByJournal(workplaceId: WorkplaceId, journalId: string, includeDeleted: boolean = false) {
+  observeByJournal(
+    workplaceId: WorkplaceId,
+    journalId: JournalId,
+    includeDeleted: boolean = false,
+  ) {
     const clauses: any[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('journal_id', journalId),
@@ -347,14 +351,12 @@ export class TransactionRepository {
    * @param journalId Journal ID to fetch transactions for
    * @returns Array of transactions for the journal
    */
-  async findByJournal(workplaceId: WorkplaceId, journalId: string): Promise<Transaction[]> {
+  async findByJournal(workplaceId: WorkplaceId, journalId: JournalId): Promise<Transaction[]> {
     return this.transactions
       .query(
-        Q.and(
-          Q.where('journal_id', journalId),
-          Q.where('deleted_at', Q.eq(null)),
-          Q.where('workplace_id', workplaceId),
-        ),
+        Q.where('journal_id', journalId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
       )
       .extend(Q.sortBy('transaction_date', Q.asc))
       .extend(Q.sortBy('created_at', Q.asc))
@@ -418,7 +420,7 @@ export class TransactionRepository {
    */
   async findLatestForAccountBeforeDate(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     date: number,
   ): Promise<Transaction | null> {
     return this.findLatestForAccount(workplaceId, accountId, date, false);
@@ -432,7 +434,7 @@ export class TransactionRepository {
    */
   async findLatestForAccount(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     date: number,
     inclusive: boolean = true,
   ): Promise<Transaction | null> {
@@ -523,7 +525,7 @@ export class TransactionRepository {
    */
   async getCountForAccount(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     cutoffDate: number = Date.now(),
   ): Promise<number> {
     return this.getCountForAccountBetween(workplaceId, accountId, 0, cutoffDate);
@@ -535,7 +537,7 @@ export class TransactionRepository {
    */
   async getCountForAccountBetween(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     startDate: number,
     endDate: number,
   ): Promise<number> {
@@ -591,7 +593,7 @@ export class TransactionRepository {
 
   async findForAccountUpToDate(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     cutoffDate: number,
   ): Promise<Transaction[]> {
     return this.transactions
@@ -611,7 +613,7 @@ export class TransactionRepository {
       .fetch();
   }
 
-  async hasTransactions(workplaceId: WorkplaceId, accountId: string): Promise<boolean> {
+  async hasTransactions(workplaceId: WorkplaceId, accountId: AccountId): Promise<boolean> {
     const count = await this.transactions
       .query(
         ...this.buildActiveClauses([

@@ -11,7 +11,13 @@ import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
-import { EnrichedJournal, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import {
+  EnrichedJournal,
+  JournalDisplayType,
+  JournalId,
+  TransactionId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
@@ -47,15 +53,15 @@ export interface JournalListViewModel {
   loadingText: string;
   loadingMoreText: string;
   plannedJournals: EnrichedJournal[];
-  selectedIds: Set<string>;
+  selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: string) => void;
-  toggleSelection: (id: string) => void;
+  onLongPressItem: (id: JournalId) => void;
+  toggleSelection: (id: JournalId) => void;
   selectAll: () => void;
   clearItems: () => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<JournalId>>>;
 }
 
 interface UseJournalListViewModelParams {
@@ -120,7 +126,7 @@ export function useJournalListViewModel(
     PLANNED_STATUS,
   );
 
-  const selectionControl = useSelection<string>();
+  const selectionControl = useSelection<JournalId>();
   const {
     selectedIds,
     isSelectionModeActive,
@@ -132,7 +138,7 @@ export function useJournalListViewModel(
   } = selectionControl;
 
   const handleJournalPress = useCallback(
-    (journalId: string) => {
+    (journalId: JournalId) => {
       if (isSelectionModeActive) {
         toggleSelection(journalId);
         return;
@@ -204,7 +210,7 @@ export function useJournalListViewModel(
         const cardProps = mapJournalToCardProps(journal);
 
         return {
-          id: journal.id,
+          id: journal.id as string as TransactionId,
           type: 'transaction' as const,
           date: journal.journalDate,
           onPress: () => handleJournalPress(journal.id),
@@ -246,7 +252,9 @@ export function useJournalListViewModel(
   }, [selectedIds, journals, defaultShareFormat]);
 
   const selectAll = useCallback(() => {
-    const visibleIds = items.filter(i => i.type === 'transaction').map(i => i.id);
+    const visibleIds = items
+      .filter(i => i.type === 'transaction')
+      .map(i => i.id as string as JournalId);
     selectionControl.selectAll(visibleIds);
   }, [items, selectionControl]);
 

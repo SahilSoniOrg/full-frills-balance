@@ -10,7 +10,7 @@ import { SmsInboxItemCard } from '@/src/features/settings/components/SmsInboxIte
 import { useTheme } from '@/src/hooks/use-theme';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { smsService } from '@/src/services/sms-service';
-import { SmsDuplicateCandidate, SmsInboxItem } from '@/src/types/domain';
+import { AccountId, JournalId, SmsDuplicateCandidate, SmsInboxItem } from '@/src/types/domain';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -41,10 +41,10 @@ function SmsInboxContent() {
   const enrich = useCallback(
     async (records: SmsInboxRecord[]) => {
       const linkedIds = Array.from(
-        new Set(records.map(record => record.linkedJournalId).filter(Boolean) as string[]),
+        new Set(records.map(record => record.linkedJournalId).filter(Boolean) as JournalId[]),
       );
       const duplicateIds = Array.from(
-        new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as string[]),
+        new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as JournalId[]),
       );
       const journals = await journalRepository.findByIds(
         workplaceId,
@@ -163,7 +163,7 @@ function SmsInboxContent() {
 
   const handleImport = useCallback(
     (item: SmsInboxItem) => {
-      let matchedBankAccountId: string | undefined;
+      let matchedBankAccountId: AccountId | undefined;
       let matchedCounterpartyId: string | undefined;
 
       if (item.parsedAccountSource) {

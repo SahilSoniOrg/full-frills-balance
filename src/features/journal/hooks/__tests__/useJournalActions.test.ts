@@ -2,8 +2,8 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { journalService } from '@/src/features/journal/services/JournalService';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
-import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/features/journal/services/JournalService');
@@ -39,11 +39,11 @@ describe('useJournalActions', () => {
     const data = { description: 'update' } as any;
 
     await act(async () => {
-      await result.current.updateJournal('id1', data);
+      await result.current.updateJournal('id1' as JournalId, data);
     });
 
     expect(journalService.updateJournal).toHaveBeenCalledWith(
-      'id1',
+      'id1' as JournalId,
       data,
       'test-wp' as WorkplaceId,
     );
@@ -57,26 +57,35 @@ describe('useJournalActions', () => {
       await result.current.deleteJournal(journal);
     });
 
-    expect(journalService.deleteJournal).toHaveBeenCalledWith('id1', 'test-wp' as WorkplaceId);
+    expect(journalService.deleteJournal).toHaveBeenCalledWith(
+      'id1' as JournalId,
+      'test-wp' as WorkplaceId,
+    );
   });
 
   it('should delegate duplicateJournal to journalService', async () => {
     const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
 
     await act(async () => {
-      await result.current.duplicateJournal('id1');
+      await result.current.duplicateJournal('id1' as JournalId);
     });
 
-    expect(journalService.duplicateJournal).toHaveBeenCalledWith('id1', 'test-wp' as WorkplaceId);
+    expect(journalService.duplicateJournal).toHaveBeenCalledWith(
+      'id1' as JournalId,
+      'test-wp' as WorkplaceId,
+    );
   });
 
   it('should delegate findJournal to journalRepository', async () => {
     const { result } = renderHook(() => useJournalActions('test-wp' as WorkplaceId));
 
     await act(async () => {
-      await result.current.findJournal('id1');
+      await result.current.findJournal('id1' as JournalId);
     });
 
-    expect(journalRepository.find).toHaveBeenCalledWith('id1', 'test-wp' as WorkplaceId);
+    expect(journalRepository.find).toHaveBeenCalledWith(
+      'test-wp' as WorkplaceId,
+      'id1' as JournalId,
+    );
   });
 });

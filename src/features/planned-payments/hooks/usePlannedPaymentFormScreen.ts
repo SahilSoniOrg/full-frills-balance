@@ -2,6 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentInterval } from '@/src/data/models/PlannedPayment';
 import { useAccounts } from '@/src/features/accounts';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
+import { AccountId } from '@/src/types/domain';
 import { useCallback, useMemo, useState } from 'react';
 
 export function usePlannedPaymentFormScreen(id?: string) {
@@ -66,7 +67,7 @@ export function usePlannedPaymentFormScreen(id?: string) {
   }, [vm]);
 
   const handleAccountSelect = useCallback(
-    (accountId: string) => {
+    (accountId: AccountId) => {
       if (pickingAccountFor === 'from') {
         vm.setForm(current => ({ ...current, fromAccountId: accountId }));
       } else if (pickingAccountFor === 'to') {

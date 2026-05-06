@@ -11,7 +11,7 @@ import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
+import { BudgetId, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { confirm } from '@/src/utils/alerts';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -41,7 +41,7 @@ export function useBudgetDetailViewModel() {
   }, []);
 
   const budgetData$ = useMemo(() => {
-    return budgetRepository.observeById(workplaceId, budgetId).pipe(
+    return budgetRepository.observeById(workplaceId, budgetId as BudgetId).pipe(
       switchMap(budget => {
         if (!budget) return of(null);
         return combineLatest([

@@ -6,11 +6,11 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { RecurringPattern } from '@/src/data/repositories/TransactionTypes';
+import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
 import { debounceTime, switchMap } from 'rxjs/operators';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface Insight {
   id: string;
@@ -84,7 +84,7 @@ export class InsightService {
           const acc = accountMap.get(candidate.accountId);
           if (acc?.accountType !== AccountType.EXPENSE) continue;
 
-          const journalIds = (candidate.journalIds || '').split(',');
+          const journalIds = (candidate.journalIds || '').split(',') as JournalId[];
           const transactions = await transactionRepository.findByJournals(workplaceId, journalIds);
 
           // Group by description to handle case where two different subscriptions have same amount

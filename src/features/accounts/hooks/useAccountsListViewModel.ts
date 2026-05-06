@@ -6,13 +6,14 @@ import { transformAccountsToSections } from '@/src/features/accounts/utils/trans
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { AccountId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { of } from 'rxjs';
 
 export interface AccountCardViewModel {
-  id: string;
+  id: AccountId;
   name: string;
   icon: IconName | null;
   accentColor: string;
@@ -41,8 +42,8 @@ export interface AccountsListViewModel {
   isRefreshing: boolean;
   onRefresh: () => void;
   onToggleSection: (title: string) => void;
-  onAccountPress: (accountId: string) => void;
-  onCollapseAccount: (accountId: string) => void;
+  onAccountPress: (accountId: AccountId) => void;
+  onCollapseAccount: (accountId: AccountId) => void;
   onCreateAccount: () => void;
   onReorderPress: () => void;
   onManageHierarchy: () => void;
@@ -138,7 +139,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   }, []);
 
   const onAccountPress = useCallback(
-    (accountId: string) => {
+    (accountId: AccountId) => {
       const account = accounts.find((a: Account) => a.id === accountId);
       if (!account) return;
 
@@ -167,7 +168,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     [accounts, expandedAccountIds, balancesByAccountId],
   );
 
-  const onCollapseAccount = useCallback((accountId: string) => {
+  const onCollapseAccount = useCallback((accountId: AccountId) => {
     setExpandedAccountIds(prev => {
       const next = new Set(prev);
       next.delete(accountId);

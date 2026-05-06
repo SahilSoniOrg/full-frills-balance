@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
 import { SimulationContext } from '../types';
+import { AccountId } from '@/src/types/domain';
 
 describe('PlannedFlowGenerator Past Handling', () => {
   const simulationStartMs = dayjs('2026-04-12T00:00:00Z').valueOf();
@@ -11,8 +12,8 @@ describe('PlannedFlowGenerator Past Handling', () => {
     simulationDays: safeToSpendDays,
     simulationEndMs: simulationStartMs + safeToSpendDays * 24 * 60 * 60 * 1000,
     resultCurrency: 'USD',
-    liquidAccountIds: new Set(['cash']),
-    orderedLiquidAccountIds: ['cash'],
+    liquidAccountIds: new Set(['cash' as AccountId]),
+    orderedLiquidAccountIds: ['cash' as AccountId],
     liabilityAccountIds: new Set([]),
     accountMap: new Map(),
     convert: amount => amount,
@@ -24,8 +25,8 @@ describe('PlannedFlowGenerator Past Handling', () => {
       name: 'Past Rent',
       amount: 1000,
       currencyCode: 'USD',
-      fromAccountId: 'cash',
-      toAccountId: 'rent-category',
+      fromAccountId: 'cash' as AccountId,
+      toAccountId: 'rent-category' as AccountId,
       nextOccurrence: dayjs(simulationStartMs).subtract(2, 'day').valueOf(),
       intervalType: 'MONTHLY',
       intervalN: 1,
@@ -51,7 +52,17 @@ describe('PlannedFlowGenerator Past Handling', () => {
     };
 
     const journalTxsMap = new Map([
-      ['j-1', [{ accountId: 'cash', amount: 500, transactionType: 'DEBIT', currencyCode: 'USD' }]],
+      [
+        'j-1',
+        [
+          {
+            accountId: 'cash' as AccountId,
+            amount: 500,
+            transactionType: 'DEBIT',
+            currencyCode: 'USD',
+          },
+        ],
+      ],
     ]);
 
     const { flows } = PlannedFlowGenerator.generate(

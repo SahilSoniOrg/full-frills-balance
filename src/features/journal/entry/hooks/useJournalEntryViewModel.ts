@@ -1,5 +1,5 @@
-import { AppConfig } from '@/src/constants';
 import { CreateAccountIntent } from '@/src/components/common/AccountPickerModal';
+import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useAccounts } from '@/src/features/accounts';
@@ -8,7 +8,7 @@ import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalE
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { smsService } from '@/src/services/sms-service';
-import { AccountRole } from '@/src/types/domain';
+import { AccountId, AccountRole, JournalId } from '@/src/types/domain';
 import { getAllowedAccountTypes, getInferredAccountType } from '@/src/utils/accountCategory';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -32,8 +32,8 @@ export interface JournalEntryViewModel {
   showAccountPicker: boolean;
   onCloseAccountPicker: () => void;
   onSelectAccountRequest: (lineId: string) => void;
-  onAccountSelected: (accountId: string) => void;
-  selectedAccountId?: string;
+  onAccountSelected: (accountId: AccountId) => void;
+  selectedAccountId?: AccountId;
   simpleFormIsValid: boolean;
   advancedFormIsValid: boolean;
   advancedFormConfig: {
@@ -76,15 +76,15 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       : undefined;
   const initialSourceAccountId =
     typeof params.sourceAccountId === 'string'
-      ? params.sourceAccountId
+      ? (params.sourceAccountId as AccountId)
       : typeof params.sourceId === 'string'
-        ? params.sourceId
+        ? (params.sourceId as AccountId)
         : undefined;
   const initialDestinationAccountId =
     typeof params.destinationAccountId === 'string'
-      ? params.destinationAccountId
+      ? (params.destinationAccountId as AccountId)
       : typeof params.destinationId === 'string'
-        ? params.destinationId
+        ? (params.destinationId as AccountId)
         : undefined;
 
   const { accounts, isLoading: isLoadingAccounts } = useAccounts(workplaceId);
@@ -93,7 +93,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   const smsRecordId = params.smsRecordId as string | undefined;
 
   const editor = useJournalEditor(workplaceId, {
-    journalId: params.journalId as string,
+    journalId: params.journalId as JournalId,
     initialMode,
     initialType,
     initialAmount: params.amount as string,
@@ -152,7 +152,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   }, []);
 
   const onAccountSelected = useCallback(
-    (accountId: string) => {
+    (accountId: AccountId) => {
       if (activeLineId) {
         const account = accounts.find(a => a.id === accountId);
         if (account) {

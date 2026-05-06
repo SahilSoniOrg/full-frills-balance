@@ -1,7 +1,8 @@
 import Account from '@/src/data/models/Account';
-import Budget from '@/src/data/models/Budget';
-import { Relation } from '@nozbe/watermelondb';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import Budget from '@/src/data/models/Budget';
+import { AccountId, BudgetId } from '@/src/types/domain';
+import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 
 export default class BudgetScope extends BaseScopedModel {
@@ -17,6 +18,6 @@ export default class BudgetScope extends BaseScopedModel {
   @relation('budgets', 'budget_id') budget!: Relation<Budget>;
   @relation('accounts', 'account_id') account!: Relation<Account>;
 
-  @field('budget_id') budgetId!: string;
-  @field('account_id') accountId!: string;
+  @field('budget_id') budgetId!: BudgetId;
+  @field('account_id') accountId!: AccountId;
 }

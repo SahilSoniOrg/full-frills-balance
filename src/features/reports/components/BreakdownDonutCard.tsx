@@ -1,17 +1,18 @@
 import { DonutChart } from '@/src/components/charts/DonutChart';
 import { AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AccountId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface LegendRow {
-  id: string;
+  id: AccountId;
   color: string;
   accountName: string;
   percentage: number;
@@ -26,7 +27,7 @@ interface BreakdownDonutCardProps {
   showExpansionButton: boolean;
   expanded: boolean;
   onToggleExpansion: () => void;
-  onLegendRowPress: (accountId: string) => void;
+  onLegendRowPress: (accountId: AccountId) => void;
   donutSize?: number;
   donutStrokeWidth?: number;
 }

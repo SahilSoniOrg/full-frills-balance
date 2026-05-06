@@ -7,7 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionRepository', () => {
   let accountId: string;
@@ -47,16 +47,24 @@ describe('TransactionRepository', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 100, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
       );
 
       const transactions = await transactionRepository.findByJournal(
-        journal.id as WorkplaceId,
         'wp-1' as WorkplaceId,
+        journal.id as JournalId,
       );
       expect(transactions).toHaveLength(2);
       expect(transactions[0].journalId).toBe(journal.id);
@@ -72,8 +80,16 @@ describe('TransactionRepository', () => {
           journalDate: 1000,
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 100, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -85,18 +101,30 @@ describe('TransactionRepository', () => {
           journalDate: 2000,
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 50, transactionType: TransactionType.CREDIT },
-            { accountId: equityAccountId, amount: 50, transactionType: TransactionType.DEBIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
       ); // -50
 
-      await accountingRebuildService.rebuildAccountBalances('wp-1' as WorkplaceId, accountId, 0);
+      await accountingRebuildService.rebuildAccountBalances(
+        'wp-1' as WorkplaceId,
+        accountId as AccountId,
+        0,
+      );
 
       const txs = await transactionRepository.findByAccount(
-        accountId as WorkplaceId,
         'wp-1' as WorkplaceId,
+        accountId as AccountId,
       );
       // Sorted by date desc: T2 (2000), T1 (1000)
       expect(txs).toHaveLength(2);
@@ -112,8 +140,16 @@ describe('TransactionRepository', () => {
           journalDate: 1000,
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 100, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -126,8 +162,16 @@ describe('TransactionRepository', () => {
           journalDate: 3000,
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 200, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 200, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 200,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 200,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -140,18 +184,29 @@ describe('TransactionRepository', () => {
           journalDate: 2000,
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 50, transactionType: TransactionType.CREDIT },
-            { accountId: equityAccountId, amount: 50, transactionType: TransactionType.DEBIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
       );
 
-      await accountingRebuildService.rebuildAccountBalances('wp-1' as WorkplaceId, accountId);
+      await accountingRebuildService.rebuildAccountBalances(
+        'wp-1' as WorkplaceId,
+        accountId as AccountId,
+      );
 
       const txs = await transactionRepository.findByAccount(
-        accountId as WorkplaceId,
         'wp-1' as WorkplaceId,
+        accountId as AccountId,
       );
       // T3, T2, T1
       expect(txs[0].transactionDate).toBe(3000); // T3
@@ -173,8 +228,16 @@ describe('TransactionRepository', () => {
           journalDate: 2000,
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 100, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -186,8 +249,16 @@ describe('TransactionRepository', () => {
           journalDate: 5000,
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 100, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,

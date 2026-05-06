@@ -1,18 +1,18 @@
 import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants/design-tokens';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { AppConfig } from '../constants/app-config';
 import { migrateFromAsyncStorage, storage } from './storage';
-import { WorkplaceId } from '@/src/types/domain';
 
 const PREFERENCES_KEY = 'full_frills_balance_ui_preferences';
 
 export interface UIPreferences {
   onboardingCompleted: boolean;
   userName?: string;
-  lastSelectedAccountId?: string;
+  lastSelectedAccountId?: AccountId;
   lastDateRange?: {
     startDate: number;
     endDate: number;
@@ -20,8 +20,8 @@ export interface UIPreferences {
   theme?: 'light' | 'dark' | 'system';
   themeId?: ThemeId;
   fontId?: FontId;
-  lastUsedSourceAccountId?: string;
-  lastUsedDestinationAccountId?: string;
+  lastUsedSourceAccountId?: AccountId;
+  lastUsedDestinationAccountId?: AccountId;
   isPrivacyMode: boolean;
   isWidgetPrivacyEnabled: boolean;
   isAppLockEnabled: boolean;
@@ -259,7 +259,7 @@ class PreferencesHelper {
     return this.preferences.lastSelectedAccountId;
   }
 
-  setLastSelectedAccountId(accountId: string | undefined): void {
+  setLastSelectedAccountId(accountId: AccountId | undefined): void {
     this.updatePreferences({ lastSelectedAccountId: accountId });
   }
 
@@ -295,19 +295,19 @@ class PreferencesHelper {
     this.updatePreferences({ fontId });
   }
 
-  get lastUsedSourceAccountId(): string | undefined {
+  get lastUsedSourceAccountId(): AccountId | undefined {
     return this.preferences.lastUsedSourceAccountId;
   }
 
-  setLastUsedSourceAccountId(accountId: string | undefined): void {
+  setLastUsedSourceAccountId(accountId: AccountId | undefined): void {
     this.updatePreferences({ lastUsedSourceAccountId: accountId });
   }
 
-  get lastUsedDestinationAccountId(): string | undefined {
+  get lastUsedDestinationAccountId(): AccountId | undefined {
     return this.preferences.lastUsedDestinationAccountId;
   }
 
-  setLastUsedDestinationAccountId(accountId: string | undefined): void {
+  setLastUsedDestinationAccountId(accountId: AccountId | undefined): void {
     this.updatePreferences({ lastUsedDestinationAccountId: accountId });
   }
 

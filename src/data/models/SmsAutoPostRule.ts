@@ -1,5 +1,6 @@
-import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import { AccountId } from '@/src/types/domain';
+import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 import Account from './Account';
 
 export default class SmsAutoPostRule extends BaseScopedModel {
@@ -10,8 +11,8 @@ export default class SmsAutoPostRule extends BaseScopedModel {
   @field('conditions_json') conditionsJson?: string;
   @field('actions_json') actionsJson?: string;
   @field('priority') priority?: number;
-  @field('source_account_id') sourceAccountId!: string;
-  @field('category_account_id') categoryAccountId!: string;
+  @field('source_account_id') sourceAccountId!: AccountId;
+  @field('category_account_id') categoryAccountId!: AccountId;
   @field('is_active') isActive!: boolean;
 
   @readonly @date('created_at') createdAt!: Date;

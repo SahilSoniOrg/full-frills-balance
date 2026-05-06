@@ -1,7 +1,8 @@
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
+import { JournalId } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
-import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 
 export enum SmsParseStatus {
   PARSED = 'parsed',
@@ -43,8 +44,8 @@ export default class SmsInboxRecord extends BaseScopedModel {
   @field('reference_number') referenceNumber?: string;
   @field('direction') direction!: SmsDirection;
   @field('processing_status') processingStatus!: SmsProcessingStatus;
-  @field('linked_journal_id') linkedJournalId?: string;
-  @field('duplicate_journal_id') duplicateJournalId?: string;
+  @field('linked_journal_id') linkedJournalId?: JournalId;
+  @field('duplicate_journal_id') duplicateJournalId?: JournalId;
   @field('duplicate_confidence') duplicateConfidence?: number;
   @field('parse_confidence') parseConfidence?: number;
   @field('parse_reason') parseReason?: string;

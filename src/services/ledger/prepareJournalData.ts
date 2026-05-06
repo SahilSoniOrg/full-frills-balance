@@ -4,7 +4,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { CreateJournalData } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { roundToPrecision } from '@/src/utils/money';
@@ -13,8 +13,8 @@ export interface PreparedJournalData {
   transactions: CreateJournalData['transactions'];
   totalAmount: number;
   displayType: JournalDisplayType;
-  calculatedBalances: Map<string, number | null>;
-  accountsToRebuild: Set<string>;
+  calculatedBalances: Map<AccountId, number | null>;
+  accountsToRebuild: Set<AccountId>;
 }
 
 export async function prepareJournalData(
@@ -63,8 +63,8 @@ export async function prepareJournalData(
     throw new Error(`Unbalanced journal: ${validation.imbalance}`);
   }
 
-  const accountsToRebuild = new Set<string>(accountIds);
-  const calculatedBalances = new Map<string, number | null>();
+  const accountsToRebuild = new Set<AccountId>(accountIds);
+  const calculatedBalances = new Map<AccountId, number | null>();
 
   const isInactive = data.status === JournalStatus.PLANNED || data.status === JournalStatus.SKIPPED;
   if (!isInactive) {

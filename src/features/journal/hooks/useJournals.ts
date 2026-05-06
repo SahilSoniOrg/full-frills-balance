@@ -3,7 +3,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { DisplayTransaction, EnrichedJournal, WorkplaceId } from '@/src/types/domain';
+import { DisplayTransaction, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
 
@@ -117,7 +117,7 @@ export function useJournals(
 
 export function useJournalTransactions(
   workplaceId: WorkplaceId,
-  journalId: string | null,
+  journalId: JournalId | null,
   includeDeleted: boolean = false,
 ) {
   const {

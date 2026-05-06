@@ -1,9 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { getRawAdapter } from '../database/DatabaseUtils';
-import { WorkplaceId } from '@/src/types/domain';
 
 /**
  * Repository for Balance Snapshots.
@@ -19,7 +19,7 @@ export class BalanceSnapshotRepository {
    */
   async findLatestForAccount(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     date: number = Date.now(),
   ): Promise<BalanceSnapshot | null> {
     const snapshots = await this.snapshots
@@ -40,8 +40,8 @@ export class BalanceSnapshotRepository {
   async create(
     workplaceId: WorkplaceId,
     data: {
-      accountId: string;
-      transactionId: string;
+      accountId: AccountId;
+      transactionId: TransactionId;
       transactionDate: number;
       absoluteBalance: number;
       transactionCount: number;
@@ -51,7 +51,7 @@ export class BalanceSnapshotRepository {
       return this.snapshots.create(snapshot => {
         snapshot.workplaceId = workplaceId;
         snapshot.accountId = data.accountId;
-        snapshot.transactionId = data.transactionId;
+        snapshot.transactionId = data.transactionId as TransactionId;
         snapshot.transactionDate = data.transactionDate;
         snapshot.absoluteBalance = data.absoluteBalance;
         snapshot.transactionCount = data.transactionCount;
@@ -125,7 +125,11 @@ export class BalanceSnapshotRepository {
    * Deletes all snapshots for an account after a certain date.
    * Useful when segments are invalidated.
    */
-  async deleteAfterDate(workplaceId: WorkplaceId, accountId: string, date: number): Promise<void> {
+  async deleteAfterDate(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    date: number,
+  ): Promise<void> {
     const snapshotsToDelete = await this.snapshots
       .query(
         Q.where('workplace_id', workplaceId),
@@ -147,8 +151,8 @@ export class BalanceSnapshotRepository {
  */
 export interface SnapshotData {
   id: string;
-  accountId: string;
-  transactionId: string;
+  accountId: AccountId;
+  transactionId: TransactionId;
   transactionDate: number;
   absoluteBalance: number;
   transactionCount: number;

@@ -19,6 +19,7 @@ import {
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
+import { AccountId } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
@@ -42,9 +43,9 @@ export interface AccountMetadataFormModel {
   setLoanTenureMonths: (value: string) => void;
   minimumPaymentAmount: string;
   setMinimumPaymentAmount: (value: string) => void;
-  payFromAccountId: string;
+  payFromAccountId: AccountId;
   payFromAccountName: string;
-  setPayFromAccountId: (value: string) => void;
+  setPayFromAccountId: (value: AccountId) => void;
   isPayFromPickerVisible: boolean;
   setIsPayFromPickerVisible: (visible: boolean) => void;
   notes: string;
@@ -83,9 +84,9 @@ export interface AccountFormViewModel {
   currencyLabel: string;
   showInitialBalance: boolean;
   isSaveDisabled: boolean;
-  parentAccountId: string;
+  parentAccountId: AccountId;
   parentAccountName: string;
-  setParentAccountId: (value: string) => void;
+  setParentAccountId: (value: AccountId) => void;
   potentialParents: Account[];
   payFromAccountOptions: Account[];
   isParentPickerVisible: boolean;
@@ -100,7 +101,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const params = useLocalSearchParams();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
-  const accountId = params.accountId as string | undefined;
+  const accountId = params.accountId as AccountId | undefined;
   const typeParam = params.type as string | undefined;
   const isEditMode = Boolean(accountId);
 
@@ -116,7 +117,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const { accounts } = useAccounts(workplaceId);
 
   const { data: isParent } = useObservable(
-    () => (accountId ? accountRepository.observeHasChildren(accountId, workplaceId) : of(false)),
+    () => (accountId ? accountRepository.observeHasChildren(workplaceId, accountId) : of(false)),
     [accountId, workplaceId],
     false,
   );
@@ -160,8 +161,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || workplaceCurrency);
   const [selectedIcon, setSelectedIcon] = useState<IconName>((pIcon as IconName) || 'wallet');
   const [initialBalance, setInitialBalance] = useState('');
-  const [parentAccountId, setParentAccountId] = useState('');
-  const [payFromAccountId, setPayFromAccountId] = useState('');
+  const [parentAccountId, setParentAccountId] = useState('' as AccountId);
+  const [payFromAccountId, setPayFromAccountId] = useState('' as AccountId);
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
@@ -191,7 +192,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       );
       setSelectedCurrency(existingAccount.currencyCode);
       setSelectedIcon(existingAccount.icon || 'wallet');
-      setParentAccountId(existingAccount.parentAccountId || '');
+      setParentAccountId(existingAccount.parentAccountId || ('' as AccountId));
 
       if (balanceData && initialBalance === '' && !hasInjectedRef.current) {
         setInitialBalance(balanceData.balance.toString());
@@ -209,7 +210,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
         setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
         setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
-        setPayFromAccountId(existingMetadata.payFromAccountId || '');
+        setPayFromAccountId(existingMetadata.payFromAccountId || ('' as AccountId));
         setNotes(existingMetadata.notes || '');
       }
 

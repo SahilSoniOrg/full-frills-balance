@@ -83,7 +83,7 @@ export interface Money {
  * AccountBalance - Summary of an account's financial state
  */
 export interface AccountBalance {
-  accountId: string;
+  accountId: AccountId;
   balance: number;
   directBalance: number;
   currencyCode: string;
@@ -101,9 +101,9 @@ export interface AccountBalance {
  * DisplayTransaction - Unified read model for transactions in the UI.
  */
 export interface DisplayTransaction {
-  id: string;
-  journalId?: string;
-  accountId: string;
+  id: TransactionId;
+  journalId?: JournalId;
+  accountId: AccountId;
   amount: number;
   currencyCode: string;
   transactionType: TransactionType;
@@ -143,7 +143,7 @@ export interface DisplayTransaction {
  * JournalWithTransactionSummary - Journal data with computed summary from its transactions
  */
 export interface JournalWithTransactionSummary {
-  id: string;
+  id: JournalId;
   journalDate: number;
   description?: string;
   currencyCode: string;
@@ -164,7 +164,7 @@ export interface JournalWithTransactionSummary {
  * AccountWithBalance - Account data with its current balance information
  */
 export interface AccountWithBalance {
-  id: string;
+  id: AccountId;
   name: string;
   accountType: AccountType;
   currencyCode: string;
@@ -185,7 +185,7 @@ export interface AccountWithBalance {
  * EnrichedJournal - Highly processed journal data for card-style list display
  */
 export interface EnrichedJournal {
-  id: string;
+  id: JournalId;
   journalDate: number;
   description?: string;
   currencyCode: string;
@@ -194,7 +194,7 @@ export interface EnrichedJournal {
   transactionCount: number;
   displayType: JournalDisplayType;
   accounts: {
-    id: string;
+    id: AccountId;
     name: string;
     accountType: string;
     icon?: string;
@@ -203,11 +203,11 @@ export interface EnrichedJournal {
   semanticType?: SemanticType;
   semanticLabel?: string;
   notes?: string;
-  plannedPaymentId?: string;
+  plannedPaymentId?: PlannedPaymentId;
 }
 
 export interface SmsDuplicateCandidate {
-  journalId: string;
+  journalId: JournalId;
   journalDate: number;
   description?: string;
   score: number;
@@ -215,14 +215,14 @@ export interface SmsDuplicateCandidate {
 }
 
 export interface SmsLinkedJournalInfo {
-  journalId: string;
+  journalId: JournalId;
   description?: string;
   journalDate: number;
   status: string;
 }
 
 export interface SmsInboxItem {
-  id: string;
+  id: string; // Internal record ID, keeping as string for now as it's not a primary domain entity yet
   deviceSmsId: string;
   senderAddress: string;
   rawBody: string;
@@ -276,8 +276,8 @@ export type JournalSmsMetadata = JournalMetadata;
  * Used in guided and advanced forms.
  */
 export interface JournalEntryLine {
-  id: string;
-  accountId: string;
+  id: TransactionId; // Line ID is transient
+  accountId: AccountId;
   accountName: string;
   accountType: AccountType;
   amount: string;
@@ -295,7 +295,7 @@ export interface AccountCreateInput {
   accountType: AccountType;
   currencyCode: string;
   description?: string;
-  parentAccountId?: string;
+  parentAccountId?: AccountId;
   icon?: string;
   initialBalance?: number;
 }
@@ -306,7 +306,7 @@ export interface AccountCreateInput {
 export interface AccountUpdateInput {
   name?: string;
   description?: string;
-  parentAccountId?: string;
+  parentAccountId?: AccountId;
   accountType?: AccountType;
   icon?: string;
 }
@@ -327,7 +327,7 @@ export interface AccountSummary {
  */
 
 export interface TransactionAuditState {
-  accountId: string;
+  accountId: AccountId;
   amount: number;
   transactionType: TransactionType;
   notes?: string;
@@ -353,7 +353,7 @@ export interface AccountAuditState {
   currencyCode?: string;
   description?: string;
   icon?: IconName;
-  parentAccountId?: string;
+  parentAccountId?: AccountId;
   deletedAt?: Date;
   restoredAt?: Date;
 }
@@ -361,7 +361,7 @@ export interface AccountAuditState {
  * TransactionLike - Minimal interface for mapping transactions to audit state.
  */
 export interface TransactionLike {
-  accountId: string;
+  accountId: AccountId;
   amount: number;
   transactionType: TransactionType;
   notes?: string;

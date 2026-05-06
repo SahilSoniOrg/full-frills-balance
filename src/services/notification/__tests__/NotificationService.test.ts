@@ -25,6 +25,7 @@ jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/simulation/CashFlowSimulationService');
 jest.mock('@/src/utils/preferences', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { of } = require('rxjs');
   return {
     preferences: {

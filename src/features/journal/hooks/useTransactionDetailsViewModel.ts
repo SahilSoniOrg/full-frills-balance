@@ -10,7 +10,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { smsService } from '@/src/services/sms-service';
-import { DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
+import { AccountId, DisplayTransaction, JournalDisplayType, JournalId } from '@/src/types/domain';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -23,7 +23,7 @@ import { map, switchMap } from 'rxjs/operators';
 
 export interface TransactionSplitItemViewModel {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   accountName: string;
   transactionType: string;
   amountText: string;
@@ -88,7 +88,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     typeIcon: paramTypeIcon,
     displayType: paramDisplayType,
   } = useLocalSearchParams<{
-    journalId: string;
+    journalId: JournalId;
     title?: string;
     amount?: string;
     currencyCode?: string;

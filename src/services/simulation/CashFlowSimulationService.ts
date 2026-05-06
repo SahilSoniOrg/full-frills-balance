@@ -12,6 +12,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
@@ -24,17 +25,16 @@ import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
 import { AccountSimulationSummary, Flow, SimulationContext, SimulationRunResult } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
-import { WorkplaceId } from '@/src/types/domain';
 
 export class CashFlowSimulationService {
   /**
    * Cash flow simulation following the "Generate truth -> simulate once" architecture.
    */
   async simulate(
-    startingBalances: Map<string, number>,
+    startingBalances: Map<AccountId, number>,
     plannedPayments: PlannedPayment[],
     plannedJournals: Journal[],
-    liquidAssetIds: string[],
+    liquidAssetIds: AccountId[],
     liabilityAccountBalances: { account: Account; balance: number }[],
     budgets: Budget[],
     usages: BudgetUsage[],
@@ -404,7 +404,7 @@ export class CashFlowSimulationService {
     if (lbs.length === 0) return map;
 
     const ids = lbs.map(lb => lb.account.id);
-    const metadataRecords = await accountRepository.findMetadataByAccountIds(ids, workplaceId);
+    const metadataRecords = await accountRepository.findMetadataByAccountIds(workplaceId, ids);
 
     metadataRecords.forEach(meta => {
       map.set(meta.accountId, meta);

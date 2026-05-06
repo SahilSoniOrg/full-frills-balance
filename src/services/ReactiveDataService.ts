@@ -10,7 +10,7 @@ import { balanceService } from '@/src/services/BalanceService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { reportService } from '@/src/services/report-service';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
-import { AccountBalance, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance, AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { traceService } from '@/src/utils/TraceService';
 import {
@@ -321,7 +321,7 @@ class ReactiveDataService {
    * Consolidates account info, balance, and sub-account tree.
    */
   observeAccountDashboard(
-    accountId: string,
+    accountId: AccountId,
     targetCurrency: string,
     workplaceId: WorkplaceId,
   ): Observable<{
@@ -344,7 +344,10 @@ class ReactiveDataService {
         const targetAccount = accounts.find(a => a.id === accountId);
         if (!targetAccount) {
           // If not found in active, try to find in deleted (one-shot find for efficiency)
-          const deletedAccount = await accountRepository.findWithDeleted(workplaceId, accountId);
+          const deletedAccount = await accountRepository.findWithDeleted(
+            workplaceId,
+            accountId as AccountId,
+          );
           if (!deletedAccount)
             return { account: null, balance: null, subAccounts: [], allAccounts: accounts };
 
@@ -425,7 +428,7 @@ class ReactiveDataService {
 
           const descendants = getDescendants(accountId);
           const subBalances = descendants
-            .map(d => balancesMap.get(d.id))
+            .map(d => balancesMap.get(d.id as AccountId))
             .filter((b): b is AccountBalance => !!b);
 
           return {
@@ -449,23 +452,23 @@ class ReactiveDataService {
 
   private mapRawToBalance(item: RawSQLRow, now: number): AccountBalance {
     // Optimization: Direct access for known SQL aliases instead of expensive regex loop
-    const accountId = item.id || item.accountId || item.account_id;
+    const accountId = (item.id || item.accountId || item.account_id) as AccountId;
     const balance = Number(item.direct_balance || item.directBalance || 0);
-    const currencyCode = item.currency_code || item.currencyCode;
-    const accountType = item.account_type || item.accountType;
+    const currencyCode = (item.currency_code || item.currencyCode) as string;
+    const accountType = (item.account_type || item.accountType) as AccountType;
     const income = Number(item.monthly_income || item.monthlyIncome || 0);
     const expenses = Number(item.monthly_expenses || item.monthlyExpenses || 0);
     const txCount = Number(item.direct_transaction_count || item.directTransactionCount || 0);
 
     return {
-      accountId: String(accountId),
+      accountId: accountId,
       balance: balance,
       directBalance: balance,
       currencyCode: String(currencyCode),
       transactionCount: txCount,
       directTransactionCount: txCount,
       asOfDate: now,
-      accountType: accountType as any,
+      accountType: accountType,
       monthlyIncome: income,
       monthlyExpenses: expenses,
     };

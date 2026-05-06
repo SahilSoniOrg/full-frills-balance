@@ -1,3 +1,4 @@
+import { AccountId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
@@ -26,7 +27,7 @@ export function useReportActions({ selectedPeriod, dateRange }: UseReportActions
   }, [selectedPeriod, onViewTransactions]);
 
   const onLegendRowPress = useCallback(
-    (accountId: string) => {
+    (accountId: AccountId) => {
       const start = selectedPeriod?.start ?? dateRange.startDate;
       const end = selectedPeriod?.end ?? dateRange.endDate;
 

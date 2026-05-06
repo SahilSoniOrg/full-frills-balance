@@ -1,10 +1,10 @@
 import { AppConfig } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domain';
+import { AccountId, AccountRole, JournalEntryLine, TabType } from '@/src/types/domain';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -20,8 +20,8 @@ export interface UseSimpleJournalEditorProps {
 export interface SimpleFormSection {
   title: string;
   accounts: Account[];
-  selectedId: string;
-  onSelect: (id: string) => void;
+  selectedId: AccountId;
+  onSelect: (id: AccountId) => void;
   role: AccountRole;
 }
 
@@ -56,8 +56,8 @@ export function useSimpleJournalEditor({
   );
 
   const amount = sourceLine?.amount || destinationLine?.amount || '';
-  const sourceId = sourceLine?.accountId || '';
-  const destinationId = destinationLine?.accountId || '';
+  const sourceId = sourceLine?.accountId || ('' as AccountId);
+  const destinationId = destinationLine?.accountId || ('' as AccountId);
 
   // Use shared account selection logic for filtering
   const { transactionAccounts, expenseAccounts, incomeAccounts } = useAccountSelection({
@@ -183,7 +183,7 @@ export function useSimpleJournalEditor({
     if (sourceLine) {
       editor.updateLine(sourceLine.id, {
         transactionType: TransactionType.CREDIT,
-        accountId: '',
+        accountId: '' as AccountId,
         accountName: '',
         accountType: getInferredAccountType(newType, TransactionType.CREDIT),
         accountCurrency: undefined,
@@ -192,7 +192,7 @@ export function useSimpleJournalEditor({
     if (destinationLine) {
       editor.updateLine(destinationLine.id, {
         transactionType: TransactionType.DEBIT,
-        accountId: '',
+        accountId: '' as AccountId,
         accountName: '',
         accountType: getInferredAccountType(newType, TransactionType.DEBIT),
         accountCurrency: undefined,
@@ -208,7 +208,7 @@ export function useSimpleJournalEditor({
   };
 
   const setSourceId = useCallback(
-    (id: string) => {
+    (id: AccountId) => {
       const account = accounts.find(a => a.id === id);
       if (sourceLine) {
         editor.updateLine(sourceLine.id, {
@@ -223,7 +223,7 @@ export function useSimpleJournalEditor({
   );
 
   const setDestinationId = useCallback(
-    (id: string) => {
+    (id: AccountId) => {
       const account = accounts.find(a => a.id === id);
       if (destinationLine) {
         editor.updateLine(destinationLine.id, {
@@ -245,8 +245,8 @@ export function useSimpleJournalEditor({
     const lastDestId = preferences.lastUsedDestinationAccountId;
 
     let shouldUpdate = false;
-    let newSourceId: string | undefined;
-    let newDestId: string | undefined;
+    let newSourceId: AccountId | undefined;
+    let newDestId: AccountId | undefined;
 
     // Only default if empty
     if (!sourceId && lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {

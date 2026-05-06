@@ -1,3 +1,5 @@
+import { AccountId, AccountType } from '@/src/types/domain';
+
 /**
  * Valid primitive types for raw SQL query arguments.
  * Note: JS Date objects must be converted to timestamps (number) before passing
@@ -28,7 +30,7 @@ export interface RebuildTransaction {
 export interface DailyDelta {
   dayStart: number;
   currencyCode: string;
-  accountType: string;
+  accountType: AccountType;
   delta: number;
 }
 
@@ -36,7 +38,7 @@ export interface DailyDelta {
  * Account-level net balance change data.
  */
 export interface AccountDelta {
-  accountId: string;
+  accountId: AccountId;
   currencyCode: string;
   delta: number;
 }
@@ -46,7 +48,7 @@ export interface AccountDelta {
  */
 export interface RecurringPattern {
   amount: number;
-  accountId: string;
+  accountId: AccountId;
   currencyCode: string;
   occurrenceCount: number;
   journalIds: string;

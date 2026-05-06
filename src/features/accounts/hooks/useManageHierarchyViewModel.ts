@@ -7,6 +7,7 @@ import {
 import { createAccountTypeRecord } from '@/src/utils/accountCategory';
 
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { AccountId } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -16,21 +17,21 @@ import { LayoutAnimation } from 'react-native';
 export interface ManageHierarchyViewModel {
   accounts: Account[];
   balancesByAccountId: Map<string, { transactionCount?: number; directTransactionCount?: number }>;
-  selectedAccountId: string | null;
+  selectedAccountId: AccountId | null;
   selectedAccount: Account | undefined;
   collapsedCategories: Set<string>;
   expandedAccountIds: Set<string>;
-  accountsByParent: Map<string | null, Account[]>;
+  accountsByParent: Map<AccountId | null, Account[]>;
   visibleRootAccountsByCategory: Record<string, Account[]>;
   canSelectedAccountBeParent: boolean;
   addChildCandidates: Account[];
   parentCandidates: Account[];
   onCreateParent: () => void;
-  onSelectAccount: (accountId: string | null) => void;
-  onToggleExpand: (accountId: string) => void;
+  onSelectAccount: (accountId: AccountId | null) => void;
+  onToggleExpand: (accountId: AccountId) => void;
   onToggleCategory: (category: string) => void;
-  onAssignParent: (accountId: string, parentId: string | null) => Promise<void>;
-  onAddChild: (parentId: string, childId: string) => Promise<void>;
+  onAssignParent: (accountId: AccountId, parentId: AccountId | null) => Promise<void>;
+  onAddChild: (parentId: AccountId, childId: AccountId) => Promise<void>;
 }
 
 export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
@@ -39,10 +40,10 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   const { balancesByAccountId } = useAccountBalances(workplaceId, accounts);
   const { updateAccount } = useAccountActions(workplaceId);
 
-  const params = useLocalSearchParams<{ accountId?: string }>();
+  const params = useLocalSearchParams<{ accountId?: AccountId }>();
   const initialFocusedId = params.accountId || null;
 
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(initialFocusedId);
+  const [selectedAccountId, setSelectedAccountId] = useState<AccountId | null>(initialFocusedId);
   const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
@@ -75,7 +76,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   }, [initialFocusedId, accounts]);
 
   const accountsByParent = useMemo(() => {
-    const groups = new Map<string | null, Account[]>();
+    const groups = new Map<AccountId | null, Account[]>();
     accounts.forEach((account: Account) => {
       const parentId = account.parentAccountId || null;
       if (!groups.has(parentId)) {
@@ -159,7 +160,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     });
   }, [accounts, balancesByAccountId, selectedAccount, descendantIds]);
 
-  const onToggleExpand = useCallback((accountId: string) => {
+  const onToggleExpand = useCallback((accountId: AccountId) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedAccountIds(prev => {
       const next = new Set(prev);
@@ -180,7 +181,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   }, []);
 
   const onAssignParent = useCallback(
-    async (accountId: string, parentId: string | null) => {
+    async (accountId: AccountId, parentId: AccountId | null) => {
       const account = accounts.find((candidate: Account) => candidate.id === accountId);
       if (!account) return;
 
@@ -199,7 +200,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   );
 
   const onAddChild = useCallback(
-    async (parentId: string, childId: string) => {
+    async (parentId: AccountId, childId: AccountId) => {
       const childAccount = accounts.find((candidate: Account) => candidate.id === childId);
       if (!childAccount) return;
 
@@ -219,7 +220,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     AppNavigation.toAccountCreation();
   }, []);
 
-  const onSelectAccount = useCallback((accountId: string | null) => {
+  const onSelectAccount = useCallback((accountId: AccountId | null) => {
     setSelectedAccountId(accountId);
   }, []);
 

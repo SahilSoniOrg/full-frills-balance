@@ -6,7 +6,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { auditService } from '@/src/services/audit-service';
 
 import { revertRegistry } from '@/src/services/revert-registry';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AuditRepository');
@@ -40,28 +40,39 @@ describe('AuditService', () => {
     // Manually register handlers since mocks don't run constructors
     revertRegistry.register('account', async (id, changes, action) => {
       if (action === AuditAction.CREATE)
-        await (accountService as any).deleteAccount(id, 'wp-1' as WorkplaceId);
+        await (accountService as any).deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.DELETE)
-        await (accountService as any).recoverAccount(id, 'wp-1' as WorkplaceId);
+        await (accountService as any).recoverAccount(id as AccountId, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.UPDATE && changes.before) {
         if (changes.before.deletedAt)
-          await (accountService as any).deleteAccount(id, 'wp-1' as WorkplaceId);
-        else await (accountService as any).updateAccount(id, changes.before, 'wp-1' as WorkplaceId);
+          await (accountService as any).deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
+        else
+          await (accountService as any).updateAccount(
+            id as AccountId,
+            changes.before,
+            'wp-1' as WorkplaceId,
+          );
       }
     });
 
     revertRegistry.register('journal', async (id, changes, action) => {
       if (action === AuditAction.CREATE)
-        await journalService.deleteJournal(id, 'wp-1' as WorkplaceId);
+        await journalService.deleteJournal(id as JournalId, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.DELETE)
-        await journalService.recoverJournal(id, 'wp-1' as WorkplaceId);
+        await journalService.recoverJournal(id as JournalId, 'wp-1' as WorkplaceId);
       else if (action === AuditAction.UPDATE && changes.before) {
-        if (changes.before.deletedAt) await journalService.deleteJournal(id, 'wp-1' as WorkplaceId);
+        if (changes.before.deletedAt)
+          await journalService.deleteJournal(id as JournalId, 'wp-1' as WorkplaceId);
         else if (changes.before.status === JournalStatus.PLANNED)
-          await journalService.revertToPlanned(id, 'wp-1' as WorkplaceId);
+          await journalService.revertToPlanned(id as JournalId, 'wp-1' as WorkplaceId);
         else if (changes.before.status === JournalStatus.POSTED)
-          await journalService.postJournal(id, 'wp-1' as WorkplaceId);
-        else await journalService.updateJournal(id, changes.before as any, 'wp-1' as WorkplaceId);
+          await journalService.postJournal(id as JournalId, 'wp-1' as WorkplaceId);
+        else
+          await journalService.updateJournal(
+            id as JournalId,
+            changes.before as any,
+            'wp-1' as WorkplaceId,
+          );
       }
     });
   });
@@ -74,7 +85,7 @@ describe('AuditService', () => {
     it('should delegate logging to repository', async () => {
       const entry = {
         entityType: 'account' as const,
-        entityId: 'acc1',
+        entityId: 'acc1' as AccountId,
         action: AuditAction.UPDATE,
         changes: { name: 'New Name' },
       };
@@ -90,11 +101,15 @@ describe('AuditService', () => {
       const mockLogs = [{ id: 'log1' }];
       (auditRepository.findByEntity as jest.Mock).mockResolvedValue(mockLogs);
 
-      const result = await auditService.getAuditTrail('account', 'acc1', 'wp-1' as WorkplaceId);
+      const result = await auditService.getAuditTrail(
+        'account',
+        'acc1' as AccountId,
+        'wp-1' as WorkplaceId,
+      );
 
       expect(auditRepository.findByEntity).toHaveBeenCalledWith(
         'account',
-        'acc1',
+        'acc1' as AccountId,
         'wp-1' as WorkplaceId,
       );
       expect(result).toBe(mockLogs);
@@ -209,7 +224,10 @@ describe('AuditService', () => {
         );
         const res = await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
         console.log('Result:', res);
-        expect(accountService.deleteAccount).toHaveBeenCalledWith('ent1');
+        expect(accountService.deleteAccount).toHaveBeenCalledWith(
+          'ent1' as AccountId,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert DELETE by recovering account', async () => {
@@ -217,7 +235,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.DELETE }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(accountService.recoverAccount).toHaveBeenCalledWith('ent1');
+        expect(accountService.recoverAccount).toHaveBeenCalledWith(
+          'ent1' as AccountId,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert UPDATE by restoring previous state', async () => {
@@ -226,7 +247,11 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(accountService.updateAccount).toHaveBeenCalledWith('ent1', changes.before);
+        expect(accountService.updateAccount).toHaveBeenCalledWith(
+          'ent1' as AccountId,
+          changes.before,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert UPDATE (undelete) by deleting account', async () => {
@@ -235,7 +260,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(accountService.deleteAccount).toHaveBeenCalledWith('ent1');
+        expect(accountService.deleteAccount).toHaveBeenCalledWith(
+          'ent1' as AccountId,
+          'wp-1' as WorkplaceId,
+        );
       });
     });
 
@@ -245,7 +273,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'journal', action: AuditAction.CREATE }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.deleteJournal).toHaveBeenCalledWith('ent1');
+        expect(journalService.deleteJournal).toHaveBeenCalledWith(
+          'ent1' as JournalId,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert DELETE by recovering journal', async () => {
@@ -253,7 +284,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'journal', action: AuditAction.DELETE }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.recoverJournal).toHaveBeenCalledWith('ent1');
+        expect(journalService.recoverJournal).toHaveBeenCalledWith(
+          'ent1' as JournalId,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert UPDATE by restoring previous state', async () => {
@@ -262,7 +296,11 @@ describe('AuditService', () => {
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.updateJournal).toHaveBeenCalledWith('ent1', changes.before);
+        expect(journalService.updateJournal).toHaveBeenCalledWith(
+          'ent1' as JournalId,
+          changes.before,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert UPDATE (undelete) by deleting journal', async () => {
@@ -271,7 +309,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.deleteJournal).toHaveBeenCalledWith('ent1');
+        expect(journalService.deleteJournal).toHaveBeenCalledWith(
+          'ent1' as JournalId,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert UPDATE transitioning to POSTED by reverting to PLANNED', async () => {
@@ -280,7 +321,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.revertToPlanned).toHaveBeenCalledWith('ent1');
+        expect(journalService.revertToPlanned).toHaveBeenCalledWith(
+          'ent1' as JournalId,
+          'wp-1' as WorkplaceId,
+        );
       });
 
       it('should revert UPDATE transitioning to PLANNED by posting journal', async () => {
@@ -289,7 +333,10 @@ describe('AuditService', () => {
           mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
         );
         await auditService.revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.postJournal).toHaveBeenCalledWith('ent1');
+        expect(journalService.postJournal).toHaveBeenCalledWith(
+          'ent1' as JournalId,
+          'wp-1' as WorkplaceId,
+        );
       });
     });
   });

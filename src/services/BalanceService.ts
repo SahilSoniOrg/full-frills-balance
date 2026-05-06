@@ -6,7 +6,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountBalance, WorkplaceId } from '@/src/types/domain';
+import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Trace, traceService } from '@/src/utils/TraceService';
 import { Money } from '../utils/money';
@@ -309,11 +309,11 @@ export class BalanceService {
    * Logic integrated with snapshots and drift tracking.
    */
   async getAccountBalance(
-    accountId: string,
+    accountId: AccountId,
     workplaceId: WorkplaceId,
     cutoffDate: number = Number.MAX_SAFE_INTEGER,
   ): Promise<AccountBalance> {
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountRepository.find(workplaceId, accountId as AccountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const latestTx = await transactionRepository.findLatestForAccount(

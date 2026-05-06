@@ -2,7 +2,7 @@ import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { logger } from '@/src/utils/logger';
 import { act, renderHook } from '@testing-library/react-native';
 import { useJournalListViewModel } from '../useJournalListViewModel';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import { JournalDisplayType, WorkplaceId, AccountId, JournalId } from '@/src/types/domain';
 
 // Purely mock everything to avoid model compilation issues
 jest.mock('@/src/features/journal/hooks/useJournals', () => ({
@@ -76,7 +76,7 @@ jest.mock('@/src/utils/money', () => ({
 // Use date components to avoid timezone shift
 const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
   {
-    id: 'j1',
+    id: 'j1' as JournalId,
     journalDate: new Date(2024, 2, 20, 10).getTime(), // March 20
     displayType: JournalDisplayType.INCOME,
     totalAmount: 100,
@@ -84,10 +84,10 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     description: 'Salary',
     status: 'POSTED',
     transactionCount: 1,
-    accounts: [{ id: 'a1', name: 'Bank', role: 'DESTINATION', accountType: 'ASSET' }],
+    accounts: [{ id: 'a1' as AccountId, name: 'Bank', role: 'DESTINATION', accountType: 'ASSET' }],
   },
   {
-    id: 'j2',
+    id: 'j2' as JournalId,
     journalDate: new Date(2024, 2, 20, 15).getTime(),
     displayType: JournalDisplayType.EXPENSE,
     totalAmount: 20,
@@ -95,10 +95,10 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     description: 'Coffee',
     status: 'POSTED',
     transactionCount: 1,
-    accounts: [{ id: 'a2', name: 'Cash', role: 'SOURCE', accountType: 'ASSET' }],
+    accounts: [{ id: 'a2' as AccountId, name: 'Cash', role: 'SOURCE', accountType: 'ASSET' }],
   },
   {
-    id: 'j3',
+    id: 'j3' as JournalId,
     journalDate: new Date(2024, 2, 21, 9).getTime(), // March 21
     displayType: JournalDisplayType.EXPENSE,
     totalAmount: 50,
@@ -106,7 +106,7 @@ const mockEnrichedJournals: import('@/src/types/domain').EnrichedJournal[] = [
     description: 'Lunch',
     status: 'POSTED',
     transactionCount: 1,
-    accounts: [{ id: 'a3', name: 'Card', role: 'SOURCE', accountType: 'ASSET' }],
+    accounts: [{ id: 'a3' as AccountId, name: 'Card', role: 'SOURCE', accountType: 'ASSET' }],
   },
 ];
 

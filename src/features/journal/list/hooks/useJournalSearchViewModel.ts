@@ -10,7 +10,13 @@ import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
 import { analytics } from '@/src/services/analytics-service';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
-import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import {
+  AccountId,
+  EnrichedJournal,
+  JournalDisplayType,
+  JournalId,
+  TransactionId,
+} from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
@@ -35,8 +41,8 @@ export interface JournalSearchViewModel {
   periodFilter: PeriodFilter;
   setDateRange: (range: DateRange | null, filter: PeriodFilter) => void;
 
-  accountIds: string[];
-  setAccountIds: (ids: string[]) => void;
+  accountIds: AccountId[];
+  setAccountIds: (ids: AccountId[]) => void;
 
   minAmount: string;
   setMinAmount: (val: string) => void;
@@ -54,15 +60,15 @@ export interface JournalSearchViewModel {
   accounts: Account[];
 
   // Selection
-  selectedIds: Set<string>;
+  selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: string) => void;
-  toggleSelection: (id: string) => void;
+  onLongPressItem: (id: JournalId) => void;
+  toggleSelection: (id: JournalId) => void;
   selectAll: () => void;
   clearItems: () => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<JournalId>>>;
 }
 
 export function useJournalSearchViewModel(): JournalSearchViewModel {
@@ -105,8 +111,8 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     }
     return { type: 'ALL_TIME' };
   });
-  const [accountIds, setAccountIds] = useState<string[]>(() => {
-    if (accountIdsParam) return accountIdsParam.split(',');
+  const [accountIds, setAccountIds] = useState<AccountId[]>(() => {
+    if (accountIdsParam) return accountIdsParam.split(',') as AccountId[];
     return [];
   });
   const [minAmount, setMinAmount] = useState(minAmountParam || '');
@@ -223,7 +229,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     loadMore();
   }, [hasMore, isLoadingMore, loadMore]);
 
-  const selectionControl = useSelection<string>();
+  const selectionControl = useSelection<JournalId>();
   const {
     selectedIds,
     isSelectionModeActive,
@@ -285,7 +291,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
         return { count: journalsForDay.length, netAmount, currencyCode: baseCurrency };
       },
       renderItem: (journal: EnrichedJournal) => ({
-        id: journal.id,
+        id: journal.id as string as TransactionId,
         type: 'transaction' as const,
         date: journal.journalDate,
         onPress: () => handleJournalPress(journal),
@@ -309,7 +315,9 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
   }, [journals, selectedIds, setSelectedIds]);
 
   const selectAll = useCallback(() => {
-    const visibleIds = items.filter(i => i.type === 'transaction').map(i => i.id);
+    const visibleIds = items
+      .filter(i => i.type === 'transaction')
+      .map(i => i.id as string as JournalId);
     selectionControl.selectAll(visibleIds);
   }, [items, selectionControl]);
 

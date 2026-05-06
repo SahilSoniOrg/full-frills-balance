@@ -4,7 +4,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { DisplayTransaction, WorkplaceId } from '@/src/types/domain';
+import { AccountId, DisplayTransaction, JournalId, WorkplaceId } from '@/src/types/domain';
 import { isBalanceIncrease, isValueEntering } from '@/src/utils/accountingHelpers';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
@@ -14,7 +14,7 @@ export class TransactionService {
    */
   async getTransactionsWithAccountInfo(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
   ): Promise<DisplayTransaction[]> {
     const journal = await journalRepository.find(workplaceId, journalId);
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
@@ -53,7 +53,7 @@ export class TransactionService {
    */
   async getEnrichedByJournal(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
   ): Promise<DisplayTransaction[]> {
     const journal = await journalRepository.find(workplaceId, journalId);
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
@@ -71,7 +71,7 @@ export class TransactionService {
    */
   observeTransactionsWithAccountInfo(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
     includeDeleted: boolean = false,
   ) {
     if (!journalId) return of([] as DisplayTransaction[]);
@@ -130,7 +130,7 @@ export class TransactionService {
 
   observeEnrichedByJournal(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
     includeDeleted: boolean = false,
   ) {
     if (!journalId) return of([] as DisplayTransaction[]);
@@ -170,7 +170,7 @@ export class TransactionService {
   private mapToEnriched(
     tx: Transaction,
     transactions: Transaction[],
-    accountMap: Map<string, Account>,
+    accountMap: Map<AccountId, Account>,
     journal: Journal | null,
   ): DisplayTransaction {
     const account = accountMap.get(tx.accountId);

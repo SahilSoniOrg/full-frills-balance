@@ -4,7 +4,7 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
-import { WorkplaceId } from '@/src/types/domain';
+import { JournalId, WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/features/journal/services/JournalService');
@@ -144,7 +144,7 @@ describe('useJournalEditor', () => {
     (transactionService.getEnrichedByJournal as jest.Mock).mockResolvedValue(mockTxs);
 
     const { result } = renderHook(() =>
-      useJournalEditor('test-workplace' as WorkplaceId, { journalId: 'j1' }),
+      useJournalEditor('test-workplace' as WorkplaceId, { journalId: 'j1' as JournalId }),
     );
 
     expect(result.current.isLoading).toBe(true);

@@ -1,7 +1,8 @@
 import Account from '@/src/data/models/Account';
-import Journal from '@/src/data/models/Journal';
-import { Relation } from '@nozbe/watermelondb';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import Journal from '@/src/data/models/Journal';
+import { AccountId, JournalId, TransactionId } from '@/src/types/domain';
+import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 
 export enum TransactionType {
@@ -9,15 +10,15 @@ export enum TransactionType {
   CREDIT = 'CREDIT',
 }
 
-export default class Transaction extends BaseScopedModel {
+export default class Transaction extends BaseScopedModel<TransactionId> {
   static table = 'transactions';
   static associations = {
     journals: { type: 'belongs_to', key: 'journal_id' },
     accounts: { type: 'belongs_to', key: 'account_id' },
   } as const;
 
-  @field('journal_id') journalId!: string;
-  @field('account_id') accountId!: string;
+  @field('journal_id') journalId!: JournalId;
+  @field('account_id') accountId!: AccountId;
   @field('amount') amount!: number;
   @field('transaction_type') transactionType!: TransactionType;
   @field('currency_code') currencyCode!: string;

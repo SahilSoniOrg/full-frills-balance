@@ -5,7 +5,13 @@ import { BatchImportData, importRepository } from '@/src/data/repositories/Impor
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  JournalDisplayType,
+  JournalId,
+  TransactionId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
@@ -267,11 +273,11 @@ export const cashewPlugin: ImportPlugin = {
       const currencyMap = new Map<string, string>();
 
       // 1. Map Wallets to Accounts
-      const accountsMap = new Map<string, string>(); // Cashew wallet_pk -> App Account ID
+      const accountsMap = new Map<string, AccountId>(); // Cashew wallet_pk -> App Account ID
       const walletCurrencies = new Map<string, string>();
 
       for (const w of wallets) {
-        const newId = generator();
+        const newId = generator() as AccountId;
         accountsMap.set(w.wallet_pk, newId);
         const currency = (w.currency || workplaceCurrency).toUpperCase();
         walletCurrencies.set(w.wallet_pk, currency);
@@ -292,7 +298,7 @@ export const cashewPlugin: ImportPlugin = {
         if (objective.type === 1) {
           // Loan
           const isLent = objective.income === 1;
-          const accountId = objective.objective_pk;
+          const accountId = objective.objective_pk as AccountId;
           data.accounts.push({
             id: accountId,
             name: `Loan: ${objective.name}`,
@@ -318,15 +324,15 @@ export const cashewPlugin: ImportPlugin = {
       }
 
       // 3. Map Categories to Accounts (Income/Expense)
-      const categoriesMap = new Map<string, string>(); // Cashew category_pk -> App Category ID
-      const parentCategoryMap = new Map<string, string>(); // category_pk -> main_category_pk
+      const categoriesMap = new Map<string, AccountId>(); // Cashew category_pk -> App Category ID
+      const parentCategoryMap = new Map<string, AccountId>(); // category_pk -> main_category_pk
 
       // First pass: create all categories
       for (const c of categories) {
-        const newId = generator();
+        const newId = generator() as AccountId;
         categoriesMap.set(c.category_pk, newId);
         if (c.main_category_pk) {
-          parentCategoryMap.set(c.category_pk, c.main_category_pk);
+          parentCategoryMap.set(c.category_pk, c.main_category_pk as AccountId);
         }
 
         data.accounts.push({
@@ -387,7 +393,7 @@ export const cashewPlugin: ImportPlugin = {
 
             if (fromAccId && toAccId) {
               if (isPaid) {
-                const journalId = generator();
+                const journalId = generator() as JournalId;
                 data.journals.push({
                   id: journalId,
                   journalDate,
@@ -400,7 +406,7 @@ export const cashewPlugin: ImportPlugin = {
                 });
 
                 data.transactions.push({
-                  id: generator(),
+                  id: generator() as TransactionId,
                   accountId: fromAccId,
                   journalId,
                   amount: Math.abs(t.amount),
@@ -422,7 +428,7 @@ export const cashewPlugin: ImportPlugin = {
                 // Planned Transfer
                 if (t.reoccurrence === null) {
                   // One-time unpaid Transfer -> PLANNED Journal
-                  const journalId = generator();
+                  const journalId = generator() as JournalId;
                   data.journals.push({
                     id: journalId,
                     journalDate,
@@ -500,7 +506,7 @@ export const cashewPlugin: ImportPlugin = {
 
         if (isPaid) {
           // History record
-          const journalId = generator();
+          const journalId = generator() as JournalId;
           data.journals.push({
             id: journalId,
             journalDate,
@@ -537,7 +543,7 @@ export const cashewPlugin: ImportPlugin = {
           // Unpaid
           if (t.reoccurrence === null) {
             // One-time unpaid -> PLANNED Journal
-            const journalId = generator();
+            const journalId = generator() as JournalId;
             data.journals.push({
               id: journalId,
               journalDate,

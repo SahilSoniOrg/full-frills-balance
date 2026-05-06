@@ -1,3 +1,4 @@
+import { AccountId } from '@/src/types/domain';
 import { FlowCategory, FlowSource } from '../../types';
 import { assertGlobalIntegrity } from '../SimulationIntegrity';
 
@@ -10,7 +11,7 @@ describe('SimulationIntegrity', () => {
     label: 'Test Flow',
     origin: FlowSource.MANUAL,
     kind: 'OUTFLOW' as const,
-    accountId: 'acc-1',
+    accountId: 'acc-1' as AccountId,
   };
 
   it('passes for unique flows', () => {
@@ -49,20 +50,20 @@ describe('SimulationIntegrity', () => {
 
   it('passes for split flows (same ref/day, different accounts)', () => {
     const flows = [
-      { ...baseFlow, referenceId: 'ref-1', dayOffset: 1, accountId: 'acc-1' },
-      { ...baseFlow, referenceId: 'ref-1', dayOffset: 1, accountId: 'acc-2' },
+      { ...baseFlow, referenceId: 'ref-1', dayOffset: 1, accountId: 'acc-1' as AccountId },
+      { ...baseFlow, referenceId: 'ref-1', dayOffset: 1, accountId: 'acc-2' as AccountId },
     ];
     expect(() => assertGlobalIntegrity(flows)).not.toThrow();
   });
 
   it('throws for identical flows to the same account', () => {
     const flows = [
-      { ...baseFlow, referenceId: 'ref-1', dayOffset: 1, accountId: 'acc-1' },
+      { ...baseFlow, referenceId: 'ref-1', dayOffset: 1, accountId: 'acc-1' as AccountId },
       {
         ...baseFlow,
         referenceId: 'ref-1',
         dayOffset: 1,
-        accountId: 'acc-1',
+        accountId: 'acc-1' as AccountId,
         label: 'Double Count',
       },
     ];
@@ -79,8 +80,8 @@ describe('SimulationIntegrity', () => {
       referenceId: 'ref-trans',
     };
     const flows = [
-      { ...tBase, fromAccountId: 'acc-1', toAccountId: 'acc-2' },
-      { ...tBase, fromAccountId: 'acc-1', toAccountId: 'acc-3' },
+      { ...tBase, fromAccountId: 'acc-1' as AccountId, toAccountId: 'acc-2' as AccountId },
+      { ...tBase, fromAccountId: 'acc-1' as AccountId, toAccountId: 'acc-3' as AccountId },
     ];
     expect(() => assertGlobalIntegrity(flows)).not.toThrow();
   });

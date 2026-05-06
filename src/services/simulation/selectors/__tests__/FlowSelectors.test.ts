@@ -3,10 +3,11 @@ import { selectDebtEntries } from '../debt';
 import { selectCommittedEntries } from '../committed';
 import { Flow, FlowCategory, FlowSource } from '../../types';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 
 describe('Flow Selectors', () => {
   const resultCurrency = 'USD';
-  const mockAccount = (id: string, name: string, subtype: AccountSubtype): Account =>
+  const mockAccount = (id: AccountId, name: string, subtype: AccountSubtype): Account =>
     ({
       id,
       name,
@@ -15,11 +16,20 @@ describe('Flow Selectors', () => {
       currencyCode: resultCurrency,
     }) as Account;
 
-  const accountMap = new Map<string, Account>([
-    ['checking', mockAccount('checking', 'Checking', AccountSubtype.BANK_CHECKING)],
-    ['savings', mockAccount('savings', 'Savings', AccountSubtype.BANK_SAVINGS)],
-    ['cc', mockAccount('cc', 'Credit Card', AccountSubtype.CREDIT_CARD)],
-    ['rent-acc', mockAccount('rent-acc', 'Rent Category', AccountSubtype.BANK_CHECKING)],
+  const accountMap = new Map<AccountId, Account>([
+    [
+      'checking' as AccountId,
+      mockAccount('checking' as AccountId, 'Checking', AccountSubtype.BANK_CHECKING),
+    ],
+    [
+      'savings' as AccountId,
+      mockAccount('savings' as AccountId, 'Savings', AccountSubtype.BANK_SAVINGS),
+    ],
+    ['cc' as AccountId, mockAccount('cc' as AccountId, 'Credit Card', AccountSubtype.CREDIT_CARD)],
+    [
+      'rent-acc' as AccountId,
+      mockAccount('rent-acc' as AccountId, 'Rent Category', AccountSubtype.BANK_CHECKING),
+    ],
   ]);
 
   describe('selectIncomeEntries', () => {
@@ -27,7 +37,7 @@ describe('Flow Selectors', () => {
       const flows: Flow[] = [
         {
           kind: 'INFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 1000,
           dayOffset: -1,
           category: FlowCategory.INCOME,
@@ -38,7 +48,7 @@ describe('Flow Selectors', () => {
         },
         {
           kind: 'INFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 2000,
           dayOffset: 15,
           category: FlowCategory.INCOME,
@@ -61,7 +71,7 @@ describe('Flow Selectors', () => {
       const flows: Flow[] = [
         {
           kind: 'OUTFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 100,
           dayOffset: 5,
           category: FlowCategory.DEBT,
@@ -72,8 +82,8 @@ describe('Flow Selectors', () => {
         },
         {
           kind: 'TRANSFER',
-          fromAccountId: 'checking',
-          toAccountId: 'cc',
+          fromAccountId: 'checking' as AccountId,
+          toAccountId: 'cc' as AccountId,
           amount: 50,
           dayOffset: 10,
           category: FlowCategory.DEBT,
@@ -86,7 +96,7 @@ describe('Flow Selectors', () => {
 
       const debts = selectDebtEntries(flows, accountMap);
       expect(debts).toHaveLength(1);
-      expect(debts[0].accountId).toBe('cc');
+      expect(debts[0].accountId).toBe('cc' as AccountId);
       expect(debts[0].amount).toBe(150);
     });
 
@@ -94,7 +104,7 @@ describe('Flow Selectors', () => {
       const flows: Flow[] = [
         {
           kind: 'OUTFLOW',
-          accountId: 'checking', // Source
+          accountId: 'checking' as AccountId, // Source
           amount: 500,
           dayOffset: 5,
           category: FlowCategory.DEBT,
@@ -107,7 +117,7 @@ describe('Flow Selectors', () => {
 
       const debts = selectDebtEntries(flows, accountMap);
       expect(debts).toHaveLength(1);
-      expect(debts[0].accountId).toBe('cc');
+      expect(debts[0].accountId).toBe('cc' as AccountId);
       expect(debts[0].accountName).toBe('Credit Card');
       expect(debts[0].amount).toBe(500);
     });
@@ -118,7 +128,7 @@ describe('Flow Selectors', () => {
       const flows: Flow[] = [
         {
           kind: 'OUTFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 50,
           dayOffset: 5,
           category: FlowCategory.BUDGET,
@@ -129,7 +139,7 @@ describe('Flow Selectors', () => {
         },
         {
           kind: 'OUTFLOW',
-          accountId: 'checking',
+          accountId: 'checking' as AccountId,
           amount: 100,
           dayOffset: 20,
           category: FlowCategory.BUDGET,
@@ -143,7 +153,7 @@ describe('Flow Selectors', () => {
       // Income on day 15
       const committed = selectCommittedEntries(flows, accountMap, 15);
 
-      const groceriesGroup = committed.find(c => c.accountId === 'groceries');
+      const groceriesGroup = committed.find(c => c.accountId === ('groceries' as AccountId));
       expect(groceriesGroup).toBeDefined();
       expect(groceriesGroup?.details).toHaveLength(2);
 
@@ -158,8 +168,8 @@ describe('Flow Selectors', () => {
       const flows: Flow[] = [
         {
           kind: 'TRANSFER',
-          fromAccountId: 'checking',
-          toAccountId: 'savings',
+          fromAccountId: 'checking' as AccountId,
+          toAccountId: 'savings' as AccountId,
           amount: 500,
           dayOffset: 10,
           category: FlowCategory.TRANSFER,

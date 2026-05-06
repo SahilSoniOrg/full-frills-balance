@@ -2,11 +2,11 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import { AccountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceService } from '@/src/services/BalanceService';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface ReconciliationResult {
-  accountId: string;
+  accountId: AccountId;
   accountName: string;
   systemBalance: number;
   expectedBalance?: number;
@@ -35,7 +35,7 @@ export class ReconciliationRepository {
    * @returns Reconciliation result with variance analysis
    */
   async reconcileAccount(
-    accountId: string,
+    accountId: AccountId,
     workplaceId: WorkplaceId,
     expectedBalance?: number,
   ): Promise<ReconciliationResult> {

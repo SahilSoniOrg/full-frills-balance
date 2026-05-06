@@ -9,6 +9,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { AccountDelta, DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
@@ -17,13 +18,12 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import { from, Observable } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { WorkplaceId } from '@/src/types/domain';
 
 dayjs.extend(weekOfYear);
 dayjs.extend(isoWeek);
 
 export interface ExpenseCategory {
-  accountId: string;
+  accountId: AccountId;
   accountName: string;
   amount: number;
   percentage: number;
@@ -85,7 +85,7 @@ export interface ReportSnapshot {
 }
 
 interface ConvertedReportTransaction {
-  accountId: string;
+  accountId: AccountId;
   accountType: AccountType;
   transactionType: TransactionType;
   transactionDate: number;
@@ -93,7 +93,7 @@ interface ConvertedReportTransaction {
 }
 
 interface ReportAccount {
-  id: string;
+  id: AccountId;
   name: string;
   currencyCode?: string;
   accountType: AccountType;
@@ -101,11 +101,11 @@ interface ReportAccount {
 }
 
 interface ReportingDelta {
-  accountId?: string;
+  accountId?: AccountId;
   currencyCode: string;
   delta: number;
   dayStart?: number;
-  accountType?: string;
+  accountType?: AccountType;
 }
 
 export class ReportService {
@@ -117,7 +117,7 @@ export class ReportService {
     startDate: number,
     endDate: number,
     targetCurrency?: string,
-    accountIds?: string[],
+    accountIds?: AccountId[],
   ): Promise<ExpenseCategory[]> {
     return this.getBreakdownInternal(
       AccountType.EXPENSE,
@@ -157,7 +157,7 @@ export class ReportService {
     startDate: number,
     endDate: number,
     targetCurrency?: string,
-    accountIds?: string[],
+    accountIds?: AccountId[],
   ): Observable<ExpenseCategory[]> {
     return journalRepository
       .observeStatusMeta(workplaceId)
@@ -440,7 +440,7 @@ export class ReportService {
     startDate: number,
     endDate: number,
     targetCurrency?: string,
-    filterAccountIds?: string[],
+    filterAccountIds?: AccountId[],
   ): Promise<IncomeVsExpense[]> {
     const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
       workplaceId,
@@ -502,7 +502,7 @@ export class ReportService {
     startDate: number,
     endDate: number,
     targetCurrency?: string,
-    filterAccountIds?: string[],
+    filterAccountIds?: AccountId[],
   ): Promise<{ date: number; income: number; expense: number }[]> {
     const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
       workplaceId,
@@ -615,12 +615,12 @@ export class ReportService {
     T extends { currencyCode: string; delta: number; dayStart?: number; accountId?: string },
   >(
     workplaceId: WorkplaceId,
-    accountIds: string[],
+    accountIds: AccountId[],
     startDate: number,
     endDate: number,
     targetCurrency: string,
     accounts: ReportAccount[],
-    fetchRaw: (ids: string[], start: number, end: number) => Promise<T[]>,
+    fetchRaw: (ids: AccountId[], start: number, end: number) => Promise<T[]>,
   ): Promise<T[]> {
     const items = await fetchRaw(accountIds, startDate, endDate);
     if (items.length > 0) {

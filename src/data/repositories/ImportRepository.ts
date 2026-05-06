@@ -27,7 +27,14 @@ import SmsInboxRecord, {
   SmsProcessingStatus,
 } from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  JournalDisplayType,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
 export interface ImportedAccount {
@@ -36,7 +43,7 @@ export interface ImportedAccount {
   accountType: AccountType | string;
   accountSubtype?: AccountSubtype | string;
   currencyCode: string;
-  parentAccountId?: string;
+  parentAccountId?: AccountId;
   description?: string;
   icon?: IconName;
   orderNum?: number;
@@ -58,15 +65,15 @@ export interface ImportedJournal {
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number;
-  originalJournalId?: string;
-  reversingJournalId?: string;
-  plannedPaymentId?: string;
+  originalJournalId?: JournalId;
+  reversingJournalId?: JournalId;
+  plannedPaymentId?: PlannedPaymentId;
 }
 
 export interface ImportedTransaction {
   id: string;
-  journalId: string;
-  accountId: string;
+  journalId: JournalId;
+  accountId: AccountId;
   amount: number;
   transactionType: string;
   currencyCode: string;
@@ -102,7 +109,7 @@ export interface ImportedBudget {
 export interface ImportedBudgetScope {
   id: string;
   budgetId: string;
-  accountId: string;
+  accountId: AccountId;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -131,7 +138,7 @@ export interface ImportedExchangeRate {
 
 export interface ImportedAccountMetadata {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   statementDay?: number;
   dueDay?: number;
   minimumPaymentAmount?: number;
@@ -153,8 +160,8 @@ export interface ImportedPlannedPayment {
   description?: string;
   amount: number;
   currencyCode: string;
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountId: AccountId;
+  toAccountId: AccountId;
   intervalN: number;
   intervalType: PlannedPaymentInterval | string;
   startDate: number;
@@ -196,8 +203,8 @@ export interface ImportedSmsInboxRecord {
   referenceNumber?: string;
   direction: string;
   processingStatus: string;
-  linkedJournalId?: string;
-  duplicateJournalId?: string;
+  linkedJournalId?: JournalId;
+  duplicateJournalId?: JournalId;
   duplicateConfidence?: number;
   parseConfidence?: number;
   parseReason?: string;
@@ -216,8 +223,8 @@ export interface ImportedSmsAutoPostRule {
   conditionsJson?: string;
   actionsJson?: string;
   priority?: number;
-  sourceAccountId: string;
-  categoryAccountId: string;
+  sourceAccountId: AccountId;
+  categoryAccountId: AccountId;
   isActive: boolean;
   createdAt?: number;
   updatedAt?: number;
@@ -225,8 +232,8 @@ export interface ImportedSmsAutoPostRule {
 
 export interface ImportedBalanceSnapshot {
   id: string;
-  accountId: string;
-  transactionId: string;
+  accountId: AccountId;
+  transactionId: TransactionId;
   transactionDate: number;
   absoluteBalance: number;
   transactionCount: number;
@@ -365,7 +372,7 @@ export class ImportRepository {
           record.totalAmount = j.totalAmount;
           record.transactionCount = j.transactionCount;
           record.displayType = j.displayType;
-          if (j.plannedPaymentId) record.plannedPaymentId = j.plannedPaymentId;
+          if (j.plannedPaymentId) record.plannedPaymentId = j.plannedPaymentId as PlannedPaymentId;
           record._raw._status = 'synced';
           if (j.createdAt) (record as any)._raw.created_at = j.createdAt;
           if (j.updatedAt) (record as any)._raw.updated_at = j.updatedAt;
@@ -763,7 +770,7 @@ export class ImportRepository {
           record.transactionCount = j.transactionCount;
           record.displayType = j.displayType;
           if (j.plannedPaymentId) {
-            record.plannedPaymentId = j.plannedPaymentId;
+            record.plannedPaymentId = j.plannedPaymentId as PlannedPaymentId;
           }
           if (j.createdAt) (record as any)._raw.created_at = j.createdAt;
           if (j.updatedAt) (record as any)._raw.updated_at = j.updatedAt;

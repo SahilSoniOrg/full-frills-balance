@@ -1,8 +1,9 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import Transaction from '@/src/data/models/Transaction';
-import { Query } from '@nozbe/watermelondb';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import Transaction from '@/src/data/models/Transaction';
+import { AccountId } from '@/src/types/domain';
+import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
 export enum AccountType {
@@ -163,7 +164,7 @@ export function isSubtypeAllowedForType(
   return ACCOUNT_SUBTYPES_BY_TYPE[accountType].includes(subtype);
 }
 
-export default class Account extends BaseScopedModel {
+export default class Account extends BaseScopedModel<AccountId> {
   static table = 'accounts';
   static associations = {
     transactions: { type: 'has_many', foreignKey: 'account_id' },
@@ -177,7 +178,7 @@ export default class Account extends BaseScopedModel {
   @field('account_type') accountType!: AccountType;
   @field('account_subtype') accountSubtype?: AccountSubtype;
   @field('currency_code') currencyCode!: string;
-  @field('parent_account_id') parentAccountId?: string;
+  @field('parent_account_id') parentAccountId?: AccountId;
   @field('description') description?: string;
   @field('icon') icon?: IconName;
   @field('order_num') orderNum?: number;

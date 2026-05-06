@@ -7,8 +7,8 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
+import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -54,7 +54,7 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
 
 describe('CashFlowSimulationService scenario coverage', () => {
   const cash = {
-    id: 'cash',
+    id: 'cash' as AccountId,
     name: 'Checking',
     accountType: AccountType.ASSET,
     accountSubtype: 'CHECKING',
@@ -62,7 +62,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
   } as any;
 
   const savings = {
-    id: 'savings',
+    id: 'savings' as AccountId,
     name: 'Savings',
     accountType: AccountType.ASSET,
     accountSubtype: 'SAVINGS',
@@ -70,21 +70,21 @@ describe('CashFlowSimulationService scenario coverage', () => {
   } as any;
 
   const groceries = {
-    id: 'exp-groceries',
+    id: 'exp-groceries' as AccountId,
     name: 'Groceries',
     accountType: AccountType.EXPENSE,
     currencyCode: 'USD',
   } as any;
 
   const dining = {
-    id: 'exp-dining',
+    id: 'exp-dining' as AccountId,
     name: 'Dining',
     accountType: AccountType.EXPENSE,
     currencyCode: 'USD',
   } as any;
 
   const cc = {
-    id: 'cc',
+    id: 'cc' as AccountId,
     name: 'Credit Card',
     accountType: AccountType.LIABILITY,
     accountSubtype: AccountSubtype.CREDIT_CARD,
@@ -92,12 +92,14 @@ describe('CashFlowSimulationService scenario coverage', () => {
     metadataRecords: {
       fetch: jest
         .fn()
-        .mockResolvedValue([{ statementDay: 1, dueDay: 15, payFromAccountId: 'cash' }]),
+        .mockResolvedValue([
+          { statementDay: 1, dueDay: 15, payFromAccountId: 'cash' as AccountId },
+        ]),
     },
   } as any;
 
   const loan = {
-    id: 'loan',
+    id: 'loan' as AccountId,
     name: 'Personal Loan',
     accountType: AccountType.LIABILITY,
     accountSubtype: AccountSubtype.LOAN,
@@ -105,7 +107,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
     metadataRecords: {
       fetch: jest
         .fn()
-        .mockResolvedValue([{ emiDay: 20, payFromAccountId: 'cash', emiAmount: 350 }]),
+        .mockResolvedValue([{ emiDay: 20, payFromAccountId: 'cash' as AccountId, emiAmount: 350 }]),
     },
   } as any;
 
@@ -113,16 +115,17 @@ describe('CashFlowSimulationService scenario coverage', () => {
     overrides?: Partial<Parameters<typeof cashFlowSimulationService.simulate>>,
   ) => {
     const args: Parameters<typeof cashFlowSimulationService.simulate> = [
-      new Map([['cash', 1000]]),
+      new Map<AccountId, number>([['cash' as AccountId, 1000]]),
       [],
       [],
-      ['cash'],
+      ['cash' as AccountId],
       [],
       [],
       [],
       [cash],
       'USD',
       'test-wp' as WorkplaceId,
+      60,
     ];
 
     for (const [index, value] of Object.entries(overrides ?? {})) {
@@ -169,11 +172,11 @@ describe('CashFlowSimulationService scenario coverage', () => {
 
   it('keeps safe-to-spend flat when there are multiple liquid accounts and no future flows', async () => {
     const result = await simulate({
-      0: new Map([
-        ['cash', 1000],
-        ['savings', 2500],
+      0: new Map<AccountId, number>([
+        ['cash' as AccountId, 1000],
+        ['savings' as AccountId, 2500],
       ]),
-      3: ['cash', 'savings'],
+      3: ['cash' as AccountId, 'savings' as AccountId],
       7: [cash, savings],
     } as any);
 
@@ -190,13 +193,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
 
   it('applies fixed planned outflows and reports shortfall when cash goes negative', async () => {
     const result = await simulate({
-      0: new Map([['cash', 100]]),
+      0: new Map<AccountId, number>([['cash' as AccountId, 100]]),
       1: [
         {
-          id: 'pp-rent',
+          id: 'pp-rent' as PlannedPaymentId,
           name: 'Rent',
-          fromAccountId: 'cash',
-          toAccountId: 'landlord',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'landlord' as AccountId,
           amount: 300,
           nextOccurrence: dayjs('2026-04-05T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -220,13 +223,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash', 500]]),
+      0: new Map<AccountId, number>([['cash' as AccountId, 500]]),
       1: [
         {
-          id: 'pp-salary',
+          id: 'pp-salary' as PlannedPaymentId,
           name: 'Salary',
-          fromAccountId: 'employer',
-          toAccountId: 'cash',
+          fromAccountId: 'employer' as AccountId,
+          toAccountId: 'cash' as AccountId,
           amount: 1500,
           nextOccurrence: dayjs('2026-04-03T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -234,10 +237,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
         {
-          id: 'pp-groceries',
+          id: 'pp-groceries' as PlannedPaymentId,
           name: 'Grocery pickup',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-groceries',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-groceries' as AccountId,
           amount: 120,
           nextOccurrence: dayjs('2026-04-10T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -247,7 +250,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ],
       5: [
         {
-          id: 'b-groceries',
+          id: 'b-groceries' as BudgetId,
           name: 'Groceries Budget',
           amount: 300,
           assetAccountIds: 'cash',
@@ -272,13 +275,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-dining',
+          id: 'pp-dining' as PlannedPaymentId,
           name: 'Dinner reservation',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-dining',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-dining' as AccountId,
           amount: 80,
           nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -312,14 +315,14 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([
-        ['cash', 400],
-        ['savings', 600],
+      0: new Map<AccountId, number>([
+        ['cash' as AccountId, 400],
+        ['savings' as AccountId, 600],
       ]),
-      3: ['cash', 'savings'],
+      3: ['cash' as AccountId, 'savings' as AccountId],
       5: [
         {
-          id: 'b-shared',
+          id: 'b-shared' as BudgetId,
           name: 'Shared Grocery Budget',
           amount: 300,
           assetAccountIds: 'cash,savings',
@@ -343,16 +346,16 @@ describe('CashFlowSimulationService scenario coverage', () => {
 
   it('keeps internal liquid transfers net-zero globally while changing account-level balances', async () => {
     const result = await simulate({
-      0: new Map([
-        ['cash', 1000],
-        ['savings', 0],
+      0: new Map<AccountId, number>([
+        ['cash' as AccountId, 1000],
+        ['savings' as AccountId, 0],
       ]),
       1: [
         {
-          id: 'pp-sweep',
+          id: 'pp-sweep' as PlannedPaymentId,
           name: 'Savings sweep',
-          fromAccountId: 'cash',
-          toAccountId: 'savings',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'savings' as AccountId,
           amount: 250,
           nextOccurrence: dayjs('2026-04-06T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -360,7 +363,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
       ],
-      3: ['cash', 'savings'],
+      3: ['cash' as AccountId, 'savings' as AccountId],
       7: [cash, savings],
     } as any);
 
@@ -377,13 +380,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-cc-overpay',
+          id: 'pp-cc-overpay' as PlannedPaymentId,
           name: 'Aggressive card payment',
-          fromAccountId: 'cash',
-          toAccountId: 'cc',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'cc' as AccountId,
           amount: 1000,
           nextOccurrence: dayjs('2026-04-05T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -415,7 +418,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
     });
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       4: [{ account: cc, balance: 800 }],
       7: [cash, cc],
     } as any);
@@ -431,7 +434,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       { emiDay: 20, payFromAccountId: 'cash', emiAmount: 350 },
     ]);
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       4: [{ account: loan, balance: 350 }],
       7: [cash, loan],
     } as any);
@@ -452,13 +455,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-rent',
+          id: 'pp-rent' as PlannedPaymentId,
           name: 'Rent template',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-rent',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-rent' as AccountId,
           amount: 700,
           nextOccurrence: occurrence,
           intervalType: 'MONTHLY',
@@ -496,13 +499,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-dining-shared',
+          id: 'pp-dining-shared' as PlannedPaymentId,
           name: 'Shared dining spend',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-dining',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-dining' as AccountId,
           amount: 80,
           nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -512,7 +515,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ],
       5: [
         {
-          id: 'b-food-shared',
+          id: 'b-food-shared' as BudgetId,
           name: 'Food Budget',
           amount: 300,
           assetAccountIds: 'cash',
@@ -535,13 +538,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-dining',
+          id: 'pp-dining' as PlannedPaymentId,
           name: 'Dining spend',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-dining',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-dining' as AccountId,
           amount: 50,
           nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -549,10 +552,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
           currencyCode: 'USD',
         },
         {
-          id: 'pp-groceries',
+          id: 'pp-groceries' as PlannedPaymentId,
           name: 'Groceries spend',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-groceries',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-groceries' as AccountId,
           amount: 60,
           nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -562,7 +565,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ],
       5: [
         {
-          id: 'b-food',
+          id: 'b-food' as BudgetId,
           name: 'Food Budget',
           amount: 300,
           assetAccountIds: 'cash',
@@ -593,13 +596,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     });
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-dining-eur',
+          id: 'pp-dining-eur' as PlannedPaymentId,
           name: 'European Dinner',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-dining',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-dining' as AccountId,
           amount: 20, // 20 EUR -> 22 USD
           currencyCode: 'EUR',
           nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
@@ -640,13 +643,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-snacks',
+          id: 'pp-snacks' as PlannedPaymentId,
           name: 'Snack run',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-snacks',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-snacks' as AccountId,
           amount: 50,
           nextOccurrence: dayjs('2026-04-08T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -656,7 +659,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ],
       5: [
         {
-          id: 'b-food-parent',
+          id: 'b-food-parent' as BudgetId,
           name: 'Food Parent Budget',
           amount: 300,
           assetAccountIds: 'cash',
@@ -684,10 +687,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ]);
 
       const result = await simulate({
-        0: new Map([['cash', 1000]]),
+        0: new Map([['cash' as AccountId, 1000]]),
         5: [
           {
-            id: 'b-overspent',
+            id: 'b-overspent' as BudgetId,
             name: 'Overspent Budget',
             amount: 300,
             assetAccountIds: 'cash',
@@ -716,13 +719,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     ]);
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-dining-exact',
+          id: 'pp-dining-exact' as PlannedPaymentId,
           name: 'Exact Dinner',
-          fromAccountId: 'cash',
-          toAccountId: 'exp-dining',
+          fromAccountId: 'cash' as AccountId,
+          toAccountId: 'exp-dining' as AccountId,
           amount: 10, // Matches 300/30
           nextOccurrence: dayjs('2026-04-01T12:00:00Z').valueOf(),
           intervalType: 'DAILY',
@@ -732,7 +735,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ],
       5: [
         {
-          id: 'b-dining-exact',
+          id: 'b-dining-exact' as BudgetId,
           name: 'Dining Budget',
           amount: 300,
           assetAccountIds: 'cash',
@@ -760,13 +763,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ]);
 
       const result = await simulate({
-        0: new Map([['cash', 1000]]),
+        0: new Map([['cash' as AccountId, 1000]]),
         1: [
           {
-            id: 'pp-groceries',
+            id: 'pp-groceries' as PlannedPaymentId,
             name: 'Groceries',
-            fromAccountId: 'cash',
-            toAccountId: 'exp-groceries',
+            fromAccountId: 'cash' as AccountId,
+            toAccountId: 'exp-groceries' as AccountId,
             amount: 50,
             nextOccurrence: dayjs('2026-04-15T12:00:00Z').valueOf(),
             intervalType: 'MONTHLY',
@@ -776,7 +779,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
         ],
         5: [
           {
-            id: 'b-smoothed',
+            id: 'b-smoothed' as BudgetId,
             name: 'Smoothed Budget',
             amount: 300,
             assetAccountIds: 'cash',
@@ -807,13 +810,13 @@ describe('CashFlowSimulationService scenario coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map([['cash' as AccountId, 1000]]),
       1: [
         {
-          id: 'pp-cc-spending',
+          id: 'pp-cc-spending' as PlannedPaymentId,
           name: 'Credit card spending',
-          fromAccountId: 'cc',
-          toAccountId: 'exp-dining',
+          fromAccountId: 'cc' as AccountId,
+          toAccountId: 'exp-dining' as AccountId,
           amount: 200,
           nextOccurrence: dayjs('2026-04-05T12:00:00Z').valueOf(),
           intervalType: 'MONTHLY',
@@ -823,7 +826,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
       ],
       4: [{ account: cc, balance: 0 }],
       7: [cash, cc, dining],
-      9: 60, // simulationDays must be large enough to catch the May 15th bill (44 days out)
+      10: 60, // simulationDays must be large enough to catch the May 15th bill (44 days out)
     } as any);
 
     const liabilityFlows = result.allFlows!.filter(flow => flow.origin === FlowSource.LIABILITY);

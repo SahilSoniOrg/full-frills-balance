@@ -12,8 +12,8 @@ import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
 
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { storage } from '@/src/utils/storage';
-import { WorkplaceId } from '@/src/types/domain';
 
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
 const REBUILD_LOCK_PREFIX = 'rebuild_lock_';
@@ -26,7 +26,7 @@ export class AccountingRebuildService {
    */
   async rebuildAccountBalances(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     fromDate?: number,
   ): Promise<void> {
     const lockKey = REBUILD_LOCK_PREFIX + accountId;
@@ -56,7 +56,7 @@ export class AccountingRebuildService {
    */
   async rebuildAccountBalancesInternal(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     fromDate?: number,
     silent: boolean = false,
   ): Promise<void> {
@@ -64,7 +64,7 @@ export class AccountingRebuildService {
       `[AccountingRebuildService] Rebuilding balances for account ${accountId} from ${fromDate || 'start'} (silent=${silent})`,
     );
 
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountRepository.find(workplaceId, accountId as AccountId);
     if (!account) throw new Error(`Account ${accountId} not found during running balance rebuild`);
 
     const precision = await currencyRepository.getPrecision(account.currencyCode);
@@ -184,8 +184,8 @@ export class AccountingRebuildService {
           ...snapshotsToCreate.map(data =>
             snapshotsCollection.prepareCreate((snapshot: BalanceSnapshot) => {
               snapshot.workplaceId = workplaceId;
-              snapshot.accountId = accountId;
-              snapshot.transactionId = data.transactionId;
+              snapshot.accountId = accountId as AccountId;
+              snapshot.transactionId = data.transactionId as TransactionId;
               snapshot.transactionDate = data.transactionDate;
               snapshot.absoluteBalance = data.absoluteBalance;
               snapshot.transactionCount = data.transactionCount;

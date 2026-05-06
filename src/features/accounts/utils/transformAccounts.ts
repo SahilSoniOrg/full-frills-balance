@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
 import Account from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 import {
   getAccountAccentColor,
   getAccountSections,
@@ -10,7 +11,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 
 export interface AccountCardViewModel {
-  id: string;
+  id: AccountId;
   name: string;
   icon: IconName | null;
   accentColor: string;

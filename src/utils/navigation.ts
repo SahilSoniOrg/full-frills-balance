@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { AccountId } from '../types/domain';
 
 /**
  * Centralized navigation utility to handle routing across the application.
@@ -190,7 +191,7 @@ export const AppNavigation = {
    * Navigate to the Account Details screen.
    */
   toAccountDetails: (
-    accountId: string,
+    accountId: AccountId,
     options?: {
       startDate?: number;
       endDate?: number;
@@ -229,7 +230,7 @@ export const AppNavigation = {
   /**
    * Navigate to the Account Details screen, replacing the current route.
    */
-  replaceToAccountDetails: (accountId: string) => {
+  replaceToAccountDetails: (accountId: AccountId) => {
     router.replace(`/account-details?accountId=${accountId}` as any);
   },
 

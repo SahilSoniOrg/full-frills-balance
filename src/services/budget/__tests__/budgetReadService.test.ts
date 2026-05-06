@@ -6,7 +6,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('budgetReadService', () => {
   let expenseParentId: string;
@@ -37,7 +37,7 @@ describe('budgetReadService', () => {
       name: 'Groceries',
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
-      parentAccountId: parent.id,
+      parentAccountId: parent.id as AccountId,
       workplaceId: 'wp-1' as WorkplaceId,
     });
     expenseChildId = child.id;
@@ -55,7 +55,7 @@ describe('budgetReadService', () => {
         currencyCode: 'USD',
         startMonth: month,
       },
-      [expenseParentId],
+      [expenseParentId as AccountId],
     );
 
     // 1. Add an expense to the child account. It should roll up.
@@ -65,8 +65,12 @@ describe('budgetReadService', () => {
         journalDate: middleOfMonth,
         currencyCode: 'USD',
         transactions: [
-          { accountId: expenseChildId, amount: 150, transactionType: TransactionType.DEBIT },
-          { accountId: assetId, amount: 150, transactionType: TransactionType.CREDIT },
+          {
+            accountId: expenseChildId as AccountId,
+            amount: 150,
+            transactionType: TransactionType.DEBIT,
+          },
+          { accountId: assetId as AccountId, amount: 150, transactionType: TransactionType.CREDIT },
         ],
       },
       'wp-1' as WorkplaceId,
@@ -79,8 +83,12 @@ describe('budgetReadService', () => {
         journalDate: middleOfMonth,
         currencyCode: 'USD',
         transactions: [
-          { accountId: expenseChildId, amount: 50, transactionType: TransactionType.CREDIT }, // refund
-          { accountId: assetId, amount: 50, transactionType: TransactionType.DEBIT },
+          {
+            accountId: expenseChildId as AccountId,
+            amount: 50,
+            transactionType: TransactionType.CREDIT,
+          }, // refund
+          { accountId: assetId as AccountId, amount: 50, transactionType: TransactionType.DEBIT },
         ],
       },
       'wp-1' as WorkplaceId,
@@ -93,8 +101,12 @@ describe('budgetReadService', () => {
         journalDate: dayjs('2023-09-15').valueOf(),
         currencyCode: 'USD',
         transactions: [
-          { accountId: expenseChildId, amount: 100, transactionType: TransactionType.DEBIT },
-          { accountId: assetId, amount: 100, transactionType: TransactionType.CREDIT },
+          {
+            accountId: expenseChildId as AccountId,
+            amount: 100,
+            transactionType: TransactionType.DEBIT,
+          },
+          { accountId: assetId as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
         ],
       },
       'wp-1' as WorkplaceId,
@@ -136,7 +148,7 @@ describe('budgetReadService', () => {
         currencyCode: 'USD',
         startMonth: currentMonth,
       },
-      [expenseParentId],
+      [expenseParentId as AccountId],
     );
 
     // Add expense in the previous month
@@ -146,8 +158,12 @@ describe('budgetReadService', () => {
         journalDate: dayjs('2023-09-15').valueOf(),
         currencyCode: 'USD',
         transactions: [
-          { accountId: expenseChildId, amount: 200, transactionType: TransactionType.DEBIT },
-          { accountId: assetId, amount: 200, transactionType: TransactionType.CREDIT },
+          {
+            accountId: expenseChildId as AccountId,
+            amount: 200,
+            transactionType: TransactionType.DEBIT,
+          },
+          { accountId: assetId as AccountId, amount: 200, transactionType: TransactionType.CREDIT },
         ],
       },
       'wp-1' as WorkplaceId,

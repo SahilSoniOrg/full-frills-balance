@@ -1,4 +1,5 @@
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import {
   DateRange,
   formatDate,
@@ -8,13 +9,12 @@ import {
 } from '@/src/utils/dateUtils';
 import { Q } from '@nozbe/watermelondb';
 import { useCallback, useMemo, useState } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 interface UseReportDateFilterProps {
   dateRange: DateRange;
-  accountIds: string[];
+  accountIds: AccountId[];
   workplaceId: WorkplaceId;
-  updateFilter: (range: DateRange, filter: PeriodFilter, accounts?: string[]) => void;
+  updateFilter: (range: DateRange, filter: PeriodFilter, accounts?: AccountId[]) => void;
   onResetSelections: () => void;
 }
 

@@ -1,5 +1,6 @@
-import { Flow, FlowCategory, DebtEntry, DebtType, FlowSource } from '../types';
 import Account from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
+import { DebtEntry, DebtType, Flow, FlowCategory, FlowSource } from '../types';
 import { resolveFlowSemanticTarget } from '../utils/FlowMetadataResolver';
 
 /**
@@ -9,13 +10,13 @@ export const selectDebtEntries = (
   allFlows: Flow[],
   accountMap: Map<string, Account>,
 ): DebtEntry[] => {
-  const debtMap = new Map<string, DebtEntry>();
+  const debtMap = new Map<AccountId, DebtEntry>();
 
   allFlows
     .filter(flow => flow.timeframe === 'FUTURE' && flow.category === FlowCategory.DEBT)
     .forEach(flow => {
       const target = resolveFlowSemanticTarget(flow, accountMap);
-      const accId = target.accountId;
+      const accId = target.accountId as AccountId;
 
       const entry = debtMap.get(accId) || {
         accountId: accId,

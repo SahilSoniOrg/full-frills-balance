@@ -5,6 +5,7 @@ import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import { AccountId } from '@/src/types/domain';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -134,7 +135,7 @@ export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> =
         onPress={() => setIsPayFromPickerVisible(true)}
         onClear={
           payFromAccountName !== AppConfig.strings.common.none
-            ? () => setPayFromAccountId('')
+            ? () => setPayFromAccountId('' as AccountId)
             : undefined
         }
       />

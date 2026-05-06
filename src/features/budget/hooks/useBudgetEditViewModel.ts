@@ -6,6 +6,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
+import { AccountId, BudgetId } from '@/src/types/domain';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -45,8 +46,8 @@ export function useBudgetEditViewModel() {
   const [recurrenceDay, setRecurrenceDay] = useState(1);
   const [recurrenceMonth, setRecurrenceMonth] = useState(1);
   const [startDate, setStartDate] = useState<number | undefined>(undefined);
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
-  const [assetAccountIds, setAssetAccountIds] = useState<string[]>([]);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<AccountId[]>([]);
+  const [assetAccountIds, setAssetAccountIds] = useState<AccountId[]>([]);
   const [loading, setLoading] = useState(!!budgetId && !pName);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -54,7 +55,7 @@ export function useBudgetEditViewModel() {
     if (!budgetId) return;
 
     budgetRepository
-      .find(workplaceId, budgetId)
+      .find(workplaceId, budgetId as BudgetId)
       .then(async b => {
         if (!b) return;
         setBudget(b);
@@ -69,11 +70,11 @@ export function useBudgetEditViewModel() {
         setRecurrenceMonth(b.recurrenceMonth || 1);
         setStartDate(b.startDate);
 
-        const scopes = await budgetRepository.getScopes(workplaceId, budgetId);
+        const scopes = await budgetRepository.getScopes(workplaceId, budgetId as BudgetId);
         setSelectedAccountIds(scopes.map(s => s.account.id));
 
         if (b.assetAccountIds) {
-          setAssetAccountIds(b.assetAccountIds.split(','));
+          setAssetAccountIds(b.assetAccountIds.split(',') as AccountId[]);
         }
 
         setLoading(false);

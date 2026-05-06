@@ -3,7 +3,13 @@ import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  JournalDisplayType,
+  JournalId,
+  PlannedPaymentId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -17,11 +23,11 @@ export interface CreateJournalData {
   description?: string;
   notes?: string;
   currencyCode: string;
-  originalJournalId?: string;
+  originalJournalId?: JournalId;
   status?: JournalStatus;
-  plannedPaymentId?: string;
+  plannedPaymentId?: PlannedPaymentId;
   transactions: {
-    accountId: string;
+    accountId: AccountId;
     amount: number;
     transactionType: TransactionType;
     notes?: string;
@@ -60,7 +66,7 @@ export class JournalRepository {
     return this.journals.query(Q.where('deleted_at', Q.eq(null)), ...clauses);
   }
 
-  observeByIdsWithDeleted(workplaceId: WorkplaceId, journalIds: string[]) {
+  observeByIdsWithDeleted(workplaceId: WorkplaceId, journalIds: JournalId[]) {
     if (journalIds.length === 0) {
       return of([] as Journal[]);
     }
@@ -87,7 +93,7 @@ export class JournalRepository {
 
   observeAccountTransactions(
     workplaceId: WorkplaceId,
-    accountId: string,
+    accountId: AccountId,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
   ) {
@@ -148,7 +154,7 @@ export class JournalRepository {
       .pipe(map(journals => journals[0] || null));
   }
 
-  observeByIds(workplaceId: WorkplaceId, journalIds: string[]) {
+  observeByIds(workplaceId: WorkplaceId, journalIds: JournalId[]) {
     if (journalIds.length === 0) return of([] as Journal[]);
     return this.journals
       .query(
@@ -191,7 +197,7 @@ export class JournalRepository {
    * PURE PERSISTENCE METHODS
    */
 
-  async find(workplaceId: WorkplaceId, id: string): Promise<Journal | null> {
+  async find(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
     try {
       const journal = await this.journals.find(id);
       if (journal.deletedAt) return null;
@@ -202,7 +208,7 @@ export class JournalRepository {
     }
   }
 
-  async findByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Journal[]> {
+  async findByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {
     if (ids.length === 0) return [];
     return this.journals
       .query(
@@ -265,7 +271,7 @@ export class JournalRepository {
    */
   async patchMetadata(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
     partialMetadata: Record<string, unknown>,
     source?: string,
   ): Promise<void> {
@@ -299,7 +305,7 @@ export class JournalRepository {
    */
   async prepareMetadataPatch(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
     partialMetadata: Record<string, unknown>,
     source?: string,
   ): Promise<Model> {
@@ -323,7 +329,7 @@ export class JournalRepository {
   }
 
   async findJournalByOriginalSmsId(
-    originalSmsId: string,
+    originalSmsId: string, // SMS ID is still string
     workplaceId: WorkplaceId,
   ): Promise<Journal | null> {
     const metadata = await this.journalMetadata
@@ -335,7 +341,7 @@ export class JournalRepository {
   }
 
   async findJournalsByOriginalSmsIds(
-    smsIds: string[],
+    smsIds: string[], // SMS IDs are still string
     workplaceId: WorkplaceId,
   ): Promise<Map<string, Journal>> {
     if (smsIds.length === 0) return new Map();
@@ -390,8 +396,8 @@ export class JournalRepository {
       )
       .fetch();
 
-    const fingerprintToJournalId = new Map<string, string>();
-    const journalIds: string[] = [];
+    const fingerprintToJournalId = new Map<string, JournalId>();
+    const journalIds: JournalId[] = [];
 
     for (const record of inboxRecords) {
       const linkedJournalId = record.linkedJournalId;
@@ -554,7 +560,7 @@ export class JournalRepository {
 
   async updateJournalWithTransactions(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
     journalData: PrepareCreateJournalData,
     extraOpCreator?: () => Model, // Synchronous callback to build extra op atomically
   ): Promise<Journal> {
@@ -676,7 +682,7 @@ export class JournalRepository {
    * no balance churn. Use this whenever only the status needs to change.
    */
   async updateJournalStatus(
-    journalId: string,
+    journalId: JournalId,
     status: JournalStatus,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
@@ -693,7 +699,7 @@ export class JournalRepository {
     return journal;
   }
 
-  async deleteJournal(journalId: string, workplaceId: WorkplaceId): Promise<void> {
+  async softDeleteJournal(workplaceId: WorkplaceId, journalId: JournalId): Promise<void> {
     const journal = await this.find(workplaceId, journalId);
     if (!journal) return;
 
@@ -725,7 +731,7 @@ export class JournalRepository {
    * Does NOT call prepareUpdate synchronously, avoiding the yield/diagnostic error.
    */
   async fetchJournalForDeletion(
-    journalId: string,
+    journalId: JournalId,
     workplaceId: WorkplaceId,
   ): Promise<{ journal: Journal; transactions: Transaction[] } | null> {
     const journal = await this.find(workplaceId, journalId);
@@ -739,8 +745,8 @@ export class JournalRepository {
   }
 
   async markReversed(
-    originalJournalId: string,
-    reversingJournalId: string,
+    originalJournalId: JournalId,
+    reversingJournalId: JournalId,
     workplaceId: WorkplaceId,
   ): Promise<void> {
     const journal = await this.find(workplaceId, originalJournalId);

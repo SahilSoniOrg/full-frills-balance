@@ -9,7 +9,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { balanceService } from '@/src/services/BalanceService';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { accountService } from '../AccountService';
 
 describe('AccountRepository', () => {
@@ -135,8 +135,16 @@ describe('AccountRepository', () => {
           totalAmount: 1000,
           displayType: JournalDisplayType.INCOME,
           transactions: [
-            { accountId: asset.id, amount: 1000, transactionType: TransactionType.DEBIT },
-            { accountId: equity.id, amount: 1000, transactionType: TransactionType.CREDIT },
+            {
+              accountId: asset.id as AccountId,
+              amount: 1000,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equity.id as AccountId,
+              amount: 1000,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
           calculatedBalances: new Map([
             [asset.id, 1000],
@@ -155,8 +163,16 @@ describe('AccountRepository', () => {
           totalAmount: 300,
           displayType: JournalDisplayType.EXPENSE,
           transactions: [
-            { accountId: asset.id, amount: 300, transactionType: TransactionType.CREDIT },
-            { accountId: equity.id, amount: 300, transactionType: TransactionType.DEBIT },
+            {
+              accountId: asset.id as AccountId,
+              amount: 300,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: equity.id as AccountId,
+              amount: 300,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
           calculatedBalances: new Map([
             [asset.id, 700],
@@ -196,8 +212,16 @@ describe('AccountRepository', () => {
           totalAmount: 500,
           displayType: JournalDisplayType.INCOME,
           transactions: [
-            { accountId: asset.id, amount: 500, transactionType: TransactionType.DEBIT },
-            { accountId: equity.id, amount: 500, transactionType: TransactionType.CREDIT },
+            {
+              accountId: asset.id as AccountId,
+              amount: 500,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equity.id as AccountId,
+              amount: 500,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
           calculatedBalances: new Map([
             [asset.id, 500],
@@ -215,8 +239,16 @@ describe('AccountRepository', () => {
           totalAmount: 200,
           displayType: JournalDisplayType.INCOME,
           transactions: [
-            { accountId: asset.id, amount: 200, transactionType: TransactionType.DEBIT },
-            { accountId: equity.id, amount: 200, transactionType: TransactionType.CREDIT },
+            {
+              accountId: asset.id as AccountId,
+              amount: 200,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equity.id as AccountId,
+              amount: 200,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
           calculatedBalances: new Map([
             [asset.id, 700],

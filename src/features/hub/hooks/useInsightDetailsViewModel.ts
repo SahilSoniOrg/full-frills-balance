@@ -1,12 +1,12 @@
-import { AppConfig } from '@/src/constants';
 import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { journalService } from '@/src/features/journal';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
-import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
+import { EnrichedJournal, JournalDisplayType, TransactionId } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -119,11 +119,11 @@ export function useInsightDetailsViewModel({
         };
 
         return {
-          id: journal.id,
+          id: journal.id as string as TransactionId,
           type: 'transaction' as const,
           date: journal.journalDate,
           onPress: () =>
-            AppNavigation.toTransactionDetails(journal.id, {
+            AppNavigation.toTransactionDetails(journal.id as string as TransactionId, {
               title: cardProps.title,
               amount: cardProps.amount,
               currencyCode: cardProps.currencyCode,

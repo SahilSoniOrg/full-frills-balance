@@ -16,7 +16,13 @@ import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
 import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
-import { AccountBalance, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
+import {
+  AccountBalance,
+  AccountId,
+  DisplayTransaction,
+  JournalDisplayType,
+  TransactionId,
+} from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { confirm, showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
@@ -51,7 +57,7 @@ export interface SubAccountViewModel {
 }
 
 export interface AccountDetailsViewModel {
-  accountId: string;
+  accountId: AccountId;
   accountLoading: boolean;
   accountMissing: boolean;
   accountName: string;
@@ -111,22 +117,22 @@ export interface AccountDetailsViewModel {
   onHideSubAccounts: () => void;
   unreconciledCount: number;
   unreconciledAmountText: string;
-  selectedIds: Set<string>;
+  selectedIds: Set<TransactionId>;
   isSelectionModeActive: boolean;
-  onLongPressItem: (id: string) => void;
-  toggleSelection: (id: string) => void;
+  onLongPressItem: (id: TransactionId) => void;
+  toggleSelection: (id: TransactionId) => void;
   selectAll: () => void;
   clearItems: () => void;
   exitSelectionMode: () => void;
   onShareSelected: () => void;
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<TransactionId>>>;
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { defaultShareFormat } = useUI();
   const params = useLocalSearchParams();
-  const accountId = params.accountId as string;
+  const accountId = params.accountId as AccountId;
   const startDateParam = params.startDate as string;
   const endDateParam = params.endDate as string;
 
@@ -186,7 +192,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   );
 
   // --- Selection State ---
-  const selectionControl = useSelection<string>();
+  const selectionControl = useSelection<TransactionId>();
   const {
     selectedIds,
     isSelectionModeActive,

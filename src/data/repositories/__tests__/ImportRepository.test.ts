@@ -5,7 +5,7 @@ import Currency from '@/src/data/models/Currency';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('ImportRepository', () => {
   beforeEach(async () => {
@@ -48,11 +48,23 @@ describe('ImportRepository', () => {
         transactions: [],
       });
 
-      const asset = await accountRepository.find('test-wp' as WorkplaceId, 'a_asset');
-      const liability = await accountRepository.find('test-wp' as WorkplaceId, 'a_liability');
-      const equity = await accountRepository.find('test-wp' as WorkplaceId, 'a_equity');
-      const income = await accountRepository.find('test-wp' as WorkplaceId, 'a_income');
-      const expense = await accountRepository.find('test-wp' as WorkplaceId, 'a_expense');
+      const asset = await accountRepository.find('test-wp' as WorkplaceId, 'a_asset' as AccountId);
+      const liability = await accountRepository.find(
+        'test-wp' as WorkplaceId,
+        'a_liability' as AccountId,
+      );
+      const equity = await accountRepository.find(
+        'test-wp' as WorkplaceId,
+        'a_equity' as AccountId,
+      );
+      const income = await accountRepository.find(
+        'test-wp' as WorkplaceId,
+        'a_income' as AccountId,
+      );
+      const expense = await accountRepository.find(
+        'test-wp' as WorkplaceId,
+        'a_expense' as AccountId,
+      );
 
       expect(asset?.accountSubtype).toBe(AccountSubtype.CASH);
       expect(liability?.accountSubtype).toBe(AccountSubtype.CREDIT_CARD);
@@ -71,8 +83,8 @@ describe('ImportRepository', () => {
       });
 
       const unknown = await accountRepository.find(
-        'a_unknown' as WorkplaceId,
         'test-wp' as WorkplaceId,
+        'a_unknown' as AccountId,
       );
       expect(unknown?.accountSubtype).toBe(AccountSubtype.OTHER);
     });
@@ -96,7 +108,13 @@ describe('ImportRepository', () => {
           },
         ],
         accountMetadata: [
-          { id: 'm_1', accountId: 'a1', statementDay: 2, dueDay: 20, autopayEnabled: true },
+          {
+            id: 'm_1',
+            accountId: 'a1' as AccountId,
+            statementDay: 2,
+            dueDay: 20,
+            autopayEnabled: true,
+          },
         ],
       });
 

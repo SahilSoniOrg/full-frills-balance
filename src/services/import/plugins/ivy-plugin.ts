@@ -22,9 +22,16 @@ import {
 } from '@/src/data/repositories/ImportRepository';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
-import { logger } from '@/src/utils/logger';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import {
+  AccountId,
+  JournalDisplayType,
+  JournalId,
+  PlannedPaymentId,
+  TransactionId,
+  WorkplaceId,
+} from '@/src/types/domain';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
 // Ivy Wallet Interfaces
@@ -64,7 +71,7 @@ interface IvyCategory {
 
 interface IvyTransaction {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
   amount: number;
   toAccountId?: string;
@@ -75,17 +82,17 @@ interface IvyTransaction {
   categoryId?: string;
   isDeleted?: boolean;
   dueDate?: string | number;
-  recurringRuleId?: string;
+  recurringRuleId?: PlannedPaymentId;
 }
 
 interface IvyPlannedPaymentRule {
-  id: string;
+  id: PlannedPaymentId;
   startDate?: string;
   intervalN?: number;
   intervalType?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
   oneTime: boolean;
   type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
-  accountId: string;
+  accountId: AccountId;
   amount: number;
   categoryId?: string;
   title?: string;
@@ -349,20 +356,20 @@ export const ivyPlugin: ImportPlugin = {
 
     // 3. Create Accounts
     onProgress?.('Preparing accounts...', 0.15);
-    const accountMap = new Map<string, string>();
-    const accountCurrencyMap = new Map<string, string>();
-    const categoryAccountMap = new Map<string, string>();
+    const accountMap = new Map<string, AccountId>();
+    const accountCurrencyMap = new Map<AccountId, string>();
+    const categoryAccountMap = new Map<string, AccountId>();
     const journalMap = new Map<string, string>();
-    const plannedPaymentMap = new Map<string, string>();
+    const plannedPaymentMap = new Map<string, PlannedPaymentId>();
 
     data.accounts.forEach(a => {
-      const balanceId = generateId();
+      const balanceId = generateId() as AccountId;
       accountMap.set(a.id, balanceId);
       accountCurrencyMap.set(balanceId, a.currency || targetDefaultCurrency);
     });
 
     for (const key of categoryUsageMap.keys()) {
-      const balanceId = generateId();
+      const balanceId = generateId() as AccountId;
       const [, currency] = key.split(':::');
       categoryAccountMap.set(key, balanceId);
       accountCurrencyMap.set(balanceId, currency);
@@ -485,7 +492,7 @@ export const ivyPlugin: ImportPlugin = {
         const fromAccountId = accountMap.get(rule.accountId);
         if (!fromAccountId) return;
 
-        const newRuleId = generateId();
+        const newRuleId = generateId() as PlannedPaymentId;
         plannedPaymentMap.set(rule.id, newRuleId);
 
         let currencyCode = accountCurrencyMap.get(fromAccountId) || targetDefaultCurrency;
@@ -560,7 +567,7 @@ export const ivyPlugin: ImportPlugin = {
           amount: Math.abs(rule.amount),
           currencyCode,
           fromAccountId,
-          toAccountId: toAccountId || '',
+          toAccountId: toAccountId || ('' as AccountId),
           intervalN: rule.intervalN || 1,
           intervalType,
           startDate,
@@ -604,7 +611,7 @@ export const ivyPlugin: ImportPlugin = {
         continue;
       }
 
-      const journalId = generateId();
+      const journalId = generateId() as JournalId;
       journalMap.set(tx.id, journalId);
       const timestamp = tx.dateTime ? new Date(tx.dateTime).getTime() : Date.now();
 
@@ -622,8 +629,8 @@ export const ivyPlugin: ImportPlugin = {
       const isAdjustBalance =
         descLower.includes('adjust balance') || catLower.includes('adjust balance');
 
-      let sourceId: string | undefined;
-      let destId: string | undefined;
+      let sourceId: AccountId | undefined;
+      let destId: AccountId | undefined;
       let displayType: JournalDisplayType;
       let currencyCode = targetDefaultCurrency;
 
@@ -643,7 +650,7 @@ export const ivyPlugin: ImportPlugin = {
         const systemKey = `SYSTEM_${isOpeningBalance ? 'OPENING_BALANCE' : 'BALANCE_CORRECTION'}:::${currencyCode}`;
 
         if (!categoryAccountMap.has(systemKey)) {
-          categoryAccountMap.set(systemKey, generateId());
+          categoryAccountMap.set(systemKey, generateId() as AccountId);
           accountCurrencyMap.set(categoryAccountMap.get(systemKey)!, currencyCode);
 
           // Add this to our accounts to be created
@@ -740,7 +747,7 @@ export const ivyPlugin: ImportPlugin = {
 
       // Transaction 1: SOURCE (Credit)
       transactionImports.push({
-        id: generateId(),
+        id: generateId() as TransactionId,
         journalId,
         transactionDate: timestamp,
         accountId: sourceId!,

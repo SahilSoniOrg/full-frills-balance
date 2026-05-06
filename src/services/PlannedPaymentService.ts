@@ -12,7 +12,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { WorkplaceId } from '@/src/types/domain';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -217,7 +217,7 @@ export class PlannedPaymentService {
           currencyCode: pp.currencyCode,
           transactions,
           status: pp.isAutoPost ? JournalStatus.POSTED : JournalStatus.PLANNED,
-          plannedPaymentId: pp.id,
+          plannedPaymentId: pp.id as PlannedPaymentId,
         },
         pp.workplaceId,
       );
@@ -343,7 +343,7 @@ export class PlannedPaymentService {
             currencyCode: pp.currencyCode,
             transactions,
             status: JournalStatus.POSTED,
-            plannedPaymentId: pp.id,
+            plannedPaymentId: pp.id as PlannedPaymentId,
           },
           pp.workplaceId,
         );
@@ -452,7 +452,7 @@ export class PlannedPaymentService {
               currencyCode: pp.currencyCode,
               transactions,
               status: JournalStatus.SKIPPED,
-              plannedPaymentId: pp.id,
+              plannedPaymentId: pp.id as PlannedPaymentId,
             },
             pp.workplaceId,
           );

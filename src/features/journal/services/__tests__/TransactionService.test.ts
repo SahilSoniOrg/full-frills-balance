@@ -4,7 +4,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { transactionService } from '../TransactionService';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionService', () => {
   let accountId: string;
@@ -48,29 +48,37 @@ describe('TransactionService', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 100, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 100, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
       );
 
       const transactions = await transactionService.getTransactionsWithAccountInfo(
-        journal.id as WorkplaceId,
         'wp-1' as WorkplaceId,
+        journal.id as JournalId,
       );
 
       expect(transactions).toHaveLength(2);
 
       // Check first transaction (Debit Asset)
-      const tx1 = transactions.find(t => t.accountId === accountId);
+      const tx1 = transactions.find(t => t.accountId === (accountId as AccountId));
       expect(tx1).toBeDefined();
       expect(tx1?.accountName).toBe('Test Account');
       expect(tx1?.accountType).toBe(AccountType.ASSET);
       expect(tx1?.balanceImpact).toBe('INCREASE'); // Debit Asset = Increase
 
       // Check second transaction (Credit Equity)
-      const tx2 = transactions.find(t => t.accountId === equityAccountId);
+      const tx2 = transactions.find(t => t.accountId === (equityAccountId as AccountId));
       expect(tx2).toBeDefined();
       expect(tx2?.accountName).toBe('Equity');
       expect(tx2?.accountType).toBe(AccountType.EQUITY);
@@ -86,17 +94,29 @@ describe('TransactionService', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId, amount: 100, transactionType: TransactionType.DEBIT },
-            { accountId: equityAccountId, amount: 60, transactionType: TransactionType.CREDIT },
-            { accountId: expenseAccountId, amount: 40, transactionType: TransactionType.CREDIT },
+            {
+              accountId: accountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 60,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 40,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
       );
 
       const enriched = await transactionService.getEnrichedByJournal(
-        journal.id as WorkplaceId,
         'wp-1' as WorkplaceId,
+        journal.id as JournalId,
       );
 
       expect(enriched).toHaveLength(3);

@@ -7,10 +7,10 @@
 
 import { AppConfig } from '@/src/constants';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
-import { WorkplaceId } from '@/src/types/domain';
 
 interface RebuildQueueConfig {
   debounceMs: number;
@@ -27,17 +27,17 @@ const DEFAULT_CONFIG: RebuildQueueConfig = {
     process.env.NODE_ENV === 'test' ? 0 : AppConfig.performance.rebuild.queue.retryDelayMs,
 };
 
-function createQueueKey(accountId: string, workplaceId: WorkplaceId): string {
+function createQueueKey(accountId: AccountId, workplaceId: WorkplaceId): string {
   return `${workplaceId}__${accountId}`;
 }
-function parseQueueKey(key: string): [string, string] {
+function parseQueueKey(key: string): [WorkplaceId, AccountId] {
   const [workplaceId, accountId] = key.split('__');
-  return [workplaceId, accountId];
+  return [workplaceId as WorkplaceId, accountId as AccountId];
 }
 class RebuildQueueService {
   private static readonly STORAGE_KEY = 'rebuild_queue_v1';
   private static readonly PROCESSING_KEY = 'rebuild_processing_batch_v1';
-  private queue: Map<string, number> = new Map(); // accountId -> minFromDate
+  private queue: Map<string, number> = new Map(); // key -> minFromDate
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isProcessing: boolean = false;
   private currentProcessingPromise: Promise<void> | null = null;
@@ -103,7 +103,7 @@ class RebuildQueueService {
    * @param accountId Account ID
    * @param fromDate Optional earliest date of change. Defaults to current time.
    */
-  enqueue(accountId: string, fromDate: number = Date.now(), workplaceId: WorkplaceId): void {
+  enqueue(accountId: AccountId, fromDate: number = Date.now(), workplaceId: WorkplaceId): void {
     const existingDate = this.queue.get(createQueueKey(accountId, workplaceId));
     if (existingDate === undefined || fromDate < existingDate) {
       this.queue.set(createQueueKey(accountId, workplaceId), fromDate);
@@ -118,7 +118,7 @@ class RebuildQueueService {
    * @param fromDate Optional earliest date of change for all accounts.
    */
   enqueueMany(
-    accountIds: string[] | Set<string>,
+    accountIds: AccountId[] | Set<AccountId>,
     fromDate: number = Date.now(),
     workplaceId: WorkplaceId,
   ): void {

@@ -2,8 +2,8 @@ import Journal from '@/src/data/models/Journal';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { journalService } from '@/src/features/journal/services/JournalService';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 export function useJournalActions(workplaceId: WorkplaceId) {
   const createJournal = useCallback(
@@ -21,35 +21,35 @@ export function useJournalActions(workplaceId: WorkplaceId) {
   );
 
   const findJournal = useCallback(
-    async (journalId: string) => {
+    async (journalId: JournalId) => {
       return journalRepository.find(workplaceId, journalId);
     },
     [workplaceId],
   );
 
   const updateJournal = useCallback(
-    async (journalId: string, data: CreateJournalData) => {
+    async (journalId: JournalId, data: CreateJournalData) => {
       return journalService.updateJournal(journalId, data, workplaceId);
     },
     [workplaceId],
   );
 
   const duplicateJournal = useCallback(
-    async (journalId: string) => {
+    async (journalId: JournalId) => {
       return journalService.duplicateJournal(journalId, workplaceId);
     },
     [workplaceId],
   );
 
   const postJournal = useCallback(
-    async (journalId: string) => {
+    async (journalId: JournalId) => {
       return journalService.postJournal(journalId, workplaceId);
     },
     [workplaceId],
   );
 
   const revertToPlanned = useCallback(
-    async (journalId: string) => {
+    async (journalId: JournalId) => {
       return journalService.revertToPlanned(journalId, workplaceId);
     },
     [workplaceId],

@@ -16,10 +16,10 @@ import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { getEpsilon, roundToPrecision } from '@/src/utils/money';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface CreateAccountData {
   name: string;
@@ -30,7 +30,7 @@ export interface CreateAccountData {
   icon?: IconName;
   initialBalance?: number;
   orderNum?: number;
-  parentAccountId?: string | null;
+  parentAccountId?: AccountId | null;
   workplaceId: WorkplaceId;
   metadata?: Partial<{
     statementDay: number;
@@ -149,12 +149,12 @@ export class AccountService {
           currencyCode: data.currencyCode,
           transactions: [
             {
-              accountId: account.id,
+              accountId: account.id as AccountId,
               amount: roundedAmount,
               transactionType: accountTxType as any,
             },
             {
-              accountId: balancingAccountId,
+              accountId: balancingAccountId as AccountId,
               amount: roundedAmount,
               transactionType: balancingTxType as any,
             },
@@ -168,7 +168,7 @@ export class AccountService {
   }
 
   async updateAccount(
-    accountId: string,
+    accountId: AccountId,
     updates: Partial<CreateAccountData>,
     workplaceId: WorkplaceId,
   ): Promise<Account> {
@@ -276,7 +276,7 @@ export class AccountService {
   }
 
   async reconcileAccount(
-    accountId: string,
+    accountId: AccountId,
     date: Date,
     workplaceId: WorkplaceId,
   ): Promise<Account> {
@@ -308,7 +308,7 @@ export class AccountService {
     return updatedAccount;
   }
 
-  async recoverAccount(accountId: string, workplaceId: WorkplaceId): Promise<void> {
+  async recoverAccount(accountId: AccountId, workplaceId: WorkplaceId): Promise<void> {
     const account = await accountRepository.findWithDeleted(workplaceId, accountId);
     if (!account) return;
 
@@ -354,7 +354,7 @@ export class AccountService {
     );
   }
 
-  async deleteAccount(accountOrId: Account | string, workplaceId: WorkplaceId): Promise<void> {
+  async deleteAccount(accountOrId: Account | AccountId, workplaceId: WorkplaceId): Promise<void> {
     const account =
       typeof accountOrId === 'string'
         ? await accountRepository.find(workplaceId, accountOrId)
@@ -391,11 +391,11 @@ export class AccountService {
   async getOpeningBalancesAccountId(
     currencyCode: string,
     workplaceId: WorkplaceId,
-  ): Promise<string> {
+  ): Promise<AccountId> {
     const { openingBalances } = AppConfig.systemAccounts;
     const name = `${openingBalances.namePrefix} (${currencyCode})`;
     const existing = await this.findAccountByName(workplaceId, name);
-    if (existing) return existing.id;
+    if (existing) return existing.id as AccountId;
 
     return (
       await accountRepository.create({
@@ -407,7 +407,7 @@ export class AccountService {
         icon: openingBalances.icon as IconName,
         workplaceId,
       })
-    ).id;
+    ).id as AccountId;
   }
 
   async findAccountByName(workplaceId: WorkplaceId, name: string): Promise<Account | null> {
@@ -470,7 +470,7 @@ export class AccountService {
         currencyCode: account.currencyCode,
         transactions: [
           {
-            accountId: account.id,
+            accountId: account.id as AccountId,
             amount: amount,
             transactionType: accountTxType as any,
           },
@@ -488,7 +488,7 @@ export class AccountService {
   async findOrCreateBalanceCorrectionAccount(
     currencyCode: string,
     workplaceId: WorkplaceId,
-  ): Promise<string> {
+  ): Promise<AccountId> {
     const { balanceCorrections } = AppConfig.systemAccounts;
     let targetCurrency = currencyCode;
     if (!targetCurrency) {
@@ -500,14 +500,14 @@ export class AccountService {
       const legacy = await this.findAccountByName(workplaceId, legacyName);
       // Match if currency is correct, OR if we're looking for default currency and the legacy one has NO currency
       if (legacy && (legacy.currencyCode === targetCurrency || !legacy.currencyCode)) {
-        return legacy.id;
+        return legacy.id as AccountId;
       }
     }
 
     // 2. Check for standard name
     const name = `${balanceCorrections.namePrefix} (${targetCurrency})`;
     const existing = await this.findAccountByName(workplaceId, name);
-    if (existing) return existing.id;
+    if (existing) return existing.id as AccountId;
 
     // 3. Last chance: find ANY account with 'Balance Correction' in the name and right currency
     // This handles cases where currency might be slightly different in name but correct in field
@@ -518,7 +518,7 @@ export class AccountService {
         a.currencyCode === targetCurrency &&
         !a.deletedAt,
     );
-    if (fallback) return fallback.id;
+    if (fallback) return fallback.id as AccountId;
 
     return (
       await accountRepository.create({
@@ -530,7 +530,7 @@ export class AccountService {
         icon: balanceCorrections.icon as IconName,
         workplaceId,
       })
-    ).id;
+    ).id as AccountId;
   }
 
   /**
@@ -538,15 +538,15 @@ export class AccountService {
    * Used to prevent circular relationships.
    */
   private async isDescendant(
-    potentialDescendantId: string,
-    ancestorId: string,
+    potentialParentId: AccountId,
+    potentialDescendantId: AccountId,
     workplaceId: WorkplaceId,
   ): Promise<boolean> {
     let currentParentId = (await accountRepository.find(workplaceId, potentialDescendantId))
       ?.parentAccountId;
 
     while (currentParentId) {
-      if (currentParentId === ancestorId) return true;
+      if (currentParentId === potentialParentId) return true;
       const parent = await accountRepository.find(workplaceId, currentParentId);
       currentParentId = parent?.parentAccountId;
     }
@@ -558,10 +558,10 @@ export class AccountService {
    * Helper to get metadata as a plain object for auditing/UI.
    */
   private async getPlainMetadata(
-    accountId: string,
+    accountId: AccountId,
     workplaceId: WorkplaceId,
   ): Promise<Record<string, any> | undefined> {
-    const meta = await accountRepository.findMetadata(accountId, workplaceId);
+    const meta = await accountRepository.findMetadata(workplaceId, accountId);
     if (!meta) return undefined;
 
     return {

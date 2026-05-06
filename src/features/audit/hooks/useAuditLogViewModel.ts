@@ -4,6 +4,7 @@ import { AuditEntityType } from '@/src/data/models/AuditLog';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
 import { useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
 import { auditService } from '@/src/services/audit-service';
+import { AccountId, JournalId } from '@/src/types/domain';
 import * as Alerts from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
@@ -58,9 +59,9 @@ export function useAuditLogViewModel(): AuditLogViewModel {
 
   const onView = useCallback((type: string, id: string, name?: string) => {
     if (type === 'account') {
-      AppNavigation.toAccountDetails(id, { preview: { name } });
+      AppNavigation.toAccountDetails(id as AccountId, { preview: { name } });
     } else if (type === 'journal') {
-      AppNavigation.toTransactionDetails(id, { title: name });
+      AppNavigation.toTransactionDetails(id as JournalId, { title: name });
     }
   }, []);
 

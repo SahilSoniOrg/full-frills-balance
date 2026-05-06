@@ -1,4 +1,5 @@
 import Account from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 import React from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
@@ -6,10 +7,10 @@ import { BaseAccountPickerModal } from './BaseAccountPickerModal';
 export interface MultiAccountPickerModalProps {
   visible: boolean;
   accounts: Account[];
-  selectedIds: string[];
+  selectedIds: AccountId[];
   title?: string;
   onClose: () => void;
-  onSelect: (accountIds: string[]) => void;
+  onSelect: (accountIds: AccountId[]) => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   excludeParentAccounts?: boolean;
 }
@@ -24,7 +25,7 @@ export function MultiAccountPickerModal({
   onCreateRequest,
   excludeParentAccounts = false,
 }: MultiAccountPickerModalProps) {
-  const handleApply = (ids: Set<string>) => {
+  const handleApply = (ids: Set<AccountId>) => {
     onSelect(Array.from(ids));
     onClose();
   };

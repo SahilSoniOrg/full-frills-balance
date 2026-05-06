@@ -15,7 +15,7 @@ import { balanceService } from '@/src/services/BalanceService';
 import { IntegrityService } from '@/src/services/integrity-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('E2E Workflows', () => {
   let integrityService: IntegrityService;
@@ -67,8 +67,16 @@ describe('E2E Workflows', () => {
           journalDate: Date.now() + 1000,
           currencyCode: 'USD',
           transactions: [
-            { accountId: wallet.id, amount: 5.5, transactionType: TransactionType.CREDIT },
-            { accountId: food.id, amount: 5.5, transactionType: TransactionType.DEBIT },
+            {
+              accountId: wallet.id as AccountId,
+              amount: 5.5,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: food.id as AccountId,
+              amount: 5.5,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'test-workplace' as WorkplaceId,
@@ -81,8 +89,16 @@ describe('E2E Workflows', () => {
           journalDate: Date.now() + 2000,
           currencyCode: 'USD',
           transactions: [
-            { accountId: wallet.id, amount: 15.0, transactionType: TransactionType.CREDIT },
-            { accountId: food.id, amount: 15.0, transactionType: TransactionType.DEBIT },
+            {
+              accountId: wallet.id as AccountId,
+              amount: 15.0,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: food.id as AccountId,
+              amount: 15.0,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'test-workplace' as WorkplaceId,
@@ -95,8 +111,16 @@ describe('E2E Workflows', () => {
           journalDate: Date.now() + 3000,
           currencyCode: 'USD',
           transactions: [
-            { accountId: wallet.id, amount: 2.5, transactionType: TransactionType.CREDIT },
-            { accountId: transport.id, amount: 2.5, transactionType: TransactionType.DEBIT },
+            {
+              accountId: wallet.id as AccountId,
+              amount: 2.5,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: transport.id as AccountId,
+              amount: 2.5,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'test-workplace' as WorkplaceId,
@@ -158,8 +182,8 @@ describe('E2E Workflows', () => {
           j.journalDate = FIXED_DATE;
         });
         const journalTransactions = await transactionRepository.findByJournal(
-          initialJournal.id as WorkplaceId,
           'test-workplace' as WorkplaceId,
+          initialJournal.id as JournalId,
         );
         for (const tx of journalTransactions) {
           await tx.update((t: any) => {
@@ -185,8 +209,16 @@ describe('E2E Workflows', () => {
           journalDate: FIXED_DATE + 10000,
           currencyCode: 'USD',
           transactions: [
-            { accountId: cash.id, amount: 100, transactionType: TransactionType.CREDIT },
-            { accountId: expense.id, amount: 100, transactionType: TransactionType.DEBIT },
+            {
+              accountId: cash.id as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expense.id as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'test-workplace' as WorkplaceId,
@@ -242,9 +274,13 @@ describe('E2E Workflows', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId: usdCash.id, amount: 110, transactionType: TransactionType.CREDIT },
             {
-              accountId: eurExpense.id,
+              accountId: usdCash.id as AccountId,
+              amount: 110,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: eurExpense.id as AccountId,
               amount: 100,
               transactionType: TransactionType.DEBIT,
               exchangeRate: 1.1,

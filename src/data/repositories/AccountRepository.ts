@@ -11,6 +11,7 @@ import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import {
   getPeriodDecreaseSQLSnippet,
   getPeriodIncreaseSQLSnippet,
@@ -21,7 +22,6 @@ import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
 import { supportsRawSql } from '../database/DatabaseUtils';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface AccountPersistenceInput {
   name: string;
@@ -32,7 +32,7 @@ export interface AccountPersistenceInput {
   icon?: string;
   orderNum?: number;
   reconciledAt?: Date;
-  parentAccountId?: string;
+  parentAccountId?: AccountId;
   workplaceId: WorkplaceId;
   metadata?: Partial<{
     statementDay: number;
@@ -45,19 +45,19 @@ export interface AccountPersistenceInput {
     loanTenureMonths: number;
     autopayEnabled: boolean;
     gracePeriodDays: number;
-    payFromAccountId: string;
+    payFromAccountId: AccountId;
     notes: string;
   }>;
 }
 
 export interface AccountListItemRaw {
-  id: string;
+  id: AccountId;
   name: string;
   account_type: AccountType;
   account_subtype: AccountSubtype;
   currency_code: string;
   icon?: string;
-  parent_account_id?: string;
+  parent_account_id?: AccountId;
   direct_balance: number;
   direct_transaction_count: number;
   periodIncrease: number;
@@ -132,7 +132,7 @@ export class AccountRepository {
       ]);
   }
 
-  observeByIds(workplaceId: WorkplaceId, accountIds: string[]) {
+  observeByIds(workplaceId: WorkplaceId, accountIds: AccountId[]) {
     if (accountIds.length === 0) {
       return of([] as Account[]);
     }
@@ -158,7 +158,7 @@ export class AccountRepository {
       ]);
   }
 
-  observeById(workplaceId: WorkplaceId, accountId: string) {
+  observeById(workplaceId: WorkplaceId, accountId: AccountId) {
     return this.accounts
       .findAndObserve(accountId)
       .pipe(
@@ -170,7 +170,7 @@ export class AccountRepository {
    * Observe all active transactions for an account.
    * Used for reactive in-memory balance calculation.
    */
-  observeTransactionsForBalance(workplaceId: WorkplaceId, accountId: string) {
+  observeTransactionsForBalance(workplaceId: WorkplaceId, accountId: AccountId) {
     const clauses: Q.Clause[] = [
       Q.experimentalJoinTables(['journals']),
       Q.where('account_id', accountId),
@@ -195,7 +195,7 @@ export class AccountRepository {
    * PURE PERSISTENCE METHODS
    */
 
-  async findByIdRaw(id: string): Promise<Account | null> {
+  async findByIdRaw(id: AccountId): Promise<Account | null> {
     try {
       const account = await this.accounts.find(id);
       return account;
@@ -204,7 +204,7 @@ export class AccountRepository {
     }
   }
 
-  async find(workplaceId: WorkplaceId, id: string): Promise<Account | null> {
+  async find(workplaceId: WorkplaceId, id: AccountId): Promise<Account | null> {
     try {
       const account = await this.accounts.find(id);
       if (account.deletedAt) return null;
@@ -215,7 +215,7 @@ export class AccountRepository {
     }
   }
 
-  async findWithDeleted(workplaceId: WorkplaceId, id: string): Promise<Account | null> {
+  async findWithDeleted(workplaceId: WorkplaceId, id: AccountId): Promise<Account | null> {
     try {
       const account = await this.accounts.find(id);
       if (account.workplaceId !== workplaceId) return null;
@@ -225,7 +225,10 @@ export class AccountRepository {
     }
   }
 
-  async findMetadata(accountId: string, workplaceId: WorkplaceId): Promise<AccountMetadata | null> {
+  async findMetadata(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+  ): Promise<AccountMetadata | null> {
     try {
       const clauses: Q.Clause[] = [
         Q.where('account_id', accountId),
@@ -239,8 +242,8 @@ export class AccountRepository {
   }
 
   async findMetadataByAccountIds(
-    accountIds: string[],
     workplaceId: WorkplaceId,
+    accountIds: AccountId[],
   ): Promise<AccountMetadata[]> {
     if (accountIds.length === 0) return [];
     const clauses: Q.Clause[] = [
@@ -250,13 +253,13 @@ export class AccountRepository {
     return await this.metadata.query(...clauses).fetch();
   }
 
-  async findAllByIdsRaw(ids: string[]): Promise<Account[]> {
+  async findAllByIdsRaw(ids: AccountId[]): Promise<Account[]> {
     if (ids.length === 0) return [];
     const clauses: Q.Clause[] = [Q.where('id', Q.oneOf(ids)), Q.where('deleted_at', Q.eq(null))];
     return this.accounts.query(...clauses).fetch();
   }
 
-  async findAllByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Account[]> {
+  async findAllByIds(workplaceId: WorkplaceId, ids: AccountId[]): Promise<Account[]> {
     if (ids.length === 0) return [];
     const clauses: Q.Clause[] = [
       Q.where('id', Q.oneOf(ids)),
@@ -312,7 +315,7 @@ export class AccountRepository {
     return this.accounts.query(...clauses).fetchCount();
   }
 
-  observeByIdsWithDeleted(accountIds: string[], workplaceId: WorkplaceId) {
+  observeByIdsWithDeleted(workplaceId: WorkplaceId, accountIds: AccountId[]) {
     if (accountIds.length === 0) {
       return of([] as Account[]);
     }
@@ -396,7 +399,7 @@ export class AccountRepository {
       });
 
       if (updates.metadata) {
-        const existingMetadata = await this.findMetadata(account.id, account.workplaceId);
+        const existingMetadata = await this.findMetadata(workplaceId, account.id);
         if (existingMetadata) {
           await existingMetadata.update(meta => {
             Object.assign(meta, updates.metadata);
@@ -425,7 +428,7 @@ export class AccountRepository {
     if (!existingAccount) {
       throw new Error('Cannot delete account. Account not found in workplace provided.');
     }
-    const children = await this.queryByParentId(existingAccount.id, workplaceId).fetch();
+    const children = await this.queryByParentId(workplaceId, existingAccount.id).fetch();
     //if no exits, throw error
     if (children.length > 0) {
       throw new Error('Cannot delete account with children. Please delete or move children first.');
@@ -438,7 +441,7 @@ export class AccountRepository {
     });
   }
 
-  observeHasChildren(accountId: string, workplaceId: WorkplaceId) {
+  observeHasChildren(workplaceId: WorkplaceId, accountId: AccountId) {
     return this.accounts
       .query(
         Q.where('workplace_id', workplaceId),
@@ -449,7 +452,7 @@ export class AccountRepository {
       .pipe(map(children => children.length > 0));
   }
 
-  observeSubAccountCount(accountId: string, workplaceId: WorkplaceId) {
+  observeSubAccountCount(workplaceId: WorkplaceId, accountId: AccountId) {
     return this.accounts
       .query(
         Q.where('workplace_id', workplaceId),
@@ -459,7 +462,7 @@ export class AccountRepository {
       .observeCount();
   }
 
-  queryByParentId(parentId: string, workplaceId: WorkplaceId) {
+  queryByParentId(workplaceId: WorkplaceId, parentId: AccountId) {
     return this.accounts.query(
       Q.where('workplace_id', workplaceId),
       Q.where('parent_account_id', parentId),
@@ -471,7 +474,7 @@ export class AccountRepository {
   private async ensureUniqueName(
     name: string,
     workplaceId: WorkplaceId,
-    excludeId?: string,
+    excludeId?: AccountId,
   ): Promise<void> {
     const sanitizedName = name.trim();
 

@@ -1,12 +1,13 @@
 import { SimulationReportGenerator } from '@/src/services/simulation/SimulationReportGenerator';
 import { Flow, FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 
 describe('SimulationReportGenerator', () => {
   const resultCurrency = 'USD';
 
   // Mock account
-  const mockAccount = (id: string, name: string, subtype: AccountSubtype): Account =>
+  const mockAccount = (id: AccountId, name: string, subtype: AccountSubtype): Account =>
     ({
       id,
       name,
@@ -15,18 +16,21 @@ describe('SimulationReportGenerator', () => {
       currencyCode: resultCurrency,
     }) as Account;
 
-  const accountMap = new Map<string, Account>([
-    ['checking', mockAccount('checking', 'Checking', AccountSubtype.BANK_CHECKING)],
-    ['cc', mockAccount('cc', 'Credit Card', AccountSubtype.CREDIT_CARD)],
+  const accountMap = new Map<AccountId, Account>([
+    [
+      'checking' as AccountId,
+      mockAccount('checking' as AccountId, 'Checking', AccountSubtype.BANK_CHECKING),
+    ],
+    ['cc' as AccountId, mockAccount('cc' as AccountId, 'Credit Card', AccountSubtype.CREDIT_CARD)],
   ]);
 
-  const liquidAccountIdsSet = new Set(['checking']);
+  const liquidAccountIdsSet = new Set<AccountId>(['checking' as AccountId]);
 
   it('correctly calculates summary totals', () => {
     const flows: Flow[] = [
       {
         kind: 'INFLOW',
-        accountId: 'checking',
+        accountId: 'checking' as AccountId,
         amount: 2000,
         dayOffset: 5,
         category: FlowCategory.INCOME,
@@ -37,7 +41,7 @@ describe('SimulationReportGenerator', () => {
       },
       {
         kind: 'OUTFLOW',
-        accountId: 'checking',
+        accountId: 'checking' as AccountId,
         amount: 100,
         dayOffset: 10,
         category: FlowCategory.PLANNED_EXPENSE,
@@ -48,7 +52,7 @@ describe('SimulationReportGenerator', () => {
       },
       {
         kind: 'OUTFLOW',
-        accountId: 'checking',
+        accountId: 'checking' as AccountId,
         amount: 50,
         dayOffset: 2,
         category: FlowCategory.BUDGET,
@@ -73,7 +77,7 @@ describe('SimulationReportGenerator', () => {
     const flows: Flow[] = [
       {
         kind: 'OUTFLOW',
-        accountId: 'cc',
+        accountId: 'cc' as AccountId,
         amount: 300,
         dayOffset: 20,
         category: FlowCategory.DEBT,
@@ -87,7 +91,7 @@ describe('SimulationReportGenerator', () => {
     const report = SimulationReportGenerator.generate(
       flows,
       accountMap,
-      [{ account: accountMap.get('cc')!, balance: 500 }],
+      [{ account: accountMap.get('cc' as AccountId)!, balance: 500 }],
       liquidAccountIdsSet,
     );
 
@@ -100,8 +104,8 @@ describe('SimulationReportGenerator', () => {
     const flows: Flow[] = [
       {
         kind: 'TRANSFER',
-        fromAccountId: 'external-employer',
-        toAccountId: 'checking',
+        fromAccountId: 'external-employer' as AccountId,
+        toAccountId: 'checking' as AccountId,
         amount: 3000,
         dayOffset: 5,
         category: FlowCategory.INCOME,
@@ -112,8 +116,8 @@ describe('SimulationReportGenerator', () => {
       },
       {
         kind: 'TRANSFER',
-        fromAccountId: 'checking',
-        toAccountId: 'savings', // Internal move (if both liquid)
+        fromAccountId: 'checking' as AccountId,
+        toAccountId: 'savings' as AccountId, // Internal move (if both liquid)
         amount: 500,
         dayOffset: 10,
         category: FlowCategory.TRANSFER,
@@ -124,7 +128,10 @@ describe('SimulationReportGenerator', () => {
       },
     ];
 
-    const liquidAccountIdsWithSavings = new Set(['checking', 'savings']);
+    const liquidAccountIdsWithSavings = new Set<AccountId>([
+      'checking' as AccountId,
+      'savings' as AccountId,
+    ]);
 
     const report = SimulationReportGenerator.generate(
       flows,
@@ -143,8 +150,8 @@ describe('SimulationReportGenerator', () => {
     const flows: Flow[] = [
       {
         kind: 'TRANSFER',
-        fromAccountId: 'checking',
-        toAccountId: 'savings',
+        fromAccountId: 'checking' as AccountId,
+        toAccountId: 'savings' as AccountId,
         amount: 500,
         dayOffset: 10,
         category: FlowCategory.TRANSFER,
@@ -155,8 +162,8 @@ describe('SimulationReportGenerator', () => {
       },
       {
         kind: 'TRANSFER',
-        fromAccountId: 'checking',
-        toAccountId: 'goal-fund',
+        fromAccountId: 'checking' as AccountId,
+        toAccountId: 'goal-fund' as AccountId,
         amount: 200,
         dayOffset: 15,
         category: FlowCategory.TRANSFER,
@@ -167,7 +174,11 @@ describe('SimulationReportGenerator', () => {
       },
     ];
 
-    const liquidAccountIds = new Set(['checking', 'savings', 'goal-fund']);
+    const liquidAccountIds = new Set<AccountId>([
+      'checking' as AccountId,
+      'savings' as AccountId,
+      'goal-fund' as AccountId,
+    ]);
     const report = SimulationReportGenerator.generate(flows, accountMap, [], liquidAccountIds);
 
     // Only the SIP (PLANNED_PAYMENT) should be a commitment.

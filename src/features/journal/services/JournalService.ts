@@ -17,10 +17,12 @@ import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {
+  AccountId,
   EnrichedJournal,
   JournalEntryLine,
-  mapTransactionToAudit,
+  JournalId,
   WorkplaceId,
+  mapTransactionToAudit,
 } from '@/src/types/domain';
 import { accountingService } from '@/src/utils/accountingService';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -46,12 +48,12 @@ export interface SubmitJournalResult {
   success: boolean;
   error?: string;
   action?: 'created' | 'updated';
-  journalId?: string;
+  journalId?: JournalId;
 }
 
 export class JournalService {
   async updateJournal(
-    journalId: string,
+    journalId: JournalId,
     data: CreateJournalData,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
@@ -106,7 +108,7 @@ export class JournalService {
     );
 
     const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
-    const allAccountsToRebuild = new Set<string>([
+    const allAccountsToRebuild = new Set<AccountId>([
       ...prepared.accountsToRebuild,
       ...originalAccountIds,
     ]);
@@ -116,7 +118,7 @@ export class JournalService {
     return journal;
   }
 
-  async deleteJournal(journalId: string, workplaceId: WorkplaceId): Promise<void> {
+  async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
     const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) return;
 
@@ -160,7 +162,7 @@ export class JournalService {
     rebuildQueueService.enqueueMany(accountIds, journal.journalDate, workplaceId);
   }
 
-  async recoverJournal(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
+  async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
     const prepared = await journalRepository.fetchJournalForDeletion(journalId, workplaceId);
     if (!prepared) throw new Error('Journal not found');
 
@@ -202,7 +204,7 @@ export class JournalService {
     return journal;
   }
 
-  async duplicateJournal(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
+  async duplicateJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
     const journal = await journalRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
 
@@ -226,7 +228,7 @@ export class JournalService {
   }
 
   async createReversalJournal(
-    originalJournalId: string,
+    originalJournalId: JournalId,
     reason: string = 'Reversal',
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
@@ -254,7 +256,7 @@ export class JournalService {
         description: `Reversal of: ${originalJournal.description || originalJournalId} (${reason})`,
         currencyCode: originalJournal.currencyCode,
         transactions: reversedTxs,
-        originalJournalId,
+        originalJournalId: originalJournalId,
       },
       originalJournal.workplaceId,
     );
@@ -265,7 +267,7 @@ export class JournalService {
     return reversalJournal;
   }
 
-  async postJournal(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
+  async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
     const journal = await journalRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.PLANNED) {
@@ -329,7 +331,7 @@ export class JournalService {
     return journal;
   }
 
-  async revertToPlanned(journalId: string, workplaceId: WorkplaceId): Promise<Journal> {
+  async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
     const journal = await journalRepository.find(workplaceId, journalId);
     if (!journal) throw new Error('Journal not found');
     if (journal.status !== JournalStatus.POSTED && journal.status !== JournalStatus.SKIPPED) {
@@ -419,7 +421,7 @@ export class JournalService {
     notes?: string;
     journalDate: string | number; // support timestamp or ISO date
     journalTime?: string;
-    journalId?: string;
+    journalId?: JournalId;
     smsId?: string;
     smsRecordId?: string;
     smsSender?: string;

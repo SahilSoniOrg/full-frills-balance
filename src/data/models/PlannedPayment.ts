@@ -1,7 +1,9 @@
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
 import { Query } from '@nozbe/watermelondb';
-import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
+
+import { AccountId } from '@/src/types/domain';
 
 export enum PlannedPaymentInterval {
   DAILY = 'DAILY',
@@ -26,8 +28,8 @@ export default class PlannedPayment extends BaseScopedModel {
   @field('description') description?: string;
   @field('amount') amount!: number;
   @field('currency_code') currencyCode!: string;
-  @field('from_account_id') fromAccountId!: string;
-  @field('to_account_id') toAccountId!: string;
+  @field('from_account_id') fromAccountId!: AccountId;
+  @field('to_account_id') toAccountId!: AccountId;
   @field('interval_n') intervalN!: number;
   @field('interval_type') intervalType!: PlannedPaymentInterval;
   @field('start_date') startDate!: number;

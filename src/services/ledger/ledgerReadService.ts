@@ -3,13 +3,13 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { DisplayTransaction, WorkplaceId } from '@/src/types/domain';
+import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { isBalanceIncrease } from '@/src/utils/accountingHelpers';
 import { auditTime, combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class LedgerReadService {
   observeEnrichedForAccount(
-    accountId: string,
+    accountId: AccountId,
     workplaceId: WorkplaceId,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
@@ -20,7 +20,7 @@ export class LedgerReadService {
   }
 
   observeEnrichedForAccounts(
-    rootAccountIds: string[],
+    rootAccountIds: AccountId[],
     workplaceId: WorkplaceId,
     limit: number,
     dateRange?: { startDate: number; endDate: number },
@@ -29,7 +29,7 @@ export class LedgerReadService {
 
     const descendantIds$ = accountRepository.observeHierarchy(workplaceId).pipe(
       map(accounts => {
-        const allIds = new Set<string>();
+        const allIds = new Set<AccountId>();
         for (const rootId of rootAccountIds) {
           const ids = this.getAccountTreeIds(rootId, accounts);
           ids.forEach(id => allIds.add(id));
@@ -62,13 +62,13 @@ export class LedgerReadService {
     );
 
     const allAccountIds$ = allJournalTransactions$.pipe(
-      map((txs: Transaction[]) => Array.from(new Set(txs.map(t => t.accountId as string))).sort()),
+      map((txs: Transaction[]) => Array.from(new Set(txs.map(t => t.accountId))).sort()),
       distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
       auditTime(50),
     );
 
     const allAccounts$ = allAccountIds$.pipe(
-      switchMap((ids: string[]) => accountRepository.observeByIds(workplaceId, ids)),
+      switchMap((ids: AccountId[]) => accountRepository.observeByIds(workplaceId, ids)),
     );
 
     return combineLatest([transactions$, journals$, allAccounts$, allJournalTransactions$]).pipe(
@@ -144,10 +144,10 @@ export class LedgerReadService {
   }
 
   private getAccountTreeIds(
-    rootAccountId: string,
-    accounts: { id: string; parentAccountId?: string | null }[],
-  ): string[] {
-    const childrenByParent = new Map<string, string[]>();
+    rootAccountId: AccountId,
+    accounts: { id: AccountId; parentAccountId?: AccountId | null }[],
+  ): AccountId[] {
+    const childrenByParent = new Map<AccountId, AccountId[]>();
     for (const account of accounts) {
       if (!account.parentAccountId) continue;
       const siblings = childrenByParent.get(account.parentAccountId) || [];
@@ -155,8 +155,8 @@ export class LedgerReadService {
       childrenByParent.set(account.parentAccountId, siblings);
     }
 
-    const result: string[] = [];
-    const queue: string[] = [rootAccountId];
+    const result: AccountId[] = [];
+    const queue: AccountId[] = [rootAccountId];
     let i = 0;
 
     while (i < queue.length) {

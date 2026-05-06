@@ -9,7 +9,7 @@ import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
 import { Model, TableSchema } from '@nozbe/watermelondb';
@@ -34,7 +34,7 @@ export interface AccountExport {
 
 export interface BalanceSnapshotExport {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   transactionId: string;
   transactionDate: string;
   absoluteBalance: number;
@@ -64,7 +64,7 @@ export interface JournalExport {
 export interface TransactionExport {
   id: string;
   journalId: string;
-  accountId: string;
+  accountId: AccountId;
   amount: number;
   transactionType: string;
   currencyCode: string;
@@ -101,7 +101,7 @@ export interface BudgetExport {
 export interface BudgetScopeExport {
   id: string;
   budgetId: string;
-  accountId: string;
+  accountId: AccountId;
   createdAt: string;
   updatedAt: string;
 }
@@ -130,7 +130,7 @@ export interface ExchangeRateExport {
 
 export interface AccountMetadataExport {
   id: string;
-  accountId: string;
+  accountId: AccountId;
   statementDay?: number;
   dueDay?: number;
   minimumPaymentAmount?: number;
@@ -164,7 +164,7 @@ export interface PlannedPaymentExport {
   description?: string;
   amount: number;
   currencyCode: string;
-  fromAccountId: string;
+  fromAccountId: AccountId;
   toAccountId?: string;
   intervalN: number;
   intervalType: string;
@@ -213,8 +213,8 @@ export interface SmsAutoPostRuleExport {
   conditionsJson?: string;
   actionsJson?: string;
   priority?: number;
-  sourceAccountId: string;
-  categoryAccountId: string;
+  sourceAccountId: AccountId;
+  categoryAccountId: AccountId;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -405,16 +405,18 @@ class ExportService {
         transactions,
         auditLogs,
         budgets,
-        budgetScopes,
-        _currencies,
-        _exchangeRates,
+        budgetScopes, // currencies
+        // exchangeRates
+        ,
+        ,
         accountMetadata,
         plannedPayments,
         journalMetadata,
-        smsAutoPostRules,
-        _smsInboxRecords,
-        _balanceSnapshots, // Prefix with _ to ignore unused warning
-        userPreferences,
+        smsAutoPostRules, // smsInboxRecords
+        // balanceSnapshots
+        ,
+        ,
+        _userPreferences,
         workplace,
       ] = await Promise.all([
         this.fetchAndTransformTable<AccountExport>(workplaceId, 'accounts'),
@@ -438,7 +440,7 @@ class ExportService {
       const exportData: ExportData = {
         exportDate: new Date().toISOString(),
         version: '1.4.0',
-        preferences: userPreferences,
+        preferences: _userPreferences,
         accounts,
         journals,
         transactions: transactions.map(t => ({ ...t, runningBalance: undefined })),

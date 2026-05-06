@@ -1,11 +1,11 @@
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccounts';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { sanitizeInput } from '@/src/utils/validation';
 import { useRef, useState } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 interface PersistenceResult {
   isCreating: boolean;
@@ -17,7 +17,7 @@ interface PersistenceResult {
     icon: import('@/src/components/core').IconName,
     initialBalance?: string,
     currentBalanceData?: { balance: number },
-    parentAccountId?: string,
+    parentAccountId?: AccountId,
     metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'],
   ) => Promise<void>;
   handleCancel: () => void;
@@ -26,7 +26,7 @@ interface PersistenceResult {
 export function useAccountPersistence(
   workplaceId: WorkplaceId,
   existingAccount: Account | null | undefined,
-  currentAccountId: string | undefined,
+  currentAccountId: AccountId | undefined,
   hasExistingAccounts: boolean,
 ): PersistenceResult {
   const { createAccount, updateAccount, adjustBalance } = useAccountActions(workplaceId);
@@ -45,7 +45,7 @@ export function useAccountPersistence(
     icon: import('@/src/components/core').IconName,
     initialBalance?: string,
     currentBalanceData?: { balance: number },
-    parentAccountId?: string,
+    parentAccountId?: AccountId,
     metadata?: import('@/src/data/repositories/AccountRepository').AccountPersistenceInput['metadata'],
   ) => {
     if (isSubmitting.current) return;

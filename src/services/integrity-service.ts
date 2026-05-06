@@ -20,14 +20,14 @@ import { accountingRebuildService } from '@/src/services/AccountingRebuildServic
 import { analytics } from '@/src/services/analytics-service';
 import { smsService } from '@/src/services/sms-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface BalanceVerificationResult {
-  accountId: string;
+  accountId: AccountId;
   accountName: string;
   cachedBalance: number;
   computedBalance: number;
@@ -77,11 +77,11 @@ export class IntegrityService {
    * otherwise falls back to the ORM-based iteration.
    */
   async computeBalanceFromTransactions(
-    accountId: string,
+    accountId: AccountId,
     workplaceId: WorkplaceId,
     cutoffDate?: number,
   ): Promise<number> {
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountRepository.find(workplaceId, accountId as AccountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     const effectiveCutoff = cutoffDate ?? Date.now();
@@ -117,12 +117,12 @@ export class IntegrityService {
    * a fresh recomputation up to that snapshot's date, to detect corrupted checkpoints.
    */
   async verifyAccountBalance(
-    accountId: string,
+    accountId: AccountId,
     workplaceId: WorkplaceId,
     cutoffDate: number = Date.now(),
   ): Promise<BalanceVerificationResult> {
     const start = Date.now();
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountRepository.find(workplaceId, accountId as AccountId);
     if (!account) {
       throw new Error(`Account ${accountId} not found`);
     }
@@ -197,12 +197,12 @@ export class IntegrityService {
    * ignoring any snapshots. Used strictly for snapshot cross-checking.
    */
   private async computeBalanceFromScratch(
-    accountId: string,
+    accountId: AccountId,
     workplaceId: WorkplaceId,
     cutoffDate: number,
-    limitTransactionId?: string,
+    limitTransactionId?: TransactionId,
   ): Promise<number> {
-    const account = await accountRepository.find(workplaceId, accountId);
+    const account = await accountRepository.find(workplaceId, accountId as AccountId);
     if (!account) throw new Error(`Account ${accountId} not found`);
 
     // HIGH PERFORMANCE: Use raw SQL aggregate (SUM) from scratch (no snapshot)
@@ -240,7 +240,7 @@ export class IntegrityService {
   /**
    * Repairs a single account's running balances.
    */
-  async repairAccountBalance(workplaceId: WorkplaceId, accountId: string): Promise<boolean> {
+  async repairAccountBalance(workplaceId: WorkplaceId, accountId: AccountId): Promise<boolean> {
     try {
       await accountingRebuildService.rebuildAccountBalances(workplaceId, accountId);
       logger.info(`[IntegrityService] Repaired running balances for account ${accountId}`);

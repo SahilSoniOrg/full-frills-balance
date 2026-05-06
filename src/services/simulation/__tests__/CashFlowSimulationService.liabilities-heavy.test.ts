@@ -7,7 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
@@ -54,7 +54,7 @@ jest.mock('@/src/utils/logger', () => ({
 describe('CashFlowSimulationService liability-heavy coverage', () => {
   const makeAsset = (id: string, name = id, currencyCode = 'USD') =>
     ({
-      id,
+      id: id as AccountId,
       name,
       accountType: AccountType.ASSET,
       accountSubtype: 'CHECKING',
@@ -72,7 +72,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     },
   ) =>
     ({
-      id,
+      id: id as AccountId,
       name: options?.name || id,
       accountType: AccountType.LIABILITY,
       accountSubtype: AccountSubtype.CREDIT_CARD,
@@ -82,7 +82,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
           {
             statementDay: options?.statementDay ?? 1,
             dueDay: options?.dueDay ?? 15,
-            payFromAccountId: options?.payFromAccountId ?? 'cash',
+            payFromAccountId: (options?.payFromAccountId ?? 'cash') as AccountId,
           },
         ]),
       },
@@ -99,7 +99,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     },
   ) =>
     ({
-      id,
+      id: id as AccountId,
       name: options?.name || id,
       accountType: AccountType.LIABILITY,
       accountSubtype: AccountSubtype.LOAN,
@@ -108,7 +108,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         fetch: jest.fn().mockResolvedValue([
           {
             emiDay: options?.emiDay ?? 20,
-            payFromAccountId: options?.payFromAccountId ?? 'cash',
+            payFromAccountId: (options?.payFromAccountId ?? 'cash') as AccountId,
             emiAmount: (options as any)?.emiAmount ?? 100,
           },
         ]),
@@ -120,16 +120,17 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
   ) => {
     const cash = makeAsset('cash', 'Checking');
     const args: Parameters<typeof cashFlowSimulationService.simulate> = [
-      new Map([['cash', 1000]]),
+      new Map<AccountId, number>([['cash' as AccountId, 1000]]),
       [],
       [],
-      ['cash'],
+      ['cash' as AccountId],
       [],
       [],
       [],
       [cash],
       'USD',
       'test-wp' as WorkplaceId,
+      60,
     ];
 
     for (const [index, value] of Object.entries(overrides ?? {})) {
@@ -194,13 +195,13 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     });
 
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockImplementation(
-      (ids: string[]) => {
+      (_wp: WorkplaceId, ids: string[]) => {
         const id = ids[0];
         return Promise.resolve(new Map([[id, id === 'cc-primary' ? 500 : 300]]));
       },
     );
     (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockImplementation(
-      (accountId: string) =>
+      (_wp: WorkplaceId, accountId: string) =>
         Promise.resolve({
           totalDecrease: accountId === 'cc-primary' ? 100 : accountId === 'cc-backup' ? 50 : 0,
           totalIncrease: 0,
@@ -208,11 +209,11 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map([
-        ['cash', 1500],
-        ['savings', 800],
+      0: new Map<AccountId, number>([
+        ['cash' as AccountId, 1500],
+        ['savings' as AccountId, 800],
       ]),
-      3: ['cash', 'savings'],
+      3: ['cash' as AccountId, 'savings' as AccountId],
       4: [
         { account: ccPrimary, balance: 800 },
         { account: ccBackup, balance: 300 },
@@ -258,11 +259,11 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map([
-        ['cash', 300],
-        ['savings', 100],
+      0: new Map<AccountId, number>([
+        ['cash' as AccountId, 300],
+        ['savings' as AccountId, 100],
       ]),
-      3: ['cash', 'savings'],
+      3: ['cash' as AccountId, 'savings' as AccountId],
       4: [
         { account: cc, balance: 250 },
         { account: loan, balance: 400 },
@@ -343,11 +344,11 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     );
 
     const result = await simulate({
-      0: new Map([
-        ['cash', 1000],
-        ['eur-savings', 100],
+      0: new Map<AccountId, number>([
+        ['cash' as AccountId, 1000],
+        ['eur-savings' as AccountId, 100],
       ]),
-      3: ['cash', 'eur-savings'],
+      3: ['cash' as AccountId, 'eur-savings' as AccountId],
       4: [{ account: euroLoan, balance: 50 }],
       7: [cash, euroSavings, euroLoan],
     } as any);
@@ -397,13 +398,13 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     });
 
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockImplementation(
-      (ids: string[]) => {
+      (_wp: WorkplaceId, ids: string[]) => {
         const id = ids[0];
         return Promise.resolve(new Map([[id, statementBalances.get(id) || 0]]));
       },
     );
     (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockImplementation(
-      (accountId: string) =>
+      (_wp: WorkplaceId, accountId: string) =>
         Promise.resolve({
           totalDecrease: settledAmounts.get(accountId) || 0,
           totalIncrease: 0,
@@ -416,12 +417,12 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     ];
 
     const result = await simulate({
-      0: new Map([
-        ['cash', 5000],
-        ['savings', 3200],
-        ['wallet', 150],
+      0: new Map<AccountId, number>([
+        ['cash' as AccountId, 5000],
+        ['savings' as AccountId, 3200],
+        ['wallet' as AccountId, 150],
       ]),
-      3: ['cash', 'savings', 'wallet'],
+      3: ['cash' as AccountId, 'savings' as AccountId, 'wallet' as AccountId],
       4: liabilityBalances,
       7: allAccounts,
     } as any);
@@ -457,11 +458,11 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
     });
 
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockImplementation(
-      (ids: string[]) => Promise.resolve(new Map([[ids[0], 400]])),
+      (_wp: WorkplaceId, ids: string[]) => Promise.resolve(new Map([[ids[0], 400]])),
     );
 
     const result = await simulate({
-      0: new Map([['cash', 1000]]),
+      0: new Map<AccountId, number>([['cash' as AccountId, 1000]]),
       1: [
         {
           id: 'pp-card-a',

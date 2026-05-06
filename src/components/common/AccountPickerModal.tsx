@@ -1,4 +1,5 @@
 import Account from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 import React, { useCallback, useMemo } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
@@ -8,10 +9,10 @@ export type { CreateAccountIntent };
 export interface AccountPickerModalProps {
   visible: boolean;
   accounts: Account[];
-  selectedId?: string;
+  selectedId?: AccountId;
   title?: string;
   onClose: () => void;
-  onSelect: (accountId: string) => void;
+  onSelect: (accountId: AccountId) => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   excludeParentAccounts?: boolean;
 }
@@ -28,7 +29,7 @@ export function AccountPickerModal({
 }: AccountPickerModalProps) {
   const handleSelect = useCallback(
     (id: string) => {
-      onSelect(id);
+      onSelect(id as AccountId);
     },
     [onSelect],
   );

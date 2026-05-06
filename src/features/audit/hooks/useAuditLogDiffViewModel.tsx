@@ -3,6 +3,7 @@ import { AppConfig, ColorKey, Opacity, Shape, Size, Spacing, Typography } from '
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AccountId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import React, { useMemo } from 'react';
@@ -24,7 +25,7 @@ export interface AuditLogEntry {
 }
 
 interface AuditTransactionSnapshot {
-  accountId: string;
+  accountId: AccountId;
   amount: number;
   type: string;
   accountName?: string;

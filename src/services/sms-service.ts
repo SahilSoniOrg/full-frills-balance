@@ -15,6 +15,7 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
@@ -22,7 +23,6 @@ import { Model, Q } from '@nozbe/watermelondb';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Observable } from 'rxjs';
 import { rebuildQueueService } from './RebuildQueueService';
-import { WorkplaceId } from '@/src/types/domain';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
@@ -55,8 +55,8 @@ export interface SmsSyncResult {
 export interface SmsRuleSuggestion {
   senderMatch: string;
   bodyMatch?: string;
-  sourceAccountId: string;
-  categoryAccountId: string;
+  sourceAccountId: AccountId;
+  categoryAccountId: AccountId;
   sourceAccountName: string;
   categoryAccountName: string;
   sampleCount: number;
@@ -86,8 +86,8 @@ export interface SmsRuleCondition {
 
 export interface SmsRuleActions {
   disposition: SmsRuleDisposition;
-  sourceAccountId?: string;
-  categoryAccountId?: string;
+  sourceAccountId?: AccountId;
+  categoryAccountId?: AccountId;
 }
 
 export interface SmsRuleDraftInput {
@@ -118,7 +118,7 @@ type ResolvedSmsRule = {
 };
 
 type DuplicateMatch = {
-  journalId: string;
+  journalId: JournalId;
   score: number;
   reasons: string[];
 } | null;
@@ -260,7 +260,7 @@ class SmsService {
 
   async linkSmsToJournal(
     recordId: string,
-    journalId: string,
+    journalId: JournalId,
     disposition: SmsProcessingStatus.IMPORTED | SmsProcessingStatus.AUTO_POSTED,
   ): Promise<void> {
     const record = await this.getInboxRecord(recordId);
@@ -275,7 +275,7 @@ class SmsService {
     });
   }
 
-  async finalizeManualImport(recordId: string, journalId: string): Promise<void> {
+  async finalizeManualImport(recordId: string, journalId: JournalId): Promise<void> {
     await this.linkSmsToJournal(recordId, journalId, SmsProcessingStatus.IMPORTED);
   }
 
@@ -316,7 +316,7 @@ class SmsService {
         senderAddress: string;
         merchant?: string;
         accountSource?: string;
-        journalIds: string[];
+        journalIds: JournalId[];
         count: number;
       }
     >();
@@ -460,8 +460,8 @@ class SmsService {
             data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
           record.actionsJson = JSON.stringify(normalizedActions);
           record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || '';
-          record.categoryAccountId = normalizedActions.categoryAccountId || '';
+          record.sourceAccountId = normalizedActions.sourceAccountId || ('' as AccountId);
+          record.categoryAccountId = normalizedActions.categoryAccountId || ('' as AccountId);
           record.isActive = data.isActive;
         });
       } else {
@@ -473,8 +473,8 @@ class SmsService {
             data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
           record.actionsJson = JSON.stringify(normalizedActions);
           record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || '';
-          record.categoryAccountId = normalizedActions.categoryAccountId || '';
+          record.sourceAccountId = normalizedActions.sourceAccountId || ('' as AccountId);
+          record.categoryAccountId = normalizedActions.categoryAccountId || ('' as AccountId);
           record.isActive = data.isActive;
         });
       }
@@ -528,7 +528,7 @@ class SmsService {
 
     let importedCount = 0;
     const allOps: Model[] = [];
-    const allAccountsToRebuild = new Set<string>();
+    const allAccountsToRebuild = new Set<AccountId>();
 
     for (const { message, parsed, fingerprint } of parsedMessages) {
       if (parsed.parseStatus === SmsParseStatus.IGNORED) {
@@ -557,7 +557,7 @@ class SmsService {
         existingRecord,
         nextStatus,
         workplaceId,
-        exactJournal?.id || fingerprintJournal?.id,
+        exactJournal?.id || fingerprintJournal?.id || undefined,
         duplicate,
       );
       allOps.push(...upsertOps);
@@ -677,7 +677,7 @@ class SmsService {
   ): Promise<{
     ops: Model[];
     status: 'auto_posted' | 'ignored';
-    accountsToRebuild: Set<string>;
+    accountsToRebuild: Set<AccountId>;
   } | null> {
     if (activeRules.length === 0 || !parsed.amount) return null;
 
@@ -731,13 +731,13 @@ class SmsService {
           },
           transactions: [
             {
-              accountId: definition.actions.sourceAccountId,
+              accountId: definition.actions.sourceAccountId as AccountId,
               amount: parsed.amount,
               transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
               currencyCode,
             },
             {
-              accountId: definition.actions.categoryAccountId,
+              accountId: definition.actions.categoryAccountId as AccountId,
               amount: parsed.amount,
               transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
               currencyCode,
@@ -768,7 +768,7 @@ class SmsService {
     existing: SmsInboxRecord | null,
     processingStatus: SmsProcessingStatus,
     workplaceId: WorkplaceId,
-    linkedJournalId?: string,
+    linkedJournalId?: JournalId,
     duplicate?: DuplicateMatch,
   ): { record: SmsInboxRecord; ops: Model[] } {
     const now = Date.now();
@@ -1241,14 +1241,14 @@ class SmsService {
       senderAddress: string;
       merchant?: string;
       accountSource?: string;
-      journalIds: string[];
+      journalIds: JournalId[];
       count: number;
     },
     workplaceId: WorkplaceId,
   ): Promise<SmsRuleSuggestion | null> {
     const journals = await journalRepository.findByIds(workplaceId, group.journalIds.slice(0, 10));
-    const accountIds = new Set<string>();
-    const journalTransactions = new Map<string, any[]>();
+    const accountIds = new Set<AccountId>();
+    const journalTransactions = new Map<JournalId, Transaction[]>();
 
     for (const journal of journals) {
       const transactions = await database.collections
@@ -1261,8 +1261,8 @@ class SmsService {
 
     const accounts = await accountRepository.findAllByIds(workplaceId, Array.from(accountIds));
     const accountMap = new Map(accounts.map(account => [account.id, account]));
-    const sourceCounts = new Map<string, number>();
-    const categoryCounts = new Map<string, number>();
+    const sourceCounts = new Map<AccountId, number>();
+    const categoryCounts = new Map<AccountId, number>();
 
     for (const journal of journals) {
       const transactions = journalTransactions.get(journal.id) || [];
@@ -1272,11 +1272,17 @@ class SmsService {
         if (
           [AccountType.ASSET, AccountType.LIABILITY].includes(account.accountType as AccountType)
         ) {
-          sourceCounts.set(account.id, (sourceCounts.get(account.id) || 0) + 1);
+          sourceCounts.set(
+            account.id as AccountId,
+            (sourceCounts.get(account.id as AccountId) || 0) + 1,
+          );
         } else if (
           [AccountType.EXPENSE, AccountType.INCOME].includes(account.accountType as AccountType)
         ) {
-          categoryCounts.set(account.id, (categoryCounts.get(account.id) || 0) + 1);
+          categoryCounts.set(
+            account.id as AccountId,
+            (categoryCounts.get(account.id as AccountId) || 0) + 1,
+          );
         }
       }
     }

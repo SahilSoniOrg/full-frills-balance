@@ -1,11 +1,11 @@
 import { AppConfig } from '@/src/constants';
 import { AccountDateRange, usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
-import { DisplayTransaction, WorkplaceId } from '@/src/types/domain';
+import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 
 export function useLedgerTransactionsForAccount(
-  accountId: string,
+  accountId: AccountId,
   workplaceId: WorkplaceId,
   pageSize: number = AppConfig.defaults.journalPageSize,
   dateRange?: { startDate: number; endDate: number },

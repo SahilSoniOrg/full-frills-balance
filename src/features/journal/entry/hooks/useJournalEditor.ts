@@ -7,22 +7,30 @@ import { journalService } from '@/src/features/journal/services/JournalService';
 import { transactionService } from '@/src/features/journal/services/TransactionService';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import { AccountRole, JournalEntryLine, TabType, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  AccountRole,
+  JournalEntryLine,
+  JournalId,
+  TabType,
+  TransactionId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export interface UseJournalEditorOptions {
-  journalId?: string;
+  journalId?: JournalId;
   initialMode?: 'simple' | 'advanced';
   initialType?: 'expense' | 'income' | 'transfer';
   initialAmount?: string;
   initialDescription?: string;
   initialNotes?: string;
   initialDate?: string; // ISO string format
-  initialSourceId?: string;
-  initialDestinationId?: string;
+  initialSourceId?: AccountId;
+  initialDestinationId?: AccountId;
   smsId?: string;
   smsRecordId?: string;
   smsSender?: string;
@@ -32,7 +40,10 @@ export interface UseJournalEditorOptions {
    * direct smsService.markSmsAsProcessed call — keeps this hook unaware of
    * SMS concerns and avoids a feature→service boundary violation.
    */
-  onAfterSave?: (result: { journalId?: string; action?: 'created' | 'updated' }) => Promise<void>;
+  onAfterSave?: (result: {
+    journalId?: JournalId;
+    action?: 'created' | 'updated';
+  }) => Promise<void>;
   onSuccess?: () => void;
 }
 
@@ -94,8 +105,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   // Advanced / Generic state
   const [lines, setLines] = useState<JournalEntryLine[]>(() => [
     {
-      id: '1',
-      accountId: initialDestinationId || '',
+      id: '1' as TransactionId,
+      accountId: initialDestinationId || ('' as AccountId),
       accountName: '',
       accountType: AccountType.ASSET,
       amount: initialAmount || '',
@@ -104,8 +115,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       exchangeRate: '',
     },
     {
-      id: '2',
-      accountId: initialSourceId || '',
+      id: '2' as TransactionId,
+      accountId: initialSourceId || ('' as AccountId),
       accountName: '',
       accountType: AccountType.ASSET,
       amount: initialAmount || '',
@@ -124,8 +135,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
           current.find(l => l.transactionType === TransactionType.CREDIT) || current[1];
         // Rule: Source (Credit) should be the first leg (index 0)
         return [
-          { ...credit, id: '1', transactionType: TransactionType.CREDIT },
-          { ...debit, id: '2', transactionType: TransactionType.DEBIT },
+          { ...credit, id: '1' as TransactionId, transactionType: TransactionType.CREDIT },
+          { ...debit, id: '2' as TransactionId, transactionType: TransactionType.DEBIT },
         ];
       });
     }
@@ -220,8 +231,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       return [
         ...prev,
         {
-          id: nextId,
-          accountId: '',
+          id: nextId as TransactionId,
+          accountId: '' as AccountId,
           accountName: '',
           accountType: AccountType.ASSET,
           amount: '',
@@ -268,7 +279,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
         showErrorAlert('Failed to fetch exchange rate');
       }
     },
-    [lines, fetchRate, updateLine],
+    [lines, fetchRate, updateLine, workplaceCurrency],
   );
 
   const balanceLine = useCallback(
@@ -314,7 +325,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
         }),
       );
     },
-    [lines],
+    [lines, workplaceCurrency],
   );
 
   const submit = async (overrides?: { description?: string }) => {
@@ -426,6 +437,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       getLineIdByRole,
       resolveActiveLineId,
       submit,
+      workplaceId,
     ],
   );
 }

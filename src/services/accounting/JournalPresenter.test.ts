@@ -1,23 +1,23 @@
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { JournalDisplayType, SemanticType } from '@/src/types/domain';
+import { AccountId, JournalDisplayType, SemanticType } from '@/src/types/domain';
 import { journalPresenter } from '@/src/utils/journalPresenter';
 
 describe('JournalPresenter', () => {
-  const accountTypes = new Map<string, AccountType>([
-    ['a1', AccountType.ASSET],
-    ['a2', AccountType.ASSET],
-    ['l1', AccountType.LIABILITY],
-    ['e1', AccountType.EQUITY],
-    ['i1', AccountType.INCOME],
-    ['ex1', AccountType.EXPENSE],
+  const accountTypes = new Map<AccountId, AccountType>([
+    ['a1' as AccountId, AccountType.ASSET],
+    ['a2' as AccountId, AccountType.ASSET],
+    ['l1' as AccountId, AccountType.LIABILITY],
+    ['e1' as AccountId, AccountType.EQUITY],
+    ['i1' as AccountId, AccountType.INCOME],
+    ['ex1' as AccountId, AccountType.EXPENSE],
   ]);
 
   describe('getJournalDisplayType', () => {
     it('identifies INCOME when an Income account is involved', () => {
       const txs = [
-        { accountId: 'a1', amount: 100, transactionType: TransactionType.DEBIT },
-        { accountId: 'i1', amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'a1' as AccountId, amount: 100, transactionType: TransactionType.DEBIT },
+        { accountId: 'i1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
       ];
       expect(journalPresenter.getJournalDisplayType(txs, accountTypes)).toBe(
         JournalDisplayType.INCOME,
@@ -26,8 +26,8 @@ describe('JournalPresenter', () => {
 
     it('identifies EXPENSE when an Expense account is involved', () => {
       const txs = [
-        { accountId: 'ex1', amount: 50, transactionType: TransactionType.DEBIT },
-        { accountId: 'a1', amount: 50, transactionType: TransactionType.CREDIT },
+        { accountId: 'ex1' as AccountId, amount: 50, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 50, transactionType: TransactionType.CREDIT },
       ];
       expect(journalPresenter.getJournalDisplayType(txs, accountTypes)).toBe(
         JournalDisplayType.EXPENSE,
@@ -36,9 +36,9 @@ describe('JournalPresenter', () => {
 
     it('identifies MIXED when both Income and Expense accounts are involved (Split)', () => {
       const txs = [
-        { accountId: 'i1', amount: 100, transactionType: TransactionType.CREDIT },
-        { accountId: 'ex1', amount: 40, transactionType: TransactionType.DEBIT },
-        { accountId: 'a1', amount: 60, transactionType: TransactionType.DEBIT },
+        { accountId: 'i1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'ex1' as AccountId, amount: 40, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 60, transactionType: TransactionType.DEBIT },
       ];
       expect(journalPresenter.getJournalDisplayType(txs, accountTypes)).toBe(
         JournalDisplayType.MIXED,
@@ -47,8 +47,8 @@ describe('JournalPresenter', () => {
 
     it('identifies TRANSFER for simple Asset-to-Asset movements', () => {
       const txs = [
-        { accountId: 'a1', amount: 100, transactionType: TransactionType.CREDIT },
-        { accountId: 'a2', amount: 100, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'a2' as AccountId, amount: 100, transactionType: TransactionType.DEBIT },
       ];
       expect(journalPresenter.getJournalDisplayType(txs, accountTypes)).toBe(
         JournalDisplayType.TRANSFER,
@@ -57,8 +57,8 @@ describe('JournalPresenter', () => {
 
     it('identifies INCOME for Asset Debit vs Equity Credit (Investment)', () => {
       const txs = [
-        { accountId: 'a1', amount: 1000, transactionType: TransactionType.DEBIT },
-        { accountId: 'e1', amount: 1000, transactionType: TransactionType.CREDIT },
+        { accountId: 'a1' as AccountId, amount: 1000, transactionType: TransactionType.DEBIT },
+        { accountId: 'e1' as AccountId, amount: 1000, transactionType: TransactionType.CREDIT },
       ];
       expect(journalPresenter.getJournalDisplayType(txs, accountTypes)).toBe(
         JournalDisplayType.INCOME,
@@ -67,8 +67,8 @@ describe('JournalPresenter', () => {
 
     it('identifies EXPENSE for Asset Credit vs Equity Debit (Owner Draw)', () => {
       const txs = [
-        { accountId: 'a1', amount: 500, transactionType: TransactionType.CREDIT },
-        { accountId: 'e1', amount: 500, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 500, transactionType: TransactionType.CREDIT },
+        { accountId: 'e1' as AccountId, amount: 500, transactionType: TransactionType.DEBIT },
       ];
       expect(journalPresenter.getJournalDisplayType(txs, accountTypes)).toBe(
         JournalDisplayType.EXPENSE,
@@ -77,9 +77,9 @@ describe('JournalPresenter', () => {
 
     it('identifies TRANSFER for complex multi-leg Asset swaps', () => {
       const txs = [
-        { accountId: 'a1', amount: 100, transactionType: TransactionType.CREDIT },
-        { accountId: 'a2', amount: 70, transactionType: TransactionType.DEBIT },
-        { accountId: 'a1', amount: 30, transactionType: TransactionType.DEBIT }, // Partial back to same account or another asset
+        { accountId: 'a1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'a2' as AccountId, amount: 70, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 30, transactionType: TransactionType.DEBIT }, // Partial back to same account or another asset
       ];
       expect(journalPresenter.getJournalDisplayType(txs, accountTypes)).toBe(
         JournalDisplayType.TRANSFER,
@@ -90,8 +90,8 @@ describe('JournalPresenter', () => {
   describe('getSourceAndDestTypes', () => {
     it('identifies Asset as source and Expense as destination for standard expense', () => {
       const txs = [
-        { accountId: 'a1', amount: 50, transactionType: TransactionType.CREDIT },
-        { accountId: 'ex1', amount: 50, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 50, transactionType: TransactionType.CREDIT },
+        { accountId: 'ex1' as AccountId, amount: 50, transactionType: TransactionType.DEBIT },
       ];
       const { source, destination } = journalPresenter.getSourceAndDestTypes(txs, accountTypes);
       expect(source).toBe(AccountType.ASSET);
@@ -100,8 +100,8 @@ describe('JournalPresenter', () => {
 
     it('identifies Income as source and Asset as destination for standard income', () => {
       const txs = [
-        { accountId: 'i1', amount: 100, transactionType: TransactionType.CREDIT },
-        { accountId: 'a1', amount: 100, transactionType: TransactionType.DEBIT },
+        { accountId: 'i1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'a1' as AccountId, amount: 100, transactionType: TransactionType.DEBIT },
       ];
       const { source, destination } = journalPresenter.getSourceAndDestTypes(txs, accountTypes);
       expect(source).toBe(AccountType.INCOME);
@@ -110,9 +110,9 @@ describe('JournalPresenter', () => {
 
     it('identifies dominant types in multi-leg transactions', () => {
       const txs = [
-        { accountId: 'a1', amount: 100, transactionType: TransactionType.CREDIT },
-        { accountId: 'ex1', amount: 80, transactionType: TransactionType.DEBIT },
-        { accountId: 'a2', amount: 20, transactionType: TransactionType.DEBIT }, // Partial transfer/fee
+        { accountId: 'a1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'ex1' as AccountId, amount: 80, transactionType: TransactionType.DEBIT },
+        { accountId: 'a2' as AccountId, amount: 20, transactionType: TransactionType.DEBIT }, // Partial transfer/fee
       ];
       const { source, destination } = journalPresenter.getSourceAndDestTypes(txs, accountTypes);
       expect(source).toBe(AccountType.ASSET);
@@ -123,25 +123,25 @@ describe('JournalPresenter', () => {
   describe('getJournalSemanticLabel', () => {
     it('returns "Income" (label) for Asset Debit vs Income Credit', () => {
       const txs = [
-        { accountId: 'a1', amount: 100, transactionType: TransactionType.DEBIT },
-        { accountId: 'i1', amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'a1' as AccountId, amount: 100, transactionType: TransactionType.DEBIT },
+        { accountId: 'i1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
       ];
       expect(journalPresenter.getJournalSemanticLabel(txs, accountTypes)).toBe('Income');
     });
 
     it('returns "Debt Payment" (label) for Asset Credit vs Liability Debit', () => {
       const txs = [
-        { accountId: 'a1', amount: 500, transactionType: TransactionType.CREDIT },
-        { accountId: 'l1', amount: 500, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 500, transactionType: TransactionType.CREDIT },
+        { accountId: 'l1' as AccountId, amount: 500, transactionType: TransactionType.DEBIT },
       ];
       expect(journalPresenter.getJournalSemanticLabel(txs, accountTypes)).toBe('Debt Payment');
     });
 
     it('returns "Split" for mixed income/expense transactions', () => {
       const txs = [
-        { accountId: 'i1', amount: 100, transactionType: TransactionType.CREDIT },
-        { accountId: 'ex1', amount: 40, transactionType: TransactionType.DEBIT },
-        { accountId: 'a1', amount: 60, transactionType: TransactionType.DEBIT },
+        { accountId: 'i1' as AccountId, amount: 100, transactionType: TransactionType.CREDIT },
+        { accountId: 'ex1' as AccountId, amount: 40, transactionType: TransactionType.DEBIT },
+        { accountId: 'a1' as AccountId, amount: 60, transactionType: TransactionType.DEBIT },
       ];
       expect(journalPresenter.getJournalSemanticLabel(txs, accountTypes)).toBe('Split');
     });

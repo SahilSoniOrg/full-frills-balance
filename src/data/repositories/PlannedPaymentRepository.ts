@@ -6,15 +6,15 @@ import PlannedPayment, {
 import { analytics } from '@/src/services/analytics-service';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 export interface PlannedPaymentPersistenceInput {
   name: string;
   description?: string;
   amount: number;
   currencyCode: string;
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountId: AccountId;
+  toAccountId: AccountId;
   intervalN: number;
   intervalType: PlannedPaymentInterval;
   startDate: number;
@@ -45,7 +45,7 @@ export class PlannedPaymentRepository {
       .observe();
   }
 
-  observeById(workplaceId: WorkplaceId, id: string) {
+  observeById(workplaceId: WorkplaceId, id: PlannedPaymentId) {
     return this.plannedPayments
       .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
       .observe()
@@ -73,7 +73,7 @@ export class PlannedPaymentRepository {
       .fetch();
   }
 
-  async find(workplaceId: WorkplaceId, id: string): Promise<PlannedPayment | null> {
+  async find(workplaceId: WorkplaceId, id: PlannedPaymentId): Promise<PlannedPayment | null> {
     try {
       const plannedPayment = await this.plannedPayments.find(id);
       if (plannedPayment.deletedAt) return null;
@@ -106,7 +106,7 @@ export class PlannedPaymentRepository {
     updates: Partial<PlannedPaymentPersistenceInput>,
   ): Promise<PlannedPayment> {
     //get first to verify workplace scoping
-    const record = await this.find(workplaceId, pp.id);
+    const record = await this.find(workplaceId, pp.id as PlannedPaymentId);
     if (!record) {
       throw new Error('Planned payment not found');
     }
@@ -120,7 +120,7 @@ export class PlannedPaymentRepository {
   }
 
   async delete(workplaceId: WorkplaceId, pp: PlannedPayment): Promise<void> {
-    const record = await this.find(workplaceId, pp.id);
+    const record = await this.find(workplaceId, pp.id as PlannedPaymentId);
     if (!record) {
       throw new Error('Planned payment not found');
     }

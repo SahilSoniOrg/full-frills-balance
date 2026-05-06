@@ -1,7 +1,7 @@
 import { AppText, EmptyStateView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { Inline, Skeleton, Stack } from '@/src/design-system';
-import { EnrichedJournal } from '@/src/types/domain';
+import { EnrichedJournal, TransactionId } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
@@ -24,8 +24,8 @@ interface TransactionListViewProps {
   plannedJournals?: EnrichedJournal[];
   onPlannedJournalPress?: (item: EnrichedJournal) => void;
   isPrivacyMode?: boolean;
-  selectedIds?: Set<string>;
-  onLongPressItem?: (id: string) => void;
+  selectedIds?: Set<TransactionId>;
+  onLongPressItem?: (id: TransactionId) => void;
   isSelectionModeActive?: boolean;
   style?: any;
 }

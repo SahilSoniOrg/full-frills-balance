@@ -3,7 +3,7 @@ import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -43,20 +43,22 @@ jest.mock('@/src/data/repositories/AccountRepository', () => ({
 }));
 
 const cashAccount = {
-  id: 'cash',
+  id: 'cash' as AccountId,
   name: 'Cash',
   accountType: AccountType.ASSET,
   accountSubtype: AccountSubtype.BANK_CHECKING,
   currencyCode: 'USD',
 } as any;
 const creditCardAccount = {
-  id: 'cc',
+  id: 'cc' as AccountId,
   name: 'Credit Card',
   accountType: AccountType.LIABILITY,
   accountSubtype: AccountSubtype.CREDIT_CARD,
   currencyCode: 'USD',
   metadataRecords: {
-    fetch: jest.fn().mockResolvedValue([{ statementDay: 1, dueDay: 15, payFromAccountId: 'cash' }]),
+    fetch: jest
+      .fn()
+      .mockResolvedValue([{ statementDay: 1, dueDay: 15, payFromAccountId: 'cash' as AccountId }]),
   },
 } as any;
 
@@ -75,8 +77,8 @@ describe('liability flow issue', () => {
     const plannedPayments = [
       {
         id: 'spend-now',
-        fromAccountId: 'cc',
-        toAccountId: 'exp',
+        fromAccountId: 'cc' as AccountId,
+        toAccountId: 'exp' as AccountId,
         amount: 200,
         nextOccurrence: dayjs('2026-04-05T12:00:00Z').valueOf(),
         intervalType: 'MONTHLY',
@@ -85,8 +87,8 @@ describe('liability flow issue', () => {
       },
       {
         id: 'spend-late',
-        fromAccountId: 'cc',
-        toAccountId: 'exp',
+        fromAccountId: 'cc' as AccountId,
+        toAccountId: 'exp' as AccountId,
         amount: 300,
         nextOccurrence: dayjs('2026-05-05T12:00:00Z').valueOf(),
         intervalType: 'MONTHLY',
@@ -96,14 +98,19 @@ describe('liability flow issue', () => {
     ] as PlannedPayment[];
 
     (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue([
-      { accountId: 'cc', statementDay: 1, dueDay: 15, payFromAccountId: 'cash' },
+      {
+        accountId: 'cc' as AccountId,
+        statementDay: 1,
+        dueDay: 15,
+        payFromAccountId: 'cash' as AccountId,
+      },
     ]);
 
     const result = await cashFlowSimulationService.simulate(
-      new Map([['cash', 1200]]),
+      new Map<AccountId, number>([['cash' as AccountId, 1200]]),
       plannedPayments,
       [],
-      ['cash'],
+      ['cash' as AccountId],
       [{ account: creditCardAccount, balance: 0 }],
       [],
       [],

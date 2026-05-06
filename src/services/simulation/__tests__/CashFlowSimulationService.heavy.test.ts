@@ -7,7 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -57,7 +57,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
 
   const makeAsset = (id: string, name = id) =>
     ({
-      id,
+      id: id as AccountId,
       name,
       accountType: AccountType.ASSET,
       accountSubtype: 'CHECKING',
@@ -66,7 +66,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
 
   const makeExpense = (id: string, name = id) =>
     ({
-      id,
+      id: id as AccountId,
       name,
       accountType: AccountType.EXPENSE,
       currencyCode: 'USD',
@@ -74,25 +74,29 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
 
   const makeCreditCard = (id: string, name = id, dueDay = 15) =>
     ({
-      id,
+      id: id as AccountId,
       name,
       accountType: AccountType.LIABILITY,
       accountSubtype: AccountSubtype.CREDIT_CARD,
       currencyCode: 'USD',
       metadataRecords: {
-        fetch: jest.fn().mockResolvedValue([{ statementDay: 1, dueDay, payFromAccountId: 'cash' }]),
+        fetch: jest
+          .fn()
+          .mockResolvedValue([{ statementDay: 1, dueDay, payFromAccountId: 'cash' as AccountId }]),
       },
     }) as any;
 
   const makeLoan = (id: string, name = id, emiDay = 20) =>
     ({
-      id,
+      id: id as AccountId,
       name,
       accountType: AccountType.LIABILITY,
       accountSubtype: AccountSubtype.LOAN,
       currencyCode: 'USD',
       metadataRecords: {
-        fetch: jest.fn().mockResolvedValue([{ emiDay, payFromAccountId: 'cash', emiAmount: 600 }]),
+        fetch: jest
+          .fn()
+          .mockResolvedValue([{ emiDay, payFromAccountId: 'cash' as AccountId, emiAmount: 600 }]),
       },
     }) as any;
 
@@ -133,7 +137,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     const budgets = expenseAccounts.map(
       (_, index) =>
         ({
-          id: `budget-${index}`,
+          id: `budget-${index}` as BudgetId,
           name: `Budget ${index}`,
           amount: 150 + index * 25,
           assetAccountIds: index % 2 === 0 ? 'cash,savings' : 'cash',
@@ -152,10 +156,10 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
 
     const plannedPayments = [
       {
-        id: 'salary',
+        id: 'salary' as PlannedPaymentId,
         name: 'Salary',
-        fromAccountId: 'external-income',
-        toAccountId: 'cash',
+        fromAccountId: 'external-income' as AccountId,
+        toAccountId: 'cash' as AccountId,
         amount: 4000,
         nextOccurrence: atDay(9),
         intervalType: 'MONTHLY',
@@ -226,7 +230,7 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
       ]),
     );
     (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockImplementation(
-      (accountId: string) =>
+      (_wp: WorkplaceId, accountId: string) =>
         Promise.resolve({
           totalDecrease: accountId === 'cc-1' ? 100 : 0,
           totalIncrease: 0,
@@ -248,21 +252,21 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     (accountRepository.findMetadataByAccountIds as jest.Mock).mockResolvedValue(metadataList);
 
     const result = await cashFlowSimulationService.simulate(
-      new Map([
-        ['cash', 2500],
-        ['savings', 1200],
-        ['wallet', 300],
+      new Map<AccountId, number>([
+        ['cash' as AccountId, 2500],
+        ['savings' as AccountId, 1200],
+        ['wallet' as AccountId, 300],
       ]),
       plannedPayments,
       [],
-      ['cash', 'savings', 'wallet'],
+      ['cash' as AccountId, 'savings' as AccountId, 'wallet' as AccountId],
       liabilityAccountBalances,
       budgets,
       usages,
       allAccounts,
       'USD',
       'test-wp' as WorkplaceId,
-      60,
+      AppConfig.defaults.safeToSpendDays,
     );
 
     expect(result.simulationResult.projections).toHaveLength(AppConfig.defaults.safeToSpendDays);
@@ -347,10 +351,10 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     );
 
     const result = await cashFlowSimulationService.simulate(
-      new Map([['cash', 2000]]),
+      new Map<AccountId, number>([['cash' as AccountId, 2000]]),
       plannedPayments,
       plannedJournals,
-      ['cash'],
+      ['cash' as AccountId],
       [],
       [],
       [],
@@ -389,10 +393,10 @@ describe('CashFlowSimulationService heavy scenario coverage', () => {
     })) as any[];
 
     const result = await cashFlowSimulationService.simulate(
-      new Map([['cash', 500]]),
+      new Map<AccountId, number>([['cash' as AccountId, 500]]),
       plannedPayments,
       [],
-      ['cash'],
+      ['cash' as AccountId],
       [],
       [],
       [],

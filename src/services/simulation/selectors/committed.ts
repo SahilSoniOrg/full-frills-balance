@@ -1,7 +1,8 @@
-import { Flow, FlowCategory, AccountCommitment, DebtType } from '../types';
 import Account from '@/src/data/models/Account';
-import { isCommitmentFlow } from '../utils/FlowPolicy';
+import { AccountId } from '@/src/types/domain';
+import { AccountCommitment, DebtType, Flow, FlowCategory } from '../types';
 import { resolveFlowSemanticTarget } from '../utils/FlowMetadataResolver';
+import { isCommitmentFlow } from '../utils/FlowPolicy';
 
 /**
  * Extracts and groups committed spending (budget + planned) from a list of flows.
@@ -18,7 +19,7 @@ export const selectCommittedEntries = (
     .forEach(flow => {
       const target = resolveFlowSemanticTarget(flow, accountMap);
       const entry: AccountCommitment = committedMap.get(target.accountId) || {
-        accountId: target.accountId,
+        accountId: target.accountId as AccountId,
         accountName: target.accountName,
         amount: 0,
         details: [],

@@ -1,4 +1,5 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import { AccountId, TransactionId } from '@/src/types/domain';
 import { date, field, readonly } from '@nozbe/watermelondb/decorators';
 
 export default class BalanceSnapshot extends BaseScopedModel {
@@ -9,8 +10,8 @@ export default class BalanceSnapshot extends BaseScopedModel {
     transactions: { type: 'belongs_to', key: 'transaction_id' },
   } as const;
 
-  @field('account_id') accountId!: string;
-  @field('transaction_id') transactionId!: string;
+  @field('account_id') accountId!: AccountId;
+  @field('transaction_id') transactionId!: TransactionId;
   @field('transaction_date') transactionDate!: number;
   @field('absolute_balance') absoluteBalance!: number;
   @field('transaction_count') transactionCount!: number;

@@ -1,6 +1,7 @@
-import Journal from '@/src/data/models/Journal';
-import { Relation } from '@nozbe/watermelondb';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import Journal from '@/src/data/models/Journal';
+import { JournalId } from '@/src/types/domain';
+import { Relation } from '@nozbe/watermelondb';
 import { date, field, relation } from '@nozbe/watermelondb/decorators';
 
 export default class JournalMetadata extends BaseScopedModel {
@@ -10,7 +11,7 @@ export default class JournalMetadata extends BaseScopedModel {
   } as const;
 
   @relation('journals', 'journal_id') journal!: Relation<Journal>;
-  @field('journal_id') journalId!: string;
+  @field('journal_id') journalId!: JournalId;
 
   @field('import_source') importSource!: string;
   @field('original_sms_id') originalSmsId?: string;

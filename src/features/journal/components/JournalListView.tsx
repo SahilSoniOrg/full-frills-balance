@@ -4,7 +4,7 @@ import { FloatingActionButton } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { JournalListViewModel } from '@/src/features/journal/hooks/useJournalListViewModel';
-import { EnrichedJournal } from '@/src/types/domain';
+import { EnrichedJournal, JournalId, TransactionId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -45,10 +45,10 @@ export interface JournalListViewProps {
   isSearchActive?: boolean;
   alignTitle?: React.ComponentProps<typeof Screen>['alignTitle'];
   selection?: {
-    selectedIds: Set<string>;
+    selectedIds: Set<JournalId>;
     isSelectionModeActive: boolean;
-    onLongPressItem: (id: string) => void;
-    toggleSelection: (id: string) => void;
+    onLongPressItem: (id: JournalId) => void;
+    toggleSelection: (id: JournalId) => void;
     selectAll: () => void;
     clearItems: () => void;
     exitSelectionMode: () => void;
@@ -113,8 +113,8 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           plannedJournals={plannedJournals}
           onPlannedJournalPress={onPlannedJournalPress}
           isPrivacyMode={isPrivacyMode}
-          selectedIds={selection?.selectedIds}
-          onLongPressItem={selection?.onLongPressItem}
+          selectedIds={selection?.selectedIds as Set<string> as Set<TransactionId>}
+          onLongPressItem={selection?.onLongPressItem as (id: string) => void}
           isSelectionModeActive={selection?.isSelectionModeActive}
           // Wrap footer in Pressable to catch taps on empty list area
           ListFooterComponent={

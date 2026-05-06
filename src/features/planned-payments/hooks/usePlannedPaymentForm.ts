@@ -1,19 +1,19 @@
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { analytics } from '@/src/services/analytics-service';
+import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { WorkplaceId } from '@/src/types/domain';
 
 export interface PlannedPaymentFormState {
   name: string;
   amount: string;
   currencyCode: string;
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountId: AccountId;
+  toAccountId: AccountId;
   intervalN: number;
   intervalType: PlannedPaymentInterval;
   startDate: number;
@@ -32,8 +32,8 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     name: '',
     amount: '',
     currencyCode: workplaceCurrency,
-    fromAccountId: '',
-    toAccountId: '',
+    fromAccountId: '' as AccountId,
+    toAccountId: '' as AccountId,
     intervalN: 1,
     intervalType: PlannedPaymentInterval.MONTHLY,
     startDate: Date.now(),
@@ -45,14 +45,14 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
   // Load initial values if editing
   useEffect(() => {
     if (id) {
-      plannedPaymentRepository.find(workplaceId, id).then(pp => {
+      plannedPaymentRepository.find(workplaceId, id as PlannedPaymentId).then(pp => {
         if (pp) {
           setForm({
             name: pp.name,
             amount: pp.amount.toString(),
             currencyCode: pp.currencyCode,
             fromAccountId: pp.fromAccountId,
-            toAccountId: pp.toAccountId || '',
+            toAccountId: pp.toAccountId || ('' as AccountId),
             intervalN: pp.intervalN,
             intervalType: pp.intervalType,
             startDate: pp.startDate,
@@ -97,7 +97,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
       };
 
       if (id) {
-        const pp = await plannedPaymentRepository.find(workplaceId, id);
+        const pp = await plannedPaymentRepository.find(workplaceId, id as PlannedPaymentId);
         if (pp) {
           const schedulingChanged =
             pp.startDate !== data.startDate ||

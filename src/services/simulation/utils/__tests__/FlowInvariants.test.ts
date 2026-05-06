@@ -1,5 +1,6 @@
-import { assertValidFlow } from '../FlowInvariants';
+import { AccountId } from '@/src/types/domain';
 import { Flow, FlowCategory, FlowSource } from '../../types';
+import { assertValidFlow } from '../FlowInvariants';
 
 describe('FlowInvariants', () => {
   const baseFlow = {
@@ -15,22 +16,22 @@ describe('FlowInvariants', () => {
   const validInflow: Flow = {
     ...baseFlow,
     kind: 'INFLOW',
-    accountId: 'acc-1',
+    accountId: 'acc-1' as AccountId,
     category: FlowCategory.INCOME,
   };
 
   const validOutflow: Flow = {
     ...baseFlow,
     kind: 'OUTFLOW',
-    accountId: 'acc-1',
+    accountId: 'acc-1' as AccountId,
     category: FlowCategory.BUDGET,
   };
 
   const validTransfer: Flow = {
     ...baseFlow,
     kind: 'TRANSFER',
-    fromAccountId: 'acc-1',
-    toAccountId: 'acc-2',
+    fromAccountId: 'acc-1' as AccountId,
+    toAccountId: 'acc-2' as AccountId,
     category: FlowCategory.TRANSFER,
   };
 
@@ -80,21 +81,25 @@ describe('FlowInvariants', () => {
 
   describe('Account Invariants', () => {
     it('throws if INFLOW is missing accountId', () => {
-      const invalid = { ...validInflow, accountId: '' };
+      const invalid = { ...validInflow, accountId: '' as AccountId };
       expect(() => assertValidFlow(invalid)).toThrow(
         '[FlowInvariant] INFLOW flow is missing accountId',
       );
     });
 
     it('throws if TRANSFER is missing fromAccountId', () => {
-      const invalid = { ...validTransfer, fromAccountId: '' };
+      const invalid = { ...validTransfer, fromAccountId: '' as AccountId };
       expect(() => assertValidFlow(invalid)).toThrow(
         '[FlowInvariant] Transfer flow is missing src/dest accounts',
       );
     });
 
     it('throws if self-transfer is detected', () => {
-      const invalid = { ...validTransfer, fromAccountId: 'acc-1', toAccountId: 'acc-1' };
+      const invalid = {
+        ...validTransfer,
+        fromAccountId: 'acc-1' as AccountId,
+        toAccountId: 'acc-1' as AccountId,
+      };
       expect(() => assertValidFlow(invalid)).toThrow(
         '[FlowInvariant] Self-transfer detected: acc-1 -> acc-1',
       );

@@ -1,20 +1,21 @@
-import { AccountPickerModal } from '@/src/components/common/AccountPickerModal'
-import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow'
-import { EntityFormScreen } from '@/src/components/common/EntityFormScreen'
-import { FilterChipRow } from '@/src/components/common/FilterChipRow'
-import { FormSectionGroup } from '@/src/components/common/FormSectionGroup'
-import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions'
-import { SelectionTileList } from '@/src/components/common/SelectionTileList'
-import { AppInput, AppText } from '@/src/components/core'
-import { Spacing } from '@/src/constants'
-import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel'
-import { useTheme } from '@/src/hooks/use-theme'
-import dayjs from 'dayjs'
-import React from 'react'
-import { StyleSheet, Switch, View } from 'react-native'
+import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
+import { AccountSelectionRow } from '@/src/components/common/AccountSelectionRow';
+import { EntityFormScreen } from '@/src/components/common/EntityFormScreen';
+import { FilterChipRow } from '@/src/components/common/FilterChipRow';
+import { FormSectionGroup } from '@/src/components/common/FormSectionGroup';
+import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
+import { SelectionTileList } from '@/src/components/common/SelectionTileList';
+import { AppInput, AppText } from '@/src/components/core';
+import { Spacing } from '@/src/constants';
+import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
+import { useTheme } from '@/src/hooks/use-theme';
+import { AccountId } from '@/src/types/domain';
+import dayjs from 'dayjs';
+import React from 'react';
+import { StyleSheet, Switch, View } from 'react-native';
 
 export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
-  const { theme } = useTheme()
+  const { theme } = useTheme();
   const {
     id,
     mode,
@@ -60,26 +61,28 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
     accounts,
     previewMatches,
     showAccountMapping,
-  } = vm
+  } = vm;
 
   return (
     <>
       <EntityFormScreen
         title={id ? 'Edit SMS Rule' : 'New SMS Rule'}
-        headerActions={id ? (
-          <ScreenHeaderActions
-            actions={[
-              {
-                name: 'delete',
-                onPress: handleDelete,
-                iconColor: theme.error,
-                variant: 'surface',
-                disabled: isSubmitting,
-                testID: 'delete-rule-button',
-              },
-            ]}
-          />
-        ) : undefined}
+        headerActions={
+          id ? (
+            <ScreenHeaderActions
+              actions={[
+                {
+                  name: 'delete',
+                  onPress: handleDelete,
+                  iconColor: theme.error,
+                  variant: 'surface',
+                  disabled: isSubmitting,
+                  testID: 'delete-rule-button',
+                },
+              ]}
+            />
+          ) : undefined
+        }
         submitAction={{
           label: isSubmitting ? 'Saving...' : 'Save Rule',
           onPress: handleSave,
@@ -94,7 +97,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                 { id: 'regex', label: 'Advanced Regex', icon: 'edit', color: theme.warning },
               ]}
               selectedId={mode}
-              onSelect={(value) => setMode((value || 'builder') as 'builder' | 'regex')}
+              onSelect={value => setMode((value || 'builder') as 'builder' | 'regex')}
             />
 
             {mode === 'builder' ? (
@@ -135,17 +138,21 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                   placeholder="e.g. INR"
                 />
 
-                <AppText variant="body" weight="medium" style={styles.inlineLabel}>Direction</AppText>
+                <AppText variant="body" weight="medium" style={styles.inlineLabel}>
+                  Direction
+                </AppText>
                 <FilterChipRow
                   items={[
                     { id: 'debit', label: 'Debit', icon: 'arrowUp', color: theme.error },
                     { id: 'credit', label: 'Credit', icon: 'arrowDown', color: theme.success },
                   ]}
                   selectedId={direction}
-                  onSelect={(value) => setDirection((value || '') as '' | 'debit' | 'credit')}
+                  onSelect={value => setDirection((value || '') as '' | 'debit' | 'credit')}
                 />
 
-                <AppText variant="body" weight="medium" style={styles.inlineLabel}>Amount Filter</AppText>
+                <AppText variant="body" weight="medium" style={styles.inlineLabel}>
+                  Amount Filter
+                </AppText>
                 <FilterChipRow
                   items={[
                     { id: 'eq', label: 'Equals', color: theme.primary },
@@ -154,7 +161,9 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                     { id: 'between', label: 'Between', color: theme.primary },
                   ]}
                   selectedId={amountOperator}
-                  onSelect={(value) => setAmountOperator((value || '') as '' | 'eq' | 'gt' | 'lt' | 'between')}
+                  onSelect={value =>
+                    setAmountOperator((value || '') as '' | 'eq' | 'gt' | 'lt' | 'between')
+                  }
                 />
                 {amountOperator ? (
                   <>
@@ -203,13 +212,21 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
               items={[
                 { id: 'auto_post', label: 'Auto-Post', icon: 'checkCircle', color: theme.success },
                 { id: 'review', label: 'Require Review', icon: 'eye', color: theme.warning },
-                { id: 'ignore', label: 'Ignore Message', icon: 'closeCircle', color: theme.textSecondary },
+                {
+                  id: 'ignore',
+                  label: 'Ignore Message',
+                  icon: 'closeCircle',
+                  color: theme.textSecondary,
+                },
               ]}
               selectedId={disposition}
-              onSelect={(value) => setDisposition((value || 'review') as 'auto_post' | 'review' | 'ignore')}
+              onSelect={value =>
+                setDisposition((value || 'review') as 'auto_post' | 'review' | 'ignore')
+              }
             />
             <AppText variant="caption" color="secondary" style={styles.helperText}>
-              Auto-post creates journals immediately. Review leaves matches in the inbox. Ignore dismisses matching SMS.
+              Auto-post creates journals immediately. Review leaves matches in the inbox. Ignore
+              dismisses matching SMS.
             </AppText>
 
             <AppInput
@@ -247,7 +264,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
 
           {previewMatches.length > 0 ? (
             <FormSectionGroup title="Recent Matches">
-              {previewMatches.map((match) => (
+              {previewMatches.map(match => (
                 <View key={match.id} style={styles.previewItem}>
                   <AppText variant="body">{match.parsedMerchant || match.senderAddress}</AppText>
                   <AppText variant="caption" color="secondary">
@@ -268,17 +285,17 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
         accounts={accounts}
         selectedId={pickingAccountFor === 'source' ? sourceAccountId : categoryAccountId}
         onClose={() => setPickingAccountFor(null)}
-        onSelect={(accountId: string) => {
+        onSelect={(accountId: AccountId) => {
           if (pickingAccountFor === 'source') {
-            setSourceAccountId(accountId)
+            setSourceAccountId(accountId);
           } else {
-            setCategoryAccountId(accountId)
+            setCategoryAccountId(accountId);
           }
-          setPickingAccountFor(null)
+          setPickingAccountFor(null);
         }}
       />
     </>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -305,4 +322,4 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     gap: Spacing.xs,
   },
-})
+});

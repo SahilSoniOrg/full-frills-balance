@@ -4,6 +4,7 @@ import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
 import { HeatmapPoint, SankeyData } from '@/src/services/report-service';
+import { AccountId } from '@/src/types/domain';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { useCallback, useState } from 'react';
 import { useReportActions } from './useReportActions';
@@ -19,8 +20,8 @@ export interface ReportsViewModel {
   showAccountPicker: boolean;
   onOpenAccountPicker: () => void;
   onCloseAccountPicker: () => void;
-  accountIds: string[];
-  onAccountSelect: (ids: string[]) => void;
+  accountIds: AccountId[];
+  onAccountSelect: (ids: AccountId[]) => void;
   showDatePicker: boolean;
   onOpenDatePicker: () => void;
   onCloseDatePicker: () => void;
@@ -48,14 +49,14 @@ export interface ReportsViewModel {
   expenseDonutData: { value: number; color: string; label: string }[];
   incomeDonutData: { value: number; color: string; label: string }[];
   legendRows: {
-    id: string;
+    id: AccountId;
     color: string;
     accountName: string;
     percentage: number;
     amount: number;
   }[];
   incomeLegendRows: {
-    id: string;
+    id: AccountId;
     color: string;
     accountName: string;
     percentage: number;
@@ -87,7 +88,7 @@ export interface ReportsViewModel {
   }[];
   onViewTransactions: (start: number, end?: number) => void;
   onViewSelectedTransactions: () => void;
-  onLegendRowPress: (accountId: string) => void;
+  onLegendRowPress: (accountId: AccountId) => void;
 
   // Advanced Charts
   wealthAreaSeries: { x: number; y: number }[][];
@@ -111,7 +112,7 @@ export interface ReportsViewModel {
   expenseCategoryViewState: {
     donutData: { value: number; color: string; label: string }[];
     legendRows: {
-      id: string;
+      id: AccountId;
       color: string;
       accountName: string;
       percentage: number;
@@ -124,7 +125,7 @@ export interface ReportsViewModel {
   incomeCategoryViewState: {
     donutData: { value: number; color: string; label: string }[];
     legendRows: {
-      id: string;
+      id: AccountId;
       color: string;
       accountName: string;
       percentage: number;
@@ -220,12 +221,12 @@ export function useReportsViewModel(): ReportsViewModel {
   }, [dateRange, periodFilter, accountIds, resetSelections, updateFilter]);
 
   const onAccountSelect = useCallback(
-    (ids: string[]) => {
+    (ids: AccountId[]) => {
       updateFilter(dateRange, periodFilter, ids);
       setShowAccountPicker(false);
       resetSelections();
     },
-    [dateRange, periodFilter, updateFilter, resetSelections],
+    [dateRange, periodFilter, updateFilter, resetSelections, accountIds],
   );
 
   return {

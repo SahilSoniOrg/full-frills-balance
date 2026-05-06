@@ -7,11 +7,11 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { reportService } from '@/src/services/report-service';
 import { wealthService } from '@/src/services/wealth-service';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { DateRange, PeriodFilter, getLastNRange } from '@/src/utils/dateUtils';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
-import { WorkplaceId } from '@/src/types/domain';
 
 export function useReports(workplaceId: WorkplaceId) {
   const { theme } = useTheme();
@@ -26,7 +26,7 @@ export function useReports(workplaceId: WorkplaceId) {
   const [dateRange, setDateRange] = useState<DateRange>(
     getLastNRange(AppConfig.defaults.reportDays, 'days'),
   );
-  const [accountIds, setAccountIds] = useState<string[]>([]);
+  const [accountIds, setAccountIds] = useState<AccountId[]>([]);
 
   const triggerObservable = useMemo(() => {
     return combineLatest([
@@ -126,7 +126,7 @@ export function useReports(workplaceId: WorkplaceId) {
   }, [data.incomeCategoryBreakdown, theme]);
 
   const updateFilter = useCallback(
-    (range: DateRange, filter: PeriodFilter, accounts?: string[]) => {
+    (range: DateRange, filter: PeriodFilter, accounts?: AccountId[]) => {
       if (__DEV__) {
         logger.debug('[DEBUG_REPORT] updateFilter called', {
           rangeStart: new Date(range.startDate).toISOString(),

@@ -1,7 +1,8 @@
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AccountId } from '@/src/types/domain';
 import {
   AccountSection,
   getAccountAccentColor,
@@ -146,13 +147,13 @@ AccountPickerRow.displayName = 'AccountPickerRow';
 // Discriminated union for prop safety
 type AccountPickerListProps = {
   accounts: Account[];
-  selectedIds: Set<string>;
+  selectedIds: Set<AccountId>;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   onClose: () => void;
   excludeParentAccounts?: boolean;
 } & (
-  | { isMultiple: true; onApply: (ids: Set<string>) => void; onSelect?: never }
-  | { isMultiple: false; onSelect: (id: string) => void; onApply?: never }
+  | { isMultiple: true; onApply: (ids: Set<AccountId>) => void; onSelect?: never }
+  | { isMultiple: false; onSelect: (id: AccountId) => void; onApply?: never }
 );
 
 export function AccountPickerList(props: AccountPickerListProps) {
@@ -170,7 +171,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
   const { theme } = useTheme();
 
   // Immutability Fix: Always clone the Set to prevent reference sharing
-  const [localSelected, setLocalSelected] = useState<Set<string>>(() => new Set(selectedIds));
+  const [localSelected, setLocalSelected] = useState<Set<AccountId>>(() => new Set(selectedIds));
 
   // Sync with prop changes using fresh cloning
   useEffect(() => {
@@ -199,7 +200,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
   );
 
   const handleToggleSelection = useCallback(
-    (id: string) => {
+    (id: AccountId) => {
       if (isMultiple) {
         setLocalSelected(prev => {
           const next = new Set(prev);

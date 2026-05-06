@@ -11,9 +11,9 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { journalService } from '../JournalService';
 import { transactionService } from '../TransactionService';
-import { WorkplaceId } from '@/src/types/domain';
 
 describe('JournalRepository', () => {
   let cashAccountId: string;
@@ -58,8 +58,16 @@ describe('JournalRepository', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId: cashAccountId, amount: 25, transactionType: TransactionType.CREDIT },
-            { accountId: expenseAccountId, amount: 25, transactionType: TransactionType.DEBIT },
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 25,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 25,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -79,8 +87,16 @@ describe('JournalRepository', () => {
             journalDate: Date.now(),
             currencyCode: 'USD',
             transactions: [
-              { accountId: cashAccountId, amount: 100, transactionType: TransactionType.CREDIT },
-              { accountId: expenseAccountId, amount: 50, transactionType: TransactionType.DEBIT },
+              {
+                accountId: cashAccountId as AccountId,
+                amount: 100,
+                transactionType: TransactionType.CREDIT,
+              },
+              {
+                accountId: expenseAccountId as AccountId,
+                amount: 50,
+                transactionType: TransactionType.DEBIT,
+              },
             ],
           },
           'wp-1' as WorkplaceId,
@@ -96,9 +112,21 @@ describe('JournalRepository', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId: cashAccountId, amount: 900, transactionType: TransactionType.DEBIT },
-            { accountId: incomeAccountId, amount: 1000, transactionType: TransactionType.CREDIT },
-            { accountId: expenseAccountId, amount: 100, transactionType: TransactionType.DEBIT },
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 900,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: incomeAccountId as AccountId,
+              amount: 1000,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -115,8 +143,16 @@ describe('JournalRepository', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId: cashAccountId, amount: 500, transactionType: TransactionType.DEBIT },
-            { accountId: incomeAccountId, amount: 500, transactionType: TransactionType.CREDIT },
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 500,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: incomeAccountId as AccountId,
+              amount: 500,
+              transactionType: TransactionType.CREDIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -126,13 +162,13 @@ describe('JournalRepository', () => {
       await rebuildQueueService.flush();
 
       const cashBalance = await balanceService.getAccountBalance(
-        cashAccountId,
+        cashAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
       expect(cashBalance.balance).toBe(500);
 
       const incomeBalance = await balanceService.getAccountBalance(
-        incomeAccountId,
+        incomeAccountId as AccountId,
         'wp-1' as WorkplaceId,
       );
       expect(incomeBalance.balance).toBe(500);
@@ -147,8 +183,16 @@ describe('JournalRepository', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId: cashAccountId, amount: 100, transactionType: TransactionType.CREDIT },
-            { accountId: expenseAccountId, amount: 100, transactionType: TransactionType.DEBIT },
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 100,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -161,15 +205,26 @@ describe('JournalRepository', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId: cashAccountId, amount: 200, transactionType: TransactionType.CREDIT },
-            { accountId: expenseAccountId, amount: 200, transactionType: TransactionType.DEBIT },
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 200,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 200,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
       );
 
       // Re-fetch from database to get updated values
-      const updatedJournal = await journalRepository.find('wp-1' as WorkplaceId, journal.id);
+      const updatedJournal = await journalRepository.find(
+        'wp-1' as WorkplaceId,
+        journal.id as JournalId,
+      );
       expect(updatedJournal).toBeDefined();
       expect(updatedJournal!.totalAmount).toBe(200);
       expect(updatedJournal!.description).toBe('Updated');
@@ -184,8 +239,16 @@ describe('JournalRepository', () => {
           journalDate: Date.now() - 86400000, // Yesterday
           currencyCode: 'USD',
           transactions: [
-            { accountId: cashAccountId, amount: 123.45, transactionType: TransactionType.CREDIT },
-            { accountId: expenseAccountId, amount: 123.45, transactionType: TransactionType.DEBIT },
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 123.45,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 123.45,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
@@ -204,13 +267,15 @@ describe('JournalRepository', () => {
 
       // Transactions should be duplicated faithfully
       const duplicatedTransactions = await transactionService.getEnrichedByJournal(
-        duplicatedJournal.id as WorkplaceId,
         'wp-1' as WorkplaceId,
+        duplicatedJournal.id as JournalId,
       );
       expect(duplicatedTransactions).toHaveLength(2);
 
-      const cashTx = duplicatedTransactions.find(t => t.accountId === cashAccountId);
-      const expenseTx = duplicatedTransactions.find(t => t.accountId === expenseAccountId);
+      const cashTx = duplicatedTransactions.find(t => t.accountId === (cashAccountId as AccountId));
+      const expenseTx = duplicatedTransactions.find(
+        t => t.accountId === (expenseAccountId as AccountId),
+      );
 
       expect(cashTx?.amount).toBe(123.45);
       expect(cashTx?.transactionType).toBe(TransactionType.CREDIT);
@@ -228,17 +293,28 @@ describe('JournalRepository', () => {
           journalDate: Date.now(),
           currencyCode: 'USD',
           transactions: [
-            { accountId: cashAccountId, amount: 50, transactionType: TransactionType.CREDIT },
-            { accountId: expenseAccountId, amount: 50, transactionType: TransactionType.DEBIT },
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.DEBIT,
+            },
           ],
         },
         'wp-1' as WorkplaceId,
       );
 
-      await journalRepository.deleteJournal(journal.id, 'wp-1' as WorkplaceId);
+      await journalService.deleteJournal(journal.id as JournalId, 'wp-1' as WorkplaceId);
 
       // Don't wait for rebuild queue - this test only verifies soft-delete
-      const deletedJournal = await journalRepository.find('wp-1' as WorkplaceId, journal.id);
+      const deletedJournal = await journalRepository.find(
+        'wp-1' as WorkplaceId,
+        journal.id as JournalId,
+      );
       expect(deletedJournal?.deletedAt).toBeDefined();
     });
   });

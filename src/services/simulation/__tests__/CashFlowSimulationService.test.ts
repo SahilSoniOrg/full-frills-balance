@@ -7,7 +7,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
   transactionRawRepository: {
@@ -54,7 +54,7 @@ jest.mock('@/src/utils/logger', () => ({
 }));
 
 describe('CashFlowSimulationService', () => {
-  const liquidAccountId = 'cash-1';
+  const liquidAccountId = 'cash-1' as AccountId;
   const liquidAccount = {
     id: liquidAccountId,
     name: 'Main Savings',
@@ -80,7 +80,7 @@ describe('CashFlowSimulationService', () => {
 
   it('runs a basic simulation with starting balance and no flows', async () => {
     const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
+      new Map<AccountId, number>([[liquidAccountId, 1000]]),
       [],
       [],
       [liquidAccountId],
@@ -100,10 +100,10 @@ describe('CashFlowSimulationService', () => {
 
   it('handles simple OUTFLOW correctly', async () => {
     const plannedPayment = {
-      id: 'pp-1',
+      id: 'pp-1' as PlannedPaymentId,
       name: 'Rent',
       fromAccountId: liquidAccountId,
-      toAccountId: 'landlord',
+      toAccountId: 'landlord' as AccountId,
       amount: 400,
       nextOccurrence: dayjs('2026-04-05T12:00:00Z').valueOf(),
       intervalType: 'MONTHLY',
@@ -112,7 +112,7 @@ describe('CashFlowSimulationService', () => {
     } as any;
 
     const result = await cashFlowSimulationService.simulate(
-      new Map([[liquidAccountId, 1000]]),
+      new Map<AccountId, number>([[liquidAccountId, 1000]]),
       [plannedPayment],
       [],
       [liquidAccountId],
@@ -133,7 +133,7 @@ describe('CashFlowSimulationService', () => {
   });
 
   it('handles TRANSFER between liquid accounts correctly (net zero)', async () => {
-    const otherAccountId = 'bank-2';
+    const otherAccountId = 'bank-2' as AccountId;
     const otherAccount = {
       id: otherAccountId,
       name: 'Bank 2',
@@ -142,7 +142,7 @@ describe('CashFlowSimulationService', () => {
     } as any;
 
     const plannedTransfer = {
-      id: 'pp-trans',
+      id: 'pp-trans' as PlannedPaymentId,
       name: 'Internal Transfer',
       fromAccountId: liquidAccountId,
       toAccountId: otherAccountId,
@@ -154,7 +154,7 @@ describe('CashFlowSimulationService', () => {
     } as any;
 
     const result = await cashFlowSimulationService.simulate(
-      new Map([
+      new Map<AccountId, number>([
         [liquidAccountId, 1000],
         [otherAccountId, 0],
       ]),
@@ -184,7 +184,7 @@ describe('CashFlowSimulationService', () => {
 
   it('handles Budget burns as OUTFLOWs', async () => {
     const budget = {
-      id: 'b-1',
+      id: 'b-1' as BudgetId,
       name: 'Eating Out',
       amount: 300,
       assetAccountIds: liquidAccountId,
@@ -193,7 +193,7 @@ describe('CashFlowSimulationService', () => {
       remaining: 300,
     } as any;
     const expenseAccount = {
-      id: 'exp-eating',
+      id: 'exp-eating' as AccountId,
       accountType: AccountType.EXPENSE,
     } as any;
     const budgetId = budget.id;

@@ -1,5 +1,5 @@
-import { Flow, FlowCategory } from '../types';
 import Account from '@/src/data/models/Account';
+import { Flow, FlowCategory } from '../types';
 
 /**
  * Resolves the "Semantic Target" of a flow.

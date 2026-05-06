@@ -3,6 +3,7 @@ import Budget from '@/src/data/models/Budget';
 import dayjs from 'dayjs';
 import { BudgetFlowGenerator } from '../engines/BudgetFlowGenerator';
 import { FlowCategory, SimulationContext } from '../types';
+import { AccountId } from '@/src/types/domain';
 
 describe('BudgetReconciliation', () => {
   const simulationStartMs = dayjs('2026-04-12T00:00:00Z').valueOf();
@@ -12,8 +13,8 @@ describe('BudgetReconciliation', () => {
     simulationDays: safeToSpendDays,
     simulationEndMs: simulationStartMs + safeToSpendDays * 24 * 60 * 60 * 1000,
     resultCurrency: 'USD',
-    liquidAccountIds: new Set(['acc1']),
-    orderedLiquidAccountIds: ['acc1'],
+    liquidAccountIds: new Set(['acc1' as AccountId]),
+    orderedLiquidAccountIds: ['acc1' as AccountId],
     liabilityAccountIds: new Set([]),
     accountMap: new Map(),
     convert: amount => amount,

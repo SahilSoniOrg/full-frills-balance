@@ -4,6 +4,7 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
+import { AccountId } from '@/src/types/domain';
 import { getAccountAccentColor } from '@/src/utils/accountCategory';
 import React, { useMemo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
@@ -11,8 +12,8 @@ import { TouchableOpacity, View } from 'react-native';
 export interface AccountTileListProps {
   title?: string;
   accounts: Account[];
-  selectedId: string;
-  onSelect: (id: string) => void;
+  selectedId: AccountId;
+  onSelect: (id: AccountId) => void;
   onSearchRequest?: () => void;
 }
 
@@ -81,7 +82,7 @@ export const AccountTileList = ({
         <SelectionTileList
           items={items}
           selectedId={selectedId}
-          onSelect={onSelect}
+          onSelect={id => onSelect(id as AccountId)}
           testIDPrefix="account-option"
         />
       </View>

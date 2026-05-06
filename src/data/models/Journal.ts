@@ -1,7 +1,7 @@
-import Transaction from '@/src/data/models/Transaction';
-import { JournalDisplayType } from '@/src/types/domain';
-import { Query, Relation } from '@nozbe/watermelondb';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
+import Transaction from '@/src/data/models/Transaction';
+import { JournalDisplayType, JournalId, PlannedPaymentId } from '@/src/types/domain';
+import { Query, Relation } from '@nozbe/watermelondb';
 import { children, date, field, relation } from '@nozbe/watermelondb/decorators';
 
 export enum JournalStatus {
@@ -12,7 +12,7 @@ export enum JournalStatus {
   SKIPPED = 'SKIPPED',
 }
 
-export default class Journal extends BaseScopedModel {
+export default class Journal extends BaseScopedModel<JournalId> {
   static table = 'journals';
   static associations = {
     transactions: { type: 'has_many', foreignKey: 'journal_id' },
@@ -24,9 +24,9 @@ export default class Journal extends BaseScopedModel {
   @field('notes') notes?: string;
   @field('currency_code') currencyCode!: string;
   @field('status') status!: JournalStatus;
-  @field('original_journal_id') originalJournalId?: string;
-  @field('reversing_journal_id') reversingJournalId?: string;
-  @field('planned_payment_id') plannedPaymentId?: string;
+  @field('original_journal_id') originalJournalId?: JournalId;
+  @field('reversing_journal_id') reversingJournalId?: JournalId;
+  @field('planned_payment_id') plannedPaymentId?: PlannedPaymentId;
 
   // Denormalized fields for list performance
   // totalAmount is the magnitude of the journal (sum of all debits)

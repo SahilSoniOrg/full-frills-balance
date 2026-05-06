@@ -1,15 +1,16 @@
 import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
+import { AccountId } from '@/src/types/domain';
 
 describe('PlannedFlowGenerator May 5th Regression', () => {
   const simulationStartMs = dayjs('2026-04-08').startOf('day').valueOf();
   const safeToSpendDays = AppConfig.defaults.safeToSpendDays;
   const simulationEndMs = dayjs('2026-04-08').startOf('day').add(safeToSpendDays, 'day').valueOf();
 
-  const liquidAccountIds = new Set(['bank']);
-  const liabilityAccountIds = new Set(['cc']);
-  const expenseAccountIds = new Set(['rent_cat']);
+  const liquidAccountIds = new Set(['bank' as AccountId]);
+  const liabilityAccountIds = new Set(['cc' as AccountId]);
+  const expenseAccountIds = new Set(['rent_cat' as AccountId]);
 
   it('generates the May 5th occurrence if nextOccurrence is in the past (overdue gap filling)', () => {
     // Scenario: Payment was on April 5 (overdue). Next should be May 5.
@@ -18,8 +19,8 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       name: 'Credit Card Payment',
       amount: 1000,
       currencyCode: 'USD',
-      fromAccountId: 'bank',
-      toAccountId: 'cc',
+      fromAccountId: 'bank' as AccountId,
+      toAccountId: 'cc' as AccountId,
       nextOccurrence: dayjs('2026-04-05').valueOf(),
       intervalType: 'MONTHLY',
       intervalN: 1,
@@ -68,8 +69,8 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       nextOccurrence: dayjs('2026-05-05').valueOf(),
       intervalType: 'MONTHLY',
       intervalN: 1,
-      fromAccountId: 'bank',
-      toAccountId: 'cc',
+      fromAccountId: 'bank' as AccountId,
+      toAccountId: 'cc' as AccountId,
     };
 
     const result = PlannedFlowGenerator.generate(

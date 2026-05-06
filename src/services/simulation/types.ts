@@ -1,4 +1,5 @@
 import Account, { AccountSubtype } from '@/src/data/models/Account';
+import { AccountId } from '@/src/types/domain';
 
 export enum FlowCategory {
   INCOME = 'INCOME',
@@ -63,18 +64,18 @@ export interface FlowBase {
 
 export interface Inflow extends FlowBase {
   kind: 'INFLOW';
-  accountId: string;
+  accountId: AccountId;
 }
 
 export interface Outflow extends FlowBase {
   kind: 'OUTFLOW';
-  accountId: string;
+  accountId: AccountId;
 }
 
 export interface Transfer extends FlowBase {
   kind: 'TRANSFER';
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountId: AccountId;
+  toAccountId: AccountId;
 }
 
 export type Flow = Inflow | Outflow | Transfer;
@@ -84,10 +85,10 @@ export interface SimulationContext {
   simulationDays: number;
   simulationEndMs: number;
   resultCurrency: string;
-  liquidAccountIds: Set<string>;
-  orderedLiquidAccountIds: string[];
-  liabilityAccountIds: Set<string>;
-  accountMap: Map<string, Account>;
+  liquidAccountIds: Set<AccountId>;
+  orderedLiquidAccountIds: AccountId[];
+  liabilityAccountIds: Set<AccountId>;
+  accountMap: Map<AccountId, Account>;
   convert: (amount: number, from: string) => number;
 }
 
@@ -96,8 +97,8 @@ export interface SimulationPlannedPayment {
   name: string;
   amount: number;
   currencyCode: string;
-  fromAccountId: string;
-  toAccountId: string;
+  fromAccountId: AccountId;
+  toAccountId: AccountId;
   nextOccurrence: number;
   intervalType: string;
   intervalN: number;
@@ -158,14 +159,14 @@ export interface CommitmentDetail {
 }
 
 export interface AccountCommitment {
-  accountId: string;
+  accountId: AccountId;
   accountName: string;
   amount: number;
   details: CommitmentDetail[];
 }
 
 export interface DebtEntry {
-  accountId: string;
+  accountId: AccountId;
   accountName: string;
   amount: number;
   type: DebtType;
@@ -215,7 +216,7 @@ export interface SimulationReport {
 }
 
 export interface AccountSimulationSummary {
-  accountId: string;
+  accountId: AccountId;
   accountName: string;
   startingBalance: number;
   safeToSpend: number;

@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, BudgetId, WorkplaceId } from '@/src/types/domain';
 
 describe('BudgetRepository', () => {
   let accountId1: string;
@@ -39,14 +39,14 @@ describe('BudgetRepository', () => {
           currencyCode: 'USD',
           startMonth: '2023-10',
         },
-        [accountId1, accountId2],
+        [accountId1 as AccountId, accountId2 as AccountId],
       );
 
       expect(budget.id).toBeTruthy();
       expect(budget.name).toBe('Food');
       expect(budget.amount).toBe(500);
 
-      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id);
+      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(2);
       const scopeIds = scopes.map(s => s.account.id);
       expect(scopeIds).toContain(accountId1);
@@ -62,15 +62,17 @@ describe('BudgetRepository', () => {
           startMonth: '2023-10',
           currencyCode: 'USD',
         },
-        [accountId1],
+        [accountId1 as AccountId],
       );
 
-      await budgetRepository.update('wp-1' as WorkplaceId, budget, { amount: 600 }, [accountId2]);
+      await budgetRepository.update('wp-1' as WorkplaceId, budget, { amount: 600 }, [
+        accountId2 as AccountId,
+      ]);
 
-      const updated = await budgetRepository.find('wp-1' as WorkplaceId, budget.id);
+      const updated = await budgetRepository.find('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(updated?.amount).toBe(600);
 
-      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id);
+      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(1);
       expect(scopes[0].account.id).toBe(accountId2);
     });
@@ -84,15 +86,15 @@ describe('BudgetRepository', () => {
           currencyCode: 'USD',
           startMonth: '2023-10',
         },
-        [accountId1],
+        [accountId1 as AccountId],
       );
 
       await budgetRepository.delete('wp-1' as WorkplaceId, budget);
 
-      const deleted = await budgetRepository.find('wp-1' as WorkplaceId, budget.id);
+      const deleted = await budgetRepository.find('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(deleted).toBeNull();
 
-      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id);
+      const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(0);
     });
   });

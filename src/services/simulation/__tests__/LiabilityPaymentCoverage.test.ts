@@ -1,7 +1,7 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import dayjs from 'dayjs';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -40,15 +40,15 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
 }));
 
 const checkingAccount = {
-  id: 'checking-1',
+  id: 'checking-1' as AccountId,
   name: 'Checking',
   accountType: AccountType.ASSET,
   accountSubtype: AccountSubtype.BANK_CHECKING,
   currencyCode: 'USD',
-} as const;
+} as any;
 
 const creditCardAccount = {
-  id: 'cc-1',
+  id: 'cc-1' as AccountId,
   name: 'Credit Card',
   accountType: AccountType.LIABILITY,
   accountSubtype: AccountSubtype.CREDIT_CARD,
@@ -63,10 +63,10 @@ type OverrideMap = Partial<{ [K in keyof SimulateArgs]: SimulateArgs[K] }>;
 
 const simulate = (overrides: OverrideMap = {} as any, planned: SimulateArgs[1] = []) => {
   const defaultArgs: Parameters<typeof cashFlowSimulationService.simulate> = [
-    new Map([['checking-1', 2000]]),
+    new Map<AccountId, number>([['checking-1' as AccountId, 2000]]),
     planned,
     [],
-    ['checking-1'],
+    ['checking-1' as AccountId],
     [{ account: creditCardAccount, balance: 1000 }],
     [],
     [],
