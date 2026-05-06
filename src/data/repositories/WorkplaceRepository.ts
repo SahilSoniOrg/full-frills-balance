@@ -7,12 +7,16 @@ export class WorkplaceRepository {
   }
 
   async create(data: {
+    id?: string;
     name: string;
     icon: string;
     defaultCurrencyCode: string;
   }): Promise<Workplace> {
     return await database.write(async () => {
       return await this.workplaces.create(w => {
+        if (data.id) {
+          w._raw.id = data.id;
+        }
         w.name = data.name.trim();
         w.icon = data.icon;
         w.defaultCurrencyCode = data.defaultCurrencyCode;

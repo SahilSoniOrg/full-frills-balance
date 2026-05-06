@@ -28,9 +28,12 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
       if (workplaceSubscription) workplaceSubscription.unsubscribe();
 
       try {
-        const workplace = await workplaceService.getWorkplace(id);
+        let workplace = await workplaceService.getWorkplace(id);
         if (!workplace) {
-          throw new Error(`Workplace ${id} not found`);
+          logger.warn(`[WorkplaceProvider] Workplace ${id} not found, attempting recovery...`);
+          // Recover by recreating the workplace with the same ID
+          workplace = await workplaceService.ensureDefaultWorkplace(id);
+          preferences.setActiveWorkplaceId(workplace.id as WorkplaceId);
         }
 
         if (isMounted) {
@@ -59,34 +62,23 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const initialize = async () => {
-      try {
-        const activeWorkplace = await workplaceService.ensureDefaultWorkplace();
-        if (isMounted) {
-          await setupWorkplaceSubscription(activeWorkplace.id);
-        }
-      } catch (err) {
-        logger.error('[WorkplaceProvider] Critical initialization failure', err);
-        if (isMounted) {
-          setError(err as Error);
-          setIsLoaded(true);
-        }
-      }
-    };
-
-    initialize();
-
     const prefsSubscription = preferences.observe('activeWorkplaceId').subscribe(async id => {
       if (!isMounted) return;
 
       if (!id) {
-        logger.warn('[WorkplaceProvider] activeWorkplaceId became empty, attempting recovery...');
+        logger.warn(
+          '[WorkplaceProvider] activeWorkplaceId is empty, ensuring default workplace...',
+        );
         try {
           const recovered = await workplaceService.ensureDefaultWorkplace();
+          // The preference update will trigger this subscription again with the new ID
           if (isMounted) await setupWorkplaceSubscription(recovered.id);
         } catch (err) {
-          logger.error('[WorkplaceProvider] Critical recovery failure', err);
-          if (isMounted) setError(new Error('Workplace context lost and recovery failed'));
+          logger.error('[WorkplaceProvider] Critical default workplace creation failure', err);
+          if (isMounted) {
+            setError(err as Error);
+            setIsLoaded(true);
+          }
         }
         return;
       }

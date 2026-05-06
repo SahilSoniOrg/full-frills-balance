@@ -15,12 +15,14 @@ export class WorkplaceService {
     name: string,
     icon: string,
     options: {
+      id?: string;
       initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
       initialCategories?: { name: string; type: AccountType; icon: IconName }[];
       currencyCode: string;
     },
   ): Promise<Workplace> {
     const workplace = await workplaceRepository.create({
+      id: options.id,
       name,
       icon,
       defaultCurrencyCode: options.currencyCode,
@@ -80,32 +82,46 @@ export class WorkplaceService {
     }
   }
 
-  async ensureDefaultWorkplace(): Promise<Workplace> {
-    // 1. Check preference first
-    const activeId = preferences.activeWorkplaceId;
-    if (activeId) {
-      const workplace = await this.getWorkplace(activeId);
-      if (workplace) return workplace;
-    }
+  private ensuringPromise: Promise<Workplace> | null = null;
+  async ensureDefaultWorkplace(forceId?: string): Promise<Workplace> {
+    if (this.ensuringPromise) return this.ensuringPromise;
 
-    // 2. Fallback to any existing workplace
-    const workplaces = await this.getAllWorkplaces();
-    if (workplaces.length > 0) {
-      const first = workplaces[0];
-      preferences.setActiveWorkplaceId(first.id as WorkplaceId);
-      return first;
-    }
+    this.ensuringPromise = (async () => {
+      try {
+        // 1. Check preference first
+        const activeId = preferences.activeWorkplaceId;
+        if (activeId) {
+          const workplace = await this.getWorkplace(activeId);
+          if (workplace) return workplace;
+        }
 
-    // 3. Create a default one if none exist
-    const defaultWorkplace = await this.createWorkplace('Personal workplace', 'briefcase', {
-      currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
-    });
-    preferences.setActiveWorkplaceId(defaultWorkplace.id as WorkplaceId);
+        // 2. Fallback to any existing workplace (only if not forcing a specific ID recovery)
+        if (!forceId) {
+          const workplaces = await this.getAllWorkplaces();
+          if (workplaces.length > 0) {
+            const first = workplaces[0];
+            preferences.setActiveWorkplaceId(first.id as WorkplaceId);
+            return first;
+          }
+        }
 
-    // Migration: If there is a legacy currency in preferences, apply it to all workplaces
-    await this.migrateLegacyCurrency();
+        // 3. Create a default one if none exist
+        const defaultWorkplace = await this.createWorkplace('Personal workplace', 'briefcase', {
+          id: forceId,
+          currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
+        });
+        preferences.setActiveWorkplaceId(defaultWorkplace.id as WorkplaceId);
 
-    return defaultWorkplace;
+        // Migration: If there is a legacy currency in preferences, apply it to all workplaces
+        await this.migrateLegacyCurrency();
+
+        return defaultWorkplace;
+      } finally {
+        this.ensuringPromise = null;
+      }
+    })();
+
+    return this.ensuringPromise;
   }
 
   getActiveWorkplaceId(): string {

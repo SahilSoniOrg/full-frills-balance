@@ -729,7 +729,7 @@ export const cashewPlugin: ImportPlugin = {
         }
       }
 
-      await integrityService.resetWorkplace(workplaceId);
+      await integrityService.resetWorkplace(workplaceId, true);
       await importRepository.batchInsert(workplaceId, data);
 
       onProgress?.('Verifying integrity...', 0.95);

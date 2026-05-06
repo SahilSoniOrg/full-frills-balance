@@ -265,7 +265,7 @@ export const ivyPlugin: ImportPlugin = {
     // 2. Wipe existing data for clean import
     logger.warn(`[IvyPlugin] Wiping workplace ${workplaceId} before import...`);
     onProgress?.('Wiping workplace data...', 0.05);
-    await integrityService.resetWorkplace(workplaceId);
+    await integrityService.resetWorkplace(workplaceId, true);
     const accountImports: ImportedAccount[] = [];
 
     // 2. Pre-Scan Transactions for Category Usage (Per Currency)
@@ -863,24 +863,27 @@ export const ivyPlugin: ImportPlugin = {
 
     // 9. Restore Preferences
     onProgress?.('Finalizing...', 0.95);
-    await preferences.setOnboardingCompleted(true);
+    try {
+      await preferences.setOnboardingCompleted(true);
 
-    if (ivyUserName) {
-      await preferences.setUserName(ivyUserName);
-      // Also update workplace name if it's currently a default
-      const workplace = await workplaceService.getWorkplace(workplaceId);
-      if (workplace && workplace.name.includes('Workplace')) {
-        await workplaceService.updateWorkplace(workplaceId, { name: `${ivyUserName}'s Workplace` });
+      if (ivyUserName) {
+        await preferences.setUserName(ivyUserName);
       }
-    }
 
-    if (ivyBaseCurrency) {
-      await workplaceService.updateWorkplace(workplaceId, { defaultCurrencyCode: ivyBaseCurrency });
-    } else {
-      const firstCurrency = accountCurrencyMap.values().next().value;
-      if (firstCurrency) {
-        await workplaceService.updateWorkplace(workplaceId, { defaultCurrencyCode: firstCurrency });
+      if (ivyBaseCurrency) {
+        await workplaceService.updateWorkplace(workplaceId, {
+          defaultCurrencyCode: ivyBaseCurrency,
+        });
+      } else {
+        const firstCurrency = accountCurrencyMap.values().next().value;
+        if (firstCurrency) {
+          await workplaceService.updateWorkplace(workplaceId, {
+            defaultCurrencyCode: firstCurrency,
+          });
+        }
       }
+    } catch (e) {
+      logger.warn('[IvyPlugin] Non-critical error during finalization', { error: e });
     }
 
     logger.info('[IvyPlugin] Import successful.');

@@ -138,8 +138,6 @@ export const nativePlugin: ImportPlugin = {
         data.workplace?.defaultCurrencyCode || (data.preferences as any)?.defaultCurrencyCode;
 
       await workplaceService.updateWorkplace(workplaceId, {
-        name: data.workplace?.name || 'Personal',
-        icon: (data.workplace?.icon as any) || 'briefcase',
         defaultCurrencyCode: currencyCode,
       });
 

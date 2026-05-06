@@ -55,18 +55,32 @@ export class IntegrityService {
    * Scans for any transactions with NULL/missing account_id.
    * Fails loudly to prevent old corrupted records from lingering invisibly.
    */
-  async scanForNullAccountTransactions(): Promise<void> {
+  async scanForNullAccountTransactions(workplaceId?: WorkplaceId): Promise<void> {
     const { database } = await import('@/src/data/database/Database');
-    const nullAccountTxs = await database.collections
+    const query = database.collections
       .get('transactions')
-      .query(Q.where('account_id', Q.eq(null)))
-      .fetch();
+      .query(
+        Q.where('account_id', Q.eq(null)),
+        ...(workplaceId ? [Q.where('workplace_id', workplaceId)] : []),
+      );
+
+    const nullAccountTxs = await query.fetch();
 
     if (nullAccountTxs.length > 0) {
+      const sample = nullAccountTxs[0] as any;
+      const errorMsg =
+        `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId!` +
+        (workplaceId ? ` (Workplace: ${workplaceId})` : '') +
+        ` Sample ID: ${sample.id}, Date: ${new Date(sample.transactionDate).toISOString()}`;
+
+      logger.error(`[IntegrityService] ${errorMsg}`, {
+        count: nullAccountTxs.length,
+        workplaceId,
+        sampleId: sample.id,
+      });
+
       analytics.logIntegrityIssue('transactions', 'null_account_id');
-      throw new Error(
-        `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId!`,
-      );
+      throw new Error(errorMsg);
     }
   }
 
@@ -284,7 +298,7 @@ export class IntegrityService {
     const totalStart = Date.now();
     logger.info('[IntegrityService] Force-running full balance verification (manual trigger)...');
 
-    await this.scanForNullAccountTransactions();
+    await this.scanForNullAccountTransactions(workplaceId);
 
     const accounts = await accountRepository.findAll(workplaceId);
     const total = accounts.length;
@@ -388,7 +402,7 @@ export class IntegrityService {
   async runStartupCheck(workplaceId: WorkplaceId): Promise<IntegrityCheckResult> {
     logger.info('[IntegrityService] Starting startup integrity check...');
 
-    await this.scanForNullAccountTransactions();
+    await this.scanForNullAccountTransactions(workplaceId);
 
     const accountsExist = await accountRepository.exists(workplaceId);
     if (!accountsExist) {
