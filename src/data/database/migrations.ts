@@ -610,5 +610,145 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 25,
+      steps: [
+        unsafeExecuteSql(`
+      CREATE INDEX IF NOT EXISTS idx_transactions_workplace_account_chrono
+      ON transactions (
+        workplace_id,
+        account_id,
+        transaction_date DESC,
+        created_at DESC,
+        id DESC
+      )
+      WHERE deleted_at IS NULL;
+    `),
+
+        unsafeExecuteSql(`
+      CREATE INDEX IF NOT EXISTS idx_transactions_workplace_journal
+      ON transactions (
+        workplace_id,
+        journal_id,
+        transaction_date DESC
+      )
+      WHERE deleted_at IS NULL;
+    `),
+
+        unsafeExecuteSql(`
+      CREATE INDEX IF NOT EXISTS idx_journals_workplace_status_chrono
+      ON journals (
+        workplace_id,
+        status,
+        journal_date DESC,
+        created_at DESC,
+        id DESC
+      )
+      WHERE deleted_at IS NULL;
+    `),
+
+        unsafeExecuteSql(`
+      CREATE INDEX IF NOT EXISTS idx_balance_snapshots_workplace_account
+      ON balance_snapshots (
+        workplace_id,
+        account_id,
+        transaction_date DESC
+      );
+    `),
+
+        unsafeExecuteSql(`
+      CREATE INDEX IF NOT EXISTS idx_sms_inbox_workplace_processing
+      ON sms_inbox_records (
+        workplace_id,
+        processing_status,
+        sms_date DESC
+      );
+    `),
+
+        unsafeExecuteSql(`
+      CREATE INDEX IF NOT EXISTS idx_planned_payments_workplace_next
+      ON planned_payments (
+        workplace_id,
+        status,
+        next_occurrence ASC
+      )
+      WHERE deleted_at IS NULL;
+    `),
+      ],
+    },
+    {
+      toVersion: 26,
+      steps: [
+        unsafeExecuteSql(`
+      CREATE TRIGGER IF NOT EXISTS trg_transactions_journal_workplace_match
+      BEFORE INSERT ON transactions
+      FOR EACH ROW
+      WHEN (
+        SELECT workplace_id
+        FROM journals
+        WHERE id = NEW.journal_id
+      ) != NEW.workplace_id
+      BEGIN
+        SELECT RAISE(ABORT, 'Transaction workplace mismatch with journal');
+      END;
+    `),
+
+        unsafeExecuteSql(`
+      CREATE TRIGGER IF NOT EXISTS trg_transactions_account_workplace_match
+      BEFORE INSERT ON transactions
+      FOR EACH ROW
+      WHEN (
+        SELECT workplace_id
+        FROM accounts
+        WHERE id = NEW.account_id
+      ) != NEW.workplace_id
+      BEGIN
+        SELECT RAISE(ABORT, 'Transaction workplace mismatch with account');
+      END;
+    `),
+
+        unsafeExecuteSql(`
+      CREATE TRIGGER IF NOT EXISTS trg_budget_scopes_budget_workplace_match
+      BEFORE INSERT ON budget_scopes
+      FOR EACH ROW
+      WHEN (
+        SELECT workplace_id
+        FROM budgets
+        WHERE id = NEW.budget_id
+      ) != NEW.workplace_id
+      BEGIN
+        SELECT RAISE(ABORT, 'Budget scope workplace mismatch');
+      END;
+    `),
+
+        unsafeExecuteSql(`
+      CREATE TRIGGER IF NOT EXISTS trg_budget_scopes_account_workplace_match
+      BEFORE INSERT ON budget_scopes
+      FOR EACH ROW
+      WHEN (
+        SELECT workplace_id
+        FROM accounts
+        WHERE id = NEW.account_id
+      ) != NEW.workplace_id
+      BEGIN
+        SELECT RAISE(ABORT, 'Budget scope account workplace mismatch');
+      END;
+    `),
+
+        unsafeExecuteSql(`
+      CREATE TRIGGER IF NOT EXISTS trg_planned_payments_from_account_match
+      BEFORE INSERT ON planned_payments
+      FOR EACH ROW
+      WHEN (
+        SELECT workplace_id
+        FROM accounts
+        WHERE id = NEW.from_account_id
+      ) != NEW.workplace_id
+      BEGIN
+        SELECT RAISE(ABORT, 'Planned payment source account workplace mismatch');
+      END;
+    `),
+      ],
+    },
   ],
 });
