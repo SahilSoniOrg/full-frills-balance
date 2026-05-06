@@ -16,6 +16,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function JournalEntryView(vm: JournalEntryViewModel) {
   const { theme } = useTheme();
+  const [hideSuggestions, setHideSuggestions] = React.useState(false);
   const {
     isLoading,
     headerTitle,
@@ -29,6 +30,15 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
     handleSubmit,
     setIsAmountFocused,
   } = vm;
+
+  // Reset hide suggestions when user focuses or types
+  const handleSetDescription = React.useCallback(
+    (desc: string) => {
+      setHideSuggestions(false);
+      vm.editor.setDescription(desc);
+    },
+    [vm.editor],
+  );
 
   if (isLoading) {
     return (
@@ -44,6 +54,10 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
     <Page
       keyboardAvoiding
       scrollable
+      scrollViewProps={{
+        onScrollBeginDrag: () => setHideSuggestions(true),
+        scrollEventThrottle: 16,
+      }}
       header={
         <JournalEntryHeader
           title={headerTitle}
@@ -93,12 +107,15 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
           time={vm.editor.journalTime}
           setTime={vm.editor.setJournalTime}
           description={vm.editor.description}
-          setDescription={vm.editor.setDescription}
+          setDescription={handleSetDescription}
           notes={vm.editor.notes}
           setNotes={vm.editor.setNotes}
           showBanner={showEditBanner}
           bannerText={editBannerText}
           variant={isGuidedMode ? 'minimal' : 'default'}
+          suggestions={vm.suggestions}
+          hideSuggestions={hideSuggestions}
+          onDescriptionFocus={() => setHideSuggestions(false)}
         />
 
         {isGuidedMode ? (

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 23,
+  version: 24,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -66,7 +66,7 @@ END;`,
       name: 'journals',
       columns: [
         { name: 'journal_date', type: 'number', isIndexed: true }, // timestamp
-        { name: 'description', type: 'string', isOptional: true },
+        { name: 'description', type: 'string', isOptional: true, isIndexed: true },
         { name: 'notes', type: 'string', isOptional: true },
         { name: 'currency_code', type: 'string', isIndexed: true },
         { name: 'status', type: 'string', isIndexed: true }, // POSTED, REVERSED

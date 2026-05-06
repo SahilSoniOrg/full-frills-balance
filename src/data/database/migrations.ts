@@ -600,5 +600,15 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 24,
+      steps: [
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_journals_description 
+          ON journals (description) 
+          WHERE deleted_at IS NULL AND description IS NOT NULL;
+        `),
+      ],
+    },
   ],
 });

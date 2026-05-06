@@ -6,6 +6,7 @@ import { useAccounts } from '@/src/features/accounts';
 import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
+import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { smsService } from '@/src/services/sms-service';
 import { AccountId, AccountRole, JournalId } from '@/src/types/domain';
@@ -56,6 +57,7 @@ export interface JournalEntryViewModel {
   handleSubmit: () => void;
   isAmountFocused: boolean;
   setIsAmountFocused: (focused: boolean) => void;
+  suggestions: string[];
 }
 
 /**
@@ -121,6 +123,8 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
         : undefined,
     onSuccess: () => AppNavigation.back(),
   });
+
+  const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
   // Editor for Simple Mode
   const simpleEditor = useSimpleJournalEditor({
@@ -395,6 +399,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       handleSubmit,
       isAmountFocused,
       setIsAmountFocused,
+      suggestions,
     }),
     [
       editor,
@@ -426,6 +431,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       isSubmitDisabled,
       handleSubmit,
       isAmountFocused,
+      suggestions,
     ],
   );
 }

@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
@@ -871,6 +872,62 @@ export class JournalRepository {
 
       return { reversalJournal, replacementJournal };
     });
+  }
+
+  async getRecentUniqueDescriptions(
+    workplaceId: WorkplaceId,
+    limit: number = 500,
+  ): Promise<{ description: string; count: number }[]> {
+    const sql = `
+      SELECT description, COUNT(*) as usage_count
+      FROM journals
+      WHERE workplace_id = ?
+        AND deleted_at IS NULL
+        AND description IS NOT NULL
+        AND description != ''
+      GROUP BY description
+      ORDER BY MAX(journal_date) DESC
+      LIMIT ?
+    `;
+
+    try {
+      const results = await transactionRawRepository.queryRaw<{
+        description: string;
+        usage_count: number;
+      }>(sql, [workplaceId, limit]);
+
+      if (!results) {
+        // Fallback to ORM if raw SQL fails
+        const journals = await this.journals
+          .query(
+            Q.where('workplace_id', workplaceId),
+            Q.where('deleted_at', Q.eq(null)),
+            Q.where('description', Q.notEq(null)),
+            Q.where('description', Q.notEq('')),
+            Q.sortBy('journal_date', 'desc'),
+            Q.take(limit * 2),
+          )
+          .fetch();
+
+        const counts = new Map<string, number>();
+        for (const j of journals) {
+          if (j.description) {
+            counts.set(j.description, (counts.get(j.description) || 0) + 1);
+          }
+        }
+        return Array.from(counts.entries())
+          .map(([description, count]) => ({ description, count }))
+          .slice(0, limit);
+      }
+
+      return results.map(r => ({
+        description: r.description,
+        count: r.usage_count,
+      }));
+    } catch (error) {
+      logger.error('[JournalRepository] getRecentUniqueDescriptions failed', error);
+      return [];
+    }
   }
 }
 

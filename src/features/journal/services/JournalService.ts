@@ -790,5 +790,10 @@ export class JournalService {
       }),
     );
   }
+  async getJournalSuggestions(
+    workplaceId: WorkplaceId,
+  ): Promise<{ description: string; count: number }[]> {
+    return journalRepository.getRecentUniqueDescriptions(workplaceId);
+  }
 }
 export const journalService = new JournalService();

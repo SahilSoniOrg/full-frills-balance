@@ -2,6 +2,7 @@ import { DateTimePickerModal } from '@/src/components/common/DateTimePickerModal
 import { AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
+import { JournalSuggestions } from '@/src/features/journal/entry/components/JournalSuggestions';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
@@ -20,6 +21,9 @@ interface JournalMetaCardProps {
   showBanner?: boolean;
   bannerText?: string;
   variant?: 'default' | 'minimal';
+  suggestions?: string[];
+  hideSuggestions?: boolean;
+  onDescriptionFocus?: () => void;
 }
 
 export function JournalMetaCard({
@@ -35,10 +39,14 @@ export function JournalMetaCard({
   showBanner,
   bannerText,
   variant = 'default',
+  suggestions = [],
+  hideSuggestions = false,
+  onDescriptionFocus,
 }: JournalMetaCardProps) {
   const { theme } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showNotes, setShowNotes] = useState(!!notes);
+  const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
   const isMinimal = variant === 'minimal';
 
   React.useEffect(() => {
@@ -53,16 +61,33 @@ export function JournalMetaCard({
         <EntryEditBanner text={bannerText || ''} style={{ marginHorizontal: 0, marginTop: 0 }} />
       )}
 
-      <AppInput
-        value={description}
-        onChangeText={setDescription}
-        placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-        variant="minimal"
-        style={{
-          fontSize: isMinimal ? 16 : 18,
-          fontWeight: isMinimal ? '500' : '600',
-        }}
-      />
+      <View style={{ zIndex: 10, position: 'relative' }}>
+        <AppInput
+          value={description}
+          onChangeText={setDescription}
+          onFocus={() => {
+            setIsDescriptionFocused(true);
+            onDescriptionFocus?.();
+          }}
+          onPressIn={() => {
+            onDescriptionFocus?.();
+          }}
+          onBlur={() => {
+            // Small delay to allow tapping suggestions before they disappear
+            setTimeout(() => setIsDescriptionFocused(false), 200);
+          }}
+          placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
+          variant="minimal"
+          style={{
+            fontSize: isMinimal ? 16 : 18,
+            fontWeight: isMinimal ? '500' : '600',
+          }}
+        />
+
+        {isDescriptionFocused && !hideSuggestions && suggestions.length > 0 && (
+          <JournalSuggestions suggestions={suggestions} onSelect={setDescription} />
+        )}
+      </View>
 
       {setNotes && showNotes && (
         <View
@@ -188,7 +213,7 @@ export function JournalMetaCard({
   }
 
   return (
-    <AppCard elevation="sm" padding="lg" style={style}>
+    <AppCard elevation="sm" padding="lg" style={style} overflow="visible">
       {content}
     </AppCard>
   );
