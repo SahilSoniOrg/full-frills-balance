@@ -1,4 +1,4 @@
-import { AccountId, AccountType } from '@/src/types/domain';
+import { AccountId, AccountType, TransactionId } from '@/src/types/domain';
 
 /**
  * Valid primitive types for raw SQL query arguments.
@@ -16,7 +16,7 @@ export type RawSQLArg = string | number | boolean | null;
  * Minimal transaction data required for running balance rebuilds.
  */
 export interface RebuildTransaction {
-  id: string;
+  id: TransactionId;
   amount: number;
   transactionType: string;
   transactionDate: number;
@@ -60,7 +60,7 @@ export interface RecurringPattern {
  * Internal interface for raw account query results matching the SQL schema.
  */
 export interface RawAccountRow {
-  id: string;
+  id: AccountId;
   name: string;
   account_type: string;
   account_subtype?: string;

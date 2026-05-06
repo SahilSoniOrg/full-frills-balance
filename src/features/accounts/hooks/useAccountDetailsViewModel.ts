@@ -131,10 +131,20 @@ export interface AccountDetailsViewModel {
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { defaultShareFormat } = useUI();
-  const params = useLocalSearchParams();
-  const accountId = params.accountId as AccountId;
-  const startDateParam = params.startDate as string;
-  const endDateParam = params.endDate as string;
+  const params = useLocalSearchParams<{
+    accountId: AccountId;
+    pName?: string;
+    pBalance?: string;
+    pCurrency?: string;
+    pIcon?: string;
+    pType?: string;
+    pColor?: string;
+    startDate?: string;
+    endDate?: string;
+  }>();
+  const accountId = params.accountId;
+  const startDateParam = params.startDate;
+  const endDateParam = params.endDate;
 
   // --- Date Handling ---
   const initialDateRange = useMemo(() => {
@@ -204,12 +214,12 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   } = selectionControl;
 
   // --- Initial Data Extraction (Preview) ---
-  const pName = params.pName as string;
-  const pBalance = params.pBalance as string;
-  const pCurrency = params.pCurrency as string;
-  const pIcon = params.pIcon as string;
-  const pType = params.pType as string;
-  const pColor = params.pColor as string;
+  const pName = params.pName;
+  const pBalance = params.pBalance;
+  const pCurrency = params.pCurrency;
+  const pIcon = params.pIcon;
+  const pType = params.pType;
+  const pColor = params.pColor;
 
   const account = useMemo(
     () =>

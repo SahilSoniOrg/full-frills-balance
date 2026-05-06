@@ -13,7 +13,7 @@ import {
   SmsRulePreviewInput,
   smsService,
 } from '@/src/services/sms-service';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -133,11 +133,9 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
   const [amountSecondaryValue, setAmountSecondaryValue] = useState('');
   const [disposition, setDisposition] = useState<SmsRuleDisposition>('auto_post');
   const [priority, setPriority] = useState('100');
-  const [sourceAccountId, setSourceAccountId] = useState(
-    seed?.sourceAccountId || ('' as AccountId),
-  );
+  const [sourceAccountId, setSourceAccountId] = useState(seed?.sourceAccountId || EMPTY_ACCOUNT_ID);
   const [categoryAccountId, setCategoryAccountId] = useState(
-    seed?.categoryAccountId || ('' as AccountId),
+    seed?.categoryAccountId || EMPTY_ACCOUNT_ID,
   );
   const [isActive, setIsActive] = useState(true);
   const [pickingAccountFor, setPickingAccountFor] = useState<'source' | 'category' | null>(null);
@@ -160,8 +158,8 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
         setLegacySenderMatch(rule.senderMatch || '');
         setLegacyBodyMatch(rule.bodyMatch || '');
         setDisposition(actions.disposition);
-        setSourceAccountId(actions.sourceAccountId || ('' as AccountId));
-        setCategoryAccountId(actions.categoryAccountId || ('' as AccountId));
+        setSourceAccountId(actions.sourceAccountId || EMPTY_ACCOUNT_ID);
+        setCategoryAccountId(actions.categoryAccountId || EMPTY_ACCOUNT_ID);
         setPriority(String(rule.priority ?? 100));
         setIsActive(rule.isActive);
 

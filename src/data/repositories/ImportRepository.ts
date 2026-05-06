@@ -29,6 +29,7 @@ import SmsInboxRecord, {
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import {
   AccountId,
+  BudgetId,
   JournalDisplayType,
   JournalId,
   PlannedPaymentId,
@@ -108,7 +109,7 @@ export interface ImportedBudget {
 
 export interface ImportedBudgetScope {
   id: string;
-  budgetId: string;
+  budgetId: BudgetId;
   accountId: AccountId;
   createdAt?: number;
   updatedAt?: number;

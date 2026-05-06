@@ -4,6 +4,7 @@ import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/co
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
+import { PlannedPaymentId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -281,7 +282,7 @@ export const SafeToSpendExplanationModal = ({
                             id: inc.id,
                             source: 'income_breakdown',
                           });
-                          AppNavigation.toPlannedPaymentDetails(inc.id);
+                          AppNavigation.toPlannedPaymentDetails(inc.id as PlannedPaymentId);
                         }
                       }}
                       disabled={inc.type !== 'PLANNED_PAYMENT'}

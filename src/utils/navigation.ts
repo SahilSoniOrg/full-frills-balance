@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { AccountId } from '../types/domain';
+import { AccountId, BudgetId, PlannedPaymentId } from '../types/domain';
 
 /**
  * Centralized navigation utility to handle routing across the application.
@@ -273,7 +273,7 @@ export const AppNavigation = {
    * Navigate to the Budget Detail screen.
    */
   toBudgetDetail: (
-    budgetId: string,
+    budgetId: BudgetId,
     preview?: {
       name?: string;
       amount?: number;
@@ -296,7 +296,7 @@ export const AppNavigation = {
    * Navigate to the Budget Form screen (Create or Edit).
    */
   toBudgetForm: (
-    budgetId?: string,
+    budgetId?: BudgetId,
     preview?: {
       name?: string;
       amount?: number;
@@ -411,7 +411,7 @@ export const AppNavigation = {
    * Navigate to the Planned Payment Details screen.
    */
   toPlannedPaymentDetails: (
-    id: string,
+    id: PlannedPaymentId,
     preview?: {
       description?: string;
       amount?: number;

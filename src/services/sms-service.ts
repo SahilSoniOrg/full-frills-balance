@@ -15,7 +15,7 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
@@ -460,8 +460,8 @@ class SmsService {
             data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
           record.actionsJson = JSON.stringify(normalizedActions);
           record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || ('' as AccountId);
-          record.categoryAccountId = normalizedActions.categoryAccountId || ('' as AccountId);
+          record.sourceAccountId = normalizedActions.sourceAccountId || EMPTY_ACCOUNT_ID;
+          record.categoryAccountId = normalizedActions.categoryAccountId || EMPTY_ACCOUNT_ID;
           record.isActive = data.isActive;
         });
       } else {
@@ -473,8 +473,8 @@ class SmsService {
             data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
           record.actionsJson = JSON.stringify(normalizedActions);
           record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || ('' as AccountId);
-          record.categoryAccountId = normalizedActions.categoryAccountId || ('' as AccountId);
+          record.sourceAccountId = normalizedActions.sourceAccountId || EMPTY_ACCOUNT_ID;
+          record.categoryAccountId = normalizedActions.categoryAccountId || EMPTY_ACCOUNT_ID;
           record.isActive = data.isActive;
         });
       }

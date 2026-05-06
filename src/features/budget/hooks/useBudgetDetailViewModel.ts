@@ -25,8 +25,14 @@ import { combineLatest, of, switchMap } from 'rxjs';
 
 export function useBudgetDetailViewModel() {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const params = useLocalSearchParams();
-  const budgetId = params.id as string;
+  const params = useLocalSearchParams<{
+    id: BudgetId;
+    pName?: string;
+    pAmount?: string;
+    pCurrency?: string;
+    pPeriod?: string;
+  }>();
+  const budgetId = params.id;
 
   const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
   const missingCurrenciesCache = useRef(new Set<string>());
@@ -41,7 +47,7 @@ export function useBudgetDetailViewModel() {
   }, []);
 
   const budgetData$ = useMemo(() => {
-    return budgetRepository.observeById(workplaceId, budgetId as BudgetId).pipe(
+    return budgetRepository.observeById(workplaceId, budgetId).pipe(
       switchMap(budget => {
         if (!budget) return of(null);
         return combineLatest([

@@ -10,6 +10,7 @@ import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {
   AccountId,
   AccountRole,
+  EMPTY_ACCOUNT_ID,
   JournalEntryLine,
   JournalId,
   TabType,
@@ -106,7 +107,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const [lines, setLines] = useState<JournalEntryLine[]>(() => [
     {
       id: '1' as TransactionId,
-      accountId: initialDestinationId || ('' as AccountId),
+      accountId: initialDestinationId || EMPTY_ACCOUNT_ID,
       accountName: '',
       accountType: AccountType.ASSET,
       amount: initialAmount || '',
@@ -116,7 +117,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     },
     {
       id: '2' as TransactionId,
-      accountId: initialSourceId || ('' as AccountId),
+      accountId: initialSourceId || EMPTY_ACCOUNT_ID,
       accountName: '',
       accountType: AccountType.ASSET,
       amount: initialAmount || '',
@@ -232,7 +233,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
         ...prev,
         {
           id: nextId as TransactionId,
-          accountId: '' as AccountId,
+          accountId: EMPTY_ACCOUNT_ID,
           accountName: '',
           accountType: AccountType.ASSET,
           amount: '',

@@ -3,7 +3,7 @@ import Journal from '@/src/data/models/Journal';
 import { Query } from '@nozbe/watermelondb';
 import { children, date, field } from '@nozbe/watermelondb/decorators';
 
-import { AccountId } from '@/src/types/domain';
+import { AccountId, PlannedPaymentId } from '@/src/types/domain';
 
 export enum PlannedPaymentInterval {
   DAILY = 'DAILY',
@@ -18,7 +18,7 @@ export enum PlannedPaymentStatus {
   COMPLETED = 'COMPLETED',
 }
 
-export default class PlannedPayment extends BaseScopedModel {
+export default class PlannedPayment extends BaseScopedModel<PlannedPaymentId> {
   static table = 'planned_payments';
   static associations = {
     journals: { type: 'has_many', foreignKey: 'planned_payment_id' },

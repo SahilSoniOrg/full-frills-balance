@@ -133,7 +133,7 @@ export class BudgetRepository {
         .fetch();
 
       //get budget to check it belongs to current workplaceId
-      const existingBudget = await this.find(workplaceId, budget.id as BudgetId);
+      const existingBudget = await this.find(workplaceId, budget.id);
       if (!existingBudget) {
         throw new Error('Budget not found');
       }
@@ -177,7 +177,7 @@ export class BudgetRepository {
   async delete(workplaceId: WorkplaceId, budget: Budget): Promise<void> {
     return await this.db.write(async () => {
       //get budget to check it belongs to current workplaceId
-      const existingBudget = await this.find(workplaceId, budget.id as BudgetId);
+      const existingBudget = await this.find(workplaceId, budget.id);
       if (!existingBudget) {
         throw new Error('Budget not found');
       }

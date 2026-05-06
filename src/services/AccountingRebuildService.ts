@@ -98,7 +98,7 @@ export class AccountingRebuildService {
 
     const idsNeedingUpdate = new Map<string, number>(); // id -> newBalance
     const snapshotsToCreate: {
-      transactionId: string;
+      transactionId: TransactionId;
       transactionDate: number;
       absoluteBalance: number;
       transactionCount: number;
@@ -184,8 +184,8 @@ export class AccountingRebuildService {
           ...snapshotsToCreate.map(data =>
             snapshotsCollection.prepareCreate((snapshot: BalanceSnapshot) => {
               snapshot.workplaceId = workplaceId;
-              snapshot.accountId = accountId as AccountId;
-              snapshot.transactionId = data.transactionId as TransactionId;
+              snapshot.accountId = accountId;
+              snapshot.transactionId = data.transactionId;
               snapshot.transactionDate = data.transactionDate;
               snapshot.absoluteBalance = data.absoluteBalance;
               snapshot.transactionCount = data.transactionCount;

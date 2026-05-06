@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Workplace from '@/src/data/models/Workplace';
+import { WorkplaceId } from '@/src/types/domain';
 
 export class WorkplaceRepository {
   private get workplaces() {
@@ -7,7 +8,7 @@ export class WorkplaceRepository {
   }
 
   async create(data: {
-    id?: string;
+    id?: WorkplaceId;
     name: string;
     icon: string;
     defaultCurrencyCode: string;
@@ -34,7 +35,7 @@ export class WorkplaceRepository {
     });
   }
 
-  async find(id: string): Promise<Workplace | undefined> {
+  async find(id: WorkplaceId): Promise<Workplace | undefined> {
     try {
       return await this.workplaces.find(id);
     } catch {
@@ -71,7 +72,7 @@ export class WorkplaceRepository {
     return this.workplaces.query().observe();
   }
 
-  observeById(id: string) {
+  observeById(id: WorkplaceId) {
     return this.workplaces.findAndObserve(id);
   }
 }

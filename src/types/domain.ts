@@ -9,6 +9,8 @@ export type WorkplaceId = Brand<string, 'WorkplaceId'>;
 export const asWorkplaceId = (id: string): WorkplaceId => id as WorkplaceId;
 
 export type AccountId = Brand<string, 'AccountId'>;
+export const EMPTY_ACCOUNT_ID: AccountId = '' as AccountId;
+
 export type JournalId = Brand<string, 'JournalId'>;
 export type TransactionId = Brand<string, 'TransactionId'>;
 export type BudgetId = Brand<string, 'BudgetId'>;

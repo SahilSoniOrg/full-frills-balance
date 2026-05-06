@@ -19,7 +19,7 @@ import {
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
@@ -98,11 +98,18 @@ export interface AccountFormViewModel {
 }
 
 export function useAccountFormViewModel(): AccountFormViewModel {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    accountId: AccountId;
+    type: string;
+    pName: string;
+    pType: string;
+    pCurrency: string;
+    pIcon: string;
+  }>();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
-  const accountId = params.accountId as AccountId | undefined;
-  const typeParam = params.type as string | undefined;
+  const accountId = params.accountId;
+  const typeParam = params.type;
   const isEditMode = Boolean(accountId);
 
   const {
@@ -162,8 +169,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || workplaceCurrency);
   const [selectedIcon, setSelectedIcon] = useState<IconName>((pIcon as IconName) || 'wallet');
   const [initialBalance, setInitialBalance] = useState('');
-  const [parentAccountId, setParentAccountId] = useState('' as AccountId);
-  const [payFromAccountId, setPayFromAccountId] = useState('' as AccountId);
+  const [parentAccountId, setParentAccountId] = useState(EMPTY_ACCOUNT_ID);
+  const [payFromAccountId, setPayFromAccountId] = useState(EMPTY_ACCOUNT_ID);
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
@@ -193,7 +200,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       );
       setSelectedCurrency(existingAccount.currencyCode);
       setSelectedIcon(existingAccount.icon || 'wallet');
-      setParentAccountId(existingAccount.parentAccountId || ('' as AccountId));
+      setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
 
       if (balanceData && initialBalance === '' && !hasInjectedRef.current) {
         setInitialBalance(balanceData.balance.toString());
@@ -211,7 +218,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
         setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
         setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
-        setPayFromAccountId(existingMetadata.payFromAccountId || ('' as AccountId));
+        setPayFromAccountId(existingMetadata.payFromAccountId || EMPTY_ACCOUNT_ID);
         setNotes(existingMetadata.notes || '');
       }
 

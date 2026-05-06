@@ -317,7 +317,7 @@ export const nativePlugin: ImportPlugin = {
         balanceSnapshots: (data.balanceSnapshots || []).map(snapshot => ({
           id: generateId(),
           accountId: accountMap.get(snapshot.accountId)!,
-          transactionId: transactionMap.get(snapshot.transactionId as string)!,
+          transactionId: transactionMap.get(snapshot.transactionId)!,
           transactionDate: parseTimestamp(snapshot.transactionDate as any) ?? Date.now(),
           absoluteBalance: snapshot.absoluteBalance as number,
           transactionCount: snapshot.transactionCount as number,

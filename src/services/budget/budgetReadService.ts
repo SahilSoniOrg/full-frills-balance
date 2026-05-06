@@ -7,7 +7,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
-import { BudgetId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
+import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -38,7 +38,7 @@ export class BudgetReadService {
   ): Observable<BudgetUsage> {
     return combineLatest([
       budget.observe(),
-      budgetRepository.observeScopes(workplaceId, budget.id as BudgetId).pipe(
+      budgetRepository.observeScopes(workplaceId, budget.id).pipe(
         switchMap(scopes => {
           if (scopes.length === 0) return of([]);
           return combineLatest(scopes.map(s => s.account.observe()));
@@ -59,7 +59,7 @@ export class BudgetReadService {
           ref,
         );
 
-        const childrenMap = new Map<string, string[]>();
+        const childrenMap = new Map<AccountId, AccountId[]>();
         allExpenses.forEach(acc => {
           if (acc.parentAccountId) {
             const siblings = childrenMap.get(acc.parentAccountId) || [];
@@ -68,7 +68,7 @@ export class BudgetReadService {
           }
         });
 
-        const getDescendants = (id: string, result: Set<string>) => {
+        const getDescendants = (id: AccountId, result: Set<AccountId>) => {
           const children = childrenMap.get(id) || [];
           for (const childId of children) {
             result.add(childId);
@@ -76,7 +76,7 @@ export class BudgetReadService {
           }
         };
 
-        const leafExpenseIds = new Set<string>();
+        const leafExpenseIds = new Set<AccountId>();
         for (const acc of scopeAccounts) {
           if (acc.accountType === AccountType.EXPENSE) {
             leafExpenseIds.add(acc.id);
@@ -158,7 +158,7 @@ export class BudgetReadService {
     budget: Budget,
     referenceDate?: number | string,
   ): Observable<DisplayTransaction[]> {
-    return budgetRepository.observeScopes(workplaceId, budget.id as BudgetId).pipe(
+    return budgetRepository.observeScopes(workplaceId, budget.id).pipe(
       switchMap(scopes => {
         if (scopes.length === 0) return of([]);
 

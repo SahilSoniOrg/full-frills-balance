@@ -5,17 +5,17 @@ import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { accountService } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
+import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, preferencesMigration } from '@/src/utils/preferences';
 import { distinctUntilChanged, map, Observable } from 'rxjs';
-import { WorkplaceId } from '@/src/types/domain';
 
 export class WorkplaceService {
   async createWorkplace(
     name: string,
     icon: string,
     options: {
-      id?: string;
+      id?: WorkplaceId;
       initialAccounts?: { name: string; type: AccountType; icon: IconName }[];
       initialCategories?: { name: string; type: AccountType; icon: IconName }[];
       currencyCode: string;
@@ -83,7 +83,7 @@ export class WorkplaceService {
   }
 
   private ensuringPromises = new Map<string, Promise<Workplace>>();
-  async ensureDefaultWorkplace(forceId?: string): Promise<Workplace> {
+  async ensureDefaultWorkplace(forceId?: WorkplaceId): Promise<Workplace> {
     const key = forceId ? `force:${forceId}` : 'default';
     const existing = this.ensuringPromises.get(key);
     if (existing) return existing;
@@ -139,7 +139,7 @@ export class WorkplaceService {
     return id;
   }
 
-  async getWorkplace(id: string): Promise<Workplace | undefined> {
+  async getWorkplace(id: WorkplaceId): Promise<Workplace | undefined> {
     return await workplaceRepository.find(id);
   }
 
@@ -148,7 +148,7 @@ export class WorkplaceService {
   }
 
   async updateWorkplace(
-    id: string,
+    id: WorkplaceId,
     data: Partial<{ name: string; icon: string; defaultCurrencyCode: string }>,
   ): Promise<void> {
     const workplace = await workplaceRepository.find(id);
@@ -158,7 +158,7 @@ export class WorkplaceService {
     await workplaceRepository.update(workplace, data);
   }
 
-  async deleteWorkplace(id: string): Promise<void> {
+  async deleteWorkplace(id: WorkplaceId): Promise<void> {
     const workplaces = await this.getAllWorkplaces();
     if (workplaces.length <= 1) {
       throw new Error('Cannot delete the last remaining workplace');
@@ -181,7 +181,7 @@ export class WorkplaceService {
     return workplaceRepository.observeAll();
   }
 
-  observeWorkplace(id: string): Observable<Workplace> {
+  observeWorkplace(id: WorkplaceId): Observable<Workplace> {
     return workplaceRepository.observeById(id).pipe(
       map(w => {
         if (!w) throw new Error(`Workplace not found: ${id}`);
@@ -190,14 +190,14 @@ export class WorkplaceService {
     );
   }
 
-  async getCurrency(id: string): Promise<string> {
+  async getCurrency(id: WorkplaceId): Promise<string> {
     const workplace = await workplaceRepository.find(id);
     if (!workplace) {
       throw new Error(`Could not find workplace with ID ${id}`);
     }
     return workplace.defaultCurrencyCode;
   }
-  observeCurrency(id: string): Observable<string> {
+  observeCurrency(id: WorkplaceId): Observable<string> {
     return workplaceRepository.observeById(id).pipe(
       map(w => {
         if (!w) throw new Error(`Could not find workplace with ID ${id}`);

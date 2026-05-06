@@ -3,7 +3,7 @@ import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/data/models/
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -32,8 +32,8 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     name: '',
     amount: '',
     currencyCode: workplaceCurrency,
-    fromAccountId: '' as AccountId,
-    toAccountId: '' as AccountId,
+    fromAccountId: EMPTY_ACCOUNT_ID,
+    toAccountId: EMPTY_ACCOUNT_ID,
     intervalN: 1,
     intervalType: PlannedPaymentInterval.MONTHLY,
     startDate: Date.now(),
@@ -52,7 +52,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
             amount: pp.amount.toString(),
             currencyCode: pp.currencyCode,
             fromAccountId: pp.fromAccountId,
-            toAccountId: pp.toAccountId || ('' as AccountId),
+            toAccountId: pp.toAccountId || EMPTY_ACCOUNT_ID,
             intervalN: pp.intervalN,
             intervalType: pp.intervalType,
             startDate: pp.startDate,

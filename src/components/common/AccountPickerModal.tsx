@@ -28,8 +28,8 @@ export function AccountPickerModal({
   excludeParentAccounts = false,
 }: AccountPickerModalProps) {
   const handleSelect = useCallback(
-    (id: string) => {
-      onSelect(id as AccountId);
+    (id: AccountId) => {
+      onSelect(id);
     },
     [onSelect],
   );

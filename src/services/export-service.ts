@@ -9,7 +9,13 @@ import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { analytics } from '@/src/services/analytics-service';
-import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
+import {
+  AccountId,
+  BudgetId,
+  JournalDisplayType,
+  TransactionId,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
 import { Model, TableSchema } from '@nozbe/watermelondb';
@@ -35,7 +41,7 @@ export interface AccountExport {
 export interface BalanceSnapshotExport {
   id: string;
   accountId: AccountId;
-  transactionId: string;
+  transactionId: TransactionId;
   transactionDate: string;
   absoluteBalance: number;
   transactionCount: number;
@@ -100,7 +106,7 @@ export interface BudgetExport {
 
 export interface BudgetScopeExport {
   id: string;
-  budgetId: string;
+  budgetId: BudgetId;
   accountId: AccountId;
   createdAt: string;
   updatedAt: string;
@@ -406,16 +412,16 @@ class ExportService {
         auditLogs,
         budgets,
         budgetScopes, // currencies
+        ,
+        ,
         // exchangeRates
-        ,
-        ,
         accountMetadata,
         plannedPayments,
         journalMetadata,
         smsAutoPostRules, // smsInboxRecords
+        ,
+        ,
         // balanceSnapshots
-        ,
-        ,
         _userPreferences,
         workplace,
       ] = await Promise.all([

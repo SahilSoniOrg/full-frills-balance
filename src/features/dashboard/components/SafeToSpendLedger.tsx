@@ -5,6 +5,7 @@ import { Stack, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
+import { PlannedPaymentId } from '@/src/types/domain';
 import { AppNavigation } from '@/src/utils/navigation';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -203,7 +204,9 @@ export const SafeToSpendLedger = ({
                                         source: 'ledger_usage',
                                       },
                                     );
-                                    AppNavigation.toPlannedPaymentDetails(item.id);
+                                    AppNavigation.toPlannedPaymentDetails(
+                                      item.id as PlannedPaymentId,
+                                    );
                                   }
                                 }}
                                 disabled={!item.id || item.source !== 'PLANNED_PAYMENT'}

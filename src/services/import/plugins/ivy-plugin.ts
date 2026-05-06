@@ -25,6 +25,8 @@ import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {
   AccountId,
+  BudgetId,
+  EMPTY_ACCOUNT_ID,
   JournalDisplayType,
   JournalId,
   PlannedPaymentId,
@@ -581,7 +583,7 @@ export const ivyPlugin: ImportPlugin = {
           amount: Math.abs(rule.amount),
           currencyCode,
           fromAccountId,
-          toAccountId: toAccountId || ('' as AccountId),
+          toAccountId: toAccountId || EMPTY_ACCOUNT_ID,
           intervalN: rule.intervalN || 1,
           intervalType,
           startDate,
@@ -852,7 +854,7 @@ export const ivyPlugin: ImportPlugin = {
               if (key.startsWith(`${catId}:::`)) {
                 budgetScopeImports.push({
                   id: generateId(),
-                  budgetId,
+                  budgetId: budgetId as BudgetId,
                   accountId: balanceId,
                 });
               }
@@ -868,7 +870,7 @@ export const ivyPlugin: ImportPlugin = {
             if (balanceId) {
               budgetScopeImports.push({
                 id: generateId(),
-                budgetId,
+                budgetId: budgetId as BudgetId,
                 accountId: balanceId,
               });
             }

@@ -7,6 +7,7 @@ import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {
   AccountId,
+  BudgetId,
   JournalDisplayType,
   JournalId,
   TransactionId,
@@ -634,7 +635,7 @@ export const cashewPlugin: ImportPlugin = {
             if (accId) {
               data.budgetScopes.push({
                 id: generator(),
-                budgetId,
+                budgetId: budgetId as BudgetId,
                 accountId: accId,
               });
             }
@@ -645,7 +646,7 @@ export const cashewPlugin: ImportPlugin = {
             if (accId) {
               data.budgetScopes.push({
                 id: generator(),
-                budgetId,
+                budgetId: budgetId as BudgetId,
                 accountId: accId,
               });
             }

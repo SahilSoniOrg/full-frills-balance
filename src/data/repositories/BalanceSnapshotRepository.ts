@@ -51,7 +51,7 @@ export class BalanceSnapshotRepository {
       return this.snapshots.create(snapshot => {
         snapshot.workplaceId = workplaceId;
         snapshot.accountId = data.accountId;
-        snapshot.transactionId = data.transactionId as TransactionId;
+        snapshot.transactionId = data.transactionId;
         snapshot.transactionDate = data.transactionDate;
         snapshot.absoluteBalance = data.absoluteBalance;
         snapshot.transactionCount = data.transactionCount;

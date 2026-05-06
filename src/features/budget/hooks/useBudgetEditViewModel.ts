@@ -14,9 +14,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 export function useBudgetEditViewModel() {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    id: BudgetId;
+    pName?: string;
+    pAmount?: string;
+    pCurrency?: string;
+  }>();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const budgetId = params.id as string;
+  const budgetId = params.id;
   const { data: expenseAccounts = [] } = useObservable(
     () => accountRepository.observeByType(workplaceId, AccountType.EXPENSE),
     [workplaceId],
@@ -32,14 +37,14 @@ export function useBudgetEditViewModel() {
   const { data: currencies = [] } = useObservable(() => currencyRepository.observeAll(), [], []);
 
   // Initial Data Injection: Extract preview data from params
-  const pName = params.pName as string;
-  const pAmount = params.pAmount as string;
-  const pCurrency = params.pCurrency as string;
+  const pName = params.pName || '';
+  const pAmount = params.pAmount || '';
+  const pCurrency = params.pCurrency || workplaceCurrency;
 
   const [budget, setBudget] = useState<Budget | null>(null);
-  const [name, setName] = useState(pName || '');
-  const [amount, setAmount] = useState(pAmount || '');
-  const [currencyCode, setCurrencyCode] = useState<string>(pCurrency || workplaceCurrency);
+  const [name, setName] = useState(pName);
+  const [amount, setAmount] = useState(pAmount);
+  const [currencyCode, setCurrencyCode] = useState<string>(pCurrency);
   const [startMonth, setStartMonth] = useState(new Date());
   const [intervalType, setIntervalType] = useState('MONTHLY');
   const [intervalN, setIntervalN] = useState(1);
@@ -55,7 +60,7 @@ export function useBudgetEditViewModel() {
     if (!budgetId) return;
 
     budgetRepository
-      .find(workplaceId, budgetId as BudgetId)
+      .find(workplaceId, budgetId)
       .then(async b => {
         if (!b) return;
         setBudget(b);
@@ -70,7 +75,7 @@ export function useBudgetEditViewModel() {
         setRecurrenceMonth(b.recurrenceMonth || 1);
         setStartDate(b.startDate);
 
-        const scopes = await budgetRepository.getScopes(workplaceId, budgetId as BudgetId);
+        const scopes = await budgetRepository.getScopes(workplaceId, budgetId);
         setSelectedAccountIds(scopes.map(s => s.account.id));
 
         if (b.assetAccountIds) {

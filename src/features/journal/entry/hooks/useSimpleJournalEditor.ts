@@ -4,7 +4,13 @@ import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import { AccountId, AccountRole, JournalEntryLine, TabType } from '@/src/types/domain';
+import {
+  AccountId,
+  AccountRole,
+  EMPTY_ACCOUNT_ID,
+  JournalEntryLine,
+  TabType,
+} from '@/src/types/domain';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
@@ -56,8 +62,8 @@ export function useSimpleJournalEditor({
   );
 
   const amount = sourceLine?.amount || destinationLine?.amount || '';
-  const sourceId = sourceLine?.accountId || ('' as AccountId);
-  const destinationId = destinationLine?.accountId || ('' as AccountId);
+  const sourceId = sourceLine?.accountId || EMPTY_ACCOUNT_ID;
+  const destinationId = destinationLine?.accountId || EMPTY_ACCOUNT_ID;
 
   // Use shared account selection logic for filtering
   const { transactionAccounts, expenseAccounts, incomeAccounts } = useAccountSelection({
@@ -183,7 +189,7 @@ export function useSimpleJournalEditor({
     if (sourceLine) {
       editor.updateLine(sourceLine.id, {
         transactionType: TransactionType.CREDIT,
-        accountId: '' as AccountId,
+        accountId: EMPTY_ACCOUNT_ID,
         accountName: '',
         accountType: getInferredAccountType(newType, TransactionType.CREDIT),
         accountCurrency: undefined,
@@ -192,7 +198,7 @@ export function useSimpleJournalEditor({
     if (destinationLine) {
       editor.updateLine(destinationLine.id, {
         transactionType: TransactionType.DEBIT,
-        accountId: '' as AccountId,
+        accountId: EMPTY_ACCOUNT_ID,
         accountName: '',
         accountType: getInferredAccountType(newType, TransactionType.DEBIT),
         accountCurrency: undefined,
