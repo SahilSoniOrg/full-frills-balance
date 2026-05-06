@@ -1,6 +1,6 @@
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Insight, insightService } from '@/src/services/notification/NotificationService';
 import { smsService } from '@/src/services/sms-service';
+import { WorkplaceId } from '@/src/types/domain';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { of } from 'rxjs';
@@ -9,8 +9,7 @@ import { of } from 'rxjs';
  * Hook to manage notifications (insights and unprocessed SMS).
  * Centralizes orchestration logic for the Notifications screen.
  */
-export function useHub() {
-  const { workplaceId } = useWorkplace();
+export function useHub(workplaceId: WorkplaceId) {
   const [activeInsights, setActiveInsights] = useState<Insight[]>([]);
   const [dismissedInsights, setDismissedInsights] = useState<Insight[]>([]);
   const [unreadSmsCount, setUnreadSmsCount] = useState(0);

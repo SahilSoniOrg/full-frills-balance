@@ -2,10 +2,10 @@ import { CategoryCreationBar } from '@/src/components/common/CategoryCreationBar
 import { SelectableGrid, SelectableItem } from '@/src/components/common/SelectableGrid';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
+import { DEFAULT_ACCOUNTS } from '@/src/constants/defaults';
 import React from 'react';
-import { DEFAULT_ACCOUNTS } from '../constants';
 
-interface OnboardingAccountSelectionStepProps {
+interface WorkplaceAccountSelectionStepProps {
   selectedAccounts: string[];
   customAccounts: { name: string; icon: IconName }[];
   onToggleAccount: (name: string) => void;
@@ -15,7 +15,7 @@ interface OnboardingAccountSelectionStepProps {
   isCompleting: boolean;
 }
 
-export function OnboardingAccountSelectionStep({
+export function WorkplaceAccountSelectionStep({
   selectedAccounts,
   customAccounts,
   onToggleAccount,
@@ -23,7 +23,7 @@ export function OnboardingAccountSelectionStep({
   onContinue,
   onBack,
   isCompleting,
-}: OnboardingAccountSelectionStepProps) {
+}: WorkplaceAccountSelectionStepProps) {
   const items: SelectableItem[] = [
     ...DEFAULT_ACCOUNTS.map(account => ({
       id: account.name, // Use name as ID to match state

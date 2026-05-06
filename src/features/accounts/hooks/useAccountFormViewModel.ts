@@ -113,6 +113,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const { balanceData, isLoading: isBalanceLoading } = useAccountBalance(
     workplaceId,
     accountId || null,
+    workplaceCurrency,
   );
   const { accounts } = useAccounts(workplaceId);
 

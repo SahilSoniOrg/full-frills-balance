@@ -1,7 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Size, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
@@ -11,23 +10,24 @@ import { Box, Inline, Inset, Stack } from '@/src/design-system';
 interface DashboardSummaryProps {
   income: number;
   expense: number;
+  currencyCode: string;
   isHidden?: boolean;
 }
 
 export const DashboardSummary = ({
   income,
   expense,
+  currencyCode,
   isHidden: controlledHidden,
 }: DashboardSummaryProps) => {
   const { theme, fonts } = useTheme();
   const { isPrivacyMode } = useUI();
-  const { defaultCurrencyCode } = useWorkplace();
 
   const isActuallyHidden = controlledHidden !== undefined ? controlledHidden : isPrivacyMode;
 
   const formatValue = (val: number) => {
     if (isActuallyHidden) return '••••';
-    return CurrencyFormatter.format(val, defaultCurrencyCode, {
+    return CurrencyFormatter.format(val, currencyCode, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });

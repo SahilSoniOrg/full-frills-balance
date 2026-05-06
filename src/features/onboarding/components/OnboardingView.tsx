@@ -1,15 +1,12 @@
-import { AppConfig } from '@/src/constants/app-config';
-import { Box, Inset, Page } from '@/src/design-system';
-import { OnboardingAccountSelectionStep } from '@/src/features/onboarding/components/OnboardingAccountSelectionStep';
-import { OnboardingCategorySelectionStep } from '@/src/features/onboarding/components/OnboardingCategorySelectionStep';
-import { OnboardingCurrencyStep } from '@/src/features/onboarding/components/OnboardingCurrencyStep';
+import { WorkplaceAccountSelectionStep } from '@/src/components/common/workplace-setup/WorkplaceAccountSelectionStep';
+import { WorkplaceCategorySelectionStep } from '@/src/components/common/workplace-setup/WorkplaceCategorySelectionStep';
+import { WorkplaceCurrencyStep } from '@/src/components/common/workplace-setup/WorkplaceCurrencyStep';
+import { WorkplaceSetupLayout } from '@/src/components/common/workplace-setup/WorkplaceSetupLayout';
 import { OnboardingThemeStep } from '@/src/features/onboarding/components/OnboardingThemeStep';
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
-import { StepIndicator } from '@/src/components/common/StepIndicator';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
 import React from 'react';
-import { Platform } from 'react-native';
 
 export function OnboardingView(vm: OnboardingFlowViewModel) {
   const {
@@ -46,7 +43,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
         );
       case 2:
         return (
-          <OnboardingCurrencyStep
+          <WorkplaceCurrencyStep
             key={step}
             selectedCurrency={selectedCurrency}
             onSelectCurrency={setSelectedCurrency}
@@ -57,7 +54,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
         );
       case 3:
         return (
-          <OnboardingAccountSelectionStep
+          <WorkplaceAccountSelectionStep
             key={step}
             selectedAccounts={selectedAccounts}
             customAccounts={customAccounts}
@@ -70,7 +67,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
         );
       case 4:
         return (
-          <OnboardingCategorySelectionStep
+          <WorkplaceCategorySelectionStep
             key={step}
             selectedCategories={selectedCategories}
             customCategories={customCategories}
@@ -98,24 +95,8 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
   };
 
   return (
-    <Page
-      edges={['top', 'bottom']}
-      keyboardAvoiding
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
-    >
-      <Box flex={1}>
-        <Inset horizontal="lg" top="lg" bottom={0} flex={1}>
-          <Box
-            maxWidth={AppConfig.layout.maxContentWidth}
-            width="100%"
-            style={{ alignSelf: 'center' }}
-            flex={1}
-          >
-            <StepIndicator currentStep={step} totalSteps={6} />
-            {renderStep()}
-          </Box>
-        </Inset>
-      </Box>
-    </Page>
+    <WorkplaceSetupLayout currentStep={step} totalSteps={6} edges={['top', 'bottom']}>
+      {renderStep()}
+    </WorkplaceSetupLayout>
   );
 }

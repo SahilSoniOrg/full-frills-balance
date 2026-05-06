@@ -1,6 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_COLOR_KEYS } from '@/src/constants/report-constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -13,10 +12,9 @@ import { logger } from '@/src/utils/logger';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map } from 'rxjs';
 
-export function useReports(workplaceId: WorkplaceId) {
+export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
   const { theme } = useTheme();
-  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const targetCurrency = workplaceCurrency;
+  const targetCurrency = currencyCode;
 
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({
     type: 'LAST_N',

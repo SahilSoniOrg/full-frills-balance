@@ -170,7 +170,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     subAccounts: rawSubBalances,
     allAccounts: accounts,
     isLoading: dashboardLoading,
-  } = useAccountDashboard(workplaceId, accountId);
+  } = useAccountDashboard(workplaceId, accountId, workplaceCurrency);
 
   const {
     deleteAccount,

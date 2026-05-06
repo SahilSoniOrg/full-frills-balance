@@ -82,17 +82,21 @@ export class WorkplaceService {
     }
   }
 
-  private ensuringPromise: Promise<Workplace> | null = null;
+  private ensuringPromises = new Map<string, Promise<Workplace>>();
   async ensureDefaultWorkplace(forceId?: string): Promise<Workplace> {
-    if (this.ensuringPromise) return this.ensuringPromise;
+    const key = forceId ? `force:${forceId}` : 'default';
+    const existing = this.ensuringPromises.get(key);
+    if (existing) return existing;
 
-    this.ensuringPromise = (async () => {
+    const promise = (async () => {
       try {
-        // 1. Check preference first
-        const activeId = preferences.activeWorkplaceId;
-        if (activeId) {
-          const workplace = await this.getWorkplace(activeId);
-          if (workplace) return workplace;
+        // 1. Check preference first (unless forcing a specific ID)
+        if (!forceId) {
+          const activeId = preferences.activeWorkplaceId;
+          if (activeId) {
+            const workplace = await this.getWorkplace(activeId);
+            if (workplace) return workplace;
+          }
         }
 
         // 2. Fallback to any existing workplace (only if not forcing a specific ID recovery)
@@ -117,11 +121,12 @@ export class WorkplaceService {
 
         return defaultWorkplace;
       } finally {
-        this.ensuringPromise = null;
+        this.ensuringPromises.delete(key);
       }
     })();
 
-    return this.ensuringPromise;
+    this.ensuringPromises.set(key, promise);
+    return promise;
   }
 
   getActiveWorkplaceId(): string {

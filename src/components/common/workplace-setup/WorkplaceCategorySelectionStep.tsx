@@ -2,11 +2,11 @@ import { CategoryCreationBar } from '@/src/components/common/CategoryCreationBar
 import { SelectableGrid, SelectableItem } from '@/src/components/common/SelectableGrid';
 import { AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
+import { DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo } from 'react';
-import { DEFAULT_CATEGORIES } from '../constants';
 
-interface OnboardingCategorySelectionStepProps {
+interface WorkplaceCategorySelectionStepProps {
   selectedCategories: string[];
   customCategories: { name: string; type: 'INCOME' | 'EXPENSE'; icon: IconName }[];
   onToggleCategory: (name: string) => void;
@@ -16,7 +16,7 @@ interface OnboardingCategorySelectionStepProps {
   isCompleting: boolean;
 }
 
-export function OnboardingCategorySelectionStep({
+export function WorkplaceCategorySelectionStep({
   selectedCategories,
   customCategories,
   onToggleCategory,
@@ -24,7 +24,7 @@ export function OnboardingCategorySelectionStep({
   onContinue,
   onBack,
   isCompleting,
-}: OnboardingCategorySelectionStepProps) {
+}: WorkplaceCategorySelectionStepProps) {
   const { theme } = useTheme();
   const incomeLabel = AppConfig.strings.onboarding.categories.typeLabels.income;
   const expenseLabel = AppConfig.strings.onboarding.categories.typeLabels.expense;

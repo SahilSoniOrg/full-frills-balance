@@ -54,6 +54,7 @@ export interface AccountsListViewModel {
   netWorth: number;
   totalAssets: number;
   totalLiabilities: number;
+  currencyCode: string;
   // Search
   searchQuery: string;
   isSearching: boolean;
@@ -262,6 +263,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     netWorth,
     totalAssets,
     totalLiabilities,
+    currencyCode: workplaceCurrency,
     searchQuery,
     isSearching,
     onSearchChange: setSearchQuery,

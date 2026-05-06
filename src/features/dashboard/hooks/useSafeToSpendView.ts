@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { analytics } from '@/src/services/analytics-service';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
@@ -60,48 +59,11 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
   } = props;
 
   const viewModel = useMemo(() => {
-    if (!report) {
-      return {
-        safeToSpend: 0,
-        shortfall: 0,
-        totalLiquidAssets: totalLiquidAssets || 0,
-        committedTotal: 0,
-        committedLiabilities: 0,
-        effectiveTotal: totalLiquidAssets || 0,
-        totalFutureInflow: 0,
-        totalLiabilities: 0,
-        displaySafeToSpend: '---',
-        displayShortfall: '---',
-        displayTotalLiquidAssets: '---',
-        displayCommittedTotal: '---',
-        displayCommittedLiabilities: '---',
-        displayTotalFutureInflow: '---',
-        insights: {
-          firstMajorInflowDay: null,
-          committedLiabilitiesCC: 0,
-          committedLiabilitiesOther: 0,
-        },
-        income: [],
-        committed: [],
-        debt: [],
-        accountSummaries: [],
-        liquidAssetSubtypes: [],
-        isOverCommitted: false,
-        isPositiveSafeToSpend: false,
-        isPrivacyMode,
-        isLoading: true,
-        safeToSpendDays: safeToSpendDays || 60,
-        formatValue: (_v: number): string => '---',
-        labels: AppConfig.strings.dashboard.safeToSpendUi,
-        info: AppConfig.strings.dashboard.safeToSpendExplanation,
-      };
-    }
-
     return SafeToSpendMapper.mapToViewModel(
       {
         summary,
         totalLiquidAssets,
-        report,
+        report: report!, // Mapper handles null/undefined
         accountSummaries,
         liquidAssetSubtypes,
         accountMap,

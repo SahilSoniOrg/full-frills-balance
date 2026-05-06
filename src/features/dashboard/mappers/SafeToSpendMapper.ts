@@ -37,6 +37,7 @@ export class SafeToSpendMapper {
     if (!result.report) {
       // Fallback for missing report (prevents component crash)
       return {
+        currencyCode: options.currencyCode,
         safeToSpend: 0,
         shortfall: 0,
         totalLiquidAssets: result.totalLiquidAssets || 0,
@@ -131,6 +132,7 @@ export class SafeToSpendMapper {
     );
 
     return {
+      currencyCode,
       safeToSpend,
       shortfall,
       totalLiquidAssets: totalLiquidAssets || 0,

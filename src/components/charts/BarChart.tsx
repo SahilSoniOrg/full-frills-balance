@@ -1,5 +1,4 @@
 import { AppText } from '@/src/components/core';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -19,6 +18,7 @@ export interface BarChartDataPoint {
 
 interface BarChartProps {
   data: BarChartDataPoint[];
+  currencyCode: string;
   height?: number;
   barWidth?: number;
   width?: number;
@@ -39,9 +39,9 @@ export const BarChart = ({
   renderTooltipContent,
   tooltipWidth,
   tooltipHeight,
+  currencyCode,
 }: BarChartProps) => {
   const { theme } = useTheme();
-  const { defaultCurrencyCode } = useWorkplace();
   const { width: windowWidth } = Dimensions.get('window');
   const [scrollX, setScrollX] = useState(0);
 
@@ -175,7 +175,7 @@ export const BarChart = ({
                 style={[styles.yAxisTick, { top: y - REPORT_CHART_LAYOUT.barChartAxisTickOffsetY }]}
               >
                 <AppText variant="caption" color="secondary" style={styles.yAxisLabel}>
-                  {CurrencyFormatter.formatShort(tickValue, defaultCurrencyCode)}
+                  {CurrencyFormatter.formatShort(tickValue, currencyCode)}
                 </AppText>
               </View>
             );

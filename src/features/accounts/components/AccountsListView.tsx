@@ -33,6 +33,7 @@ export function AccountsListView({
   netWorth,
   totalAssets,
   totalLiabilities,
+  currencyCode,
   searchQuery,
   isSearching,
   onSearchChange,
@@ -154,6 +155,7 @@ export function AccountsListView({
                 netWorth={netWorth}
                 totalAssets={totalAssets}
                 totalLiabilities={totalLiabilities}
+                currencyCode={currencyCode}
                 isLoading={isLoading}
                 hidden={isPrivacyMode}
                 onToggleHidden={onTogglePrivacy}

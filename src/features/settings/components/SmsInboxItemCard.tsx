@@ -1,6 +1,5 @@
 import { AppButton, AppCard, AppText, Badge } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord';
 import { SmsInboxItem } from '@/src/types/domain';
 import { alert } from '@/src/utils/alerts';
@@ -13,6 +12,7 @@ import { StyleSheet, View } from 'react-native';
 interface SmsInboxItemCardProps {
   item: SmsInboxItem;
   theme: any;
+  currencyCode: string;
   handleDismiss: (item: SmsInboxItem) => Promise<void>;
   handleUndismiss: (item: SmsInboxItem) => Promise<void>;
   handleImport: (item: SmsInboxItem) => void;
@@ -21,11 +21,11 @@ interface SmsInboxItemCardProps {
 export function SmsInboxItemCard({
   item,
   theme,
+  currencyCode,
   handleDismiss,
   handleUndismiss,
   handleImport,
 }: SmsInboxItemCardProps) {
-  const { defaultCurrencyCode } = useWorkplace();
   return (
     <AppCard style={styles.card}>
       <View style={styles.cardTop}>
@@ -43,7 +43,7 @@ export function SmsInboxItemCard({
             {item.parsedAmount != null
               ? `${item.direction === 'credit' ? '+' : '-'} ${CurrencyFormatter.format(
                   item.parsedAmount,
-                  item.parsedCurrencyCode || defaultCurrencyCode,
+                  item.parsedCurrencyCode || currencyCode,
                 )}`
               : 'No amount'}
           </AppText>
@@ -103,7 +103,7 @@ export function SmsInboxItemCard({
               title:
                 item.duplicateCandidate!.description || item.parsedMerchant || item.senderAddress,
               amount: item.parsedAmount || 0,
-              currencyCode: item.parsedCurrencyCode || defaultCurrencyCode,
+              currencyCode: item.parsedCurrencyCode || currencyCode,
               date: item.duplicateCandidate!.journalDate,
               displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE',
             })
@@ -122,7 +122,7 @@ export function SmsInboxItemCard({
               AppNavigation.toTransactionDetails(item.linkedJournal!.journalId, {
                 title: item.linkedJournal!.description || item.parsedMerchant || item.senderAddress,
                 amount: item.parsedAmount || 0,
-                currencyCode: item.parsedCurrencyCode || defaultCurrencyCode,
+                currencyCode: item.parsedCurrencyCode || currencyCode,
                 date: item.linkedJournal!.journalDate,
                 displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE',
               })

@@ -3,6 +3,7 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { WorkplaceId } from '@/src/types/domain';
+import { from, map, of, switchMap } from 'rxjs';
 
 export interface WorkplaceContextType {
   readonly workplaceId: WorkplaceId;
@@ -10,7 +11,7 @@ export interface WorkplaceContextType {
   setWorkplaceId: (id: string) => void;
 }
 
-const WorkplaceContext = createContext<WorkplaceContextType | null>(null);
+export const WorkplaceContext = createContext<WorkplaceContextType | undefined>(undefined);
 
 export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<{
@@ -22,74 +23,60 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-    let workplaceSubscription: any = null;
 
-    const setupWorkplaceSubscription = async (id: string) => {
-      if (workplaceSubscription) workplaceSubscription.unsubscribe();
-
-      try {
-        let workplace = await workplaceService.getWorkplace(id);
-        if (!workplace) {
-          logger.warn(`[WorkplaceProvider] Workplace ${id} not found, attempting recovery...`);
-          // Recover by recreating the workplace with the same ID
-          workplace = await workplaceService.ensureDefaultWorkplace(id);
-          preferences.setActiveWorkplaceId(workplace.id as WorkplaceId);
-        }
-
-        if (isMounted) {
-          // Set initial state from the workplace model
-          setState({
-            workplaceId: workplace.id as WorkplaceId,
-            defaultCurrencyCode: workplace.defaultCurrencyCode,
-          });
-          setIsLoaded(true);
-        }
-
-        workplaceSubscription = workplace.observe().subscribe(w => {
-          if (isMounted && w) {
-            setState({
-              workplaceId: w.id as WorkplaceId,
-              defaultCurrencyCode: w.defaultCurrencyCode,
-            });
+    const subscription = preferences
+      .observe('activeWorkplaceId')
+      .pipe(
+        // 1. Ensure we have an ID. If not, this is a valid terminal state for this provider
+        // until preferences are updated (e.g. by onboarding or import).
+        switchMap(id => {
+          if (!id) {
+            logger.warn('[WorkplaceProvider] No activeWorkplaceId. Waiting...');
+            return of(null);
           }
-        });
-      } catch (err) {
-        logger.error('[WorkplaceProvider] Error setting up workplace subscription', err);
-        if (isMounted) {
-          setError(err as Error);
-          setIsLoaded(true);
-        }
-      }
-    };
-
-    const prefsSubscription = preferences.observe('activeWorkplaceId').subscribe(async id => {
-      if (!isMounted) return;
-
-      if (!id) {
-        logger.warn(
-          '[WorkplaceProvider] activeWorkplaceId is empty, ensuring default workplace...',
-        );
-        try {
-          const recovered = await workplaceService.ensureDefaultWorkplace();
-          // The preference update will trigger this subscription again with the new ID
-          if (isMounted) await setupWorkplaceSubscription(recovered.id);
-        } catch (err) {
-          logger.error('[WorkplaceProvider] Critical default workplace creation failure', err);
+          return of(id);
+        }),
+        // 2. Load the workplace from database.
+        switchMap(id => {
+          if (!id) return of(null);
+          return from(workplaceService.getWorkplace(id)).pipe(
+            map(workplace => {
+              if (!workplace) {
+                // RUTHLESS: No silent resurrection. Surface the void.
+                throw new Error(`Workplace ${id} not found in database.`);
+              }
+              return workplace;
+            }),
+          );
+        }),
+        // 3. Observe for live updates.
+        switchMap(workplace => {
+          if (!workplace) return of(null);
+          return workplace.observe();
+        }),
+      )
+      .subscribe({
+        next: workplace => {
+          if (isMounted && workplace) {
+            setState({
+              workplaceId: workplace.id as WorkplaceId,
+              defaultCurrencyCode: workplace.defaultCurrencyCode,
+            });
+            setIsLoaded(true);
+          }
+        },
+        error: err => {
+          logger.error('[WorkplaceProvider] Pipeline failure', err);
           if (isMounted) {
             setError(err as Error);
             setIsLoaded(true);
           }
-        }
-        return;
-      }
-
-      await setupWorkplaceSubscription(id);
-    });
+        },
+      });
 
     return () => {
       isMounted = false;
-      prefsSubscription.unsubscribe();
-      if (workplaceSubscription) workplaceSubscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

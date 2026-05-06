@@ -1,6 +1,7 @@
 import { AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Size } from '@/src/constants';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import { useHub } from '@/src/features/hub/hooks/useHub';
@@ -14,8 +15,9 @@ type Tab = 'active' | 'dismissed';
 export default function HubScreen() {
   const { strings } = AppConfig;
   const { theme } = useTheme();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const [activeTab, setActiveTab] = useState<Tab>('active');
-  const { activeInsights, dismissedInsights, unreadSmsCount, restoreInsight } = useHub();
+  const { activeInsights, dismissedInsights, unreadSmsCount, restoreInsight } = useHub(workplaceId);
 
   const tabOptions = useMemo(
     () => [
@@ -67,7 +69,11 @@ export default function HubScreen() {
 
         {activeTab === 'active' ? (
           activeInsights.length > 0 ? (
-            <HubWidget insights={activeInsights} hideManageDismissed />
+            <HubWidget
+              insights={activeInsights}
+              currencyCode={defaultCurrencyCode}
+              hideManageDismissed
+            />
           ) : unreadSmsCount === 0 ? (
             <EmptyStateView
               icon="info"

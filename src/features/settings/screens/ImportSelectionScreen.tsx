@@ -4,8 +4,9 @@ import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/cons
 import { useImportPlugins } from '@/src/features/settings/hooks/useImportPlugins';
 import { useImport } from '@/src/hooks/use-import';
 import { useTheme } from '@/src/hooks/use-theme';
+import { WorkplaceContext } from '@/src/contexts/WorkplaceContext';
 import type { ImportPlugin } from '@/src/services/import/types';
-import React, { useCallback } from 'react';
+import React, { useCallback, useContext } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface ImportPluginCardProps {
@@ -47,14 +48,15 @@ const ImportPluginCard = ({ plugin, index, isImporting, onSelect }: ImportPlugin
     </AppCard>
   );
 };
-
 export default function ImportSelectionScreen() {
   const { theme } = useTheme();
+  const workplaceContext = useContext(WorkplaceContext);
+  const workplaceId = workplaceContext?.workplaceId;
   const { handleImport, isImporting, progress, progressMessage } = useImport();
   const plugins = useImportPlugins();
   const handleSelect = useCallback(
     (id: string) => {
-      handleImport(id);
+      handleImport(workplaceId, id);
     },
     [handleImport],
   );

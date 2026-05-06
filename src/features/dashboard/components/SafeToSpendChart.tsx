@@ -17,6 +17,7 @@ interface SafeToSpendChartProps {
   safeToSpend: number;
   isOverCommitted: boolean;
   isPrivacyMode: boolean;
+  currencyCode: string;
   formatValue: (val: number) => string | React.ReactNode;
 }
 
@@ -25,6 +26,7 @@ export const SafeToSpendChart = ({
   safeToSpend,
   isOverCommitted,
   isPrivacyMode,
+  currencyCode,
   formatValue,
 }: SafeToSpendChartProps) => {
   const { theme } = useTheme();
@@ -135,6 +137,7 @@ export const SafeToSpendChart = ({
       <View style={{ overflow: 'visible' }}>
         <LineChart
           data={data}
+          currencyCode={currencyCode}
           height={AppConfig.layout.safeToSpendChartHeight}
           color={isOverCommitted ? theme.error : theme.primary}
           xTicks={xTicks}

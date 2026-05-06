@@ -42,6 +42,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
             expanded={expandedExpenses}
             onToggleExpansion={toggleExpenseExpansion}
             onLegendRowPress={onLegendRowPress}
+            currencyCode={vm.targetCurrency}
           />
         ) : (
           <ReportNoData />
@@ -58,6 +59,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
             expanded={vm.expandedExpenseCategories}
             onToggleExpansion={vm.toggleExpenseCategoryExpansion}
             onLegendRowPress={vm.onCategoryPress}
+            currencyCode={vm.targetCurrency}
           />
         ) : (
           <ReportNoData />
@@ -74,6 +76,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
             expanded={vm.expandedIncomeCategories}
             onToggleExpansion={vm.toggleIncomeCategoryExpansion}
             onLegendRowPress={vm.onCategoryPress}
+            currencyCode={vm.targetCurrency}
           />
         ) : (
           <ReportNoData />

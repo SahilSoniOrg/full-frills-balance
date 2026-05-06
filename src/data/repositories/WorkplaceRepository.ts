@@ -12,6 +12,14 @@ export class WorkplaceRepository {
     icon: string;
     defaultCurrencyCode: string;
   }): Promise<Workplace> {
+    // 1. Guard against ID collisions when forcing specific identity
+    if (data.id) {
+      const existing = await this.find(data.id);
+      if (existing) {
+        throw new Error(`Workplace ID collision: ${data.id}`);
+      }
+    }
+
     return await database.write(async () => {
       return await this.workplaces.create(w => {
         if (data.id) {

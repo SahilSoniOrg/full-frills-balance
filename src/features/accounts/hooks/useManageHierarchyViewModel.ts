@@ -35,9 +35,9 @@ export interface ManageHierarchyViewModel {
 }
 
 export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
-  const { balancesByAccountId } = useAccountBalances(workplaceId, accounts);
+  const { balancesByAccountId } = useAccountBalances(workplaceId, accounts, defaultCurrencyCode);
   const { updateAccount } = useAccountActions(workplaceId);
 
   const params = useLocalSearchParams<{ accountId?: AccountId }>();

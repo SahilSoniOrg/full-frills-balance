@@ -119,6 +119,10 @@ function BootManager() {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
+  React.useEffect(() => {
+    analytics.initialize();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View
@@ -132,30 +136,26 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <ErrorBoundary>
             <DatabaseProvider database={database}>
-              <WorkplaceProvider>
-                <UIProvider>
-                  <BootManager />
-                  <FontManager>
-                    <PostHogProvider
-                      client={analytics.posthog ?? undefined}
-                      apiKey={analytics.posthog ? undefined : POSTHOG_API_KEY}
-                      options={
-                        analytics.posthog ? undefined : { host: POSTHOG_HOST, disabled: true }
-                      }
-                      debug={__DEV__}
-                    >
-                      <PostHogScreenTracker />
-                      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                        <AppLockInterceptor>
-                          <AppContent />
-                        </AppLockInterceptor>
-                        <AlertContainer />
-                        <ToastContainer />
-                      </ThemeProvider>
-                    </PostHogProvider>
-                  </FontManager>
-                </UIProvider>
-              </WorkplaceProvider>
+              <UIProvider>
+                <BootManager />
+                <FontManager>
+                  <PostHogProvider
+                    client={analytics.posthog ?? undefined}
+                    apiKey={analytics.posthog ? undefined : POSTHOG_API_KEY}
+                    options={analytics.posthog ? undefined : { host: POSTHOG_HOST, disabled: true }}
+                    debug={__DEV__}
+                  >
+                    <PostHogScreenTracker />
+                    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                      <AppLockInterceptor>
+                        <AppContent />
+                      </AppLockInterceptor>
+                      <AlertContainer />
+                      <ToastContainer />
+                    </ThemeProvider>
+                  </PostHogProvider>
+                </FontManager>
+              </UIProvider>
             </DatabaseProvider>
           </ErrorBoundary>
         </SafeAreaProvider>
@@ -165,18 +165,35 @@ export default function RootLayout() {
 }
 
 function AppContent() {
-  const { isRestartRequired } = useUI();
-
-  const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  // Sync app data with native widgets
-  useWidgetSync(workplaceId, defaultCurrencyCode);
-
-  useAppBootstrap(workplaceId, defaultCurrencyCode);
+  const { isRestartRequired, hasCompletedOnboarding } = useUI();
 
   if (isRestartRequired) {
     return <RestartRequiredScreen />;
   }
 
+  if (!hasCompletedOnboarding) {
+    return <NavigationStack />;
+  }
+
+  return (
+    <WorkplaceProvider>
+      <WorkplaceLoadedContent />
+    </WorkplaceProvider>
+  );
+}
+
+function WorkplaceLoadedContent() {
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
+
+  // Sync app data with native widgets
+  useWidgetSync(workplaceId, defaultCurrencyCode);
+
+  useAppBootstrap(workplaceId, defaultCurrencyCode);
+
+  return <NavigationStack />;
+}
+
+function NavigationStack() {
   return (
     <Stack
       screenOptions={{

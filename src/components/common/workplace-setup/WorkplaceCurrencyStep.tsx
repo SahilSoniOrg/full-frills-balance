@@ -6,7 +6,7 @@ import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo, useState } from 'react';
 
-interface OnboardingCurrencyStepProps {
+interface WorkplaceCurrencyStepProps {
   selectedCurrency: string;
   onSelectCurrency: (code: string) => void;
   onContinue: () => void;
@@ -14,13 +14,13 @@ interface OnboardingCurrencyStepProps {
   isCompleting: boolean;
 }
 
-export function OnboardingCurrencyStep({
+export function WorkplaceCurrencyStep({
   selectedCurrency,
   onSelectCurrency,
   onContinue,
   onBack,
   isCompleting,
-}: OnboardingCurrencyStepProps) {
+}: WorkplaceCurrencyStepProps) {
   const { theme } = useTheme();
   const { currencies } = useCurrencies();
   const [searchQuery, setSearchQuery] = useState('');

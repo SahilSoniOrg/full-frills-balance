@@ -123,6 +123,7 @@ export function BudgetDetailHeader({
             {chartWidth > 0 && (
               <LineChart
                 data={chartData.data}
+                currencyCode={budget.currencyCode}
                 domainX={chartData.domainX}
                 width={chartWidth}
                 color={stripColor}

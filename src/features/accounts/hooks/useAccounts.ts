@@ -3,7 +3,6 @@
  */
 import { IconName } from '@/src/components/core';
 import { Animation } from '@/src/constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
@@ -57,8 +56,11 @@ export function useAccount(accountId: AccountId | null, workplaceId: WorkplaceId
  * Uses PURE REACTIVITY: No async enrichment, no race conditions.
  * Calculates sum in-memory for instant consistency.
  */
-export function useAccountBalance(workplaceId: WorkplaceId, accountId: AccountId | null) {
-  const { defaultCurrencyCode } = useWorkplace();
+export function useAccountBalance(
+  workplaceId: WorkplaceId,
+  accountId: AccountId | null,
+  currencyCode: string,
+) {
   const {
     data: balanceData,
     isLoading,
@@ -85,7 +87,7 @@ export function useAccountBalance(workplaceId: WorkplaceId, accountId: AccountId
         switchMap(async ([account]) => {
           if (!account) return null;
 
-          const targetCurrency = defaultCurrencyCode;
+          const targetCurrency = currencyCode;
 
           // If it's a leaf account (no children), we can just get its direct balance
           // But for consistency with parent accounts, we use the optimized getAccountBalances
@@ -99,7 +101,7 @@ export function useAccountBalance(workplaceId: WorkplaceId, accountId: AccountId
         }),
       );
     },
-    [accountId, defaultCurrencyCode, workplaceId],
+    [accountId, currencyCode, workplaceId],
     null as AccountBalance | null,
   );
 
@@ -150,9 +152,11 @@ export function useAccountSubAccountCount(accountId: AccountId | null, workplace
  * Hook to reactively compute balances for a list of accounts.
  * Supports async balance aggregation with currency conversion.
  */
-export function useAccountBalances(workplaceId: WorkplaceId, accounts: Account[]) {
-  const { defaultCurrencyCode } = useWorkplace();
-
+export function useAccountBalances(
+  workplaceId: WorkplaceId,
+  accounts: Account[],
+  currencyCode: string,
+) {
   const {
     data: balancesByAccountId,
     isLoading,
@@ -179,7 +183,7 @@ export function useAccountBalances(workplaceId: WorkplaceId, accounts: Account[]
       ]).pipe(
         debounceTime(Animation.dataRefreshDebounce),
         switchMap(async () => {
-          const targetCurrency = defaultCurrencyCode;
+          const targetCurrency = currencyCode;
           const balances = await balanceService.getAccountBalances(
             workplaceId,
             undefined,
@@ -189,7 +193,7 @@ export function useAccountBalances(workplaceId: WorkplaceId, accounts: Account[]
         }),
       );
     },
-    [accounts, defaultCurrencyCode, workplaceId],
+    [accounts, currencyCode, workplaceId],
     new Map<string, AccountBalance>(),
   );
 
@@ -294,9 +298,12 @@ export function useAccountActions(workplaceId: WorkplaceId) {
  * Optimized hook for account details/dashboard.
  * Uses the high-performance raw SQL + consolidated optimization from ReactiveDataService.
  */
-export function useAccountDashboard(workplaceId: WorkplaceId, accountId: AccountId | null) {
-  const { defaultCurrencyCode } = useWorkplace();
-  const targetCurrency = defaultCurrencyCode;
+export function useAccountDashboard(
+  workplaceId: WorkplaceId,
+  accountId: AccountId | null,
+  currencyCode: string,
+) {
+  const targetCurrency = currencyCode;
 
   const { data, isLoading, version, error } = useObservable(
     () =>

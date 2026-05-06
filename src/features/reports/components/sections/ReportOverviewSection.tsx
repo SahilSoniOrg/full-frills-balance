@@ -57,6 +57,7 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
           netWorth={point.netWorth}
           income={point.income}
           expense={point.expense}
+          currencyCode={vm.targetCurrency}
           successColor={theme.success}
           errorColor={theme.error}
           borderColor={theme.border}
@@ -80,6 +81,7 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
           label={data.label}
           income={data.values[0]}
           expense={data.values[1]}
+          currencyCode={vm.targetCurrency}
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={vm.onViewSelectedTransactions}
@@ -108,6 +110,7 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
         <View style={styles.chartContainer}>
           <LineChart
             data={netWorthSeries}
+            currencyCode={vm.targetCurrency}
             height={NET_WORTH_CHART_HEIGHT}
             color={theme.primary}
             width={chartWidth}
@@ -125,6 +128,7 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
         <View style={styles.chartContainer}>
           <BarChart
             data={barChartData}
+            currencyCode={vm.targetCurrency}
             height={BAR_CHART_HEIGHT}
             width={chartWidth}
             onPress={onIncomeExpensePointSelect}
@@ -162,7 +166,12 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
       </ReportChartCard>
 
       <ReportChartCard title="Money Flow (Sankey)" zIndex={20}>
-        <SankeyChart nodes={sankeyData.nodes} links={sankeyData.links} width={chartWidth} />
+        <SankeyChart
+          nodes={sankeyData.nodes}
+          links={sankeyData.links}
+          currencyCode={vm.targetCurrency}
+          width={chartWidth}
+        />
       </ReportChartCard>
     </>
   );

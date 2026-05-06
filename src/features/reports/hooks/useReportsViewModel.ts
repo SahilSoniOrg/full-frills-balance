@@ -145,7 +145,7 @@ export interface ReportsViewModel {
 
 export function useReportsViewModel(): ReportsViewModel {
   const { theme } = useTheme();
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
 
   const {
     accounts,
@@ -166,7 +166,7 @@ export function useReportsViewModel(): ReportsViewModel {
     sankeyData,
     spendingHeatmap,
     calendarHeatmap,
-  } = useReports(workplaceId);
+  } = useReports(workplaceId, defaultCurrencyCode);
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
   const [showAccountPicker, setShowAccountPicker] = useState(false);

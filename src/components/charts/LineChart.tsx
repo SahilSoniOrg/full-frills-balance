@@ -1,7 +1,6 @@
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
@@ -35,6 +34,7 @@ export interface HorizontalLine {
 
 interface LineChartProps<T extends DataPoint = DataPoint> {
   data: T[];
+  currencyCode: string;
   height?: number;
   color?: string;
   showGradient?: boolean;
@@ -106,9 +106,9 @@ export const LineChart = <T extends DataPoint>({
   offset = 15,
   tooltipWidth,
   tooltipHeight,
+  currencyCode,
 }: LineChartProps<T>) => {
   const { theme } = useTheme();
-  const { defaultCurrencyCode } = useWorkplace();
   const chartColor = resolveThemeColor(theme, color) || theme.primary;
   const resolvedSecondaryColor = resolveThemeColor(theme, secondaryColor);
   const { width: windowWidth } = Dimensions.get('window');
@@ -366,9 +366,7 @@ export const LineChart = <T extends DataPoint>({
                       fill={theme.textSecondary}
                       textAnchor="end"
                     >
-                      {hideLabels
-                        ? '••••'
-                        : CurrencyFormatter.formatShort(val, defaultCurrencyCode)}
+                      {hideLabels ? '••••' : CurrencyFormatter.formatShort(val, currencyCode)}
                     </SvgText>
                   </React.Fragment>
                 );
@@ -460,7 +458,7 @@ export const LineChart = <T extends DataPoint>({
                               fill={chartColor}
                               textAnchor="start"
                             >
-                              {CurrencyFormatter.formatShort(todayPoint.y, defaultCurrencyCode)}
+                              {CurrencyFormatter.formatShort(todayPoint.y, currencyCode)}
                             </SvgText>
                           </React.Fragment>
                         );

@@ -150,6 +150,7 @@ export function AccountDetailsHeader({
       {chartData.length > 0 ? (
         <LineChart
           data={chartData}
+          currencyCode={currencyCode}
           secondaryData={rollingAverageData}
           secondaryColor={theme.warning}
           xTicks={xTicks}

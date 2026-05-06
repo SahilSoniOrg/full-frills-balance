@@ -36,6 +36,7 @@ export function ReportWealthSection({ vm, theme, chartWidth }: ReportWealthSecti
           })}
           income={data.assets}
           expense={data.liabilities}
+          currencyCode={vm.targetCurrency}
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={() => vm.onViewTransactions(data.date)}
@@ -85,6 +86,7 @@ export function ReportWealthSection({ vm, theme, chartWidth }: ReportWealthSecti
         <View style={styles.chartContainer}>
           <BarChart
             data={barChartData}
+            currencyCode={vm.targetCurrency}
             height={WEALTH_CHART_HEIGHT}
             width={chartWidth}
             onPress={setSelectedBarIndex}

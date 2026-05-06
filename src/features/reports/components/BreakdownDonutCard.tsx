@@ -3,7 +3,6 @@ import { AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
@@ -28,6 +27,7 @@ interface BreakdownDonutCardProps {
   expanded: boolean;
   onToggleExpansion: () => void;
   onLegendRowPress: (accountId: AccountId) => void;
+  currencyCode: string;
   donutSize?: number;
   donutStrokeWidth?: number;
 }
@@ -43,11 +43,11 @@ export function BreakdownDonutCard({
   expanded,
   onToggleExpansion,
   onLegendRowPress,
+  currencyCode,
   donutSize = DEFAULT_DONUT_SIZE,
   donutStrokeWidth = DEFAULT_DONUT_STROKE_WIDTH,
 }: BreakdownDonutCardProps) {
   const { theme } = useTheme();
-  const { defaultCurrencyCode } = useWorkplace();
 
   return (
     <View style={styles.donutContainer}>
@@ -76,7 +76,7 @@ export function BreakdownDonutCard({
                 {row.percentage}%
               </AppText>
               <AppText variant="caption" color="secondary" style={styles.amountText}>
-                {CurrencyFormatter.format(row.amount, defaultCurrencyCode)}
+                {CurrencyFormatter.format(row.amount, currencyCode)}
               </AppText>
             </View>
           </TouchableOpacity>

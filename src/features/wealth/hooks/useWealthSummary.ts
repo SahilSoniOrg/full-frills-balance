@@ -1,7 +1,7 @@
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WealthSummary } from '@/src/services/wealth-service';
+import { WorkplaceId } from '@/src/types/domain';
 import { of } from 'rxjs';
 
 export interface WealthSummaryResult extends WealthSummary {
@@ -24,9 +24,11 @@ const EMPTY_WEALTH_SUMMARY: Omit<WealthSummaryResult, 'isLoading' | 'version'> =
  * Now uses ReactiveDataService to eliminate duplicate subscriptions.
  * Provides a single source of truth for wealth calculations.
  */
-export function useWealthSummary(): WealthSummaryResult {
-  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const targetCurrency = workplaceCurrency;
+export function useWealthSummary(
+  workplaceId: WorkplaceId,
+  currencyCode: string,
+): WealthSummaryResult {
+  const targetCurrency = currencyCode;
 
   const { data, isLoading, version } = useObservable(
     () =>

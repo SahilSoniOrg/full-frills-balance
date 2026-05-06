@@ -1,7 +1,6 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React, { useEffect, useState } from 'react';
@@ -11,6 +10,7 @@ interface NetWorthCardProps {
   netWorth: number;
   totalAssets: number;
   totalLiabilities: number;
+  currencyCode: string;
   isLoading?: boolean;
   hidden?: boolean;
   onToggleHidden?: (hidden: boolean) => void;
@@ -20,13 +20,14 @@ export const NetWorthCard = ({
   netWorth,
   totalAssets,
   totalLiabilities,
+  currencyCode,
   isLoading = false,
   hidden: controlledHidden,
   onToggleHidden,
 }: NetWorthCardProps) => {
   const { theme, fonts } = useTheme();
   const { isPrivacyMode } = useUI();
-  const { defaultCurrencyCode } = useWorkplace();
+
   const [internalHidden, setInternalHidden] = useState(isPrivacyMode);
 
   // Sync with global privacy mode when it changes (e.g. from settings)
@@ -47,7 +48,7 @@ export const NetWorthCard = ({
   const formatCurrency = (amount: number) => {
     if (isLoading) return '...';
     if (isActuallyHidden) return '••••';
-    return CurrencyFormatter.format(amount, defaultCurrencyCode, {
+    return CurrencyFormatter.format(amount, currencyCode, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });

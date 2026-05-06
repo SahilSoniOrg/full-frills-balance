@@ -1,5 +1,4 @@
 import { useUI } from '@/src/contexts/UIContext';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { analytics } from '@/src/services/analytics-service';
 import {
   decodeContent,
@@ -9,6 +8,8 @@ import {
   readFileAsBytes,
   sanitizeContent,
 } from '@/src/services/import';
+import { workplaceService } from '@/src/services/WorkplaceService';
+import { WorkplaceId } from '@/src/types/domain';
 import { confirm, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import * as DocumentPicker from 'expo-document-picker';
@@ -18,13 +19,13 @@ export type ImportFormat = string;
 
 export function useImport() {
   const { requireRestart } = useUI();
-  const { workplaceId } = useWorkplace();
+
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
 
   const handleImport = useCallback(
-    async (expectedType?: ImportFormat) => {
+    async (targetWorkplaceId?: WorkplaceId, expectedType?: ImportFormat) => {
       let didSetImporting = false;
 
       const processFile = async (file: DocumentPicker.DocumentPickerAsset) => {
@@ -34,6 +35,16 @@ export function useImport() {
         didSetImporting = true;
 
         try {
+          // Resolve target workplace
+          let resolvedWorkplaceId = targetWorkplaceId;
+          if (!resolvedWorkplaceId) {
+            logger.info(
+              '[useImport] No active workplace found, ensuring default workplace before import...',
+            );
+            const defaultWorkplace = await workplaceService.ensureDefaultWorkplace();
+            resolvedWorkplaceId = defaultWorkplace.id;
+          }
+
           let rawBytes = await readFileAsBytes(file.uri);
           rawBytes = await extractIfZip(rawBytes);
 
@@ -89,7 +100,7 @@ export function useImport() {
 
           logger.info(`[useImport] Using plugin: ${plugin.id}`);
 
-          const stats = await plugin.import(context, workplaceId, (msg, prog) => {
+          const stats = await plugin.import(context, resolvedWorkplaceId, (msg, prog) => {
             setProgressMessage(msg);
             setProgress(prog);
           });

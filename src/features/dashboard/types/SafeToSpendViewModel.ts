@@ -8,6 +8,7 @@ import {
 import React from 'react';
 
 export interface SafeToSpendViewModel {
+  currencyCode: string;
   // Raw Totals
   safeToSpend: number;
   shortfall: number;

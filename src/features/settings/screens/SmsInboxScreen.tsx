@@ -26,7 +26,7 @@ function normalizeForMatch(value?: string) {
 
 function SmsInboxContent() {
   const { theme } = useTheme();
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
 
   const [filter, setFilter] = useState<InboxFilter>('pending');
@@ -277,6 +277,7 @@ function SmsInboxContent() {
             <SmsInboxItemCard
               item={item}
               theme={theme}
+              currencyCode={defaultCurrencyCode}
               handleDismiss={handleDismiss}
               handleUndismiss={handleUndismiss}
               handleImport={handleImport}
