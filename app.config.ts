@@ -40,6 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: appConfig.name,
   slug: 'full-frills-balance',
   version: '1.0.0',
+  runtimeVersion: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'fullfrillsbalance',

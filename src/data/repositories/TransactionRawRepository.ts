@@ -10,7 +10,6 @@ import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { getRawAdapter } from '../database/DatabaseUtils';
 import Account, { AccountType } from '../models/Account';
 import Transaction, { TransactionType } from '../models/Transaction';
-import { transactionRepository } from './TransactionRepository';
 import {
   AccountDelta,
   DailyDelta,
@@ -939,7 +938,10 @@ export class TransactionRawRepository {
     endDate: number,
     isAssetOrExpense: boolean = true,
   ): Observable<AccountPeriodMetrics> {
-    return transactionRepository.observeActiveCount(workplaceId).pipe(
+    return from(import('./TransactionRepository')).pipe(
+      switchMap(({ transactionRepository }) =>
+        transactionRepository.observeActiveCount(workplaceId),
+      ),
       switchMap(() =>
         from(
           this.getAccountPeriodMetricsRaw(
@@ -968,13 +970,14 @@ export class TransactionRawRepository {
     startDate: number,
     endDate: number,
   ): Observable<AccountDelta[]> {
-    return transactionRepository
-      .observeActiveCount(workplaceId)
-      .pipe(
-        switchMap(() =>
-          from(this.getAccountDeltasGroupedRaw(workplaceId, accountIds, startDate, endDate)),
-        ),
-      );
+    return from(import('./TransactionRepository')).pipe(
+      switchMap(({ transactionRepository }) =>
+        transactionRepository.observeActiveCount(workplaceId),
+      ),
+      switchMap(() =>
+        from(this.getAccountDeltasGroupedRaw(workplaceId, accountIds, startDate, endDate)),
+      ),
+    );
   }
 
   /**
@@ -990,8 +993,10 @@ export class TransactionRawRepository {
     const multiplierSql = isAssetOrExpense
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
-
-    return transactionRepository.observeActiveCount(workplaceId).pipe(
+    return from(import('./TransactionRepository')).pipe(
+      switchMap(({ transactionRepository }) =>
+        transactionRepository.observeActiveCount(workplaceId),
+      ),
       switchMap(() => {
         const sql = `
           SELECT COUNT(*) as count, SUM(${multiplierSql}) as total

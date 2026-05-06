@@ -3,6 +3,7 @@ import {
   getContextualTokens,
   getFontTheme,
   getThemeColors,
+  Theme,
 } from '@/src/constants/design-tokens';
 import { useThemeOverride, useUI } from '@/src/contexts/UIContext';
 import { blendColors, getWCAGContrastColor } from '@/src/utils/color-math';
@@ -80,4 +81,13 @@ export function useTheme() {
     blend: (color: string, alpha: number) => blendColors(color, theme.surface, alpha),
     getVariantColors: resolveVariantColors,
   };
+}
+
+/**
+ * Helper hook to get color by semantic name.
+ * Strictly follows the application theme.
+ */
+export function useSemanticColor(colorName: keyof Theme) {
+  const { theme } = useTheme();
+  return theme[colorName] || theme.text;
 }

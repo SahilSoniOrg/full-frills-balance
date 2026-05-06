@@ -18,4 +18,5 @@
   <string name="safe_to_spend_widget_loading">Open app to load data</string>
   <string name="safe_to_spend_widget_amount_placeholder">--</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+  <string name="expo_runtime_version">1.0.0</string>
 </resources>

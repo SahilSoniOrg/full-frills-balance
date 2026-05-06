@@ -6,7 +6,8 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 import * as Device from 'expo-device';
 import { useEffect, useRef } from 'react';
-import { InteractionManager, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { runAfterInteractions } from '@/src/utils/scheduler';
 
 // Cache Warmup Imports
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -85,7 +86,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             const yieldToUI = () =>
               new Promise(resolve => {
                 let resolved = false;
-                InteractionManager.runAfterInteractions(() => {
+                runAfterInteractions(() => {
                   if (!resolved) {
                     resolved = true;
                     resolve(null);
@@ -156,8 +157,8 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
       // -----------------------------------------------------------------------
       if (appPhase !== AppPhase.READY) return;
 
-      // InteractionManager ensures we don't jank splash-to-tabs transition
-      InteractionManager.runAfterInteractions(async () => {
+      // runAfterInteractions ensures we don't jank splash-to-tabs transition
+      runAfterInteractions(async () => {
         if (!isActive) return;
 
         logger.info('[Bootstrap] Stabilizing background services...');

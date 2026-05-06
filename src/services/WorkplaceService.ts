@@ -3,7 +3,6 @@ import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/data/models/Account';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { accountService } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -43,6 +42,7 @@ export class WorkplaceService {
   ): Promise<void> {
     const { initialAccounts = [], initialCategories = [], currencyCode } = options;
 
+    const { accountService } = await import('@/src/features/accounts');
     // 1. Ensure system accounts exist
     await accountService.getOpeningBalancesAccountId(currencyCode, workplaceId);
     await accountService.findOrCreateBalanceCorrectionAccount(currencyCode, workplaceId);
@@ -61,7 +61,6 @@ export class WorkplaceService {
         workplaceId,
       );
     }
-
     // 3. Create initial categories
     for (const cat of initialCategories) {
       // Avoid duplicates if already created as account

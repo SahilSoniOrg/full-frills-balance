@@ -4,7 +4,6 @@
  */
 
 import { FontTheme, Shape, Spacing, Theme } from '@/src/constants/design-tokens';
-import { useTheme } from '@/src/hooks/use-theme';
 
 /**
  * Common styles for react-native-ui-datepicker to ensure consistent appearance
@@ -38,17 +37,6 @@ export const getDatePickerStyles = (theme: Theme, fonts: FontTheme) => ({
     marginVertical: 1,
   },
 });
-
-/**
- * Helper hook to get color by semantic name.
- * Now strictly follows the application theme without mode overrides.
- */
-export const useSemanticColor = (colorName: keyof Theme) => {
-  const { theme } = useTheme();
-  return theme[colorName] || theme.text;
-};
-
-export { useTheme };
 
 // === LUMINANCE & CONTRAST HELPERS ===
 

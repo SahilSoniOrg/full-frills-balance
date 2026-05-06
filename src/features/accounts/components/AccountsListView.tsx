@@ -1,3 +1,4 @@
+import { NetWorthCard } from '@/src/components/common/NetWorthCard';
 import {
   AppText,
   ExpandableSearchButton,
@@ -12,7 +13,6 @@ import {
   AccountCardViewModel,
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
-import { NetWorthCard } from '@/src/features/dashboard';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
