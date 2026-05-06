@@ -32,6 +32,11 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
         switchMap(id => {
           if (!id) {
             logger.warn('[WorkplaceProvider] No activeWorkplaceId. Waiting...');
+            // KICKSTART: If we are here, we are missing a workplace ID.
+            // We should try to recover or bootstrap one.
+            workplaceService.ensureDefaultWorkplace().catch(err => {
+              logger.error('[WorkplaceProvider] Failed to bootstrap workplace', err);
+            });
             return of(null);
           }
           return of(id);

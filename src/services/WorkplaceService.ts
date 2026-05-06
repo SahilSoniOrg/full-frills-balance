@@ -90,36 +90,38 @@ export class WorkplaceService {
 
     const promise = (async () => {
       try {
+        let result: Workplace | undefined;
+
         // 1. Check preference first (unless forcing a specific ID)
         if (!forceId) {
           const activeId = preferences.activeWorkplaceId;
           if (activeId) {
-            const workplace = await this.getWorkplace(activeId);
-            if (workplace) return workplace;
+            result = await this.getWorkplace(activeId);
           }
         }
 
         // 2. Fallback to any existing workplace (only if not forcing a specific ID recovery)
-        if (!forceId) {
+        if (!result && !forceId) {
           const workplaces = await this.getAllWorkplaces();
           if (workplaces.length > 0) {
-            const first = workplaces[0];
-            preferences.setActiveWorkplaceId(first.id as WorkplaceId);
-            return first;
+            result = workplaces[0];
+            preferences.setActiveWorkplaceId(result.id as WorkplaceId);
           }
         }
 
         // 3. Create a default one if none exist
-        const defaultWorkplace = await this.createWorkplace('Personal workplace', 'briefcase', {
-          id: forceId,
-          currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
-        });
-        preferences.setActiveWorkplaceId(defaultWorkplace.id as WorkplaceId);
+        if (!result) {
+          result = await this.createWorkplace('Personal workplace', 'briefcase', {
+            id: forceId,
+            currencyCode: preferencesMigration.legacyCurrencyCode || AppConfig.defaultCurrency,
+          });
+          preferences.setActiveWorkplaceId(result.id as WorkplaceId);
+        }
 
-        // Migration: If there is a legacy currency in preferences, apply it to all workplaces
+        // 4. Migration: Ensure legacy currency is applied to ALL workplaces if found
         await this.migrateLegacyCurrency();
 
-        return defaultWorkplace;
+        return result!;
       } finally {
         this.ensuringPromises.delete(key);
       }

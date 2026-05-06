@@ -63,7 +63,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   activeWorkplaceId: undefined,
 };
 
-const LEGACY_PREFERENCE_KEYS = ['defaultCurrencyCode'] as const;
+const LEGACY_PREFERENCE_KEYS = ['defaultCurrencyCode', 'defaultCurrency'] as const;
 
 class PreferencesHelper {
   private preferences: UIPreferences = { ...DEFAULT_UI_PREFERENCES };
@@ -475,10 +475,14 @@ export const preferences = new PreferencesHelper();
  */
 export const preferencesMigration = {
   get legacyCurrencyCode(): string | undefined {
-    return (preferences as any)._legacyData.defaultCurrencyCode;
+    return (
+      (preferences as any)._legacyData.defaultCurrencyCode ||
+      (preferences as any)._legacyData.defaultCurrency
+    );
   },
   clearLegacyCurrencyCode(): void {
     delete (preferences as any)._legacyData.defaultCurrencyCode;
+    delete (preferences as any)._legacyData.defaultCurrency;
     (preferences as any)._save();
   },
 };
