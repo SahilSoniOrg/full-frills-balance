@@ -217,7 +217,7 @@ export const ivyPlugin: ImportPlugin = {
 
     data.transactions.forEach(tx => {
       if (!tx.title && !tx.description) {
-        tx.title = 'unknown';
+        tx.title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1).toLowerCase();
       }
       if (tx.type !== 'TRANSFER' && !tx.categoryId) {
         tx.categoryId = UNKNOWN_CATEGORY_ID;
@@ -228,7 +228,7 @@ export const ivyPlugin: ImportPlugin = {
     if (data.plannedPaymentRules) {
       data.plannedPaymentRules.forEach(rule => {
         if (!rule.title && !rule.description) {
-          rule.title = 'unknown';
+          rule.title = rule.type.charAt(0).toUpperCase() + rule.type.slice(1).toLowerCase();
         }
         if (rule.type !== 'TRANSFER' && !rule.categoryId) {
           rule.categoryId = UNKNOWN_CATEGORY_ID;
@@ -490,7 +490,12 @@ export const ivyPlugin: ImportPlugin = {
         if (rule.isDeleted) return;
 
         const fromAccountId = accountMap.get(rule.accountId);
-        if (!fromAccountId) return;
+        if (!fromAccountId) {
+          logger.warn(
+            `[IvyPlugin] Skipping rule ${rule.id} (${rule.title}): Missing fromAccountId ${rule.accountId}`,
+          );
+          return;
+        }
 
         const newRuleId = generateId() as PlannedPaymentId;
         plannedPaymentMap.set(rule.id, newRuleId);
@@ -514,7 +519,12 @@ export const ivyPlugin: ImportPlugin = {
         const today = now.getTime();
 
         if (rule.oneTime) {
-          if (finalNextOcc < today) return;
+          if (finalNextOcc < today) {
+            logger.info(
+              `[IvyPlugin] Skipping one-time rule ${rule.id} (${rule.title}) in the past: ${new Date(finalNextOcc).toLocaleDateString()}`,
+            );
+            return;
+          }
         } else if (finalNextOcc < today) {
           let safetyCap = 0;
           while (finalNextOcc < today && safetyCap < 1000) {
@@ -557,6 +567,10 @@ export const ivyPlugin: ImportPlugin = {
             } else if (rule.type === 'EXPENSE') {
               toAccountId = catAccId;
             }
+          } else {
+            logger.warn(
+              `[IvyPlugin] Category account missing for rule ${rule.id} (${rule.title}), category: ${rule.categoryId}`,
+            );
           }
         }
 
@@ -638,9 +652,33 @@ export const ivyPlugin: ImportPlugin = {
         currencyCode = rawIvyAccountCurrency.get(tx.accountId)!;
       }
 
+      const primaryAccId = accountMap.get(tx.accountId);
+      if (!primaryAccId) {
+        skippedItems.push({
+          id: tx.id,
+          reason: `Primary account not found: ${tx.accountId}`,
+          description: txDesc,
+        });
+        continue;
+      }
+
       const key = `${tx.categoryId}:::${currencyCode}`;
 
-      if (isOpeningBalance || isAdjustBalance) {
+      if (tx.type === 'TRANSFER' && tx.toAccountId) {
+        const sourceAccId = accountMap.get(tx.accountId);
+        const destAccId = accountMap.get(tx.toAccountId);
+        if (!sourceAccId || !destAccId) {
+          skippedItems.push({
+            id: tx.id,
+            reason: `Invalid Transfer Accounts - source: ${tx.accountId} (mapped: ${sourceAccId}), dest: ${tx.toAccountId} (mapped: ${destAccId})`,
+            description: txDesc,
+          });
+          continue;
+        }
+        sourceId = sourceAccId;
+        destId = destAccId;
+        displayType = JournalDisplayType.TRANSFER;
+      } else if (isOpeningBalance || isAdjustBalance) {
         // Route to the dedicated Equity account based on type
         const accountConfig = isOpeningBalance
           ? AppConfig.systemAccounts.openingBalances
@@ -680,50 +718,49 @@ export const ivyPlugin: ImportPlugin = {
         if (!sourceId || !destId) {
           skippedItems.push({
             id: tx.id,
-            reason: `Missing account mapping for system tx (${systemKey})`,
+            reason: `Missing account mapping for system tx (${systemKey}) - source: ${sourceId}, dest: ${destId}`,
             description: txDesc,
           });
         }
       } else if (tx.type === 'TRANSFER') {
-        const sourceAccId = accountMap.get(tx.accountId);
-        const destAccId = accountMap.get(tx.toAccountId || '');
-        if (!sourceAccId || !destAccId) {
-          skippedItems.push({
-            id: tx.id,
-            reason: 'Invalid Transfer Accounts',
-            description: txDesc,
-          });
-          continue;
-        }
-        sourceId = sourceAccId;
-        destId = destAccId;
-        displayType = JournalDisplayType.TRANSFER;
+        // Fallback for transfer with missing toAccountId - should have been caught above but just in case
+        skippedItems.push({
+          id: tx.id,
+          reason: 'Transfer missing toAccountId',
+          description: txDesc,
+        });
+        continue;
       } else if (tx.type === 'EXPENSE') {
-        sourceId = accountMap.get(tx.accountId);
+        sourceId = primaryAccId;
         destId = categoryAccountMap.get(key);
         displayType = JournalDisplayType.EXPENSE;
         if (!destId) {
           skippedItems.push({
             id: tx.id,
-            reason: `Missing Category Account (${key})`,
+            reason: `Missing Category Account for Expense (${key})`,
             description: txDesc,
           });
         }
       } else {
         // INCOME
         sourceId = categoryAccountMap.get(key);
-        destId = accountMap.get(tx.accountId);
+        destId = primaryAccId;
         displayType = JournalDisplayType.INCOME;
         if (!sourceId) {
           skippedItems.push({
             id: tx.id,
-            reason: `Missing Category Account (${key})`,
+            reason: `Missing Category Account for Income (${key})`,
             description: txDesc,
           });
         }
       }
 
       if (!sourceId || !destId) {
+        skippedItems.push({
+          id: tx.id,
+          reason: `Missing generic account mapping (source: ${sourceId}, dest: ${destId})`,
+          description: txDesc,
+        });
         continue;
       }
 
