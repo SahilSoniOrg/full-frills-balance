@@ -153,9 +153,10 @@ export class BudgetRepository {
         record.updatedAt = new Date();
       });
 
-      const existingAccountIds = existingScopes.map(s => s.account.id);
-      const toAdd = accountIds.filter(id => !existingAccountIds.includes(id));
-      const toRemove = existingScopes.filter(s => !accountIds.includes(s.account.id));
+      const existingAccountIdsSet = new Set(existingScopes.map(s => s.account.id));
+      const accountIdsSet = new Set(accountIds);
+      const toAdd = accountIds.filter(id => !existingAccountIdsSet.has(id));
+      const toRemove = existingScopes.filter(s => !accountIdsSet.has(s.account.id));
 
       const addOps = toAdd.map(accountId =>
         this.budgetScopes.prepareCreate(scope => {
@@ -186,6 +187,22 @@ export class BudgetRepository {
       const removeBudget = budget.prepareDestroyPermanently();
       await this.db.batch(...removeScopes, removeBudget);
     });
+  }
+
+  async findAllScopesByAccountIds(
+    workplaceId: WorkplaceId,
+    accountIds: AccountId[],
+  ): Promise<BudgetScope[]> {
+    if (accountIds.length === 0) return [];
+    return await this.budgetScopes
+      .query(Q.where('workplace_id', workplaceId), Q.where('account_id', Q.oneOf(accountIds)))
+      .fetch();
+  }
+
+  async findAllWithAssetAccountIds(workplaceId: WorkplaceId): Promise<Budget[]> {
+    return await this.budgets
+      .query(Q.where('workplace_id', workplaceId), Q.where('asset_account_ids', Q.notEq(null)))
+      .fetch();
   }
 }
 

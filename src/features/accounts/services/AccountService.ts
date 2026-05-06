@@ -1,5 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
+import { database } from '@/src/data/database/Database';
 import Account, {
   AccountSubtype,
   AccountType,
@@ -8,13 +9,18 @@ import Account, {
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
+import { transactionService } from '@/src/features/journal';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { balanceService } from '@/src/services/BalanceService';
+import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { smsService } from '@/src/services/sms-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
@@ -580,6 +586,149 @@ export class AccountService {
       minimumPaymentPercent: meta.minimumPaymentPercent,
       notes: meta.notes,
     };
+  }
+
+  /**
+   * Merges one or more source accounts into a target account.
+   * Moves all transactions, planned payments, SMS rules, and budget associations.
+   * Deletes balance snapshots and enqueues a rebuild for the target account.
+   */
+  async mergeAccounts(
+    workplaceId: WorkplaceId,
+    targetAccountId: AccountId,
+    sourceAccountIds: AccountId[],
+  ): Promise<void> {
+    logger.info('[AccountService] mergeAccounts requested', {
+      workplaceId,
+      targetAccountId,
+      sourceAccountIds,
+    });
+
+    // 1. Fetch and deduplicate IDs
+    const filteredSourceIds = [...new Set(sourceAccountIds)].filter(id => id !== targetAccountId);
+    if (filteredSourceIds.length === 0) {
+      logger.info('[AccountService] No valid source accounts to merge.');
+      return;
+    }
+
+    const [targetAccount, sourceAccounts] = await Promise.all([
+      accountRepository.find(workplaceId, targetAccountId),
+      accountRepository.findAllByIds(workplaceId, filteredSourceIds),
+    ]);
+
+    await this.validateMergeEligibility(
+      workplaceId,
+      targetAccountId,
+      filteredSourceIds,
+      targetAccount,
+      sourceAccounts,
+    );
+
+    // 2. Prepare all merge operations through respective services
+    // This maintains segregation of concerns and avoids direct table access in AccountService
+    const [transactionOps, plannedOps, smsOps, budgetOps, accountOps, snapshotOps] =
+      await Promise.all([
+        transactionService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+        plannedPaymentService.prepareMergeOperations(
+          workplaceId,
+          filteredSourceIds,
+          targetAccountId,
+        ),
+        smsService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+        budgetWriteService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+        accountRepository.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+        balanceSnapshotRepository.prepareMergeOperations(workplaceId, [
+          ...filteredSourceIds,
+          targetAccountId,
+        ]),
+      ]);
+
+    await database.write(async () => {
+      // Execute all operations atomically in a single batch
+      await database.batch([
+        ...transactionOps,
+        ...plannedOps,
+        ...smsOps,
+        ...budgetOps,
+        ...accountOps,
+        ...snapshotOps,
+      ]);
+    });
+
+    // 3. Post-merge actions
+    rebuildQueueService.enqueue(targetAccountId, 0, workplaceId);
+
+    await auditService.log(
+      {
+        entityType: 'account',
+        entityId: targetAccountId,
+        action: AuditAction.UPDATE,
+        changes: {
+          action: 'MERGE_ACCOUNTS',
+          mergedAccountIds: filteredSourceIds,
+        },
+      },
+      workplaceId,
+    );
+
+    analytics.trackFeatureUsage('account', 'merge', {
+      source_count: filteredSourceIds.length,
+      account_type: targetAccount?.accountType || AccountType.ASSET,
+    });
+
+    logger.info('[AccountService] mergeAccounts completed successfully', {
+      targetAccountId,
+      movedCount: filteredSourceIds.length,
+    });
+  }
+
+  /**
+   * Validates if a merge operation is allowed between the target and source accounts.
+   */
+  private async validateMergeEligibility(
+    workplaceId: WorkplaceId,
+    targetAccountId: AccountId,
+    sourceAccountIds: AccountId[],
+    targetAccount?: Account | null,
+    sourceAccounts?: Account[],
+  ): Promise<void> {
+    const target = targetAccount ?? (await accountRepository.find(workplaceId, targetAccountId));
+    if (!target) throw new Error('Target account not found or deleted');
+    if (target.workplaceId !== workplaceId) throw new Error('Target account workplace mismatch');
+
+    const sources =
+      sourceAccounts ?? (await accountRepository.findAllByIds(workplaceId, sourceAccountIds));
+
+    if (sources.length !== sourceAccountIds.length) {
+      throw new Error('One or more source accounts not found or deleted');
+    }
+
+    for (const source of sources) {
+      if (source.id === targetAccountId) {
+        throw new Error('Cannot merge an account into itself');
+      }
+      if (source.workplaceId !== workplaceId) {
+        throw new Error(`Source account "${source.name}" workplace mismatch`);
+      }
+      if (source.accountType !== target.accountType) {
+        throw new Error(
+          `Cannot merge accounts of different categories: ${source.name} and ${target.name}`,
+        );
+      }
+      if (source.accountSubtype !== target.accountSubtype) {
+        throw new Error(
+          `Cannot merge accounts of different sub-categories: ${source.name} and ${target.name}`,
+        );
+      }
+      if (source.currencyCode !== target.currencyCode) {
+        throw new Error(
+          `Cannot merge accounts with different currencies: ${source.name} (${source.currencyCode}) and ${target.name} (${target.currencyCode})`,
+        );
+      }
+    }
+
+    // Optional: prevent merging system accounts if identified by some flag or name pattern
+    // This can be expanded as needed.
   }
 }
 

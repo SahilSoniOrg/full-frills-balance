@@ -50,6 +50,7 @@ import {
   Lock,
   LogOut,
   Menu,
+  Merge,
   MessageCircle,
   MessageSquare,
   EllipsisVertical as MoreVertical,
@@ -183,6 +184,7 @@ export const IconMap = {
   checkSquare: SquareCheck,
   minusSquare: SquareMinus,
   x: X,
+  merge: Merge,
 } as const;
 
 export type IconName = keyof typeof IconMap;

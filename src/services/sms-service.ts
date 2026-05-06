@@ -1310,6 +1310,57 @@ class SmsService {
       sampleMerchants: group.merchant ? [group.merchant] : [],
     };
   }
+
+  /**
+   * Prepares WatermelonDB operations to merge auto-post rules from source accounts to a target account.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<SmsAutoPostRule[]> {
+    const rulesSource = await this.rules
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('source_account_id', Q.oneOf(sourceAccountIds)),
+      )
+      .fetch();
+    const rulesCategory = await this.rules
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('category_account_id', Q.oneOf(sourceAccountIds)),
+      )
+      .fetch();
+
+    // Use a Map to aggregate mutations for the same record
+    const mutations = new Map<
+      string,
+      { source?: AccountId; category?: AccountId; record: SmsAutoPostRule }
+    >();
+
+    rulesSource.forEach(rule => {
+      if (!mutations.has(rule.id)) {
+        mutations.set(rule.id, { record: rule });
+      }
+      mutations.get(rule.id)!.source = targetAccountId;
+    });
+
+    rulesCategory.forEach(rule => {
+      if (!mutations.has(rule.id)) {
+        mutations.set(rule.id, { record: rule });
+      }
+      mutations.get(rule.id)!.category = targetAccountId;
+    });
+
+    // Emit exactly one prepareUpdate per record
+    return Array.from(mutations.values()).map(({ record, source, category }) => {
+      return record.prepareUpdate((r: SmsAutoPostRule) => {
+        if (source) r.sourceAccountId = source;
+        if (category) r.categoryAccountId = category;
+        r.updatedAt = new Date();
+      });
+    });
+  }
 }
 
 export const smsService = new SmsService();

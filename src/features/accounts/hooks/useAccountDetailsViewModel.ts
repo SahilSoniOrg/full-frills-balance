@@ -76,6 +76,9 @@ export interface AccountDetailsViewModel {
     onEdit: () => void;
     onDelete: () => void;
     onReconcile: () => void;
+    onMerge: () => void;
+    canDelete: boolean;
+    canMerge: boolean;
   };
   isReconcileModalVisible: boolean;
   setIsReconcileModalVisible: (visible: boolean) => void;
@@ -126,6 +129,10 @@ export interface AccountDetailsViewModel {
   exitSelectionMode: () => void;
   onShareSelected: () => void;
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<TransactionId>>>;
+  isMergeModalVisible: boolean;
+  setIsMergeModalVisible: (visible: boolean) => void;
+  mergeCandidates: Account[];
+  onConfirmMerge: (targetAccountId: AccountId) => void;
 }
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
@@ -186,6 +193,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     deleteAccount,
     recoverAccount: recoverAction,
     reconcileAccount,
+    mergeAccounts,
   } = useAccountActions(workplaceId);
 
   const {
@@ -481,6 +489,56 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     }
   }, [accountId, reconcileAccount]);
 
+  const [isMergeModalVisible, setIsMergeModalVisible] = useState(false);
+  const mergeCandidates = useMemo(() => {
+    if (!account) return [];
+    return accounts.filter(
+      a =>
+        a.id !== accountId &&
+        a.accountType === account.accountType &&
+        a.accountSubtype === account.accountSubtype &&
+        a.currencyCode === account.currencyCode &&
+        a.deletedAt === null,
+    );
+  }, [account, accounts, accountId]);
+
+  const onMerge = useCallback(() => {
+    if (mergeCandidates.length === 0) {
+      toast.info('No eligible accounts found to merge into.');
+      return;
+    }
+    setIsMergeModalVisible(true);
+  }, [mergeCandidates.length]);
+
+  const onConfirmMerge = useCallback(
+    async (targetAccountId: AccountId) => {
+      const target = accounts.find(a => a.id === targetAccountId);
+      if (!target || !account) return;
+
+      setIsMergeModalVisible(false);
+
+      confirm.show({
+        title: 'Merge Accounts',
+        message: `This account has transactions and cannot be deleted directly. Merging will move ALL transactions, planned payments, and rules from "${account.name}" into "${target.name}", and then delete "${account.name}". This action is permanent.`,
+        destructive: true,
+        requiredConfirmationValue: account.name,
+        onConfirm: async () => {
+          try {
+            await mergeAccounts(targetAccountId, [accountId]);
+            toast.success(`Successfully merged into ${target.name}`);
+            AppNavigation.toAccounts();
+          } catch (error) {
+            logger.error('Failed to merge accounts:', error);
+            showErrorAlert(
+              `Merge failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
+          }
+        },
+      });
+    },
+    [account, accountId, accounts, mergeAccounts],
+  );
+
   const onEdit = useCallback(() => {
     if (!account) return;
     AppNavigation.toAccountForm(accountId, {
@@ -679,7 +737,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }
-  }, [selectedIds, transactions, account?.name, defaultShareFormat]);
+  }, [selectedIds, transactions, account?.name, defaultShareFormat, workplaceCurrency]);
 
   const selectAll = useCallback(() => {
     const visibleIds = transactionItems.filter(i => i.type === 'transaction').map(i => i.id);
@@ -811,7 +869,16 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     currencyCode: balanceCurrency,
     balanceText,
     transactionCountText,
-    headerActions: { canRecover: isDeleted, onRecover, onEdit, onDelete, onReconcile },
+    headerActions: {
+      canRecover: isDeleted,
+      onRecover,
+      onEdit,
+      onDelete,
+      onReconcile,
+      onMerge,
+      canDelete: !isDeleted && transactionCount === 0,
+      canMerge: !isDeleted && transactionCount > 0,
+    },
     isReconcileModalVisible,
     setIsReconcileModalVisible,
     onConfirmReconcile,
@@ -861,5 +928,9 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     exitSelectionMode,
     onShareSelected,
     setSelectedIds,
+    isMergeModalVisible,
+    setIsMergeModalVisible,
+    mergeCandidates,
+    onConfirmMerge,
   };
 }

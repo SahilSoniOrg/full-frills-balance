@@ -282,6 +282,13 @@ export function useAccountActions(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
+  const mergeAccounts = useCallback(
+    async (targetAccountId: AccountId, sourceAccountIds: AccountId[]) => {
+      return accountService.mergeAccounts(workplaceId, targetAccountId, sourceAccountIds);
+    },
+    [workplaceId],
+  );
+
   return {
     createAccount,
     updateAccount,
@@ -291,6 +298,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
     findAccountByName,
     adjustBalance,
     reconcileAccount,
+    mergeAccounts,
   };
 }
 

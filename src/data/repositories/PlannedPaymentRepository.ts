@@ -131,6 +131,34 @@ export class PlannedPaymentRepository {
       });
     });
   }
+
+  async findAllByFromAccountIds(
+    workplaceId: WorkplaceId,
+    accountIds: AccountId[],
+  ): Promise<PlannedPayment[]> {
+    if (accountIds.length === 0) return [];
+    return this.plannedPayments
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('from_account_id', Q.oneOf(accountIds)),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+  }
+
+  async findAllByToAccountIds(
+    workplaceId: WorkplaceId,
+    accountIds: AccountId[],
+  ): Promise<PlannedPayment[]> {
+    if (accountIds.length === 0) return [];
+    return this.plannedPayments
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('to_account_id', Q.oneOf(accountIds)),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+  }
 }
 
 export const plannedPaymentRepository = new PlannedPaymentRepository();

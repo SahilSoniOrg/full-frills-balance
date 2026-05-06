@@ -29,6 +29,10 @@ jest.mock('@/src/data/database/Database', () => ({
 }));
 
 describe('PlannedPaymentService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('calculateNextOccurrence', () => {
     // Use fixed dates for testing
     // Jan 31, 2024 (Wednesday)
@@ -358,9 +362,44 @@ describe('PlannedPaymentService', () => {
       expect(mockJournal.status).toBe('SKIPPED');
       expect(plannedPaymentRepository.update).toHaveBeenCalled();
 
-      const nextOcc = (plannedPaymentRepository.update as jest.Mock).mock.calls[0][1]
+      const nextOcc = (plannedPaymentRepository.update as jest.Mock).mock.calls[0][2]
         .nextOccurrence as number;
       expect(new Date(nextOcc).getMonth()).toBe(1); // Feb
+    });
+  });
+
+  describe('prepareMergeOperations', () => {
+    test('handles dual-reference case (both from and to accounts are source accounts)', async () => {
+      const sourceAccountIds = ['acc-1', 'acc-2'] as AccountId[];
+      const targetAccountId = 'target-acc' as AccountId;
+      const workplaceId = 'wp-1' as WorkplaceId;
+
+      const mockPP = {
+        id: 'pp-dual',
+        fromAccountId: 'acc-1',
+        toAccountId: 'acc-2',
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
+          const record = { id: 'pp-dual', fromAccountId: 'acc-1', toAccountId: 'acc-2' };
+          fn(record);
+          return record;
+        }),
+      };
+
+      // Mock repository to return the same PP for both queries
+      (plannedPaymentRepository.findAllByFromAccountIds as jest.Mock).mockResolvedValue([mockPP]);
+      (plannedPaymentRepository.findAllByToAccountIds as jest.Mock).mockResolvedValue([mockPP]);
+
+      const ops = await plannedPaymentService.prepareMergeOperations(
+        workplaceId,
+        sourceAccountIds,
+        targetAccountId,
+      );
+
+      // Verify exactly one prepareUpdate was called
+      expect(mockPP.prepareUpdate).toHaveBeenCalledTimes(1);
+      expect(ops.length).toBe(1);
+      expect(ops[0].fromAccountId).toBe(targetAccountId);
+      expect(ops[0].toAccountId).toBe(targetAccountId);
     });
   });
 });

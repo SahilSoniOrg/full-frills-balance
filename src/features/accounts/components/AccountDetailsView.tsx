@@ -1,3 +1,4 @@
+import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
@@ -107,7 +108,7 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                 iconColor: theme.income,
               },
             ]
-          : [
+          : ([
               {
                 name: 'history',
                 onPress: onAuditPress,
@@ -133,14 +134,25 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                       : theme.textSecondary,
                 testID: 'reconcile-button',
               },
-              {
-                name: 'delete',
-                onPress: headerActions.onDelete,
-                variant: 'surface',
-                iconColor: theme.error,
-                testID: 'delete-button',
-              },
-            ]
+              headerActions.canDelete
+                ? {
+                    name: 'delete',
+                    onPress: headerActions.onDelete,
+                    variant: 'surface',
+                    iconColor: theme.error,
+                    testID: 'delete-button',
+                  }
+                : null,
+              headerActions.canMerge
+                ? {
+                    name: 'merge',
+                    onPress: headerActions.onMerge,
+                    variant: 'surface',
+                    iconColor: theme.error,
+                    testID: 'merge-button',
+                  }
+                : null,
+            ].filter(Boolean) as any)
       }
     />
   );
@@ -256,6 +268,14 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
         onConfirm={vm.onConfirmReconcile}
         balanceText={vm.balanceText}
         unreconciledCount={vm.unreconciledCount}
+      />
+
+      <AccountPickerModal
+        visible={vm.isMergeModalVisible}
+        onClose={() => vm.setIsMergeModalVisible(false)}
+        accounts={vm.mergeCandidates}
+        onSelect={vm.onConfirmMerge}
+        title="Merge Into Account"
       />
     </Screen>
   );

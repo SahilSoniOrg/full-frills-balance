@@ -206,7 +206,8 @@ export class ReportService {
     let accounts = type === AccountType.INCOME ? incomeAccounts : expenseAccounts;
 
     if (filterAccountIds && filterAccountIds.length > 0) {
-      accounts = accounts.filter(a => filterAccountIds.includes(a.id));
+      const filterSet = new Set(filterAccountIds);
+      accounts = accounts.filter(a => filterSet.has(a.id));
     }
 
     const accountIds = accounts.map(a => a.id);
@@ -261,7 +262,8 @@ export class ReportService {
     let accounts = type === AccountType.INCOME ? incomeAccounts : expenseAccounts;
 
     if (filterAccountIds && filterAccountIds.length > 0) {
-      accounts = accounts.filter(a => filterAccountIds.includes(a.id));
+      const filterSet = new Set(filterAccountIds);
+      accounts = accounts.filter(a => filterSet.has(a.id));
     }
 
     const accountIds = accounts.map(a => a.id);
@@ -331,7 +333,8 @@ export class ReportService {
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
 
     if (filterAccountIds && filterAccountIds.length > 0) {
-      allAccounts = allAccounts.filter(a => filterAccountIds.includes(a.id));
+      const filterSet = new Set(filterAccountIds);
+      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
     }
 
     const allIds = allAccounts.map(a => a.id);
@@ -449,7 +452,8 @@ export class ReportService {
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
 
     if (filterAccountIds && filterAccountIds.length > 0) {
-      allAccounts = allAccounts.filter(a => filterAccountIds.includes(a.id));
+      const filterSet = new Set(filterAccountIds);
+      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
     }
 
     const allIds = allAccounts.map(a => a.id);
@@ -511,7 +515,8 @@ export class ReportService {
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
 
     if (filterAccountIds && filterAccountIds.length > 0) {
-      allAccounts = allAccounts.filter(a => filterAccountIds.includes(a.id));
+      const filterSet = new Set(filterAccountIds);
+      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
     }
 
     const allIds = allAccounts.map(a => a.id);
@@ -642,8 +647,9 @@ export class ReportService {
       );
       const accountTypeMap = new Map(accounts.map(a => [a.id, a.accountType]));
 
+      const accountIdsSet = new Set(accountIds);
       return converted
-        .filter(tx => accountIds.includes(tx.accountId))
+        .filter(tx => accountIdsSet.has(tx.accountId))
         .map(tx => {
           const type = accountTypeMap.get(tx.accountId) || tx.accountType;
           const delta = getAccountBalanceDelta(tx.amount, type, tx.transactionType);
@@ -674,7 +680,8 @@ export class ReportService {
     );
     let allAccounts = [...incomeAccounts, ...expenseAccounts];
     if (filterAccountIds && filterAccountIds.length > 0) {
-      allAccounts = allAccounts.filter(a => filterAccountIds.includes(a.id));
+      const filterSet = new Set(filterAccountIds);
+      allAccounts = allAccounts.filter(a => filterSet.has(a.id));
     }
 
     const allIds = allAccounts.map(a => a.id);

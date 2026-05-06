@@ -1,4 +1,5 @@
 import Budget from '@/src/data/models/Budget';
+import BudgetScope from '@/src/data/models/BudgetScope';
 import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -57,6 +58,52 @@ export class BudgetWriteService {
       budget_id: budget.id,
       budget_name: budget.name,
     });
+  }
+
+  /**
+   * Prepares WatermelonDB operations to merge budgets from source accounts to a target account.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<(Budget | BudgetScope)[]> {
+    const scopes = await budgetRepository.findAllScopesByAccountIds(workplaceId, sourceAccountIds);
+    const budgets = await budgetRepository.findAllWithAssetAccountIds(workplaceId);
+
+    const scopeOps = scopes.map((s: BudgetScope) =>
+      s.prepareUpdate((r: BudgetScope) => {
+        r.accountId = targetAccountId;
+        r.updatedAt = new Date();
+      }),
+    );
+
+    const sourceIdsSet = new Set(sourceAccountIds);
+
+    const budgetOps: Budget[] = [];
+    for (const budget of budgets) {
+      if (!budget.assetAccountIds) continue;
+      let ids = budget.assetAccountIds.split(',');
+      let changed = false;
+      ids = ids.map(id => {
+        if (sourceIdsSet.has(id as AccountId)) {
+          changed = true;
+          return targetAccountId;
+        }
+        return id;
+      });
+      if (changed) {
+        ids = Array.from(new Set(ids));
+        budgetOps.push(
+          budget.prepareUpdate((r: Budget) => {
+            r.assetAccountIds = ids.join(',');
+            r.updatedAt = new Date();
+          }),
+        );
+      }
+    }
+
+    return [...scopeOps, ...budgetOps];
   }
 }
 

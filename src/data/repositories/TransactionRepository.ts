@@ -624,6 +624,20 @@ export class TransactionRepository {
       .fetchCount();
     return count > 0;
   }
+
+  async findAllByAccountIds(
+    workplaceId: WorkplaceId,
+    accountIds: AccountId[],
+  ): Promise<Transaction[]> {
+    if (accountIds.length === 0) return [];
+    return this.transactions
+      .query(
+        Q.where('account_id', Q.oneOf(accountIds)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
+      .fetch();
+  }
 }
 
 export const transactionRepository = new TransactionRepository();

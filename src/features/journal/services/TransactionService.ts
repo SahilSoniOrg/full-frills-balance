@@ -206,6 +206,27 @@ export class TransactionService {
       exchangeRate: tx.exchangeRate,
     } as DisplayTransaction;
   }
+
+  /**
+   * Prepares WatermelonDB operations to merge transactions from multiple accounts into a target account.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<Transaction[]> {
+    const transactions = await transactionRepository.findAllByAccountIds(
+      workplaceId,
+      sourceAccountIds,
+    );
+    return transactions.map((tx: Transaction) =>
+      tx.prepareUpdate((r: Transaction) => {
+        r.accountId = targetAccountId;
+        r.runningBalance = null; // Invalidate cache
+        r.updatedAt = new Date();
+      }),
+    );
+  }
 }
 
 export const transactionService = new TransactionService();

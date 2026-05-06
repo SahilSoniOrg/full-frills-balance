@@ -156,7 +156,8 @@ export const wealthService = {
     );
 
     if (accountIds && accountIds.length > 0) {
-      relevantBalances = relevantBalances.filter(a => accountIds.includes(a.accountId));
+      const accountIdsSet = new Set(accountIds);
+      relevantBalances = relevantBalances.filter(a => accountIdsSet.has(a.accountId));
     }
 
     if (relevantBalances.length === 0) return [];

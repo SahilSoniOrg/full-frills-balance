@@ -144,6 +144,19 @@ export class BalanceSnapshotRepository {
       });
     }
   }
+
+  /**
+   * Prepares WatermelonDB operations to delete balance snapshots for multiple accounts.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    accountIds: AccountId[],
+  ): Promise<BalanceSnapshot[]> {
+    const snapshots = await this.snapshots
+      .query(Q.where('workplace_id', workplaceId), Q.where('account_id', Q.oneOf(accountIds)))
+      .fetch();
+    return snapshots.map(s => s.prepareDestroyPermanently());
+  }
 }
 
 /**

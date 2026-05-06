@@ -1,12 +1,13 @@
-import { SmsParseStatus } from '@/src/data/models/SmsInboxRecord'
-import { smsService } from '@/src/services/sms-service'
+import { SmsParseStatus } from '@/src/data/models/SmsInboxRecord';
+import { smsService } from '@/src/services/sms-service';
+import { database } from '@/src/data/database/Database';
 
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
   default: undefined,
-}))
+}));
 
-jest.mock('@/src/utils/logger')
+jest.mock('@/src/utils/logger');
 
 describe('smsService.parseTransactionMessage', () => {
   it('parses INR debit messages with merchant and account source', () => {
@@ -15,16 +16,16 @@ describe('smsService.parseTransactionMessage', () => {
       address: 'HDFCBK',
       body: 'Your card XX1234 is debited by INR 1,299.50 at SWIGGY on 07-03. Ref 12345678',
       date: 1700000000000,
-    })
+    });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSED)
-    expect(parsed.type).toBe('debit')
-    expect(parsed.amount).toBe(1299.5)
-    expect(parsed.currencyCode).toBe('INR')
-    expect(parsed.merchant).toBe('SWIGGY')
-    expect(parsed.accountSource).toBe('Card 1234')
-    expect(parsed.referenceNumber).toBe('12345678')
-  })
+    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSED);
+    expect(parsed.type).toBe('debit');
+    expect(parsed.amount).toBe(1299.5);
+    expect(parsed.currencyCode).toBe('INR');
+    expect(parsed.merchant).toBe('SWIGGY');
+    expect(parsed.accountSource).toBe('Card 1234');
+    expect(parsed.referenceNumber).toBe('12345678');
+  });
 
   it('parses symbol-based foreign currency messages', () => {
     const parsed = smsService.parseTransactionMessage({
@@ -32,14 +33,14 @@ describe('smsService.parseTransactionMessage', () => {
       address: 'AMEX',
       body: 'Amt $24.99 spent at NETFLIX on your card 9876',
       date: 1700000001000,
-    })
+    });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSED)
-    expect(parsed.amount).toBe(24.99)
-    expect(parsed.currencyCode).toBe('USD')
-    expect(parsed.merchant).toBe('NETFLIX')
-    expect(parsed.type).toBe('debit')
-  })
+    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSED);
+    expect(parsed.amount).toBe(24.99);
+    expect(parsed.currencyCode).toBe('USD');
+    expect(parsed.merchant).toBe('NETFLIX');
+    expect(parsed.type).toBe('debit');
+  });
 
   it('marks transaction-like messages without amount as parse failed', () => {
     const parsed = smsService.parseTransactionMessage({
@@ -47,11 +48,11 @@ describe('smsService.parseTransactionMessage', () => {
       address: 'ICICIB',
       body: 'Your account was debited at AMAZON. Balance available is 5000.',
       date: 1700000002000,
-    })
+    });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSE_FAILED)
-    expect(parsed.parseReason).toContain('supported amount')
-  })
+    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSE_FAILED);
+    expect(parsed.parseReason).toContain('supported amount');
+  });
 
   it('ignores personal sender messages', () => {
     const parsed = smsService.parseTransactionMessage({
@@ -59,9 +60,52 @@ describe('smsService.parseTransactionMessage', () => {
       address: '+919999999999',
       body: 'Paid INR 100 to friend',
       date: 1700000003000,
-    })
+    });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.IGNORED)
-    expect(parsed.parseReason).toContain('Personal')
-  })
-})
+    expect(parsed.parseStatus).toBe(SmsParseStatus.IGNORED);
+    expect(parsed.parseReason).toContain('Personal');
+  });
+});
+
+describe('smsService.prepareMergeOperations', () => {
+  test('handles dual-reference case (both source and category accounts are source accounts)', async () => {
+    const sourceAccountIds = ['acc-1', 'acc-2'];
+    const targetAccountId = 'target-acc';
+    const workplaceId = 'wp-1';
+
+    const mockRule = {
+      id: 'rule-dual',
+      sourceAccountId: 'acc-1',
+      categoryAccountId: 'acc-2',
+      prepareUpdate: jest.fn().mockImplementation((fn: any) => {
+        const record = { id: 'rule-dual', sourceAccountId: 'acc-1', categoryAccountId: 'acc-2' };
+        fn(record);
+        return record;
+      }),
+    };
+
+    // Mock query and fetch
+    const mockQuery = {
+      fetch: jest.fn().mockResolvedValue([mockRule]),
+    };
+
+    // Mock database.collections.get to return our mock rules
+    const databaseSpy = jest.spyOn(database.collections, 'get').mockReturnValue({
+      query: jest.fn().mockReturnValue(mockQuery),
+    } as any);
+
+    const ops = await smsService.prepareMergeOperations(
+      workplaceId as any,
+      sourceAccountIds as any,
+      targetAccountId as any,
+    );
+
+    // Verify exactly one prepareUpdate was called
+    expect(mockRule.prepareUpdate).toHaveBeenCalledTimes(1);
+    expect(ops.length).toBe(1);
+    expect((ops[0] as any).sourceAccountId).toBe(targetAccountId);
+    expect((ops[0] as any).categoryAccountId).toBe(targetAccountId);
+
+    databaseSpy.mockRestore();
+  });
+});

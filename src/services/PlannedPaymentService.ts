@@ -12,7 +12,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import { Q } from '@nozbe/watermelondb';
@@ -93,7 +93,8 @@ export class PlannedPaymentService {
         }
         break;
     }
-    return date.getTime();
+    const result = date.getTime();
+    return result;
   }
 
   /**
@@ -580,6 +581,53 @@ export class PlannedPaymentService {
         await plannedPaymentRepository.update(workplaceId, pp, { nextOccurrence: nextOcc });
       }
     }
+  }
+
+  /**
+   * Prepares WatermelonDB operations to merge planned payments from source accounts to a target account.
+   */
+  async prepareMergeOperations(
+    workplaceId: WorkplaceId,
+    sourceAccountIds: AccountId[],
+    targetAccountId: AccountId,
+  ): Promise<PlannedPayment[]> {
+    const plannedFrom = await plannedPaymentRepository.findAllByFromAccountIds(
+      workplaceId,
+      sourceAccountIds,
+    );
+    const plannedTo = await plannedPaymentRepository.findAllByToAccountIds(
+      workplaceId,
+      sourceAccountIds,
+    );
+
+    // Use a Map to aggregate mutations for the same record
+    const mutations = new Map<
+      string,
+      { from?: AccountId; to?: AccountId; record: PlannedPayment }
+    >();
+
+    plannedFrom.forEach(p => {
+      if (!mutations.has(p.id)) {
+        mutations.set(p.id, { record: p });
+      }
+      mutations.get(p.id)!.from = targetAccountId;
+    });
+
+    plannedTo.forEach(p => {
+      if (!mutations.has(p.id)) {
+        mutations.set(p.id, { record: p });
+      }
+      mutations.get(p.id)!.to = targetAccountId;
+    });
+
+    // Emit exactly one prepareUpdate per record
+    return Array.from(mutations.values()).map(({ record, from, to }) => {
+      return record.prepareUpdate((r: PlannedPayment) => {
+        if (from) r.fromAccountId = from;
+        if (to) r.toAccountId = to;
+        r.updatedAt = new Date();
+      });
+    });
   }
 }
 
