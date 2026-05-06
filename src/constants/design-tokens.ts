@@ -354,8 +354,8 @@ export const Shape = {
 export const DeepSpacePalette = {
   // Neutrals (Rich Space Grays)
   background: '#0A0A0C', // Main background (Deep Space)
-  surface: '#1E1E26', // Cards/Containers (Deep Purple-Gray)
-  surfaceHighlight: '#2A2A35', // Hover/Active states
+  surface: '#14141A', // Cards/Containers (Deep Space Gray)
+  surfaceHighlight: '#1E1E26', // Hover/Active states (Old Surface)
 
   // Text
   textPrimary: '#F0ECE4', // Bone/Off-White (High Contrast)
