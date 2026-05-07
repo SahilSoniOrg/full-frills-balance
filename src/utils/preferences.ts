@@ -419,7 +419,7 @@ class PreferencesHelper {
     return this.preferences.activeWorkplaceId;
   }
 
-  setActiveWorkplaceId(workplaceId: WorkplaceId): void {
+  setActiveWorkplaceId(workplaceId?: WorkplaceId): void {
     this.updatePreferences({ activeWorkplaceId: workplaceId });
   }
 

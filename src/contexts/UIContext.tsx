@@ -212,6 +212,17 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     loadPreferences();
   }, []);
 
+  // Synchronize onboarding state with preferences
+  useEffect(() => {
+    const subscription = preferences.observe('onboardingCompleted').subscribe(completed => {
+      setUIState(prev => {
+        if (prev.hasCompletedOnboarding === completed) return prev;
+        return { ...prev, hasCompletedOnboarding: completed };
+      });
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const completeOnboarding = useCallback(async (name: string, archetype?: string) => {
     try {
       preferences.setUserName(name);

@@ -47,8 +47,14 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
           return from(workplaceService.getWorkplace(id)).pipe(
             map(workplace => {
               if (!workplace) {
-                // RUTHLESS: No silent resurrection. Surface the void.
-                throw new Error(`Workplace ${id} not found in database.`);
+                // RECOVERY: If the workplace is missing, we must reset the app state to onboarding.
+                // This prevents the "not found" crash and allows the user to re-establish a workplace.
+                logger.error(
+                  `[WorkplaceProvider] Workplace ${id} not found in database. Resetting app state.`,
+                );
+                preferences.setActiveWorkplaceId(undefined);
+                preferences.setOnboardingCompleted(false);
+                return null;
               }
               return workplace;
             }),

@@ -4,7 +4,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/services/ledger');
 jest.mock('@/src/services/RebuildQueueService');
