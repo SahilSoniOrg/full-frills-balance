@@ -317,6 +317,7 @@ class ExportService {
   private async fetchAndTransformTable<T extends object>(
     workplaceId: WorkplaceId,
     tableName: string,
+    onProgress?: (processed: number, total: number) => void,
   ): Promise<T[]> {
     const tableSchema = this.getTableSchema(tableName);
     if (!tableSchema) throw new Error(`Missing schema for table: ${tableName}`);
@@ -377,7 +378,13 @@ class ExportService {
       });
     }
 
-    return raws.map(raw => {
+    const total = raws.length;
+    return raws.map((raw, index) => {
+      // Report sub-progress for large tables every 100 rows
+      if (onProgress && index > 0 && index % 100 === 0) {
+        onProgress(index, total);
+      }
+
       const transformed = { ...raw } as Record<string, unknown>;
 
       // Convert date numbers to ISO strings
@@ -400,67 +407,92 @@ class ExportService {
 
   /**
    * Exports all data as JSON using raw SQL to bypass model instantiation overhead.
+   * Returns a Base64 encoded ZIP string.
    */
-  async exportToJSON(workplaceId: WorkplaceId): Promise<Uint8Array> {
+  async exportToJSON(
+    workplaceId: WorkplaceId,
+    onProgress?: (message: string, progress: number) => void,
+  ): Promise<string> {
     logger.info('[ExportService] Starting optimized JSON export...');
+    onProgress?.('Initializing export...', 0.05);
 
     try {
+      const tableTasks = [
+        { name: 'Accounts', table: 'accounts' },
+        { name: 'Journals', table: 'journals' },
+        { name: 'Entries', table: 'transactions' },
+        { name: 'Audit Logs', table: 'audit_logs' },
+        { name: 'Budgets', table: 'budgets' },
+        { name: 'Budget Scopes', table: 'budget_scopes' },
+        { name: 'Metadata', table: 'account_metadata' },
+        { name: 'Planned Payments', table: 'planned_payments' },
+        { name: 'Metadata', table: 'journal_metadata' },
+        { name: 'Rules', table: 'sms_auto_post_rules' },
+      ];
+
+      // Track sub-progress of each parallel task
+      const tableProgress = new Map<string, number>();
+      const updateGlobalProgress = (message: string) => {
+        const totalProgress =
+          Array.from(tableProgress.values()).reduce((a, b) => a + b, 0) / tableTasks.length;
+        onProgress?.(message, 0.05 + totalProgress * 0.45); // 5% to 50%
+      };
+
+      const fetchResults = await Promise.all(
+        tableTasks.map(async task => {
+          const startTime = Date.now();
+          const result = await this.fetchAndTransformTable<any>(workplaceId, task.table, (p, t) => {
+            tableProgress.set(task.table, p / t);
+            updateGlobalProgress(`Gathering ${task.name}...`);
+          });
+          const endTime = Date.now();
+          tableProgress.set(task.table, 1.0);
+          updateGlobalProgress(`Gathering ${task.name}...`);
+
+          logger.info(`[ExportService] Fetched ${task.name}...`, {
+            count: result.length,
+            timeTakenMs: endTime - startTime,
+          });
+
+          // Yield to event loop to allow UI to render
+          await new Promise(resolve => setTimeout(resolve, 0));
+
+          return result;
+        }),
+      );
+      onProgress?.('Gathering workplaces...', 0.52);
+
       const [
         accounts,
         journals,
         transactions,
         auditLogs,
         budgets,
-        budgetScopes, // currencies
-        ,
-        ,
-        // exchangeRates
+        budgetScopes,
         accountMetadata,
         plannedPayments,
         journalMetadata,
-        smsAutoPostRules, // smsInboxRecords
-        ,
-        ,
-        // balanceSnapshots
-        _userPreferences,
-        workplace,
-      ] = await Promise.all([
-        this.fetchAndTransformTable<AccountExport>(workplaceId, 'accounts'),
-        this.fetchAndTransformTable<JournalExport>(workplaceId, 'journals'),
-        this.fetchAndTransformTable<TransactionExport>(workplaceId, 'transactions'),
-        this.fetchAndTransformTable<AuditLogExport>(workplaceId, 'audit_logs'),
-        this.fetchAndTransformTable<BudgetExport>(workplaceId, 'budgets'),
-        this.fetchAndTransformTable<BudgetScopeExport>(workplaceId, 'budget_scopes'),
-        this.fetchAndTransformTable<CurrencyExport>(workplaceId, 'currencies'),
-        this.fetchAndTransformTable<ExchangeRateExport>(workplaceId, 'exchange_rates'),
-        this.fetchAndTransformTable<AccountMetadataExport>(workplaceId, 'account_metadata'),
-        this.fetchAndTransformTable<PlannedPaymentExport>(workplaceId, 'planned_payments'),
-        this.fetchAndTransformTable<JournalMetadataExport>(workplaceId, 'journal_metadata'),
-        this.fetchAndTransformTable<SmsAutoPostRuleExport>(workplaceId, 'sms_auto_post_rules'),
-        this.fetchAndTransformTable<SmsInboxRecordExport>(workplaceId, 'sms_inbox_records'),
-        this.fetchAndTransformTable<BalanceSnapshotExport>(workplaceId, 'balance_snapshots'),
+        smsAutoPostRules,
+      ] = fetchResults;
+
+      onProgress?.('Processing preferences...', 0.53);
+      const [userPreferences, workplace] = await Promise.all([
         preferences.loadPreferences(),
         database.collections.get('workplaces').find(workplaceId),
       ]);
 
-      const exportData: ExportData = {
+      onProgress?.('Optimizing data structure...', 0.54);
+      // Yield before heavy serialization
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      onProgress?.('Serializing metadata...', 0.55);
+      await new Promise(resolve => setTimeout(resolve, 16));
+
+      // 1. Serialize top-level metadata
+      const metadataPart = JSON.stringify({
         exportDate: new Date().toISOString(),
         version: '1.4.0',
-        preferences: _userPreferences,
-        accounts,
-        journals,
-        transactions: transactions.map(t => ({ ...t, runningBalance: undefined })),
-        auditLogs,
-        budgets,
-        budgetScopes,
-        accountMetadata,
-        plannedPayments,
-        journalMetadata: journalMetadata.map(m => ({
-          ...m,
-          originalSmsBody: undefined,
-        })),
-        smsAutoPostRules,
-        balanceSnapshots: [],
+        preferences: userPreferences,
         workplace: workplace
           ? {
               id: workplace.id,
@@ -471,34 +503,95 @@ class ExportService {
               updatedAt: (workplace as any).updatedAt.toISOString(),
             }
           : undefined,
-      };
+      });
+      // Remove trailing '}' from metadata to start stitching
+      let finalJson = metadataPart.slice(0, -1);
 
-      const json = JSON.stringify(exportData);
+      // 2. Serialize and stitch each major table with yields
+      const tablesToStitch = [
+        { key: 'accounts', data: accounts },
+        { key: 'journals', data: journals },
+        { key: 'transactions', data: transactions },
+        { key: 'auditLogs', data: auditLogs },
+        { key: 'budgets', data: budgets },
+        { key: 'budgetScopes', data: budgetScopes },
+        { key: 'accountMetadata', data: accountMetadata },
+        { key: 'plannedPayments', data: plannedPayments },
+        { key: 'journalMetadata', data: journalMetadata },
+        { key: 'smsAutoPostRules', data: smsAutoPostRules },
+      ];
+
+      let currentProgress = 0.56;
+      const progressStep = 0.04 / tablesToStitch.length;
+
+      for (const table of tablesToStitch) {
+        onProgress?.(`Serializing ${table.key}...`, currentProgress);
+        await new Promise(resolve => setTimeout(resolve, 0)); // Yield to UI
+
+        const chunk = JSON.stringify(table.data, (key, value) => {
+          if (key === 'runningBalance' || key === 'originalSmsBody') {
+            return undefined;
+          }
+          return value;
+        });
+
+        finalJson += `,"${table.key}":${chunk}`;
+        currentProgress += progressStep;
+      }
+
+      // Close the JSON object
+      finalJson += '}';
+      //yield here
+      await new Promise(resolve => setTimeout(resolve, 10));
+      onProgress?.('Preparing ZIP archive...', 0.6);
       analytics.logExportCompleted('ZIP');
 
       logger.info('[ExportService] Export complete', {
-        accounts: exportData.accounts.length,
-        journals: exportData.journals.length,
-        transactions: exportData.transactions.length,
-        auditLogs: exportData.auditLogs.length,
-        budgets: exportData.budgets.length,
-        budgetScopes: exportData.budgetScopes.length,
-        accountMetadata: exportData.accountMetadata.length,
-        plannedPayments: exportData.plannedPayments.length,
-        journalMetadata: exportData.journalMetadata.length,
-        smsAutoPostRules: exportData.smsAutoPostRules.length,
+        accounts: accounts.length,
+        journals: journals.length,
+        transactions: transactions.length,
+        auditLogs: auditLogs.length,
+        budgets: budgets.length,
+        budgetScopes: budgetScopes.length,
+        accountMetadata: accountMetadata.length,
+        plannedPayments: plannedPayments.length,
+        journalMetadata: journalMetadata.length,
+        smsAutoPostRules: smsAutoPostRules.length,
       });
 
       // Create ZIP archive
       const zip = new JSZip();
-      zip.file('backup.json', json);
-      const zipData = await zip.generateAsync({
-        type: 'uint8array',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 9 },
+      zip.file('backup.json', finalJson);
+      logger.info('[ExportService] ZIP archive created');
+      //yield here
+      await new Promise(resolve => setTimeout(resolve, 10));
+      onProgress?.('Compressing ZIP archive...', 0.62);
+      logger.info('[ExportService] Compressing ZIP archive');
+      const startTime = Date.now();
+      const base64Data = await zip.generateAsync(
+        {
+          type: 'base64',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 9 },
+        },
+        metadata => {
+          onProgress?.(
+            `Compressing and encoding... (${Math.round(metadata.percent)}%)`,
+            0.65 + (metadata.percent / 100) * 0.35, // 65% to 100%
+          );
+        },
+      );
+      const endTime = Date.now();
+      logger.info('[ExportService] ZIP archive compressed', {
+        timeTakenMs: endTime - startTime,
       });
-      return zipData;
+      //yield here
+      await new Promise(resolve => setTimeout(resolve, 10));
+      onProgress?.('Finalizing...', 1.0);
+      analytics.logExportCompleted('ZIP');
+      return base64Data;
     } catch (error) {
+      onProgress?.('Export failed', 0.0);
       logger.error('[ExportService] Export failed', error);
       throw error;
     }

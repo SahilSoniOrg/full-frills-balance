@@ -58,6 +58,7 @@ export interface ConfirmOptions {
   cancelText?: string;
   onConfirm: () => void;
   onCancel?: () => void;
+  onClose?: () => void;
   destructive?: boolean; // If true, confirm button is red/destructive
   requiredConfirmationValue?: string; // If provided, user must type this value to confirm
 }
@@ -66,6 +67,7 @@ export interface ConfirmPayload extends Omit<ConfirmOptions, 'onConfirm' | 'onCa
   id: string;
   onConfirm: () => void;
   onCancel: () => void;
+  onClose: () => void;
   requiredConfirmationValue?: string;
 }
 
@@ -253,6 +255,7 @@ export const confirm = {
         // Wrap callbacks to ensure listener can handle them
         onConfirm: options.onConfirm,
         onCancel: options.onCancel || (() => {}),
+        onClose: options.onClose || options.onCancel || (() => {}),
       });
       return;
     }

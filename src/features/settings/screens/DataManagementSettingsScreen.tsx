@@ -1,6 +1,8 @@
+import { ProgressBar } from '@/src/components/common/ProgressBar';
 import { AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
+import { Inset, Stack } from '@/src/design-system';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { ShareFormatPreference } from '@/src/features/settings/components/ShareFormatPreference';
@@ -8,7 +10,6 @@ import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsV
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
-import { Inset, Stack } from '@/src/design-system';
 
 export default function DataManagementSettingsScreen() {
   const vm = useSettingsViewModel();
@@ -25,6 +26,8 @@ export default function DataManagementSettingsScreen() {
     setIsNamingExport,
     exportFilename,
     setExportFilename,
+    exportProgress,
+    exportProgressMessage,
   } = vm;
 
   return (
@@ -71,10 +74,11 @@ export default function DataManagementSettingsScreen() {
               {AppConfig.strings.settings.data.exportingTitle}
             </AppText>
             <View style={styles.spinnerContainer}>
-              {/* Spinner would go here, but using a simple text fallback for now as per design system */}
-              <AppText variant="body" color="secondary" style={styles.modalStatus}>
-                {AppConfig.strings.settings.data.exportingWait}
-              </AppText>
+              <ProgressBar
+                progress={exportProgress}
+                label={exportProgressMessage || AppConfig.strings.settings.data.exportingWait}
+                style={styles.progressBar}
+              />
             </View>
             <AppText variant="caption" color="secondary" style={styles.modalHint}>
               {AppConfig.strings.settings.data.exportingHint}
@@ -177,5 +181,9 @@ const styles = StyleSheet.create({
   spinnerContainer: {
     paddingVertical: Spacing.md,
     alignItems: 'center',
+    width: '100%',
+  },
+  progressBar: {
+    width: '100%',
   },
 });

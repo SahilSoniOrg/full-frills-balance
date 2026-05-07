@@ -67,7 +67,7 @@ export function AlertContainer() {
         visible={true}
         title={payload.title}
         onClose={() => {
-          payload.onCancel();
+          payload.onClose();
           setActiveAlert(null);
         }}
         secondaryAction={{

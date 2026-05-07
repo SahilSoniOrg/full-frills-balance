@@ -9,9 +9,12 @@ import { WorkplaceId } from '@/src/types/domain';
 export function useSettingsActions(workplaceId: WorkplaceId) {
   const { requireRestart } = useUI();
 
-  const exportToJSON = useCallback(async () => {
-    return exportService.exportToJSON(workplaceId);
-  }, [workplaceId]);
+  const exportToJSON = useCallback(
+    async (onProgress?: (message: string, progress: number) => void) => {
+      return exportService.exportToJSON(workplaceId, onProgress);
+    },
+    [workplaceId],
+  );
 
   const runIntegrityCheck = useCallback(
     async (onProgress?: (message: string, progress: number) => void) => {

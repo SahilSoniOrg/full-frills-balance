@@ -4,14 +4,12 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsActions';
 import { useImport } from '@/src/hooks/use-import';
 import { analytics } from '@/src/services/analytics-service';
+import { sharingService } from '@/src/services/SharingService';
 import { ShareFormat } from '@/src/types/sharing';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import * as LocalAuthentication from '@/src/utils/auth';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { bytesToBase64 } from '@/src/utils/serialization';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 
@@ -45,6 +43,8 @@ export interface SettingsViewModel {
   setExportFilename: (value: string) => void;
   onExport: () => void;
   onConfirmExport: () => void;
+  exportProgress: number;
+  exportProgressMessage: string;
   onImport: () => void;
   onAuditLog: () => void;
   onSmsInbox: () => void;
@@ -96,6 +96,8 @@ export function useSettingsViewModel(): SettingsViewModel {
   const [isResetting, setIsResetting] = useState(false);
   const [isNamingExport, setIsNamingExport] = useState(false);
   const [exportFilename, setExportFilename] = useState('');
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportProgressMessage, setExportProgressMessage] = useState('');
 
   const setUserName = useCallback(
     (newName: string) => {
@@ -118,10 +120,15 @@ export function useSettingsViewModel(): SettingsViewModel {
   const onConfirmExport = useCallback(async () => {
     setIsNamingExport(false);
     setIsExporting(true);
+    setExportProgress(0);
+    setExportProgressMessage('Starting export...');
     // Yield to let UI show the loader before heavy work
     await new Promise(resolve => setTimeout(resolve, 200));
     try {
-      const jsonData = await exportToJSON();
+      const jsonData = await exportToJSON((message, progress) => {
+        setExportProgressMessage(message);
+        setExportProgress(progress);
+      });
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
       // Sanitize filename and use default if empty
@@ -129,9 +136,15 @@ export function useSettingsViewModel(): SettingsViewModel {
         .trim()
         .replace(/[^a-z0-9-_]/gi, '-')
         .substring(0, 50);
-      const filename = sanitizedName
-        ? `${sanitizedName}-${timestamp}.zip`
-        : `balance-export-${timestamp}.zip`;
+
+      const provider = {
+        id: 'data-export',
+        title: 'Data Backup',
+        filename: sanitizedName || `balance-export-${timestamp}`,
+        mimeType: 'application/zip',
+        fileExtension: 'zip',
+        getContent: () => jsonData, // SharingService now handles Uint8Array
+      };
 
       // Track Analytics
       analytics.trackFeatureUsage('settings', 'export_data', {
@@ -140,65 +153,7 @@ export function useSettingsViewModel(): SettingsViewModel {
         data_size_bytes: jsonData.length,
       });
 
-      if (Platform.OS === 'web') {
-        const blob = new Blob([jsonData.buffer as ArrayBuffer], { type: 'application/zip' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        return;
-      }
-
-      // Convert Uint8Array to Base64 for Expo FileSystem
-      const base64Encoded = bytesToBase64(jsonData);
-
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
-      await FileSystem.writeAsStringAsync(fileUri, base64Encoded, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // On Android, provide an option to save to a user-selected location
-      if (Platform.OS === 'android') {
-        const permissions =
-          await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-        if (permissions.granted) {
-          try {
-            const fileLocation = await FileSystem.StorageAccessFramework.createFileAsync(
-              permissions.directoryUri,
-              filename,
-              'application/zip',
-            );
-            await FileSystem.writeAsStringAsync(fileLocation, base64Encoded, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            toast.success('Backup saved successfully');
-          } catch (err) {
-            logger.error('[onConfirmExport] SAF save failed', err);
-          }
-        }
-      }
-
-      confirm.show({
-        title: 'Backup Generated',
-        message: 'Your backup has been created. Would you like to share or upload the file now?',
-        confirmText: 'Share File',
-        cancelText: 'Just Save',
-        onConfirm: async () => {
-          const canShare = await Sharing.isAvailableAsync();
-          if (canShare) {
-            await Sharing.shareAsync(fileUri, {
-              mimeType: 'application/zip',
-              dialogTitle: 'Export Your Balance Data',
-            });
-          } else {
-            alert.show({ title: 'Export Ready', message: `File saved to ${fileUri}` });
-          }
-        },
-      });
+      await sharingService.save(provider, ShareFormat.ZIP);
     } catch (error) {
       logger.error('[onConfirmExport] Export failed', error);
       toast.error('Could not export data');
@@ -413,6 +368,8 @@ export function useSettingsViewModel(): SettingsViewModel {
     setExportFilename,
     onExport,
     onConfirmExport,
+    exportProgress,
+    exportProgressMessage,
     onImport: AppNavigation.toImportSelection,
     onAuditLog: AppNavigation.toAuditLog,
     onSmsInbox: AppNavigation.toSmsInbox,

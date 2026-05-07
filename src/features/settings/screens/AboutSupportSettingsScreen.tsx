@@ -9,7 +9,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import React from 'react';
-import { Linking } from 'react-native';
+import { Linking, TouchableOpacity } from 'react-native';
 
 export default function AboutSupportSettingsScreen() {
   const { theme } = useTheme();
@@ -50,6 +50,27 @@ export default function AboutSupportSettingsScreen() {
               title="Report a Bug"
               description="Share app logs and device info to help fix issues"
               onPress={() => BugReportService.shareReport()}
+              hasArrow={false}
+              rightContent={
+                <Inline space="md">
+                  <TouchableOpacity
+                    onPress={() => BugReportService.shareReport()}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                  >
+                    <Box padding="xs">
+                      <AppIcon name="share" size={20} color={theme.primary} />
+                    </Box>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => BugReportService.saveReport()}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                  >
+                    <Box padding="xs">
+                      <AppIcon name="save" size={20} color={theme.primary} />
+                    </Box>
+                  </TouchableOpacity>
+                </Inline>
+              }
             />
           </SettingsMenu>
 

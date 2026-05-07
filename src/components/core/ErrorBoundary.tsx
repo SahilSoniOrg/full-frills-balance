@@ -70,6 +70,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>Report Bug</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => BugReportService.saveReport(this.state.error || undefined)}
+          >
+            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Save Report</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -130,7 +137,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: Palette.outline,
+    borderColor: Palette.surfaceHighlight,
     marginTop: Spacing.md,
   },
   secondaryButtonText: {

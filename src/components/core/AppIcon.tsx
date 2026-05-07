@@ -14,6 +14,7 @@ import {
   Bell,
   BetweenHorizontalStart,
   Briefcase,
+  Bug,
   Bus,
   Calculator,
   Calendar,
@@ -30,6 +31,7 @@ import {
   CreditCard,
   Database,
   DollarSign,
+  Download,
   Pencil as Edit2,
   Eye,
   EyeOff,
@@ -185,6 +187,8 @@ export const IconMap = {
   minusSquare: SquareMinus,
   x: X,
   merge: Merge,
+  bug: Bug,
+  save: Download,
 } as const;
 
 export type IconName = keyof typeof IconMap;

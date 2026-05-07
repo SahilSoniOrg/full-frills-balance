@@ -30,6 +30,14 @@ export class AnalyticsService {
   }
 
   /**
+   * Get the anonymous distinct ID for the current user.
+   * Useful for correlating bug reports with PostHog/Sentry logs.
+   */
+  getDistinctId(): string {
+    return this._posthog?.getDistinctId() || 'anonymous';
+  }
+
+  /**
    * Initialize analytics provider.
    */
   initialize() {
@@ -49,6 +57,12 @@ export class AnalyticsService {
     logger.setPerformanceReporter((metric, value, context) => {
       this.trackPerformance(metric, value, context);
     });
+
+    // 3. Sync ID to Sentry for cross-platform correlation
+    if (this._posthog) {
+      const distinctId = this._posthog.getDistinctId();
+      Sentry.setUser({ id: distinctId });
+    }
 
     if (this._posthog && __DEV__) {
       logger.info('[Analytics] PostHog client ready (debug mode — events disabled in __DEV__)');
