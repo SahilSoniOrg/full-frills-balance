@@ -6,6 +6,7 @@ import { preferences } from '@/src/utils/preferences';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import PostHog from 'posthog-react-native';
+import * as Sentry from '@sentry/react-native';
 import { Platform } from 'react-native';
 
 /**
@@ -249,6 +250,13 @@ export class AnalyticsService {
       message: error.message,
       stack: error.stack?.slice(0, trimLimit) || 'no-stack', // Trim long stacks
       componentStack: componentStack?.slice(0, trimLimit) || 'no-component-stack',
+    });
+
+    // Report to Sentry with component stack
+    Sentry.captureException(error, {
+      contexts: {
+        react: { componentStack },
+      },
     });
   }
 

@@ -4,6 +4,7 @@ import { AppConfig, Spacing } from '@/src/constants';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { BugReportService } from '@/src/services/BugReportService';
 import { useTheme } from '@/src/hooks/use-theme';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
@@ -42,6 +43,13 @@ export default function AboutSupportSettingsScreen() {
               title={AppConfig.strings.settings.community.githubTitle}
               description={AppConfig.strings.settings.community.githubDesc}
               onPress={() => Linking.openURL('https://github.com/SahilSoniOrg/full-frills-balance')}
+            />
+            <SettingsMenuItem
+              leftIcon="bug"
+              iconColor
+              title="Report a Bug"
+              description="Share app logs and device info to help fix issues"
+              onPress={() => BugReportService.shareReport()}
             />
           </SettingsMenu>
 

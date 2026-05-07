@@ -12,7 +12,8 @@ import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { analytics, POSTHOG_API_KEY, POSTHOG_HOST } from '@/src/services/analytics-service';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, usePathname, useSegments } from 'expo-router';
+import * as Sentry from '@sentry/react-native';
+import { Stack, useNavigationContainerRef, usePathname, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
@@ -27,6 +28,23 @@ import '@/src/services/audit-handlers';
 // Prevent splash screen from auto-hiding before we are ready
 SplashScreen.preventAutoHideAsync().catch(() => {
   /* ignore */
+});
+
+const navigationIntegration = Sentry.reactNavigationIntegration();
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  debug: __DEV__,
+  tracesSampleRate: 1.0,
+  // Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+  integrations: [
+    navigationIntegration,
+    Sentry.reactNativeTracingIntegration(),
+    Sentry.mobileReplayIntegration(),
+  ],
+  enableUserInteractionTracing: true,
 });
 
 function PostHogScreenTracker() {
@@ -116,8 +134,15 @@ function BootManager() {
   return null;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
+  const navigationRef = useNavigationContainerRef();
+
+  React.useEffect(() => {
+    if (navigationRef) {
+      navigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, [navigationRef]);
 
   React.useEffect(() => {
     analytics.initialize();
@@ -163,6 +188,8 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);
 
 function AppContent() {
   const { isRestartRequired, hasCompletedOnboarding } = useUI();

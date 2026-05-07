@@ -1,6 +1,7 @@
 <resources>
   <string name="app_name">Full Frills Balance</string>
   <string name="expo_system_ui_user_interface_style" translatable="false">automatic</string>
+  <string name="expo_runtime_version">1.0.0</string>
   <string name="journal_widget_name">New Journal</string>
   <string name="journal_widget_add_transaction">Add transaction</string>
   <string name="journal_widget_subtitle">Create a transaction from your home screen.</string>
@@ -18,5 +19,4 @@
   <string name="safe_to_spend_widget_loading">Open app to load data</string>
   <string name="safe_to_spend_widget_amount_placeholder">--</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
-  <string name="expo_runtime_version">1.0.0</string>
 </resources>

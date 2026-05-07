@@ -30,6 +30,7 @@
     "@react-navigation/bottom-tabs": "^7.15.9",
     "@react-navigation/elements": "^2.9.14",
     "@react-navigation/native": "^7.2.2",
+    "@sentry/react-native": "^8.11.0",
     "@shopify/flash-list": "2.0.2",
     "@typescript/native-preview": "^7.0.0-dev.20260418.1",
     "babel-plugin-react-compiler": "^19.0.0-beta-ebf51a3-20250411",

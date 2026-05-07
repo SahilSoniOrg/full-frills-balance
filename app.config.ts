@@ -118,6 +118,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         sounds: [],
       },
     ],
+    [
+      '@sentry/react-native/expo',
+      {
+        url: 'https://sentry.io/',
+        project: 'react-native',
+        organization: 'full-frills-balance',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

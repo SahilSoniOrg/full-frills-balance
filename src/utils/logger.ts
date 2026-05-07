@@ -5,6 +5,7 @@
  * Supports direct performance metrics and trace-correlated logs.
  */
 
+import * as Sentry from '@sentry/react-native';
 import { AppConfig } from '@/src/constants/app-config';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'metric';
@@ -19,6 +20,8 @@ interface LogContext {
 class Logger {
   private isDevelopment = __DEV__;
   private performanceReporter?: PerformanceReporter;
+  private logBuffer: string[] = [];
+  private readonly MAX_BUFFER_SIZE = 100;
 
   /**
    * Set a reporter to handle performance-related metric events
@@ -57,6 +60,12 @@ class Logger {
     }
 
     const logMessage = `[${timestamp}] [${level.toUpperCase()}]${contextStr} ${message}${detailStr}`;
+
+    // Update in-memory buffer
+    this.logBuffer.push(logMessage);
+    if (this.logBuffer.length > this.MAX_BUFFER_SIZE) {
+      this.logBuffer.shift();
+    }
 
     switch (level) {
       case 'debug':
@@ -115,6 +124,22 @@ class Logger {
           : error,
     };
     this.log('error', message, errorContext);
+
+    // Report to Sentry
+    if (error instanceof Error) {
+      Sentry.captureException(error, { extra: context });
+    } else if (typeof error === 'string') {
+      Sentry.captureMessage(error, { extra: context });
+    } else if (error) {
+      Sentry.captureException(new Error(String(error)), { extra: context });
+    }
+  }
+
+  /**
+   * Get recently recorded logs for diagnostic reporting.
+   */
+  getRecentLogs(): string {
+    return this.logBuffer.join('\n');
   }
 }
 
