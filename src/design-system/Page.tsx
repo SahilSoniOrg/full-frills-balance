@@ -102,6 +102,7 @@ export const Page = ({
 
   const wrappedContent = scrollable ? (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       {...scrollViewProps}
       style={[styles.scrollView, scrollViewProps?.style]}
       contentContainerStyle={[styles.scrollContent, scrollViewProps?.contentContainerStyle]}

@@ -6,7 +6,7 @@ import { JournalSuggestions } from '@/src/features/journal/entry/components/Jour
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
-import { StyleProp, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Keyboard, StyleProp, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface JournalMetaCardProps {
   date: string;
@@ -85,7 +85,13 @@ export function JournalMetaCard({
         />
 
         {isDescriptionFocused && !hideSuggestions && suggestions.length > 0 && (
-          <JournalSuggestions suggestions={suggestions} onSelect={setDescription} />
+          <JournalSuggestions
+            suggestions={suggestions}
+            onSelect={suggestion => {
+              setDescription(suggestion);
+              Keyboard.dismiss();
+            }}
+          />
         )}
       </View>
 
@@ -172,7 +178,10 @@ export function JournalMetaCard({
         }}
       >
         <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
+          onPress={() => {
+            Keyboard.dismiss();
+            setShowDatePicker(true);
+          }}
           style={{
             flexDirection: 'row',
             alignItems: 'center',

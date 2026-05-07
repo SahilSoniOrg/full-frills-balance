@@ -2,7 +2,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalSuggestionsProps {
   suggestions: string[];
@@ -25,7 +25,7 @@ export function JournalSuggestions({ suggestions, onSelect }: JournalSuggestions
         },
       ]}
     >
-      <ScrollView keyboardShouldPersistTaps="handled" style={styles.scrollView}>
+      <ScrollView keyboardShouldPersistTaps="always" style={styles.scrollView}>
         {suggestions.map((suggestion, index) => (
           <TouchableOpacity
             key={`${suggestion}-${index}`}
@@ -36,7 +36,10 @@ export function JournalSuggestions({ suggestions, onSelect }: JournalSuggestions
                 borderBottomWidth: index === suggestions.length - 1 ? 0 : StyleSheet.hairlineWidth,
               },
             ]}
-            onPress={() => onSelect(suggestion)}
+            onPress={() => {
+              Keyboard.dismiss();
+              onSelect(suggestion);
+            }}
           >
             <View style={styles.itemContent}>
               <AppIcon name="clock" size={12} color={theme.textTertiary} />

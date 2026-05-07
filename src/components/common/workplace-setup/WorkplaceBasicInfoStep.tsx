@@ -2,7 +2,7 @@ import { AppButton, AppIcon, AppInput, AppText, IconName } from '@/src/component
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface WorkplaceBasicInfoStepProps {
   title: string;
@@ -81,7 +81,10 @@ export function WorkplaceBasicInfoStep({
               value={name}
               onChangeText={onNameChange}
               autoFocus
-              onSubmitEditing={onContinue}
+              onSubmitEditing={() => {
+                Keyboard.dismiss();
+                onContinue();
+              }}
             />
           </Stack>
 
@@ -89,7 +92,10 @@ export function WorkplaceBasicInfoStep({
             <AppButton
               variant="primary"
               size="lg"
-              onPress={onContinue}
+              onPress={() => {
+                Keyboard.dismiss();
+                onContinue();
+              }}
               disabled={!name.trim() || isCreating}
               loading={isCreating}
             >

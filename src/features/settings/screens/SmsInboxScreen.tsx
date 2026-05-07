@@ -14,7 +14,7 @@ import { AccountId, JournalId, SmsDuplicateCandidate, SmsInboxItem } from '@/src
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, Platform, StyleSheet, View } from 'react-native';
 
 type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
 
@@ -265,7 +265,10 @@ function SmsInboxContent() {
                   key={button.key}
                   size="sm"
                   variant={filter === button.key ? 'primary' : 'secondary'}
-                  onPress={() => setFilter(button.key)}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setFilter(button.key);
+                  }}
                   style={styles.filterButton}
                 >
                   {button.label}

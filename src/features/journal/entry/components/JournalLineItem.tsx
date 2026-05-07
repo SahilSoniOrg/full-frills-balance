@@ -6,7 +6,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { JournalEntryLine } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalLineItemProps {
   line: JournalEntryLine;
@@ -43,7 +43,10 @@ export const JournalLineItem = React.memo(
               styles.accountSelector,
               { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
             ]}
-            onPress={onSelectAccount}
+            onPress={() => {
+              Keyboard.dismiss();
+              onSelectAccount();
+            }}
           >
             <View style={{ flex: 1, justifyContent: 'center' }}>
               <AppText variant="caption" color="tertiary" weight="bold" style={styles.fieldLabel}>
@@ -96,7 +99,10 @@ export const JournalLineItem = React.memo(
                   backgroundColor: theme.primary,
                 },
               ]}
-              onPress={() => onUpdate('transactionType', TransactionType.DEBIT)}
+              onPress={() => {
+                Keyboard.dismiss();
+                onUpdate('transactionType', TransactionType.DEBIT);
+              }}
             >
               <AppText
                 variant="caption"
@@ -118,7 +124,10 @@ export const JournalLineItem = React.memo(
                   backgroundColor: theme.primary,
                 },
               ]}
-              onPress={() => onUpdate('transactionType', TransactionType.CREDIT)}
+              onPress={() => {
+                Keyboard.dismiss();
+                onUpdate('transactionType', TransactionType.CREDIT);
+              }}
             >
               <AppText
                 variant="caption"
@@ -154,7 +163,10 @@ export const JournalLineItem = React.memo(
 
           {canRemove && (
             <TouchableOpacity
-              onPress={onRemove}
+              onPress={() => {
+                Keyboard.dismiss();
+                onRemove();
+              }}
               style={[
                 styles.removeButton,
                 { backgroundColor: withOpacity(theme.error, Opacity.soft) },

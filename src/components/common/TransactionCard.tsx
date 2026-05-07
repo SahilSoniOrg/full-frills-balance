@@ -8,7 +8,7 @@ import { formatDate } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { MotiView } from 'moti';
 import React, { memo, useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface TransactionBadge {
   id?: string;
@@ -100,8 +100,14 @@ const TransactionCardComponent = ({
 
   return (
     <Wrapper
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={() => {
+        Keyboard.dismiss();
+        onPress?.();
+      }}
+      onLongPress={() => {
+        Keyboard.dismiss();
+        onLongPress?.();
+      }}
       activeOpacity={onPress ? Opacity.heavy : 1}
       delayLongPress={350}
       style={styles.wrapper}

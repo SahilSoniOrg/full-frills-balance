@@ -12,7 +12,8 @@ import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { useJournalSearchViewModel } from '../hooks/useJournalSearchViewModel';
 
 export default function JournalSearchScreen() {
@@ -39,10 +40,14 @@ export default function JournalSearchScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipContainer}
+          keyboardShouldPersistTaps="always"
         >
           <DateRangeTrigger
             range={vm.dateRange}
-            onPress={() => setIsDatePickerVisible(true)}
+            onPress={() => {
+              Keyboard.dismiss();
+              setIsDatePickerVisible(true);
+            }}
             showNavigationArrows={false}
           />
 
@@ -51,7 +56,10 @@ export default function JournalSearchScreen() {
               label={vm.accountIds.length > 0 ? `${vm.accountIds.length} Accounts` : 'All Accounts'}
               icon="wallet"
               isActive={vm.accountIds.length > 0}
-              onPress={() => setIsAccountPickerVisible(true)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setIsAccountPickerVisible(true);
+              }}
             />
           </View>
 
@@ -64,7 +72,10 @@ export default function JournalSearchScreen() {
                 { label: 'Transfer', id: 'TRANSFER' },
               ]}
               value={vm.displayType}
-              onChange={vm.setDisplayType}
+              onChange={val => {
+                Keyboard.dismiss();
+                vm.setDisplayType(val);
+              }}
             />
           </View>
         </ScrollView>

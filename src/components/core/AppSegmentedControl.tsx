@@ -14,6 +14,7 @@ import {
   StyleSheet,
   View,
   ViewStyle,
+  Keyboard,
 } from 'react-native';
 import { AppIcon, type IconName } from './AppIcon';
 import { AppText } from './AppText';
@@ -83,7 +84,10 @@ const SegmentedItem = <T extends string | number>({
 }: SegmentedItemProps<T>) => {
   return (
     <Pressable
-      onPress={() => onPress(option.id)}
+      onPress={() => {
+        Keyboard.dismiss();
+        onPress(option.id);
+      }}
       disabled={disabled}
       testID={testID}
       accessibilityRole="tab"
@@ -286,6 +290,7 @@ export const AppSegmentedControl = <T extends string | number>({
   const handlePress = useCallback(
     (id: T) => {
       if (disabled || disabledSet.has(id)) return;
+      Keyboard.dismiss();
       onChange(id);
     },
     [disabled, disabledSet, onChange],

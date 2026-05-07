@@ -2,7 +2,7 @@ import { Shape, Spacing } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { memo } from 'react';
-import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { Keyboard, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { AppIcon, IconName } from './AppIcon';
 import { AppText } from './AppText';
 
@@ -23,7 +23,10 @@ export const FilterChipButton = memo(
         accessibilityRole="button"
         accessibilityState={{ selected: !!isActive }}
         activeOpacity={0.7}
-        onPress={onPress}
+        onPress={() => {
+          Keyboard.dismiss();
+          onPress();
+        }}
         style={[
           styles.container,
           {

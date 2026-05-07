@@ -3,7 +3,7 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { Layout, Opacity, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { MotiView } from 'moti';
@@ -211,6 +211,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
 
   const handleToggle = useCallback(
     (id: string) => {
+      Keyboard.dismiss();
       if (maxSelection && selectedSet.size >= maxSelection && !selectedSet.has(id)) {
         triggerHaptic('warning');
         return;
@@ -267,7 +268,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
         style={styles.scrollContainer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         ListHeaderComponent={
           <Stack align="center" paddingTop="lg" paddingBottom="md" space="xs">
             <AppText variant="title" style={{ textAlign: 'center' }}>

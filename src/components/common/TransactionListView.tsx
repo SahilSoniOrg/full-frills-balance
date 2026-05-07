@@ -109,6 +109,7 @@ export const TransactionListView = React.forwardRef<any, TransactionListViewProp
       ListFooterComponent={listFooter}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
+      keyboardShouldPersistTaps="always"
     />
   );
 });

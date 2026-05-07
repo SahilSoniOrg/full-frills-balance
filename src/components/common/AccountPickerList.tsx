@@ -11,7 +11,7 @@ import {
   getSectionColor,
 } from '@/src/utils/accountCategory';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Keyboard, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export type CreateAccountIntent = {
   suggestedName: string;
@@ -210,6 +210,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
         });
       } else if (onSelect) {
         onSelect(id);
+        Keyboard.dismiss();
       }
     },
     [isMultiple, onSelect],
@@ -363,6 +364,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
           ListEmptyComponent={renderEmpty}
           renderSectionHeader={renderSectionHeader}
           renderItem={renderItem}
+          keyboardShouldPersistTaps="always"
         />
       </View>
 
@@ -373,7 +375,13 @@ export function AccountPickerList(props: AccountPickerListProps) {
             { backgroundColor: theme.background, borderTopColor: theme.border },
           ]}
         >
-          <AppButton onPress={() => onApply(localSelected)} variant="primary">
+          <AppButton
+            onPress={() => {
+              Keyboard.dismiss();
+              onApply(localSelected);
+            }}
+            variant="primary"
+          >
             {AppConfig.strings.accounts.picker.applySelection(localSelected.size)}
           </AppButton>
         </View>
