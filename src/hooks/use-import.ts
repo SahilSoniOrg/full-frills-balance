@@ -61,8 +61,10 @@ export function useImport() {
             context.text = text;
 
             try {
+              logger.info(`[useImport] Parsing JSON content (${text.length} chars)...`);
               const data = JSON.parse(text);
               context.json = data;
+              logger.info('[useImport] JSON parsed successfully.');
             } catch (e) {
               logger.warn('[useImport] JSON Parse failed, might be a binary file', {
                 error: e instanceof Error ? e.message : String(e),
@@ -105,8 +107,13 @@ export function useImport() {
             setProgress(prog);
           });
 
-          analytics.logImportCompleted(plugin.id, stats);
-          requireRestart({ type: 'IMPORT', stats });
+          const finalStats = {
+            ...stats,
+            skippedItems: stats.skippedItems?.slice(0, 100), // Prevent UI state bloat
+          };
+          logger.info('[useImport] Import task complete. Requesting restart...');
+          analytics.logImportCompleted(plugin.id, finalStats);
+          requireRestart({ type: 'IMPORT', stats: finalStats });
         } catch (error) {
           logger.error('[useImport] Import failed', error);
           toast.error('Could not parse or import the selected file.');

@@ -239,12 +239,18 @@ export class IntegrityService {
 
     const results: BalanceVerificationResult[] = [];
 
-    for (const account of accounts) {
+    for (let i = 0; i < accounts.length; i++) {
+      const account = accounts[i];
       try {
         const result = await this.verifyAccountBalance(account.id, workplaceId);
         results.push(result);
       } catch (error) {
         logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
+      }
+
+      // Yield every 10 accounts to keep JS thread responsive
+      if (i % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
 
@@ -314,6 +320,11 @@ export class IntegrityService {
       }
       const verifyProgress = total > 0 ? ((i + 1) / total) * 0.7 : 0.7;
       onProgress?.(`Checking ${account.name}...`, verifyProgress);
+
+      // Yield every 5 accounts during manual/force check to ensure UI responsiveness
+      if (i % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
 
     const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted);

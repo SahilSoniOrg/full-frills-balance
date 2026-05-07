@@ -734,7 +734,7 @@ export const cashewPlugin: ImportPlugin = {
       await importRepository.batchInsert(workplaceId, data);
 
       onProgress?.('Verifying integrity...', 0.95);
-      await integrityService.forceRunCheck(workplaceId);
+      await integrityService.forceRunCheck(workplaceId, onProgress);
 
       // Cleanup
       await db.closeAsync();

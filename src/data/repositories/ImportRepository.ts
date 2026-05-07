@@ -36,6 +36,7 @@ import {
   TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
+import { logger } from '@/src/utils/logger';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
 export interface ImportedAccount {
@@ -646,7 +647,18 @@ export class ImportRepository {
       ];
 
       if (operations.length > 0) {
-        await database.batch(operations);
+        // Chunk operations to prevent memory pressure/crashes on large imports
+        const CHUNK_SIZE = 5000;
+        logger.info(
+          `[ImportRepository] Starting batch insert of ${operations.length} operations in chunks of ${CHUNK_SIZE}...`,
+        );
+        for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+          const chunk = operations.slice(i, i + CHUNK_SIZE);
+          await database.batch(chunk);
+          // Yield to event loop between chunks
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        logger.info('[ImportRepository] Batch insert complete.');
       }
     });
   }

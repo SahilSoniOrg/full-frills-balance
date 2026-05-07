@@ -894,7 +894,7 @@ export const ivyPlugin: ImportPlugin = {
     // 7. Run integrity check to repair account balances
     onProgress?.('Running integrity check...', 0.85);
     logger.info('[IvyPlugin] Running integrity check to fix account balances...');
-    const integrityResult = await integrityService.forceRunCheck(workplaceId);
+    const integrityResult = await integrityService.forceRunCheck(workplaceId, onProgress);
     logger.info('[IvyPlugin] Integrity check complete', {
       discrepanciesFound: integrityResult.discrepanciesFound,
       repairsSuccessful: integrityResult.repairsSuccessful,
