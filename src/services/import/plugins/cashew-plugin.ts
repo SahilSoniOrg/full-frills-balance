@@ -13,8 +13,8 @@ import {
   TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
+import { files } from '@/src/utils/files';
 import { logger } from '@/src/utils/logger';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 
 const CASHEW_DB_NAME = 'cashew_import.sqlite';
@@ -211,21 +211,15 @@ export const cashewPlugin: ImportPlugin = {
       throw new Error('Raw file data is missing.');
     }
 
-    const sqliteDir = `${FileSystem.documentDirectory}SQLite`;
+    const sqliteDir = `${files.document}SQLite`;
     const tempDbPath = `${sqliteDir}/${CASHEW_DB_NAME}`;
 
     try {
       // Ensure SQLite directory exists
-      const dirInfo = await FileSystem.getInfoAsync(sqliteDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(sqliteDir, { intermediates: true });
-      }
+      await files.ensureDirectory(sqliteDir);
 
       // Copy file to SQLite directory
-      await FileSystem.copyAsync({
-        from: context.uri,
-        to: tempDbPath,
-      });
+      await files.copy(context.uri, tempDbPath);
 
       // Open SQLite Database
       onProgress?.('Extracting data from backup...', 0.2);
@@ -738,7 +732,7 @@ export const cashewPlugin: ImportPlugin = {
 
       // Cleanup
       await db.closeAsync();
-      await FileSystem.deleteAsync(tempDbPath, { idempotent: true });
+      await files.deleteFile(tempDbPath);
 
       logger.info('[CashewPlugin] Import completed successfully');
       onProgress?.('Import completed!', 1.0);
@@ -753,9 +747,7 @@ export const cashewPlugin: ImportPlugin = {
       };
     } catch (error) {
       logger.error('[CashewPlugin] Import failed', error);
-      try {
-        await FileSystem.deleteAsync(tempDbPath, { idempotent: true });
-      } catch {}
+      await files.deleteFile(tempDbPath);
       throw new Error(
         `Cashew import failed: ${error instanceof Error ? error.message : String(error)}`,
       );

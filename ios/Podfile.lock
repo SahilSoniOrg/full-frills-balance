@@ -2570,6 +2570,13 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNZipArchive (7.1.1):
+    - React-Core
+    - RNZipArchive/Core (= 7.1.1)
+    - SSZipArchive (~> 2.5.5)
+  - RNZipArchive/Core (7.1.1):
+    - React-Core
+    - SSZipArchive (~> 2.5.5)
   - SDWebImage (5.21.7):
     - SDWebImage/Core (= 5.21.7)
   - SDWebImage/Core (5.21.7)
@@ -2585,6 +2592,7 @@ PODS:
     - Sentry/Core (= 9.12.1)
   - Sentry/Core (9.12.1)
   - simdjson (3.9.4)
+  - SSZipArchive (2.5.5)
   - WatermelonDB (0.28.1-0):
     - React
     - simdjson
@@ -2717,6 +2725,7 @@ DEPENDENCIES:
   - "RNSentry (from `../node_modules/@sentry/react-native`)"
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
+  - RNZipArchive (from `../node_modules/react-native-zip-archive`)
   - "simdjson (from `../node_modules/@nozbe/simdjson`)"
   - "WatermelonDB (from `../node_modules/@nozbe/watermelondb`)"
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
@@ -2733,6 +2742,7 @@ SPEC REPOS:
     - SDWebImageSVGCoder
     - SDWebImageWebPCoder
     - Sentry
+    - SSZipArchive
 
 EXTERNAL SOURCES:
   EASClient:
@@ -2986,6 +2996,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNWorklets:
     :path: "../node_modules/react-native-worklets"
+  RNZipArchive:
+    :path: "../node_modules/react-native-zip-archive"
   simdjson:
     :path: "../node_modules/@nozbe/simdjson"
   WatermelonDB:
@@ -3124,12 +3136,14 @@ SPEC CHECKSUMS:
   RNSentry: 4ea69f724b427236c55fdac5a86f6c906ba4cfd9
   RNSVG: 0bd149b873018bc6e0e3321e2f6435bdba294460
   RNWorklets: 0e736f568c3c61cb3326cdcda767c4daee56a8a9
+  RNZipArchive: 0f7498c241e20d276d9cfa50ab35df4c572497d0
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   Sentry: 49ca124994347ba8f89a70f99784bbeedabfa35e
   simdjson: 7bb9e33d87737cec966e7b427773c67baa4458fe
+  SSZipArchive: c69881e8ac5521f0e622291387add5f60f30f3c4
   WatermelonDB: 4c846c8cb94eef3cba90fa034d15310163226703
   Yoga: acd565934addf7423687593ec490bd4491b2a802
 

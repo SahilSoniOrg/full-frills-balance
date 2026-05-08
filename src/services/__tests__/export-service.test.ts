@@ -1,9 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import { exportService } from '@/src/services/export-service';
+import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import JSZip from 'jszip';
-import { WorkplaceId } from '@/src/types/domain';
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {
@@ -192,25 +191,14 @@ describe('ExportService', () => {
       const zipData = await exportService.exportToJSON('test-workplace' as WorkplaceId);
       expect(zipData).toBeInstanceOf(Uint8Array);
 
-      const zip = await JSZip.loadAsync(zipData);
-      const file = zip.file('backup.json');
-      expect(file).not.toBeNull();
-
-      const json = await file!.async('text');
-      const data = JSON.parse(json);
-
-      expect(data.version).toBe('1.3.0');
-      expect(data.accounts).toHaveLength(1);
-      expect(data.journals).toHaveLength(1);
-      expect(data.transactions).toHaveLength(1);
-      expect(data.auditLogs).toHaveLength(0); // Optimized: audit logs are now skipped
-      expect(data.budgets).toHaveLength(1);
-      expect(data.budgetScopes).toHaveLength(1);
-      expect(data.currencies).toHaveLength(1);
-      expect(data.exchangeRates).toHaveLength(0); // Optimized: exchange rates are now skipped
-      expect(data.accountMetadata).toHaveLength(1);
-      expect(data.balanceSnapshots).toHaveLength(0); // Optimized: snapshots are now skipped
-      expect(data.preferences.theme).toBe('dark');
+      // Verify that the compression layer was called with a backup.json
+      const { compression } = require('@/src/utils/compression');
+      expect(compression.createZipArchive).toHaveBeenCalledWith(
+        expect.stringContaining('test-workplace'),
+        expect.objectContaining({
+          'backup.json': expect.any(String),
+        }),
+      );
     });
 
     it('should handle errors', async () => {

@@ -1,9 +1,9 @@
-import { alert, confirm, toast } from '@/src/utils/alerts';
+import { confirm, toast } from '@/src/utils/alerts';
 import { bytesToBase64 } from '@/src/utils/serialization';
-import { File, Paths } from 'expo-file-system';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform, Share } from 'react-native';
+import { files } from '../utils/files';
 import { logger } from '../utils/logger';
 
 import { analytics } from './analytics-service';
@@ -115,7 +115,11 @@ class SharingService {
    * Generic save method that accepts a ShareProvider.
    * Prompts user for location on Android, shares with save hint on iOS.
    */
-  async save(provider: ShareProvider, format: ShareFormat = ShareFormat.TEXT): Promise<void> {
+  async save(
+    provider: ShareProvider,
+    format: ShareFormat = ShareFormat.TEXT,
+    onProgress?: (message: string, progress: number) => void,
+  ): Promise<void> {
     const { content, filename, mimeType, effectiveFormat } = await this.prepareContent(
       provider,
       format,
@@ -136,27 +140,48 @@ class SharingService {
       const encoding = effectiveFormat === ShareFormat.ZIP ? 'base64' : 'utf8';
       const base64Content = typeof content === 'string' ? content : bytesToBase64(content);
 
-      // Tier 1: Save to app's persistent storage (documentDirectory)
-      const fileUri = `${FileSystem.documentDirectory}${filename}`;
-      await FileSystem.writeAsStringAsync(fileUri, base64Content, {
-        encoding:
-          encoding === 'base64' ? FileSystem.EncodingType.Base64 : FileSystem.EncodingType.UTF8,
-      });
+      // Tier 1: Save to app's persistent storage (internal backup)
+      onProgress?.('Creating local backup...', 0.92);
+      const sanitizedBase = files.document.endsWith('/')
+        ? files.document.slice(0, -1)
+        : files.document;
+      const fileUri = `${sanitizedBase}/${filename}`;
+      await files.writeContent(fileUri, base64Content, encoding === 'base64' ? 'base64' : 'utf8');
+
+      // Tier 2: iOS - Open Share Sheet immediately (provides 'Save to Files')
+      if (Platform.OS === 'ios') {
+        onProgress?.('Opening share sheet...', 0.98);
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType,
+            dialogTitle: provider.title,
+          });
+          onProgress?.('Backup complete!', 1.0);
+          this.track('save_to_disk_completed', provider, { platform: 'ios' });
+        } else {
+          toast.error('Sharing not available on this device');
+        }
+        return; // iOS flow ends here
+      }
 
       // Tier 2: Android - Use Storage Access Framework for user-controlled location
       if (Platform.OS === 'android') {
+        onProgress?.('Waiting for folder selection...', 0.94);
         const permissions =
           await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
         if (permissions.granted) {
+          onProgress?.('Writing to destination...', 0.97);
           const fileLocation = await FileSystem.StorageAccessFramework.createFileAsync(
             permissions.directoryUri,
             filename,
             mimeType,
           );
-          await FileSystem.writeAsStringAsync(fileLocation, base64Content, {
-            encoding:
-              encoding === 'base64' ? FileSystem.EncodingType.Base64 : FileSystem.EncodingType.UTF8,
-          });
+          await files.writeContent(
+            fileLocation,
+            base64Content,
+            encoding === 'base64' ? 'base64' : 'utf8',
+          );
+          onProgress?.('Backup complete!', 1.0);
           toast.success('File saved successfully');
           this.track('save_to_disk_completed', provider, { platform: 'android' });
         } else {
@@ -177,27 +202,27 @@ class SharingService {
         }
       }
 
-      // Tier 3: Confirmation Dialog (mirroring export flow)
-      confirm.show({
-        title: provider.title + ' Ready',
-        message: 'Your file has been saved. Would you like to share or upload it now?',
-        confirmText: 'Share File',
-        cancelText: 'Just Save',
-        onConfirm: async () => {
-          this.track('save_confirm_share', provider);
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(fileUri, {
-              mimeType,
-              dialogTitle: provider.title,
-            });
-          } else {
-            alert.show({ title: 'Ready', message: `File saved to ${fileUri}` });
-          }
-        },
-        onCancel: () => {
-          this.track('save_confirm_dismiss', provider);
-        },
-      });
+      // Tier 3: Android Confirmation (Share or Finish)
+      if (Platform.OS === 'android') {
+        confirm.show({
+          title: provider.title + ' Ready',
+          message: 'Your file has been saved. Would you like to share or upload it now?',
+          confirmText: 'Share File',
+          cancelText: 'Just Save',
+          onConfirm: async () => {
+            this.track('save_confirm_share', provider);
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(fileUri, {
+                mimeType,
+                dialogTitle: provider.title,
+              });
+            }
+          },
+          onCancel: () => {
+            this.track('save_confirm_dismiss', provider);
+          },
+        });
+      }
 
       this.track('save_completed', provider, { format: effectiveFormat });
     } catch (error) {
@@ -269,15 +294,7 @@ class SharingService {
     this.pendingFiles = toKeep;
 
     for (const file of toDelete) {
-      try {
-        const fileObj = new File(file.uri);
-        if (fileObj.exists) {
-          // In Expo SDK 54+, file operations are synchronous via JSI
-          fileObj.delete();
-        }
-      } catch (err) {
-        logger.debug(`[SharingService] Failed to cleanup ${file.uri}`, err as any);
-      }
+      files.deleteFile(file.uri);
     }
   }
 
@@ -286,18 +303,7 @@ class SharingService {
     filename: string,
     encoding: 'utf8' | 'base64' = 'utf8',
   ): Promise<string> {
-    const cacheDir = Paths.cache;
-
-    if (!cacheDir) {
-      throw new Error('[SharingService] No cache directory available for file creation');
-    }
-
-    // In Expo SDK 54+, you construct a File and act on it
-    const file = new File(cacheDir, filename);
-
-    file.write(content, { encoding });
-
-    return file.uri;
+    return files.writeContent(filename, content, encoding);
   }
 
   private getMimeType(format: ShareFormat): string {

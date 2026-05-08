@@ -1,3 +1,4 @@
+import { ProgressBar } from '@/src/components/common/ProgressBar';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Spacing, withOpacity } from '@/src/constants';
@@ -58,21 +59,12 @@ export default function MaintenanceSettingsScreen() {
               {AppConfig.strings.settings.maintenance.integrityTitle}
             </AppText>
 
-            <View style={[styles.progressBarBg, { backgroundColor: theme.surfaceSecondary }]}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    backgroundColor: theme.primary,
-                    width: `${Math.max(2, Math.min(100, vm.integrityProgress * 100))}%`,
-                  },
-                ]}
-              />
-            </View>
-
-            <AppText variant="body" color="secondary" style={styles.modalStatus}>
-              {vm.integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait}
-            </AppText>
+            <ProgressBar
+              progress={vm.integrityProgress}
+              label={
+                vm.integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait
+              }
+            />
 
             <AppText variant="caption" color="secondary" style={styles.modalHint}>
               {AppConfig.strings.settings.maintenance.integrityHint}
@@ -109,16 +101,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     marginBottom: Spacing.lg,
     textAlign: 'center',
-  },
-  progressBarBg: {
-    width: '100%',
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: Spacing.md,
-  },
-  progressBarFill: {
-    height: '100%',
   },
   modalStatus: {
     textAlign: 'center',

@@ -20,8 +20,8 @@ import { logger } from '@/src/utils/logger';
 import { preferences, UIPreferences } from '@/src/utils/preferences';
 import { Model, TableSchema } from '@nozbe/watermelondb';
 import { AppSchema } from '@nozbe/watermelondb/Schema';
-import JSZip from 'jszip';
 import { supportsRawSql } from '../data/database/DatabaseUtils';
+import { compression } from '../utils/compression';
 
 export interface AccountExport {
   id: string;
@@ -401,7 +401,17 @@ class ExportService {
         }
       });
 
-      return transformed as T;
+      // Strictly filter to camelCase keys and exclude original snake_case names
+      const cleaned: Record<string, unknown> = {};
+      const targetKeys = columnNames.map(snakeToCamel);
+
+      for (const key of targetKeys) {
+        if (transformed[key] !== undefined) {
+          cleaned[key] = transformed[key];
+        }
+      }
+
+      return cleaned as T;
     });
   }
 
@@ -426,7 +436,7 @@ class ExportService {
         { name: 'Budget Scopes', table: 'budget_scopes' },
         { name: 'Metadata', table: 'account_metadata' },
         { name: 'Planned Payments', table: 'planned_payments' },
-        { name: 'Metadata', table: 'journal_metadata' },
+        { name: 'Journal Metadata', table: 'journal_metadata' },
         { name: 'Rules', table: 'sms_auto_post_rules' },
       ];
 
@@ -521,8 +531,8 @@ class ExportService {
         { key: 'smsAutoPostRules', data: smsAutoPostRules },
       ];
 
-      let currentProgress = 0.56;
-      const progressStep = 0.04 / tablesToStitch.length;
+      let currentProgress = 0.55;
+      const progressStep = 0.2 / tablesToStitch.length; // Serialization takes 20% total
 
       for (const table of tablesToStitch) {
         onProgress?.(`Serializing ${table.key}...`, currentProgress);
@@ -559,35 +569,28 @@ class ExportService {
         smsAutoPostRules: smsAutoPostRules.length,
       });
 
-      // Create ZIP archive
-      const zip = new JSZip();
-      zip.file('backup.json', finalJson);
-      logger.info('[ExportService] ZIP archive created');
-      //yield here
-      await new Promise(resolve => setTimeout(resolve, 10));
-      onProgress?.('Compressing ZIP archive...', 0.62);
-      logger.info('[ExportService] Compressing ZIP archive');
+      onProgress?.('Compressing ZIP archive...', 0.75);
+      logger.info('[ExportService] Native compression started');
       const startTime = Date.now();
-      const base64Data = await zip.generateAsync(
-        {
-          type: 'base64',
-          compression: 'DEFLATE',
-          compressionOptions: { level: 9 },
-        },
-        metadata => {
-          onProgress?.(
-            `Compressing and encoding... (${Math.round(metadata.percent)}%)`,
-            0.65 + (metadata.percent / 100) * 0.35, // 65% to 100%
-          );
-        },
-      );
+
+      const archive = await compression.createZipArchive('export', {
+        'backup.json': finalJson,
+      });
+
       const endTime = Date.now();
-      logger.info('[ExportService] ZIP archive compressed', {
+      logger.info('[ExportService] Native compression complete', {
         timeTakenMs: endTime - startTime,
       });
-      //yield here
-      await new Promise(resolve => setTimeout(resolve, 10));
-      onProgress?.('Finalizing...', 1.0);
+
+      onProgress?.('Finalizing backup...', 0.9);
+      let base64Data = '';
+      try {
+        base64Data = archive.base64;
+      } finally {
+        archive.cleanup(); // Clean up temp files immediately after base64 conversion
+      }
+
+      onProgress?.('Export complete!', 1.0);
       analytics.logExportCompleted('ZIP');
       return base64Data;
     } catch (error) {

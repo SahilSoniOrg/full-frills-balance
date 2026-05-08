@@ -5,25 +5,10 @@
  * Platform-agnostic utilities used by the import hook.
  */
 
+import { compression } from '@/src/utils/compression';
+import { files } from '@/src/utils/files';
 import { logger } from '@/src/utils/logger';
-import * as FileSystem from 'expo-file-system/legacy';
-import JSZip from 'jszip';
 import { Platform } from 'react-native';
-
-/**
- * Convert Base64 string to Uint8Array.
- */
-function base64ToBytes(base64: string): Uint8Array {
-  // Optimization: Avoid large intermediate string from atob if possible.
-  // However, in RN environment without Buffer, we use a more efficient loop.
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
 
 /**
  * Decode Uint8Array as UTF-16BE (Strict BE as per Ivy Wallet format).
@@ -75,10 +60,7 @@ export async function readFileAsBytes(uri: string): Promise<Uint8Array> {
       const buffer = await response.arrayBuffer();
       return new Uint8Array(buffer);
     } else {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      return base64ToBytes(base64);
+      return files.readBytes(uri);
     }
   } catch (error) {
     logger.error('[ImportOrchestrator] Failed to read file', error);
@@ -104,21 +86,17 @@ export async function extractIfZip(bytes: Uint8Array): Promise<Uint8Array> {
   }
 
   try {
-    const zip = await JSZip.loadAsync(bytes);
-    const files = Object.keys(zip.files);
+    const extracted = await compression.extractFirstFile(bytes);
 
-    // Filter out MACOSX metadata
-    const validFile = files.find(name => !name.includes('__MACOSX') && !zip.files[name].dir);
-
-    if (!validFile) {
+    if (!extracted) {
       logger.warn('[ImportOrchestrator] No valid files in ZIP, falling back to raw bytes');
       return bytes;
     }
 
-    logger.info(`[ImportOrchestrator] Extracting: ${validFile}`);
-    return await zip.files[validFile].async('uint8array');
+    logger.info(`[ImportOrchestrator] Extracting: ${extracted.name}`);
+    return extracted.bytes;
   } catch (error) {
-    logger.error('[ImportOrchestrator] ZIP load failed, falling back to raw content', error);
+    logger.error('[ImportOrchestrator] ZIP extraction failed, falling back to raw content', error);
     return bytes;
   }
 }

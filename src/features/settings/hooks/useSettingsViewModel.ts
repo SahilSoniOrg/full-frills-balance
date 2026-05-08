@@ -153,7 +153,13 @@ export function useSettingsViewModel(): SettingsViewModel {
         data_size_bytes: jsonData.length,
       });
 
-      await sharingService.save(provider, ShareFormat.ZIP);
+      await sharingService.save(provider, ShareFormat.ZIP, (message, progress) => {
+        setExportProgressMessage(message);
+        setExportProgress(progress);
+      });
+
+      // Keep at 100% for a moment before closing modal
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
       logger.error('[onConfirmExport] Export failed', error);
       toast.error('Could not export data');

@@ -1,10 +1,11 @@
+import { ProgressBar } from '@/src/components/common/ProgressBar';
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { WorkplaceContext } from '@/src/contexts/WorkplaceContext';
 import { useImportPlugins } from '@/src/features/settings/hooks/useImportPlugins';
 import { useImport } from '@/src/hooks/use-import';
 import { useTheme } from '@/src/hooks/use-theme';
-import { WorkplaceContext } from '@/src/contexts/WorkplaceContext';
 import type { ImportPlugin } from '@/src/services/import/types';
 import React, { useCallback, useContext } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -49,7 +50,6 @@ const ImportPluginCard = ({ plugin, index, isImporting, onSelect }: ImportPlugin
   );
 };
 export default function ImportSelectionScreen() {
-  const { theme } = useTheme();
   const workplaceContext = useContext(WorkplaceContext);
   const workplaceId = workplaceContext?.workplaceId;
   const { handleImport, isImporting, progress, progressMessage } = useImport();
@@ -75,25 +75,7 @@ export default function ImportSelectionScreen() {
             Restoring Backup
           </AppText>
 
-          <View style={[styles.progressBarBg, { backgroundColor: theme.surfaceSecondary }]}>
-            <View
-              style={[
-                styles.progressBarFill,
-                {
-                  backgroundColor: theme.primary,
-                  width: `${Math.max(0, Math.min(100, progress * 100))}%`,
-                },
-              ]}
-            />
-          </View>
-
-          <AppText
-            variant="body"
-            color="secondary"
-            style={{ textAlign: 'center', marginTop: Spacing.md }}
-          >
-            {progressMessage || 'Please wait...'}
-          </AppText>
+          <ProgressBar progress={progress} label={progressMessage || 'Please wait...'} />
 
           <AppText
             variant="caption"
@@ -184,14 +166,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressBarBg: {
-    width: '100%',
-    height: 8,
-    borderRadius: Shape.radius.full,
-    overflow: 'hidden',
-    marginBottom: Spacing.md,
-  },
-  progressBarFill: {
-    height: '100%',
+  progressMessage: {
+    marginBottom: 24,
+    textAlign: 'center',
+    opacity: 0.8,
   },
 });

@@ -1,11 +1,11 @@
+import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
-import JSZip from 'jszip';
-import * as Sentry from '@sentry/react-native';
 import { Platform } from 'react-native';
-import { sharingService, ShareFormat } from './SharingService';
+import { compression } from '../utils/compression';
 import { logger } from '../utils/logger';
 import { analytics } from './analytics-service';
+import { ShareFormat, sharingService } from './SharingService';
 
 export class BugReportService {
   /**
@@ -33,15 +33,16 @@ export class BugReportService {
       supportedFormats: [ShareFormat.ZIP, ShareFormat.TEXT],
       getContent: async (format: ShareFormat) => {
         if (format === ShareFormat.ZIP) {
-          const zip = new JSZip();
-          zip.file('metadata.txt', metadata);
-          zip.file('logs.txt', logs);
-
-          return await zip.generateAsync({
-            type: 'base64',
-            compression: 'DEFLATE',
-            compressionOptions: { level: 6 },
+          const archive = await compression.createZipArchive('bug_report', {
+            'metadata.txt': metadata,
+            'logs.txt': logs,
           });
+
+          try {
+            return archive.base64;
+          } finally {
+            archive.cleanup(); // Clean up temp files immediately after base64 conversion
+          }
         }
 
         return `${metadata}\n\n--- RECENT LOGS ---\n${logs}`;
