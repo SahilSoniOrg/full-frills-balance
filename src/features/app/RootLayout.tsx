@@ -9,13 +9,13 @@ import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
-import { analytics, POSTHOG_API_KEY, POSTHOG_HOST } from '@/src/services/analytics-service';
+import { analytics } from '@/src/services/analytics-service';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import { Stack, useNavigationContainerRef, usePathname, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { PostHogProvider } from 'posthog-react-native';
+import PostHog, { PostHogProvider } from 'posthog-react-native';
 import React from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -138,6 +138,7 @@ function BootManager() {
 function RootLayout() {
   const colorScheme = useColorScheme();
   const navigationRef = useNavigationContainerRef();
+  const [isAnalyticsReady, setIsAnalyticsReady] = React.useState(false);
 
   React.useEffect(() => {
     if (navigationRef) {
@@ -147,7 +148,12 @@ function RootLayout() {
 
   React.useEffect(() => {
     analytics.initialize();
+    setIsAnalyticsReady(true);
   }, []);
+
+  if (!isAnalyticsReady) {
+    return null; // Keep splash screen visible until analytics (and other services) are ready
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -165,12 +171,7 @@ function RootLayout() {
               <UIProvider>
                 <BootManager />
                 <FontManager>
-                  <PostHogProvider
-                    client={analytics.posthog ?? undefined}
-                    apiKey={analytics.posthog ? undefined : POSTHOG_API_KEY}
-                    options={analytics.posthog ? undefined : { host: POSTHOG_HOST, disabled: true }}
-                    debug={__DEV__}
-                  >
+                  <MaybePostHogProvider client={analytics.posthog}>
                     <PostHogScreenTracker />
                     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                       <AppLockInterceptor>
@@ -179,7 +180,7 @@ function RootLayout() {
                       <AlertContainer />
                       <ToastContainer />
                     </ThemeProvider>
-                  </PostHogProvider>
+                  </MaybePostHogProvider>
                 </FontManager>
               </UIProvider>
             </DatabaseProvider>
@@ -187,6 +188,28 @@ function RootLayout() {
         </SafeAreaProvider>
       </View>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * Helper to ensure we don't render PostHogProvider without a valid client.
+ * This prevents the provider from attempting its own (racy) initialization.
+ */
+function MaybePostHogProvider({
+  client,
+  children,
+}: {
+  client: PostHog | null;
+  children: React.ReactNode;
+}) {
+  if (!client) {
+    return <>{children}</>;
+  }
+
+  return (
+    <PostHogProvider client={client} debug={__DEV__}>
+      {children}
+    </PostHogProvider>
   );
 }
 

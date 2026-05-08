@@ -3,10 +3,10 @@ import { schema } from '@/src/data/database/schema';
 import { ImportStats } from '@/src/services/import';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import PostHog from 'posthog-react-native';
-import * as Sentry from '@sentry/react-native';
 import { Platform } from 'react-native';
 
 /**
@@ -22,6 +22,7 @@ const BUILD_TYPE = process.env.APP_VARIANT || 'development'; // 'development', '
 
 export class AnalyticsService {
   private _posthog: PostHog | null = null;
+  private _initialized = false;
   private sessionStartTime: number = Date.now();
   private sessionTimeoutTimer: NodeJS.Timeout | null = null;
 
@@ -31,7 +32,6 @@ export class AnalyticsService {
 
   /**
    * Get the anonymous distinct ID for the current user.
-   * Useful for correlating bug reports with PostHog/Sentry logs.
    */
   getDistinctId(): string {
     return this._posthog?.getDistinctId() || 'anonymous';
@@ -39,14 +39,37 @@ export class AnalyticsService {
 
   /**
    * Initialize analytics provider.
+   * Guaranteed to be idempotent and safe to call multiple times.
    */
   initialize() {
+    if (this._initialized) return;
+
+    const isPosthogEnabled =
+      typeof POSTHOG_API_KEY === 'string' && POSTHOG_API_KEY.trim().length > 0;
     // 1. Setup PostHog instance on-demand
-    if (!this._posthog && POSTHOG_API_KEY) {
+    if (!this._posthog && isPosthogEnabled) {
       try {
         this._posthog = new PostHog(POSTHOG_API_KEY, {
           host: POSTHOG_HOST,
-          disabled: __DEV__,
+          // Temporarily enabled in dev for verification
+          disabled: !isPosthogEnabled,
+          // Enable error tracking
+          errorTracking: { autocapture: true },
+          // Better mobile session tracking
+          enablePersistSessionIdAcrossRestart: true,
+          // Automatically enrich EVERY event (including autocaptured ones)
+          customAppProperties: props => ({
+            ...props,
+            ...this.getGlobalProperties(),
+          }),
+          // Temporarily enabled in dev for verification
+          enableSessionReplay: true,
+          sessionReplayConfig: {
+            sampleRate: 1.0, // 100% sampling for testing
+            maskAllTextInputs: true,
+            maskAllImages: true,
+            captureLog: true, // Capture console logs in replays
+          },
         });
       } catch (error) {
         logger.error('[Analytics] Failed to create PostHog instance', error);
@@ -64,21 +87,23 @@ export class AnalyticsService {
       Sentry.setUser({ id: distinctId });
     }
 
+    this._initialized = true;
+
     if (this._posthog && __DEV__) {
       logger.info('[Analytics] PostHog client ready (debug mode — events disabled in __DEV__)');
     } else if (this._posthog) {
       logger.info('[Analytics] PostHog client ready');
       this.startSessionTracking();
     } else {
-      logger.warn('[Analytics] No PostHog API key configured — analytics disabled');
+      logger.warn('[Analytics] Analytics disabled (missing key or dev mode)');
     }
   }
   /**
-   * Enrich properties with global metadata
+   * Get global properties for event enrichment
    */
-  private enrichProps(props?: Record<string, any>): Record<string, any> {
+  private getGlobalProperties(): Record<string, any> {
     return {
-      ...props,
+      $app_id: Application.applicationId || 'unknown',
       $app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
       $app_build_number: Application.nativeBuildVersion || '1',
       $device_name: Device.deviceName,
@@ -102,10 +127,9 @@ export class AnalyticsService {
     if (!this.posthog) return;
 
     try {
-      const enrichedProps = this.enrichProps(props);
-      this.posthog.capture(eventName, enrichedProps);
+      this.posthog.capture(eventName, props);
       if (__DEV__) {
-        logger.debug(`[Analytics] Tracked: ${eventName}`, enrichedProps);
+        logger.debug(`[Analytics] Tracked: ${eventName}`, props);
       }
     } catch (error) {
       logger.error(`[Analytics] Failed to track event: ${eventName}`, error);
@@ -119,14 +143,9 @@ export class AnalyticsService {
     if (!this.posthog) return;
 
     try {
-      const enrichedProps = this.enrichProps({
-        ...properties,
-        $app_id: Application.applicationId || 'unknown',
-      });
-
-      this.posthog.identify(distinctId, enrichedProps);
+      this.posthog.identify(distinctId, properties);
       if (__DEV__) {
-        logger.debug(`[Analytics] Identified: ${distinctId}`, enrichedProps);
+        logger.debug(`[Analytics] Identified: ${distinctId}`, properties);
       }
     } catch (error) {
       logger.error(`[Analytics] Failed to identify user: ${distinctId}`, error);
@@ -140,10 +159,9 @@ export class AnalyticsService {
     if (!this.posthog) return;
 
     try {
-      const enrichedProps = this.enrichProps(props);
-      this.posthog.screen(screenName, enrichedProps);
+      this.posthog.screen(screenName, props);
       if (__DEV__) {
-        logger.debug(`[Analytics] Screen: ${screenName}`, enrichedProps);
+        logger.debug(`[Analytics] Screen: ${screenName}`, props);
       }
     } catch (error) {
       logger.error(`[Analytics] Failed to track screen: ${screenName}`, error);
