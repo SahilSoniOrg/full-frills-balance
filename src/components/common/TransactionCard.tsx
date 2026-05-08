@@ -142,7 +142,6 @@ const TransactionCardComponent = ({
                   )}
                   textColor={typeColor}
                   icon={presentation.typeIcon}
-                  style={styles.primaryBadge}
                 >
                   {presentation.label}
                 </Badge>
@@ -230,10 +229,6 @@ const styles = StyleSheet.create({
   },
   container: {
     overflow: 'hidden',
-  },
-  primaryBadge: {
-    borderRightWidth: 1,
-    paddingRight: Spacing.sm,
   },
   notes: {
     opacity: Opacity.heavy,
