@@ -8,49 +8,81 @@ import React, { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 interface AdvancedFormProps {
-    accounts: ReturnType<typeof useAccounts>['accounts'];
-    editor: ReturnType<typeof useJournalEditor>;
-    onSelectAccountRequest: (lineId: string) => void;
+  accounts: ReturnType<typeof useAccounts>['accounts'];
+  editor: ReturnType<typeof useJournalEditor>;
+  workplaceCurrency: string;
+  onSelectAccountRequest: (lineId: string) => void;
 }
 
 export const AdvancedForm = ({
-    accounts: _accounts,
-    editor,
-    onSelectAccountRequest,
+  accounts: _accounts,
+  editor,
+  workplaceCurrency,
+  onSelectAccountRequest,
 }: AdvancedFormProps) => {
-    // Handlers
-    const handleUpdateLine = useCallback((id: string, field: string, value: any) => {
-        editor.updateLine(id, { [field]: value });
-    }, [editor]);
+  // Handlers
+  const handleUpdateLine = useCallback(
+    (id: string, field: string, value: any) => {
+      editor.updateLine(id, { [field]: value });
+    },
+    [editor],
+  );
 
-    return (
-        <View style={{ gap: Spacing.md, padding: Spacing.lg }}>
-
-            <View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, paddingHorizontal: Spacing.xs }}>
-                    <AppText variant="heading">{AppConfig.strings.advancedEntry.journalLines}</AppText>
-                    <TouchableOpacity onPress={editor.addLine} style={{ padding: Spacing.sm }} accessibilityLabel={AppConfig.strings.advancedEntry.addLineAccessibility} accessibilityRole="button">
-                        <AppText variant="body" color="primary">{AppConfig.strings.advancedEntry.addLine}</AppText>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={{ gap: 0 }}>
-                    {editor.lines.map((line, index) => (
-                        <JournalLineItem
-                            key={line.id}
-                            line={line}
-                            index={index}
-                            canRemove={editor.lines.length > 2}
-                            onUpdate={(field, value) => handleUpdateLine(line.id, field, value)}
-                            onRemove={() => editor.removeLine(line.id)}
-                            onSelectAccount={() => onSelectAccountRequest(line.id)}
-                            onAutoFetchRate={() => editor.autoFetchLineRate(line.id)}
-                            onBalanceLine={() => editor.balanceLine(line.id)}
-                            getLineBaseAmount={JournalCalculator.getLineBaseAmount}
-                        />
-                    ))}
-                </View>
-            </View>
+  return (
+    <View style={{ gap: Spacing.md, padding: Spacing.lg }}>
+      <View>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: Spacing.sm,
+            paddingHorizontal: Spacing.xs,
+          }}
+        >
+          <AppText variant="heading">{AppConfig.strings.advancedEntry.journalLines}</AppText>
+          <TouchableOpacity
+            onPress={editor.addLine}
+            style={{ padding: Spacing.sm }}
+            accessibilityLabel={AppConfig.strings.advancedEntry.addLineAccessibility}
+            accessibilityRole="button"
+          >
+            <AppText variant="body" color="primary">
+              {AppConfig.strings.advancedEntry.addLine}
+            </AppText>
+          </TouchableOpacity>
         </View>
-    );
+
+        <View style={{ gap: 0 }}>
+          {(() => {
+            const journalCurrencies = [
+              ...new Set(
+                editor.lines.map(l => l.accountCurrency || workplaceCurrency).filter(Boolean),
+              ),
+            ];
+            const journalBaseCurrency =
+              journalCurrencies.length === 1 ? journalCurrencies[0] : workplaceCurrency;
+
+            return editor.lines.map((line, index) => (
+              <JournalLineItem
+                key={line.id}
+                line={line}
+                index={index}
+                canRemove={editor.lines.length > 2}
+                onUpdate={(field, value) => handleUpdateLine(line.id, field, value)}
+                onRemove={() => editor.removeLine(line.id)}
+                onSelectAccount={() => onSelectAccountRequest(line.id)}
+                onAutoFetchRate={force => editor.autoFetchLineRate(line.id, force)}
+                onBalanceLine={() => editor.balanceLine(line.id)}
+                isBalancePrimary={editor.isUnbalanced && editor.isEntryReadyToBalance}
+                getLineBaseAmount={JournalCalculator.getLineBaseAmount}
+                workplaceCurrency={workplaceCurrency}
+                journalBaseCurrency={journalBaseCurrency}
+              />
+            ));
+          })()}
+        </View>
+      </View>
+    </View>
+  );
 };

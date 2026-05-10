@@ -1,5 +1,6 @@
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -45,7 +46,7 @@ export function SimpleFormAmountInput({
           weight="bold"
           style={{ color: theme.textSecondary, opacity: Opacity.heavy }}
         >
-          {displayCurrency}
+          {CURRENCY_SYMBOLS[displayCurrency] || displayCurrency}
         </AppText>
       </View>
       {readOnly ? (

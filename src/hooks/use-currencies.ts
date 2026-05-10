@@ -41,11 +41,3 @@ export function useCurrencyPrecision(code: string | undefined) {
 
   return { precision, isLoading };
 }
-
-/**
- * Hook to get the active workplace's currency code
- */
-export function useWorkplaceCurrency() {
-  const { currencyCode } = require('@/src/contexts/WorkplaceContext').useWorkplace();
-  return currencyCode;
-}

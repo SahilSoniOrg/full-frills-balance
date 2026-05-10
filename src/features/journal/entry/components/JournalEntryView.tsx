@@ -125,15 +125,18 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
             <AdvancedForm
               accounts={vm.accounts}
               editor={vm.editor}
+              workplaceCurrency={vm.workplaceCurrency}
               onSelectAccountRequest={vm.advancedFormConfig.onSelectAccountRequest}
             />
             <JournalSummary
               totalDebits={vm.totalDebits}
               totalCredits={vm.totalCredits}
               isBalanced={vm.isBalanced}
+              isBalancedDisplay={vm.isBalancedDisplay}
               availableCurrencies={vm.availableCurrencies}
               selectedCurrency={vm.selectedCurrency}
               onSelectCurrency={vm.onSelectCurrency}
+              workplaceCurrency={vm.workplaceCurrency}
             />
           </View>
         )}

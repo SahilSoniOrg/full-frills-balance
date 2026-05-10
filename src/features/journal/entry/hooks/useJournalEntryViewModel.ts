@@ -50,6 +50,7 @@ export interface JournalEntryViewModel {
   totalDebits: number;
   totalCredits: number;
   isBalanced: boolean;
+  isBalancedDisplay: boolean;
   launchSource?: string;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   submitLabel: string;
@@ -58,6 +59,7 @@ export interface JournalEntryViewModel {
   isAmountFocused: boolean;
   setIsAmountFocused: (focused: boolean) => void;
   suggestions: string[];
+  workplaceCurrency: string;
 }
 
 /**
@@ -249,6 +251,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     totalDebits,
     totalCredits,
     isBalanced,
+    isBalancedDisplay,
     availableCurrencies,
     selectedCurrency,
     setSelectedCurrency,
@@ -385,6 +388,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       selectableAccounts,
       isSimpleModeDisabled,
       isBalanced,
+      isBalancedDisplay,
       primaryDisplayAmount,
       primaryDisplayCurrency,
       availableCurrencies,
@@ -400,6 +404,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       isAmountFocused,
       setIsAmountFocused,
       suggestions,
+      workplaceCurrency,
     }),
     [
       editor,
@@ -418,6 +423,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       selectableAccounts,
       isSimpleModeDisabled,
       isBalanced,
+      isBalancedDisplay,
       primaryDisplayAmount,
       primaryDisplayCurrency,
       availableCurrencies,
@@ -432,6 +438,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       handleSubmit,
       isAmountFocused,
       suggestions,
+      workplaceCurrency,
     ],
   );
 }

@@ -65,7 +65,9 @@ export class JournalCalculator {
   static isBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
     const debits = JournalCalculator.calculateTotalDebits(lines, baseCurrency);
     const credits = JournalCalculator.calculateTotalCredits(lines, baseCurrency);
-    return debits === credits;
+    // Use a small epsilon to account for floating point summation noise
+    // Since all individual lines are rounded to 2 decimals, 0.001 is a safe threshold
+    return Math.abs(debits - credits) < 0.001;
   }
 
   /**
@@ -103,7 +105,9 @@ export class JournalCalculator {
     }
 
     if (!line.accountCurrency || line.accountCurrency === baseCurrency) {
-      return finalAmount;
+      // Even for base currency, ensure we round to the currency precision
+      // to avoid 10.100000000002 issues from manual entry or calculations
+      return roundAmount(finalAmount);
     }
 
     const baseAmount = finalAmount * rate;

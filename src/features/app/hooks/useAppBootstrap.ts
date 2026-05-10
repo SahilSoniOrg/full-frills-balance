@@ -118,7 +118,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
               if (!isActive || phaseRef.current >= AppPhase.STABILIZED) return;
               await yieldToUI();
               await Promise.allSettled([
-                exchangeRateService.preWarmCache(),
+                exchangeRateService.preWarmCache(defaultCurrencyCode),
                 currencyRepository.getAllPrecisions(),
                 accountRepository.findAll(workplaceId),
               ]);

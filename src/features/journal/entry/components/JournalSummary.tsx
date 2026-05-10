@@ -1,7 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
-import { useWorkplaceCurrency } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -9,24 +9,41 @@ interface JournalSummaryProps {
   totalDebits: number;
   totalCredits: number;
   isBalanced: boolean;
+  isBalancedDisplay?: boolean;
   availableCurrencies?: string[];
   selectedCurrency?: string;
   onSelectCurrency?: (currency: string) => void;
+  workplaceCurrency: string;
 }
 
 export function JournalSummary({
   totalDebits,
   totalCredits,
   isBalanced,
+  isBalancedDisplay = true,
   availableCurrencies = [],
   selectedCurrency,
   onSelectCurrency,
+  workplaceCurrency,
 }: JournalSummaryProps) {
   const { theme } = useTheme();
-  const workplaceCurrency = useWorkplaceCurrency();
   const currency = selectedCurrency || workplaceCurrency;
   const difference = Math.abs(totalDebits - totalCredits);
   const showSelector = availableCurrencies.length > 1;
+
+  // Determining the status message
+  let statusColor: 'success' | 'error' = isBalanced ? 'success' : 'error';
+  let statusText = '';
+
+  if (isBalanced) {
+    statusText = AppConfig.strings.journalSummary.balanced(currency);
+  } else if (!isBalancedDisplay) {
+    // Doesn't balance in the currently selected currency either
+    statusText = AppConfig.strings.journalSummary.unbalanced(currency);
+  } else {
+    // Balances in display currency but NOT in workplace base
+    statusText = AppConfig.strings.journalSummary.unbalanced(workplaceCurrency) + ' (BASE)';
+  }
 
   return (
     <View style={styles.container}>
@@ -69,26 +86,39 @@ export function JournalSummary({
         ]}
       >
         <View style={styles.summaryRow}>
-          <AppText variant="body" color="secondary">
-            {AppConfig.strings.journalSummary.totalDebits}
+          <AppText variant="body" color="secondary" weight="bold">
+            {AppConfig.strings.journalSummary.totalAmount}
           </AppText>
-          <AppText variant="body" weight="semibold">
-            {totalDebits.toFixed(2)} {currency}
+          <AppText variant="body" weight="bold" color="primary">
+            {CurrencyFormatter.format(totalDebits, currency)}
+          </AppText>
+        </View>
+
+        <View
+          style={[styles.divider, { backgroundColor: theme.divider, marginVertical: Spacing.xs }]}
+        />
+
+        <View style={styles.summaryRow}>
+          <AppText variant="caption" color="tertiary" weight="bold">
+            {AppConfig.strings.journalSummary.totalDebits.toUpperCase()}
+          </AppText>
+          <AppText variant="caption" weight="semibold" color="tertiary">
+            {CurrencyFormatter.format(totalDebits, currency)}
           </AppText>
         </View>
 
         <View style={styles.summaryRow}>
-          <AppText variant="body" color="secondary">
-            {AppConfig.strings.journalSummary.totalCredits}
+          <AppText variant="caption" color="tertiary" weight="bold">
+            {AppConfig.strings.journalSummary.totalCredits.toUpperCase()}
           </AppText>
-          <AppText variant="body" weight="semibold">
-            {totalCredits.toFixed(2)} {currency}
+          <AppText variant="caption" weight="semibold" color="tertiary">
+            {CurrencyFormatter.format(totalCredits, currency)}
           </AppText>
         </View>
 
         <View style={[styles.balanceSection, { borderTopColor: theme.divider }]}>
           <View style={styles.summaryRow}>
-            <AppText variant="heading" weight="bold">
+            <AppText variant="body" weight="bold" color="secondary">
               {AppConfig.strings.journalSummary.balance}
             </AppText>
             <View
@@ -101,8 +131,8 @@ export function JournalSummary({
                 },
               ]}
             >
-              <AppText variant="heading" weight="bold" color={isBalanced ? 'success' : 'error'}>
-                {difference.toFixed(2)} {currency}
+              <AppText variant="body" weight="bold" color={isBalanced ? 'success' : 'error'}>
+                {CurrencyFormatter.format(difference, currency)}
               </AppText>
             </View>
           </View>
@@ -111,18 +141,16 @@ export function JournalSummary({
             <View
               style={[
                 styles.statusDot,
-                { backgroundColor: isBalanced ? theme.success : theme.error },
+                { backgroundColor: statusColor === 'success' ? theme.success : theme.error },
               ]}
             />
             <AppText
               variant="caption"
-              color={isBalanced ? 'success' : 'error'}
+              color={statusColor}
               weight="bold"
               style={{ letterSpacing: 0.5 }}
             >
-              {isBalanced
-                ? AppConfig.strings.journalSummary.balanced(currency).toUpperCase()
-                : AppConfig.strings.journalSummary.unbalanced(currency).toUpperCase()}
+              {statusText.toUpperCase()}
             </AppText>
           </View>
         </View>
@@ -183,5 +211,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  divider: {
+    height: 1,
+    width: '100%',
+    opacity: Opacity.muted,
   },
 });

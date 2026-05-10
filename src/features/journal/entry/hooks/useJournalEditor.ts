@@ -262,7 +262,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   }, []);
 
   const autoFetchLineRate = useCallback(
-    async (id: string) => {
+    async (id: string, forceRefresh: boolean = false) => {
       const line = lines.find(l => l.id === id);
       if (!line || !line.accountCurrency) return;
 
@@ -273,7 +273,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
           return;
         }
 
-        const rate = await fetchRate(line.accountCurrency, defaultCurrency);
+        const rate = await fetchRate(line.accountCurrency, defaultCurrency, forceRefresh);
         updateLine(id, { exchangeRate: rate.toString() });
       } catch (error) {
         logger.error('Failed to auto-fetch rate for line', { id, error });
@@ -282,6 +282,21 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     },
     [lines, fetchRate, updateLine, workplaceCurrency],
   );
+
+  // Auto-fetch rates when currency changes or line is added
+  useEffect(() => {
+    lines.forEach(line => {
+      if (
+        line.accountCurrency &&
+        line.accountCurrency !== workplaceCurrency &&
+        !line.exchangeRate &&
+        !isLoading &&
+        !isSubmitting
+      ) {
+        autoFetchLineRate(line.id);
+      }
+    });
+  }, [lines, workplaceCurrency, autoFetchLineRate, isLoading, isSubmitting]);
 
   const balanceLine = useCallback(
     (id: string) => {
@@ -388,6 +403,30 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     return roleOrId;
   };
 
+  const imbalance = useMemo(() => {
+    return JournalCalculator.calculateImbalance(
+      lines.map(l => ({
+        amount: l.amount,
+        type: l.transactionType,
+        exchangeRate: l.exchangeRate,
+        accountCurrency: l.accountCurrency,
+      })),
+      workplaceCurrency,
+    );
+  }, [lines, workplaceCurrency]);
+
+  const isUnbalanced = Math.abs(imbalance) > 0.001;
+  const isEntryReadyToBalance = useMemo(
+    () =>
+      lines.every(
+        l =>
+          l.accountId !== EMPTY_ACCOUNT_ID &&
+          l.amount !== '' &&
+          !isNaN(parseFloat(l.amount.toString())),
+      ),
+    [lines],
+  );
+
   return useMemo(
     () => ({
       isGuidedMode,
@@ -416,6 +455,9 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       getLineIdByRole,
       resolveActiveLineId,
       submit,
+      imbalance,
+      isUnbalanced,
+      isEntryReadyToBalance,
     }),
     [
       isGuidedMode,
@@ -439,6 +481,9 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       resolveActiveLineId,
       submit,
       workplaceId,
+      imbalance,
+      isUnbalanced,
+      isEntryReadyToBalance,
     ],
   );
 }

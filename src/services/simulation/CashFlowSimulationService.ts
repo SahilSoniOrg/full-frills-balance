@@ -13,6 +13,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
@@ -423,17 +424,17 @@ export class CashFlowSimulationService {
   ) {
     const balances = new Map<string, number>();
     const settledAmounts = new Map<string, number>();
-    const ccAccounts = lbs.filter(lb => lb.account.accountSubtype === 'CREDIT_CARD');
 
     const convert = (amount: number, from: string) =>
       Math.round(amount * (rateMap.get(from) || 1) * 100) / 100;
 
     await Promise.all(
-      ccAccounts.map(async lb => {
+      lbs.map(async lb => {
         const metadata = metadataMap.get(lb.account.id);
-        if (metadata?.statementDay) {
+        const now = time.getStartOfToday();
+
+        if (lb.account.accountSubtype === 'CREDIT_CARD' && metadata?.statementDay) {
           const dueDay = metadata.dueDay || AppConfig.insights.liabilityDefaultDueDay;
-          const now = time.getStartOfToday();
           const d1Date = getNextDueDate(now, dueDay);
           const s1Date = getCorrespondingStatementDate(d1Date, metadata.statementDay, dueDay);
 
@@ -455,6 +456,27 @@ export class CashFlowSimulationService {
           const rawBal = Math.abs(latestBalances.get(lb.account.id) || 0);
           const statementBal = convert(rawBal, lb.account.currencyCode || toCurrency);
           balances.set(lb.account.id, statementBal);
+
+          const rawSettled = metrics.totalDecrease;
+          const settled = convert(rawSettled, lb.account.currencyCode || toCurrency);
+          settledAmounts.set(lb.account.id, settled);
+        } else if (isLoanSubtype(lb.account.accountSubtype)) {
+          // For loans, calculate settlement since the previous due date
+          const deductionDay =
+            metadata?.dueDay ||
+            metadata?.emiDay ||
+            AppConfig.insights.liabilityFallbackDeductionDay;
+          const nextDue = getNextDueDate(now, deductionDay);
+          const prevDue = nextDue.subtract(1, 'month');
+
+          // We check for any payments (totalDecrease) between prevDue and now
+          const metrics = await transactionRawRepository.getAccountPeriodMetricsRaw(
+            workplaceId,
+            lb.account.id,
+            prevDue.valueOf(),
+            now.endOf('day').valueOf(),
+            false,
+          );
 
           const rawSettled = metrics.totalDecrease;
           const settled = convert(rawSettled, lb.account.currencyCode || toCurrency);

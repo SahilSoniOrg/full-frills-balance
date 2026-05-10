@@ -21,7 +21,11 @@ export class ExchangeRateService {
   /**
    * Get exchange rate, using cache if available and recent
    */
-  async getRate(fromCurrency: string, toCurrency: string): Promise<number> {
+  async getRate(
+    fromCurrency: string,
+    toCurrency: string,
+    forceRefresh: boolean = false,
+  ): Promise<number> {
     // Same currency = rate of 1
     if (fromCurrency === toCurrency) {
       return 1.0;
@@ -37,7 +41,7 @@ export class ExchangeRateService {
 
     try {
       // Use the unified fetcher which handles memory, DB, and network layers sequentially.
-      const rates = await this.fetchRatesForBase(fromCurrency);
+      const rates = await this.fetchRatesForBase(fromCurrency, forceRefresh);
 
       if (!rates[toCurrency]) {
         logger.warn(`No rate found for ${fromCurrency} to ${toCurrency}. Defaulting to 1.0`);
@@ -209,10 +213,31 @@ export class ExchangeRateService {
   }
 
   /**
+   * Synchronizes today's rates for a specific base currency.
+   * If rates are missing or stale, it performs a network fetch and persists to DB.
+   */
+  async syncTodayRates(baseCurrency: string): Promise<void> {
+    if (!baseCurrency) return;
+
+    try {
+      const memCached = this.memoryCache.get(baseCurrency);
+      if (memCached && this.isRateFresh(memCached.timestamp)) {
+        return; // Already fresh
+      }
+
+      // fetchRatesForBase already handles DB-then-Network sequence and de-duplication
+      await this.fetchRatesForBase(baseCurrency);
+      logger.info(`[ExchangeRateService] Synchronized rates for ${baseCurrency}`);
+    } catch (error) {
+      logger.error(`[ExchangeRateService] Failed to sync rates for ${baseCurrency}:`, error);
+    }
+  }
+
+  /**
    * Pre-warms the memory cache by fetching all recent rates from the database.
    * Prevents sequential "per-pair" async database lookups during initial load.
    */
-  async preWarmCache(): Promise<void> {
+  async preWarmCache(baseCurrency?: string): Promise<void> {
     try {
       const start = Date.now();
       // Optimization: Load ALL most recent rates from DB to populate memory cache instantly.
@@ -221,22 +246,27 @@ export class ExchangeRateService {
       const recentRates = await exchangeRateRepository.getAllRecentRates(0);
       const duration = Date.now() - start;
 
-      if (recentRates.length === 0) return;
-
-      // Group by base currency
-      recentRates.forEach(r => {
-        const entry = this.memoryCache.get(r.fromCurrency) || { rates: {}, timestamp: 0 };
-        // Only keep the newest rate for each pair if DB has duplicates
-        if (r.effectiveDate >= entry.timestamp) {
-          entry.rates[r.toCurrency] = r.rate;
-          entry.timestamp = r.effectiveDate;
-        }
-        this.memoryCache.set(r.fromCurrency, entry);
-      });
+      if (recentRates.length > 0) {
+        // Group by base currency
+        recentRates.forEach(r => {
+          const entry = this.memoryCache.get(r.fromCurrency) || { rates: {}, timestamp: 0 };
+          // Only keep the newest rate for each pair if DB has duplicates
+          if (r.effectiveDate >= entry.timestamp) {
+            entry.rates[r.toCurrency] = r.rate;
+            entry.timestamp = r.effectiveDate;
+          }
+          this.memoryCache.set(r.fromCurrency, entry);
+        });
+      }
 
       logger.info(
         `[Trace] ExchangeRateService.preWarmCache: ${duration}ms (rates: ${recentRates.length})`,
       );
+
+      // Trigger background sync for the base currency if provided
+      if (baseCurrency) {
+        void this.syncTodayRates(baseCurrency);
+      }
     } catch (error) {
       logger.error('[ExchangeRateService] Failed to pre-warm cache:', error);
     }

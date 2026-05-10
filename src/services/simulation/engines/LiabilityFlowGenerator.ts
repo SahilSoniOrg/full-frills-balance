@@ -248,16 +248,18 @@ export class LiabilityFlowGenerator {
         remainingBalance += f.amount;
       }
 
-      const rawEmiAmount = metadata?.emiAmount;
-
       // 3-state EMI Logic:
-      // 1. Known EMI -> use it
+      // 1. Known EMI (explicit field or overloaded minimumPaymentAmount) -> use it
       // 2. Unknown EMI -> heuristic estimate (mortgage/loan)
       // 3. Fallback -> full balance (safety)
+      const rawEmiAmount =
+        metadata?.emiAmount ??
+        (isLoanSubtype(acc.accountSubtype) ? metadata?.minimumPaymentAmount : undefined);
+
       let emiAmount: number;
       let labelSuffix = '';
 
-      if (rawEmiAmount !== undefined) {
+      if (rawEmiAmount !== undefined && rawEmiAmount > 0) {
         emiAmount = context.convert(rawEmiAmount, acc.currencyCode || context.resultCurrency);
       } else if (isLoanSubtype(acc.accountSubtype)) {
         // Conservative heuristic: 10-year amort
@@ -268,20 +270,29 @@ export class LiabilityFlowGenerator {
         emiAmount = remainingBalance;
       }
 
+      let remainingSettled = settledSinceStatement;
+
       while (
         currDDate.diff(startOfToday, 'day') < simulationDays &&
         remainingBalance > AppConfig.defaults.simulation.financialEpsilon
       ) {
-        const amountToPay = Math.min(remainingBalance, emiAmount);
+        const fullEmi = Math.min(remainingBalance, emiAmount);
 
-        obligations.push({
-          liabilityId: acc.id,
-          amount: amountToPay,
-          dueDayOffset: currDDate.diff(startOfToday, 'day'),
-          label: `Unsettled: ${acc.name}${labelSuffix}`,
-        });
+        // Match with already settled amount for the current cycle
+        const reduction = Math.min(fullEmi, remainingSettled);
+        const amountToPay = fullEmi - reduction;
+        remainingSettled -= reduction;
 
-        remainingBalance -= amountToPay;
+        if (amountToPay > AppConfig.defaults.simulation.financialEpsilon) {
+          obligations.push({
+            liabilityId: acc.id,
+            amount: amountToPay,
+            dueDayOffset: currDDate.diff(startOfToday, 'day'),
+            label: `Unsettled: ${acc.name}${labelSuffix}`,
+          });
+        }
+
+        remainingBalance -= fullEmi;
         currDDate = currDDate.add(1, 'month');
       }
     }

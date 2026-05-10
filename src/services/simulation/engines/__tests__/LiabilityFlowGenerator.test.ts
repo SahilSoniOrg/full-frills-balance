@@ -155,6 +155,66 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       });
     });
 
+    it('reduces obligations by settledSinceStatement', () => {
+      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+        loan,
+        1200, // currentBalance
+        metadata,
+        0,
+        300, // settledSinceStatement (already paid 300)
+        startOfToday,
+        simulationDays,
+        [],
+        mockContext,
+      );
+
+      // April 5th -> 500 - 300 = 200
+      // May 5th -> 500
+      expect(obligations).toHaveLength(2);
+      expect(obligations[0]).toMatchObject({ amount: 200, dueDayOffset: 4 });
+      expect(obligations[1]).toMatchObject({ amount: 500, dueDayOffset: 34 });
+    });
+
+    it('skips obligations if settledSinceStatement covers them fully', () => {
+      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+        loan,
+        1200, // currentBalance
+        metadata,
+        0,
+        600, // settledSinceStatement (already paid 600 - covers 1st EMI and 100 of 2nd)
+        startOfToday,
+        simulationDays,
+        [],
+        mockContext,
+      );
+
+      // April 5th -> 500 - 600 = -100 -> Skipped
+      // May 5th -> 500 - 100 = 400
+      expect(obligations).toHaveLength(1);
+      expect(obligations[0]).toMatchObject({ amount: 400, dueDayOffset: 34 });
+    });
+
+    it('uses minimumPaymentAmount as fallback for emiAmount for loans', () => {
+      const loanMin = mockAcc('loan-min', AccountSubtype.LOAN, 'Loan with Min');
+      const metadataMin = { minimumPaymentAmount: 750 };
+      const obligations = (LiabilityFlowGenerator as any).generateObligations(
+        loanMin,
+        2000,
+        metadataMin,
+        0,
+        0,
+        startOfToday,
+        simulationDays,
+        [],
+        mockContext,
+      );
+
+      expect(obligations[0]).toMatchObject({
+        amount: 750,
+        label: 'Unsettled: Loan with Min', // Should NOT have (Est. EMI)
+      });
+    });
+
     it('rounds obligation amounts to 2 decimal places', () => {
       const cc = mockAcc('cc-1', AccountSubtype.CREDIT_CARD, 'Visa');
       const spendingFlows = [

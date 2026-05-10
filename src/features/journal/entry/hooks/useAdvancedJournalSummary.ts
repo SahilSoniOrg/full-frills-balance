@@ -21,8 +21,11 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
         currencies.add(line.accountCurrency);
       }
     });
-    // Always include default currency as a fallback/option
-    currencies.add(defaultCurrency);
+
+    // Only include default currency if explicitly used or if no other currencies exist
+    if (currencies.size === 0) {
+      currencies.add(defaultCurrency);
+    }
     return Array.from(currencies).sort();
   }, [lines, defaultCurrency]);
 
@@ -105,11 +108,15 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
     () => JournalCalculator.calculateTotalCredits(displayLines, defaultCurrency),
     [displayLines, defaultCurrency],
   );
-  const isBalanced = useMemo(() => {
-    const baseDebits = JournalCalculator.calculateTotalDebits(baseLines, defaultCurrency);
-    const baseCredits = JournalCalculator.calculateTotalCredits(baseLines, defaultCurrency);
-    return Math.abs(baseDebits - baseCredits) < 0.0001;
-  }, [baseLines, defaultCurrency]);
+  const isBalancedBase = useMemo(
+    () => JournalCalculator.isBalanced(baseLines, defaultCurrency),
+    [baseLines, defaultCurrency],
+  );
+
+  const isBalancedDisplay = useMemo(
+    () => JournalCalculator.isBalanced(displayLines, selectedCurrency),
+    [displayLines, selectedCurrency],
+  );
 
   const imbalance = useMemo(
     () => JournalCalculator.calculateImbalance(baseLines, defaultCurrency),
@@ -124,10 +131,12 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
   return {
     totalDebits,
     totalCredits,
-    isBalanced,
+    isBalanced: isBalancedBase,
+    isBalancedDisplay,
     imbalance,
     availableCurrencies,
     selectedCurrency,
     setSelectedCurrency: onSelectCurrency,
+    baseCurrency: defaultCurrency,
   };
 }

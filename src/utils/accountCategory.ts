@@ -91,9 +91,11 @@ export function isDebitNormalAccountType(typeOrLabel: string | AccountType): boo
   return type === AccountType.ASSET || type === AccountType.EXPENSE;
 }
 
-export function isAssetOrLiability(typeOrLabel: string | AccountType): boolean {
+export function isBalanceSheetAccount(typeOrLabel: string | AccountType): boolean {
   const type = toAccountType(typeOrLabel);
-  return type === AccountType.ASSET || type === AccountType.LIABILITY;
+  return (
+    type === AccountType.ASSET || type === AccountType.LIABILITY || type === AccountType.EQUITY
+  );
 }
 
 export function getInferredAccountType(tab: TabType, side: TransactionType): AccountType {
@@ -111,15 +113,21 @@ export function getAllowedAccountTypes(tab: TabType, side: TransactionType): Acc
   if (tab === 'expense') {
     return side === TransactionType.DEBIT
       ? [AccountType.EXPENSE]
-      : [AccountType.ASSET, AccountType.LIABILITY];
+      : [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY];
   }
   if (tab === 'income') {
     return side === TransactionType.CREDIT
       ? [AccountType.INCOME]
-      : [AccountType.ASSET, AccountType.LIABILITY];
+      : [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY];
   }
-  // Transfer
-  return [AccountType.ASSET, AccountType.LIABILITY];
+  // Transfer: Include ALL types as requested
+  return [
+    AccountType.ASSET,
+    AccountType.LIABILITY,
+    AccountType.EQUITY,
+    AccountType.INCOME,
+    AccountType.EXPENSE,
+  ];
 }
 
 export function groupAccountsByType(accounts: Account[]): Record<AccountType, Account[]> {

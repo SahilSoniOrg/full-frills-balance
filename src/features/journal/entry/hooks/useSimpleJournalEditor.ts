@@ -46,6 +46,8 @@ export function useSimpleJournalEditor({
   const { fetchRate } = useExchangeRate();
 
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [sourceBaseRate, setSourceBaseRate] = useState<number | null>(null);
+  const [destBaseRate, setDestBaseRate] = useState<number | null>(null);
   const [isLoadingRate, setIsLoadingRate] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
 
@@ -66,9 +68,10 @@ export function useSimpleJournalEditor({
   const destinationId = destinationLine?.accountId || EMPTY_ACCOUNT_ID;
 
   // Use shared account selection logic for filtering
-  const { transactionAccounts, expenseAccounts, incomeAccounts } = useAccountSelection({
-    accounts,
-  });
+  const { transactionAccounts, expenseAccounts, incomeAccounts, leafAccounts } =
+    useAccountSelection({
+      accounts,
+    });
 
   const sourceAccount = useMemo(() => accounts.find(a => a.id === sourceId), [accounts, sourceId]);
   const destAccount = useMemo(
@@ -86,14 +89,27 @@ export function useSimpleJournalEditor({
     const fetchCurrentRate = async () => {
       if (!isCrossCurrency || !sourceCurrency || !destCurrency) {
         setExchangeRate(null);
+        setSourceBaseRate(null);
+        setDestBaseRate(null);
         return;
       }
 
       setIsLoadingRate(true);
       setRateError(null);
       try {
-        const rate = await fetchRate(sourceCurrency, destCurrency);
-        setExchangeRate(rate);
+        // To ensure balance in base currency, we fetch both rates relative to workplace currency
+        const [srcRate, dstRate] = await Promise.all([
+          sourceCurrency !== workplaceCurrency ? fetchRate(sourceCurrency, workplaceCurrency) : 1.0,
+          destCurrency !== workplaceCurrency ? fetchRate(destCurrency, workplaceCurrency) : 1.0,
+        ]);
+
+        setSourceBaseRate(srcRate);
+        setDestBaseRate(dstRate);
+
+        // Derive the cross-rate for UI display (1 Source = X Dest)
+        // Rate(src->dest) = Rate(src->base) / Rate(dest->base)
+        const crossRate = srcRate / dstRate;
+        setExchangeRate(crossRate);
       } catch (error) {
         setRateError('Rate unavailable');
         logger.error('Failed to fetch rate', { sourceCurrency, destCurrency, error });
@@ -103,7 +119,7 @@ export function useSimpleJournalEditor({
     };
 
     fetchCurrentRate();
-  }, [isCrossCurrency, sourceCurrency, destCurrency, fetchRate]);
+  }, [isCrossCurrency, sourceCurrency, destCurrency, fetchRate, workplaceCurrency]);
 
   const numAmount = useMemo(() => {
     return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
@@ -123,31 +139,21 @@ export function useSimpleJournalEditor({
 
     if (isCrossCurrency && exchangeRate) {
       const formattedConverted = convertedAmount.toFixed(2);
-      const parsedConverted = parseFloat(formattedConverted);
 
       // Set source line rate to Base Currency
-      if (sourceCurrency !== baseCurrency) {
-        const srcRate =
-          destCurrency === baseCurrency
-            ? numAmount > 0
-              ? (parsedConverted / numAmount).toFixed(6)
-              : ''
-            : '';
-        if (sourceLine.exchangeRate !== srcRate) updates[sourceLine.id] = { exchangeRate: srcRate };
+      if (sourceCurrency !== baseCurrency && sourceBaseRate) {
+        const srcRateStr = sourceBaseRate.toFixed(6);
+        if (sourceLine.exchangeRate !== srcRateStr)
+          updates[sourceLine.id] = { exchangeRate: srcRateStr };
       } else if (sourceLine.exchangeRate) {
         updates[sourceLine.id] = { exchangeRate: '' };
       }
 
       // Set destination line rate to Base Currency
-      if (destCurrency !== baseCurrency) {
-        const dstRate =
-          sourceCurrency === baseCurrency
-            ? parsedConverted > 0
-              ? (numAmount / parsedConverted).toFixed(6)
-              : ''
-            : '';
-        if (destinationLine.exchangeRate !== dstRate)
-          updates[destinationLine.id] = { exchangeRate: dstRate };
+      if (destCurrency !== baseCurrency && destBaseRate) {
+        const dstRateStr = destBaseRate.toFixed(6);
+        if (destinationLine.exchangeRate !== dstRateStr)
+          updates[destinationLine.id] = { exchangeRate: dstRateStr };
       } else if (destinationLine.exchangeRate) {
         updates[destinationLine.id] = { exchangeRate: '' };
       }
@@ -166,6 +172,8 @@ export function useSimpleJournalEditor({
     }
   }, [
     exchangeRate,
+    sourceBaseRate,
+    destBaseRate,
     isCrossCurrency,
     sourceLine,
     destinationLine,
@@ -175,6 +183,7 @@ export function useSimpleJournalEditor({
     sourceCurrency,
     destCurrency,
     numAmount,
+    workplaceCurrency,
   ]);
 
   // Helpers to update editor state
@@ -397,14 +406,14 @@ export function useSimpleJournalEditor({
           : [
               {
                 title: AppConfig.strings.transactionFlow.simpleEntry.sourceAccount,
-                accounts: transactionAccounts,
+                accounts: leafAccounts,
                 selectedId: sourceId,
                 onSelect: setSourceId,
                 role: 'source' as const,
               },
               {
                 title: AppConfig.strings.transactionFlow.simpleEntry.destinationAccount,
-                accounts: transactionAccounts,
+                accounts: leafAccounts,
                 selectedId: destinationId,
                 onSelect: setDestinationId,
                 role: 'destination' as const,
@@ -416,6 +425,7 @@ export function useSimpleJournalEditor({
     expenseAccounts,
     incomeAccounts,
     transactionAccounts,
+    leafAccounts,
     sourceId,
     destinationId,
     setSourceId,

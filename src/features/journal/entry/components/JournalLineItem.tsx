@@ -1,7 +1,7 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { TransactionType } from '@/src/data/models/Transaction';
-import { useWorkplaceCurrency } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { JournalEntryLine } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -15,9 +15,12 @@ interface JournalLineItemProps {
   onUpdate: <K extends keyof JournalEntryLine>(field: K, value: JournalEntryLine[K]) => void;
   onRemove: () => void;
   onSelectAccount: () => void;
-  onAutoFetchRate?: () => void;
+  onAutoFetchRate?: (force?: boolean) => void;
   onBalanceLine?: () => void;
+  isBalancePrimary?: boolean;
   getLineBaseAmount: (line: JournalEntryLine, baseCurrency: string) => number;
+  workplaceCurrency: string;
+  journalBaseCurrency: string;
 }
 
 export const JournalLineItem = React.memo(
@@ -29,10 +32,14 @@ export const JournalLineItem = React.memo(
     onSelectAccount,
     onAutoFetchRate,
     onBalanceLine,
+    isBalancePrimary,
     getLineBaseAmount,
+    workplaceCurrency,
+    journalBaseCurrency,
   }: JournalLineItemProps) => {
     const { theme } = useTheme();
-    const workplaceCurrency = useWorkplaceCurrency();
+
+    const rateInputRef = React.useRef<any>(null);
 
     return (
       <View style={styles.container}>
@@ -68,7 +75,9 @@ export const JournalLineItem = React.memo(
           >
             <View style={{ flex: 1, paddingLeft: Spacing.md }}>
               <AppText variant="caption" color="tertiary" weight="bold" style={styles.fieldLabel}>
-                {line.accountCurrency || workplaceCurrency}
+                {CURRENCY_SYMBOLS[line.accountCurrency || workplaceCurrency] ||
+                  line.accountCurrency ||
+                  workplaceCurrency}
               </AppText>
               <AppInput
                 value={line.amount}
@@ -178,55 +187,87 @@ export const JournalLineItem = React.memo(
         </View>
 
         {/* Exchange Rate (Conditional) */}
-        {line.accountCurrency && line.accountCurrency !== workplaceCurrency && (
-          <View
-            style={[
-              styles.exchangeRateRow,
-              { backgroundColor: withOpacity(theme.primary, Opacity.soft) },
-            ]}
-          >
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-              <AppIcon name="refresh" size={12} color={theme.primary} />
-              <AppText variant="caption" color="primary" weight="medium">
-                ≈{' '}
-                {CurrencyFormatter.format(
-                  getLineBaseAmount(line, workplaceCurrency),
-                  workplaceCurrency,
-                )}
-              </AppText>
-            </View>
+        {(() => {
+          const lineCurrency = line.accountCurrency || workplaceCurrency;
+
+          if (lineCurrency === journalBaseCurrency) return null;
+
+          return (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-              <AppText variant="caption" color="secondary">
-                Rate:
-              </AppText>
-              <AppInput
-                value={line.exchangeRate || ''}
-                onChangeText={(value: string) => onUpdate('exchangeRate', value)}
-                placeholder="1.0"
-                keyboardType="decimal-pad"
-                variant="minimal"
-                containerStyle={{ width: 60, minHeight: 0 }}
-                style={{ fontSize: 13, textAlign: 'right', fontWeight: 'bold' }}
-              />
-              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                {onBalanceLine && (
-                  <TouchableOpacity onPress={onBalanceLine} style={styles.fetchButton}>
-                    <AppText variant="caption" color="primary" weight="bold">
-                      Balance
-                    </AppText>
-                  </TouchableOpacity>
-                )}
-                {onAutoFetchRate && (
-                  <TouchableOpacity onPress={onAutoFetchRate} style={styles.fetchButton}>
-                    <AppText variant="caption" color="secondary" weight="bold">
-                      Fetch
-                    </AppText>
-                  </TouchableOpacity>
-                )}
+              <View
+                style={[
+                  styles.exchangeRateRow,
+                  {
+                    flex: 1,
+                    backgroundColor: withOpacity(theme.primary, Opacity.soft),
+                  },
+                ]}
+              >
+                <View
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}
+                >
+                  <AppIcon name="refresh" size={12} color={theme.primary} />
+                  <AppText variant="caption" color="primary" weight="medium">
+                    ≈{' '}
+                    {CurrencyFormatter.format(
+                      getLineBaseAmount(line, workplaceCurrency),
+                      workplaceCurrency,
+                    )}
+                  </AppText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                  <AppText variant="caption" color="secondary">
+                    Rate:
+                  </AppText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <AppInput
+                      ref={rateInputRef}
+                      value={
+                        line.exchangeRate && !isNaN(parseFloat(line.exchangeRate))
+                          ? parseFloat(line.exchangeRate).toString()
+                          : line.exchangeRate || ''
+                      }
+                      onChangeText={(value: string) => onUpdate('exchangeRate', value)}
+                      placeholder="1.0"
+                      keyboardType="decimal-pad"
+                      variant="minimal"
+                      containerStyle={{ width: 50, minHeight: 0 }}
+                      style={{ fontSize: 13, textAlign: 'right', fontWeight: 'bold' }}
+                    />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                      <TouchableOpacity
+                        onPress={() => rateInputRef.current?.focus()}
+                        style={{ paddingHorizontal: 2 }}
+                      >
+                        <AppIcon name="edit" size={12} color={theme.textTertiary} />
+                      </TouchableOpacity>
+                      {onAutoFetchRate && (
+                        <TouchableOpacity
+                          onPress={() => onAutoFetchRate(true)}
+                          style={{ paddingHorizontal: 2 }}
+                        >
+                          <AppIcon name="refresh" size={12} color={theme.primary} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                </View>
               </View>
+
+              {onBalanceLine && (
+                <TouchableOpacity onPress={onBalanceLine} style={styles.fetchButton}>
+                  <AppText
+                    variant="caption"
+                    color={isBalancePrimary ? 'primary' : 'secondary'}
+                    weight="bold"
+                  >
+                    Balance
+                  </AppText>
+                </TouchableOpacity>
+              )}
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         <View style={[styles.divider, { backgroundColor: theme.divider }]} />
       </View>
