@@ -104,8 +104,11 @@ export class AnalyticsService {
   private getGlobalProperties(): Record<string, any> {
     return {
       $app_id: Application.applicationId || 'unknown',
+      $app_namespace: Application.applicationId || 'unknown',
+      $app_name: Application.applicationName || 'Full Frills Balance',
       $app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
-      $app_build_number: Application.nativeBuildVersion || '1',
+      $app_build: Application.nativeBuildVersion || '1',
+      $app_build_number: Application.nativeBuildVersion || '1', // Keep for backward compatibility
       $device_name: Device.deviceName,
       $device_model: Device.modelName,
       $os_name: Platform.OS,
@@ -175,7 +178,9 @@ export class AnalyticsService {
   logAppOpened() {
     this.track('app_opened', {
       version: Application.nativeApplicationVersion || AppConfig.appVersion,
+      app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
       build: Application.nativeBuildVersion || '1',
+      app_build: Application.nativeBuildVersion || '1',
     });
   }
 
