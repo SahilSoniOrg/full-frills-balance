@@ -43,6 +43,16 @@ export interface ParsedTransaction {
   parseReason: string;
 }
 
+export interface SmsMatchData {
+  senderAddress: string;
+  rawBody: string;
+  parsedMerchant?: string;
+  parsedAccountSource?: string;
+  direction: SmsDirection;
+  parsedCurrencyCode?: string;
+  parsedAmount?: number;
+}
+
 export interface SmsInboxFilterOptions {
   status?: 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
 }
@@ -550,31 +560,34 @@ class SmsService {
         existingStatus: existingRecord?.processingStatus,
       });
 
-      const { record, ops: upsertOps } = this.prepareUpsertInboxRecord(
+      let finalStatus = nextStatus;
+      let finalJournalId = exactJournal?.id || fingerprintJournal?.id || undefined;
+      const ruleResult =
+        parsed.parseStatus === SmsParseStatus.PARSED && nextStatus === SmsProcessingStatus.PENDING
+          ? await this.matchAndPrepareAutoPost(message, parsed, activeRules, workplaceId)
+          : null;
+
+      if (ruleResult) {
+        allOps.push(...ruleResult.ops);
+        ruleResult.accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
+        finalStatus = ruleResult.status;
+        finalJournalId = ruleResult.linkedJournalId || finalJournalId;
+        if (ruleResult.status === SmsProcessingStatus.AUTO_POSTED) {
+          importedCount += 1;
+        }
+      }
+
+      const { ops: upsertOps } = this.prepareUpsertInboxRecord(
         message,
         parsed,
         fingerprint,
         existingRecord,
-        nextStatus,
+        finalStatus,
         workplaceId,
-        exactJournal?.id || fingerprintJournal?.id || undefined,
+        finalJournalId,
         duplicate,
       );
       allOps.push(...upsertOps);
-
-      if (
-        parsed.parseStatus === SmsParseStatus.PARSED &&
-        nextStatus === SmsProcessingStatus.PENDING
-      ) {
-        const ruleResult = await this.prepareAutoPostRecord(record, parsed, activeRules);
-        if (ruleResult) {
-          allOps.push(...ruleResult.ops);
-          ruleResult.accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
-          if (ruleResult.status === 'auto_posted') {
-            importedCount += 1;
-          }
-        }
-      }
     }
 
     if (allOps.length > 0) {
@@ -670,30 +683,42 @@ class SmsService {
     return results;
   }
 
-  private async prepareAutoPostRecord(
-    record: SmsInboxRecord,
+  private async matchAndPrepareAutoPost(
+    message: SmsMessage,
     parsed: ParsedTransaction,
     activeRules: SmsAutoPostRule[],
+    workplaceId: WorkplaceId,
   ): Promise<{
     ops: Model[];
-    status: 'auto_posted' | 'ignored';
+    status: SmsProcessingStatus;
+    linkedJournalId?: JournalId;
     accountsToRebuild: Set<AccountId>;
   } | null> {
     if (activeRules.length === 0 || !parsed.amount) return null;
 
+    const matchData: SmsMatchData = {
+      senderAddress: message.address,
+      rawBody: message.body,
+      parsedMerchant: parsed.merchant,
+      parsedAccountSource: parsed.accountSource,
+      direction: this.toDirection(parsed.type),
+      parsedCurrencyCode: parsed.currencyCode,
+      parsedAmount: parsed.amount,
+    };
+
     for (const rule of activeRules) {
       const definition = this.getRuleDefinition(rule);
-      if (!this.matchesResolvedRule(record, definition)) {
+      if (!this.matchesResolvedRule(matchData, definition)) {
         continue;
       }
 
       if (definition.actions.disposition === 'ignore') {
-        const updateOp = record.prepareUpdate(entry => {
-          entry.processingStatus = SmsProcessingStatus.DISMISSED;
-          entry.processedAt = Date.now();
-        });
-        this.markSmsAsProcessed(record.deviceSmsId);
-        return { ops: [updateOp], status: 'ignored', accountsToRebuild: new Set() };
+        this.markSmsAsProcessed(message.id);
+        return {
+          ops: [],
+          status: SmsProcessingStatus.DISMISSED,
+          accountsToRebuild: new Set(),
+        };
       }
 
       if (definition.actions.disposition === 'review') {
@@ -704,7 +729,7 @@ class SmsService {
         return null;
       }
 
-      const currencyCode = await workplaceService.getCurrency(rule.workplaceId);
+      const currencyCode = await workplaceService.getCurrency(workplaceId);
       const isExpense = parsed.type === 'debit';
 
       const { journal, ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal(
@@ -721,7 +746,11 @@ class SmsService {
             originalSmsSender: parsed.address,
             originalSmsBody: parsed.rawBody,
             metadataJson: JSON.stringify({
-              smsFingerprint: record.smsFingerprint,
+              smsFingerprint: this.computeSmsFingerprint(
+                message.address,
+                message.body,
+                message.date,
+              ),
               parsedAmount: parsed.amount,
               parsedCurrencyCode: parsed.currencyCode || null,
               parsedMerchant: parsed.merchant || null,
@@ -744,18 +773,17 @@ class SmsService {
             },
           ],
         },
-        rule.workplaceId,
+        workplaceId,
       );
 
-      // Link SMS to Journal
-      const linkOp = record.prepareUpdate(entry => {
-        entry.linkedJournalId = journal.id;
-        entry.processingStatus = SmsProcessingStatus.AUTO_POSTED;
-        entry.processedAt = Date.now();
-      });
       analytics.logSmsRuleTriggered(rule.id, true);
-      this.markSmsAsProcessed(record.deviceSmsId);
-      return { ops: [...ops, linkOp], status: 'auto_posted', accountsToRebuild };
+      this.markSmsAsProcessed(message.id);
+      return {
+        ops,
+        status: SmsProcessingStatus.AUTO_POSTED,
+        linkedJournalId: journal.id,
+        accountsToRebuild,
+      };
     }
 
     return null;
@@ -1023,22 +1051,22 @@ class SmsService {
     }
   }
 
-  private matchesPreviewRule(record: SmsInboxRecord, input: SmsRulePreviewInput): boolean {
+  private matchesPreviewRule(data: SmsMatchData, input: SmsRulePreviewInput): boolean {
     if (input.mode === 'builder') {
       const conditions = (input.conditions || []).filter(condition =>
         this.isMeaningfulCondition(condition),
       );
       if (conditions.length === 0) return false;
-      return this.matchesStructuredConditions(record, conditions);
+      return this.matchesStructuredConditions(data, conditions);
     }
 
     const senderRegex = this.buildRegex(input.senderMatch);
     const bodyRegex = input.bodyMatch ? this.buildRegex(input.bodyMatch) : null;
     const senderOk = senderRegex?.test(
-      record.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength),
+      data.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength),
     );
     const bodyOk = bodyRegex
-      ? bodyRegex.test(record.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength))
+      ? bodyRegex.test(data.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength))
       : true;
     return !!senderOk && bodyOk;
   }
@@ -1090,63 +1118,60 @@ class SmsService {
     };
   }
 
-  private matchesResolvedRule(record: SmsInboxRecord, definition: ResolvedSmsRule): boolean {
+  private matchesResolvedRule(data: SmsMatchData, definition: ResolvedSmsRule): boolean {
     if (definition.mode === 'builder' && definition.conditions.length > 0) {
-      return this.matchesStructuredConditions(record, definition.conditions);
+      return this.matchesStructuredConditions(data, definition.conditions);
     }
 
     const senderRegex = this.buildRegex(definition.senderMatch);
     const bodyRegex = definition.bodyMatch ? this.buildRegex(definition.bodyMatch) : null;
     const senderOk = senderRegex?.test(
-      record.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength),
+      data.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength),
     );
     const bodyOk = bodyRegex
-      ? bodyRegex.test(record.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength))
+      ? bodyRegex.test(data.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength))
       : true;
     return !!senderOk && bodyOk;
   }
 
-  private matchesStructuredConditions(
-    record: SmsInboxRecord,
-    conditions: SmsRuleCondition[],
-  ): boolean {
-    return conditions.every(condition => this.matchesCondition(record, condition));
+  private matchesStructuredConditions(data: SmsMatchData, conditions: SmsRuleCondition[]): boolean {
+    return conditions.every(condition => this.matchesCondition(data, condition));
   }
 
-  private matchesCondition(record: SmsInboxRecord, condition: SmsRuleCondition): boolean {
+  private matchesCondition(data: SmsMatchData, condition: SmsRuleCondition): boolean {
     const normalizedValue = condition.value?.trim();
 
     switch (condition.field) {
       case 'sender':
         return this.matchesStringCondition(
-          record.senderAddress,
+          data.senderAddress,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'body':
         return this.matchesStringCondition(
-          record.rawBody,
+          data.rawBody,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'merchant':
         return this.matchesStringCondition(
-          record.parsedMerchant,
+          data.parsedMerchant,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'account_source':
         return this.matchesStringCondition(
-          record.parsedAccountSource,
+          data.parsedAccountSource,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'direction':
-        return this.matchesStringCondition(record.direction, 'is', normalizedValue);
+        return this.matchesStringCondition(data.direction, 'is', normalizedValue);
       case 'currency':
-        return this.matchesStringCondition(record.parsedCurrencyCode, 'is', normalizedValue);
+        return this.matchesStringCondition(data.parsedCurrencyCode, 'is', normalizedValue);
       case 'amount':
-        return this.matchesAmountCondition(record.parsedAmount, condition);
+        return this.matchesAmountCondition(data.parsedAmount, condition);
       default:
         return false;
     }
