@@ -470,26 +470,27 @@ export function useAuditLogDiffViewModel({
 
       const status = entityStatusMap[item.entityId];
       if (!status || !status.exists) {
-        // If it doesn't exist at all, we can only revert a DELETE (to recreate it)
-        // but currently we don't support recreating journals that were hard-deleted.
-        // For accounts, if it's missing from the map it might be hard-deleted (rare).
-        return item.action === AuditAction.DELETE && item.entityType === 'account';
+        // If it doesn't exist at all in the DB, we can't revert anything.
+        // We don't currently support recreating entities from scratch via audit logs.
+        return false;
       }
 
       if (item.action === AuditAction.CREATE) {
-        // If created, undoing means deleting. Only possible if currently NOT deleted.
+        // Undoing a CREATE means deleting the entity.
+        // Only possible if it's currently active (not already deleted).
         return !status.isDeleted;
       }
 
       if (item.action === AuditAction.DELETE) {
-        // If deleted, undoing means recovering. Only possible if currently DELETED.
+        // Undoing a DELETE means recovering the entity.
+        // Only possible if it's currently in a deleted state.
         return status.isDeleted;
       }
 
       if (item.action === AuditAction.UPDATE) {
-        // Updates are always undoable as long as the entity exists (even if deleted,
-        // though usually we want it active).
-        return status.exists;
+        // Undoing an UPDATE means applying previous values.
+        // Our service methods (updateJournal, updateAccount) require the entity to be active.
+        return !status.isDeleted;
       }
 
       return false;

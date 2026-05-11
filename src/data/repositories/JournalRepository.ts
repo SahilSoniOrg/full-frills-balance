@@ -209,6 +209,16 @@ export class JournalRepository {
     }
   }
 
+  async findWithDeleted(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
+    try {
+      const journal = await this.journals.find(id);
+      if (journal.workplaceId !== workplaceId) return null;
+      return journal;
+    } catch {
+      return null;
+    }
+  }
+
   async findByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {
     if (ids.length === 0) return [];
     return this.journals
@@ -735,7 +745,7 @@ export class JournalRepository {
     journalId: JournalId,
     workplaceId: WorkplaceId,
   ): Promise<{ journal: Journal; transactions: Transaction[] } | null> {
-    const journal = await this.find(workplaceId, journalId);
+    const journal = await this.findWithDeleted(workplaceId, journalId);
     if (!journal) return null;
 
     const associatedTransactions = await this.transactions
