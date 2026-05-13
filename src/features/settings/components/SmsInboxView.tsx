@@ -37,7 +37,7 @@ export function SmsInboxView({ vm }: SmsInboxViewProps) {
 
   if (Platform.OS !== 'android') {
     return (
-      <SettingsLayout title="SMS Inbox">
+      <SettingsLayout title="SMS Inbox" hideFooter={true}>
         <View style={styles.center}>
           <EmptyStateView
             title="Not Supported"
@@ -52,6 +52,7 @@ export function SmsInboxView({ vm }: SmsInboxViewProps) {
     <SettingsLayout
       title="SMS Inbox"
       scrollable={false}
+      hideFooter={true}
       headerActions={
         <View style={styles.headerActions}>
           <AppButton variant="ghost" size="sm" onPress={AppNavigation.toSmsRules}>

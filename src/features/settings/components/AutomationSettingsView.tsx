@@ -38,22 +38,22 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
         {Platform.OS === 'android' && (
           <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
             <SettingsMenuItem
-              leftIcon="messageSquare"
-              title={AppConfig.strings.settings.personalization.smsInboxTitle}
-              description="Import transactions from SMS messages"
+              leftIcon="zap"
+              title={AppConfig.strings.settings.personalization.smsImportTitle}
+              description="Automatically scan for transaction messages"
               hasArrow={false}
               rightContent={
                 <Switch value={vm.isSmsImportEnabled} onValueChange={vm.setIsSmsImportEnabled} />
               }
             />
+            <SettingsMenuItem
+              leftIcon="messageSquare"
+              title={AppConfig.strings.settings.personalization.smsInboxTitle}
+              description={AppConfig.strings.settings.personalization.smsInboxDesc}
+              onPress={AppNavigation.toSmsInbox}
+            />
             {vm.isSmsImportEnabled && (
               <>
-                <SettingsMenuItem
-                  leftIcon="inbox"
-                  title={AppConfig.strings.settings.personalization.smsInboxTitle}
-                  description={AppConfig.strings.settings.personalization.smsInboxDesc}
-                  onPress={AppNavigation.toSmsInbox}
-                />
                 <SettingsMenuItem
                   leftIcon="terminal"
                   title={AppConfig.strings.settings.personalization.smsAutoPostTitle}

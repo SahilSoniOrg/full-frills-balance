@@ -56,7 +56,8 @@ export interface DashboardViewModel {
 
 export function useDashboardViewModel(): DashboardViewModel {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode } = useUI();
+  const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, isSmsImportEnabled } =
+    useUI();
 
   const [isLocalPrivacyMode, setIsLocalPrivacyMode] = React.useState(isPrivacyMode);
 
@@ -133,10 +134,20 @@ export function useDashboardViewModel(): DashboardViewModel {
       onTogglePrivacy,
       onNotificationsPress: AppNavigation.toHub,
       unreadSmsCount: unreadSmsCount || 0,
-      onSmsPress: Platform.OS === 'android' ? AppNavigation.toSmsInbox : undefined,
+      onSmsPress:
+        Platform.OS === 'android' && (isSmsImportEnabled || (unreadSmsCount || 0) > 0)
+          ? AppNavigation.toSmsInbox
+          : undefined,
       onSearchPress: AppNavigation.toJournalSearch,
     }),
-    [greeting, totalNotifications, isLocalPrivacyMode, onTogglePrivacy, unreadSmsCount],
+    [
+      greeting,
+      totalNotifications,
+      isLocalPrivacyMode,
+      onTogglePrivacy,
+      unreadSmsCount,
+      isSmsImportEnabled,
+    ],
   );
 
   // Memoize fab object to prevent re-renders

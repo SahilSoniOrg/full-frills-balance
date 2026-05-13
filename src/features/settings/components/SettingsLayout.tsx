@@ -10,6 +10,7 @@ interface SettingsLayoutProps {
   children: React.ReactNode;
   headerActions?: React.ReactNode;
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
+  hideFooter?: boolean;
 }
 
 /**
@@ -23,6 +24,7 @@ export function SettingsLayout({
   children,
   headerActions,
   edges,
+  hideFooter = false,
 }: SettingsLayoutProps) {
   return (
     <Screen
@@ -35,7 +37,7 @@ export function SettingsLayout({
       <Inset space="md" vertical="md" flex={scrollable ? undefined : 1}>
         <Stack space="xl" flex={scrollable ? undefined : 1}>
           {children}
-          <SettingsFooter />
+          {!hideFooter && <SettingsFooter />}
         </Stack>
       </Inset>
     </Screen>

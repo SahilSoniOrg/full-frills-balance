@@ -46,6 +46,7 @@ import {
   CircleQuestionMark as HelpCircle,
   History,
   House as Home,
+  Inbox,
   Info,
   Landmark,
   LayoutDashboard,
@@ -90,6 +91,9 @@ import {
   Wrench,
   X,
   CircleX as XCircle,
+  Zap,
+  Mail,
+  Terminal,
 } from 'lucide-react-native';
 import React from 'react';
 import { ViewStyle } from 'react-native';
@@ -162,6 +166,7 @@ export const IconMap = {
   shield: Shield,
   palette: Palette,
   messageSquare: MessageSquare,
+  inbox: Inbox,
   barChart: BarChart3,
   clock: Clock,
   star: Star,
@@ -189,6 +194,9 @@ export const IconMap = {
   merge: Merge,
   bug: Bug,
   save: Download,
+  zap: Zap,
+  mail: Mail,
+  terminal: Terminal,
 } as const;
 
 export type IconName = keyof typeof IconMap;

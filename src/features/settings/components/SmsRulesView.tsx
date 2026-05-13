@@ -53,7 +53,7 @@ export function SmsRulesView({ rules, suggestions, accountMap }: SmsRulesViewPro
   };
 
   return (
-    <SettingsLayout title="SMS Rules" scrollable={false}>
+    <SettingsLayout title="SMS Rules" scrollable={false} hideFooter={true}>
       <FlatList
         data={rules}
         keyExtractor={r => r.id}

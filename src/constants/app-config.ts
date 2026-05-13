@@ -507,6 +507,7 @@ export const AppConfig = {
         smsAutoPostTitle: 'SMS Auto-Post',
         smsAutoPostDesc: 'Rules that turn reviewed SMS messages into entries automatically',
         smsAutomationHeader: 'SMS Automation',
+        smsImportTitle: 'SMS Import',
         smsInboxTitle: 'SMS Inbox',
         smsInboxDesc: 'Review pending, processed, duplicate, and failed SMS imports',
         forecastTitle: 'Simulation Horizon',
