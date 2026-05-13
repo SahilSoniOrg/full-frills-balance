@@ -1,21 +1,27 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { ARCHETYPES, getArchetypeById } from '@/src/constants/archetypes';
-import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 
-export const ArchetypePreference = () => {
+interface ArchetypePreferenceViewProps {
+  currentArchetypeId: string;
+  onSelect: (id: string) => Promise<void>;
+}
+
+export const ArchetypePreferenceView = ({
+  currentArchetypeId,
+  onSelect,
+}: ArchetypePreferenceViewProps) => {
   const { theme } = useTheme();
-  const { archetype: currentArchetypeId, setArchetype } = useUI();
   const [showModal, setShowModal] = useState(false);
 
   const currentArchetype = getArchetypeById(currentArchetypeId);
 
   const handleSelect = async (id: string) => {
-    await setArchetype(id);
+    await onSelect(id);
     setShowModal(false);
   };
 
@@ -119,16 +125,6 @@ export const ArchetypePreference = () => {
 };
 
 const styles = StyleSheet.create({
-  rowBetween: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.xs,
-  },
-  textContainer: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
   selector: {
     flexDirection: 'row',
     alignItems: 'center',

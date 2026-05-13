@@ -1,14 +1,13 @@
-import { AppConfig, ThemeId, ThemeIds, ThemeSchemes } from '@/src/constants';
+import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/constants';
 import { AppIcon, AppText } from '@/src/components/core';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 
-type ThemeSelectorProps = {
+type ThemeSelectorViewProps = {
   themeId: ThemeId;
   setThemeId: (id: ThemeId) => void;
-  theme: any;
 };
 
 const THEME_OPTIONS = [
@@ -34,8 +33,8 @@ const THEME_OPTIONS = [
   },
 ] as const;
 
-export function ThemeSelector({ themeId, setThemeId, theme }: ThemeSelectorProps) {
-  const { onContrast } = useTheme();
+export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProps) {
+  const { theme, onContrast } = useTheme();
 
   return (
     <View>
@@ -66,7 +65,7 @@ export function ThemeSelector({ themeId, setThemeId, theme }: ThemeSelectorProps
                 {
                   backgroundColor: bg,
                   borderColor: selected ? theme.primary : theme.border,
-                  opacity: pressed ? 0.75 : 1,
+                  opacity: pressed ? Opacity.heavy : 1,
                 },
               ]}
             >
@@ -99,7 +98,7 @@ export function ThemeSelector({ themeId, setThemeId, theme }: ThemeSelectorProps
                 <AppText
                   variant="caption"
                   numberOfLines={1}
-                  style={{ color: withOpacity(textColor, 0.7) }}
+                  style={{ color: withOpacity(textColor, Opacity.heavy) }}
                 >
                   {option.desc}
                 </AppText>

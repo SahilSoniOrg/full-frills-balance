@@ -1,14 +1,12 @@
 import { AppButton, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
-import { Theme } from '@/src/constants/design-tokens';
+import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import React from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface DateRangeMenuContentProps {
-  theme: Theme;
-  fonts: any;
   draftFilter: PeriodFilter;
   customRange: { startDate: any; endDate: any };
   lastNValue: string;
@@ -23,8 +21,6 @@ interface DateRangeMenuContentProps {
 }
 
 export function DateRangeMenuContent({
-  theme,
-  fonts,
   draftFilter,
   customRange,
   lastNValue,
@@ -37,6 +33,8 @@ export function DateRangeMenuContent({
   onShowEndDate,
   onUpdateLastN,
 }: DateRangeMenuContentProps) {
+  const { theme, fonts } = useTheme();
+
   const monthPanelActive = draftFilter.type === 'MONTH';
   const customPanelActive = draftFilter.type === 'CUSTOM';
   const rollingPanelActive = draftFilter.type === 'LAST_N';

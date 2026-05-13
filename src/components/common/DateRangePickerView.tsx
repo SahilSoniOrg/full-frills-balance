@@ -1,6 +1,5 @@
 import { AppButton, AppText, IconButton } from '@/src/components/core';
 import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/constants';
-import { Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import type { Dayjs } from 'dayjs';
@@ -15,7 +14,6 @@ export type PickerView = 'MENU' | 'START_DATE' | 'END_DATE';
 export interface DateRangePickerViewProps {
   visible: boolean;
   onClose: () => void;
-  theme: Theme;
   insets: EdgeInsets;
   view: PickerView;
   setView: (view: PickerView) => void;
@@ -35,7 +33,6 @@ export interface DateRangePickerViewProps {
 export function DateRangePickerView({
   visible,
   onClose,
-  theme,
   insets,
   view,
   setView,
@@ -51,7 +48,7 @@ export function DateRangePickerView({
   handleDateSelect,
   handleApply,
 }: DateRangePickerViewProps) {
-  const { fonts } = useTheme();
+  const { theme, fonts } = useTheme();
 
   return (
     <Modal
@@ -108,8 +105,6 @@ export function DateRangePickerView({
           <View style={{ flex: 1 }}>
             {view === 'MENU' ? (
               <DateRangeMenuContent
-                theme={theme}
-                fonts={fonts}
                 draftFilter={draftFilter}
                 customRange={customRange}
                 lastNValue={lastNValue}

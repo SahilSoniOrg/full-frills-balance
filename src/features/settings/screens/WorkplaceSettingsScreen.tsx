@@ -4,5 +4,5 @@ import React from 'react';
 
 export default function WorkplaceSettingsScreen() {
   const vm = useWorkplaceSettingsViewModel();
-  return <WorkplaceSettingsView {...vm} />;
+  return <WorkplaceSettingsView vm={vm} />;
 }

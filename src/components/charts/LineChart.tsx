@@ -1,6 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { AppConfig } from '@/src/constants/app-config';
+import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInteraction';
@@ -320,7 +321,7 @@ export const LineChart = <T extends DataPoint>({
           },
         ]}
       >
-        <AppText color="secondary">{REPORT_CHART_STRINGS.chartNoData}</AppText>
+        <AppText color="secondary">{AppConfig.strings.reports.chartNoData}</AppText>
       </View>
     );
   }
@@ -429,7 +430,7 @@ export const LineChart = <T extends DataPoint>({
                         textAnchor="start"
                         opacity={0.8}
                       >
-                        Today
+                        {AppConfig.strings.reports.today}
                       </SvgText>
                       {(() => {
                         const todayPoint = data.find(d => Math.abs(d.x - todayX) < 1000);
@@ -533,7 +534,7 @@ export const LineChart = <T extends DataPoint>({
                         fill={chartColor}
                         textAnchor="middle"
                       >
-                        {REPORT_CHART_STRINGS.maxLabel}
+                        {AppConfig.strings.reports.maxLabel}
                       </SvgText>
                     </React.Fragment>
                   );

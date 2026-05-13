@@ -1,7 +1,7 @@
 import { CalendarHeatmap } from '@/src/components/charts/CalendarHeatmap';
 import { HeatmapChart } from '@/src/components/charts/HeatmapChart';
 import { AppText } from '@/src/components/core';
-import { Spacing, Theme } from '@/src/constants';
+import { AppConfig, Spacing } from '@/src/constants';
 import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownDonutCard';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import { ReportNoData } from '@/src/features/reports/components/ReportNoData';
@@ -11,7 +11,6 @@ import { StyleSheet } from 'react-native';
 
 interface ReportSpendingSectionProps {
   vm: ReportsViewModel;
-  theme: Theme;
   chartWidth: number;
 }
 
@@ -32,7 +31,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
 
   return (
     <>
-      <ReportChartCard title="Spending by Account">
+      <ReportChartCard title={AppConfig.strings.reports.spendingByAccount}>
         {expenseCategoryViewState.hasData ? (
           <BreakdownDonutCard
             donutData={expenseDonutData}
@@ -49,7 +48,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
         )}
       </ReportChartCard>
 
-      <ReportChartCard title="Spending by Category">
+      <ReportChartCard title={AppConfig.strings.reports.spendingByCategory}>
         {expenseCategoryViewState.hasData ? (
           <BreakdownDonutCard
             donutData={expenseCategoryViewState.donutData}
@@ -66,7 +65,7 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
         )}
       </ReportChartCard>
 
-      <ReportChartCard title="Income by Category">
+      <ReportChartCard title={AppConfig.strings.reports.incomeByCategory}>
         {incomeCategoryViewState.hasData ? (
           <BreakdownDonutCard
             donutData={incomeCategoryViewState.donutData}
@@ -83,14 +82,14 @@ export function ReportSpendingSection({ vm, chartWidth }: ReportSpendingSectionP
         )}
       </ReportChartCard>
 
-      <ReportChartCard title="Spending Heatmap">
+      <ReportChartCard title={AppConfig.strings.reports.spendingHeatmap}>
         <HeatmapChart data={spendingHeatmap} width={chartWidth} currency={vm.targetCurrency} />
         <AppText variant="caption" color="secondary" style={styles.chartSubtitle}>
-          Intensity of spending across weekdays and hours.
+          {AppConfig.strings.reports.heatmapSubtitle}
         </AppText>
       </ReportChartCard>
 
-      <ReportChartCard title="Activity Calendar">
+      <ReportChartCard title={AppConfig.strings.reports.activityCalendar}>
         <CalendarHeatmap data={calendarHeatmap} width={chartWidth} currency={vm.targetCurrency} />
       </ReportChartCard>
     </>

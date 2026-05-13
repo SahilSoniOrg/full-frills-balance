@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
@@ -295,7 +294,7 @@ export class ReportService {
     for (const d of deltas) {
       const accountId = (d as any).accountId;
       if (!accountId) continue;
-      const subtype = accountSubtypeMap.get(accountId) || REPORT_CHART_STRINGS.categoryOther;
+      const subtype = accountSubtypeMap.get(accountId) || AppConfig.strings.reports.categoryOther;
       const delta = Money.from(d.delta, currency);
       const current = sumsMap.get(subtype) || Money.from(0, currency);
       sumsMap.set(subtype, current.add(delta));
@@ -743,8 +742,8 @@ export class ReportService {
     expenseCategorySummary: CategoryBreakdown[],
   ): SankeyData {
     const nodes: SankeyNode[] = [
-      { id: 'total_income', name: 'Total Income' },
-      { id: 'surplus', name: 'Savings/Surplus' },
+      { id: 'total_income', name: AppConfig.strings.reports.sankeyTotalIncome },
+      { id: 'surplus', name: AppConfig.strings.reports.sankeySurplus },
     ];
 
     const links: SankeyLink[] = [];

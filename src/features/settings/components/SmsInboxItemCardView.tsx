@@ -4,28 +4,31 @@ import { SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord';
 import { SmsInboxItem } from '@/src/types/domain';
 import { alert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { AppNavigation } from '@/src/utils/navigation';
 import dayjs from 'dayjs';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-interface SmsInboxItemCardProps {
+interface SmsInboxItemCardViewProps {
   item: SmsInboxItem;
-  theme: any;
   currencyCode: string;
   handleDismiss: (item: SmsInboxItem) => Promise<void>;
   handleUndismiss: (item: SmsInboxItem) => Promise<void>;
   handleImport: (item: SmsInboxItem) => void;
+  onCompareDuplicate: (item: SmsInboxItem) => void;
+  onOpenJournal: (item: SmsInboxItem) => void;
 }
 
-export function SmsInboxItemCard({
+export function SmsInboxItemCardView({
   item,
-  theme,
   currencyCode,
   handleDismiss,
   handleUndismiss,
   handleImport,
-}: SmsInboxItemCardProps) {
+  onCompareDuplicate,
+  onOpenJournal,
+}: SmsInboxItemCardViewProps) {
+  const { theme } = useTheme();
   return (
     <AppCard style={styles.card}>
       <View style={styles.cardTop}>
@@ -98,16 +101,7 @@ export function SmsInboxItemCard({
           variant="ghost"
           size="sm"
           style={styles.inlineButton}
-          onPress={() =>
-            AppNavigation.toTransactionDetails(item.duplicateCandidate!.journalId, {
-              title:
-                item.duplicateCandidate!.description || item.parsedMerchant || item.senderAddress,
-              amount: item.parsedAmount || 0,
-              currencyCode: item.parsedCurrencyCode || currencyCode,
-              date: item.duplicateCandidate!.journalDate,
-              displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE',
-            })
-          }
+          onPress={() => onCompareDuplicate(item)}
         >
           Compare duplicate
         </AppButton>
@@ -115,19 +109,7 @@ export function SmsInboxItemCard({
 
       <View style={styles.actions}>
         {item.linkedJournal ? (
-          <AppButton
-            size="sm"
-            variant="outline"
-            onPress={() =>
-              AppNavigation.toTransactionDetails(item.linkedJournal!.journalId, {
-                title: item.linkedJournal!.description || item.parsedMerchant || item.senderAddress,
-                amount: item.parsedAmount || 0,
-                currencyCode: item.parsedCurrencyCode || currencyCode,
-                date: item.linkedJournal!.journalDate,
-                displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE',
-              })
-            }
-          >
+          <AppButton size="sm" variant="outline" onPress={() => onOpenJournal(item)}>
             Open Journal
           </AppButton>
         ) : (

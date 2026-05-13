@@ -1,5 +1,5 @@
 import { AppIcon, AppText } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -187,7 +187,7 @@ export const NetWorthTooltipContent = ({
         onPress={onViewTransactions}
       >
         <AppText variant="caption" weight="bold" style={{ color: contrastColor }}>
-          View Details
+          {AppConfig.strings.reports.viewDetails}
         </AppText>
         <AppIcon name="arrowRight" size={10} color={contrastColor} style={{ marginLeft: 4 }} />
       </TouchableOpacity>
@@ -307,7 +307,7 @@ export const IncomeExpenseTooltipContent = ({
         onPress={onViewTransactions}
       >
         <AppText variant="caption" weight="bold" style={{ color: contrastColor }}>
-          View Details
+          {AppConfig.strings.reports.viewDetails}
         </AppText>
         <AppIcon name="arrowRight" size={10} color={contrastColor} style={{ marginLeft: 4 }} />
       </TouchableOpacity>

@@ -2,7 +2,7 @@ import { DateRangePicker } from '@/src/components/common/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/common/DateRangeTrigger';
 import { MultiAccountPickerModal } from '@/src/components/common/MultiAccountPickerModal';
 import { AppIcon, AppText } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -27,10 +27,8 @@ export function ReportFilterBar(vm: ReportsViewModel) {
 
   const accountLabel =
     accountIds.length === 0
-      ? 'All Accounts'
-      : accountIds.length === 1
-        ? '1 Account'
-        : `${accountIds.length} Accounts`;
+      ? AppConfig.strings.reports.allAccounts
+      : AppConfig.strings.reports.accountCount(accountIds.length);
 
   return (
     <View style={styles.container}>
@@ -76,7 +74,7 @@ export function ReportFilterBar(vm: ReportsViewModel) {
         onSelect={onAccountSelect}
         accounts={vm.accounts}
         selectedIds={accountIds}
-        title="Filter by Accounts"
+        title={AppConfig.strings.reports.filterByAccounts}
       />
     </View>
   );

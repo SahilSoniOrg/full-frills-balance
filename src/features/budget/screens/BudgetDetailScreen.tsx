@@ -72,7 +72,6 @@ export function BudgetDetailScreen() {
               prevMonth={vm.prevMonth}
               nextMonth={vm.nextMonth}
               resetToToday={vm.resetToToday}
-              theme={theme}
             />
           }
           contentContainerStyle={styles.listContent}

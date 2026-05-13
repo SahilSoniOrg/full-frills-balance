@@ -1,12 +1,12 @@
-import { AppConfig, FontId, FontIds, FontSchemes } from '@/src/constants';
+import { AppConfig, FontId, FontIds, FontSchemes, Opacity } from '@/src/constants';
 import { AppIcon, AppText } from '@/src/components/core';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 type FontSelectorProps = {
   fontId: FontId;
   setFontId: (id: FontId) => void;
-  theme: any;
 };
 
 const FONT_OPTIONS = [
@@ -27,7 +27,8 @@ const FONT_OPTIONS = [
   },
 ] as const;
 
-export function FontSelector({ fontId, setFontId, theme }: FontSelectorProps) {
+export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
+  const { theme } = useTheme();
   return (
     <View>
       <View style={styles.sectionHeader}>
@@ -56,7 +57,7 @@ export function FontSelector({ fontId, setFontId, theme }: FontSelectorProps) {
                   borderBottomColor: theme.border,
                   borderBottomWidth: 1,
                 },
-                pressed && { opacity: 0.75 },
+                pressed && { opacity: Opacity.heavy },
               ]}
             >
               <View style={[styles.preview, { backgroundColor: theme.surfaceSecondary }]}>

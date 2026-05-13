@@ -1,14 +1,14 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
-import { AppNavigation } from '@/src/utils/navigation';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
-interface SmsRuleCardProps {
+interface SmsRuleCardViewProps {
   item: SmsAutoPostRule;
-  theme: any;
   accountMap: Map<string, string>;
+  onPress: (item: SmsAutoPostRule) => void;
 }
 
 export function getConditions(rule: SmsAutoPostRule): any[] {
@@ -69,12 +69,10 @@ export function getConditionSummary(rule: SmsAutoPostRule) {
     .join(' • ');
 }
 
-export function SmsRuleCard({ item, theme, accountMap }: SmsRuleCardProps) {
+export function SmsRuleCardView({ item, accountMap, onPress }: SmsRuleCardViewProps) {
+  const { theme } = useTheme();
   return (
-    <TouchableOpacity
-      activeOpacity={Opacity.heavy}
-      onPress={() => AppNavigation.toSmsRuleForm(item.id)}
-    >
+    <TouchableOpacity activeOpacity={Opacity.heavy} onPress={() => onPress(item)}>
       <AppCard elevation="sm" style={styles.card}>
         <View style={styles.cardHeader}>
           <AppText variant="subheading" weight="semibold">

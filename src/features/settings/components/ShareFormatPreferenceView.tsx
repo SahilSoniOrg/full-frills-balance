@@ -1,13 +1,15 @@
 import { AppConfig } from '@/src/constants';
 import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
-import { useSettingsViewModel } from '@/src/features/settings/hooks/useSettingsViewModel';
 import { ShareFormat } from '@/src/types/sharing';
 import React from 'react';
 
-export const ShareFormatPreference = () => {
-  const { defaultShareFormat, setDefaultShareFormat } = useSettingsViewModel();
+interface ShareFormatPreferenceViewProps {
+  value: ShareFormat;
+  onChange: (value: ShareFormat) => void;
+}
 
+export const ShareFormatPreferenceView = ({ value, onChange }: ShareFormatPreferenceViewProps) => {
   const options = [
     { id: ShareFormat.TEXT, label: AppConfig.strings.settings.data.shareFormats.TEXT },
     { id: ShareFormat.CSV, label: AppConfig.strings.settings.data.shareFormats.CSV },
@@ -22,8 +24,8 @@ export const ShareFormatPreference = () => {
       rightContent={
         <AppSegmentedControl
           options={options}
-          value={defaultShareFormat}
-          onChange={id => setDefaultShareFormat(id as ShareFormat)}
+          value={value}
+          onChange={id => onChange(id as ShareFormat)}
           size="sm"
           minWidth={72}
         />

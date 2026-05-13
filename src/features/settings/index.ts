@@ -1,4 +1,4 @@
-export { AppearanceSettingsScreen } from './screens/AppearanceSettingsScreen';
+export { default as AppearanceSettingsScreen } from './screens/AppearanceSettingsScreen';
 export { default as AboutSupportSettingsScreen } from './screens/AboutSupportSettingsScreen';
 export { default as AutomationSettingsScreen } from './screens/AutomationSettingsScreen';
 export { default as DataManagementSettingsScreen } from './screens/DataManagementSettingsScreen';

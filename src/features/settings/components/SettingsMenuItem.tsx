@@ -2,8 +2,9 @@ import { AppIcon, AppText, type IconName, isValidIconName } from '@/src/componen
 import { Opacity } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { MotiView } from 'moti';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, type ViewProps } from 'react-native';
 
 type SettingsMenuItemProps = {
   title: string;
@@ -17,6 +18,7 @@ type SettingsMenuItemProps = {
   loading?: boolean;
   iconColor?: boolean;
   prominent?: boolean;
+  style?: ViewProps['style'];
 };
 
 /**
@@ -34,6 +36,7 @@ export function SettingsMenuItem({
   loading = false,
   iconColor = undefined,
   prominent = false,
+  style,
 }: SettingsMenuItemProps) {
   const { theme } = useTheme();
 
@@ -73,11 +76,56 @@ export function SettingsMenuItem({
     );
   };
 
+  const renderRightContent = () => {
+    if (loading) {
+      return (
+        <Box padding="xs">
+          <MotiView
+            from={{ rotate: '0deg' }}
+            animate={{ rotate: '360deg' }}
+            transition={{
+              type: 'timing',
+              duration: 1000,
+              loop: true,
+              repeatReverse: false,
+            }}
+          >
+            <AppIcon
+              name="refresh"
+              size={16}
+              color={theme.textSecondary}
+              style={{ opacity: Opacity.medium }}
+            />
+          </MotiView>
+        </Box>
+      );
+    }
+
+    return (
+      <Inline align="center" space="xs">
+        {rightContent}
+        {hasArrow && onPress && (
+          <AppIcon
+            name="chevronRight"
+            size={16}
+            color={theme.textSecondary}
+            style={{ opacity: Opacity.medium }}
+          />
+        )}
+      </Inline>
+    );
+  };
+
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || !onPress}
       activeOpacity={Opacity.heavy}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || !onPress }}
+      accessibilityLabel={title}
+      accessibilityHint={description}
+      style={style}
     >
       <Inline
         align="center"
@@ -104,28 +152,7 @@ export function SettingsMenuItem({
           </Stack>
         </Inline>
 
-        <Inline align="center" space="xs">
-          {loading ? (
-            <Box padding="xs">
-              <AppIcon
-                name="refresh"
-                size={16}
-                color={theme.textSecondary}
-                style={{ opacity: Opacity.medium }}
-              />
-            </Box>
-          ) : (
-            rightContent
-          )}
-          {hasArrow && onPress && (
-            <AppIcon
-              name="chevronRight"
-              size={16}
-              color={theme.textSecondary}
-              style={{ opacity: Opacity.medium }}
-            />
-          )}
-        </Inline>
+        {renderRightContent()}
       </Inline>
     </TouchableOpacity>
   );

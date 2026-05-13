@@ -3,6 +3,6 @@ import { useReportsViewModel } from '@/src/features/reports/hooks/useReportsView
 import React from 'react';
 
 export default function ReportsScreen() {
-    const vm = useReportsViewModel();
-    return <ReportsView {...vm} />;
+  const vm = useReportsViewModel();
+  return <ReportsView vm={vm} />;
 }

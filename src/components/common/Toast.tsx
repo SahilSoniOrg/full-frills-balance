@@ -9,7 +9,6 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, TouchableOpacity } from 'react-native';
 
 export function ToastContainer() {
-  const { theme } = useTheme();
   const { toasts } = useToastListener();
 
   if (toasts.length === 0) return null;
@@ -17,13 +16,14 @@ export function ToastContainer() {
   return (
     <View style={styles.container} pointerEvents="box-none">
       {toasts.map(toast => (
-        <ToastItemView key={toast.id} toast={toast} theme={theme} />
+        <ToastItemView key={toast.id} toast={toast} />
       ))}
     </View>
   );
 }
 
-function ToastItemView({ toast, theme }: { toast: ToastItem; theme: any }) {
+function ToastItemView({ toast }: { toast: ToastItem }) {
+  const { theme } = useTheme();
   const animatedValue = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 

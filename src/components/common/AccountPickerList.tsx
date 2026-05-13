@@ -104,14 +104,13 @@ const AccountPickerRow = React.memo(
     isSelected,
     isMultiple,
     onPress,
-    theme,
   }: {
     item: Account;
     isSelected: boolean;
     isMultiple: boolean;
     onPress: () => void;
-    theme: any;
   }) => {
+    const { theme } = useTheme();
     const subtitle = [item.accountType, item.currencyCode].filter(Boolean).join(' • ');
     const accentColor = getAccountAccentColor(item.accountType, theme);
 
@@ -318,7 +317,6 @@ export function AccountPickerList(props: AccountPickerListProps) {
           isSelected={isSelected}
           isMultiple={isMultiple}
           onPress={() => handleToggleSelection(item.id)}
-          theme={theme}
         />
       );
     },

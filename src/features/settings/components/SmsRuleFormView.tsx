@@ -8,11 +8,11 @@ import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { AppInput, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
-import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
+import { useTheme } from '@/src/hooks/use-theme';
 
 export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
   const { theme } = useTheme();

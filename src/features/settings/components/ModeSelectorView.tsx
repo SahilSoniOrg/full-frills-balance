@@ -16,7 +16,7 @@ const MODE_OPTIONS = [
   { id: 'dark', label: 'Dark' },
 ] as const;
 
-export function ModeSelector({ themePreference, setThemePreference }: ModeSelectorProps) {
+export function ModeSelectorView({ themePreference, setThemePreference }: ModeSelectorProps) {
   return (
     <View>
       <View style={styles.headerRow}>

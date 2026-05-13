@@ -1,6 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { Layout } from '@/src/constants';
-import { REPORT_CHART_LAYOUT, REPORT_CHART_STRINGS } from '@/src/constants/report-constants';
+import { AppConfig } from '@/src/constants/app-config';
+import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useMemo } from 'react';
@@ -88,7 +89,7 @@ export const DonutChart = ({
           },
         ]}
       >
-        <AppText color="secondary">{REPORT_CHART_STRINGS.chartNoData}</AppText>
+        <AppText color="secondary">{AppConfig.strings.reports.chartNoData}</AppText>
       </View>
     );
   }

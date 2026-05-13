@@ -2,20 +2,14 @@ import { BarChart } from '@/src/components/charts/BarChart';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { SankeyChart } from '@/src/components/charts/SankeyChart';
 import { AppText } from '@/src/components/core';
-import {
-  AppConfig,
-  REPORT_CHART_LAYOUT,
-  REPORT_CHART_STRINGS,
-  Shape,
-  Spacing,
-  Theme,
-} from '@/src/constants';
+import { AppConfig, REPORT_CHART_LAYOUT, Shape, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import {
   IncomeExpenseTooltipContent,
   NetWorthTooltipContent,
 } from '@/src/features/reports/components/ReportTooltip';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
+import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -26,11 +20,11 @@ const BALANCE_BAR_HEIGHT = Spacing.sm;
 
 interface ReportOverviewSectionProps {
   vm: ReportsViewModel;
-  theme: Theme;
   chartWidth: number;
 }
 
-export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewSectionProps) {
+export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionProps) {
+  const { theme } = useTheme();
   const {
     displayedNetWorthText,
     netWorthSeries,
@@ -62,13 +56,13 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
           errorColor={theme.error}
           borderColor={theme.border}
           onViewTransactions={() => onViewTransactions(point.date)}
-          incomeLabel={REPORT_CHART_STRINGS.incomeShort}
-          expenseLabel={REPORT_CHART_STRINGS.expenseShort}
+          incomeLabel={AppConfig.strings.reports.incomeShort}
+          expenseLabel={AppConfig.strings.reports.expenseShort}
           backgroundColor={theme.surface}
         />
       );
     },
-    [theme, onViewTransactions, netWorthSeries],
+    [theme, onViewTransactions, netWorthSeries, vm.targetCurrency],
   );
 
   const renderBarTooltip = useCallback(
@@ -85,13 +79,13 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={vm.onViewSelectedTransactions}
-          incomeLabel={REPORT_CHART_STRINGS.incomeShort}
-          expenseLabel={REPORT_CHART_STRINGS.expenseShort}
+          incomeLabel={AppConfig.strings.reports.incomeShort}
+          expenseLabel={AppConfig.strings.reports.expenseShort}
           backgroundColor={theme.surface}
         />
       );
     },
-    [barChartData, theme, vm.onViewSelectedTransactions],
+    [barChartData, theme, vm.onViewSelectedTransactions, vm.targetCurrency],
   );
 
   return (
@@ -165,7 +159,7 @@ export function ReportOverviewSection({ vm, theme, chartWidth }: ReportOverviewS
         </View>
       </ReportChartCard>
 
-      <ReportChartCard title="Money Flow (Sankey)" zIndex={20}>
+      <ReportChartCard title={AppConfig.strings.reports.moneyFlowTitle} zIndex={20}>
         <SankeyChart
           nodes={sankeyData.nodes}
           links={sankeyData.links}

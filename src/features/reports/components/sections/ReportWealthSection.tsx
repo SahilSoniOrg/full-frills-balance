@@ -1,10 +1,11 @@
 import { AreaChart } from '@/src/components/charts/AreaChart';
 import { BarChart } from '@/src/components/charts/BarChart';
 import { AppText } from '@/src/components/core';
-import { REPORT_CHART_LAYOUT, Spacing, Theme } from '@/src/constants';
+import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import { IncomeExpenseTooltipContent } from '@/src/features/reports/components/ReportTooltip';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
+import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -12,11 +13,11 @@ const WEALTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;
 
 interface ReportWealthSectionProps {
   vm: ReportsViewModel;
-  theme: Theme;
   chartWidth: number;
 }
 
-export function ReportWealthSection({ vm, theme, chartWidth }: ReportWealthSectionProps) {
+export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps) {
+  const { theme } = useTheme();
   const { wealthAreaSeries, barChartData, dailyData } = vm;
 
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | undefined>(undefined);
@@ -40,8 +41,8 @@ export function ReportWealthSection({ vm, theme, chartWidth }: ReportWealthSecti
           successColor={theme.success}
           errorColor={theme.error}
           onViewTransactions={() => vm.onViewTransactions(data.date)}
-          incomeLabel="Assets"
-          expenseLabel="Liabil."
+          incomeLabel={AppConfig.strings.reports.assets}
+          expenseLabel={AppConfig.strings.reports.liabilitiesShort}
           backgroundColor={theme.surface}
         />
       );
@@ -52,7 +53,7 @@ export function ReportWealthSection({ vm, theme, chartWidth }: ReportWealthSecti
   return (
     <>
       <ReportChartCard
-        title="Net Worth History"
+        title={AppConfig.strings.reports.netWorthHistory}
         zIndex={selectedAreaIndex !== undefined ? 100 : 50}
       >
         <View style={styles.chartContainer}>
@@ -70,19 +71,19 @@ export function ReportWealthSection({ vm, theme, chartWidth }: ReportWealthSecti
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: theme.success }]} />
             <AppText variant="caption" color="secondary">
-              Assets
+              {AppConfig.strings.reports.assets}
             </AppText>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
             <AppText variant="caption" color="secondary">
-              Liabilities
+              {AppConfig.strings.reports.liabilities}
             </AppText>
           </View>
         </View>
       </ReportChartCard>
 
-      <ReportChartCard title="Daily Momentum">
+      <ReportChartCard title={AppConfig.strings.reports.dailyMomentum}>
         <View style={styles.chartContainer}>
           <BarChart
             data={barChartData}
@@ -115,9 +116,9 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: Spacing.sm,
+    height: Spacing.sm,
+    borderRadius: Spacing.xs,
   },
   placeholderText: {
     textAlign: 'center',

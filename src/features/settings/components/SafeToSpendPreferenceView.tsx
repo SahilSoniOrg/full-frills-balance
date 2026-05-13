@@ -1,11 +1,14 @@
 import { AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { useUI } from '@/src/contexts/UIContext';
 import { Box, Stack } from '@/src/design-system';
 import React from 'react';
 
-export const SafeToSpendPreference = () => {
-  const { safeToSpendDays, setSafeToSpendDays } = useUI();
+interface SafeToSpendPreferenceViewProps {
+  days: number;
+  onChange: (days: number) => void;
+}
+
+export const SafeToSpendPreferenceView = ({ days, onChange }: SafeToSpendPreferenceViewProps) => {
   const strings = AppConfig.strings.settings.personalization;
 
   const options = [
@@ -27,8 +30,8 @@ export const SafeToSpendPreference = () => {
       <Box>
         <AppSegmentedControl
           options={options as any}
-          value={safeToSpendDays}
-          onChange={val => setSafeToSpendDays(Number(val))}
+          value={days}
+          onChange={val => onChange(Number(val))}
           flex={true}
           size="sm"
         />

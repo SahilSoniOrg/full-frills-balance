@@ -5,6 +5,7 @@ import { REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
+import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -17,7 +18,6 @@ interface BudgetDetailHeaderProps {
   prevMonth: () => void;
   nextMonth: () => void;
   resetToToday: () => void;
-  theme: any;
 }
 
 export function BudgetDetailHeader({
@@ -29,8 +29,8 @@ export function BudgetDetailHeader({
   prevMonth,
   nextMonth,
   resetToToday,
-  theme,
 }: BudgetDetailHeaderProps) {
+  const { theme } = useTheme();
   const [chartWidth, setChartWidth] = React.useState<number>(0);
 
   const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));

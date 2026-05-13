@@ -1,4 +1,4 @@
-import { Theme } from '@/src/constants/design-tokens';
+import { Opacity, Theme } from '@/src/constants/design-tokens';
 
 export const REPORT_CHART_COLOR_KEYS = {
   expense: [
@@ -43,7 +43,7 @@ export const REPORT_CHART_LAYOUT = {
   tooltipIconButtonPadding: 4,
   tooltipShadowOffsetX: 0,
   tooltipShadowOffsetY: 2,
-  tooltipShadowOpacity: 0.1,
+  tooltipShadowOpacity: Opacity.hover,
   tooltipShadowRadius: 4,
   tooltipElevation: 3,
   tooltipZIndex: 100,
@@ -51,12 +51,12 @@ export const REPORT_CHART_LAYOUT = {
   lineChartYLabelOffsetX: 8,
   lineChartYLabelOffsetY: 4,
   lineChartYLabelFontSize: 10,
-  lineChartGridOpacity: 0.5,
+  lineChartGridOpacity: Opacity.medium,
   lineChartMaxLabelOffsetY: 12,
   lineChartMaxLabelFontSize: 10,
   lineChartMaxPointRadius: 4,
   lineChartSeriesStrokeWidth: 3,
-  lineChartSelectedSeriesOpacity: 0.5,
+  lineChartSelectedSeriesOpacity: Opacity.medium,
   lineChartSelectedPointRadius: 6,
   lineChartSelectedPointStrokeWidth: 2,
   lineChartSelectedIndicatorStrokeWidth: 1,
@@ -64,7 +64,7 @@ export const REPORT_CHART_LAYOUT = {
   lineChartBorderRadius: 16,
   barChartDefaultBarWidth: 12,
   barChartBarCornerRadius: 4,
-  barChartUnselectedOpacity: 0.3,
+  barChartUnselectedOpacity: Opacity.muted,
   barChartAxisLabelFontSize: 10,
   barChartAxisTickOffsetY: 8,
   barChartXAxisLabelFontSize: 10,
@@ -91,14 +91,6 @@ export const REPORT_CHART_LAYOUT = {
   sankeyNodeSpacing: 30,
   sankeyLabelOffset: 8,
   sankeyDefaultHeight: 300,
-} as const;
-
-export const REPORT_CHART_STRINGS = {
-  chartNoData: 'No data available',
-  incomeShort: 'Inc',
-  expenseShort: 'Exp',
-  maxLabel: 'Max',
-  categoryOther: 'Other',
 } as const;
 
 export const REPORT_CHART_EVENTS = {
