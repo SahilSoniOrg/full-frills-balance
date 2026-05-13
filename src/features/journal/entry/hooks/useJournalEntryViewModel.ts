@@ -310,7 +310,13 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       }, 0);
 
     return JournalCalculator.roundAmount(debitTotalInPrimary).toFixed(2);
-  }, [editor.isGuidedMode, simpleEditor.amount, editor.lines, primaryDisplayCurrency]);
+  }, [
+    editor.isGuidedMode,
+    simpleEditor.amount,
+    editor.lines,
+    primaryDisplayCurrency,
+    workplaceCurrency,
+  ]);
 
   const hasDescription = editor.description.trim().length > 0;
   const hasIncompleteLines = editor.lines.some(line => !line.accountId || !line.amount.trim());
