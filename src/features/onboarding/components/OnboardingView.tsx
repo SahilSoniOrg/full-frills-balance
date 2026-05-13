@@ -95,7 +95,7 @@ export function OnboardingView(vm: OnboardingFlowViewModel) {
   };
 
   return (
-    <WorkplaceSetupLayout currentStep={step} totalSteps={6} edges={['top', 'bottom']}>
+    <WorkplaceSetupLayout currentStep={step} totalSteps={6}>
       {renderStep()}
     </WorkplaceSetupLayout>
   );
