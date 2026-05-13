@@ -146,7 +146,7 @@ export function transformAccountsToSections(
       const roundedBalance = Math.round(balance * 100) / 100;
       const roundedIncome = Math.round(monthlyIncome * 100) / 100;
       const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
-      const stateKey = `${account.id}:${roundedBalance}:${roundedIncome}:${roundedExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${theme.asset}`;
+      const stateKey = `${account.id}:${roundedBalance}:${roundedIncome}:${roundedExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);

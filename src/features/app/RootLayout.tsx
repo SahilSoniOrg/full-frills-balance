@@ -1,28 +1,14 @@
-import { AlertContainer } from '@/src/components/common/AlertContainer';
-import { ToastContainer } from '@/src/components/common/Toast';
-import { ErrorBoundary } from '@/src/components/core';
-import { UIProvider, useUI } from '@/src/contexts/UIContext';
-import { useWorkplace, WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
-import { database } from '@/src/data/database/Database';
-import { AppLockInterceptor } from '@/src/features/app/components/AppLockInterceptor';
-import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
-import { RestartRequiredScreen } from '@/src/features/dev';
-import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
-import { useColorScheme } from '@/src/hooks/use-color-scheme';
-import { analytics } from '@/src/services/analytics-service';
-import { DatabaseProvider } from '@nozbe/watermelondb/react';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import * as Sentry from '@sentry/react-native';
-import { Stack, useNavigationContainerRef, usePathname, useSegments } from 'expo-router';
+import { AppConfig } from '@/src/constants/app-config';
+import { analytics, navigationIntegration } from '@/src/services/analytics-service';
 import * as SplashScreen from 'expo-splash-screen';
-import PostHog, { PostHogProvider } from 'posthog-react-native';
+import { useNavigationContainerRef } from 'expo-router';
+import * as Sentry from '@sentry/react-native';
 import React from 'react';
-import { View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { FontManager } from './components/FontManager';
 
-import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
+import { AppProviders } from './components/AppProviders';
+import { TelemetryTracker } from './components/TelemetryTracker';
+import { AppContent } from './components/AppNavigation';
+
 import '@/src/services/audit-handlers';
 
 // Prevent splash screen from auto-hiding before we are ready
@@ -30,279 +16,35 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* ignore */
 });
 
-const navigationIntegration = Sentry.reactNavigationIntegration();
+// Initialize telemetry at module load time — runs once during JS bundle evaluation,
+// before any component mounts. This eliminates an extra render cycle that was
+// previously gated on a useEffect + useState.
+analytics.initialize();
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-  enabled: !__DEV__,
-  debug: false,
-  tracesSampleRate: 1.0,
-  // Session Replay
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
-  integrations: [
-    navigationIntegration,
-    Sentry.reactNativeTracingIntegration(),
-    Sentry.mobileReplayIntegration(),
-  ],
-  enableUserInteractionTracing: true,
-});
-
-function PostHogScreenTracker() {
-  const pathname = usePathname();
-  const segments = useSegments();
-
-  React.useEffect(() => {
-    if (pathname) {
-      // Enhanced screen name extraction
-      const screenName = segments.join('/') || 'index';
-      const screenType = getScreenType(screenName);
-      const flowContext = getFlowContext(screenName);
-
-      // Track screen view with enhanced context
-      analytics.screen(screenName, {
-        pathname,
-        screen_type: screenType,
-        flow_context: flowContext || 'none',
-        segment_count: segments.length,
-        is_modal: isModalScreen(screenName),
-      });
-
-      // Update activity for session tracking
-      analytics.updateActivity();
-
-      // Track user flow progression
-      if (flowContext) {
-        analytics.trackUserInteraction('screen_view', {
-          screen: screenName,
-          flow: flowContext,
-          type: screenType,
-        });
-      }
-    }
-  }, [pathname, segments]);
-
-  return null;
-}
-
-// Helper functions for screen classification
-function getScreenType(screenName: string): string {
-  if (screenName.includes('onboarding')) return 'onboarding';
-  if (screenName.includes('journal') || screenName.includes('transaction')) return 'transaction';
-  if (screenName.includes('account')) return 'account';
-  if (screenName.includes('settings')) return 'settings';
-  if (screenName.includes('import') || screenName.includes('export')) return 'data_management';
-  if (screenName === 'index' || screenName === '(tabs)') return 'main';
-  return 'other';
-}
-
-function getFlowContext(screenName: string): string | null {
-  if (screenName.includes('onboarding')) return 'user_setup';
-  if (screenName.includes('journal-entry')) return 'transaction_creation';
-  if (screenName.includes('account-creation')) return 'account_setup';
-  if (screenName.includes('import-selection')) return 'data_import';
-  if (screenName.includes('audit-log')) return 'data_review';
-  if (screenName.includes('appearance-settings')) return 'personalization';
-  if (screenName.includes('privacy-security-settings')) return 'privacy_security';
-  if (screenName.includes('automation-settings')) return 'automation';
-  if (screenName.includes('maintenance-settings')) return 'maintenance';
-  return null;
-}
-
-function isModalScreen(screenName: string): boolean {
-  const modalScreens = [
-    'journal-entry',
-    'account-creation',
-    'onboarding',
-    'account-reorder',
-    'manage-hierarchy',
-    'appearance-settings',
-  ];
-  return modalScreens.some(modal => screenName.includes(modal));
-}
-
-function BootManager() {
-  const { isAppReady } = useUI();
-
-  React.useEffect(() => {
-    if (isAppReady) {
-      SplashScreen.hideAsync().catch(() => {
-        /* ignore */
-      });
-    }
-  }, [isAppReady]);
-
-  return null;
-}
-
+/**
+ * Root Layout
+ *
+ * Segregated into:
+ * 1. AppProviders: Global context orchestration
+ * 2. TelemetryTracker: Screen-view and behavior tracking
+ * 3. AppContent: Navigation and auth-flow orchestration
+ */
 function RootLayout() {
-  const colorScheme = useColorScheme();
   const navigationRef = useNavigationContainerRef();
-  const [isAnalyticsReady, setIsAnalyticsReady] = React.useState(false);
 
+  // Register navigation container with Sentry for distributed tracing
   React.useEffect(() => {
-    if (navigationRef) {
+    if (navigationRef && AppConfig.features.enableSentry) {
       navigationIntegration.registerNavigationContainer(navigationRef);
     }
   }, [navigationRef]);
 
-  React.useEffect(() => {
-    analytics.initialize();
-    setIsAnalyticsReady(true);
-  }, []);
-
-  if (!isAnalyticsReady) {
-    return null; // Keep splash screen visible until analytics (and other services) are ready
-  }
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View
-        style={{ flex: 1 }}
-        onStartShouldSetResponderCapture={e => {
-          const { pageX, pageY } = e.nativeEvent;
-          resetAllCharts(pageX, pageY);
-          return false; // don't block children (scroll, gestures)
-        }}
-      >
-        <SafeAreaProvider>
-          <ErrorBoundary>
-            <DatabaseProvider database={database}>
-              <UIProvider>
-                <BootManager />
-                <FontManager>
-                  <MaybePostHogProvider client={analytics.posthog}>
-                    <PostHogScreenTracker />
-                    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                      <AppLockInterceptor>
-                        <AppContent />
-                      </AppLockInterceptor>
-                      <AlertContainer />
-                      <ToastContainer />
-                    </ThemeProvider>
-                  </MaybePostHogProvider>
-                </FontManager>
-              </UIProvider>
-            </DatabaseProvider>
-          </ErrorBoundary>
-        </SafeAreaProvider>
-      </View>
-    </GestureHandlerRootView>
-  );
-}
-
-/**
- * Helper to ensure we don't render PostHogProvider without a valid client.
- * This prevents the provider from attempting its own (racy) initialization.
- */
-function MaybePostHogProvider({
-  client,
-  children,
-}: {
-  client: PostHog | null;
-  children: React.ReactNode;
-}) {
-  if (!client) {
-    return <>{children}</>;
-  }
-
-  return (
-    <PostHogProvider client={client} debug={__DEV__}>
-      {children}
-    </PostHogProvider>
+    <AppProviders analyticsClient={analytics.posthog}>
+      <TelemetryTracker />
+      <AppContent />
+    </AppProviders>
   );
 }
 
 export default Sentry.wrap(RootLayout);
-
-function AppContent() {
-  const { isRestartRequired, hasCompletedOnboarding } = useUI();
-
-  if (isRestartRequired) {
-    return <RestartRequiredScreen />;
-  }
-
-  if (!hasCompletedOnboarding) {
-    return <NavigationStack />;
-  }
-
-  return (
-    <WorkplaceProvider>
-      <WorkplaceLoadedContent />
-    </WorkplaceProvider>
-  );
-}
-
-function WorkplaceLoadedContent() {
-  const { workplaceId, defaultCurrencyCode } = useWorkplace();
-
-  // Sync app data with native widgets
-  useWidgetSync(workplaceId, defaultCurrencyCode);
-
-  useAppBootstrap(workplaceId, defaultCurrencyCode);
-
-  return <NavigationStack />;
-}
-
-function NavigationStack() {
-  return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="journal-entry"
-        options={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_bottom',
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-        }}
-      />
-      <Stack.Screen
-        name="account-creation"
-        options={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_bottom',
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-        }}
-      />
-      <Stack.Screen
-        name="onboarding"
-        options={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_bottom',
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-        }}
-      />
-      <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
-      <Stack.Screen name="account-details" options={{ headerShown: false }} />
-      <Stack.Screen name="transaction-details" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="account-reorder"
-        options={{ headerShown: false, presentation: 'modal' }}
-      />
-      <Stack.Screen
-        name="manage-hierarchy"
-        options={{ headerShown: false, presentation: 'modal' }}
-      />
-      <Stack.Screen name="import-selection" options={{ headerShown: false }} />
-      <Stack.Screen name="audit-log" options={{ headerShown: false }} />
-      <Stack.Screen name="privacy-security-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="automation-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="maintenance-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="about-support-settings" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="appearance-settings"
-        options={{ headerShown: false, presentation: 'modal' }}
-      />
-    </Stack>
-  );
-}

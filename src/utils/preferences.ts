@@ -167,20 +167,29 @@ class PreferencesHelper {
     return sanitized;
   }
 
+  private _loadPromise: Promise<UIPreferences> | null = null;
+
   /**
    * Initializes preferences. Performs one-time migration if needed.
-   * This remains async primarily for the migration bridge.
+   * Promise is cached so concurrent callers share the same in-flight migration
+   * check and the storage layer is never hit twice during boot.
    */
   async loadPreferences(): Promise<UIPreferences> {
-    try {
-      const migrated = await migrateFromAsyncStorage();
-      if (migrated) {
-        this.reloadFromStorage();
+    if (this._loadPromise) return this._loadPromise;
+
+    this._loadPromise = (async () => {
+      try {
+        const migrated = await migrateFromAsyncStorage();
+        if (migrated) {
+          this.reloadFromStorage();
+        }
+      } catch (error) {
+        logger.error('Failed to initialize preferences migration', { error });
       }
-    } catch (error) {
-      logger.error('Failed to initialize preferences migration', { error });
-    }
-    return this.preferences;
+      return this.preferences;
+    })();
+
+    return this._loadPromise;
   }
 
   private updatePreferences(updates: Partial<UIPreferences>): void {

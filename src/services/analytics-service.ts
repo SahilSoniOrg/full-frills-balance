@@ -20,6 +20,8 @@ export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
 export const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 const BUILD_TYPE = process.env.APP_VARIANT || 'development'; // 'development', 'preview', 'production'
 
+export const navigationIntegration = Sentry.reactNavigationIntegration();
+
 export class AnalyticsService {
   private _posthog: PostHog | null = null;
   private _initialized = false;
@@ -45,7 +47,9 @@ export class AnalyticsService {
     if (this._initialized) return;
 
     const isPosthogEnabled =
-      typeof POSTHOG_API_KEY === 'string' && POSTHOG_API_KEY.trim().length > 0;
+      typeof POSTHOG_API_KEY === 'string' &&
+      POSTHOG_API_KEY.trim().length > 0 &&
+      AppConfig.features.enablePostHog;
     // 1. Setup PostHog instance on-demand
     if (!this._posthog && isPosthogEnabled) {
       try {
@@ -87,6 +91,7 @@ export class AnalyticsService {
       Sentry.setUser({ id: distinctId });
     }
 
+    this.initializeSentry();
     this._initialized = true;
 
     if (this._posthog && __DEV__) {
@@ -96,6 +101,37 @@ export class AnalyticsService {
       this.startSessionTracking();
     } else {
       logger.warn('[Analytics] Analytics disabled (missing key or dev mode)');
+    }
+  }
+
+  /**
+   * Initialize Sentry for error tracking and performance monitoring.
+   */
+  private initializeSentry() {
+    if (!AppConfig.features.enableSentry) {
+      logger.info('[Analytics] Sentry disabled by config');
+      return;
+    }
+
+    try {
+      Sentry.init({
+        dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+        enabled: true, // We already checked the config flag above
+        debug: false,
+        tracesSampleRate: 1.0,
+        // Session Replay
+        replaysSessionSampleRate: 0.1,
+        replaysOnErrorSampleRate: 1.0,
+        integrations: [
+          navigationIntegration,
+          Sentry.reactNativeTracingIntegration(),
+          Sentry.mobileReplayIntegration(),
+        ],
+        enableUserInteractionTracing: true,
+      });
+      logger.info('[Analytics] Sentry initialized');
+    } catch (error) {
+      logger.error('[Analytics] Failed to initialize Sentry', error);
     }
   }
   /**

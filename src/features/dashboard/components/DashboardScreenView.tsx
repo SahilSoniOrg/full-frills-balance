@@ -86,18 +86,16 @@ export function DashboardScreenView({
         listHeader={
           <View style={{ zIndex: 10 }}>
             <DashboardHeader {...headerProps} />
-            {safeToSpendData && (
-              <View style={{ zIndex: 10 }}>
-                <SafeToSpendCard
-                  {...safeToSpendData}
-                  viewModel={safeToSpendViewModel}
-                  onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
-                  onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
-                  isLoading={!isInitialized}
-                  isPrivacyMode={isPrivacyMode}
-                />
-              </View>
-            )}
+            <View style={{ zIndex: 10 }}>
+              <SafeToSpendCard
+                {...(safeToSpendData || ({} as any))}
+                viewModel={safeToSpendViewModel}
+                onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
+                onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
+                isLoading={!isInitialized || !safeToSpendData}
+                isPrivacyMode={isPrivacyMode}
+              />
+            </View>
             <View style={{ zIndex: 1 }}>
               <PlannedPaymentsSection
                 items={listViewProps.plannedJournals || []}

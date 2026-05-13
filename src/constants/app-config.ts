@@ -77,6 +77,8 @@ export const AppConfig = {
   // Feature toggles
   features: {
     enableAnalytics: true, // Analytics collection
+    enableSentry: !__DEV__, // Error tracking
+    enablePostHog: !__DEV__, // Product analytics
     enableDebugMode: false, // Debug logging
     enableExperimentalFeatures: false,
     debug: {

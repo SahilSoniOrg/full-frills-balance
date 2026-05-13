@@ -14,9 +14,10 @@ import { AccountBalance, AccountId, AccountType, WorkplaceId } from '@/src/types
 import { logger } from '@/src/utils/logger';
 import { traceService } from '@/src/utils/TraceService';
 import {
+  auditTime,
   combineLatest,
-  debounceTime,
   distinctUntilChanged,
+  firstValueFrom,
   Observable,
   shareReplay,
   switchMap,
@@ -57,6 +58,39 @@ class ReactiveDataService {
   // M-1 fix: cache dashboard observables per currency and workplace so multiple hook subscribers
   // share a single combineLatest chain.
   private _dashboardCache = new Map<string, Observable<DashboardData>>();
+  private _optimizedAccountListCache = new Map<string, Observable<DashboardSummaryData>>();
+  private _accountDashboardCache = new Map<string, Observable<any>>();
+  private _allBalancesCache = new Map<
+    string,
+    Observable<{
+      accounts: Account[];
+      balancesMap: Map<string, AccountBalance>;
+      wealthSummary: WealthSummary;
+    }>
+  >();
+
+  /**
+   * Background hydration pass for reactive streams.
+   * Call this during app bootstrap to pre-calculate and cache expensive data
+   * like the dashboard and optimized account list before the user navigates to those screens.
+   */
+  async preWarm(targetCurrency: string, workplaceId: WorkplaceId): Promise<void> {
+    const trace = traceService.startTrace('ReactiveDataService.preWarm');
+    try {
+      // Warm up both dashboard and optimized account list
+      // This ensures that when the user lands on the Home or Accounts screen,
+      // the data is already hydrated and multicasted via shareReplay.
+      await Promise.allSettled([
+        firstValueFrom(this.observeDashboardData(targetCurrency, workplaceId)),
+        firstValueFrom(this.observeOptimizedAccountList(targetCurrency, workplaceId)),
+      ]);
+      logger.info('[ReactiveDataService] Pre-warm complete');
+    } catch (error) {
+      logger.warn('[ReactiveDataService] Pre-warm failed', { error });
+    } finally {
+      trace.end();
+    }
+  }
 
   /**
    * Get or create the shared dashboard data observable for the given currency and workplace.
@@ -74,6 +108,8 @@ class ReactiveDataService {
     // so we don't accumulate dangling combineLatest chains over the bridge.
     if (this._dashboardCache.size > 0) {
       this._dashboardCache.clear();
+      this._optimizedAccountListCache.clear();
+      this._accountDashboardCache.clear();
     }
 
     const obs$ = combineLatest([
@@ -90,7 +126,7 @@ class ReactiveDataService {
       currencyRepository.observeAll(),
       journalRepository.observeStatusMeta(workplaceId),
     ]).pipe(
-      debounceTime(Animation.dataRefreshDebounce),
+      auditTime(Animation.dataRefreshDebounce),
       switchMap(async ([accounts, transactions]) => {
         const trace = traceService.startTrace('DashboardData');
         try {
@@ -127,11 +163,32 @@ class ReactiveDataService {
           trace.end();
         }
       }),
-      shareReplay({ bufferSize: 1, refCount: true }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    this._dashboardCache.set(cacheKey, obs$);
-    return obs$;
+    const loggedObs$ = new Observable<DashboardData>(subscriber => {
+      const subStart = performance.now();
+      let firstEmission = true;
+      const sub = obs$.subscribe({
+        next: value => {
+          if (firstEmission) {
+            const duration = performance.now() - subStart;
+            logger.metric('Hydration.Hit.Dashboard', duration, {
+              hit: duration < 50,
+              currency: targetCurrency,
+            });
+            firstEmission = false;
+          }
+          subscriber.next(value);
+        },
+        error: err => subscriber.error(err),
+        complete: () => subscriber.complete(),
+      });
+      return () => sub.unsubscribe();
+    });
+
+    this._dashboardCache.set(cacheKey, loggedObs$);
+    return loggedObs$;
   }
 
   /**
@@ -148,7 +205,7 @@ class ReactiveDataService {
         const { transactions, ...summary } = data;
         return summary;
       }),
-      shareReplay({ bufferSize: 1, refCount: true }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
   }
 
@@ -187,37 +244,46 @@ class ReactiveDataService {
           return { income: 0, expense: 0 };
         }
       }),
-      shareReplay({ bufferSize: 1, refCount: true }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
   }
 
   /**
-   * Optimized lightweight observable for the Accounts List.
-   * Uses raw SQL for heavy lifting and minimizes JS thread overhead.
+   * Internal shared stream for all balance-related views.
+   * Consolidates raw SQL balance fetching and hierarchy aggregation.
+   * Multicasted with refCount: false to keep it warm during navigation.
    */
-  observeOptimizedAccountList(
+  private observeAllBalances(
     targetCurrency: string,
     workplaceId: WorkplaceId,
-  ): Observable<DashboardSummaryData> {
-    return combineLatest([
+  ): Observable<{
+    accounts: Account[];
+    balancesMap: Map<string, AccountBalance>;
+    wealthSummary: WealthSummary;
+  }> {
+    const cacheKey = `${targetCurrency}_${workplaceId}`;
+    if (this._allBalancesCache.has(cacheKey)) {
+      return this._allBalancesCache.get(cacheKey)!;
+    }
+
+    const obs$ = combineLatest([
       accountRepository.observeAll(workplaceId),
       journalRepository.observeStatusMeta(workplaceId),
       transactionRepository.observeActiveCount(workplaceId),
-      exchangeRateRepository.observeAll(), // Snap to accuracy when background rates arrive
+      exchangeRateRepository.observeAll(),
     ]).pipe(
-      debounceTime(Animation.dataRefreshDebounce),
-      // Optimization: Only re-calculate if the underlying data actually changed.
+      auditTime(Animation.dataRefreshDebounce),
       distinctUntilChanged((prev, curr) => {
+        // Only re-run if accounts structure, journal status, or tx count changed.
+        // Exchange rates (curr[3]) are handled by the switchMap.
         return (
-          prev[0] === curr[0] && prev[1] === curr[1] && prev[2] === curr[2] && prev[3] === curr[3] // Exchange rates reference check
+          prev[0] === curr[0] && prev[1] === curr[1] && prev[2] === curr[2] && prev[3] === curr[3]
         );
       }),
       switchMap(async ([accounts]) => {
-        const trace = traceService.startTrace('OptimizedAccountList');
+        const trace = traceService.startTrace('AllBalances.Calculate');
         try {
-          // 0. Pre-warm the exchange rate cache
           await exchangeRateService.preWarmCache();
-          trace.metric('preWarm');
 
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -231,91 +297,116 @@ class ReactiveDataService {
             999,
           ).getTime();
 
-          // 1. Fetch raw balances
+          // Fetch ALL balances raw (includes totals and deleted for maximum utility)
           const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
             startOfMonth,
             endOfMonth,
             workplaceId,
-            false,
+            true, // includeTotalCount: true (needed for detail views)
+            true, // includeDeleted: true (needed for detail views)
           );
 
-          trace.metric('fetchRaw');
-
           let finalBalances: AccountBalance[] = [];
+          const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
+            ? (rawItemsResponse as unknown as RawSQLRow[])
+            : (((rawItemsResponse as any)?.rows || []) as RawSQLRow[]);
 
-          if (rawItemsResponse === null) {
-            finalBalances = await balanceService.getAccountBalances(
-              workplaceId,
-              undefined,
-              targetCurrency,
-            );
-          } else {
-            const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
-              ? (rawItemsResponse as unknown as RawSQLRow[])
-              : (((rawItemsResponse as any)?.rows || []) as RawSQLRow[]);
+          const balances: AccountBalance[] = rawItems.map((item: RawSQLRow) =>
+            this.mapRawToBalance(item, now.getTime()),
+          );
 
-            const balances: AccountBalance[] = rawItems.map((item: RawSQLRow) =>
-              this.mapRawToBalance(item, now.getTime()),
-            );
+          const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
+          const balancesMap = new Map(validBalances.map(b => [b.accountId, b]));
 
-            const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
-            const balancesMap = new Map(validBalances.map(b => [b.accountId, b]));
-
-            const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
-            const precisionMap = new Map<string, number>();
-            for (const account of accounts) {
-              const precision = currencyPrecisionMap.get(account.currencyCode) ?? 2;
-              precisionMap.set(account.id, precision);
-            }
-
-            await balanceService.aggregateBalances(
-              accounts,
-              balancesMap,
-              precisionMap,
-              targetCurrency,
-              trace,
-            );
-
-            trace.metric('aggregate');
-
-            finalBalances = Array.from(balancesMap.values());
+          const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
+          const precisionMap = new Map<string, number>();
+          for (const account of accounts) {
+            const precision = currencyPrecisionMap.get(account.currencyCode) ?? 2;
+            precisionMap.set(account.id, precision);
           }
 
-          // 4. Calculate wealth summary
+          await balanceService.aggregateBalances(
+            accounts,
+            balancesMap,
+            precisionMap,
+            targetCurrency,
+            trace,
+          );
+
+          finalBalances = Array.from(balancesMap.values());
           const parentIds = new Set(
             accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
           );
           const leafBalances = finalBalances.filter(b => !parentIds.has(b.accountId));
           const wealthSummary = wealthService.calculateSummarySync(leafBalances, targetCurrency);
 
-          const result = {
-            accounts,
-            balances: finalBalances,
-            wealthSummary,
-          };
-
-          return result;
+          return { accounts, balancesMap, wealthSummary };
         } catch (error) {
-          logger.error('Failed to calculate optimized account list:', error);
+          logger.error('Failed to calculate shared balances:', error);
           return {
             accounts,
-            balances: [],
-            wealthSummary: {
-              netWorth: 0,
-              totalAssets: 0,
-              totalLiabilities: 0,
-              totalEquity: 0,
-              totalIncome: 0,
-              totalExpense: 0,
-            },
+            balancesMap: new Map(),
+            wealthSummary: wealthService.calculateSummarySync([], targetCurrency),
           };
         } finally {
           trace.end();
         }
       }),
-      shareReplay({ bufferSize: 1, refCount: true }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+
+    this._allBalancesCache.set(cacheKey, obs$);
+    return obs$;
   }
+
+  /**
+   * Optimized lightweight observable for the Accounts List.
+   * Uses raw SQL for heavy lifting and minimizes JS thread overhead.
+   */
+  observeOptimizedAccountList(
+    targetCurrency: string,
+    workplaceId: WorkplaceId,
+  ): Observable<DashboardSummaryData> {
+    const cacheKey = `${targetCurrency}_${workplaceId}`;
+    if (this._optimizedAccountListCache.has(cacheKey)) {
+      return this._optimizedAccountListCache.get(cacheKey)!;
+    }
+
+    const obs$ = this.observeAllBalances(targetCurrency, workplaceId).pipe(
+      switchMap(async ({ accounts, balancesMap, wealthSummary }) => {
+        return {
+          accounts,
+          balances: Array.from(balancesMap.values()),
+          wealthSummary,
+        };
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+
+    const loggedObs$ = new Observable<DashboardSummaryData>(subscriber => {
+      const subStart = performance.now();
+      let firstEmission = true;
+      const sub = obs$.subscribe({
+        next: value => {
+          if (firstEmission) {
+            const duration = performance.now() - subStart;
+            logger.metric('Hydration.Hit.AccountList', duration, {
+              hit: duration < 50,
+            });
+            firstEmission = false;
+          }
+          subscriber.next(value);
+        },
+        error: err => subscriber.error(err),
+        complete: () => subscriber.complete(),
+      });
+      return () => sub.unsubscribe();
+    });
+
+    this._optimizedAccountListCache.set(cacheKey, loggedObs$);
+    return loggedObs$;
+  }
+
   /**
    * Optimized observable for a specific account's dashboard/detail view.
    * Consolidates account info, balance, and sub-account tree.
@@ -330,124 +421,69 @@ class ReactiveDataService {
     subAccounts: AccountBalance[];
     allAccounts: Account[];
   }> {
-    return combineLatest([
-      accountRepository.observeAll(workplaceId), // structural + all accounts for tree
-      journalRepository.observeStatusMeta(workplaceId),
-      transactionRepository.observeActiveCount(workplaceId), // Efficient trigger for balance changes
-    ]).pipe(
-      debounceTime(Animation.dataRefreshDebounce),
-      switchMap(async ([accounts]) => {
-        const start = Date.now();
-        // 0. Pre-warm exchange rate cache for speed
-        await exchangeRateService.preWarmCache();
+    const cacheKey = `${accountId}_${targetCurrency}_${workplaceId}`;
+    if (this._accountDashboardCache.has(cacheKey)) {
+      return this._accountDashboardCache.get(cacheKey)!;
+    }
 
+    const obs$ = this.observeAllBalances(targetCurrency, workplaceId).pipe(
+      switchMap(async ({ accounts, balancesMap }) => {
         const targetAccount = accounts.find(a => a.id === accountId);
         if (!targetAccount) {
-          // If not found in active, try to find in deleted (one-shot find for efficiency)
-          const deletedAccount = await accountRepository.findWithDeleted(
-            workplaceId,
-            accountId as AccountId,
-          );
-          if (!deletedAccount)
-            return { account: null, balance: null, subAccounts: [], allAccounts: accounts };
-
-          // If deleted, we still want to show its details.
-          // Note: This won't be as reactive as active accounts, but deletion is a rare event.
-          // We'll proceed with this account.
+          const deletedAccount = await accountRepository.findWithDeleted(workplaceId, accountId);
           return { account: deletedAccount, balance: null, subAccounts: [], allAccounts: accounts };
         }
 
-        try {
-          const now = new Date();
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-          const endOfMonth = new Date(
-            now.getFullYear(),
-            now.getMonth() + 1,
-            0,
-            23,
-            59,
-            59,
-            999,
-          ).getTime();
+        const balance = balancesMap.get(accountId) || null;
 
-          // Fetch ALL balances raw (most efficient way to get tree balances too)
-          const rawItemsResponse = await accountRepository.getAccountListItemsRaw(
-            startOfMonth,
-            endOfMonth,
-            workplaceId,
-            true, // includeTotalCount: true for detail view
-            true, // includeDeleted: true
-          );
-
-          let finalBalances: AccountBalance[] = [];
-
-          if (rawItemsResponse === null) {
-            finalBalances = await balanceService.getAccountBalances(
-              workplaceId,
-              undefined,
-              targetCurrency,
-            );
-          } else {
-            const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
-              ? (rawItemsResponse as unknown as RawSQLRow[])
-              : (((rawItemsResponse as any)?.rows || []) as RawSQLRow[]);
-            const balances: AccountBalance[] = rawItems.map((item: RawSQLRow) =>
-              this.mapRawToBalance(item, now.getTime()),
-            );
-            const validBalances = balances.filter(b => b.accountId && b.accountId !== 'undefined');
-            const balancesMap = new Map(validBalances.map(b => [b.accountId, b]));
-
-            const currencyPrecisionMap = await currencyRepository.getAllPrecisions();
-            const precisionMap = new Map<string, number>();
-            for (const account of accounts) {
-              const precision = currencyPrecisionMap.get(account.currencyCode) ?? 2;
-              precisionMap.set(account.id, precision);
-            }
-
-            await balanceService.aggregateBalances(
-              accounts,
-              balancesMap,
-              precisionMap,
-              targetCurrency,
-            );
-            finalBalances = Array.from(balancesMap.values());
+        // Get sub-accounts (all descendants)
+        const getDescendants = (parentId: string): Account[] => {
+          const directChildren = accounts.filter(a => a.parentAccountId === parentId);
+          const all: Account[] = [...directChildren];
+          for (const child of directChildren) {
+            all.push(...getDescendants(child.id));
           }
+          return all;
+        };
 
-          const balancesMap = new Map(finalBalances.map(b => [b.accountId, b]));
-          const balance = balancesMap.get(accountId) || null;
+        const descendants = getDescendants(accountId);
+        const subBalances = descendants
+          .map(d => balancesMap.get(d.id as AccountId))
+          .filter((b): b is AccountBalance => !!b);
 
-          // Get sub-accounts (all descendants)
-          const getDescendants = (parentId: string): Account[] => {
-            const directChildren = accounts.filter(a => a.parentAccountId === parentId);
-            const all: Account[] = [...directChildren];
-            for (const child of directChildren) {
-              all.push(...getDescendants(child.id));
-            }
-            return all;
-          };
-
-          const descendants = getDescendants(accountId);
-          const subBalances = descendants
-            .map(d => balancesMap.get(d.id as AccountId))
-            .filter((b): b is AccountBalance => !!b);
-
-          return {
-            account: targetAccount,
-            balance,
-            subAccounts: subBalances,
-            allAccounts: accounts,
-          };
-        } catch (error) {
-          logger.error('Failed to calculate account dashboard:', error);
-          return { account: targetAccount, balance: null, subAccounts: [], allAccounts: accounts };
-        } finally {
-          logger.info(
-            `[Trace] ReactiveDataService.observeAccountDashboard (${accountId}): ${Date.now() - start}ms`,
-          );
-        }
+        return {
+          account: targetAccount,
+          balance,
+          subAccounts: subBalances,
+          allAccounts: accounts,
+        };
       }),
-      shareReplay({ bufferSize: 1, refCount: true }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+
+    const loggedObs$ = new Observable<any>(subscriber => {
+      const subStart = performance.now();
+      let firstEmission = true;
+      const sub = obs$.subscribe({
+        next: value => {
+          if (firstEmission) {
+            const duration = performance.now() - subStart;
+            logger.metric('Hydration.Hit.AccountDetails', duration, {
+              hit: duration < 50,
+              accountId,
+            });
+            firstEmission = false;
+          }
+          subscriber.next(value);
+        },
+        error: err => subscriber.error(err),
+        complete: () => subscriber.complete(),
+      });
+      return () => sub.unsubscribe();
+    });
+
+    this._accountDashboardCache.set(cacheKey, loggedObs$);
+    return loggedObs$;
   }
 
   private mapRawToBalance(item: RawSQLRow, now: number): AccountBalance {
