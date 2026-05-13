@@ -11,9 +11,10 @@ import SmsInboxRecord, {
 } from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { journalRepository } from '@/src/data/repositories/JournalRepository';
+import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
+import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, EMPTY_ACCOUNT_ID, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -132,6 +133,21 @@ type DuplicateMatch = {
   score: number;
   reasons: string[];
 } | null;
+
+interface SmsAnalysisResult {
+  message: SmsMessage;
+  parsed: ParsedTransaction;
+  fingerprint: string;
+  existingRecord: SmsInboxRecord | null;
+  duplicate: DuplicateMatch;
+  exactJournalId?: JournalId;
+  finalStatus: SmsProcessingStatus;
+  autoPost?: {
+    ruleId: string;
+    journalData: CreateJournalData;
+    preparedJournal: PreparedJournalData;
+  };
+}
 
 class SmsService {
   private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
@@ -504,9 +520,11 @@ class SmsService {
     if (messages.length === 0) {
       return 0;
     }
+
     const activeRules = (await this.rules.query(Q.where('is_active', true)).fetch()).sort(
       (a, b) => this.getRulePriority(b) - this.getRulePriority(a),
     );
+
     const processedIds = new Set(this.getProcessedSmsIds());
     const existing = await this.inbox
       .query(Q.where('device_sms_id', Q.oneOf(messages.map(message => message.id))))
@@ -536,9 +554,8 @@ class SmsService {
       workplaceId,
     );
 
-    let importedCount = 0;
-    const allOps: Model[] = [];
-    const allAccountsToRebuild = new Set<AccountId>();
+    // --- Phase 1: Async Analysis ---
+    const analysisResults: SmsAnalysisResult[] = [];
 
     for (const { message, parsed, fingerprint } of parsedMessages) {
       if (parsed.parseStatus === SmsParseStatus.IGNORED) {
@@ -560,38 +577,84 @@ class SmsService {
         existingStatus: existingRecord?.processingStatus,
       });
 
+      let autoPost: SmsAnalysisResult['autoPost'] = undefined;
       let finalStatus = nextStatus;
       let finalJournalId = exactJournal?.id || fingerprintJournal?.id || undefined;
-      const ruleResult =
-        parsed.parseStatus === SmsParseStatus.PARSED && nextStatus === SmsProcessingStatus.PENDING
-          ? await this.matchAndPrepareAutoPost(message, parsed, activeRules, workplaceId)
-          : null;
 
-      if (ruleResult) {
-        allOps.push(...ruleResult.ops);
-        ruleResult.accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
-        finalStatus = ruleResult.status;
-        finalJournalId = ruleResult.linkedJournalId || finalJournalId;
-        if (ruleResult.status === SmsProcessingStatus.AUTO_POSTED) {
-          importedCount += 1;
+      if (
+        parsed.parseStatus === SmsParseStatus.PARSED &&
+        nextStatus === SmsProcessingStatus.PENDING
+      ) {
+        const ruleResult = await this.analyzeAutoPost(message, parsed, activeRules, workplaceId);
+        if (ruleResult) {
+          if (ruleResult.disposition === 'ignore') {
+            finalStatus = SmsProcessingStatus.DISMISSED;
+          } else if (ruleResult.disposition === 'auto_post' && ruleResult.createData) {
+            autoPost = {
+              ruleId: ruleResult.ruleId,
+              journalData: ruleResult.createData.journalData,
+              preparedJournal: ruleResult.createData.preparedJournal,
+            };
+            finalStatus = SmsProcessingStatus.AUTO_POSTED;
+            // Note: Journal ID is generated synchronously later during batching
+          }
         }
       }
 
-      const { ops: upsertOps } = this.prepareUpsertInboxRecord(
+      analysisResults.push({
         message,
         parsed,
         fingerprint,
         existingRecord,
-        finalStatus,
-        workplaceId,
-        finalJournalId,
         duplicate,
-      );
-      allOps.push(...upsertOps);
+        exactJournalId: finalJournalId,
+        finalStatus,
+        autoPost,
+      });
     }
 
-    if (allOps.length > 0) {
+    // --- Phase 2: Synchronous Batching ---
+    let importedCount = 0;
+    const allOps: Model[] = [];
+    const allAccountsToRebuild = new Set<AccountId>();
+
+    if (analysisResults.length > 0) {
       await database.write(async () => {
+        for (const result of analysisResults) {
+          let linkedJournalId = result.exactJournalId;
+
+          if (result.autoPost) {
+            const { journal, ops, accountsToRebuild } =
+              ledgerWriteService.prepareCreateJournalFromPreparedData(
+                result.autoPost.journalData,
+                result.autoPost.preparedJournal,
+                workplaceId,
+              );
+
+            allOps.push(...ops);
+            accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
+            linkedJournalId = journal.id;
+            importedCount += 1;
+
+            // Side effects that are safe to run in current tick
+            analytics.logSmsRuleTriggered(result.autoPost.ruleId, true);
+            this.markSmsAsProcessed(result.message.id);
+          }
+
+          const { ops: upsertOps } = this.prepareUpsertInboxRecord(
+            result.message,
+            result.parsed,
+            result.fingerprint,
+            result.existingRecord,
+            result.finalStatus,
+            workplaceId,
+            linkedJournalId,
+            result.duplicate || undefined,
+          );
+          allOps.push(...upsertOps);
+        }
+
+        // Execute batch in chunks
         for (let i = 0; i < allOps.length; i += SMS_CONFIG.batchOpChunkSize) {
           const chunk = allOps.slice(i, i + SMS_CONFIG.batchOpChunkSize);
           await database.batch(chunk);
@@ -599,7 +662,6 @@ class SmsService {
       });
 
       if (allAccountsToRebuild.size > 0) {
-        // We use the latest message date as a heuristic for rebuild start
         const latestDate = Math.max(...messages.map(m => m.date));
         rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate, workplaceId);
       }
@@ -683,16 +745,18 @@ class SmsService {
     return results;
   }
 
-  private async matchAndPrepareAutoPost(
+  private async analyzeAutoPost(
     message: SmsMessage,
     parsed: ParsedTransaction,
     activeRules: SmsAutoPostRule[],
     workplaceId: WorkplaceId,
   ): Promise<{
-    ops: Model[];
-    status: SmsProcessingStatus;
-    linkedJournalId?: JournalId;
-    accountsToRebuild: Set<AccountId>;
+    disposition: SmsRuleDisposition;
+    ruleId: string;
+    createData?: {
+      journalData: CreateJournalData;
+      preparedJournal: PreparedJournalData;
+    };
   } | null> {
     if (activeRules.length === 0 || !parsed.amount) return null;
 
@@ -713,76 +777,66 @@ class SmsService {
       }
 
       if (definition.actions.disposition === 'ignore') {
-        this.markSmsAsProcessed(message.id);
-        return {
-          ops: [],
-          status: SmsProcessingStatus.DISMISSED,
-          accountsToRebuild: new Set(),
-        };
+        return { disposition: 'ignore', ruleId: rule.id };
       }
 
       if (definition.actions.disposition === 'review') {
-        return null;
+        return { disposition: 'review', ruleId: rule.id };
       }
 
       if (!definition.actions.sourceAccountId || !definition.actions.categoryAccountId) {
-        return null;
+        return { disposition: 'review', ruleId: rule.id };
       }
 
       const currencyCode = await workplaceService.getCurrency(workplaceId);
       const isExpense = parsed.type === 'debit';
 
-      const { journal, ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal(
-        {
-          journalDate: parsed.date || Date.now(),
-          description: parsed.merchant
-            ? `Auto-Posted: ${parsed.merchant}`
-            : 'Auto-Posted SMS Transaction',
-          currencyCode,
-          status: JournalStatus.POSTED,
-          metadata: {
-            importSource: 'sms',
-            originalSmsId: parsed.id,
-            originalSmsSender: parsed.address,
-            originalSmsBody: parsed.rawBody,
-            metadataJson: JSON.stringify({
-              smsFingerprint: this.computeSmsFingerprint(
-                message.address,
-                message.body,
-                message.date,
-              ),
-              parsedAmount: parsed.amount,
-              parsedCurrencyCode: parsed.currencyCode || null,
-              parsedMerchant: parsed.merchant || null,
-              referenceNumber: parsed.referenceNumber || null,
-              accountSource: parsed.accountSource || null,
-            }),
-          },
-          transactions: [
-            {
-              accountId: definition.actions.sourceAccountId as AccountId,
-              amount: parsed.amount,
-              transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
-              currencyCode,
-            },
-            {
-              accountId: definition.actions.categoryAccountId as AccountId,
-              amount: parsed.amount,
-              transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
-              currencyCode,
-            },
-          ],
+      const journalData: CreateJournalData = {
+        journalDate: parsed.date || Date.now(),
+        description: parsed.merchant
+          ? `Auto-Posted: ${parsed.merchant}`
+          : 'Auto-Posted SMS Transaction',
+        currencyCode,
+        status: JournalStatus.POSTED,
+        metadata: {
+          importSource: 'sms',
+          originalSmsId: parsed.id,
+          originalSmsSender: parsed.address,
+          originalSmsBody: parsed.rawBody,
+          metadataJson: JSON.stringify({
+            smsFingerprint: this.computeSmsFingerprint(message.address, message.body, message.date),
+            parsedAmount: parsed.amount,
+            parsedCurrencyCode: parsed.currencyCode || null,
+            parsedMerchant: parsed.merchant || null,
+            referenceNumber: parsed.referenceNumber || null,
+            accountSource: parsed.accountSource || null,
+          }),
         },
-        workplaceId,
-      );
+        transactions: [
+          {
+            accountId: definition.actions.sourceAccountId as AccountId,
+            amount: parsed.amount,
+            transactionType: isExpense ? TransactionType.CREDIT : TransactionType.DEBIT,
+            currencyCode,
+          },
+          {
+            accountId: definition.actions.categoryAccountId as AccountId,
+            amount: parsed.amount,
+            transactionType: isExpense ? TransactionType.DEBIT : TransactionType.CREDIT,
+            currencyCode,
+          },
+        ],
+      };
 
-      analytics.logSmsRuleTriggered(rule.id, true);
-      this.markSmsAsProcessed(message.id);
+      const preparedJournal = await prepareJournalData(journalData, workplaceId);
+
       return {
-        ops,
-        status: SmsProcessingStatus.AUTO_POSTED,
-        linkedJournalId: journal.id,
-        accountsToRebuild,
+        disposition: 'auto_post',
+        ruleId: rule.id,
+        createData: {
+          journalData,
+          preparedJournal,
+        },
       };
     }
 

@@ -191,6 +191,18 @@ jest.mock('posthog-react-native', () => {
   };
 });
 
+// Mock Sentry
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  captureException: jest.fn(),
+  captureMessage: jest.fn(),
+  addBreadcrumb: jest.fn(),
+  setUser: jest.fn(),
+  setTag: jest.fn(),
+  setExtra: jest.fn(),
+  setContext: jest.fn(),
+}));
+
 // Global fetch mock to prevent network hangs
 global.fetch = jest.fn().mockImplementation(() =>
   Promise.resolve({

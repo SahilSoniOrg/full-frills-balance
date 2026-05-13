@@ -3,7 +3,7 @@ import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal from '@/src/data/models/Journal';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
-import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
+import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -19,7 +19,22 @@ export class LedgerWriteService {
     accountsToRebuild: Set<AccountId>;
   }> {
     const prepared = await prepareJournalData(data, workplaceId);
+    return this.prepareCreateJournalFromPreparedData(data, prepared, workplaceId);
+  }
 
+  /**
+   * Synchronous part of journal preparation.
+   * Can be called inside a batch loop if the async 'prepareJournalData' was already called.
+   */
+  prepareCreateJournalFromPreparedData(
+    data: CreateJournalData,
+    prepared: PreparedJournalData,
+    workplaceId: WorkplaceId,
+  ): {
+    journal: Journal;
+    ops: Model[];
+    accountsToRebuild: Set<AccountId>;
+  } {
     const { journal, transactions, metadataRecord } =
       journalRepository.prepareCreateJournalWithTransactions(
         {
