@@ -6,10 +6,9 @@ const config = getSentryExpoConfig(__dirname);
 
 config.maxWorkers = os.cpus().length;
 
-// Support .mjs for libraries like framer-motion/moti
-if (!config.resolver.sourceExts.includes('mjs')) {
-  config.resolver.sourceExts.push('mjs');
-}
+// Ensure web-specific extensions are prioritized for web platform
+config.resolver.platforms = ['web', ...config.resolver.platforms.filter(p => p !== 'web')];
+config.resolver.sourceExts = [...new Set(config.resolver.sourceExts)];
 
 const nativeNodePolyfills = {
   buffer: path.resolve(__dirname, 'node_modules/@craftzdog/react-native-buffer'),

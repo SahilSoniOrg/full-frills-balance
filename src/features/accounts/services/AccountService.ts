@@ -12,12 +12,11 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { transactionService } from '@/src/features/journal';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
 import { balanceService } from '@/src/services/BalanceService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
-import { ledgerWriteService } from '@/src/services/ledger';
+import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsService } from '@/src/services/sms-service';
@@ -628,7 +627,19 @@ export class AccountService {
     // This maintains segregation of concerns and avoids direct table access in AccountService
     const [transactionOps, plannedOps, smsOps, budgetOps, accountOps, snapshotOps] =
       await Promise.all([
-        transactionService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+        (async () => {
+          const transactions = await transactionRepository.findAllByAccountIds(
+            workplaceId,
+            filteredSourceIds,
+          );
+          return transactions.map(tx =>
+            tx.prepareUpdate(r => {
+              r.accountId = targetAccountId;
+              r.runningBalance = null; // Invalidate cache
+              r.updatedAt = new Date();
+            }),
+          );
+        })(),
         plannedPaymentService.prepareMergeOperations(
           workplaceId,
           filteredSourceIds,
