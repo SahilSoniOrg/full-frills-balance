@@ -239,20 +239,16 @@ export class IntegrityService {
 
     const results: BalanceVerificationResult[] = [];
 
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i];
-      try {
-        const result = await this.verifyAccountBalance(account.id, workplaceId);
-        results.push(result);
-      } catch (error) {
-        logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
-      }
-
-      // Yield every 10 accounts to keep JS thread responsive
-      if (i % 10 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-    }
+    await Promise.all(
+      accounts.map(async account => {
+        try {
+          const result = await this.verifyAccountBalance(account.id, workplaceId);
+          results.push(result);
+        } catch (error) {
+          logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
+        }
+      }),
+    );
 
     return results;
   }
@@ -311,25 +307,24 @@ export class IntegrityService {
     const total = accounts.length;
     const results: BalanceVerificationResult[] = [];
 
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i];
-      try {
-        const result = await this.verifyAccountBalance(account.id, workplaceId);
-        results.push(result);
-      } catch (error) {
-        logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
-      }
-      const verifyProgress = total > 0 ? (i / total) * 0.7 : 0.05;
-      onProgress?.(
-        `Checking account balances: ${account.name} (${i + 1}/${total})`,
-        verifyProgress,
-      );
-
-      // Yield every 5 accounts during manual/force check to ensure UI responsiveness
-      if (i % 5 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-    }
+    let checkedCount = 0;
+    await Promise.all(
+      accounts.map(async account => {
+        try {
+          const result = await this.verifyAccountBalance(account.id, workplaceId);
+          results.push(result);
+        } catch (error) {
+          logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
+        } finally {
+          checkedCount++;
+          const verifyProgress = total > 0 ? (checkedCount / total) * 0.7 : 0.05;
+          onProgress?.(
+            `Checking account balances: ${account.name} (${checkedCount}/${total})`,
+            verifyProgress,
+          );
+        }
+      }),
+    );
 
     onProgress?.('Verification phase complete. Analyzing results...', 0.7);
     const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted);
