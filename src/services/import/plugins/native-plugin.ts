@@ -319,7 +319,10 @@ export const nativePlugin: ImportPlugin = {
       return {
         data: resultData,
         preferences: data.preferences,
-        workplace: { defaultCurrencyCode: currencyCode },
+        workplace: {
+          name: data.workplace?.name,
+          defaultCurrencyCode: currencyCode,
+        },
         stats: {
           accounts: data.accounts.length,
           journals: data.journals.length,

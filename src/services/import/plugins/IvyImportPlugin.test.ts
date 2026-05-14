@@ -165,7 +165,10 @@ describe('IvyImportPlugin', () => {
       // The budget scopes both of them.
       expect(lastBatch.budgetScopes).toHaveLength(2);
 
-      expect(preferences.setUserName).toHaveBeenCalledWith('Sahil');
+      expect(preferences.restorePreferences).toHaveBeenCalledWith(
+        expect.objectContaining({ userName: 'Sahil' }),
+      );
+      expect(preferences.setOnboardingCompleted).toHaveBeenCalledWith(true);
     });
 
     it('handles multi-currency transfers correctly', async () => {
@@ -194,7 +197,7 @@ describe('IvyImportPlugin', () => {
       expect(stats.transactions).toBe(2);
 
       // Check if exchange rate was calculated (100 USD / 85 EUR)
-      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[1][1];
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const debitTx = lastBatch.transactions.find(
         (t: any) => t.transactionType === 'DEBIT' && t.exchangeRate !== undefined,
       );
@@ -225,7 +228,7 @@ describe('IvyImportPlugin', () => {
       expect(stats.skippedTransactions).toBe(2); // ivy-t-deleted AND ivy-t-planned
       expect(stats.plannedPayments).toBe(0);
 
-      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[2][1];
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       expect(lastBatch.plannedPayments).toHaveLength(0);
     });
 
@@ -251,8 +254,8 @@ describe('IvyImportPlugin', () => {
 
       expect(stats.plannedPayments).toBe(1);
 
-      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[3][1];
-      const pp = lastBatch.plannedPayments.find((p: any) => p.id === 'ivy-rule-1');
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
+      const pp = lastBatch.plannedPayments.find((p: any) => p.name === 'One Time Gift');
       expect(pp).toBeDefined();
       expect(pp.endDate).toBe(pp.nextOccurrence);
     });
@@ -285,7 +288,7 @@ describe('IvyImportPlugin', () => {
       // Food (USD) (if it was in a budget or transaction)
       // Planned Category (INR) (INR is from settings in validIvyData)
 
-      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[4][1];
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const plannedAcc = lastBatch.accounts.find((a: any) => a.name === 'Planned Category (INR)');
 
       expect(plannedAcc).toBeDefined();
@@ -317,7 +320,7 @@ describe('IvyImportPlugin', () => {
       const context = { json: dataWithRawId } as ImportFileContext;
       const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
-      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[5][1];
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const rawAcc = lastBatch.accounts.find((a: any) => a.name === 'Raw Category (INR)');
 
       expect(rawAcc).toBeDefined();
@@ -346,7 +349,7 @@ describe('IvyImportPlugin', () => {
       const context = { json: dataWithOpeningBalance } as ImportFileContext;
       const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
-      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[6][1];
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const obAcc = lastBatch.accounts.find(
         (a: any) => a.name === 'Opening Balances (USD)' && a.accountType === 'EQUITY',
       );
@@ -382,7 +385,7 @@ describe('IvyImportPlugin', () => {
       const context = { json: dataWithAdjustBalance } as ImportFileContext;
       const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
-      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[7][1];
+      const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const abAcc = lastBatch.accounts.find(
         (a: any) => a.name === 'Balance Corrections (USD)' && a.accountType === 'EQUITY',
       );
