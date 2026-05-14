@@ -1,13 +1,12 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
-import Currency from '@/src/data/models/Currency';
-import { importRepository } from '@/src/data/repositories/ImportRepository';
+import { BatchImportData, importRepository } from '@/src/data/repositories/ImportRepository';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
-import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
 
@@ -24,6 +23,23 @@ export class ImportRunner {
     return (message: string, progress: number) => {
       onProgress?.(message, start + progress * range);
     };
+  }
+
+  private getUsedCurrencyCodes(data: BatchImportData, defaultCurrency: string): string[] {
+    const codes = new Set<string>();
+
+    // Always include default currency
+    codes.add(defaultCurrency);
+
+    // Extract from various data types
+    data.accounts?.forEach(a => a.currencyCode && codes.add(a.currencyCode));
+    data.journals?.forEach(j => j.currencyCode && codes.add(j.currencyCode));
+    data.transactions?.forEach(t => t.currencyCode && codes.add(t.currencyCode));
+    data.budgets?.forEach(b => b.currencyCode && codes.add(b.currencyCode));
+    data.plannedPayments?.forEach(p => p.currencyCode && codes.add(p.currencyCode));
+    data.smsInboxRecords?.forEach(s => s.parsedCurrencyCode && codes.add(s.parsedCurrencyCode));
+
+    return [...codes].filter(Boolean);
   }
 
   async runImport(
@@ -53,7 +69,7 @@ export class ImportRunner {
     parseProgress(`Parsing ${plugin.name} data...`, 0);
 
     // Fetch current workplace context for the plugin
-    let defaultCurrency = AppConfig.defaultCurrency;
+    let defaultCurrency = AppConfig.defaultCurrency as string;
     try {
       const workplace = await database.collections.get<any>('workplaces').find(workplaceId);
       if (workplace?.defaultCurrencyCode) {
@@ -115,34 +131,38 @@ export class ImportRunner {
       await workplaceService.updateWorkplace(workplaceId, {
         defaultCurrencyCode: parsedResult.workplace.defaultCurrencyCode,
       });
+      defaultCurrency = parsedResult.workplace.defaultCurrencyCode;
     }
 
-    // 6. Synchronize exchange rates for all active currencies
+    // 6. Synchronize exchange rates for used currencies
     const ratesProgress = this.createProgressSegment(
       onProgress,
       SEGMENTS.RATES.start,
       SEGMENTS.RATES.end,
     );
-    const activeCurrencies = await database.collections.get<Currency>('currencies').query().fetch();
-    const currencyCodes = [...new Set(activeCurrencies.map(c => c.code))];
+
+    const currencyCodes = this.getUsedCurrencyCodes(parsedResult.data, defaultCurrency);
 
     if (currencyCodes.length > 0) {
       ratesProgress(`Updating exchange rates for ${currencyCodes.length} currencies...`, 0);
 
-      // Use Promise.all with limited concurrency if needed, but for now simple loop is safer for DB stability
+      // Use Promise.all to sync rates in parallel. syncTodayRates handles internal de-duplication.
       let syncedCount = 0;
-      for (const code of currencyCodes) {
-        try {
-          await exchangeRateService.syncTodayRates(code);
-        } catch (e) {
-          logger.warn(`[ImportRunner] Rate sync failed for ${code}:`, { error: e });
-        }
-        syncedCount++;
-        ratesProgress(
-          `Updating exchange rates (${syncedCount}/${currencyCodes.length})...`,
-          syncedCount / currencyCodes.length,
-        );
-      }
+      await Promise.all(
+        currencyCodes.map(async code => {
+          try {
+            await exchangeRateService.syncTodayRates(code);
+          } catch (e) {
+            logger.warn(`[ImportRunner] Rate sync failed for ${code}:`, { error: e });
+          } finally {
+            syncedCount++;
+            ratesProgress(
+              `Updating exchange rates (${syncedCount}/${currencyCodes.length})...`,
+              syncedCount / currencyCodes.length,
+            );
+          }
+        }),
+      );
     }
 
     // 7. Verify data integrity (Running balances, etc.)
