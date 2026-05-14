@@ -153,10 +153,10 @@ export class BudgetRepository {
         record.updatedAt = new Date();
       });
 
-      const existingAccountIdsSet = new Set(existingScopes.map(s => s.account.id));
+      const existingAccountIdsSet = new Set(existingScopes.map(s => s.accountId));
       const accountIdsSet = new Set(accountIds);
       const toAdd = accountIds.filter(id => !existingAccountIdsSet.has(id));
-      const toRemove = existingScopes.filter(s => !accountIdsSet.has(s.account.id));
+      const toRemove = existingScopes.filter(s => !accountIdsSet.has(s.accountId));
 
       const addOps = toAdd.map(accountId =>
         this.budgetScopes.prepareCreate(scope => {

@@ -76,7 +76,7 @@ export function useBudgetEditViewModel() {
         setStartDate(b.startDate);
 
         const scopes = await budgetRepository.getScopes(workplaceId, budgetId);
-        setSelectedAccountIds(scopes.map(s => s.account.id));
+        setSelectedAccountIds(scopes.map(s => s.accountId));
 
         if (b.assetAccountIds) {
           setAssetAccountIds(b.assetAccountIds.split(',') as AccountId[]);
@@ -111,7 +111,7 @@ export function useBudgetEditViewModel() {
         recurrenceDay: recurrenceDay || 1,
         recurrenceMonth: recurrenceMonth || 1,
         active: true,
-        assetAccountIds: assetAccountIds.length > 0 ? assetAccountIds : undefined,
+        assetAccountIds,
       };
 
       if (budget) {

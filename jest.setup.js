@@ -201,6 +201,9 @@ jest.mock('@sentry/react-native', () => ({
   setTag: jest.fn(),
   setExtra: jest.fn(),
   setContext: jest.fn(),
+  reactNavigationIntegration: jest.fn(),
+  reactNativeTracingIntegration: jest.fn(),
+  mobileReplayIntegration: jest.fn(),
 }));
 
 // Global fetch mock to prevent network hangs
