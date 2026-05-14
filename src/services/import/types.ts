@@ -25,7 +25,7 @@ export interface ParsedImportResult {
   data: BatchImportData;
   stats: ImportStats;
   preferences?: Partial<UIPreferences>;
-  workplace?: { defaultCurrencyCode?: string };
+  workplace?: { name?: string; defaultCurrencyCode?: string };
 }
 
 /**

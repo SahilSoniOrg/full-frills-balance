@@ -275,7 +275,7 @@ export const ivyPlugin: ImportPlugin = {
 
     const rawIvyAccountCurrency = new Map<string, string>();
     data.accounts.forEach(a => {
-      rawIvyAccountCurrency.set(a.id, a.currency || targetDefaultCurrency);
+      rawIvyAccountCurrency.set(a.id, a.currency || ivyBaseCurrency);
     });
 
     data.transactions.forEach(tx => {
@@ -283,7 +283,7 @@ export const ivyPlugin: ImportPlugin = {
       if (tx.dueDate) return;
       if (!tx.categoryId) return;
 
-      let currency = targetDefaultCurrency;
+      let currency = ivyBaseCurrency;
       if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
         currency = rawIvyAccountCurrency.get(tx.accountId)!;
       }
@@ -327,7 +327,7 @@ export const ivyPlugin: ImportPlugin = {
       data.plannedPaymentRules.forEach(rule => {
         if (rule.isDeleted || !rule.categoryId) return;
 
-        let currency = targetDefaultCurrency;
+        let currency = ivyBaseCurrency;
         if (rule.accountId && rawIvyAccountCurrency.has(rule.accountId)) {
           currency = rawIvyAccountCurrency.get(rule.accountId)!;
         }
@@ -360,7 +360,7 @@ export const ivyPlugin: ImportPlugin = {
     data.accounts.forEach(a => {
       const balanceId = generateId() as AccountId;
       accountMap.set(a.id, balanceId);
-      accountCurrencyMap.set(balanceId, a.currency || targetDefaultCurrency);
+      accountCurrencyMap.set(balanceId, a.currency || ivyBaseCurrency);
     });
 
     for (const key of categoryUsageMap.keys()) {
@@ -401,7 +401,7 @@ export const ivyPlugin: ImportPlugin = {
       allPendingAccounts.push({
         id,
         name: ivyAcc.name,
-        currency: ivyAcc.currency || targetDefaultCurrency,
+        currency: ivyAcc.currency || ivyBaseCurrency,
         type: mappedType,
         description,
         icon: ivyAcc.icon,
@@ -495,7 +495,7 @@ export const ivyPlugin: ImportPlugin = {
         const newRuleId = generateId() as PlannedPaymentId;
         plannedPaymentMap.set(rule.id, newRuleId);
 
-        let currencyCode = accountCurrencyMap.get(fromAccountId) || targetDefaultCurrency;
+        let currencyCode = accountCurrencyMap.get(fromAccountId) || ivyBaseCurrency;
         let toAccountId = rule.toAccountId ? accountMap.get(rule.toAccountId) : undefined;
         const intervalType = mapIvyInterval(rule.intervalType);
         const startDate = rule.startDate ? new Date(rule.startDate).getTime() : Date.now();
@@ -641,7 +641,7 @@ export const ivyPlugin: ImportPlugin = {
       let sourceId: AccountId | undefined;
       let destId: AccountId | undefined;
       let displayType: JournalDisplayType;
-      let currencyCode = targetDefaultCurrency;
+      let currencyCode = ivyBaseCurrency;
 
       if (tx.accountId && rawIvyAccountCurrency.has(tx.accountId)) {
         currencyCode = rawIvyAccountCurrency.get(tx.accountId)!;
@@ -902,6 +902,7 @@ export const ivyPlugin: ImportPlugin = {
         skippedItems,
       },
       workplace: {
+        name: ivyUserName || undefined,
         defaultCurrencyCode:
           ivyBaseCurrency || accountCurrencyMap.values().next().value || undefined,
       },

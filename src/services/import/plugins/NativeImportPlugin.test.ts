@@ -24,6 +24,7 @@ jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     restorePreferences: jest.fn().mockResolvedValue(true),
     setActiveWorkplaceId: jest.fn(),
+    setOnboardingCompleted: jest.fn(),
   },
 }));
 

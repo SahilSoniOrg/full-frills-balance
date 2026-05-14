@@ -127,11 +127,14 @@ export class ImportRunner {
     );
 
     // 5. Update workplace defaults if provided
-    if (parsedResult.workplace?.defaultCurrencyCode) {
+    if (parsedResult.workplace?.name || parsedResult.workplace?.defaultCurrencyCode) {
       await workplaceService.updateWorkplace(workplaceId, {
+        name: parsedResult.workplace.name,
         defaultCurrencyCode: parsedResult.workplace.defaultCurrencyCode,
       });
-      defaultCurrency = parsedResult.workplace.defaultCurrencyCode;
+      if (parsedResult.workplace.defaultCurrencyCode) {
+        defaultCurrency = parsedResult.workplace.defaultCurrencyCode;
+      }
     }
 
     // 6. Synchronize exchange rates for used currencies
@@ -182,8 +185,10 @@ export class ImportRunner {
       await preferences.restorePreferences(sanitizedPrefs);
     }
 
-    // Ensure active workplace is set to the one we just imported into
+    // A successful import is a complete setup path, including imports launched
+    // from onboarding before the normal onboarding completion flow has run.
     preferences.setActiveWorkplaceId(workplaceId);
+    preferences.setOnboardingCompleted(true);
 
     logger.info('[ImportRunner] Import completed successfully.');
     onProgress?.('Import completed successfully.', 1);
