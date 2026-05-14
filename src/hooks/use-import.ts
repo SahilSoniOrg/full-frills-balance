@@ -3,11 +3,12 @@ import { analytics } from '@/src/services/analytics-service';
 import {
   decodeContent,
   extractIfZip,
-  ImportFileContext,
   importRegistry,
   readFileAsBytes,
   sanitizeContent,
 } from '@/src/services/import';
+import { importRunner } from '@/src/services/import/runner';
+import { ImportFileContext } from '@/src/services/import/types';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/domain';
 import { confirm, toast } from '@/src/utils/alerts';
@@ -102,10 +103,15 @@ export function useImport() {
 
           logger.info(`[useImport] Using plugin: ${plugin.id}`);
 
-          const stats = await plugin.import(context, resolvedWorkplaceId, (msg, prog) => {
-            setProgressMessage(msg);
-            setProgress(prog);
-          });
+          const stats = await importRunner.runImport(
+            plugin,
+            context,
+            resolvedWorkplaceId,
+            (msg: string, prog?: number) => {
+              setProgressMessage(msg);
+              if (prog !== undefined) setProgress(prog);
+            },
+          );
 
           const finalStats = {
             ...stats,

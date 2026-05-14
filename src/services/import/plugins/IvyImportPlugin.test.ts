@@ -1,5 +1,6 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
+import { importRunner } from '@/src/services/import/runner';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
@@ -23,6 +24,8 @@ jest.mock('@/src/utils/preferences', () => ({
   preferences: {
     setOnboardingCompleted: jest.fn().mockResolvedValue(true),
     setUserName: jest.fn().mockResolvedValue(true),
+    restorePreferences: jest.fn().mockResolvedValue(true),
+    setActiveWorkplaceId: jest.fn(),
   },
 }));
 
@@ -30,6 +33,29 @@ jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     getWorkplace: jest.fn().mockResolvedValue({ name: 'Default Workplace' }),
     updateWorkplace: jest.fn().mockResolvedValue(true),
+  },
+}));
+
+jest.mock('@/src/data/database/Database', () => ({
+  database: {
+    collections: {
+      get: jest.fn().mockReturnValue({
+        find: jest.fn().mockResolvedValue({ defaultCurrencyCode: 'USD' }),
+        query: jest.fn().mockReturnValue({ fetch: jest.fn().mockResolvedValue([]) }),
+      }),
+    },
+  },
+}));
+
+jest.mock('@/src/services/currency-init-service', () => ({
+  currencyInitService: {
+    initialize: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('@/src/services/exchange-rate-service', () => ({
+  exchangeRateService: {
+    syncTodayRates: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -94,10 +120,14 @@ describe('IvyImportPlugin', () => {
 
     it('transforms and imports Ivy data correctly', async () => {
       const context = { json: validIvyData } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
-      expect(integrityService.resetWorkplace).toHaveBeenCalledWith('w1');
-      expect(importRepository.batchInsert).toHaveBeenCalledWith('w1', expect.any(Object));
+      expect(integrityService.resetWorkplace).toHaveBeenCalledWith('w1', true);
+      expect(importRepository.batchInsert).toHaveBeenCalledWith(
+        'w1',
+        expect.any(Object),
+        expect.anything(),
+      );
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[0][1];
       const walletAcc = lastBatch.accounts.find((a: any) => a.name === 'Wallet');
@@ -159,7 +189,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithTransfer } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
       expect(stats.journals).toBe(1);
       expect(stats.transactions).toBe(2);
 
@@ -190,7 +220,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithPlanned } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       expect(stats.skippedTransactions).toBe(2); // ivy-t-deleted AND ivy-t-planned
       expect(stats.plannedPayments).toBe(0);
@@ -217,7 +247,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithOneTimeRule } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       expect(stats.plannedPayments).toBe(1);
 
@@ -247,7 +277,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithBudgetedCategoryOnly } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       // Should create 3 accounts: 1 Wallet + 1 Category Food (unused but in data, though we only create for usage)
       // Wait, IvyPlugin creates accounts for categories in categoryUsageMap.
@@ -285,7 +315,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithRawId } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[5][1];
       const rawAcc = lastBatch.accounts.find((a: any) => a.name === 'Raw Category (INR)');
@@ -314,7 +344,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithOpeningBalance } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[6][1];
       const obAcc = lastBatch.accounts.find(
@@ -350,7 +380,7 @@ describe('IvyImportPlugin', () => {
       };
 
       const context = { json: dataWithAdjustBalance } as ImportFileContext;
-      const stats = await ivyPlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(ivyPlugin, context, 'w1' as WorkplaceId);
 
       const lastBatch = (importRepository.batchInsert as jest.Mock).mock.calls[7][1];
       const abAcc = lastBatch.accounts.find(

@@ -187,40 +187,46 @@ export function useSimpleJournalEditor({
   ]);
 
   // Helpers to update editor state
-  const setType = (newType: TabType) => {
-    editor.setTransactionType(newType);
+  const setType = useCallback(
+    (newType: TabType) => {
+      editor.setTransactionType(newType);
 
-    // Simple mode always assumes 2 lines. Let's ensure they have the correct roles.
-    // Expense: Source (Credit: Asset/Liab) -> Dest (Debit: Expense)
-    // Income: Source (Credit: Income) -> Dest (Debit: Asset/Liab)
-    // Transfer: Source (Credit: Asset/Liab) -> Dest (Debit: Asset/Liab)
+      // Simple mode always assumes 2 lines. Let's ensure they have the correct roles.
+      // Expense: Source (Credit: Asset/Liab) -> Dest (Debit: Expense)
+      // Income: Source (Credit: Income) -> Dest (Debit: Asset/Liab)
+      // Transfer: Source (Credit: Asset/Liab) -> Dest (Debit: Asset/Liab)
 
-    if (sourceLine) {
-      editor.updateLine(sourceLine.id, {
-        transactionType: TransactionType.CREDIT,
-        accountId: EMPTY_ACCOUNT_ID,
-        accountName: '',
-        accountType: getInferredAccountType(newType, TransactionType.CREDIT),
-        accountCurrency: undefined,
-      });
-    }
-    if (destinationLine) {
-      editor.updateLine(destinationLine.id, {
-        transactionType: TransactionType.DEBIT,
-        accountId: EMPTY_ACCOUNT_ID,
-        accountName: '',
-        accountType: getInferredAccountType(newType, TransactionType.DEBIT),
-        accountCurrency: undefined,
-      });
-    }
-  };
+      if (sourceLine) {
+        editor.updateLine(sourceLine.id, {
+          transactionType: TransactionType.CREDIT,
+          accountId: EMPTY_ACCOUNT_ID,
+          accountName: '',
+          accountType: getInferredAccountType(newType, TransactionType.CREDIT),
+          accountCurrency: undefined,
+        });
+      }
+      if (destinationLine) {
+        editor.updateLine(destinationLine.id, {
+          transactionType: TransactionType.DEBIT,
+          accountId: EMPTY_ACCOUNT_ID,
+          accountName: '',
+          accountType: getInferredAccountType(newType, TransactionType.DEBIT),
+          accountCurrency: undefined,
+        });
+      }
+    },
+    [editor, sourceLine, destinationLine],
+  );
 
-  const setAmount = (newAmount: string) => {
-    // Update both lines - the effect will handle the cross-currency conversion
-    if (sourceLine) editor.updateLine(sourceLine.id, { amount: newAmount });
-    if (destinationLine && !isCrossCurrency)
-      editor.updateLine(destinationLine.id, { amount: newAmount });
-  };
+  const setAmount = useCallback(
+    (newAmount: string) => {
+      // Update both lines - the effect will handle the cross-currency conversion
+      if (sourceLine) editor.updateLine(sourceLine.id, { amount: newAmount });
+      if (destinationLine && !isCrossCurrency)
+        editor.updateLine(destinationLine.id, { amount: newAmount });
+    },
+    [editor, sourceLine, destinationLine, isCrossCurrency],
+  );
 
   const setSourceId = useCallback(
     (id: AccountId) => {
@@ -500,6 +506,7 @@ export function useSimpleJournalEditor({
       openAccountPicker,
       numAmount,
       accountSections,
+      workplaceCurrency,
     ],
   );
 }

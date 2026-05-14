@@ -327,7 +327,6 @@ export function AccountPickerList(props: AccountPickerListProps) {
       localSelected,
       selectedIds,
       handleToggleSelection,
-      theme,
     ],
   );
 

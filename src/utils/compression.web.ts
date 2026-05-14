@@ -16,7 +16,7 @@ export const compression = {
    */
   async createZipArchive(
     name: string,
-    filesData: Record<string, string | Uint8Array>,
+    _filesData: Record<string, string | Uint8Array>,
   ): Promise<ZipResult> {
     logger.debug(`[Compression.web] createZipArchive (mock)`, { name });
     return {
@@ -30,8 +30,8 @@ export const compression = {
    * Unzips an archive and returns the content of the first valid file found.
    */
   async extractFirstFile(
-    zipBytes: Uint8Array,
-    options: { filterMac?: boolean } = { filterMac: true },
+    _zipBytes: Uint8Array,
+    _options: { filterMac?: boolean } = { filterMac: true },
   ): Promise<{ bytes: Uint8Array; name: string } | null> {
     logger.debug(`[Compression.web] extractFirstFile (mock)`);
     return null;

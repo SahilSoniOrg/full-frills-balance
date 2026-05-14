@@ -254,6 +254,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
       renderIcon,
       renderSubtitle,
       handleToggle,
+      disableAnimation,
     ],
   );
 

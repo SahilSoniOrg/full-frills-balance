@@ -136,6 +136,7 @@ export function useBudgetEditViewModel() {
     startDate,
     recurrenceDay,
     recurrenceMonth,
+    workplaceId,
   ]);
 
   return {

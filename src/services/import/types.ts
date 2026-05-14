@@ -1,4 +1,6 @@
-import { WorkplaceId } from '@/src/types/domain';
+import { BatchImportData } from '@/src/data/repositories/ImportRepository';
+import { UIPreferences } from '@/src/utils/preferences';
+
 /**
  * Import Plugin Types
  *
@@ -17,6 +19,13 @@ export interface ImportStats {
   plannedPayments?: number;
   skippedTransactions: number;
   skippedItems?: { id: string; reason: string; description?: string }[];
+}
+
+export interface ParsedImportResult {
+  data: BatchImportData;
+  stats: ImportStats;
+  preferences?: Partial<UIPreferences>;
+  workplace?: { defaultCurrencyCode?: string };
 }
 
 /**
@@ -38,7 +47,7 @@ export interface ImportFileContext {
 /**
  * Plugin interface for data import formats.
  *
- * Each plugin handles detection and import for a specific format.
+ * Each plugin handles detection and parsing for a specific format.
  * To add a new format:
  * 1. Create a new file in plugins/
  * 2. Implement this interface
@@ -64,12 +73,13 @@ export interface ImportPlugin {
   detect(context: ImportFileContext): boolean;
 
   /**
-   * Execute the import operation.
-   * WARNING: Implementations should wipe existing data before import.
+   * Parse the file context and return the extracted data.
    */
-  import(
+  parse(
     context: ImportFileContext,
-    workplaceId: WorkplaceId,
-    onProgress?: (message: string, progress: number) => void,
-  ): Promise<ImportStats>;
+    options: {
+      defaultCurrency: string;
+      onProgress?: (message: string, progress: number) => void;
+    },
+  ): Promise<ParsedImportResult>;
 }

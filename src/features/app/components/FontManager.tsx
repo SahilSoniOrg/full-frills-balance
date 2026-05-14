@@ -15,6 +15,7 @@ import { Raleway_400Regular } from '@expo-google-fonts/raleway/400Regular';
 import { Raleway_500Medium } from '@expo-google-fonts/raleway/500Medium';
 import { Raleway_600SemiBold } from '@expo-google-fonts/raleway/600SemiBold';
 import { Raleway_700Bold } from '@expo-google-fonts/raleway/700Bold';
+import { logger } from '@sentry/react-native';
 import * as Font from 'expo-font';
 import React, { useEffect, useState } from 'react';
 
@@ -95,7 +96,7 @@ export function FontManager({ children }: FontManagerProps) {
           dispatchBootEvent('FONTS_LOADED');
         }
       } catch (error) {
-        console.error(`Failed to load fonts for ${fontId}`, error);
+        logger.error(`Failed to load fonts for ${fontId}`, error as any);
         // Still allow the app to show (with system fonts) if loading fails
         if (isActive) {
           setCurrentFontReady(true);

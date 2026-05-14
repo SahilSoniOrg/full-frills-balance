@@ -13,7 +13,6 @@ import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import Currency from '@/src/data/models/Currency';
-import ExchangeRate from '@/src/data/models/ExchangeRate';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment, {
@@ -36,6 +35,9 @@ import {
   TransactionId,
   WorkplaceId,
 } from '@/src/types/domain';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import { accountingService } from '@/src/utils/accountingService';
+import { roundToPrecision } from '@/src/utils/money';
 import { logger } from '@/src/utils/logger';
 import { Collection, Model, Q } from '@nozbe/watermelondb';
 
@@ -82,6 +84,7 @@ export interface ImportedTransaction {
   transactionDate: number;
   notes?: string;
   exchangeRate?: number;
+  runningBalance?: number;
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number;
@@ -321,14 +324,81 @@ function toSmsDirection(value: string): SmsDirection {
 }
 
 export class ImportRepository {
-  async batchInsert(workplaceId: WorkplaceId, data: BatchImportData): Promise<void> {
+  async batchInsert(
+    workplaceId: WorkplaceId,
+    data: BatchImportData,
+    onProgress?: (message: string, progress?: number) => void,
+  ): Promise<void> {
+    // 1. Calculate running balances (Segment: 0 to 0.1)
+    onProgress?.('Calculating transaction balances...', 0.02);
+    logger.info('[ImportRepository] Calculating transaction balances...');
+
+    const journalStatusMap = new Map<string, string>();
+    data.journals.forEach(j => journalStatusMap.set(j.id, j.status));
+
+    const transactionsByAccount = new Map<string, ImportedTransaction[]>();
+    data.transactions.forEach(t => {
+      const list = transactionsByAccount.get(t.accountId) || [];
+      list.push(t);
+      transactionsByAccount.set(t.accountId, list);
+    });
+
+    const accountMap = new Map(data.accounts.map(a => [a.id, a]));
+    const currencies = await database.collections.get<Currency>('currencies').query().fetch();
+    const precisionMap = new Map(currencies.map(c => [c.code, c.precision]));
+
+    let accountsProcessed = 0;
+    const totalAccounts = transactionsByAccount.size;
+
+    for (const [accountId, accountTransactions] of transactionsByAccount.entries()) {
+      const account = accountMap.get(accountId);
+      if (!account) continue;
+
+      const accountType = toAccountType(account.accountType);
+      const precision = precisionMap.get(account.currencyCode) ?? 2;
+
+      accountTransactions.sort((a, b) => {
+        if (a.transactionDate !== b.transactionDate) return a.transactionDate - b.transactionDate;
+        if (a.createdAt !== b.createdAt) return (a.createdAt || 0) - (b.createdAt || 0);
+        return a.id.localeCompare(b.id);
+      });
+
+      let currentBalance = 0;
+      for (const t of accountTransactions) {
+        const journalStatus = journalStatusMap.get(t.journalId);
+        const isDeleted = !!t.deletedAt;
+        const isActive = !isDeleted && ACTIVE_JOURNAL_STATUSES.includes(journalStatus as any);
+
+        if (isActive) {
+          const roundedAmount = roundToPrecision(t.amount, precision);
+          currentBalance = accountingService.calculateNewBalance(
+            currentBalance,
+            roundedAmount,
+            accountType,
+            toTransactionType(t.transactionType),
+            precision,
+          );
+          t.runningBalance = currentBalance;
+          t.amount = roundedAmount;
+        } else {
+          t.runningBalance = 0;
+        }
+      }
+
+      accountsProcessed++;
+      if (totalAccounts > 0) {
+        onProgress?.(
+          `Calculating transaction balances (${accountsProcessed}/${totalAccounts})...`,
+          0.02 + (accountsProcessed / totalAccounts) * 0.08,
+        );
+      }
+    }
+
     await database.write(async () => {
       const accountsCollection = database.collections.get<Account>('accounts');
       const journalsCollection = database.collections.get<Journal>('journals');
       const transactionsCollection = database.collections.get<Transaction>('transactions');
       const auditLogsCollection = database.collections.get<AuditLog>('audit_logs');
-      const currenciesCollection = database.collections.get<Currency>('currencies');
-      const exchangeRatesCollection = database.collections.get<ExchangeRate>('exchange_rates');
       const accountMetadataCollection =
         database.collections.get<AccountMetadata>('account_metadata');
       const plannedPaymentsCollection =
@@ -394,6 +464,7 @@ export class ImportRepository {
           record.transactionDate = t.transactionDate;
           record.notes = t.notes;
           record.exchangeRate = t.exchangeRate;
+          record.runningBalance = t.runningBalance;
           record._raw._status = 'synced';
           if (t.createdAt) (record as any)._raw.created_at = t.createdAt;
           if (t.updatedAt) (record as any)._raw.updated_at = t.updatedAt;
@@ -441,64 +512,6 @@ export class ImportRepository {
           if (bs.updatedAt) (record as any)._raw.updated_at = bs.updatedAt;
         }),
       );
-
-      // Global tables (currencies, exchange_rates) require upsert logic to avoid UNIQUE constraint violations.
-      const existingCurrencies = await currenciesCollection.query().fetch();
-      const existingRates = await exchangeRatesCollection.query().fetch();
-      const currencyMap = new Map(existingCurrencies.map(c => [c.id, c]));
-      const rateMap = new Map(existingRates.map(r => [r.id, r]));
-
-      const currencyPrepares = (data.currencies || []).map(c => {
-        const existing = currencyMap.get(c.id);
-        if (existing) {
-          return existing.prepareUpdate(record => {
-            record.code = c.code;
-            record.symbol = c.symbol;
-            record.name = c.name;
-            record.precision = c.precision;
-            record._raw._status = 'synced';
-            if (c.updatedAt) (record as any)._raw.updated_at = c.updatedAt;
-            if (c.deletedAt) (record as any)._raw.deleted_at = c.deletedAt;
-          });
-        }
-        return currenciesCollection.prepareCreate(record => {
-          record._raw.id = c.id;
-          record.code = c.code;
-          record.symbol = c.symbol;
-          record.name = c.name;
-          record.precision = c.precision;
-          record._raw._status = 'synced';
-          if (c.createdAt) (record as any)._raw.created_at = c.createdAt;
-          if (c.updatedAt) (record as any)._raw.updated_at = c.updatedAt;
-          if (c.deletedAt) (record as any)._raw.deleted_at = c.deletedAt;
-        });
-      });
-
-      const exchangeRatePrepares = (data.exchangeRates || []).map(er => {
-        const existing = rateMap.get(er.id);
-        if (existing) {
-          return existing.prepareUpdate(record => {
-            record.fromCurrency = er.fromCurrency;
-            record.toCurrency = er.toCurrency;
-            record.rate = er.rate;
-            record.effectiveDate = er.effectiveDate;
-            record.source = er.source;
-            record._raw._status = 'synced';
-            if (er.updatedAt) (record as any)._raw.updated_at = er.updatedAt;
-          });
-        }
-        return exchangeRatesCollection.prepareCreate(record => {
-          record._raw.id = er.id;
-          record.fromCurrency = er.fromCurrency;
-          record.toCurrency = er.toCurrency;
-          record.rate = er.rate;
-          record.effectiveDate = er.effectiveDate;
-          record.source = er.source;
-          record._raw._status = 'synced';
-          if (er.createdAt) (record as any)._raw.created_at = er.createdAt;
-          if (er.updatedAt) (record as any)._raw.updated_at = er.updatedAt;
-        });
-      });
 
       const accountMetadataPrepares = (data.accountMetadata || []).map(metadata =>
         accountMetadataCollection.prepareCreate(record => {
@@ -636,8 +649,6 @@ export class ImportRepository {
         ...auditLogPrepares,
         ...budgetPrepares,
         ...budgetScopePrepares,
-        ...currencyPrepares,
-        ...exchangeRatePrepares,
         ...accountMetadataPrepares,
         ...plannedPaymentPrepares,
         ...journalMetadataPrepares,
@@ -654,10 +665,17 @@ export class ImportRepository {
         );
         for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
           const chunk = operations.slice(i, i + CHUNK_SIZE);
+          const currentCount = i + chunk.length;
+          onProgress?.(
+            `Saving records (${Math.min(currentCount, operations.length)}/${operations.length})...`,
+            i / operations.length,
+          );
+
           await database.batch(chunk);
           // Yield to event loop between chunks
           await new Promise(resolve => setTimeout(resolve, 0));
         }
+        onProgress?.('Saving records complete.', 1);
         logger.info('[ImportRepository] Batch insert complete.');
       }
     });
@@ -807,6 +825,7 @@ export class ImportRepository {
           record.transactionDate = t.transactionDate;
           record.notes = t.notes;
           record.exchangeRate = t.exchangeRate;
+          record.runningBalance = t.runningBalance;
           if (t.createdAt) (record as any)._raw.created_at = t.createdAt;
           if (t.updatedAt) (record as any)._raw.updated_at = t.updatedAt;
           if (t.deletedAt) {

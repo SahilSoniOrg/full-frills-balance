@@ -1,5 +1,6 @@
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
+import { importRunner } from '@/src/services/import/runner';
 import { ImportFileContext } from '@/src/services/import/types';
 import { integrityService } from '@/src/services/integrity-service';
 import { preferences } from '@/src/utils/preferences';
@@ -31,6 +32,34 @@ jest.mock('@/src/services/WorkplaceService', () => ({
     getWorkplace: jest.fn().mockResolvedValue({ name: 'Default Workplace' }),
     updateWorkplace: jest.fn().mockResolvedValue(true),
   },
+}));
+
+jest.mock('@/src/data/database/Database', () => ({
+  database: {
+    collections: {
+      get: jest.fn().mockReturnValue({
+        find: jest.fn().mockResolvedValue({ defaultCurrencyCode: 'USD' }),
+        query: jest.fn().mockReturnValue({ fetch: jest.fn().mockResolvedValue([]) }),
+      }),
+    },
+  },
+}));
+
+jest.mock('@/src/services/currency-init-service', () => ({
+  currencyInitService: {
+    initialize: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('@/src/services/exchange-rate-service', () => ({
+  exchangeRateService: {
+    syncTodayRates: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// Mock ID generator
+jest.mock('@/src/data/database/idGenerator', () => ({
+  generator: () => 'mock-id-' + Math.random(),
 }));
 
 describe('NativeImportPlugin', () => {
@@ -132,10 +161,12 @@ describe('NativeImportPlugin', () => {
 
     it('performs full import process', async () => {
       const context = { json: validNativeData } as ImportFileContext;
-      const stats = await nativePlugin.import(context, 'w1' as WorkplaceId);
+      const stats = await importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId);
 
-      expect(integrityService.resetWorkplace).toHaveBeenCalledWith('w1');
-      expect(preferences.restorePreferences).toHaveBeenCalledWith(validNativeData.preferences);
+      expect(integrityService.resetWorkplace).toHaveBeenCalledWith('w1', true);
+      expect(preferences.restorePreferences).toHaveBeenCalledWith(
+        expect.objectContaining({ userName: 'Test User' }),
+      );
       expect(importRepository.batchInsert).toHaveBeenCalledWith(
         'w1',
         expect.objectContaining({
@@ -144,6 +175,7 @@ describe('NativeImportPlugin', () => {
           accountMetadata: expect.any(Array),
           balanceSnapshots: expect.any(Array),
         }),
+        expect.anything(),
       );
 
       expect(integrityService.forceRunCheck).toHaveBeenCalled();
@@ -157,22 +189,22 @@ describe('NativeImportPlugin', () => {
 
     it('throws error for missing parsed JSON', async () => {
       const context = { json: null } as unknown as ImportFileContext;
-      await expect(nativePlugin.import(context, 'w1' as WorkplaceId)).rejects.toThrow(
-        /Invalid JSON/,
-      );
+      await expect(
+        importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId),
+      ).rejects.toThrow(/Invalid JSON/);
     });
 
     it('throws error for missing sections', async () => {
       const incompleteData = { version: '1.0' };
       const context = { json: incompleteData } as ImportFileContext;
-      await expect(nativePlugin.import(context, 'w1' as WorkplaceId)).rejects.toThrow(
-        /missing required data/,
-      );
+      await expect(
+        importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId),
+      ).rejects.toThrow(/missing required data/);
     });
 
     it('remaps IDs correctly and maintains references', async () => {
       const context = { json: validNativeData } as ImportFileContext;
-      await nativePlugin.import(context, 'w1' as WorkplaceId);
+      await importRunner.runImport(nativePlugin, context, 'w1' as WorkplaceId);
 
       const batchInsertCall = (importRepository.batchInsert as jest.Mock).mock.calls[0];
       const data = batchInsertCall[1];

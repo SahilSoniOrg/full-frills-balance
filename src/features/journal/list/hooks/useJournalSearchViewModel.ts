@@ -170,16 +170,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [
-    searchQuery,
-    accountIds,
-    minAmount,
-    maxAmount,
-    displayType,
-    dateRange?.startDate,
-    dateRange?.endDate,
-    periodFilter.type,
-  ]);
+  }, [searchQuery, accountIds, minAmount, maxAmount, displayType, dateRange, periodFilter.type]);
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
@@ -200,7 +191,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
             endDate: dateRange.endDate,
           }
         : undefined,
-    [dateRange?.startDate, dateRange?.endDate],
+    [dateRange],
   );
 
   const queryOptions = useMemo(
@@ -347,7 +338,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
     } catch (error) {
       logger.error('Failed to share search transactions', error);
     }
-  }, [selectedIds, journals, defaultShareFormat]);
+  }, [selectedIds, journals, defaultShareFormat, defaultCurrencyCode]);
 
   return {
     items,

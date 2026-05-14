@@ -147,7 +147,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         }),
       );
     },
-    [journalId],
+    [journalId, workplaceId],
     undefined,
   );
 
@@ -183,7 +183,16 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     }
 
     return null;
-  }, [journal, version, paramTitle, paramAmount, paramDate, paramCurrency, paramDisplayType]);
+  }, [
+    journal,
+    version,
+    paramTitle,
+    paramAmount,
+    paramDate,
+    paramCurrency,
+    paramDisplayType,
+    workplaceCurrency,
+  ]);
 
   const isLoading = (isLoadingTransactions || isLoadingJournal) && !journalInfo;
 
@@ -328,7 +337,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         }
       },
     );
-  }, [journalInfo, amountText]);
+  }, [journalInfo, amountText, workplaceId]);
 
   const splitItems = useMemo(() => {
     return transactions.map((item: DisplayTransaction) => {

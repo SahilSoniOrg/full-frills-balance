@@ -11,7 +11,7 @@ export const files = {
    */
   async writeContent(
     pathOrUri: string,
-    content: string | Uint8Array,
+    _content: string | Uint8Array,
     encoding: 'utf8' | 'base64' = 'utf8',
   ): Promise<string> {
     logger.debug(`[Files.web] writeContent (mock)`, { pathOrUri, encoding });
@@ -66,7 +66,7 @@ export const files = {
   /**
    * Checks if a file or directory exists.
    */
-  async exists(uri: string): Promise<boolean> {
+  async exists(_uri: string): Promise<boolean> {
     return false;
   },
 
@@ -80,7 +80,7 @@ export const files = {
   /**
    * Returns metadata for a path.
    */
-  async getInfo(uri: string): Promise<any> {
+  async getInfo(_uri: string): Promise<any> {
     return { exists: false, isDirectory: false };
   },
 

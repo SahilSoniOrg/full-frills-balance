@@ -65,6 +65,12 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     initialDate,
     initialSourceId,
     initialDestinationId,
+    smsId,
+    smsRecordId,
+    smsSender,
+    rawSmsBody,
+    onAfterSave,
+    onSuccess,
   } = options;
   const { fetchRate } = useExchangeRate();
 
@@ -344,64 +350,90 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     [lines, workplaceCurrency],
   );
 
-  const submit = async (overrides?: { description?: string }) => {
-    setIsSubmitting(true);
-    try {
-      // Default description to transaction type if empty
-      let finalDescription = overrides?.description || description.trim();
-      if (!finalDescription) {
-        finalDescription = transactionType.charAt(0).toUpperCase() + transactionType.slice(1);
-        setDescription(finalDescription);
-      }
+  const submit = useCallback(
+    async (overrides?: { description?: string }) => {
+      setIsSubmitting(true);
+      try {
+        // Default description to transaction type if empty
+        let finalDescription = overrides?.description || description.trim();
+        if (!finalDescription) {
+          finalDescription = transactionType.charAt(0).toUpperCase() + transactionType.slice(1);
+          setDescription(finalDescription);
+        }
 
-      const result = await journalService.saveJournalEntry({
-        lines,
-        description: finalDescription,
-        notes: notes.trim(),
-        journalDate,
-        journalTime,
-        journalId: isEdit ? journalId : undefined,
-        mode: isGuidedMode ? 'simple' : 'advanced',
-        smsId: options.smsId,
-        smsRecordId: options.smsRecordId,
-        smsSender: options.smsSender,
-        rawSmsBody: options.rawSmsBody,
-        workplaceId: workplaceId,
-      });
+        const result = await journalService.saveJournalEntry({
+          lines,
+          description: finalDescription,
+          notes: notes.trim(),
+          journalDate,
+          journalTime,
+          journalId: isEdit ? journalId : undefined,
+          mode: isGuidedMode ? 'simple' : 'advanced',
+          smsId,
+          smsRecordId,
+          smsSender,
+          rawSmsBody,
+          workplaceId: workplaceId,
+        });
 
-      if (!result.success) {
-        showErrorAlert(result.error || 'Unknown error');
+        if (!result.success) {
+          showErrorAlert(result.error || 'Unknown error');
+          return result;
+        }
+
+        await onAfterSave?.({ journalId: result.journalId, action: result.action });
+
+        onSuccess?.();
         return result;
+      } catch {
+        showErrorAlert('Unexpected error occurred');
+        return { success: false, error: 'Unexpected error occurred' };
+      } finally {
+        setIsSubmitting(false);
       }
+    },
+    [
+      description,
+      transactionType,
+      lines,
+      notes,
+      journalDate,
+      journalTime,
+      isEdit,
+      journalId,
+      isGuidedMode,
+      workplaceId,
+      smsId,
+      smsRecordId,
+      smsSender,
+      rawSmsBody,
+      onAfterSave,
+      onSuccess,
+    ],
+  );
 
-      await options.onAfterSave?.({ journalId: result.journalId, action: result.action });
-
-      options.onSuccess?.();
-      return result;
-    } catch {
-      showErrorAlert('Unexpected error occurred');
-      return { success: false, error: 'Unexpected error occurred' };
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const getLineIdByRole = (role: AccountRole): string | undefined => {
-    // Source is leg 1 (CREDIT), Destination is leg 2 (DEBIT) in guided mode
-    const targetType = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
-    return lines.find(l => l.transactionType === targetType)?.id;
-  };
+  const getLineIdByRole = useCallback(
+    (role: AccountRole): string | undefined => {
+      // Source is leg 1 (CREDIT), Destination is leg 2 (DEBIT) in guided mode
+      const targetType = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
+      return lines.find(l => l.transactionType === targetType)?.id;
+    },
+    [lines],
+  );
 
   /**
    * Resolves a selection request (role or direct ID) to a line ID.
    * Centralizes guided-mode mapping logic.
    */
-  const resolveActiveLineId = (roleOrId: string): string => {
-    if (isGuidedMode) {
-      return getLineIdByRole(roleOrId as AccountRole) || roleOrId;
-    }
-    return roleOrId;
-  };
+  const resolveActiveLineId = useCallback(
+    (roleOrId: string): string => {
+      if (isGuidedMode) {
+        return getLineIdByRole(roleOrId as AccountRole) || roleOrId;
+      }
+      return roleOrId;
+    },
+    [isGuidedMode, getLineIdByRole],
+  );
 
   const imbalance = useMemo(() => {
     return JournalCalculator.calculateImbalance(
@@ -480,7 +512,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       getLineIdByRole,
       resolveActiveLineId,
       submit,
-      workplaceId,
       imbalance,
       isUnbalanced,
       isEntryReadyToBalance,

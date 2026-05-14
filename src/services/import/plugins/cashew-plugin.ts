@@ -1,17 +1,14 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { generator } from '@/src/data/database/idGenerator';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
-import { BatchImportData, importRepository } from '@/src/data/repositories/ImportRepository';
-import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
-import { integrityService } from '@/src/services/integrity-service';
-import { workplaceService } from '@/src/services/WorkplaceService';
+import { BatchImportData } from '@/src/data/repositories/ImportRepository';
+import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import {
   AccountId,
   BudgetId,
   JournalDisplayType,
   JournalId,
   TransactionId,
-  WorkplaceId,
 } from '@/src/types/domain';
 import { files } from '@/src/utils/files';
 import { logger } from '@/src/utils/logger';
@@ -198,14 +195,16 @@ export const cashewPlugin: ImportPlugin = {
     return isCashewExt && hasMagicHeader;
   },
 
-  async import(
+  async parse(
     context: ImportFileContext,
-    workplaceId: WorkplaceId,
-    onProgress?: (message: string, progress: number) => void,
-  ): Promise<ImportStats> {
-    logger.info('[CashewPlugin] Starting import...');
-    const workplaceCurrency = await workplaceService.getCurrency(workplaceId);
-    onProgress?.('Initializing database...', 0.1);
+    options: {
+      defaultCurrency: string;
+      onProgress?: (message: string, progress: number) => void;
+    },
+  ): Promise<ParsedImportResult> {
+    const { defaultCurrency: workplaceCurrency, onProgress } = options;
+    logger.info('[CashewPlugin] Parsing SQLite database...');
+    onProgress?.('Opening backup file...', 0.1);
 
     if (!context.rawBytes) {
       throw new Error('Raw file data is missing.');
@@ -218,11 +217,11 @@ export const cashewPlugin: ImportPlugin = {
       // Ensure SQLite directory exists
       await files.ensureDirectory(sqliteDir);
 
-      // Copy file to SQLite directory
+      // Copy file to SQLite directory for expo-sqlite to open it
       await files.copy(context.uri, tempDbPath);
 
       // Open SQLite Database
-      onProgress?.('Extracting data from backup...', 0.2);
+      onProgress?.('Extracting database records...', 0.2);
       const db = await SQLite.openDatabaseAsync(CASHEW_DB_NAME);
 
       // Fetch Data
@@ -268,6 +267,7 @@ export const cashewPlugin: ImportPlugin = {
       const currencyMap = new Map<string, string>();
 
       // 1. Map Wallets to Accounts
+      onProgress?.('Mapping wallets and categories...', 0.4);
       const accountsMap = new Map<string, AccountId>(); // Cashew wallet_pk -> App Account ID
       const walletCurrencies = new Map<string, string>();
 
@@ -352,7 +352,6 @@ export const cashewPlugin: ImportPlugin = {
       // 4. Special handling for category '0' (Transfer/Correction)
       const correctionCategoryPk = '0';
       const correctionAccountId = categoriesMap.get(correctionCategoryPk);
-      // If it exists, rename it to "Balance Adjustment" and ensure it's EXPENSE (or generic)
       if (correctionAccountId) {
         const acc = data.accounts.find(a => a.id === correctionAccountId);
         if (acc) {
@@ -362,6 +361,7 @@ export const cashewPlugin: ImportPlugin = {
       }
 
       // 5. Map Transactions
+      onProgress?.('Processing transactions...', 0.6);
       const processedCashewPks = new Set<string>();
       let skippedTransactions = 0;
 
@@ -369,7 +369,6 @@ export const cashewPlugin: ImportPlugin = {
         if (processedCashewPks.has(t.transaction_pk)) continue;
 
         const isPaid = t.paid === 1;
-
         const journalDate = new Date(t.date_created * 1000).getTime();
         const absoluteAmount = Math.abs(t.amount);
         const isIncome = t.income === 1;
@@ -392,7 +391,7 @@ export const cashewPlugin: ImportPlugin = {
                 data.journals.push({
                   id: journalId,
                   journalDate,
-                  currencyCode: walletCurrency, // Use primary wallet currency
+                  currencyCode: walletCurrency,
                   status: 'POSTED',
                   totalAmount: absoluteAmount,
                   transactionCount: 2,
@@ -422,7 +421,6 @@ export const cashewPlugin: ImportPlugin = {
               } else {
                 // Planned Transfer
                 if (t.reoccurrence === null) {
-                  // One-time unpaid Transfer -> PLANNED Journal
                   const journalId = generator() as JournalId;
                   data.journals.push({
                     id: journalId,
@@ -455,7 +453,6 @@ export const cashewPlugin: ImportPlugin = {
                     transactionDate: journalDate,
                   });
                 } else {
-                  // Recurring Transfer -> ImportedPlannedPayment
                   data.plannedPayments!.push({
                     id: generator(),
                     name: t.name || 'Planned Transfer',
@@ -500,7 +497,6 @@ export const cashewPlugin: ImportPlugin = {
         }
 
         if (isPaid) {
-          // History record
           const journalId = generator() as JournalId;
           data.journals.push({
             id: journalId,
@@ -508,7 +504,7 @@ export const cashewPlugin: ImportPlugin = {
             currencyCode: walletCurrency,
             status: 'POSTED',
             totalAmount: absoluteAmount,
-            transactionCount: t.objective_loan_fk ? 3 : 2, // 2 for normal, 3 if loan involved
+            transactionCount: t.objective_loan_fk ? 3 : 2,
             displayType: isIncome ? JournalDisplayType.INCOME : JournalDisplayType.EXPENSE,
             description: t.name || (isIncome ? 'Income' : 'Expense'),
             notes: t.note || undefined,
@@ -535,9 +531,7 @@ export const cashewPlugin: ImportPlugin = {
             transactionDate: journalDate,
           });
         } else {
-          // Unpaid
           if (t.reoccurrence === null) {
-            // One-time unpaid -> PLANNED Journal
             const journalId = generator() as JournalId;
             data.journals.push({
               id: journalId,
@@ -572,7 +566,6 @@ export const cashewPlugin: ImportPlugin = {
               transactionDate: journalDate,
             });
           } else if (data.plannedPayments) {
-            // Recurring schedule -> ImportedPlannedPayment
             data.plannedPayments!.push({
               id: generator(),
               name: t.name || 'Planned Payment',
@@ -596,12 +589,13 @@ export const cashewPlugin: ImportPlugin = {
         processedCashewPks.add(t.transaction_pk);
       }
 
-      // 5. Map Budgets
+      // 6. Map Budgets
+      onProgress?.('Mapping budgets and rules...', 0.8);
       if (budgets.length > 0 && data.budgets && data.budgetScopes) {
         for (const b of budgets) {
           const budgetId = generator();
           const startDate = new Date(b.start_date * 1000);
-          const startMonth = startDate.toISOString().substring(0, 7); // YYYY-MM
+          const startMonth = startDate.toISOString().substring(0, 7);
 
           data.budgets.push({
             id: budgetId,
@@ -612,7 +606,6 @@ export const cashewPlugin: ImportPlugin = {
             active: b.archived === 0,
           });
 
-          // Parse scopes
           const parseFks = (fks: string | null): string[] => {
             try {
               return fks ? JSON.parse(fks) : [];
@@ -648,7 +641,7 @@ export const cashewPlugin: ImportPlugin = {
         }
       }
 
-      // 6. Map SMS Rules
+      // 7. Map SMS Rules
       if (scannerTemplates.length > 0 && data.smsAutoPostRules) {
         for (const st of scannerTemplates) {
           const sourceAccId = accountsMap.get(st.wallet_fk);
@@ -657,17 +650,12 @@ export const cashewPlugin: ImportPlugin = {
           if (sourceAccId && categoryAccId) {
             data.smsAutoPostRules.push({
               id: generator(),
-              senderMatch: '*', // Cashew doesn't always have sender in template
+              senderMatch: '*',
               bodyMatch: st.contains,
               isActive: true,
               sourceAccountId: sourceAccId,
               categoryAccountId: categoryAccId,
-              conditionsJson: JSON.stringify([
-                {
-                  type: 'contains',
-                  value: st.contains,
-                },
-              ]),
+              conditionsJson: JSON.stringify([{ type: 'contains', value: st.contains }]),
               actionsJson: JSON.stringify([
                 {
                   type: 'extract_amount',
@@ -685,17 +673,16 @@ export const cashewPlugin: ImportPlugin = {
         }
       }
 
-      // 7. Map Exchange Rates
+      // 8. Map Exchange Rates
       if (appSettings.length > 0 && data.exchangeRates) {
         try {
           const settings = JSON.parse(appSettings[0].settings_json);
-          const cachedRates = settings.cachedCurrencyExchange; // Map<String, double>
+          const cachedRates = settings.cachedCurrencyExchange;
           if (cachedRates) {
-            const baseCurrency = workplaceCurrency;
             for (const [targetCurrency, rate] of Object.entries(cachedRates)) {
               data.exchangeRates.push({
                 id: generator(),
-                fromCurrency: baseCurrency,
+                fromCurrency: workplaceCurrency,
                 toCurrency: targetCurrency.toUpperCase(),
                 rate: rate as number,
                 effectiveDate: Date.now(),
@@ -704,53 +691,43 @@ export const cashewPlugin: ImportPlugin = {
             }
           }
         } catch (e) {
-          logger.warn('[CashewPlugin] Failed to parse app settings for exchange rates', {
-            error: e,
-          });
+          logger.warn('[CashewPlugin] Failed to parse exchange rates from settings', { error: e });
         }
       }
 
-      onProgress?.('Saving data...', 0.8);
-
-      // Add Journal Metadata for all journals
+      // 9. Add Journal Metadata
       if (data.journalMetadata) {
-        for (const journal of data.journals) {
-          data.journalMetadata.push({
+        data.journals.forEach(journal => {
+          data.journalMetadata!.push({
             id: generator(),
             journalId: journal.id,
             importSource: 'cashew',
             createdAt: Date.now(),
           });
-        }
+        });
       }
-
-      await integrityService.resetWorkplace(workplaceId, true);
-      await importRepository.batchInsert(workplaceId, data);
-
-      onProgress?.('Verifying integrity...', 0.95);
-      await integrityService.forceRunCheck(workplaceId, onProgress);
 
       // Cleanup
       await db.closeAsync();
       await files.deleteFile(tempDbPath);
 
-      logger.info('[CashewPlugin] Import completed successfully');
-      onProgress?.('Import completed!', 1.0);
-
+      onProgress?.('Finalizing...', 1.0);
       return {
-        accounts: data.accounts.length,
-        transactions: data.transactions.length,
-        journals: data.journals.length,
-        budgets: data.budgets?.length || 0,
-        auditLogs: 0,
-        skippedTransactions,
+        data,
+        workplace: { defaultCurrencyCode: workplaceCurrency },
+        stats: {
+          accounts: data.accounts.length,
+          transactions: data.transactions.length,
+          journals: data.journals.length,
+          budgets: data.budgets?.length || 0,
+          plannedPayments: data.plannedPayments?.length || 0,
+          auditLogs: 0,
+          skippedTransactions,
+        },
       };
     } catch (error) {
-      logger.error('[CashewPlugin] Import failed', error);
       await files.deleteFile(tempDbPath);
-      throw new Error(
-        `Cashew import failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw error;
     }
   },
 };

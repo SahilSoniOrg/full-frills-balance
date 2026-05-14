@@ -249,7 +249,7 @@ export function useJournalListViewModel(
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }
-  }, [selectedIds, journals, defaultShareFormat]);
+  }, [selectedIds, journals, defaultShareFormat, baseCurrency]);
 
   const selectAll = useCallback(() => {
     const visibleIds = items
