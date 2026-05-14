@@ -19,21 +19,18 @@ import {
   ImportedPlannedPayment,
   ImportedSmsAutoPostRule,
   ImportedTransaction,
-  importRepository,
 } from '@/src/data/repositories/ImportRepository';
-import { workplaceService } from '@/src/services/WorkplaceService';
-import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
-import { integrityService } from '@/src/services/integrity-service';
+
+import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import {
   AccountId,
   BudgetId,
   JournalId,
   PlannedPaymentId,
   TransactionId,
-  WorkplaceId,
 } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { preferences, UIPreferences } from '@/src/utils/preferences';
+import { UIPreferences } from '@/src/utils/preferences';
 
 interface NativeImportData {
   version: string;
@@ -87,11 +84,14 @@ export const nativePlugin: ImportPlugin = {
     return hasJournals && hasAccounts && hasTransactions && hasVersion && !hasCategories;
   },
 
-  async import(
+  async parse(
     context: ImportFileContext,
-    workplaceId: WorkplaceId,
-    onProgress?: (message: string, progress: number) => void,
-  ): Promise<ImportStats> {
+    options: {
+      defaultCurrency: string;
+      onProgress?: (message: string, progress: number) => void;
+    },
+  ): Promise<ParsedImportResult> {
+    const { defaultCurrency: fallbackCurrency, onProgress } = options;
     logger.info('[NativePlugin] Starting import...');
 
     if (!context.json) {
@@ -130,89 +130,81 @@ export const nativePlugin: ImportPlugin = {
     );
 
     try {
-      // 1. Wipe existing data for this workplace
-      // We always keep the shell record to prevent the app from crashing if this is the active workplace.
-      onProgress?.('Wiping workplace data...', 0.1);
-      logger.info(`[NativePlugin] Wiping workplace ${workplaceId} for import...`);
-      await integrityService.resetWorkplace(workplaceId, true);
-      logger.info('[NativePlugin] Workplace wipe complete.');
-
-      // Update workplace identity from imported data
-      // Priority: 1. data.workplace (new format) 2. data.preferences (legacy format)
       const currencyCode =
         data.workplace?.defaultCurrencyCode || (data.preferences as any)?.defaultCurrencyCode;
 
-      await workplaceService.updateWorkplace(workplaceId, {
-        defaultCurrencyCode: currencyCode,
+      const defaultCurrencyCode = currencyCode || fallbackCurrency; // Fallback if no preferences exist
+
+      // 3. Map Data
+      onProgress?.('Parsing data records...', 0.5);
+      logger.info('[NativePlugin] Starting data mapping...');
+
+      const accounts = data.accounts.map(acc => {
+        const id = accountMap.get(acc.id)!;
+        const currencyCode = acc.currencyCode || defaultCurrencyCode;
+
+        return {
+          id,
+          name: acc.name,
+          accountType: acc.accountType,
+          accountSubtype: acc.accountSubtype,
+          currencyCode,
+          parentAccountId: acc.parentAccountId ? accountMap.get(acc.parentAccountId) : undefined,
+          description: acc.description,
+          icon: acc.icon,
+          orderNum: acc.orderNum,
+          createdAt: parseTimestamp(acc.createdAt),
+          updatedAt: parseTimestamp(acc.updatedAt),
+          deletedAt: parseTimestamp(acc.deletedAt),
+        };
       });
 
-      const defaultCurrencyCode = await workplaceService.getCurrency(workplaceId);
+      const journals = data.journals.map(j => {
+        return {
+          id: journalMap.get(j.id)!,
+          journalDate: parseTimestamp(j.journalDate) ?? Date.now(),
+          description: j.description,
+          notes: j.notes,
+          currencyCode: j.currencyCode,
+          status: j.status,
+          originalJournalId: j.originalJournalId ? journalMap.get(j.originalJournalId) : undefined,
+          reversingJournalId: j.reversingJournalId
+            ? journalMap.get(j.reversingJournalId)
+            : undefined,
+          totalAmount: j.totalAmount,
+          transactionCount: j.transactionCount,
+          displayType: j.displayType,
+          plannedPaymentId: j.plannedPaymentId
+            ? plannedPaymentMap.get(j.plannedPaymentId)
+            : undefined,
+          createdAt: parseTimestamp(j.createdAt),
+          updatedAt: parseTimestamp(j.updatedAt),
+          deletedAt: parseTimestamp(j.deletedAt),
+        };
+      });
 
-      // 3. Import Data in Batch
-      onProgress?.('Saving data to database (this may take a while)...', 0.4);
-      // Yield UI
-      await new Promise(resolve => setTimeout(resolve, 0));
-      logger.info('[NativePlugin] Starting data mapping for batch insert...');
-      // We use the provided workplaceId instead of ensuring a default one
-      await importRepository.batchInsert(workplaceId, {
-        accounts: data.accounts.map(acc => {
-          return {
-            id: accountMap.get(acc.id)!,
-            name: acc.name,
-            accountType: acc.accountType,
-            accountSubtype: acc.accountSubtype,
-            currencyCode: acc.currencyCode || defaultCurrencyCode,
-            parentAccountId: acc.parentAccountId ? accountMap.get(acc.parentAccountId) : undefined,
-            description: acc.description,
-            icon: acc.icon,
-            orderNum: acc.orderNum,
-            createdAt: parseTimestamp(acc.createdAt),
-            updatedAt: parseTimestamp(acc.updatedAt),
-            deletedAt: parseTimestamp(acc.deletedAt),
-          };
-        }),
-        journals: data.journals.map(j => {
-          return {
-            id: journalMap.get(j.id)!,
-            journalDate: parseTimestamp(j.journalDate) ?? Date.now(),
-            description: j.description,
-            notes: j.notes,
-            currencyCode: j.currencyCode,
-            status: j.status,
-            originalJournalId: j.originalJournalId
-              ? journalMap.get(j.originalJournalId)
-              : undefined,
-            reversingJournalId: j.reversingJournalId
-              ? journalMap.get(j.reversingJournalId)
-              : undefined,
-            totalAmount: j.totalAmount,
-            transactionCount: j.transactionCount,
-            displayType: j.displayType,
-            plannedPaymentId: j.plannedPaymentId
-              ? plannedPaymentMap.get(j.plannedPaymentId)
-              : undefined,
-            createdAt: parseTimestamp(j.createdAt),
-            updatedAt: parseTimestamp(j.updatedAt),
-            deletedAt: parseTimestamp(j.deletedAt),
-          };
-        }),
-        transactions: data.transactions.map(t => {
-          return {
-            id: transactionMap.get(t.id)!,
-            journalId: journalMap.get(t.journalId)!,
-            accountId: accountMap.get(t.accountId)!,
-            amount: t.amount,
-            transactionType: t.transactionType,
-            currencyCode:
-              t.currencyCode || accountCurrencyMap.get(t.accountId) || defaultCurrencyCode,
-            transactionDate: parseTimestamp(t.transactionDate) ?? Date.now(),
-            notes: t.notes,
-            exchangeRate: t.exchangeRate,
-            createdAt: parseTimestamp(t.createdAt),
-            updatedAt: parseTimestamp(t.updatedAt),
-            deletedAt: parseTimestamp(t.deletedAt),
-          };
-        }),
+      const transactions = data.transactions.map(t => {
+        return {
+          id: transactionMap.get(t.id)!,
+          journalId: journalMap.get(t.journalId)!,
+          accountId: accountMap.get(t.accountId)!,
+          amount: t.amount,
+          transactionType: t.transactionType,
+          currencyCode:
+            t.currencyCode || accountCurrencyMap.get(t.accountId) || defaultCurrencyCode,
+          transactionDate: parseTimestamp(t.transactionDate) ?? Date.now(),
+          notes: t.notes,
+          exchangeRate: t.exchangeRate,
+          createdAt: parseTimestamp(t.createdAt),
+          updatedAt: parseTimestamp(t.updatedAt),
+          deletedAt: parseTimestamp(t.deletedAt),
+        };
+      });
+
+      const resultData = {
+        accounts,
+        journals,
+        transactions,
         auditLogs: (data.auditLogs || []).map(log => {
           let mappedEntityId = log.entityId;
           const type = log.entityType as AuditEntityType;
@@ -321,39 +313,26 @@ export const nativePlugin: ImportPlugin = {
           createdAt: parseTimestamp(snapshot.createdAt as any),
           updatedAt: parseTimestamp(snapshot.updatedAt as any),
         })),
-      });
-      logger.info('[NativePlugin] Batch insert complete.');
+      };
 
-      await integrityService.forceRunCheck(workplaceId, onProgress);
-
-      // 4. Restore preferences and set active workplace at the VERY END
-      // This prevents the app from re-bootstrapping/navigating away during the heavy DB work above.
-      onProgress?.('Finalizing preferences...', 0.98);
-
-      // Sanitize preferences to prevent legacy currency from polluting the global state
-      const importedPrefs = { ...data.preferences };
-      if (importedPrefs) {
-        delete (importedPrefs as any).defaultCurrencyCode;
-      }
-
-      await preferences.restorePreferences(importedPrefs);
-
-      // Finally switch to the workplace we just imported into
-      preferences.setActiveWorkplaceId(workplaceId);
-
-      logger.info('[NativePlugin] Import successful.');
+      logger.info('[NativePlugin] Parsing successful.');
       return {
-        accounts: data.accounts.length,
-        journals: data.journals.length,
-        transactions: data.transactions.length,
-        budgets: data.budgets?.length || 0,
-        auditLogs: data.auditLogs?.length || 0,
-        plannedPayments: data.plannedPayments?.length || 0,
-        skippedTransactions: 0,
+        data: resultData,
+        preferences: data.preferences,
+        workplace: { defaultCurrencyCode: currencyCode },
+        stats: {
+          accounts: data.accounts.length,
+          journals: data.journals.length,
+          transactions: data.transactions.length,
+          budgets: data.budgets?.length || 0,
+          auditLogs: data.auditLogs?.length || 0,
+          plannedPayments: data.plannedPayments?.length || 0,
+          skippedTransactions: 0,
+        },
       };
     } catch (error) {
-      logger.error('[NativePlugin] Import failed mid-process', error);
-      throw new Error('Failed to import data into database');
+      logger.error('[NativePlugin] Parse failed', error);
+      throw new Error('Failed to parse data');
     }
   },
 };

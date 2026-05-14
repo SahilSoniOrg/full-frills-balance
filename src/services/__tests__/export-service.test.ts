@@ -3,6 +3,7 @@ import { exportService } from '@/src/services/export-service';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { compression } from '@/src/utils/compression';
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {
@@ -20,6 +21,11 @@ jest.mock('@/src/utils/preferences', () => ({
 }));
 
 jest.mock('@/src/utils/logger');
+jest.mock('@/src/utils/compression', () => ({
+  compression: {
+    createZipArchive: jest.fn(),
+  },
+}));
 
 describe('ExportService', () => {
   const mockGet = database.collections.get as jest.Mock;
@@ -192,7 +198,6 @@ describe('ExportService', () => {
       expect(zipData).toBeInstanceOf(Uint8Array);
 
       // Verify that the compression layer was called with a backup.json
-      const { compression } = require('@/src/utils/compression');
       expect(compression.createZipArchive).toHaveBeenCalledWith(
         expect.stringContaining('test-workplace'),
         expect.objectContaining({

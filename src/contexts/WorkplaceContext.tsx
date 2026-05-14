@@ -1,6 +1,7 @@
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
+import { analytics } from '@/src/services/analytics-service';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { WorkplaceId } from '@/src/types/domain';
 import { from, map, of, switchMap } from 'rxjs';
@@ -98,7 +99,6 @@ export function WorkplaceProvider({ children }: { children: React.ReactNode }) {
     const oldId = preferences.activeWorkplaceId;
     preferences.setActiveWorkplaceId(id as WorkplaceId);
     if (oldId && oldId !== id) {
-      const { analytics } = require('@/src/services/analytics-service');
       analytics.logWorkplaceSwitched(oldId, id);
     }
   }, []);

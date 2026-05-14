@@ -107,7 +107,7 @@ export function FontManager({ children }: FontManagerProps) {
           setCurrentFontReady(true);
           dispatchBootEvent('FONTS_LOADED');
         }
-      } catch (_error) {
+      } catch {
         // Still allow the app to show (with system fonts) if loading fails
         if (isActive) {
           setCurrentFontReady(true);

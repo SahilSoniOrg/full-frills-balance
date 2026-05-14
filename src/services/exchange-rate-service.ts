@@ -167,9 +167,13 @@ export class ExchangeRateService {
           rate,
         }));
 
-        exchangeRateRepository
-          .cacheRatesBatch(fromCurrency, rateArray)
-          .catch(err => logger.error('Background DB batch persist failed:', err));
+        exchangeRateRepository.cacheRatesBatch(fromCurrency, rateArray).catch(err => {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          logger.error(
+            `[ExchangeRateService] Background DB batch persist failed: ${errMsg}`,
+            err || new Error('Batch persist failed'),
+          );
+        });
 
         return rates;
       } catch (error) {
@@ -185,7 +189,7 @@ export class ExchangeRateService {
           return staleRates;
         }
 
-        throw error;
+        throw error || new Error(`Failed to fetch rates for ${fromCurrency}`);
       } finally {
         this.inFlightRequests.delete(fromCurrency);
       }
@@ -217,19 +221,30 @@ export class ExchangeRateService {
    * If rates are missing or stale, it performs a network fetch and persists to DB.
    */
   async syncTodayRates(baseCurrency: string): Promise<void> {
-    if (!baseCurrency) return;
+    if (!baseCurrency || typeof baseCurrency !== 'string') {
+      logger.warn('[ExchangeRateService] syncTodayRates called with invalid baseCurrency:', {
+        baseCurrency,
+      });
+      return;
+    }
+
+    const currencyCode = baseCurrency.toUpperCase();
 
     try {
-      const memCached = this.memoryCache.get(baseCurrency);
+      const memCached = this.memoryCache.get(currencyCode);
       if (memCached && this.isRateFresh(memCached.timestamp)) {
         return; // Already fresh
       }
 
       // fetchRatesForBase already handles DB-then-Network sequence and de-duplication
-      await this.fetchRatesForBase(baseCurrency);
-      logger.info(`[ExchangeRateService] Synchronized rates for ${baseCurrency}`);
+      await this.fetchRatesForBase(currencyCode);
+      logger.info(`[ExchangeRateService] Synchronized rates for ${currencyCode}`);
     } catch (error) {
-      logger.error(`[ExchangeRateService] Failed to sync rates for ${baseCurrency}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        `[ExchangeRateService] Failed to sync rates for ${currencyCode}: ${errorMessage}`,
+        error || new Error('Sync failed'),
+      );
     }
   }
 

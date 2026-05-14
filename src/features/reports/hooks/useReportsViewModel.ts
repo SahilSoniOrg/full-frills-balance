@@ -226,7 +226,7 @@ export function useReportsViewModel(): ReportsViewModel {
       setShowAccountPicker(false);
       resetSelections();
     },
-    [dateRange, periodFilter, updateFilter, resetSelections, accountIds],
+    [dateRange, periodFilter, updateFilter, resetSelections],
   );
 
   return {

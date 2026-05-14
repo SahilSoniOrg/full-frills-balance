@@ -83,7 +83,7 @@ export function useBudgetDetailViewModel() {
       } as any;
     }
     return null;
-  }, [dbBudgetData, pName, pAmount, pCurrency, pPeriod, budgetId, workplaceId, baseCurrency]);
+  }, [dbBudgetData, pName, pAmount, pCurrency, pPeriod, budgetId, baseCurrency]);
 
   const usage = useMemo(() => {
     if (dbBudgetData) return dbBudgetData[1];
@@ -320,7 +320,7 @@ export function useBudgetDetailViewModel() {
         }
       },
     });
-  }, [budget]);
+  }, [budget, workplaceId]);
 
   return {
     budget,

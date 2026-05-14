@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { logger } from './logger';
+import { bytesToBase64 } from './serialization';
 
 /**
  * Unified File System Utility
@@ -29,7 +30,6 @@ export const files = {
         // SAF via FileSystemLegacy requires strings.
         // If we have raw bytes, we must convert to base64.
         if (content instanceof Uint8Array) {
-          const { bytesToBase64 } = require('./serialization');
           safeContent = bytesToBase64(content);
           safeEncoding = 'base64';
         }

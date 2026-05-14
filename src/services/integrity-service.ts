@@ -304,6 +304,7 @@ export class IntegrityService {
     const totalStart = Date.now();
     logger.info('[IntegrityService] Force-running full balance verification (manual trigger)...');
 
+    onProgress?.('Scanning for orphaned transactions...', 0.02);
     await this.scanForNullAccountTransactions(workplaceId);
 
     const accounts = await accountRepository.findAll(workplaceId);
@@ -318,8 +319,11 @@ export class IntegrityService {
       } catch (error) {
         logger.error(`[IntegrityService] Failed to verify account ${account.id}`, error);
       }
-      const verifyProgress = total > 0 ? ((i + 1) / total) * 0.7 : 0.7;
-      onProgress?.(`Checking ${account.name}...`, verifyProgress);
+      const verifyProgress = total > 0 ? (i / total) * 0.7 : 0.05;
+      onProgress?.(
+        `Checking account balances: ${account.name} (${i + 1}/${total})`,
+        verifyProgress,
+      );
 
       // Yield every 5 accounts during manual/force check to ensure UI responsiveness
       if (i % 5 === 0) {
@@ -327,6 +331,7 @@ export class IntegrityService {
       }
     }
 
+    onProgress?.('Verification phase complete. Analyzing results...', 0.7);
     const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted);
 
     let repairsAttempted = 0;
@@ -344,8 +349,13 @@ export class IntegrityService {
             (discrepancy.snapshotCorrupted ? ' [snapshot corrupted]' : ''),
         );
         repairsAttempted++;
-        const repairProgress = 0.7 + ((i + 1) / Math.max(discrepancies.length, 1)) * 0.2;
-        onProgress?.(`Repairing ${discrepancy.accountName}...`, repairProgress);
+
+        // Repair phase uses 0.7 to 0.95 range
+        const repairProgress = 0.7 + (i / discrepancies.length) * 0.25;
+        onProgress?.(
+          `Repairing balance for ${discrepancy.accountName} (${i + 1}/${discrepancies.length})`,
+          repairProgress,
+        );
 
         // Perform repair in its own transaction and yield to JS event loop
         // This prevents UI lockup and allows reactive system to breathe
@@ -366,6 +376,7 @@ export class IntegrityService {
 
       // Perform ONE single unified refresh for all repaired accounts at the very end
       if (repairedAccountIds.length > 0) {
+        onProgress?.('Updating database snapshots...', 0.96);
         await database.write(async () => {
           const accountsToNotify = await database.collections
             .get<Account>('accounts')
@@ -381,9 +392,12 @@ export class IntegrityService {
           );
         });
       }
+    } else {
+      onProgress?.('No discrepancies found. All balances correct.', 0.9);
+      await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for user to see the success message
     }
 
-    onProgress?.('Finalizing...', 1);
+    onProgress?.('Verification complete', 1);
 
     const totalDuration = Date.now() - totalStart;
     logger.info(`[Trace] IntegrityService.forceRunCheck: ${totalDuration}ms`, {

@@ -18,11 +18,8 @@ import {
   ImportedJournal,
   ImportedPlannedPayment,
   ImportedTransaction,
-  importRepository,
 } from '@/src/data/repositories/ImportRepository';
-import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
-import { integrityService } from '@/src/services/integrity-service';
-import { workplaceService } from '@/src/services/WorkplaceService';
+import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
 import {
   AccountId,
   BudgetId,
@@ -31,10 +28,8 @@ import {
   JournalId,
   PlannedPaymentId,
   TransactionId,
-  WorkplaceId,
 } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { preferences } from '@/src/utils/preferences';
 
 // Ivy Wallet Interfaces
 interface IvyAccount {
@@ -202,12 +197,14 @@ export const ivyPlugin: ImportPlugin = {
     return hasAccounts && hasCategories && hasTransactions;
   },
 
-  async import(
+  async parse(
     context: ImportFileContext,
-    workplaceId: WorkplaceId,
-    onProgress?: (message: string, progress: number) => void,
-  ): Promise<ImportStats> {
-    const targetDefaultCurrency = await workplaceService.getCurrency(workplaceId);
+    options: {
+      defaultCurrency: string;
+      onProgress?: (message: string, progress: number) => void;
+    },
+  ): Promise<ParsedImportResult> {
+    const { defaultCurrency: targetDefaultCurrency, onProgress } = options;
 
     if (!this.detect(context)) {
       throw new Error('Invalid Ivy Wallet backup format');
@@ -248,9 +245,9 @@ export const ivyPlugin: ImportPlugin = {
       });
     }
 
-    logger.info('[IvyPlugin] Starting Import from Ivy Wallet JSON...');
+    onProgress?.('Parsing backup data...', 0.05);
     logger.info(
-      `[IvyPlugin] Found ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions, ${data.budgets?.length || 0} budgets`,
+      `[IvyPlugin] Parsing backup: ${data.accounts.length} accounts, ${data.categories.length} categories, ${data.transactions.length} transactions`,
     );
 
     // 1. Extract base currency and name from settings
@@ -264,10 +261,6 @@ export const ivyPlugin: ImportPlugin = {
       );
     }
 
-    // 2. Wipe existing data for clean import
-    logger.warn(`[IvyPlugin] Wiping workplace ${workplaceId} before import...`);
-    onProgress?.('Wiping workplace data...', 0.05);
-    await integrityService.resetWorkplace(workplaceId, true);
     const accountImports: ImportedAccount[] = [];
 
     // 2. Pre-Scan Transactions for Category Usage (Per Currency)
@@ -357,7 +350,7 @@ export const ivyPlugin: ImportPlugin = {
     }
 
     // 3. Create Accounts
-    onProgress?.('Preparing accounts...', 0.15);
+    onProgress?.('Preparing accounts...', 0.2);
     const accountMap = new Map<string, AccountId>();
     const accountCurrencyMap = new Map<AccountId, string>();
     const categoryAccountMap = new Map<string, AccountId>();
@@ -469,7 +462,7 @@ export const ivyPlugin: ImportPlugin = {
     });
 
     // 5. Map Planned Payments (Pre-pass to establish ID mappings for journals)
-    onProgress?.('Mapping planned payments...', 0.18);
+    onProgress?.('Mapping planned payments...', 0.3);
     const plannedPaymentImports: ImportedPlannedPayment[] = [];
     const mapIvyInterval = (ivyInterval?: string): string => {
       switch (ivyInterval) {
@@ -598,7 +591,7 @@ export const ivyPlugin: ImportPlugin = {
     }
 
     // 6. Create Journals & Transactions
-    onProgress?.('Mapping transactions...', 0.2);
+    onProgress?.('Mapping transactions...', 0.4);
     const journalImports: ImportedJournal[] = [];
     const transactionImports: ImportedTransaction[] = [];
     const skippedItems: { id: string; reason: string; description?: string }[] = [];
@@ -609,7 +602,7 @@ export const ivyPlugin: ImportPlugin = {
         // Yield to UI thread every so often
         onProgress?.(
           `Processing transactions (${i} of ${totalTransactions})...`,
-          0.2 + (i / totalTransactions) * 0.5,
+          0.4 + (i / totalTransactions) * 0.5,
         );
         await new Promise(r => setTimeout(r, 0));
       }
@@ -822,7 +815,7 @@ export const ivyPlugin: ImportPlugin = {
     }
 
     // 6. Map Budgets
-    onProgress?.('Mapping budgets...', 0.7);
+    onProgress?.('Mapping budgets...', 0.9);
     const budgetImports: ImportedBudget[] = [];
     const budgetScopeImports: ImportedBudgetScope[] = [];
 
@@ -879,53 +872,8 @@ export const ivyPlugin: ImportPlugin = {
       });
     }
 
-    // 8. Write to DB
-    onProgress?.('Saving to database...', 0.75);
-    logger.info('[IvyPlugin] Writing mapped data to database...');
-    await importRepository.batchInsert(workplaceId, {
-      accounts: accountImports,
-      journals: journalImports,
-      transactions: transactionImports,
-      budgets: budgetImports,
-      budgetScopes: budgetScopeImports,
-      plannedPayments: plannedPaymentImports,
-    });
-
-    // 7. Run integrity check to repair account balances
-    onProgress?.('Running integrity check...', 0.85);
-    logger.info('[IvyPlugin] Running integrity check to fix account balances...');
-    const integrityResult = await integrityService.forceRunCheck(workplaceId, onProgress);
-    logger.info('[IvyPlugin] Integrity check complete', {
-      discrepanciesFound: integrityResult.discrepanciesFound,
-      repairsSuccessful: integrityResult.repairsSuccessful,
-    });
-
-    // 9. Restore Preferences
-    onProgress?.('Finalizing...', 0.95);
-    try {
-      await preferences.setOnboardingCompleted(true);
-
-      if (ivyUserName) {
-        await preferences.setUserName(ivyUserName);
-      }
-
-      if (ivyBaseCurrency) {
-        await workplaceService.updateWorkplace(workplaceId, {
-          defaultCurrencyCode: ivyBaseCurrency,
-        });
-      } else {
-        const firstCurrency = accountCurrencyMap.values().next().value;
-        if (firstCurrency) {
-          await workplaceService.updateWorkplace(workplaceId, {
-            defaultCurrencyCode: firstCurrency,
-          });
-        }
-      }
-    } catch (e) {
-      logger.warn('[IvyPlugin] Non-critical error during finalization', { error: e });
-    }
-
-    logger.info('[IvyPlugin] Import successful.');
+    onProgress?.('Parsing complete', 1.0);
+    logger.info('[IvyPlugin] Parse successful.');
 
     if (skippedItems.length > 0) {
       logger.warn('[IvyPlugin] Skipped Items:', {
@@ -935,14 +883,29 @@ export const ivyPlugin: ImportPlugin = {
     }
 
     return {
-      accounts: accountImports.length,
-      journals: journalImports.length,
-      transactions: transactionImports.length,
-      budgets: budgetImports.length,
-      plannedPayments: plannedPaymentImports.length,
-      auditLogs: 0,
-      skippedTransactions: skippedItems.length,
-      skippedItems,
+      data: {
+        accounts: accountImports,
+        journals: journalImports,
+        transactions: transactionImports,
+        budgets: budgetImports,
+        budgetScopes: budgetScopeImports,
+        plannedPayments: plannedPaymentImports,
+      },
+      stats: {
+        accounts: accountImports.length,
+        journals: journalImports.length,
+        transactions: transactionImports.length,
+        budgets: budgetImports.length,
+        plannedPayments: plannedPaymentImports.length,
+        auditLogs: 0,
+        skippedTransactions: skippedItems.length,
+        skippedItems,
+      },
+      workplace: {
+        defaultCurrencyCode:
+          ivyBaseCurrency || accountCurrencyMap.values().next().value || undefined,
+      },
+      preferences: ivyUserName ? { userName: ivyUserName } : undefined,
     };
   },
 };

@@ -14,7 +14,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const { data: item, isLoading: isItemLoading } = useObservable<PlannedPayment | null>(
     () =>
       id ? plannedPaymentRepository.observeById(workplaceId, id as PlannedPaymentId) : of(null),
-    [id],
+    [id, workplaceId],
     null,
   );
 
@@ -58,7 +58,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
       new_status: newStatus,
       previous_status: item.status,
     });
-  }, [item]);
+  }, [item, workplaceId]);
 
   const handleDelete = useCallback(async () => {
     if (!item) return;

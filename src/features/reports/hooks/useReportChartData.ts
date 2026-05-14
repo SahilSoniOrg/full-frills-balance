@@ -67,7 +67,7 @@ export function useReportChartData({
 
   const displayedNetWorthText = useMemo(() => {
     return CurrencyFormatter.format(currentNetWorth, defaultCurrencyCode);
-  }, [currentNetWorth]);
+  }, [currentNetWorth, defaultCurrencyCode]);
 
   const displayedIncome = useMemo(() => {
     if (

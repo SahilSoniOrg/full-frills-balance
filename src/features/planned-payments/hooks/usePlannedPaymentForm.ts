@@ -64,7 +64,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
         }
       });
     }
-  }, [id]);
+  }, [id, workplaceId]);
 
   const isValid = useMemo(() => {
     return (

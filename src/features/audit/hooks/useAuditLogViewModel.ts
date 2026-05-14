@@ -65,20 +65,23 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     }
   }, []);
 
-  const onRevert = useCallback((logId: string) => {
-    Alerts.showConfirmationAlert(
-      AppConfig.strings.audit.revertConfirmTitle,
-      AppConfig.strings.audit.revertConfirmMessage,
-      async () => {
-        const result = await auditService.revertEntry(logId, workplaceId);
-        if (result.success) {
-          Alerts.toast.success(AppConfig.strings.audit.revertSuccess);
-        } else {
-          Alerts.showErrorAlert(result.error || AppConfig.strings.audit.errors.revertFailed);
-        }
-      },
-    );
-  }, []);
+  const onRevert = useCallback(
+    (logId: string) => {
+      Alerts.showConfirmationAlert(
+        AppConfig.strings.audit.revertConfirmTitle,
+        AppConfig.strings.audit.revertConfirmMessage,
+        async () => {
+          const result = await auditService.revertEntry(logId, workplaceId);
+          if (result.success) {
+            Alerts.toast.success(AppConfig.strings.audit.revertSuccess);
+          } else {
+            Alerts.showErrorAlert(result.error || AppConfig.strings.audit.errors.revertFailed);
+          }
+        },
+      );
+    },
+    [workplaceId],
+  );
 
   return {
     logs,
