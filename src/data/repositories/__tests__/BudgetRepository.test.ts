@@ -48,7 +48,7 @@ describe('BudgetRepository', () => {
 
       const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(2);
-      const scopeIds = scopes.map(s => s.account.id);
+      const scopeIds = scopes.map(s => s.accountId);
       expect(scopeIds).toContain(accountId1);
       expect(scopeIds).toContain(accountId2);
     });
@@ -74,7 +74,7 @@ describe('BudgetRepository', () => {
 
       const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(1);
-      expect(scopes[0].account.id).toBe(accountId2);
+      expect(scopes[0].accountId).toBe(accountId2);
     });
 
     it('should delete a budget and its scopes', async () => {
@@ -96,6 +96,29 @@ describe('BudgetRepository', () => {
 
       const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(0);
+    });
+
+    it('should allow removing all source accounts', async () => {
+      const budget = await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Food',
+          amount: 500,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+          assetAccountIds: [accountId1 as AccountId],
+        },
+        [accountId1 as AccountId],
+      );
+
+      expect(budget.assetAccountIds).toBe(accountId1);
+
+      await budgetRepository.update('wp-1' as WorkplaceId, budget, { assetAccountIds: [] }, [
+        accountId1 as AccountId,
+      ]);
+
+      const updated = await budgetRepository.find('wp-1' as WorkplaceId, budget.id as BudgetId);
+      expect(updated?.assetAccountIds).toBe('');
     });
   });
 });
