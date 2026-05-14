@@ -381,6 +381,20 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Handle onboarding hydration bypass
+  // Since useAppBootstrap (which normally dispatches DATA_HYDRATED) is gated behind onboarding,
+  // we must manually force the event to allow the app to reach AppPhase.READY and hide the splash screen.
+  useEffect(() => {
+    if (uiState.isInitialized && !uiState.hasCompletedOnboarding && !uiState.isDataHydrated) {
+      dispatchBootEvent('DATA_HYDRATED');
+    }
+  }, [
+    uiState.isInitialized,
+    uiState.hasCompletedOnboarding,
+    uiState.isDataHydrated,
+    dispatchBootEvent,
+  ]);
+
   const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
     try {
       await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats);
