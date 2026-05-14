@@ -30,7 +30,6 @@ export function useSettingsActions(workplaceId: WorkplaceId) {
   const resetApp = useCallback(async () => {
     analytics.logFactoryReset();
     await integrityService.resetDatabase();
-    await preferences.clearPreferences();
     requireRestart({ type: 'RESET' });
   }, [requireRestart]);
 

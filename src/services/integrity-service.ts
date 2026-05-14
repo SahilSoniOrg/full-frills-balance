@@ -23,6 +23,7 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
+import { preferences } from '@/src/utils/preferences';
 import { storage } from '@/src/utils/storage';
 import { Q } from '@nozbe/watermelondb';
 
@@ -537,6 +538,7 @@ export class IntegrityService {
     try {
       await databaseRepository.resetDatabase();
       await smsService.clearProcessedMessages();
+      preferences.clearPreferences();
       logger.info('[IntegrityService] Database reset successful.');
     } catch (error) {
       logger.error('[IntegrityService] CRITICAL: Factory reset failed:', error);
