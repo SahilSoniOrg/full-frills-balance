@@ -8,16 +8,18 @@ import { runAfterInteractions } from '@/src/utils/scheduler';
 import * as Device from 'expo-device';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 
 // Cache Warmup Imports
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
+import { notificationService } from '@/src/services/notification/NotificationService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { sharingService } from '@/src/services/SharingService';
 import { WorkplaceId } from '@/src/types/domain';
+import { take } from 'rxjs/operators';
 
 /**
  * Bootstraps app-wide side effects that must not live in UI context.
@@ -163,6 +165,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           .subscribe(),
         reactiveDataService.observeMonthlyFlow(defaultCurrencyCode, workplaceId).subscribe(),
         reactiveDataService.observeDashboardData(defaultCurrencyCode, workplaceId).subscribe(),
+        notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode).subscribe(),
       );
 
       logger.info('[Bootstrap] Proactive warming triggered.');
@@ -175,6 +178,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           if (session.isActive && phaseRef.current === AppPhase.BOOTING) {
             logger.warn('[Bootstrap] Watchdog triggered: Force-hiding splash.');
             dispatchBootEvent('PREFS_HYDRATED');
+            dispatchBootEvent('DATA_HYDRATED');
           }
         }, AppConfig.timing.bootWatchdogMs);
 
@@ -190,11 +194,28 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           logger.metric('Bootstrap.ready', performance.now() - bootStart);
           dispatchBootEvent('PREFS_HYDRATED');
 
+          // PHASE 1.5: Critical Data Hydration
+          // We wait for the first emission of Safe-to-Spend data to avoid dashboard flicker.
+          // Since we removed the initial debounce in NotificationService, this is near-instant.
+          try {
+            await firstValueFrom(
+              notificationService
+                .observeSafeToSpend(workplaceId, defaultCurrencyCode)
+                .pipe(take(1)),
+            );
+            dispatchBootEvent('DATA_HYDRATED');
+          } catch (err) {
+            logger.warn('[Bootstrap] Critical data hydration failed', err as Error);
+            // Fallback: don't block the app forever if simulation fails
+            dispatchBootEvent('DATA_HYDRATED');
+          }
+
           // Start the ghost pass
           ghostPass(prefs);
         } catch (error) {
           logger.error('[Bootstrap] Critical initialization failed', error);
           dispatchBootEvent('PREFS_HYDRATED');
+          dispatchBootEvent('DATA_HYDRATED');
         }
       } else {
         // If we are already READY but just reached this effect (e.g. unlock),
@@ -239,12 +260,10 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           plannedPaymentService.processDuePayments(workplaceId),
         ),
         sharingService.init(),
-        import('@/src/services/notification/NotificationService').then(
-          ({ notificationService }) => {
-            notificationService.preWarm(workplaceId, defaultCurrencyCode);
-            return notificationService.scheduleReminder(notifCadence, notifHour, notifMinute);
-          },
-        ),
+        (async () => {
+          notificationService.preWarm(workplaceId, defaultCurrencyCode);
+          return notificationService.scheduleReminder(notifCadence, notifHour, notifMinute);
+        })(),
         insightService.preWarm(workplaceId),
         ...(Platform.OS === 'android' && preferences.isSmsImportEnabled && workplaceId
           ? [

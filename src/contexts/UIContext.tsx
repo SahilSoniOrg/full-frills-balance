@@ -26,7 +26,7 @@ export enum AppPhase {
   STABILIZED = 2, // Background tasks (integrity, payments, etc.) finished
 }
 
-export type BootEvent = 'PREFS_HYDRATED' | 'FONTS_LOADED' | 'STABILIZATION_DONE';
+export type BootEvent = 'PREFS_HYDRATED' | 'FONTS_LOADED' | 'DATA_HYDRATED' | 'STABILIZATION_DONE';
 
 // Simple UI state only - no domain data
 interface UIState {
@@ -54,6 +54,7 @@ interface UIState {
   isAppActive: boolean; // Track OS AppState in global context
   isLockAuthenticating: boolean; // Track if biometric prompt is visible
   fontsReady: boolean; // Track if fonts are loaded
+  isDataHydrated: boolean; // Track if critical data (safe-to-spend) is loaded
 
   // Account Display
   showAccountMonthlyStats: boolean;
@@ -159,6 +160,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     notificationMinute: AppConfig.defaults.notifications.defaultMinute,
     notificationWeekday: AppConfig.defaults.notifications.defaultWeekday,
     fontsReady: false,
+    isDataHydrated: false,
     appPhase: AppPhase.BOOTING,
     defaultShareFormat: ShareFormat.TEXT,
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
@@ -349,14 +351,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setUIState(prev => {
       let nextIsInitialized = prev.isInitialized;
       let nextFontsReady = prev.fontsReady;
+      let nextIsDataHydrated = prev.isDataHydrated;
 
       if (event === 'PREFS_HYDRATED') nextIsInitialized = true;
       if (event === 'FONTS_LOADED') nextFontsReady = true;
+      if (event === 'DATA_HYDRATED') nextIsDataHydrated = true;
 
       let nextPhase = prev.appPhase;
 
-      // Transition to READY only if both critical paths are complete
-      if (nextIsInitialized && nextFontsReady && nextPhase < AppPhase.READY) {
+      // Transition to READY only if all critical paths are complete
+      if (nextIsInitialized && nextFontsReady && nextIsDataHydrated && nextPhase < AppPhase.READY) {
         nextPhase = AppPhase.READY;
         logger.info('[UIContext] Boot Phase: READY');
       }
@@ -376,6 +380,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         isInitialized: nextIsInitialized,
         fontsReady: nextFontsReady,
+        isDataHydrated: nextIsDataHydrated,
         appPhase: nextPhase,
       };
     });

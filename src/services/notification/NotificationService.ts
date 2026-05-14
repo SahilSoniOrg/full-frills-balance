@@ -19,8 +19,17 @@ import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { combineLatest, from, Observable, of } from 'rxjs';
-import { catchError, debounceTime, map, shareReplay, switchMap } from 'rxjs/operators';
+import { combineLatest, from, merge, Observable, of } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  map,
+  share,
+  shareReplay,
+  skip,
+  switchMap,
+  take,
+} from 'rxjs/operators';
 import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
@@ -278,7 +287,15 @@ export class NotificationService {
           })),
         );
       }),
-      debounceTime(AppConfig.insights.observeDebounceMs),
+      // P0 FIX: Skip initial debounce to eliminate launch flicker.
+      // We share the source and split it: first emission is immediate,
+      // subsequent ones are debounced to prevent simulation spam.
+      source$ =>
+        merge(
+          source$.pipe(take(1)),
+          source$.pipe(skip(1), debounceTime(AppConfig.insights.observeDebounceMs)),
+        ).pipe(share()),
+
       switchMap(
         ({
           assets,
