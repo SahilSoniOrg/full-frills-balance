@@ -1,4 +1,4 @@
-import { AppConfig } from '@/src/constants';
+import { Animation, AppConfig } from '@/src/constants';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
@@ -19,12 +19,14 @@ import { preferences } from '@/src/utils/preferences';
 import dayjs from 'dayjs';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { combineLatest, from, Observable, of } from 'rxjs';
-import { catchError, debounceTime, map, shareReplay, switchMap } from 'rxjs/operators';
+import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
 import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
+import { traceService } from '@/src/utils/TraceService';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -253,7 +255,7 @@ export class NotificationService {
             dayjs().subtract(safeToSpendDays, 'day').startOf('day').valueOf(),
             dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
           ),
-          transactionRepository.observeActiveWithColumns(workplaceId, ['running_balance']),
+          transactionRepository.observeActiveCount(workplaceId),
           journalRepository.observeStatusMeta(workplaceId),
         ] as [
           Observable<Account[]>,
@@ -262,7 +264,7 @@ export class NotificationService {
           Observable<PlannedPayment[]>,
           Observable<Account[]>,
           Observable<Journal[]>,
-          Observable<unknown[]>,
+          Observable<number>,
           Observable<Journal[]>,
         ]).pipe(
           map(([assets, liabilities, budgets, plannedPayments, allAccounts, plannedJournals]) => ({
@@ -278,7 +280,7 @@ export class NotificationService {
           })),
         );
       }),
-      debounceTime(AppConfig.insights.observeDebounceMs),
+      firstFastDebounce(Animation.observeDebounce),
       switchMap(
         ({
           assets,
@@ -384,20 +386,14 @@ export class NotificationService {
 
           return combineLatest([budgetUsage$, history$]).pipe(
             switchMap(async ([usages, rawDeltas]) => {
-              // Phase 1: Normalized balance fetch (includes hierarchy rollups and exclusions)
-              const allBalances = await balanceService.getAccountBalances(
-                workplaceId,
-                now.valueOf(),
-                defaultCurrencyCode,
-              );
-              const balancesMapByAccountId = new Map(
-                allBalances.map(b => [b.accountId, b.balance]),
-              );
+              const trace = traceService.startTrace('NotificationService.observeSafeToSpend');
 
               // P0 Perf: Pre-warm exchange rates once, then use sync getRateSafe()
               // Replaces N sequential await convert() calls across RN bridge
               const uniqueBaseCurrencies = new Set<string>();
               uniqueBaseCurrencies.add(defaultCurrencyCode);
+
+              // Include assets/liabilities currencies
               for (const a of liquidAssets) {
                 if (a.currencyCode && a.currencyCode !== defaultCurrencyCode) {
                   uniqueBaseCurrencies.add(a.currencyCode);
@@ -408,11 +404,32 @@ export class NotificationService {
                   uniqueBaseCurrencies.add(l.currencyCode);
                 }
               }
+
+              // Include budget currencies to ensure BudgetReadService can convert synchronously
+              for (const b of budgets) {
+                if (b.currencyCode && b.currencyCode !== defaultCurrencyCode) {
+                  uniqueBaseCurrencies.add(b.currencyCode);
+                }
+              }
+
               await Promise.all(
                 Array.from(uniqueBaseCurrencies).map(base =>
                   exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
                 ),
               );
+
+              // Phase 1: Normalized balance fetch (includes hierarchy rollups and exclusions)
+              const allBalances = await balanceService.getAccountBalances(
+                workplaceId,
+                now.valueOf(),
+                defaultCurrencyCode,
+                trace,
+              );
+              const balancesMapByAccountId = new Map(
+                allBalances.map(b => [b.accountId, b.balance]),
+              );
+
+              trace.metric('fetch_balances');
 
               const startingBalances = new Map<AccountId, number>();
               let totalLiquidAssetsAmount = 0;
@@ -437,6 +454,8 @@ export class NotificationService {
                 };
               });
 
+              trace.metric('fetch_balances_processed');
+
               // Call the simulation engine
               const runResult = await cashFlowSimulationService.simulate(
                 startingBalances,
@@ -450,7 +469,10 @@ export class NotificationService {
                 defaultCurrencyCode,
                 workplaceId,
                 safeToSpendDays,
+                trace,
               );
+
+              trace.metric('simulation_complete');
 
               // Calculate History Points (UI concern)
               // P1 Perf: Use sync getRateSafe() — rates already pre-warmed above
@@ -530,6 +552,7 @@ export class NotificationService {
                 return firstNeg ? firstNeg.dayOffset + 1 : null;
               })();
 
+              trace.end();
               return {
                 summary: {
                   ...runResult.simulationResult.summary,
@@ -554,7 +577,10 @@ export class NotificationService {
               };
             }),
             catchError(err => {
-              logger.error('[SafeToSpend] Error in simulation pipeline:', err);
+              logger.error(
+                `[SafeToSpend] Error in simulation pipeline (Workplace: ${workplaceId}):`,
+                err,
+              );
               // Return an empty/fallback result instead of letting the observable die
               return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
             }),
@@ -562,7 +588,7 @@ export class NotificationService {
         },
       ),
       catchError(err => {
-        logger.error('[SafeToSpend] Outer pipeline error:', err);
+        logger.error(`[SafeToSpend] Outer pipeline error (Workplace: ${workplaceId}):`, err);
         return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
       }),
       shareReplay({ bufferSize: 1, refCount: true }),

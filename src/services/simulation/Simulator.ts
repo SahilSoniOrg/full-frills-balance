@@ -58,6 +58,10 @@ export class Simulator {
       }
 
       let lastAccountBalancesMap = new Map(currentBalances);
+      const roundedAccountBalances = new Map<string, number>();
+      for (const [id, bal] of lastAccountBalancesMap.entries()) {
+        roundedAccountBalances.set(id, Math.round(((bal ?? 0) + Number.EPSILON) * 100) / 100);
+      }
 
       for (let d = 0; d < days; d++) {
         const todayOffset = startDayOffset + d;
@@ -87,6 +91,9 @@ export class Simulator {
               const preMin = accountMinBalancesBeforeIncome.get(id) ?? Infinity;
               accountMinBalancesBeforeIncome.set(id, Math.min(preMin, bal));
             }
+
+            // Update rounded map only for changed accounts
+            roundedAccountBalances.set(id, Math.round((bal + Number.EPSILON) * 100) / 100);
           }
 
           // Only create a new Map if there were changes
@@ -95,11 +102,6 @@ export class Simulator {
 
         globalMinBalance = Math.min(globalMinBalance, globalBalance);
 
-        const roundedAccountBalances = new Map<string, number>();
-        for (const [id, bal] of lastAccountBalancesMap.entries()) {
-          roundedAccountBalances.set(id, Math.round((bal ?? 0) * 100) / 100);
-        }
-
         // Set timestamp to the end of the day (23:59:59)
         const timestamp =
           startDayTimestamp + todayOffset * 24 * 60 * 60 * 1000 + (24 * 60 * 60 * 1000 - 1000);
@@ -107,8 +109,8 @@ export class Simulator {
         projections.push({
           dayOffset: todayOffset,
           timestamp,
-          globalBalance: Math.round(globalBalance * 100) / 100,
-          accountBalances: roundedAccountBalances,
+          globalBalance: Math.round((globalBalance + Number.EPSILON) * 100) / 100,
+          accountBalances: new Map(roundedAccountBalances), // Snapshot for this day
           flows: todayFlows,
         });
       }
@@ -124,17 +126,22 @@ export class Simulator {
 
       const res = {
         summary: {
-          safeToSpend: Math.round(safeToSpend * 100) / 100,
+          safeToSpend: Math.round((safeToSpend + Number.EPSILON) * 100) / 100,
           shortfall:
-            Math.round((globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0) * 100) / 100,
-          trajectoryMinBalance: Math.round(globalMinBalance * 100) / 100,
+            Math.round(
+              ((globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0) + Number.EPSILON) * 100,
+            ) / 100,
+          trajectoryMinBalance: Math.round((globalMinBalance + Number.EPSILON) * 100) / 100,
           accountMinBalances: new Map(
-            Array.from(accountMinBalances).map(([id, b]) => [id, Math.round(b * 100) / 100]),
+            Array.from(accountMinBalances).map(([id, b]) => [
+              id,
+              Math.round((b + Number.EPSILON) * 100) / 100,
+            ]),
           ),
           accountMinBalancesBeforeIncome: new Map(
             Array.from(accountMinBalancesBeforeIncome).map(([id, b]) => [
               id,
-              Math.round(b * 100) / 100,
+              Math.round((b + Number.EPSILON) * 100) / 100,
             ]),
           ),
           firstMajorInflowDay,

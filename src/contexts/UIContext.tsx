@@ -26,7 +26,7 @@ export enum AppPhase {
   STABILIZED = 2, // Background tasks (integrity, payments, etc.) finished
 }
 
-export type BootEvent = 'PREFS_HYDRATED' | 'FONTS_LOADED' | 'STABILIZATION_DONE';
+export type BootEvent = 'PREFS_HYDRATED' | 'FONTS_LOADED' | 'DATA_HYDRATED' | 'STABILIZATION_DONE';
 
 // Simple UI state only - no domain data
 interface UIState {
@@ -83,6 +83,7 @@ interface UIState {
   defaultShareFormat: ShareFormat;
   safeToSpendDays: number;
   isSmsImportEnabled: boolean;
+  isDataHydrated: boolean; // Tracks if core domain data is primed
 }
 
 interface UIContextType extends UIState {
@@ -163,6 +164,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     defaultShareFormat: ShareFormat.TEXT,
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
     isSmsImportEnabled: false,
+    isDataHydrated: false,
   });
 
   // Load preferences on mount
@@ -352,6 +354,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
       if (event === 'PREFS_HYDRATED') nextIsInitialized = true;
       if (event === 'FONTS_LOADED') nextFontsReady = true;
+      if (event === 'DATA_HYDRATED') {
+        return { ...prev, isDataHydrated: true };
+      }
 
       let nextPhase = prev.appPhase;
 

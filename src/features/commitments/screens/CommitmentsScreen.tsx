@@ -5,12 +5,18 @@ import { Box, Stack } from '@/src/design-system';
 import { BudgetListView } from '@/src/features/budget';
 import { PlannedPaymentListView } from '@/src/features/planned-payments';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useMemo, useState } from 'react';
+import { logger } from '@/src/utils/logger';
+import React, { useEffect, useMemo, useState } from 'react';
 
 type Tab = 'budgets' | 'planned';
 
 export default function CommitmentsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('budgets');
+
+  // Log UI Mount
+  useEffect(() => {
+    logger.info('[Commitments] Screen Mounted');
+  }, []);
 
   const tabOptions = useMemo(
     () => [

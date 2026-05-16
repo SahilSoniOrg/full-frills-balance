@@ -1,5 +1,6 @@
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -10,6 +11,7 @@ import { WorkplaceId } from '@/src/types/domain';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/AccountRepository');
+jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
@@ -29,6 +31,7 @@ describe('PatternService', () => {
 
     // Default simple mocks
     (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
+    (journalRepository.findByIds as jest.Mock).mockResolvedValue([]);
     (transactionRepository.observeByDateRange as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
     (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
@@ -199,21 +202,13 @@ describe('PatternService', () => {
         },
       ]);
       (transactionRepository.findByJournals as jest.Mock).mockResolvedValue(mockTransactions);
+      (journalRepository.findByIds as jest.Mock).mockResolvedValue(Object.values(mockJournals));
       (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
-      // Mock tx.journal.fetch()
-      mockTransactions.forEach(tx => {
-        (tx as any).journal = {
-          fetch: jest
-            .fn()
-            .mockResolvedValue(mockJournals[tx.journalId as keyof typeof mockJournals]),
-        };
-      });
-
       patternService
-        .observePatterns('test-wp' as WorkplaceId)
+        .observePatterns('wp1' as WorkplaceId)
         .pipe(take(1))
-        .subscribe((patterns: Insight[]) => {
+        .subscribe(patterns => {
           const netflixPattern = patterns.find((p: Insight) => p.description.includes('Netflix'));
           const spotifyPattern = patterns.find((p: Insight) => p.description.includes('Spotify'));
 

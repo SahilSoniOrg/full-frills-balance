@@ -112,20 +112,32 @@ export class BudgetReadService {
           .pipe(
             switchMap(async transactions => {
               const budgetMoney = Money.from(observedBudget.amount, observedBudget.currencyCode);
+
+              // P0 Perf: Batch pre-fetch all required exchange rates in parallel
+              // This avoids N sequential bridge calls inside the loop below.
+              const txCurrencies = new Set(transactions.map(t => t.currencyCode));
+              txCurrencies.add(budgetMoney.currencyCode);
+
+              await Promise.all(
+                Array.from(txCurrencies).map(c =>
+                  exchangeRateService.fetchRatesForBase(c).catch(() => ({})),
+                ),
+              );
+
               let spentMoney = Money.from(0, budgetMoney.currencyCode);
 
               for (const tx of transactions) {
                 let txAmount = tx.amount;
                 if (tx.currencyCode !== budgetMoney.currencyCode) {
                   try {
-                    const { convertedAmount } = await exchangeRateService.convert(
-                      tx.amount,
+                    // FAST: getRateSafe hits the memory cache we just pre-warmed
+                    const rate = exchangeRateService.getRateSafe(
                       tx.currencyCode,
                       budgetMoney.currencyCode,
                     );
-                    txAmount = convertedAmount;
+                    txAmount = tx.amount * rate;
                   } catch {
-                    // Fallback to raw amount if conversion fails (better than nothing or throwing)
+                    // Fallback to raw amount if conversion fails
                   }
                 }
 

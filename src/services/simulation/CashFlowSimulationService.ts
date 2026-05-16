@@ -173,6 +173,7 @@ export class CashFlowSimulationService {
       expenseAccountIds,
       journalTxsMap,
     );
+    trace?.metric('flow_gen_planned');
 
     const budgetEntries = normalizedBudgets.map((budget, index) => ({
       budget,
@@ -194,6 +195,7 @@ export class CashFlowSimulationService {
       budgetCategoryMap,
       plannedFlows,
     );
+    trace?.metric('flow_gen_budget');
 
     const resolvedSpendingFlows = FlowResolver.resolveConflicts(
       [...budgetFlows, ...plannedFlows],
@@ -208,6 +210,7 @@ export class CashFlowSimulationService {
       statementBalances,
       settledSinceStatement,
     );
+    trace?.metric('flow_gen_liability');
 
     // SORTING SAFETY: Ensure all flows are globally sorted by dayOffset
     const allFlows = [...resolvedSpendingFlows, ...liabilityFlows].sort(
@@ -250,6 +253,7 @@ export class CashFlowSimulationService {
       liabilityAccountBalances,
       context.liquidAccountIds,
     );
+    trace?.metric('post_process_report');
 
     // Pre-group all flows by account for O(1) inside account loop
     const flowsByAccount = new Map<string, Flow[]>();
@@ -373,6 +377,7 @@ export class CashFlowSimulationService {
         } as AccountSimulationSummary;
       },
     );
+    trace?.metric('post_process_summaries');
 
     const result: SimulationRunResult = {
       simulationResult,
@@ -425,8 +430,10 @@ export class CashFlowSimulationService {
     const balances = new Map<string, number>();
     const settledAmounts = new Map<string, number>();
 
-    const convert = (amount: number, from: string) =>
-      Math.round(amount * (rateMap.get(from) || 1) * 100) / 100;
+    const convert = (amount: number, from: string) => {
+      const val = amount * (rateMap.get(from) || 1);
+      return Math.round((val + Number.EPSILON) * 100) / 100;
+    };
 
     await Promise.all(
       lbs.map(async lb => {

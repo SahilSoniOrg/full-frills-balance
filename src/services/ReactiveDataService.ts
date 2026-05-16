@@ -13,8 +13,8 @@ import { wealthService, WealthSummary } from '@/src/services/wealth-service';
 import { AccountBalance, AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { traceService } from '@/src/utils/TraceService';
+import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import {
-  auditTime,
   combineLatest,
   distinctUntilChanged,
   firstValueFrom,
@@ -126,7 +126,7 @@ class ReactiveDataService {
       currencyRepository.observeAll(),
       journalRepository.observeStatusMeta(workplaceId),
     ]).pipe(
-      auditTime(Animation.dataRefreshDebounce),
+      firstFastDebounce(Animation.dataRefreshDebounce),
       switchMap(async ([accounts, transactions]) => {
         const trace = traceService.startTrace('DashboardData');
         try {
@@ -272,7 +272,7 @@ class ReactiveDataService {
       transactionRepository.observeActiveCount(workplaceId),
       exchangeRateRepository.observeAll(),
     ]).pipe(
-      auditTime(Animation.dataRefreshDebounce),
+      firstFastDebounce(Animation.dataRefreshDebounce),
       distinctUntilChanged((prev, curr) => {
         // Only re-run if accounts structure, journal status, or tx count changed.
         // Exchange rates (curr[3]) are handled by the switchMap.

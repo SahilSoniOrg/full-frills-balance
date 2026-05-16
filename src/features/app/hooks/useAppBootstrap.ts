@@ -88,12 +88,15 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
               resolve(null);
             }
           });
-          setTimeout(() => {
-            if (!resolved) {
-              resolved = true;
-              resolve(null);
-            }
-          }, 100);
+          setTimeout(
+            () => {
+              if (!resolved) {
+                resolved = true;
+                resolve(null);
+              }
+            },
+            phaseRef.current === AppPhase.BOOTING ? 30 : 100,
+          );
         });
         logger.metric(`Bootstrap.Ghost.Yield.${stepName}`, performance.now() - yieldStart);
       };

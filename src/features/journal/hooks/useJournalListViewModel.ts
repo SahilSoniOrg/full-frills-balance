@@ -91,6 +91,8 @@ export function useJournalListViewModel(
   const baseCurrency = workplaceCurrency;
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
 
+  const mountTimeRef = useRef(performance.now());
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchGlobal, setIsSearchGlobal] = useState(true);
   const missingCurrenciesCache = useRef(new Set<string>());
@@ -117,6 +119,15 @@ export function useJournalListViewModel(
     effectiveDateRange,
     searchQuery,
   );
+
+  // Log Journal Query completion
+  useEffect(() => {
+    if (!isLoading && journals.length > 0) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      logger.info(`[JournalList] Data Loaded (Count: ${journals.length}) in ${duration}ms`);
+      logger.metric('JournalList.LoadTime', duration);
+    }
+  }, [isLoading, journals.length]);
 
   const { journals: plannedJournals } = useJournals(
     workplaceId,

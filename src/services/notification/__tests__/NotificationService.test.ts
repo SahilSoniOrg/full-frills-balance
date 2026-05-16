@@ -52,7 +52,7 @@ describe('NotificationService', () => {
     (journalRepository.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
     (journalRepository.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
     (transactionRepository.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
-    (transactionRepository.observeActiveWithColumns as jest.Mock).mockReturnValue(of([]));
+    (transactionRepository.observeActiveCount as jest.Mock).mockReturnValue(of(0));
     (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);

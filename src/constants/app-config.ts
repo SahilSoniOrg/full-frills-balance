@@ -92,6 +92,8 @@ export const AppConfig = {
     maxConcurrentOperations: 5,
     cacheTimeoutMs: 300000, // 5 minutes
     slowTraceThresholdMs: 200,
+    slowBalanceThresholdMs: 50,
+    slowAggregateThresholdMs: 30,
     rebuild: {
       checkpointInterval: 1000,
       batchSize: 500,
@@ -919,8 +921,6 @@ export const AppConfig = {
   insights: {
     lookbackDays: 90,
     refreshIntervalMs: 60 * 60 * 1000,
-    observeDebounceMs: 400,
-    patternDebounceMs: 500,
     minRecurringIntervalDays: 25,
     maxRecurringIntervalDays: 35,
     minAnnualRecurringIntervalDays: 360,

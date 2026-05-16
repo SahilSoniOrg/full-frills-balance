@@ -14,7 +14,8 @@ import { balanceService } from '@/src/services/BalanceService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
-import { combineLatest, debounceTime, of, switchMap } from 'rxjs';
+import { combineLatest, of, switchMap } from 'rxjs';
+import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 
 /**
  * Hook to reactively get all accounts
@@ -83,7 +84,7 @@ export function useAccountBalance(
         ]),
         currencyRepository.observeAll(),
       ]).pipe(
-        debounceTime(Animation.dataRefreshDebounce),
+        firstFastDebounce(Animation.dataRefreshDebounce),
         switchMap(async ([account]) => {
           if (!account) return null;
 
@@ -181,7 +182,7 @@ export function useAccountBalances(
         currencyRepository.observeAll(),
         journalRepository.observeStatusMeta(workplaceId),
       ]).pipe(
-        debounceTime(Animation.dataRefreshDebounce),
+        firstFastDebounce(Animation.dataRefreshDebounce),
         switchMap(async () => {
           const targetCurrency = currencyCode;
           const balances = await balanceService.getAccountBalances(

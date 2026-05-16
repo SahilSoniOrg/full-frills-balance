@@ -908,7 +908,9 @@ export const Layout = {
 // Timing values for interactions
 export const Animation = {
   scrollDelay: 100,
-  dataRefreshDebounce: 300,
+  dataRefreshDebounce: 150,
+  observeDebounce: 200,
+  patternDebounce: 500,
 } as const;
 
 // === Z-INDEX STACK ===

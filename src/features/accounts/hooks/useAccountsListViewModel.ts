@@ -9,7 +9,8 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { logger } from '@/src/utils/logger';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
 export interface AccountCardViewModel {
@@ -69,6 +70,13 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { showAccountMonthlyStats, isPrivacyMode } = useUI();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
+  const mountTimeRef = useRef(performance.now());
+
+  // Log UI Mount
+  useEffect(() => {
+    logger.info('[AccountsList] Screen Mounted');
+  }, []);
+
   const [isLocalPrivacyMode, setIsLocalPrivacyMode] = useState<boolean>(isPrivacyMode);
 
   // Sync with global privacy mode when it changes (e.g. from settings)
@@ -112,6 +120,17 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       },
     },
   );
+
+  const hasData = !!(dashboardData.accounts.length > 0 || dashboardData.balances.length > 0);
+
+  // Log Data Arrival
+  useEffect(() => {
+    if (hasData) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      logger.info(`[AccountsList] Data Loaded in ${duration}ms`);
+      logger.metric('AccountsList.DataLoaded', duration);
+    }
+  }, [hasData]);
 
   const accounts = dashboardData.accounts;
 

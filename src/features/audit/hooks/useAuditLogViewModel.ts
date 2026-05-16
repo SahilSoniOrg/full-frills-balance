@@ -7,8 +7,9 @@ import { auditService } from '@/src/services/audit-service';
 import { AccountId, JournalId } from '@/src/types/domain';
 import * as Alerts from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface AuditLogViewModel {
   logs: ReturnType<typeof useAuditLogs>['logs'];
@@ -28,10 +29,29 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     entityId?: string;
   }>();
   const { workplaceId } = useWorkplace();
+
+  const mountTimeRef = useRef(performance.now());
+
+  // Log UI Mount
+  useEffect(() => {
+    logger.info('[AuditLog] Screen Mounted');
+  }, []);
+
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const { accountMap, isLoading: accountsLoading } = useAuditAccounts(workplaceId);
   const { logs, isLoading } = useAuditLogs({ entityType, entityId, workplaceId });
+
+  const hasData = logs.length > 0;
+
+  // Log Data Arrival
+  useEffect(() => {
+    if (hasData) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      logger.info(`[AuditLog] Data Loaded in ${duration}ms`);
+      logger.metric('AuditLog.DataLoaded', duration);
+    }
+  }, [hasData]);
 
   const idsByEntityType = useMemo(() => {
     const groups: Record<string, string[]> = { account: [], journal: [] };

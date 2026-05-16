@@ -10,6 +10,11 @@ export default function DashboardScreen() {
   const vm = useDashboardViewModel();
   const listRef = useRef(null);
 
+  // Track Mount
+  useEffect(() => {
+    logger.info('[Dashboard] Screen Mounted');
+  }, []);
+
   // Track "First Paint" - Only fires once upon initial landing on Dashboard
   useEffect(() => {
     const startTime = (global as any).__BOOT_START_TIME__;

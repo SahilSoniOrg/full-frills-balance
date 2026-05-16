@@ -11,9 +11,10 @@ import {
 } from '@/src/services/notification/NotificationService';
 import { smsService } from '@/src/services/sms-service';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useCallback, useMemo } from 'react';
+import { logger as appLogger } from '@/src/utils/logger';
 import { Platform, UIManager } from 'react-native';
 import { of } from 'rxjs';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -59,6 +60,16 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, isSmsImportEnabled } =
     useUI();
 
+  const mountTimeRef = useRef(performance.now());
+
+  // Log UI Initialization (Prefs Loaded)
+  useEffect(() => {
+    if (isInitialized) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      appLogger.info(`[Dashboard] UI Initialized (Prefs Loaded) in ${duration}ms`);
+    }
+  }, [isInitialized]);
+
   const [isLocalPrivacyMode, setIsLocalPrivacyMode] = React.useState(isPrivacyMode);
 
   // Sync with global privacy mode when it changes (e.g. from settings)
@@ -76,11 +87,29 @@ export function useDashboardViewModel(): DashboardViewModel {
     null,
   );
 
+  const hasSafeToSpendData = !!safeToSpendData;
+  // Log Safe To Spend Data arrival
+  useEffect(() => {
+    if (hasSafeToSpendData) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      appLogger.info(`[Dashboard] SafeToSpend Data Loaded in ${duration}ms`);
+    }
+  }, [hasSafeToSpendData]);
+
   const { data: insights } = useObservable(
     () => insightService.observePatterns(workplaceId),
     [workplaceId],
     [],
   );
+
+  const hasInsights = !!(insights && insights.length > 0);
+  // Log Insights arrival
+  useEffect(() => {
+    if (hasInsights) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      appLogger.info(`[Dashboard] Insights Loaded in ${duration}ms`);
+    }
+  }, [hasInsights]);
 
   const { data: unreadSmsCount } = useObservable(
     () => (Platform.OS === 'android' ? smsService.observeUnprocessedCount(workplaceId) : of(0)),
@@ -112,6 +141,24 @@ export function useDashboardViewModel(): DashboardViewModel {
     },
     workplaceId,
   );
+
+  const hasJournalItems = listViewProps.items.length > 0;
+  // Log Journal List arrival
+  useEffect(() => {
+    if (hasJournalItems) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      appLogger.info(`[Dashboard] Journal List Items Loaded in ${duration}ms`);
+    }
+  }, [hasJournalItems]);
+
+  // Log "Fully Ready" state
+  useEffect(() => {
+    if (isInitialized && hasSafeToSpendData && hasJournalItems) {
+      const duration = Math.round(performance.now() - mountTimeRef.current);
+      appLogger.info(`[Dashboard] Fully Ready in ${duration}ms`);
+      appLogger.metric('Dashboard.FullyReady', duration);
+    }
+  }, [isInitialized, hasSafeToSpendData, hasJournalItems]);
 
   const onAddPress = useCallback(() => {
     AppNavigation.toJournalEntry();

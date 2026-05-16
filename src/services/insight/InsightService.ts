@@ -1,16 +1,18 @@
 import { AppConfig } from '@/src/constants';
 import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account';
+import Transaction from '@/src/data/models/Transaction';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { RecurringPattern } from '@/src/data/repositories/TransactionTypes';
+import { traceService } from '@/src/utils/TraceService';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
 import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
-import { debounceTime, switchMap } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators';
 
 export interface Insight {
   id: string;
@@ -71,26 +73,66 @@ export class InsightService {
           of(ninetyDaysAgo),
         ]);
       }),
-      debounceTime(insightsConfig.patternDebounceMs),
       switchMap(async ([_, accounts, activePlannedPayments, __, ninetyDaysAgo]) => {
+        const trace = traceService.startTrace('InsightService.observePatterns');
         const accountMap = new Map((accounts as Account[]).map((a: Account) => [a.id, a]));
         const minCount = insightsConfig.minRecurringCount;
 
-        const recurringCandidates: RecurringPattern[] =
-          await transactionRawRepository.getRecurringPatternsRaw(ninetyDaysAgo as number, minCount);
+        // 1. Concurrent Fetch: Recurring candidates and Expense history
+        trace.metric('fetch_data');
+        const [recurringCandidates, expenseTransactions] = await Promise.all([
+          transactionRawRepository.getRecurringPatternsRaw(ninetyDaysAgo as number, minCount),
+          transactionRepository.findByAccountsAndDateRange(
+            workplaceId,
+            (accounts as Account[])
+              .filter((a: Account) => a.accountType === AccountType.EXPENSE)
+              .map((a: Account) => a.id),
+            ninetyDaysAgo as number,
+            Date.now(),
+          ),
+        ]);
+
         const patterns: Insight[] = [];
 
+        // 2. Batch fetch journals for recurring candidates to fix N+1
+        trace.metric('evaluate_recurring');
+        const candidateJournalIds = new Set<JournalId>();
+        for (const candidate of recurringCandidates) {
+          const acc = accountMap.get(candidate.accountId);
+          if (acc?.accountType !== AccountType.EXPENSE) continue;
+          const ids = (candidate.journalIds || '').split(',') as JournalId[];
+          ids.forEach(id => id && candidateJournalIds.add(id as JournalId));
+        }
+
+        const [candidateJournals, allCandidateTransactions] = await Promise.all([
+          journalRepository.findByIds(workplaceId, Array.from(candidateJournalIds)),
+          transactionRepository.findByJournals(workplaceId, Array.from(candidateJournalIds)),
+        ]);
+        const journalMap = new Map(candidateJournals.map(j => [j.id, j]));
+
+        const transactionsByJournal = new Map<JournalId, Transaction[]>();
+        for (const tx of allCandidateTransactions) {
+          const list = transactionsByJournal.get(tx.journalId) || [];
+          list.push(tx);
+          transactionsByJournal.set(tx.journalId, list);
+        }
+
+        // Process recurring candidates
         for (const candidate of recurringCandidates) {
           const acc = accountMap.get(candidate.accountId);
           if (acc?.accountType !== AccountType.EXPENSE) continue;
 
           const journalIds = (candidate.journalIds || '').split(',') as JournalId[];
-          const transactions = await transactionRepository.findByJournals(workplaceId, journalIds);
+          const groupTransactions: Transaction[] = [];
+          for (const id of journalIds) {
+            const txs = transactionsByJournal.get(id);
+            if (txs) groupTransactions.push(...txs);
+          }
 
-          // Group by description to handle case where two different subscriptions have same amount
-          const byDescription = new Map<string, typeof transactions>();
-          for (const tx of transactions) {
-            const journal = await tx.journal.fetch();
+          // Group by description (cached journals)
+          const byDescription = new Map<string, Transaction[]>();
+          for (const tx of groupTransactions) {
+            const journal = journalMap.get(tx.journalId);
             const desc = journal?.description || 'Unknown';
             if (!byDescription.has(desc)) byDescription.set(desc, []);
             byDescription.get(desc)!.push(tx);
@@ -141,17 +183,10 @@ export class InsightService {
           }
         }
 
+        // 3. Evaluate Leaks and Lifestyle Drift
+        trace.metric('evaluate_leaks');
         const spikeWindow = insightsConfig.spikeWindowDays;
         const last7Days = Date.now() - spikeWindow * AppConfig.time.msPerDay;
-
-        const expenseTransactions = await transactionRepository.findByAccountsAndDateRange(
-          workplaceId,
-          (accounts as Account[])
-            .filter((a: Account) => a.accountType === AccountType.EXPENSE)
-            .map((a: Account) => a.id),
-          ninetyDaysAgo as number,
-          Date.now(),
-        );
 
         const finalPatterns = patterns.filter((p: Insight) => {
           if (p.type !== 'subscription-amnesiac') return true;
@@ -255,6 +290,7 @@ export class InsightService {
           }
         }
 
+        trace.end();
         const dismissedIds = preferences.dismissedPatternIds;
         if (onlyDismissed) {
           return finalPatterns.filter(p => dismissedIds.includes(p.id));

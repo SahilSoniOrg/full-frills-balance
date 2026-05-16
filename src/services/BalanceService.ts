@@ -34,6 +34,7 @@ export class BalanceService {
     targetDefaultCurrency?: string,
     parentTrace?: Trace,
   ) {
+    const start = performance.now();
     const trace = parentTrace || traceService.startTrace('BalanceService.aggregateBalances');
     try {
       if (accounts.length === 0) return;
@@ -253,7 +254,13 @@ export class BalanceService {
       logger.error('Failed to aggregate balances:', error);
       throw error;
     } finally {
-      if (!parentTrace) trace.end();
+      if (!parentTrace) {
+        trace.end();
+        const duration = Math.round(performance.now() - start);
+        if (duration > AppConfig.performance.slowAggregateThresholdMs) {
+          logger.info(`[BalanceService] aggregateBalances took ${duration}ms`);
+        }
+      }
     }
   }
 
@@ -383,6 +390,7 @@ export class BalanceService {
     targetDefaultCurrency?: string,
     parentTrace?: Trace,
   ): Promise<AccountBalance[]> {
+    const start = performance.now();
     const trace = parentTrace || traceService.startTrace('BalanceService.getAccountBalances');
     try {
       const accounts = await accountRepository.findAll(workplaceId);
@@ -456,8 +464,6 @@ export class BalanceService {
 
       const balancesMap = new Map(balances.map(b => [b.accountId, b]));
 
-      // No longer need precisionMap by account ID, we use currencyPrecisionMap directly
-
       await this.aggregateBalances(
         accounts,
         balancesMap,
@@ -466,6 +472,13 @@ export class BalanceService {
         trace,
       );
       trace.metric('aggregate');
+
+      const duration = Math.round(performance.now() - start);
+      if (duration > AppConfig.performance.slowBalanceThresholdMs) {
+        logger.info(
+          `[BalanceService] getAccountBalances took ${duration}ms (${accounts.length} accounts)`,
+        );
+      }
 
       return Array.from(balancesMap.values());
     } catch (error) {
