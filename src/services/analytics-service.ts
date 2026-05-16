@@ -42,6 +42,7 @@ export class AnalyticsService {
   /**
    * Initialize analytics provider.
    * Guaranteed to be idempotent and safe to call multiple times.
+   * MUST be called at module level or very early boot to satisfy Sentry requirements.
    */
   initialize() {
     if (this._initialized) return;
@@ -50,29 +51,25 @@ export class AnalyticsService {
       typeof POSTHOG_API_KEY === 'string' &&
       POSTHOG_API_KEY.trim().length > 0 &&
       AppConfig.features.enablePostHog;
-    // 1. Setup PostHog instance on-demand
+
+    // 1. Setup PostHog instance
     if (!this._posthog && isPosthogEnabled) {
       try {
         this._posthog = new PostHog(POSTHOG_API_KEY, {
           host: POSTHOG_HOST,
-          // Temporarily enabled in dev for verification
           disabled: !isPosthogEnabled,
-          // Enable error tracking
           errorTracking: { autocapture: true },
-          // Better mobile session tracking
           enablePersistSessionIdAcrossRestart: true,
-          // Automatically enrich EVERY event (including autocaptured ones)
           customAppProperties: props => ({
             ...props,
             ...this.getGlobalProperties(),
           }),
-          // Temporarily enabled in dev for verification
           enableSessionReplay: true,
           sessionReplayConfig: {
-            sampleRate: 1.0, // 100% sampling for testing
+            sampleRate: 1.0,
             maskAllTextInputs: true,
             maskAllImages: true,
-            captureLog: true, // Capture console logs in replays
+            captureLog: true,
           },
         });
       } catch (error) {
@@ -80,27 +77,24 @@ export class AnalyticsService {
       }
     }
 
-    // 2. Register as the performance reporter for the logger metric layer
+    // 2. Register as the performance reporter
     logger.setPerformanceReporter((metric, value, context) => {
       this.trackPerformance(metric, value, context);
     });
 
-    // 3. Sync ID to Sentry for cross-platform correlation
-    if (this._posthog) {
-      const distinctId = this._posthog.getDistinctId();
-      Sentry.setUser({ id: distinctId });
-    }
-
+    // 3. Sentry Setup
     this.initializeSentry();
+
+    // 4. Finalize
     this._initialized = true;
 
-    if (this._posthog && __DEV__) {
-      logger.info('[Analytics] PostHog client ready (debug mode — events disabled in __DEV__)');
-    } else if (this._posthog) {
-      logger.info('[Analytics] PostHog client ready');
-      this.startSessionTracking();
-    } else {
-      logger.warn('[Analytics] Analytics disabled (missing key or dev mode)');
+    if (this._posthog) {
+      if (__DEV__) {
+        logger.info('[Analytics] PostHog client ready (debug mode)');
+      } else {
+        logger.info('[Analytics] PostHog client ready');
+        this.startSessionTracking();
+      }
     }
   }
 
@@ -116,10 +110,9 @@ export class AnalyticsService {
     try {
       Sentry.init({
         dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-        enabled: true, // We already checked the config flag above
+        enabled: true,
         debug: false,
         tracesSampleRate: 1.0,
-        // Session Replay
         replaysSessionSampleRate: 0.1,
         replaysOnErrorSampleRate: 1.0,
         integrations: [
@@ -129,6 +122,12 @@ export class AnalyticsService {
         ],
         enableUserInteractionTracing: true,
       });
+
+      if (this._posthog) {
+        const distinctId = this._posthog.getDistinctId();
+        Sentry.setUser({ id: distinctId });
+      }
+
       logger.info('[Analytics] Sentry initialized');
     } catch (error) {
       logger.error('[Analytics] Failed to initialize Sentry', error);
@@ -138,25 +137,34 @@ export class AnalyticsService {
    * Get global properties for event enrichment
    */
   private getGlobalProperties(): Record<string, any> {
-    return {
-      $app_id: Application.applicationId || 'unknown',
-      $app_namespace: Application.applicationId || 'unknown',
-      $app_name: Application.applicationName || 'Full Frills Balance',
-      $app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
-      $app_build: Application.nativeBuildVersion || '1',
-      $app_build_number: Application.nativeBuildVersion || '1', // Keep for backward compatibility
-      $device_name: Device.deviceName,
-      $device_model: Device.modelName,
-      $os_name: Platform.OS,
-      $os_version: Device.osVersion,
-      $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
-      $is_dev: __DEV__ || !Device.isDevice,
-      $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
-      $build_type: BUILD_TYPE,
-      $active_workplace_id: preferences.activeWorkplaceId || 'none',
-      $db_schema_version: schema.version,
-      is_test_build: BUILD_TYPE !== 'production',
-    };
+    try {
+      return {
+        $app_id: Application.applicationId || 'unknown',
+        $app_namespace: Application.applicationId || 'unknown',
+        $app_name: Application.applicationName || 'Full Frills Balance',
+        $app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
+        $app_build: Application.nativeBuildVersion || '1',
+        $app_build_number: Application.nativeBuildVersion || '1', // Keep for backward compatibility
+        $device_name: Device.deviceName || 'unknown',
+        $device_model: Device.modelName || 'unknown',
+        $os_name: Platform.OS,
+        $os_version: Device.osVersion || 'unknown',
+        $is_tablet: Device.deviceType === Device.DeviceType.TABLET,
+        $is_dev: __DEV__ || !Device.isDevice,
+        $app_variant: process.env.EXPO_PUBLIC_APP_VARIANT || 'production',
+        $build_type: BUILD_TYPE || 'unknown',
+        $active_workplace_id: preferences.activeWorkplaceId || 'none',
+        $db_schema_version: schema.version,
+        is_test_build: BUILD_TYPE !== 'production',
+      };
+    } catch (error) {
+      logger.warn('[Analytics] Failed to collect some global properties', { error });
+      return {
+        $os_name: Platform.OS,
+        $is_dev: __DEV__,
+        $build_type: BUILD_TYPE || 'unknown',
+      };
+    }
   }
 
   /**

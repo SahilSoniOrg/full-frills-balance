@@ -1,3 +1,6 @@
+// Polyfill secure randomness for libraries like PostHog (Fixes RangeError on Huawei/Hermes)
+import 'react-native-get-random-values';
+
 // Global anchor for boot performance telemetry
 import 'expo-router/entry';
 
