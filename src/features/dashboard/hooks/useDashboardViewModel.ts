@@ -4,24 +4,19 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalListViewProps, useJournalListScreen } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
 import { analytics } from '@/src/services/analytics-service';
-import { insightService } from '@/src/services/insight/InsightService';
+import { insightService, Insight } from '@/src/services/insight/InsightService';
 import {
   notificationService,
   SafeToSpendResult,
 } from '@/src/services/notification/NotificationService';
 import { smsService } from '@/src/services/sms-service';
-import { AppNavigation } from '@/src/utils/navigation';
 import { logger as appLogger } from '@/src/utils/logger';
-import { Platform, UIManager } from 'react-native';
-import { of } from 'rxjs';
+import { AppNavigation } from '@/src/utils/navigation';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { Platform } from 'react-native';
+import { EMPTY, of } from 'rxjs';
 
 export interface DashboardViewModel {
-  isInitialized: boolean;
   hasCompletedOnboarding: boolean;
   isPrivacyMode: boolean;
   listViewProps: Omit<JournalListViewProps, 'screenTitle' | 'showBack' | 'listHeader' | 'fab'>;
@@ -57,8 +52,14 @@ export interface DashboardViewModel {
 
 export function useDashboardViewModel(): DashboardViewModel {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const { userName, hasCompletedOnboarding, isInitialized, isPrivacyMode, isSmsImportEnabled } =
-    useUI();
+  const {
+    userName,
+    hasCompletedOnboarding,
+    isInitialized,
+    isAppReady,
+    isPrivacyMode,
+    isSmsImportEnabled,
+  } = useUI();
 
   const mountTimeRef = useRef(performance.now());
 
@@ -81,9 +82,10 @@ export function useDashboardViewModel(): DashboardViewModel {
     setIsLocalPrivacyMode(prev => !prev);
   }, []);
 
-  const { data: safeToSpendData } = useObservable(
-    () => notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode),
-    [workplaceId],
+  const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
+    () =>
+      isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
+    [workplaceId, isAppReady],
     null,
   );
 
@@ -96,9 +98,9 @@ export function useDashboardViewModel(): DashboardViewModel {
     }
   }, [hasSafeToSpendData]);
 
-  const { data: insights } = useObservable(
-    () => insightService.observePatterns(workplaceId),
-    [workplaceId],
+  const { data: insights } = useObservable<Insight[]>(
+    () => (isAppReady ? insightService.observePatterns(workplaceId) : EMPTY),
+    [workplaceId, isAppReady],
     [],
   );
 
@@ -213,7 +215,7 @@ export function useDashboardViewModel(): DashboardViewModel {
         if (v) analytics.logChartInteracted('safe_to_spend', 'explanation_open');
       },
       expandedSection,
-      setExpandedSection: (s: any) => {
+      setExpandedSection: (s: 'assets' | 'income' | 'committed' | 'debts' | null) => {
         setExpandedSection(s);
         if (s) analytics.logChartInteracted('safe_to_spend', `explanation_expand_${s}`);
       },

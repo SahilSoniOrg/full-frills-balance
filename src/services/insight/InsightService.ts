@@ -8,11 +8,12 @@ import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { traceService } from '@/src/utils/TraceService';
+import { logger } from '@/src/utils/logger';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { preferences } from '@/src/utils/preferences';
-import { BehaviorSubject, combineLatest, Observable, of, timer } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { BehaviorSubject, combineLatest, firstValueFrom, Observable, of, timer } from 'rxjs';
+import { shareReplay, switchMap, take } from 'rxjs/operators';
 
 export interface Insight {
   id: string;
@@ -36,13 +37,17 @@ export class InsightService {
    * Triggers heavy SQL queries and pattern analysis during the splash screen
    * phase without blocking the first render.
    */
-  preWarm(workplaceId: WorkplaceId): void {
-    // Trigger the pattern matching chain.
-    const sub = this.observePatterns(workplaceId).subscribe();
-
-    // Keep alive long enough to prime repository and SQLite caches.
-    setTimeout(() => sub.unsubscribe(), 15000);
+  async preWarm(workplaceId: WorkplaceId): Promise<void> {
+    try {
+      // Trigger the pattern matching chain and wait for the first emission.
+      // This ensures repository caches are primed and initial analysis is done.
+      await firstValueFrom(this.observePatterns(workplaceId).pipe(take(1)));
+    } catch (error) {
+      logger.warn('[InsightService] Pre-warm failed', { error });
+    }
   }
+
+  private insightCache = new Map<string, Observable<Insight[]>>();
 
   observeDismissedPatterns(workplaceId: WorkplaceId): Observable<Insight[]> {
     return this.observePatternsInternal(workplaceId, true);
@@ -56,12 +61,16 @@ export class InsightService {
     workplaceId: WorkplaceId,
     onlyDismissed: boolean,
   ): Observable<Insight[]> {
+    const cacheKey = `${workplaceId}_${onlyDismissed}`;
+    const cached = this.insightCache.get(cacheKey);
+    if (cached) return cached;
+
     const insightsConfig = AppConfig.insights;
     const lookbackDays = insightsConfig.lookbackDays;
 
     const oneHour = insightsConfig.refreshIntervalMs;
 
-    return timer(0, oneHour).pipe(
+    const obs$: Observable<Insight[]> = timer(0, oneHour).pipe(
       switchMap(() => {
         const ninetyDaysAgo = Date.now() - lookbackDays * AppConfig.time.msPerDay;
 
@@ -297,7 +306,11 @@ export class InsightService {
         }
         return finalPatterns.filter(p => !dismissedIds.includes(p.id));
       }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
+
+    this.insightCache.set(cacheKey, obs$);
+    return obs$;
   }
 
   async dismissPattern(id: string): Promise<void> {

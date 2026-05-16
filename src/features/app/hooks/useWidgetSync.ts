@@ -1,11 +1,16 @@
 import { AppConfig } from '@/src/constants';
+import { Theme } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
-import { notificationService } from '@/src/services/notification/NotificationService';
+import {
+  notificationService,
+  SafeToSpendResult,
+} from '@/src/services/notification/NotificationService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { Platform } from 'react-native';
+import { EMPTY } from 'rxjs';
 
 // Use the types from the module
 import { WorkplaceId } from '@/src/types/domain';
@@ -64,7 +69,7 @@ function mixHexColors(base: string, overlay: string, overlayWeight: number) {
 function buildWidgetThemeSnapshot(
   themeId: string,
   themeMode: 'light' | 'dark',
-  theme: any, // Using any for theme object for now to match RootLayout's usage, but ideally should be typed
+  theme: Theme,
 ): WidgetThemeSnapshot {
   const backgroundStartColor = normalizeHexColor(theme.surface);
   const backgroundEndColor =
@@ -92,11 +97,14 @@ function buildWidgetThemeSnapshot(
 }
 
 export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
-  const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked } = useUI();
+  const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked, isAppReady } = useUI();
   const { theme, themeMode } = useTheme();
-  const { data: safeToSpendData } = useObservable(
-    () => notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode),
-    [workplaceId, defaultCurrencyCode],
+
+  // Delay safeToSpend calculation until the app is ready to avoid blocking hydration
+  const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
+    () =>
+      isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
+    [workplaceId, defaultCurrencyCode, isAppReady],
     null,
   );
 
@@ -111,7 +119,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const currencyCode = rawCurrencyCode || defaultCurrencyCode;
 
   React.useEffect(() => {
-    if (Platform.OS === 'web' || isAppCurrentlyLocked) {
+    if (Platform.OS === 'web' || isAppCurrentlyLocked || !isAppReady) {
       return;
     }
 
@@ -144,7 +152,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
         isPrivacyEnabled: isWidgetPrivacyEnabled,
       };
 
-      await expoWidgetsModule.syncWidgetData(snapshot).catch((err: any) => {
+      await expoWidgetsModule.syncWidgetData(snapshot).catch((err: Error | unknown) => {
         console.warn('[useWidgetSync] Failed to sync widget data:', err);
       });
     };
@@ -176,5 +184,6 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     firstMajorInflowDayFromData,
     currencyCode,
     isDataPresent,
+    isAppReady,
   ]);
 }

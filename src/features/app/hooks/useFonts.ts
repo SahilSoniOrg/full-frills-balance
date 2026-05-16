@@ -16,7 +16,7 @@ import { Raleway_500Medium } from '@expo-google-fonts/raleway/500Medium';
 import { Raleway_600SemiBold } from '@expo-google-fonts/raleway/600SemiBold';
 import { Raleway_700Bold } from '@expo-google-fonts/raleway/700Bold';
 import * as Font from 'expo-font';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Define the fonts needed for each ID
 const FONT_MAP: Record<string, Record<string, any>> = {
@@ -43,59 +43,31 @@ const FONT_MAP: Record<string, Record<string, any>> = {
   },
 };
 
-// Pre-warm the default font set at module evaluation time so it loads in parallel
-// with JS bundle parsing and provider tree construction. By the time FontManager
-// mounts and checks, the font is often already registered — eliminating the visual
-// blocking window on the common-case (default theme) boot path.
-const DEFAULT_FONT_PREWARM_PROMISE = Font.loadAsync(FONT_MAP[FontIds.DEEP_SPACE]).catch(() => {
-  /* ignore pre-warm failures — FontManager handles fallback */
-});
-
-interface FontManagerProps {
-  children: React.ReactNode;
-}
+const DEFAULT_FONT_PREWARM_PROMISE = Font.loadAsync(FONT_MAP[FontIds.DEEP_SPACE]).catch(() => {});
 
 /**
- * FontManager - Dynamically loads fonts based on the selected theme.
- * This prevents loading all fonts at startup, saving memory and improving boot time.
+ * useFonts - Dynamically loads fonts based on the selected theme.
  */
-export function FontManager({ children }: FontManagerProps) {
+export function useFonts() {
   const { fontId, dispatchBootEvent } = useUI();
-  // Use a ref to track loaded font sets — avoids re-triggering the load effect
-  // every time the set is updated (the previous useState approach caused an
-  // unnecessary reload loop when loadedFontSets was in the dep array).
   const loadedFontSetsRef = useRef<Set<string>>(new Set());
-  const [currentFontReady, setCurrentFontReady] = useState(false);
 
   useEffect(() => {
-    // Local RESET for UI blocking during theme switch
-    setCurrentFontReady(false);
-
     let isActive = true;
 
     async function loadFontSet() {
-      // If fonts for this theme are already loaded (or pre-warmed), we're ready
       if (loadedFontSetsRef.current.has(fontId)) {
-        if (isActive) {
-          setCurrentFontReady(true);
-          dispatchBootEvent('FONTS_LOADED');
-        }
+        if (isActive) dispatchBootEvent('FONTS_LOADED');
         return;
       }
 
       const fontsToLoad = FONT_MAP[fontId];
       if (!fontsToLoad) {
-        // Fallback for missing/invalid fontId
-        if (isActive) {
-          setCurrentFontReady(true);
-          dispatchBootEvent('FONTS_LOADED');
-        }
+        if (isActive) dispatchBootEvent('FONTS_LOADED');
         return;
       }
 
       try {
-        // If this is the default font, await the module-level pre-warm promise
-        // (which may already be resolved) rather than starting a new load.
         if (fontId === FontIds.DEEP_SPACE) {
           await DEFAULT_FONT_PREWARM_PROMISE;
         } else {
@@ -104,15 +76,10 @@ export function FontManager({ children }: FontManagerProps) {
 
         if (isActive) {
           loadedFontSetsRef.current.add(fontId);
-          setCurrentFontReady(true);
           dispatchBootEvent('FONTS_LOADED');
         }
       } catch {
-        // Still allow the app to show (with system fonts) if loading fails
-        if (isActive) {
-          setCurrentFontReady(true);
-          dispatchBootEvent('FONTS_LOADED');
-        }
+        if (isActive) dispatchBootEvent('FONTS_LOADED');
       }
     }
 
@@ -121,13 +88,5 @@ export function FontManager({ children }: FontManagerProps) {
     return () => {
       isActive = false;
     };
-    // loadedFontSetsRef is intentionally excluded — it's a ref, not reactive state
   }, [fontId, dispatchBootEvent]);
-
-  // Block the app ONLY during the initial font load of the current theme
-  if (!currentFontReady && loadedFontSetsRef.current.size === 0) {
-    return null;
-  }
-
-  return <>{children}</>;
 }

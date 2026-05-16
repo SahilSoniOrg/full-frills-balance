@@ -20,13 +20,7 @@ import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
-export enum AppPhase {
-  BOOTING = 0, // Native splash active, loading critical prefs/fonts
-  READY = 1, // Preferences + Fonts loaded, UI safe to show (hide splash)
-  STABILIZED = 2, // Background tasks (integrity, payments, etc.) finished
-}
-
-export type BootEvent = 'PREFS_HYDRATED' | 'FONTS_LOADED' | 'DATA_HYDRATED' | 'STABILIZATION_DONE';
+export type BootEvent = 'FONTS_LOADED' | 'DATA_HYDRATED';
 
 // Simple UI state only - no domain data
 interface UIState {
@@ -79,7 +73,6 @@ interface UIState {
   notificationHour: number;
   notificationMinute: number;
   notificationWeekday: number;
-  appPhase: AppPhase;
   defaultShareFormat: ShareFormat;
   safeToSpendDays: number;
   isSmsImportEnabled: boolean;
@@ -160,7 +153,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     notificationMinute: AppConfig.defaults.notifications.defaultMinute,
     notificationWeekday: AppConfig.defaults.notifications.defaultWeekday,
     fontsReady: false,
-    appPhase: AppPhase.BOOTING,
     defaultShareFormat: ShareFormat.TEXT,
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
     isSmsImportEnabled: false,
@@ -195,7 +187,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           importStats: null,
           isLoading: false,
           isInitialized: true,
-          appPhase: prev.fontsReady ? AppPhase.READY : AppPhase.BOOTING,
           archetype: loadedPreferences.archetype || 'balance-glancer',
           notificationCadence: loadedPreferences.notificationCadence || 'none',
           notificationHour: loadedPreferences.notificationHour ?? 10,
@@ -351,54 +342,19 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setUIState(prev => {
       let nextIsInitialized = prev.isInitialized;
       let nextFontsReady = prev.fontsReady;
+      let nextIsDataHydrated = prev.isDataHydrated;
 
-      if (event === 'PREFS_HYDRATED') nextIsInitialized = true;
       if (event === 'FONTS_LOADED') nextFontsReady = true;
-      if (event === 'DATA_HYDRATED') {
-        return { ...prev, isDataHydrated: true };
-      }
-
-      let nextPhase = prev.appPhase;
-
-      // Transition to READY only if both critical paths are complete
-      if (nextIsInitialized && nextFontsReady && nextPhase < AppPhase.READY) {
-        nextPhase = AppPhase.READY;
-        logger.info('[UIContext] Boot Phase: READY');
-      }
-
-      // Transition to STABILIZED only if we were READY
-      if (event === 'STABILIZATION_DONE' && nextPhase === AppPhase.READY) {
-        nextPhase = AppPhase.STABILIZED;
-        logger.info('[UIContext] Boot Phase: STABILIZED');
-      }
-
-      // MONOTONIC LOCK: Prevent phase regression (cannot go back to BOOTING or READY)
-      if (nextPhase < prev.appPhase) {
-        nextPhase = prev.appPhase;
-      }
+      if (event === 'DATA_HYDRATED') nextIsDataHydrated = true;
 
       return {
         ...prev,
         isInitialized: nextIsInitialized,
         fontsReady: nextFontsReady,
-        appPhase: nextPhase,
+        isDataHydrated: nextIsDataHydrated,
       };
     });
   }, []);
-
-  // Handle onboarding hydration bypass
-  // Since useAppBootstrap (which normally dispatches DATA_HYDRATED) is gated behind onboarding,
-  // we must manually force the event to allow the app to reach AppPhase.READY and hide the splash screen.
-  useEffect(() => {
-    if (uiState.isInitialized && !uiState.hasCompletedOnboarding && !uiState.isDataHydrated) {
-      dispatchBootEvent('DATA_HYDRATED');
-    }
-  }, [
-    uiState.isInitialized,
-    uiState.hasCompletedOnboarding,
-    uiState.isDataHydrated,
-    dispatchBootEvent,
-  ]);
 
   const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
     try {
@@ -551,10 +507,15 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     uiState.isLockAuthenticating,
   ]);
 
+  const isAppReady = useMemo(
+    () => uiState.isInitialized && uiState.fontsReady && uiState.isDataHydrated,
+    [uiState.isInitialized, uiState.fontsReady, uiState.isDataHydrated],
+  );
+
   const value = useMemo<UIContextType>(
     () => ({
       ...uiState,
-      isAppReady: uiState.appPhase >= AppPhase.READY,
+      isAppReady,
       themeMode,
       isAppCurrentlyLocked,
       completeOnboarding,
@@ -582,6 +543,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       uiState,
+      isAppReady,
       themeMode,
       isAppCurrentlyLocked,
       completeOnboarding,

@@ -3,10 +3,9 @@ import { usePathname, useSegments } from 'expo-router';
 import { analytics } from '@/src/services/analytics-service';
 
 /**
- * Screen tracker component that listens to navigation changes and reports to analytics.
- * This should be placed inside the navigation container or router layout.
+ * Hook that listens to navigation changes and reports to analytics.
  */
-export function TelemetryTracker() {
+export function useTelemetry() {
   const pathname = usePathname();
   const segments = useSegments();
 
@@ -39,8 +38,6 @@ export function TelemetryTracker() {
       }
     }
   }, [pathname, segments]);
-
-  return null;
 }
 
 // --- Helper functions for screen classification ---

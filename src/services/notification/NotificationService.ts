@@ -20,8 +20,8 @@ import dayjs from 'dayjs';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
-import { combineLatest, from, Observable, of } from 'rxjs';
-import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
+import { firstValueFrom, combineLatest, from, Observable, of } from 'rxjs';
+import { catchError, map, shareReplay, switchMap, take } from 'rxjs/operators';
 import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
@@ -117,15 +117,15 @@ export class NotificationService {
    * This triggers the heavy data observation and cache hydration during the
    * splash screen phase without blocking the first render.
    */
-  preWarm(workplaceId: WorkplaceId, defaultCurrencyCode: string): void {
+  async preWarm(workplaceId: WorkplaceId, defaultCurrencyCode: string): Promise<void> {
     if (Platform.OS === 'web') return;
-    // Trigger the simulation chain. The shareReplay(1) in observeSafeToSpend
-    // will ensure the first screen to subscribe gets the result instantly.
-    const sub = this.observeSafeToSpend(workplaceId, defaultCurrencyCode).subscribe();
-
-    // We keep the subscription alive for at least 10s to ensure the first results
-    // are calculated and cached in the shareReplay buffer.
-    setTimeout(() => sub.unsubscribe(), 10000);
+    try {
+      // Trigger the simulation chain and wait for the first emission.
+      // The shareReplay(1) in observeSafeToSpend ensures the result is cached.
+      await firstValueFrom(this.observeSafeToSpend(workplaceId, defaultCurrencyCode).pipe(take(1)));
+    } catch (error) {
+      logger.warn('[NotificationService] Pre-warm failed', { error });
+    }
   }
 
   async checkPermissions(): Promise<boolean> {
@@ -591,7 +591,7 @@ export class NotificationService {
         logger.error(`[SafeToSpend] Outer pipeline error (Workplace: ${workplaceId}):`, err);
         return of(this.getEmptySafeToSpendResult(defaultCurrencyCode));
       }),
-      shareReplay({ bufferSize: 1, refCount: true }),
+      shareReplay({ bufferSize: 1, refCount: false }),
     );
 
     this.safeToSpendByWorkplace.set(workplaceId, obs);

@@ -1,7 +1,4 @@
 import { useUI } from '@/src/contexts/UIContext';
-import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
-import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { Stack } from 'expo-router';
 import React from 'react';
@@ -10,35 +7,14 @@ import React from 'react';
  * Orchestrates the main app content based on onboarding and restart state.
  */
 export function AppContent() {
-  const { isRestartRequired, hasCompletedOnboarding } = useUI();
+  const { isRestartRequired } = useUI();
 
   if (isRestartRequired) {
     return <RestartRequiredScreen />;
   }
 
-  if (!hasCompletedOnboarding) {
-    return <NavigationStack />;
-  }
-
-  return (
-    <WorkplaceProvider>
-      <WorkplaceLoadedContent />
-    </WorkplaceProvider>
-  );
-}
-
-/**
- * Handles bootstrap logic once a workplace is loaded.
- */
-function WorkplaceLoadedContent() {
-  const { workplaceId, defaultCurrencyCode } = useWorkplace();
-
-  // Sync app data with native widgets
-  useWidgetSync(workplaceId, defaultCurrencyCode);
-
-  // Initialize background services and data warmup
-  useAppBootstrap(workplaceId, defaultCurrencyCode);
-
+  // We render the same stack, expo-router handles the path matching
+  // but we can add path-gating here if needed in the future.
   return <NavigationStack />;
 }
 

@@ -7,13 +7,12 @@ import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepo
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { balanceService } from '@/src/services/BalanceService';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { reportService } from '@/src/services/report-service';
 import { wealthService, WealthSummary } from '@/src/services/wealth-service';
 import { AccountBalance, AccountId, AccountType, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
-import { traceService } from '@/src/utils/TraceService';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
+import { traceService } from '@/src/utils/TraceService';
 import {
   combineLatest,
   distinctUntilChanged,
@@ -283,8 +282,6 @@ class ReactiveDataService {
       switchMap(async ([accounts]) => {
         const trace = traceService.startTrace('AllBalances.Calculate');
         try {
-          await exchangeRateService.preWarmCache();
-
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
           const endOfMonth = new Date(

@@ -1,19 +1,17 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
-import { Spacing } from '@/src/constants';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
 
-import { Inset, Page, Skeleton, Stack } from '@/src/design-system';
+import { Inset } from '@/src/design-system';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeToSpendCard } from './SafeToSpendCard';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
 export function DashboardScreenView({
-  isInitialized,
   hasCompletedOnboarding,
   listViewProps,
   headerProps,
@@ -47,30 +45,53 @@ export function DashboardScreenView({
   );
 
   const safeToSpendViewModel = useSafeToSpendView({
-    ...(safeToSpendData || ({} as any)),
+    // Provide defaults for all required fields when data is null to avoid dangerous casting
+    summary: safeToSpendData?.summary ?? {
+      safeToSpend: 0,
+      shortfall: 0,
+      trajectoryMinBalance: 0,
+      safeDaysCount: null,
+      totalFutureInflow: 0,
+      totalPlannedInflow: 0,
+      totalPlannedOutflow: 0,
+      totalCommittedPlanned: 0,
+      firstMajorInflowDay: null,
+    },
+    report: safeToSpendData?.report ?? {
+      allFlows: [],
+      liabilities: {
+        total: 0,
+        totalCreditCard: 0,
+        totalOther: 0,
+        committed: 0,
+        committedCreditCard: 0,
+        committedOther: 0,
+      },
+      budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 0 },
+      summary: {
+        firstMajorInflowDay: null,
+        totalFutureInflow: 0,
+        totalPlannedInflow: 0,
+        totalPlannedOutflow: 0,
+        totalCommittedPlanned: 0,
+      },
+    },
+    accountSummaries: safeToSpendData?.accountSummaries ?? [],
+    totalLiquidAssets: safeToSpendData?.totalLiquidAssets ?? 0,
+    currencyCode: safeToSpendData?.currencyCode ?? '',
+    liquidAssetSubtypes: safeToSpendData?.liquidAssetSubtypes ?? [],
+    dailyBudgetBurn: safeToSpendData?.dailyBudgetBurn ?? 0,
+    projection: safeToSpendData?.projection ?? {
+      history: [],
+      projection: [],
+      safeDaysCount: null,
+      safeToSpend: 0,
+    },
+    accountMap: safeToSpendData?.accountMap ?? new Map(),
+    safeToSpendDays: safeToSpendData?.safeToSpendDays ?? 0,
     uiState,
-    isLoading: !isInitialized,
+    isLoading: !safeToSpendData,
   });
-  if (!isInitialized) {
-    return (
-      <Page edges={['top']}>
-        <Inset space="lg">
-          <Stack gap="xl">
-            <Skeleton height={60} radius="lg" />
-            <Skeleton height={180} radius="xl" />
-            <Stack gap="md">
-              <Skeleton width={150} height={20} />
-              <Stack gap="sm">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} height={50} radius="lg" />
-                ))}
-              </Stack>
-            </Stack>
-          </Stack>
-        </Inset>
-      </Page>
-    );
-  }
 
   if (!hasCompletedOnboarding) {
     return null;
@@ -92,7 +113,7 @@ export function DashboardScreenView({
                 viewModel={safeToSpendViewModel}
                 onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
                 onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
-                isLoading={!isInitialized || !safeToSpendData}
+                isLoading={!safeToSpendData}
                 isPrivacyMode={isPrivacyMode}
               />
             </View>
@@ -100,47 +121,30 @@ export function DashboardScreenView({
               <PlannedPaymentsSection
                 items={listViewProps.plannedJournals || []}
                 onItemPress={listViewProps.onPlannedJournalPress}
-                isPrivacyMode={isPrivacyMode}
               />
             </View>
-            <ScreenSectionHeader
-              title={transactionSectionTitle}
-              style={styles.transactionSectionTitle}
-            />
+            <Inset horizontal="lg" vertical="lg">
+              <ScreenSectionHeader title={transactionSectionTitle} />
+            </Inset>
           </View>
         }
         fab={fab}
       />
+
       <SafeToSpendExplanationModal
-        visible={explanationModalState.visible}
-        onClose={() => explanationModalState.setVisible(false)}
+        visible={uiState.isInfoVisible}
+        onClose={() => uiState.setInfoVisible(false)}
+        expandedSection={uiState.expandedSection}
+        setExpandedSection={uiState.setExpandedSection}
         viewModel={safeToSpendViewModel}
-        expandedSection={explanationModalState.expandedSection}
-        setExpandedSection={explanationModalState.setExpandedSection}
       />
 
       <SafeToSpendLegendModal
-        visible={!!legendModalState.selectedItem}
-        onClose={() => legendModalState.setSelectedItem(null)}
-        type={legendModalState.selectedItem}
+        visible={!!uiState.selectedLegendItem}
+        onClose={() => uiState.setSelectedLegendItem(null)}
+        type={uiState.selectedLegendItem}
         viewModel={safeToSpendViewModel}
       />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  loadingText: {
-    marginTop: Spacing.sm,
-  },
-  transactionSectionTitle: {
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-});
