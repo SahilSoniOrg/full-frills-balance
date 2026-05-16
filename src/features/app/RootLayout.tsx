@@ -1,15 +1,15 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { analytics, navigationIntegration } from '@/src/services/analytics-service';
-import * as SplashScreen from 'expo-splash-screen';
-import { useNavigationContainerRef } from 'expo-router';
+import { DatabaseProvider } from '@nozbe/watermelondb/react';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
+import { useNavigationContainerRef } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import PostHog, { PostHogProvider } from 'posthog-react-native';
 import React, { useEffect } from 'react';
 import { View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { DatabaseProvider } from '@nozbe/watermelondb/react';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import PostHog, { PostHogProvider } from 'posthog-react-native';
 
 import { AlertContainer } from '@/src/components/common/AlertContainer';
 import { ToastContainer } from '@/src/components/common/Toast';
@@ -18,29 +18,28 @@ import { UIProvider, useUI } from '@/src/contexts/UIContext';
 import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
-import { AppContent } from './components/AppNavigation';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
-import { useTelemetry } from './hooks/useTelemetry';
-import { useFonts } from './hooks/useFonts';
+import { AppContent } from './components/AppNavigation';
+import { DesignedSplashScreen } from './components/DesignedSplashScreen';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
+import { useFonts } from './hooks/useFonts';
+import { useTelemetry } from './hooks/useTelemetry';
 import { useWidgetSync } from './hooks/useWidgetSync';
 
 import '@/src/services/audit-handlers';
 
-// Initialize core services
+// Prevent splash from hiding until we control it
 SplashScreen.preventAutoHideAsync().catch(() => {});
 analytics.initialize();
 
 /**
  * Root Layout
- * The entry point that composes all global providers and initializes the app.
  */
 function RootLayout() {
   const navigationRef = useNavigationContainerRef();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
 
-  // Sentry Navigation Tracing
   useEffect(() => {
     if (navigationRef && AppConfig.features.enableSentry) {
       navigationIntegration.registerNavigationContainer(navigationRef);
@@ -50,7 +49,7 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: '#000000' }}
         onStartShouldSetResponderCapture={e => {
           resetAllCharts(e.nativeEvent.pageX, e.nativeEvent.pageY);
           return false;
@@ -70,6 +69,7 @@ function RootLayout() {
                       </AppLockInterceptor>
                       <AlertContainer />
                       <ToastContainer />
+                      <SplashOrchestrator />
                     </ThemeProvider>
                   </MaybeAnalyticsProvider>
                 </WorkplaceProvider>
@@ -83,41 +83,43 @@ function RootLayout() {
 }
 
 /**
- * Stage 1: Critical UI path (Fonts, Telemetry, Splash)
- * Runs immediately when UIProvider is ready.
+ * Stage 1: UI Readiness (Fonts, Telemetry)
  */
 function EarlyBootstrap() {
-  const { isAppReady } = useUI();
-
   useFonts();
   useTelemetry();
-
-  // Hide splash screen as soon as critical UI assets are ready
-  useEffect(() => {
-    if (isAppReady) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [isAppReady]);
-
   return null;
 }
 
 /**
- * Stage 2: Background Data path (Bootstrap, Widgets)
- * Runs once a Workplace is loaded from the database.
+ * Stage 2: Data Readiness (Bootstrap, Widgets)
  */
 function WorkplaceBootstrap() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-
   useAppBootstrap(workplaceId, defaultCurrencyCode);
   useWidgetSync(workplaceId, defaultCurrencyCode);
-
   return null;
 }
 
 /**
- * Analytics wrapper to handle conditional client initialization.
+ * Manages the transition from Native Splash to application UI.
  */
+function SplashOrchestrator() {
+  const { isAppReady, isDataHydrated, hasCompletedOnboarding } = useUI();
+
+  // If onboarding is done, we wait for both UI and Data hydration.
+  // Otherwise, we just wait for UI assets to show the onboarding shell.
+  const isFullyReady = isAppReady && (!hasCompletedOnboarding || isDataHydrated);
+
+  useEffect(() => {
+    if (isFullyReady) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isFullyReady]);
+
+  return <DesignedSplashScreen isReady={isFullyReady} />;
+}
+
 function MaybeAnalyticsProvider({
   client,
   children,

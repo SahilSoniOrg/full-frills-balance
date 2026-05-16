@@ -23,7 +23,7 @@ import { WorkplaceId } from '@/src/types/domain';
  * Optimized for fast initial render and background readiness.
  */
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
-  const { isAppReady, dispatchBootEvent } = useUI();
+  const { isAppReady, setDataHydrated } = useUI();
   const initStartedRef = useRef(false);
 
   useEffect(() => {
@@ -60,15 +60,15 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
         logger.info(
           `[Bootstrap] Core hydration complete in ${Math.round(performance.now() - bootStart)}ms.`,
         );
-        dispatchBootEvent('DATA_HYDRATED');
+        setDataHydrated(true);
       } catch (error) {
         logger.error('[Bootstrap] Initialization failed partially', error);
-        dispatchBootEvent('DATA_HYDRATED');
+        setDataHydrated(true);
       }
     };
 
     initializeApp();
-  }, [workplaceId, defaultCurrencyCode, dispatchBootEvent]);
+  }, [workplaceId, defaultCurrencyCode, setDataHydrated]);
 
   // Background stabilization tasks - run once the app is ready and idle
   useEffect(() => {

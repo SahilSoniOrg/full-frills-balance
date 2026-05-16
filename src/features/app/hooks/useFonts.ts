@@ -49,7 +49,7 @@ const DEFAULT_FONT_PREWARM_PROMISE = Font.loadAsync(FONT_MAP[FontIds.DEEP_SPACE]
  * useFonts - Dynamically loads fonts based on the selected theme.
  */
 export function useFonts() {
-  const { fontId, dispatchBootEvent } = useUI();
+  const { fontId, setFontsReady } = useUI();
   const loadedFontSetsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -57,13 +57,13 @@ export function useFonts() {
 
     async function loadFontSet() {
       if (loadedFontSetsRef.current.has(fontId)) {
-        if (isActive) dispatchBootEvent('FONTS_LOADED');
+        if (isActive) setFontsReady(true);
         return;
       }
 
       const fontsToLoad = FONT_MAP[fontId];
       if (!fontsToLoad) {
-        if (isActive) dispatchBootEvent('FONTS_LOADED');
+        if (isActive) setFontsReady(true);
         return;
       }
 
@@ -76,10 +76,10 @@ export function useFonts() {
 
         if (isActive) {
           loadedFontSetsRef.current.add(fontId);
-          dispatchBootEvent('FONTS_LOADED');
+          setFontsReady(true);
         }
       } catch {
-        if (isActive) dispatchBootEvent('FONTS_LOADED');
+        if (isActive) setFontsReady(true);
       }
     }
 
@@ -88,5 +88,5 @@ export function useFonts() {
     return () => {
       isActive = false;
     };
-  }, [fontId, dispatchBootEvent]);
+  }, [fontId, setFontsReady]);
 }

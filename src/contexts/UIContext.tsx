@@ -12,7 +12,8 @@
  * ========================================
  */
 
-import { AppConfig, FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
+import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants/design-tokens';
 import { analytics } from '@/src/services/analytics-service';
 import { ShareFormat } from '@/src/types/sharing';
 import { logger } from '@/src/utils/logger';
@@ -20,7 +21,21 @@ import { preferences } from '@/src/utils/preferences';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
-export type BootEvent = 'FONTS_LOADED' | 'DATA_HYDRATED';
+export interface ImportStats {
+  accounts: number;
+  journals: number;
+  transactions: number;
+  budgets?: number;
+  auditLogs?: number;
+  plannedPayments?: number;
+  skippedTransactions: number;
+  skippedItems?: { id: string; reason: string; description?: string }[];
+}
+
+export interface RestartOptions {
+  type: 'IMPORT' | 'RESET';
+  stats?: ImportStats;
+}
 
 // Simple UI state only - no domain data
 interface UIState {
@@ -58,16 +73,7 @@ interface UIState {
   // App Lifecycle
   isRestartRequired: boolean;
   restartType: 'IMPORT' | 'RESET' | null;
-  importStats: {
-    accounts: number;
-    journals: number;
-    transactions: number;
-    budgets?: number;
-    auditLogs?: number;
-    plannedPayments?: number;
-    skippedTransactions: number;
-    skippedItems?: { id: string; reason: string; description?: string }[];
-  } | null;
+  importStats: ImportStats | null;
   archetype: string;
   notificationCadence: 'none' | 'daily' | 'weekly';
   notificationHour: number;
@@ -82,8 +88,12 @@ interface UIState {
 interface UIContextType extends UIState {
   // Computed values
   themeMode: 'light' | 'dark';
-  isAppReady: boolean;
   isAppCurrentlyLocked: boolean; // BULLETPROOF: blocking logic unified for UI and services
+  isAppReady: boolean; // Ready to show UI shell (Prefs + Fonts)
+
+  // Setters for boot process
+  setFontsReady: (ready: boolean) => void;
+  setDataHydrated: (hydrated: boolean) => void;
 
   // Actions for UI state only
   completeOnboarding: (name: string, archetype?: string) => Promise<void>;
@@ -97,7 +107,6 @@ interface UIContextType extends UIState {
   authenticateSession: (unlocked: boolean) => void;
   setIsAppActive: (isActive: boolean) => void;
   setIsLockAuthenticating: (isAuthenticating: boolean) => void;
-  dispatchBootEvent: (event: BootEvent) => void;
   setShowAccountMonthlyStats: (show: boolean) => Promise<void>;
   setArchetype: (archetype: string) => Promise<void>;
   setAdvancedMode: (advancedMode: boolean) => Promise<void>;
@@ -107,22 +116,23 @@ interface UIContextType extends UIState {
   setDefaultShareFormat: (format: ShareFormat) => void;
   setSafeToSpendDays: (days: number) => Promise<void>;
   setIsSmsImportEnabled: (enabled: boolean) => Promise<void>;
-  requireRestart: (options: {
-    type: 'IMPORT' | 'RESET';
-    stats?: {
-      accounts: number;
-      journals: number;
-      transactions: number;
-      budgets?: number;
-      auditLogs?: number;
-      plannedPayments?: number;
-      skippedTransactions: number;
-      skippedItems?: { id: string; reason: string; description?: string }[];
-    };
-  }) => void;
+  requireRestart: (options: RestartOptions) => void;
 }
 
 export const UIContext = createContext<UIContextType | undefined>(undefined);
+
+// Support for local theme overrides (e.g. Design Preview)
+const ThemeOverrideContext = createContext<ThemeMode | null>(null);
+
+export function ThemeOverride({ mode, children }: { mode?: ThemeMode; children: React.ReactNode }) {
+  return (
+    <ThemeOverrideContext.Provider value={mode ?? null}>{children}</ThemeOverrideContext.Provider>
+  );
+}
+
+export function useThemeOverride() {
+  return useContext(ThemeOverrideContext);
+}
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
@@ -197,7 +207,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           isSmsImportEnabled: loadedPreferences.isSmsImportEnabled || false,
         }));
       } catch (error) {
-        logger.warn('Failed to load preferences', { error });
+        logger.warn('[UIProvider] Failed to load preferences', { error });
         setUIState(prev => ({ ...prev, isLoading: false, isInitialized: true }));
       }
     };
@@ -216,11 +226,19 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const setFontsReady = useCallback((fontsReady: boolean) => {
+    setUIState(prev => ({ ...prev, fontsReady }));
+  }, []);
+
+  const setDataHydrated = useCallback((isDataHydrated: boolean) => {
+    setUIState(prev => ({ ...prev, isDataHydrated }));
+  }, []);
+
   const completeOnboarding = useCallback(async (name: string, archetype?: string) => {
     try {
-      preferences.setUserName(name);
-      if (archetype) preferences.setArchetype(archetype);
-      preferences.setOnboardingCompleted(true);
+      await preferences.setUserName(name);
+      if (archetype) await preferences.setArchetype(archetype);
+      await preferences.setOnboardingCompleted(true);
       setUIState(prev => ({
         ...prev,
         hasCompletedOnboarding: true,
@@ -228,7 +246,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         archetype: archetype || prev.archetype,
       }));
     } catch (error) {
-      logger.warn('Failed to save onboarding state', { error });
+      logger.warn('[UIContext] Failed to complete onboarding', { error });
       setUIState(prev => ({ ...prev, hasCompletedOnboarding: true }));
     }
   }, []);
@@ -243,7 +261,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         archetype: archetype || prev.archetype,
       }));
     } catch (error) {
-      logger.warn('Failed to update user details', { error });
+      logger.warn('[UIContext] Failed to update user details', { error });
     }
   }, []);
 
@@ -254,7 +272,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         setUIState(prev => ({ ...prev, themePreference: theme }));
         analytics.logThemeChanged(theme, uiState.themeId, uiState.fontId);
       } catch (error) {
-        logger.warn('Failed to save theme preference', { error });
+        logger.warn('[UIContext] Failed to set theme preference', { error });
         setUIState(prev => ({ ...prev, themePreference: theme }));
       }
     },
@@ -268,7 +286,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         setUIState(prev => ({ ...prev, themeId }));
         analytics.logThemeChanged(uiState.themePreference, themeId, uiState.fontId);
       } catch (error) {
-        logger.warn('Failed to save theme ID', { error });
+        logger.warn('[UIContext] Failed to set theme ID', { error });
         setUIState(prev => ({ ...prev, themeId }));
       }
     },
@@ -282,7 +300,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         setUIState(prev => ({ ...prev, fontId }));
         analytics.logThemeChanged(uiState.themePreference, uiState.themeId, fontId);
       } catch (error) {
-        logger.warn('Failed to save font ID', { error });
+        logger.warn('[UIContext] Failed to set font ID', { error });
         setUIState(prev => ({ ...prev, fontId }));
       }
     },
@@ -295,7 +313,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setUIState(prev => ({ ...prev, isPrivacyMode }));
       analytics.trackFeatureUsage('settings', 'toggle_privacy_mode', { isPrivacyMode });
     } catch (error) {
-      logger.warn('Failed to save privacy mode', { error });
+      logger.warn('[UIContext] Failed to set privacy mode', { error });
       setUIState(prev => ({ ...prev, isPrivacyMode }));
     }
   }, []);
@@ -305,7 +323,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setIsWidgetPrivacyEnabled(isWidgetPrivacyEnabled);
       setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }));
     } catch (error) {
-      logger.warn('Failed to save widget privacy mode', { error });
+      logger.warn('[UIContext] Failed to set widget privacy', { error });
       setUIState(prev => ({ ...prev, isWidgetPrivacyEnabled }));
     }
   }, []);
@@ -315,7 +333,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setAppLockEnabled(isAppLockEnabled);
       setUIState(prev => ({ ...prev, isAppLockEnabled }));
     } catch (error) {
-      logger.warn('Failed to save app lock preference', { error });
+      logger.warn('[UIContext] Failed to set app lock', { error });
       setUIState(prev => ({ ...prev, isAppLockEnabled }));
     }
   }, []);
@@ -338,30 +356,12 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     setUIState(prev => ({ ...prev, isLockAuthenticating }));
   }, []);
 
-  const dispatchBootEvent = useCallback((event: BootEvent) => {
-    setUIState(prev => {
-      let nextIsInitialized = prev.isInitialized;
-      let nextFontsReady = prev.fontsReady;
-      let nextIsDataHydrated = prev.isDataHydrated;
-
-      if (event === 'FONTS_LOADED') nextFontsReady = true;
-      if (event === 'DATA_HYDRATED') nextIsDataHydrated = true;
-
-      return {
-        ...prev,
-        isInitialized: nextIsInitialized,
-        fontsReady: nextFontsReady,
-        isDataHydrated: nextIsDataHydrated,
-      };
-    });
-  }, []);
-
   const setShowAccountMonthlyStats = useCallback(async (showAccountMonthlyStats: boolean) => {
     try {
       await preferences.setShowAccountMonthlyStats(showAccountMonthlyStats);
       setUIState(prev => ({ ...prev, showAccountMonthlyStats }));
     } catch (error) {
-      logger.warn('Failed to save account stats preference', { error });
+      logger.warn('[UIContext] Failed to set account stats preference', { error });
       setUIState(prev => ({ ...prev, showAccountMonthlyStats }));
     }
   }, []);
@@ -371,7 +371,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setArchetype(archetype);
       setUIState(prev => ({ ...prev, archetype }));
     } catch (error) {
-      logger.warn('Failed to save archetype', { error });
+      logger.warn('[UIContext] Failed to set archetype', { error });
       setUIState(prev => ({ ...prev, archetype }));
     }
   }, []);
@@ -381,7 +381,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setAdvancedMode(advancedMode);
       setUIState(prev => ({ ...prev, advancedMode }));
     } catch (error) {
-      logger.warn('Failed to save advanced mode', { error });
+      logger.warn('[UIContext] Failed to set advanced mode', { error });
       setUIState(prev => ({ ...prev, advancedMode }));
     }
   }, []);
@@ -393,7 +393,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         setUIState(prev => ({ ...prev, notificationCadence: cadence }));
         analytics.logNotificationPreferenceChanged(cadence, uiState.notificationHour);
       } catch (error) {
-        logger.warn('Failed to save notification cadence', { error });
+        logger.warn('[UIContext] Failed to set notification cadence', { error });
         setUIState(prev => ({ ...prev, notificationCadence: cadence }));
       }
     },
@@ -406,7 +406,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setNotificationMinute(minute);
       setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }));
     } catch (error) {
-      logger.warn('Failed to save notification time', { error });
+      logger.warn('[UIContext] Failed to set notification time', { error });
       setUIState(prev => ({ ...prev, notificationHour: hour, notificationMinute: minute }));
     }
   }, []);
@@ -416,21 +416,17 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setNotificationWeekday(weekday);
       setUIState(prev => ({ ...prev, notificationWeekday: weekday }));
     } catch (error) {
-      logger.warn('Failed to save notification weekday', { error });
+      logger.warn('[UIContext] Failed to set notification weekday', { error });
       setUIState(prev => ({ ...prev, notificationWeekday: weekday }));
     }
   }, []);
 
   const setDefaultShareFormat = useCallback((format: ShareFormat) => {
-    setUIState(prev => {
-      if (prev.defaultShareFormat === format) return prev;
-      return { ...prev, defaultShareFormat: format };
-    });
-
     try {
       preferences.setDefaultShareFormat(format);
+      setUIState(prev => ({ ...prev, defaultShareFormat: format }));
     } catch (error) {
-      logger.warn('Failed to save default share format', { error });
+      logger.warn('[UIContext] Failed to set default share format', { error });
     }
   }, []);
 
@@ -439,7 +435,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       await preferences.setSafeToSpendDays(days);
       setUIState(prev => ({ ...prev, safeToSpendDays: days }));
     } catch (error) {
-      logger.warn('Failed to save safe to spend days', { error });
+      logger.warn('[UIContext] Failed to set safe to spend days', { error });
       setUIState(prev => ({ ...prev, safeToSpendDays: days }));
     }
   }, []);
@@ -450,33 +446,18 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setUIState(prev => ({ ...prev, isSmsImportEnabled: enabled }));
       analytics.logSmsImportSettingsChanged(enabled);
     } catch (error) {
-      logger.warn('Failed to save SMS import preference', { error });
+      logger.warn('[UIContext] Failed to set sms import preference', { error });
     }
   }, []);
 
-  const requireRestart = useCallback(
-    (options: {
-      type: 'IMPORT' | 'RESET';
-      stats?: {
-        accounts: number;
-        journals: number;
-        transactions: number;
-        budgets?: number;
-        auditLogs?: number;
-        plannedPayments?: number;
-        skippedTransactions: number;
-        skippedItems?: { id: string; reason: string; description?: string }[];
-      };
-    }) => {
-      setUIState(prev => ({
-        ...prev,
-        isRestartRequired: true,
-        restartType: options.type,
-        importStats: options.stats || null,
-      }));
-    },
-    [],
-  );
+  const requireRestart = useCallback((options: RestartOptions) => {
+    setUIState(prev => ({
+      ...prev,
+      isRestartRequired: true,
+      restartType: options.type,
+      importStats: options.stats || null,
+    }));
+  }, []);
 
   const themeMode = useMemo(() => {
     return uiState.themePreference === 'system'
@@ -508,16 +489,18 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   const isAppReady = useMemo(
-    () => uiState.isInitialized && uiState.fontsReady && uiState.isDataHydrated,
-    [uiState.isInitialized, uiState.fontsReady, uiState.isDataHydrated],
+    () => uiState.isInitialized && uiState.fontsReady,
+    [uiState.isInitialized, uiState.fontsReady],
   );
 
   const value = useMemo<UIContextType>(
     () => ({
       ...uiState,
-      isAppReady,
       themeMode,
       isAppCurrentlyLocked,
+      isAppReady,
+      setFontsReady,
+      setDataHydrated,
       completeOnboarding,
       setThemePreference,
       setThemeId,
@@ -538,14 +521,15 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setDefaultShareFormat,
       setSafeToSpendDays,
       setIsSmsImportEnabled,
-      dispatchBootEvent,
       requireRestart,
     }),
     [
       uiState,
-      isAppReady,
       themeMode,
       isAppCurrentlyLocked,
+      isAppReady,
+      setFontsReady,
+      setDataHydrated,
       completeOnboarding,
       setThemePreference,
       setThemeId,
@@ -566,23 +550,11 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setDefaultShareFormat,
       setSafeToSpendDays,
       setIsSmsImportEnabled,
-      dispatchBootEvent,
       requireRestart,
     ],
   );
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
-}
-
-// Support for local theme overrides (e.g. Design Preview)
-const ThemeOverrideContext = createContext<ThemeMode | undefined>(undefined);
-
-export function ThemeOverride({ mode, children }: { mode: ThemeMode; children: React.ReactNode }) {
-  return <ThemeOverrideContext.Provider value={mode}>{children}</ThemeOverrideContext.Provider>;
-}
-
-export function useThemeOverride() {
-  return useContext(ThemeOverrideContext);
 }
 
 export function useUI() {
