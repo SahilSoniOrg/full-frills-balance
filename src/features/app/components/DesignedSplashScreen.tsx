@@ -79,8 +79,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: 180, // Matches imageWidth in app.config.ts
+    height: 180,
+    borderRadius: 45, // Matches the circular mask of Android 12
   },
 });
