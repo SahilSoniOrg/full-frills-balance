@@ -24,70 +24,92 @@ import { WorkplaceId } from '@/src/types/domain';
  */
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { isAppReady, setDataHydrated } = useUI();
-  const initStartedRef = useRef(false);
+  const lastInitializedWorkplaceRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // We allow initialization to start even if locked so data is ready upon unlock
-    if (initStartedRef.current) return;
-    initStartedRef.current = true;
+    // Prevent double-running for the same workspace ID
+    if (lastInitializedWorkplaceRef.current === workplaceId) return;
+    lastInitializedWorkplaceRef.current = workplaceId;
 
-    const initializeApp = () => {
-      const bootStart = performance.now();
-      logger.info(`[Bootstrap] Starting initialization at ${Math.round(bootStart)}ms`);
+    let timeoutId: NodeJS.Timeout;
+    const bootStart = performance.now();
+    logger.info(
+      `[Bootstrap] Starting initialization for workplace ${workplaceId} at ${Math.round(bootStart)}ms`,
+    );
 
-      // 1. Unblock UI IMMEDIATELY
-      // This hides the splash screen and mounts the Dashboard.
-      // Dashboard hooks will hit the MMKV cache synchronously (<20ms).
+    // 1. Unblock UI IMMEDIATELY
+    // This hides the splash screen and mounts the Dashboard.
+    // Dashboard hooks will hit the MMKV cache synchronously (<20ms).
+    setDataHydrated(true);
+
+    // 2. Background Hydration (Completely Parallel)
+    // We wrap this in a timeout to ensure the splash hide
+    // and initial frame paint happen before we saturate the bridge with DB work.
+    timeoutId = setTimeout(() => {
+      const bgHydrationStart = performance.now();
       logger.info(
-        `[Bootstrap] Triggering UI Hydration signal at ${Math.round(performance.now() - bootStart)}ms`,
+        `[Bootstrap] Starting background hydration for workplace ${workplaceId} at ${Math.round(
+          bgHydrationStart - bootStart,
+        )}ms`,
       );
-      setDataHydrated(true);
+      (async () => {
+        try {
+          // Stage A: Critical Data Seeding
+          await currencyInitService.initialize();
 
-      // 2. Background Hydration (Completely Parallel)
-      // We wrap this in a timeout/interaction block to ensure the splash hide
-      // and initial frame paint happen before we saturate the bridge with DB work.
-      setTimeout(() => {
-        const bgHydrationStart = performance.now();
-        logger.info(
-          `[Bootstrap] Starting background hydration at ${Math.round(bgHydrationStart - bootStart)}ms`,
-        );
-        (async () => {
-          try {
-            // Stage A: Critical Data Seeding
-            await currencyInitService.initialize();
-
-            // Stage B: Lean Cache Warming (Shared SQL Streams)
-            await Promise.allSettled([
-              currencyRepository.getAllPrecisions(),
-              reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
-              insightService.preWarm(workplaceId),
-              notificationService.preWarm(workplaceId, defaultCurrencyCode),
-            ]);
-
+          // Safe guard: check if workplace didn't change while we were waiting for the timeout or seed
+          if (lastInitializedWorkplaceRef.current !== workplaceId) {
             logger.info(
-              `[Bootstrap] Core background hydration complete in ${Math.round(
-                performance.now() - bgHydrationStart,
-              )}ms (Total since boot: ${Math.round(performance.now() - bootStart)}ms)`,
+              `[Bootstrap] Workplace changed during background initialization, aborting.`,
             );
-          } catch (error) {
-            logger.error('[Bootstrap] Background initialization failed partially', error);
+            return;
           }
-        })();
-      }, 50); // 50ms is enough for one clear UI frame and splash hide
-    };
 
-    initializeApp();
+          // Stage B: Lean Cache Warming (Shared SQL Streams)
+          await Promise.allSettled([
+            currencyRepository.getAllPrecisions(),
+            reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
+            insightService.preWarm(workplaceId),
+            notificationService.preWarm(workplaceId, defaultCurrencyCode),
+          ]);
+
+          logger.info(
+            `[Bootstrap] Core background hydration complete for workplace ${workplaceId} in ${Math.round(
+              performance.now() - bgHydrationStart,
+            )}ms (Total since boot: ${Math.round(performance.now() - bootStart)}ms)`,
+          );
+        } catch (error) {
+          logger.error(
+            `[Bootstrap] Background initialization failed partially for ${workplaceId}`,
+            error,
+          );
+        }
+      })();
+    }, 50); // 50ms is enough for one clear UI frame and splash hide
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [workplaceId, defaultCurrencyCode, setDataHydrated]);
 
   // Background stabilization tasks - run once the app is ready and idle
   useEffect(() => {
     if (!isAppReady) return;
 
+    let active = true;
+
     runAfterInteractions(async () => {
       // 3-second delay to ensure Dashboard animations and early interactions are smooth
       await new Promise(resolve => setTimeout(resolve, 3000));
 
-      logger.info('[Bootstrap] Running delayed background tasks...');
+      if (!active) {
+        logger.info('[Bootstrap] Stabilization cancelled (workspace changed or unmounted)');
+        return;
+      }
+
+      logger.info(`[Bootstrap] Running delayed background tasks for workplace ${workplaceId}...`);
 
       // 3. Lazy Analytics & Identity
       analytics.delayedInitializePostHog();
@@ -120,7 +142,13 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           : []),
       ]);
 
-      logger.info('[Bootstrap] App fully stabilized.');
+      if (active) {
+        logger.info(`[Bootstrap] Workplace ${workplaceId} fully stabilized.`);
+      }
     });
+
+    return () => {
+      active = false;
+    };
   }, [isAppReady, workplaceId, defaultCurrencyCode]);
 }

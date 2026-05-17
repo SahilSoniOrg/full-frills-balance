@@ -15,8 +15,10 @@ import {
   AccountType,
   EnrichedJournal,
   JournalDisplayType,
+  PlainAccount,
   WorkplaceId,
 } from '@/src/types/domain';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { logger } from '@/src/utils/logger';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { traceService } from '@/src/utils/TraceService';
@@ -25,7 +27,6 @@ import {
   combineLatest,
   distinctUntilChanged,
   firstValueFrom,
-  map,
   Observable,
   shareReplay,
   switchMap,
@@ -38,13 +39,19 @@ type RawSQLRow = Record<string, unknown>;
  * Eliminates duplicate subscriptions by providing a single source of truth.
  */
 export interface DashboardData {
-  accounts: Account[];
+  accounts: (Account | PlainAccount)[];
   enrichedJournals: EnrichedJournal[];
   balances: AccountBalance[];
   wealthSummary: WealthSummary;
 }
 
 export type DashboardSummaryData = Omit<DashboardData, 'enrichedJournals'>;
+
+export interface LiveAccountsSummaryData {
+  accounts: (Account | PlainAccount)[];
+  balances: AccountBalance[];
+  wealthSummary: WealthSummary;
+}
 
 /**
  * Monthly income and expense flow data.
@@ -55,10 +62,10 @@ export interface MonthlyFlowData {
 }
 
 export interface AccountDashboardData {
-  account: Account | null;
+  account: Account | PlainAccount | null;
   balance: AccountBalance | null;
   subAccounts: AccountBalance[];
-  allAccounts: Account[];
+  allAccounts: (Account | PlainAccount)[];
 }
 
 /**
@@ -73,7 +80,7 @@ class ReactiveDataService {
   // M-1 fix: cache dashboard observables per currency and workplace so multiple hook subscribers
   // share a single combineLatest chain.
   private _dashboardCache = new Map<string, Observable<DashboardData>>();
-  private _optimizedAccountListCache = new Map<string, Observable<DashboardSummaryData>>();
+  private _optimizedAccountListCache = new Map<string, Observable<LiveAccountsSummaryData>>();
   private _accountDashboardCache = new Map<string, Observable<AccountDashboardData>>();
   private _allBalancesCache = new Map<
     string,
@@ -205,7 +212,7 @@ class ReactiveDataService {
         const { accounts, balancesMap, wealthSummary } = base;
 
         // Sanitization: Map Account models to plain objects to avoid circular references during JSON.stringify
-        const plainAccounts = accounts.map(a => ({
+        const plainAccounts: PlainAccount[] = accounts.map(a => ({
           id: a.id,
           name: a.name,
           accountType: a.accountType,
@@ -221,8 +228,8 @@ class ReactiveDataService {
           deletedAt: a.deletedAt?.getTime(),
         }));
 
-        const data = {
-          accounts: plainAccounts as any,
+        const data: DashboardData = {
+          accounts: plainAccounts,
           enrichedJournals,
           balances: Array.from(balancesMap.values()),
           wealthSummary,
@@ -286,7 +293,7 @@ class ReactiveDataService {
     workplaceId: WorkplaceId,
   ): Observable<MonthlyFlowData> {
     return this.observeDashboardData(targetCurrency, workplaceId).pipe(
-      map(({ enrichedJournals }) => {
+      switchMap(async ({ enrichedJournals }) => {
         try {
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -303,19 +310,30 @@ class ReactiveDataService {
           let income = 0;
           let expense = 0;
 
-          for (const j of enrichedJournals) {
-            if (j.journalDate < startOfMonth || j.journalDate > endOfMonth) continue;
+          // Parallel currency conversion using exchangeRateService
+          const conversions = await Promise.all(
+            enrichedJournals.map(async j => {
+              if (j.journalDate < startOfMonth || j.journalDate > endOfMonth) return null;
 
-            // Note: Enriched journals already have totalAmount in the target currency
-            // or at least normalized during enrichment if they were multicurrency.
-            // Actually, EnrichedJournal.totalAmount is the raw journal amount.
+              const { convertedAmount } = await exchangeRateService.convert(
+                j.totalAmount,
+                j.currencyCode || targetCurrency,
+                targetCurrency,
+              );
 
-            // For now, we assume simple mapping for the dashboard widget.
-            // If more precision is needed, we'd use reportService.
-            if (j.displayType === JournalDisplayType.INCOME) {
-              income += j.totalAmount;
-            } else if (j.displayType === JournalDisplayType.EXPENSE) {
-              expense += j.totalAmount;
+              return {
+                convertedAmount,
+                displayType: j.displayType,
+              };
+            }),
+          );
+
+          for (const conv of conversions) {
+            if (!conv) continue;
+            if (conv.displayType === JournalDisplayType.INCOME) {
+              income += conv.convertedAmount;
+            } else if (conv.displayType === JournalDisplayType.EXPENSE) {
+              expense += conv.convertedAmount;
             }
           }
 
@@ -448,7 +466,7 @@ class ReactiveDataService {
   observeOptimizedAccountList(
     targetCurrency: string,
     workplaceId: WorkplaceId,
-  ): Observable<DashboardSummaryData> {
+  ): Observable<LiveAccountsSummaryData> {
     const cacheKey = `${targetCurrency}_${workplaceId}`;
     if (this._optimizedAccountListCache.has(cacheKey)) {
       return this._optimizedAccountListCache.get(cacheKey)!;
@@ -465,7 +483,7 @@ class ReactiveDataService {
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    const loggedObs$ = new Observable<DashboardSummaryData>(subscriber => {
+    const loggedObs$ = new Observable<LiveAccountsSummaryData>(subscriber => {
       const subStart = performance.now();
       let firstEmission = true;
       const sub = obs$.subscribe({
@@ -497,12 +515,7 @@ class ReactiveDataService {
     accountId: AccountId,
     targetCurrency: string,
     workplaceId: WorkplaceId,
-  ): Observable<{
-    account: Account | null;
-    balance: AccountBalance | null;
-    subAccounts: AccountBalance[];
-    allAccounts: Account[];
-  }> {
+  ): Observable<AccountDashboardData> {
     const cacheKey = `${accountId}_${targetCurrency}_${workplaceId}`;
     if (this._accountDashboardCache.has(cacheKey)) {
       return this._accountDashboardCache.get(cacheKey)!;

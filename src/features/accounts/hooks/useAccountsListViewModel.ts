@@ -1,7 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import Account from '@/src/data/models/Account';
 import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -160,10 +159,10 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const onAccountPress = useCallback(
     (accountId: AccountId) => {
-      const account = accounts.find((a: Account) => a.id === accountId);
+      const account = accounts.find(a => a.id === accountId);
       if (!account) return;
 
-      const hasChildren = accounts.some((a: Account) => a.parentAccountId === accountId);
+      const hasChildren = accounts.some(a => a.parentAccountId === accountId);
       const isExpanded = expandedAccountIds.has(accountId);
 
       if (hasChildren && !isExpanded) {
@@ -221,7 +220,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const filteredAccounts = useMemo(() => {
     if (!searchQuery) return accounts;
     const lowercaseQuery = searchQuery.toLowerCase();
-    return accounts.filter((a: Account) => a.name.toLowerCase().includes(lowercaseQuery));
+    return accounts.filter(a => a.name.toLowerCase().includes(lowercaseQuery));
   }, [accounts, searchQuery]);
 
   // M-5 fix: Memoize transform options to prevent redundant re-transformations

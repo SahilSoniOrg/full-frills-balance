@@ -1,7 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
 import Account from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   getAccountAccentColor,
   getAccountSections,
@@ -74,7 +74,7 @@ let oldBucket = new Map<string, AccountCardViewModel>();
 const BUCKET_LIMIT = 1000;
 
 export function transformAccountsToSections(
-  accounts: Account[],
+  accounts: (Account | PlainAccount)[],
   options: TransformOptions,
 ): AccountSectionViewModel[] {
   const startTime = Date.now();
@@ -117,7 +117,7 @@ export function transformAccountsToSections(
       : CurrencyFormatter.formatShort(sectionTotal, defaultCurrency);
 
     const typeAccounts = section.data;
-    const accountsByParent = new Map<string, Account[]>();
+    const accountsByParent = new Map<string, (Account | PlainAccount)[]>();
     typeAccounts.forEach(a => {
       if (a.parentAccountId) {
         const children = accountsByParent.get(a.parentAccountId) || [];
@@ -131,7 +131,7 @@ export function transformAccountsToSections(
     );
     const flattenedData: AccountCardViewModel[] = [];
 
-    const flatten = (account: Account, depth: number) => {
+    const flatten = (account: Account | PlainAccount, depth: number) => {
       totalAccounts++;
       const balanceData = balancesByAccountId.get(account.id) || null;
       const balance = balanceData?.balance || 0;
@@ -199,7 +199,7 @@ export function transformAccountsToSections(
           ? mask
           : CurrencyFormatter.format(monthlyExpenses, currencyCode);
 
-      viewModel = {
+      const createdViewModel: AccountCardViewModel = {
         id: account.id,
         name: account.name,
         icon: account.icon || null,
@@ -213,17 +213,23 @@ export function transformAccountsToSections(
         depth,
         hasChildren: children.length > 0,
         isExpanded,
-        reconciledAt: account.reconciledAt,
+        reconciledAt: account.reconciledAt
+          ? account.reconciledAt instanceof Date
+            ? account.reconciledAt
+            : new Date(account.reconciledAt)
+          : undefined,
       };
+
+      viewModel = createdViewModel;
 
       // Bucket Management (Aging)
       if (currentBucket.size >= BUCKET_LIMIT) {
         oldBucket = currentBucket;
         currentBucket = new Map();
       }
-      currentBucket.set(stateKey, viewModel);
+      currentBucket.set(stateKey, createdViewModel);
 
-      flattenedData.push(viewModel);
+      flattenedData.push(createdViewModel);
 
       if (isExpanded) {
         children.forEach(child => flatten(child, depth + 1));

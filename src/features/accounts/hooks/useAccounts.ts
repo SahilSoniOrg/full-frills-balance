@@ -11,7 +11,7 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { accountService } from '@/src/features/accounts/services/AccountService';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
-import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';
 import { AccountBalance, AccountId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
 import { combineLatest, of, switchMap } from 'rxjs';
@@ -320,12 +320,7 @@ export function useAccountDashboard(
         ? reactiveDataService.observeAccountDashboard(accountId, targetCurrency, workplaceId)
         : of(null),
     [accountId, targetCurrency, workplaceId],
-    null as {
-      account: Account | null;
-      balance: AccountBalance | null;
-      subAccounts: AccountBalance[];
-      allAccounts: Account[];
-    } | null,
+    null as AccountDashboardData | null,
   );
 
   return {

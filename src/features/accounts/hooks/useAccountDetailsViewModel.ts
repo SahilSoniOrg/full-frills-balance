@@ -21,6 +21,7 @@ import {
   AccountId,
   DisplayTransaction,
   JournalDisplayType,
+  PlainAccount,
   TransactionId,
 } from '@/src/types/domain';
 import { TransactionListItem } from '@/src/types/ui';
@@ -131,7 +132,7 @@ export interface AccountDetailsViewModel {
   setSelectedIds: React.Dispatch<React.SetStateAction<Set<TransactionId>>>;
   isMergeModalVisible: boolean;
   setIsMergeModalVisible: (visible: boolean) => void;
-  mergeCandidates: Account[];
+  mergeCandidates: (Account | PlainAccount)[];
   onConfirmMerge: (targetAccountId: AccountId) => void;
 }
 
@@ -265,13 +266,11 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const accountType = account?.accountType || '';
   const isAssetOrExpense = accountType === 'ASSET' || accountType === 'EXPENSE';
   const isParent = useMemo(
-    () => accounts.some((a: Account) => a.parentAccountId === accountId && a.deletedAt === null),
+    () => accounts.some(a => a.parentAccountId === accountId && a.deletedAt === null),
     [accounts, accountId],
   );
   const subAccountCount = useMemo(
-    () =>
-      accounts.filter((a: Account) => a.parentAccountId === accountId && a.deletedAt === null)
-        .length,
+    () => accounts.filter(a => a.parentAccountId === accountId && a.deletedAt === null).length,
     [accounts, accountId],
   );
 
@@ -279,7 +278,12 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const balance = dbBalanceData?.balance || 0;
   const transactionCount = balanceData?.transactionCount || 0;
   const isDeleted = account?.deletedAt != null;
-  const reconciledAt = account?.reconciledAt || null;
+  const reconciledAt = useMemo(() => {
+    if (!account?.reconciledAt) return null;
+    return account.reconciledAt instanceof Date
+      ? account.reconciledAt
+      : new Date(account.reconciledAt);
+  }, [account?.reconciledAt]);
 
   const accountSubtypeLabel = account?.accountSubtype
     ? formatAccountSubtypeLabel(account.accountSubtype)
@@ -376,11 +380,11 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const buildSubTree = (
       parentId: string,
       level: number,
-    ): { account: Account; level: number }[] => {
-      const result: { account: Account; level: number }[] = [];
+    ): { account: Account | PlainAccount; level: number }[] => {
+      const result: { account: Account | PlainAccount; level: number }[] = [];
       const children = accounts
-        .filter((a: Account) => a.parentAccountId === parentId && a.deletedAt === null)
-        .sort((a: Account, b: Account) => (a.orderNum || 0) - (b.orderNum || 0));
+        .filter(a => a.parentAccountId === parentId && a.deletedAt === null)
+        .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));
       for (const child of children) {
         result.push({ account: child, level });
         result.push(...buildSubTree(child.id, level + 1));
@@ -395,9 +399,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     return descendants.map(({ account: child, level }) => {
       const subBalance = subBalances.get(child.id);
       const color = theme[getAccountTypeColorKey(child.accountType)];
-      const isGroup = accounts.some(
-        (a: Account) => a.parentAccountId === child.id && a.deletedAt === null,
-      );
+      const isGroup = accounts.some(a => a.parentAccountId === child.id && a.deletedAt === null);
       return {
         id: child.id,
         name: child.name,
@@ -426,7 +428,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       requiredConfirmationValue: account.name,
       onConfirm: async () => {
         try {
-          await deleteAccount(account);
+          await deleteAccount(account as Account);
           toast.success('Account has been deleted.', {
             action: {
               label: 'Undo',

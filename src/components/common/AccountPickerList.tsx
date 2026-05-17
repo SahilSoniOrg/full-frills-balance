@@ -2,7 +2,7 @@ import { AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   AccountSection,
   getAccountAccentColor,
@@ -38,7 +38,7 @@ function useAccountPicker({
   accounts,
   excludeParentAccounts,
 }: {
-  accounts: Account[];
+  accounts: (Account | PlainAccount)[];
   excludeParentAccounts: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -105,7 +105,7 @@ const AccountPickerRow = React.memo(
     isMultiple,
     onPress,
   }: {
-    item: Account;
+    item: Account | PlainAccount;
     isSelected: boolean;
     isMultiple: boolean;
     onPress: () => void;
@@ -145,7 +145,7 @@ AccountPickerRow.displayName = 'AccountPickerRow';
 
 // Discriminated union for prop safety
 type AccountPickerListProps = {
-  accounts: Account[];
+  accounts: (Account | PlainAccount)[];
   selectedIds: Set<AccountId>;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   onClose: () => void;
@@ -303,7 +303,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
   );
 
   const renderItem = useCallback(
-    ({ item, section }: { item: Account; section: any }) => {
+    ({ item, section }: { item: Account | PlainAccount; section: any }) => {
       const { key: sectionKey } = section as AccountSection;
       const isCollapsed = collapsedSections.has(sectionKey) && !isSearchMode;
       if (isCollapsed) return null;

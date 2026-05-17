@@ -1,5 +1,5 @@
 import Account from '@/src/data/models/Account';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, PlainAccount } from '@/src/types/domain';
 import React, { useCallback, useMemo } from 'react';
 import { AccountPickerList, CreateAccountIntent } from './AccountPickerList';
 import { BaseAccountPickerModal } from './BaseAccountPickerModal';
@@ -8,7 +8,7 @@ export type { CreateAccountIntent };
 
 export interface AccountPickerModalProps {
   visible: boolean;
-  accounts: Account[];
+  accounts: (Account | PlainAccount)[];
   selectedId?: AccountId;
   title?: string;
   onClose: () => void;

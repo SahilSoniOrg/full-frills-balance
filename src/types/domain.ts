@@ -19,6 +19,26 @@ export type PlannedPaymentId = Brand<string, 'PlannedPaymentId'>;
 export type TabType = 'expense' | 'income' | 'transfer';
 export type AccountRole = 'source' | 'destination';
 
+/**
+ * PlainAccount - Plain JSON object representation of an Account model.
+ * Used for high-performance snapshot serialization (MMKV) and type safety.
+ */
+export interface PlainAccount {
+  id: AccountId;
+  name: string;
+  accountType: AccountType;
+  accountSubtype?: AccountSubtype;
+  currencyCode: string;
+  parentAccountId?: AccountId;
+  description?: string;
+  icon?: IconName;
+  orderNum?: number;
+  reconciledAt?: number;
+  createdAt?: number;
+  updatedAt?: number;
+  deletedAt?: number;
+}
+
 export enum JournalDisplayType {
   INCOME = 'INCOME',
   EXPENSE = 'EXPENSE',

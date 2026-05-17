@@ -57,8 +57,23 @@ export function useObservable<T>(
   const dataRef = useRef(data);
   dataRef.current = data;
 
-  // If we have a non-null initial value (cache hit), we are not "loading" the first frame
-  const [isLoading, setIsLoading] = useState(!!resolvedInitialValue);
+  // If we have a non-null initial value (cache hit), we are not "loading" the first frame.
+  // Standard initial values like empty arrays [], empty maps/sets, or null/undefined are treated as loading.
+  const [isLoading, setIsLoading] = useState(() => {
+    if (resolvedInitialValue === null || resolvedInitialValue === undefined) {
+      return true;
+    }
+    if (Array.isArray(resolvedInitialValue) && resolvedInitialValue.length === 0) {
+      return true;
+    }
+    if (resolvedInitialValue instanceof Map && resolvedInitialValue.size === 0) {
+      return true;
+    }
+    if (resolvedInitialValue instanceof Set && resolvedInitialValue.size === 0) {
+      return true;
+    }
+    return false;
+  });
   const [error, setError] = useState<Error | null>(null);
   const [version, setVersion] = useState(0);
 
