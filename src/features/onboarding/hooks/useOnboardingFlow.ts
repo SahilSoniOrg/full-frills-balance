@@ -4,6 +4,7 @@ import { useUI } from '@/src/contexts/UIContext';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from '../constants';
 import { onboardingService } from '../services/OnboardingService';
@@ -229,6 +230,9 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
 
       logger.info('Onboarding complete; app state will route to dashboard');
       void triggerHaptic('success');
+
+      // Navigate the user to the dashboard
+      AppNavigation.toDashboard();
     } catch (error) {
       logger.error('Failed to complete onboarding:', error);
       void triggerHaptic('error');
