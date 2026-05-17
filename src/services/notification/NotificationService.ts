@@ -3,12 +3,10 @@ import Account, { AccountSubtype, AccountType } from '@/src/data/models/Account'
 import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { budgetReadService, BudgetUsage } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
@@ -24,6 +22,7 @@ import { firstValueFrom, combineLatest, from, Observable, of } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, take } from 'rxjs/operators';
 import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
+import { reactiveDataService } from '../ReactiveDataService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
 import { traceService } from '@/src/utils/TraceService';
@@ -245,39 +244,39 @@ export class NotificationService {
     const obs = combineLatest([preferences.observe('safeToSpendDays')]).pipe(
       switchMap(([safeToSpendDays]) => {
         return combineLatest([
-          accountRepository.observeByType(workplaceId, AccountType.ASSET),
-          accountRepository.observeByType(workplaceId, AccountType.LIABILITY),
+          reactiveDataService.observeAccounts(workplaceId),
           budgetRepository.observeAllActive(workplaceId),
           plannedPaymentRepository.observeActive(workplaceId),
-          accountRepository.observeAll(workplaceId),
           journalRepository.observePlannedInRange(
             workplaceId,
             dayjs().subtract(safeToSpendDays, 'day').startOf('day').valueOf(),
             dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
           ),
-          transactionRepository.observeActiveCount(workplaceId),
-          journalRepository.observeStatusMeta(workplaceId),
+          reactiveDataService.observeActiveCount(workplaceId),
+          reactiveDataService.observeJournalMeta(workplaceId),
         ] as [
-          Observable<Account[]>,
           Observable<Account[]>,
           Observable<Budget[]>,
           Observable<PlannedPayment[]>,
-          Observable<Account[]>,
           Observable<Journal[]>,
           Observable<number>,
-          Observable<Journal[]>,
+          Observable<any>,
         ]).pipe(
-          map(([assets, liabilities, budgets, plannedPayments, allAccounts, plannedJournals]) => ({
-            assets,
-            liabilities,
-            budgets,
-            plannedPayments,
-            allAccounts,
-            plannedJournals,
-            safeToSpendDays,
-            defaultCurrencyCode,
-            workplaceId,
-          })),
+          map(([allAccounts, budgets, plannedPayments, plannedJournals]) => {
+            const assets = allAccounts.filter(a => a.accountType === AccountType.ASSET);
+            const liabilities = allAccounts.filter(a => a.accountType === AccountType.LIABILITY);
+            return {
+              assets,
+              liabilities,
+              budgets,
+              plannedPayments,
+              allAccounts,
+              plannedJournals,
+              safeToSpendDays,
+              defaultCurrencyCode,
+              workplaceId,
+            };
+          }),
         );
       }),
       firstFastDebounce(Animation.observeDebounce),

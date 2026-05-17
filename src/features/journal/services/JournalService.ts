@@ -1,11 +1,10 @@
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
-import Account, { AccountType } from '@/src/data/models/Account';
+import { AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
-import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
@@ -31,7 +30,7 @@ import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { Q } from '@nozbe/watermelondb';
-import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
+import { distinctUntilChanged, switchMap } from 'rxjs';
 
 export interface SimpleEntryParams {
   type: 'expense' | 'income' | 'transfer';
@@ -657,93 +656,55 @@ export class JournalService {
         'display_type',
       ]);
 
-    // 1. Stable stream of Journal IDs
-    const journalIds$ = journalsObservable.pipe(
-      map(journals => journals.map(j => j.id).sort()),
-      distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
-    );
-
-    // 2. Stable Transaction Stream
-    // Only re-queries if the list of visible journals changes
-    const transactions$ = journalIds$.pipe(
-      switchMap(journalIds => {
-        if (journalIds.length === 0) return of([] as Transaction[]);
-
-        return transactionRepository
-          .transactionsQuery(
-            Q.where('workplace_id', workplaceId),
-            Q.where('journal_id', Q.oneOf(journalIds)),
-            Q.where('deleted_at', Q.eq(null)),
-          )
-          .observeWithColumns(['account_id', 'journal_id', 'transaction_type', 'deleted_at']);
-      }),
-    );
-
-    // 3. Stable Helper Stream: Unique Account IDs involved in these transactions
-    const accountIds$ = transactions$.pipe(
-      map(transactions => Array.from(new Set(transactions.map(t => t.accountId))).sort()),
-      distinctUntilChanged((a, b) => a.length === b.length && a.every((id, idx) => id === b[idx])),
-    );
-
-    // 4. Stable Account Stream
-    const accounts$ = accountIds$.pipe(
-      switchMap(accountIds => {
-        if (accountIds.length === 0) return of([] as Account[]);
-        return accountRepository.observeByIds(workplaceId, accountIds);
-      }),
-    );
-
-    // 5. Combine everything
-    return combineLatest([journalsObservable, transactions$, accounts$]).pipe(
-      map(([journals, transactions, accounts]) => {
+    // Optimized: Single pass enrichment using Raw SQL
+    return journalsObservable.pipe(
+      switchMap(async journals => {
         if (journals.length === 0) return [] as EnrichedJournal[];
 
-        const accountMap = new Map(accounts.map(a => [a.id, a]));
-        const transactionsByJournal = new Map<string, Transaction[]>();
+        const journalIds = journals.map(j => j.id);
+        const enrichmentData = await journalRepository.getEnrichmentDataRaw(journalIds);
 
-        for (const t of transactions) {
-          const list = transactionsByJournal.get(t.journalId) || [];
-          list.push(t);
-          transactionsByJournal.set(t.journalId, list);
+        const dataByJournal = new Map<string, typeof enrichmentData>();
+        for (const row of enrichmentData) {
+          const list = dataByJournal.get(row.journal_id) || [];
+          list.push(row);
+          dataByJournal.set(row.journal_id, list);
         }
 
         return journals.map(j => {
-          const jTxs = transactionsByJournal.get(j.id) || [];
-          const journalAccountIds = Array.from(new Set(jTxs.map(t => t.accountId)));
+          const rows = dataByJournal.get(j.id) || [];
 
           const accountTypesMap = new Map<string, AccountType>();
-          journalAccountIds.forEach(id => {
-            const acc = accountMap.get(id);
-            if (acc) {
-              accountTypesMap.set(id, acc.accountType as AccountType);
-            }
-          });
+          rows.forEach(r => accountTypesMap.set(r.account_id, r.account_type));
 
-          const enrichedAccounts = journalAccountIds.map(id => {
-            const acc = accountMap.get(id);
+          const enrichedAccounts = rows.map(r => ({
+            id: r.account_id,
+            name: r.account_name,
+            accountType: r.account_type,
+            role: (r.transaction_type === TransactionType.CREDIT ? 'SOURCE' : 'DESTINATION') as any,
+            icon: r.account_icon,
+          }));
 
-            const role =
-              jTxs.find(t => t.accountId === id)?.transactionType === TransactionType.CREDIT
-                ? 'SOURCE'
-                : 'DESTINATION';
+          // Map for presenter compatibility
+          const txsForPresenter = rows.map(r => ({
+            accountId: r.account_id,
+            amount: r.amount,
+            transactionType: r.transaction_type,
+          }));
 
-            return {
-              id,
-              name: acc?.name || 'Unknown',
-              accountType: acc?.accountType || 'ASSET',
-              role: role as 'SOURCE' | 'DESTINATION' | 'NEUTRAL',
-              icon: acc?.icon,
-            };
-          });
-
-          // Recalculate displayType, semanticType, and semanticLabel using multi-leg logic
           const { source, destination } = journalPresenter.getSourceAndDestTypes(
-            jTxs,
+            txsForPresenter,
             accountTypesMap,
           );
           const semanticType = journalPresenter.getSemanticType(source, destination);
-          const displayType = journalPresenter.getJournalDisplayType(jTxs, accountTypesMap);
-          const semanticLabel = journalPresenter.getJournalSemanticLabel(jTxs, accountTypesMap);
+          const displayType = journalPresenter.getJournalDisplayType(
+            txsForPresenter,
+            accountTypesMap,
+          );
+          const semanticLabel = journalPresenter.getJournalSemanticLabel(
+            txsForPresenter,
+            accountTypesMap,
+          );
 
           return {
             id: j.id,
@@ -768,7 +729,6 @@ export class JournalService {
         for (let i = 0; i < prev.length; i++) {
           const p = prev[i];
           const c = curr[i];
-          // Simple deep check for the parts of the journal that trigger list re-renders
           if (
             p.id !== c.id ||
             p.status !== c.status ||
@@ -780,7 +740,6 @@ export class JournalService {
           )
             return false;
 
-          // Quick check for account stability (ID + Name change should trigger re-render)
           for (let j = 0; j < p.accounts.length; j++) {
             if (p.accounts[j].id !== c.accounts[j].id || p.accounts[j].name !== c.accounts[j].name)
               return false;

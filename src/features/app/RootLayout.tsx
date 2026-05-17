@@ -29,7 +29,6 @@ import '@/src/services/audit-handlers';
 
 // Prevent splash from hiding until we control it
 SplashScreen.preventAutoHideAsync().catch(() => {});
-analytics.initialize();
 
 /**
  * Root Layout

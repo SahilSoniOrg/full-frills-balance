@@ -5,6 +5,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { of } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { WorkplaceId } from '@/src/types/domain';
@@ -28,6 +29,8 @@ jest.mock('@/src/utils/preferences', () => ({
 describe('PatternService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    reactiveDataService.clearCache();
+    patternService.clearCache();
 
     // Default simple mocks
     (accountRepository.observeAll as jest.Mock).mockReturnValue(of([]));
@@ -37,6 +40,7 @@ describe('PatternService', () => {
     (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
     (transactionRepository.findByJournals as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
+    (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue([]);
   });
 
   describe('observePatterns', () => {
@@ -100,7 +104,7 @@ describe('PatternService', () => {
       ];
 
       (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue(
+      (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue(
         mockTransactions,
       );
 
@@ -203,7 +207,7 @@ describe('PatternService', () => {
       ]);
       (transactionRepository.findByJournals as jest.Mock).mockResolvedValue(mockTransactions);
       (journalRepository.findByIds as jest.Mock).mockResolvedValue(Object.values(mockJournals));
-      (transactionRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+      (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue([]);
 
       patternService
         .observePatterns('wp1' as WorkplaceId)

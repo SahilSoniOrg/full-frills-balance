@@ -1,5 +1,6 @@
-import { Animation } from '@/src/constants';
+import { Animation, AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
+import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
@@ -45,6 +46,13 @@ export interface MonthlyFlowData {
   expense: number;
 }
 
+export interface AccountDashboardData {
+  account: Account | null;
+  balance: AccountBalance | null;
+  subAccounts: AccountBalance[];
+  allAccounts: Account[];
+}
+
 /**
  * ReactiveDataService - Centralized observable management for dashboard data.
  *
@@ -58,7 +66,7 @@ class ReactiveDataService {
   // share a single combineLatest chain.
   private _dashboardCache = new Map<string, Observable<DashboardData>>();
   private _optimizedAccountListCache = new Map<string, Observable<DashboardSummaryData>>();
-  private _accountDashboardCache = new Map<string, Observable<any>>();
+  private _accountDashboardCache = new Map<string, Observable<AccountDashboardData>>();
   private _allBalancesCache = new Map<
     string,
     Observable<{
@@ -67,6 +75,67 @@ class ReactiveDataService {
       wealthSummary: WealthSummary;
     }>
   >();
+
+  // Base Shared Observables to avoid redundant initial fetches across different caches
+  private _accountsObsCache = new Map<WorkplaceId, Observable<Account[]>>();
+  private _journalMetaObsCache = new Map<WorkplaceId, Observable<Journal[]>>();
+  private _activeCountObsCache = new Map<WorkplaceId, Observable<number>>();
+
+  /**
+   * Clears all cached observables. Primarily used for unit test isolation.
+   */
+  clearCache(): void {
+    this._dashboardCache.clear();
+    this._optimizedAccountListCache.clear();
+    this._accountDashboardCache.clear();
+    this._allBalancesCache.clear();
+    this._accountsObsCache.clear();
+    this._journalMetaObsCache.clear();
+    this._activeCountObsCache.clear();
+  }
+
+  /**
+   * Observe all accounts for a workplace.
+   * Shared and cached via shareReplay.
+   */
+  observeAccounts(workplaceId: WorkplaceId): Observable<Account[]> {
+    if (this._accountsObsCache.has(workplaceId)) {
+      return this._accountsObsCache.get(workplaceId)!;
+    }
+    const obs$ = accountRepository
+      .observeAll(workplaceId)
+      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    this._accountsObsCache.set(workplaceId, obs$);
+    return obs$;
+  }
+
+  /**
+   * Observe journal status metadata (posted/deleted counts).
+   */
+  observeJournalMeta(workplaceId: WorkplaceId): Observable<Journal[]> {
+    if (this._journalMetaObsCache.has(workplaceId)) {
+      return this._journalMetaObsCache.get(workplaceId)!;
+    }
+    const obs$ = journalRepository
+      .observeStatusMeta(workplaceId)
+      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    this._journalMetaObsCache.set(workplaceId, obs$);
+    return obs$;
+  }
+
+  /**
+   * Observe total active transaction count.
+   */
+  observeActiveCount(workplaceId: WorkplaceId): Observable<number> {
+    if (this._activeCountObsCache.has(workplaceId)) {
+      return this._activeCountObsCache.get(workplaceId)!;
+    }
+    const obs$ = transactionRepository
+      .observeActiveCount(workplaceId)
+      .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    this._activeCountObsCache.set(workplaceId, obs$);
+    return obs$;
+  }
 
   /**
    * Background hydration pass for reactive streams.
@@ -109,58 +178,25 @@ class ReactiveDataService {
       this._dashboardCache.clear();
       this._optimizedAccountListCache.clear();
       this._accountDashboardCache.clear();
+      this._accountsObsCache.clear();
+      this._journalMetaObsCache.clear();
     }
 
+    const ninetyDaysAgo = Date.now() - AppConfig.insights.lookbackDays * AppConfig.time.msPerDay;
+
+    // Optimized: Derive from the high-performance SQL balance stream
     const obs$ = combineLatest([
-      accountRepository.observeAll(workplaceId),
-      transactionRepository.observeActiveWithColumns(workplaceId, [
-        'amount',
-        'transaction_type',
-        'transaction_date',
-        'currency_code',
-        'account_id',
-        'exchange_rate',
-        'updated_at',
-      ]),
-      currencyRepository.observeAll(),
-      journalRepository.observeStatusMeta(workplaceId),
+      this.observeAllBalances(targetCurrency, workplaceId),
+      transactionRepository.observeByDateRange(workplaceId, ninetyDaysAgo),
     ]).pipe(
-      firstFastDebounce(Animation.dataRefreshDebounce),
-      switchMap(async ([accounts, transactions]) => {
-        const trace = traceService.startTrace('DashboardData');
-        try {
-          const balances = await balanceService.getAccountBalances(
-            workplaceId,
-            undefined,
-            targetCurrency,
-            trace,
-          );
-
-          const parentIds = new Set(
-            accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
-          );
-          const leafBalances = balances.filter(b => !parentIds.has(b.accountId));
-          const wealthSummary = await wealthService.calculateSummary(leafBalances, targetCurrency);
-
-          return { accounts, transactions, balances, wealthSummary };
-        } catch (error) {
-          logger.error('Failed to calculate dashboard data:', error);
-          return {
-            accounts,
-            transactions,
-            balances: [],
-            wealthSummary: {
-              netWorth: 0,
-              totalAssets: 0,
-              totalLiabilities: 0,
-              totalEquity: 0,
-              totalIncome: 0,
-              totalExpense: 0,
-            },
-          };
-        } finally {
-          trace.end();
-        }
+      switchMap(async ([base, transactions]) => {
+        const { accounts, balancesMap, wealthSummary } = base;
+        return {
+          accounts,
+          transactions,
+          balances: Array.from(balancesMap.values()),
+          wealthSummary,
+        };
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
@@ -266,9 +302,9 @@ class ReactiveDataService {
     }
 
     const obs$ = combineLatest([
-      accountRepository.observeAll(workplaceId),
-      journalRepository.observeStatusMeta(workplaceId),
-      transactionRepository.observeActiveCount(workplaceId),
+      this.observeAccounts(workplaceId),
+      this.observeJournalMeta(workplaceId),
+      this.observeActiveCount(workplaceId),
       exchangeRateRepository.observeAll(),
     ]).pipe(
       firstFastDebounce(Animation.dataRefreshDebounce),
@@ -458,7 +494,7 @@ class ReactiveDataService {
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    const loggedObs$ = new Observable<any>(subscriber => {
+    const loggedObs$ = new Observable<AccountDashboardData>(subscriber => {
       const subStart = performance.now();
       let firstEmission = true;
       const sub = obs$.subscribe({

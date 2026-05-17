@@ -10,6 +10,7 @@ import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { of } from 'rxjs';
 import { WorkplaceId } from '@/src/types/domain';
 
@@ -42,6 +43,7 @@ jest.mock('@/src/utils/preferences', () => {
 describe('NotificationService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    reactiveDataService.clearCache();
 
     // Default simple mocks
     (accountRepository.observeByType as jest.Mock).mockReturnValue(of([]));
@@ -104,6 +106,9 @@ describe('NotificationService', () => {
         if (type === AccountType.LIABILITY) return of(mockLiabilities);
         return of([]);
       });
+      (accountRepository.observeAll as jest.Mock).mockReturnValue(
+        of([...mockAssets, ...mockLiabilities]),
+      );
       (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
         { accountId: 'a1', balance: 5000 },
         { accountId: 'l1', balance: -1000 },

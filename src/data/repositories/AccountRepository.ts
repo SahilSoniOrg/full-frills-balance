@@ -528,56 +528,43 @@ export class AccountRepository {
     const statusArgs = [...ACTIVE_JOURNAL_STATUSES];
 
     // We split the query into parts to avoid scanning the entire transactions table multiple times.
-    // 1. RankedTransactions: Finds the absolute latest balance for each account using ROW_NUMBER.
+    // 1. LatestBalance: Finds the absolute latest balance for each account using ROW_NUMBER.
     //    Optimization: Prune transaction scan to only include active accounts.
-    // 2. AggregatedStats: Calculates monthly totals using unified helpers.
+    // 2. Aggregates: Calculates monthly totals and optionally total counts in a single pass.
     const sql = `
-      WITH RankedTransactions AS (
-        SELECT 
-          t.account_id, 
-          t.running_balance,
-          ROW_NUMBER() OVER (
-            PARTITION BY t.account_id 
-            ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
-          ) as rn
-        FROM transactions t
-        JOIN journals j ON t.journal_id = j.id
-        WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${placeholders})
-          AND t.account_id IN (SELECT id FROM accounts WHERE deleted_at IS NULL AND workplace_id = ?)
-      ),
-      LatestBalance AS (
+      WITH LatestBalance AS (
         SELECT account_id, running_balance
-        FROM RankedTransactions
+        FROM (
+          SELECT 
+            t.account_id, 
+            t.running_balance,
+            ROW_NUMBER() OVER (
+              PARTITION BY t.account_id 
+              ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
+            ) as rn
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${placeholders})
+            AND t.account_id IN (SELECT id FROM accounts WHERE deleted_at IS NULL AND workplace_id = ?)
+        )
         WHERE rn = 1
       ),
-      MonthlyAggregates AS (
+      Aggregates AS (
         SELECT 
           t.account_id,
-          SUM(${getPeriodIncreaseSQLSnippet()}) as periodIncrease,
-          SUM(${getPeriodDecreaseSQLSnippet()}) as periodDecrease
+          SUM(CASE WHEN t.transaction_date >= ? AND t.transaction_date <= ? THEN ${getPeriodIncreaseSQLSnippet()} ELSE 0 END) as periodIncrease,
+          SUM(CASE WHEN t.transaction_date >= ? AND t.transaction_date <= ? THEN ${getPeriodDecreaseSQLSnippet()} ELSE 0 END) as periodDecrease
+          ${includeTotalCount ? ', COUNT(*) as direct_transaction_count' : ''}
         FROM transactions t
         JOIN journals j ON t.journal_id = j.id
         JOIN accounts a ON t.account_id = a.id
         WHERE t.deleted_at IS NULL 
           AND j.deleted_at IS NULL 
           AND j.status IN (${placeholders})
-          AND t.transaction_date >= ? AND t.transaction_date <= ?
+          AND a.workplace_id = ?
+          ${!includeTotalCount ? 'AND t.transaction_date >= ? AND t.transaction_date <= ?' : ''}
         GROUP BY t.account_id
       )
-    ${
-      includeTotalCount
-        ? `,
-      TotalCounts AS (
-        SELECT 
-          t.account_id,
-          COUNT(*) as direct_transaction_count
-        FROM transactions t
-        JOIN journals j ON t.journal_id = j.id
-        WHERE t.deleted_at IS NULL AND j.deleted_at IS NULL AND j.status IN (${placeholders})
-        GROUP BY t.account_id
-      )`
-        : ``
-    }
       SELECT 
         a.id as id, 
         a.name as name, 
@@ -587,22 +574,20 @@ export class AccountRepository {
         a.icon as icon, 
         a.parent_account_id as parent_account_id,
         lb.running_balance as direct_balance,
-        ${includeTotalCount ? 'IFNULL(tc.direct_transaction_count, 0)' : '0'} as direct_transaction_count,
-        IFNULL(ma.periodIncrease, 0) as periodIncrease,
-        IFNULL(ma.periodDecrease, 0) as periodDecrease
+        ${includeTotalCount ? 'IFNULL(agg.direct_transaction_count, 0)' : '0'} as direct_transaction_count,
+        IFNULL(agg.periodIncrease, 0) as periodIncrease,
+        IFNULL(agg.periodDecrease, 0) as periodDecrease
       FROM accounts a
       LEFT JOIN LatestBalance lb ON a.id = lb.account_id
-      LEFT JOIN MonthlyAggregates ma ON a.id = ma.account_id
-      ${includeTotalCount ? 'LEFT JOIN TotalCounts tc ON a.id = tc.account_id' : ''}
+      LEFT JOIN Aggregates agg ON a.id = agg.account_id
       WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'} AND a.workplace_id = ?
       ORDER BY a.order_num ASC
     `;
 
-    const args: RawSQLArg[] = [...statusArgs];
-    args.push(workplaceId);
-    args.push(...statusArgs, startOfMonth, endOfMonth);
-    if (includeTotalCount) {
-      args.push(...statusArgs);
+    const args: RawSQLArg[] = [...statusArgs, workplaceId];
+    args.push(startOfMonth, endOfMonth, startOfMonth, endOfMonth, ...statusArgs, workplaceId);
+    if (!includeTotalCount) {
+      args.push(startOfMonth, endOfMonth);
     }
     args.push(workplaceId);
 

@@ -36,20 +36,10 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
       logger.info('[Bootstrap] Starting initialization...');
 
       try {
-        // 1. Identify user (preferences already hydrated via singleton)
-        analytics.logAppOpened();
-
-        let anonId = preferences.anonymizedId;
-        if (!anonId) {
-          anonId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-          preferences.setAnonymizedId(anonId);
-        }
-        analytics.identify(anonId);
-
-        // 2. Critical Data Seeding
+        // 1. Critical Data Seeding
         await currencyInitService.initialize();
 
-        // 3. Lean Cache Warming (including Safe-to-Spend and Insights)
+        // 2. Lean Cache Warming (Shared SQL Streams)
         await Promise.allSettled([
           currencyRepository.getAllPrecisions(),
           reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
@@ -75,8 +65,23 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     if (!isAppReady) return;
 
     runAfterInteractions(async () => {
-      logger.info('[Bootstrap] Running background stabilization tasks...');
+      // 3-second delay to ensure Dashboard animations and early interactions are smooth
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
+      logger.info('[Bootstrap] Running delayed background tasks...');
+
+      // 3. Lazy Analytics & Identity
+      analytics.delayedInitializePostHog();
+      analytics.logAppOpened();
+
+      let anonId = preferences.anonymizedId;
+      if (!anonId) {
+        anonId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        preferences.setAnonymizedId(anonId);
+      }
+      analytics.identify(anonId);
+
+      // 4. Stabilization
       const notifCadence = preferences.notificationCadence;
       const notifHour = preferences.notificationHour;
       const notifMinute = preferences.notificationMinute;

@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { AccountType } from '@/src/data/models/Account';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
@@ -938,6 +939,42 @@ export class JournalRepository {
       logger.error('[JournalRepository] getRecentUniqueDescriptions failed', error);
       return [];
     }
+  }
+
+  /**
+   * Fetches transactions and account info for a batch of journals in a single raw query.
+   * Optimized for JournalService.observeEnrichedJournals.
+   */
+  async getEnrichmentDataRaw(journalIds: string[]): Promise<
+    {
+      journal_id: JournalId;
+      account_id: AccountId;
+      amount: number;
+      transaction_type: TransactionType;
+      account_name: string;
+      account_type: AccountType;
+      account_icon?: string;
+    }[]
+  > {
+    if (journalIds.length === 0) return [];
+
+    const placeholders = journalIds.map(() => '?').join(',');
+    const sql = `
+      SELECT 
+        t.journal_id as journal_id, 
+        t.account_id as account_id, 
+        t.amount as amount, 
+        t.transaction_type as transaction_type, 
+        a.name as account_name, 
+        a.account_type as account_type, 
+        a.icon as account_icon
+      FROM transactions t
+      JOIN accounts a ON t.account_id = a.id
+      WHERE t.journal_id IN (${placeholders}) AND t.deleted_at IS NULL
+    `;
+
+    const results = await transactionRawRepository.queryRaw<any>(sql, journalIds);
+    return (results || []) as any[];
   }
 }
 

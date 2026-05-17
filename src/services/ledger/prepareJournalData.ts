@@ -68,21 +68,24 @@ export async function prepareJournalData(
 
   const isInactive = data.status === JournalStatus.PLANNED || data.status === JournalStatus.SKIPPED;
   if (!isInactive) {
-    for (const tx of roundedTransactions) {
-      const latestTx = await transactionRepository.findLatestForAccountBeforeDate(
-        workplaceId,
-        tx.accountId,
-        data.journalDate,
-      );
-      const balance = accountingService.calculateNewBalance(
-        latestTx?.runningBalance || 0,
-        tx.amount,
-        accountTypes.get(tx.accountId)!,
-        tx.transactionType,
-        accountPrecisions.get(tx.accountId) ?? 2,
-      );
-      calculatedBalances.set(tx.accountId, balance);
-    }
+    // Parallelize fetching latest transactions for all accounts involved
+    await Promise.all(
+      roundedTransactions.map(async tx => {
+        const latestTx = await transactionRepository.findLatestForAccountBeforeDate(
+          workplaceId,
+          tx.accountId,
+          data.journalDate,
+        );
+        const balance = accountingService.calculateNewBalance(
+          latestTx?.runningBalance || 0,
+          tx.amount,
+          accountTypes.get(tx.accountId)!,
+          tx.transactionType,
+          accountPrecisions.get(tx.accountId) ?? 2,
+        );
+        calculatedBalances.set(tx.accountId, balance);
+      }),
+    );
   }
 
   const totalAmount = Math.max(Math.abs(validation.totalDebits), Math.abs(validation.totalCredits));

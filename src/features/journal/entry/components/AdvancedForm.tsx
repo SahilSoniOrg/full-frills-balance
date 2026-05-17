@@ -72,7 +72,7 @@ export const AdvancedForm = ({
                 onUpdate={(field, value) => handleUpdateLine(line.id, field, value)}
                 onRemove={() => editor.removeLine(line.id)}
                 onSelectAccount={() => onSelectAccountRequest(line.id)}
-                onAutoFetchRate={force => editor.autoFetchLineRate(line.id, force)}
+                onAutoFetchRate={force => editor.fetchRatesForLines([line.id], force)}
                 onBalanceLine={() => editor.balanceLine(line.id)}
                 isBalancePrimary={editor.isUnbalanced && editor.isEntryReadyToBalance}
                 getLineBaseAmount={JournalCalculator.getLineBaseAmount}

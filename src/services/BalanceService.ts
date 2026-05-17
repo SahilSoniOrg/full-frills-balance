@@ -429,15 +429,14 @@ export class BalanceService {
         };
       });
 
-      // Phase 2: Latest Balances & Transaction Counts (Parallel)
-      const [latestBalancesMap, deltaCountsMap] = await Promise.all([
-        transactionRawRepository.getLatestBalancesRaw(workplaceId, accountIds, cutoffDate),
-        transactionRawRepository.getAccountTransactionCountsRaw(
+      // Phase 2: Latest Balances & Transaction Counts (Single Pass Optimization)
+      const { balances: latestBalancesMap, counts: deltaCountsMap } =
+        await transactionRawRepository.getLatestBalancesAndCountsRaw(
+          workplaceId,
           countInput,
           cutoffDate,
           minSnapshotDate,
-        ),
-      ]);
+        );
       trace.metric('fetchData');
 
       // 5. Map results to AccountBalance objects

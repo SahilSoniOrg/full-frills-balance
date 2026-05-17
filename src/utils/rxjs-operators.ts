@@ -1,4 +1,4 @@
-import { Observable, timer } from 'rxjs';
+import { Observable, timer, of } from 'rxjs';
 import { debounce } from 'rxjs/operators';
 
 /**
@@ -12,6 +12,6 @@ import { debounce } from 'rxjs/operators';
 export function firstFastDebounce<T>(dueTime: number) {
   return (source: Observable<T>) => {
     let emissionCount = 0;
-    return source.pipe(debounce(() => (emissionCount++ === 0 ? timer(0) : timer(dueTime))));
+    return source.pipe(debounce(() => (emissionCount++ === 0 ? of(null) : timer(dueTime))));
   };
 }

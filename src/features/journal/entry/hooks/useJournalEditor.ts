@@ -20,7 +20,7 @@ import {
 import { showErrorAlert } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface UseJournalEditorOptions {
   journalId?: JournalId;
@@ -267,30 +267,44 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     setLines(prev => prev.map(line => (batch[line.id] ? { ...line, ...batch[line.id] } : line)));
   }, []);
 
-  const autoFetchLineRate = useCallback(
-    async (id: string, forceRefresh: boolean = false) => {
-      const line = lines.find(l => l.id === id);
-      if (!line || !line.accountCurrency) return;
+  const fetchRatesForLines = useCallback(
+    async (ids: string[], forceRefresh: boolean = false) => {
+      const pendingLines = lines.filter(l => ids.includes(l.id) && l.accountCurrency);
+      if (pendingLines.length === 0) return;
 
       try {
         const defaultCurrency = workplaceCurrency;
-        if (line.accountCurrency === defaultCurrency) {
-          updateLine(id, { exchangeRate: '' });
-          return;
-        }
+        const updates: Record<string, Partial<JournalEntryLine>> = {};
 
-        const rate = await fetchRate(line.accountCurrency, defaultCurrency, forceRefresh);
-        updateLine(id, { exchangeRate: rate.toString() });
+        await Promise.all(
+          pendingLines.map(async line => {
+            const currency = line.accountCurrency;
+            if (!currency) return;
+
+            if (currency === defaultCurrency) {
+              updates[line.id] = { exchangeRate: '' };
+            } else {
+              const rate = await fetchRate(currency, defaultCurrency, forceRefresh);
+              updates[line.id] = { exchangeRate: rate.toString() };
+            }
+          }),
+        );
+
+        updateLines(updates);
       } catch (error) {
-        logger.error('Failed to auto-fetch rate for line', { id, error });
-        showErrorAlert('Failed to fetch exchange rate');
+        logger.error('Failed to auto-fetch rates for lines', { ids, error });
+        showErrorAlert('Failed to fetch exchange rates');
       }
     },
-    [lines, fetchRate, updateLine, workplaceCurrency],
+    [lines, fetchRate, updateLines, workplaceCurrency],
   );
+
+  const autoFetchedLines = useRef<Set<string>>(new Set());
 
   // Auto-fetch rates when currency changes or line is added
   useEffect(() => {
+    const idsToFetch: string[] = [];
+
     lines.forEach(line => {
       if (
         line.accountCurrency &&
@@ -299,10 +313,18 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
         !isLoading &&
         !isSubmitting
       ) {
-        autoFetchLineRate(line.id);
+        const cacheKey = `${line.id}_${line.accountCurrency}`;
+        if (!autoFetchedLines.current.has(cacheKey)) {
+          autoFetchedLines.current.add(cacheKey);
+          idsToFetch.push(line.id);
+        }
       }
     });
-  }, [lines, workplaceCurrency, autoFetchLineRate, isLoading, isSubmitting]);
+
+    if (idsToFetch.length > 0) {
+      fetchRatesForLines(idsToFetch);
+    }
+  }, [lines, workplaceCurrency, fetchRatesForLines, isLoading, isSubmitting]);
 
   const balanceLine = useCallback(
     (id: string) => {
@@ -483,7 +505,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       updateLine,
       updateLines,
       balanceLine,
-      autoFetchLineRate,
+      fetchRatesForLines,
       getLineIdByRole,
       resolveActiveLineId,
       submit,
@@ -508,7 +530,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       updateLine,
       updateLines,
       balanceLine,
-      autoFetchLineRate,
+      fetchRatesForLines,
       getLineIdByRole,
       resolveActiveLineId,
       submit,

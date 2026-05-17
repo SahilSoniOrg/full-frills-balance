@@ -1,5 +1,5 @@
 import { database } from '@/src/data/database/Database';
-import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/domain';
 import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -622,8 +622,10 @@ export class TransactionRawRepository {
         t.amount,
         t.account_id AS accountId,
         t.currency_code AS currencyCode,
+        j.description,
         COUNT(*) AS occurrenceCount,
         GROUP_CONCAT(t.journal_id) AS journalIds,
+        GROUP_CONCAT(t.transaction_date) AS transactionDates,
         MIN(t.transaction_date) AS firstDate,
         MAX(t.transaction_date) AS lastDate
       FROM transactions t
@@ -632,7 +634,7 @@ export class TransactionRawRepository {
         AND t.deleted_at IS NULL
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
-      GROUP BY t.amount, t.account_id, t.currency_code
+      GROUP BY t.amount, t.account_id, t.currency_code, j.description
       HAVING COUNT(*) >= ?
       ORDER BY occurrenceCount DESC
     `;
@@ -663,6 +665,7 @@ export class TransactionRawRepository {
         currencyCode: string;
         occurrenceCount: number;
         journalIds: Set<string>;
+        transactionDates: number[];
         firstDate: number;
         lastDate: number;
       }
@@ -675,6 +678,7 @@ export class TransactionRawRepository {
       if (existing) {
         existing.occurrenceCount += 1;
         existing.journalIds.add(tx.journalId);
+        existing.transactionDates.push(tx.transactionDate);
         if (tx.transactionDate < existing.firstDate) existing.firstDate = tx.transactionDate;
         if (tx.transactionDate > existing.lastDate) existing.lastDate = tx.transactionDate;
       } else {
@@ -684,6 +688,7 @@ export class TransactionRawRepository {
           currencyCode: tx.currencyCode,
           occurrenceCount: 1,
           journalIds: new Set([tx.journalId]),
+          transactionDates: [tx.transactionDate],
           firstDate: tx.transactionDate,
           lastDate: tx.transactionDate,
         });
@@ -699,6 +704,7 @@ export class TransactionRawRepository {
         currencyCode: g.currencyCode,
         occurrenceCount: g.occurrenceCount,
         journalIds: Array.from(g.journalIds).join(','),
+        transactionDates: g.transactionDates.join(','),
         firstDate: g.firstDate,
         lastDate: g.lastDate,
       }));
@@ -833,6 +839,202 @@ export class TransactionRawRepository {
       results.set(item.accountId, count);
     }
     return results;
+  }
+
+  /**
+   * High-Performance Combination: Fetches latest balances AND transaction counts in a single pass.
+   * Eliminates redundant scans of the transactions table.
+   */
+  async getLatestBalancesAndCountsRaw(
+    workplaceId: WorkplaceId,
+    accountIdsWithBoundaries: {
+      accountId: AccountId;
+      startDate: number;
+      afterTransactionId?: string;
+      afterTransactionDate?: number;
+      afterTransactionCreatedAt?: number;
+    }[],
+    endDate: number,
+    minTransactionDate?: number,
+  ): Promise<{
+    balances: Map<string, number>;
+    counts: Map<string, number>;
+  }> {
+    const balances = new Map<string, number>();
+    const counts = new Map<string, number>();
+
+    if (accountIdsWithBoundaries.length === 0) return { balances, counts };
+
+    // Pre-populate
+    for (const b of accountIdsWithBoundaries) {
+      balances.set(b.accountId, 0);
+      counts.set(b.accountId, 0);
+    }
+
+    const CHUNK_SIZE = 50; // Smaller chunk for complex combined query
+    for (let i = 0; i < accountIdsWithBoundaries.length; i += CHUNK_SIZE) {
+      const chunk = accountIdsWithBoundaries.slice(i, i + CHUNK_SIZE);
+      const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+
+      const unionParts: string[] = [];
+      const boundaryParams: (string | number)[] = [];
+      const accountIds: string[] = [];
+
+      for (const b of chunk) {
+        unionParts.push('SELECT ? as acc_id, ? as last_date, ? as last_created, ? as last_id');
+        boundaryParams.push(
+          b.accountId,
+          b.afterTransactionDate || 0,
+          b.afterTransactionCreatedAt || 0,
+          b.afterTransactionId || '',
+        );
+        accountIds.push(b.accountId);
+      }
+
+      const sql = `
+        WITH search_boundaries(acc_id, last_date, last_created, last_id) AS (
+          ${unionParts.join(' UNION ALL ')}
+        ),
+        RankedTransactions AS (
+          SELECT 
+            t.account_id AS accountId, 
+            t.running_balance AS runningBalance,
+            ROW_NUMBER() OVER (
+              PARTITION BY t.account_id 
+              ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
+            ) as rn
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.account_id IN (${accountIds.map(() => '?').join(',')})
+            AND t.transaction_date <= ?
+            AND t.deleted_at IS NULL
+            AND j.workplace_id = ?
+            AND j.deleted_at IS NULL
+            AND j.status IN (${placeholders})
+        ),
+        LatestBalance AS (
+          SELECT accountId, runningBalance
+          FROM RankedTransactions
+          WHERE rn = 1
+        ),
+        DeltaCounts AS (
+          SELECT t.account_id as accountId, COUNT(*) as count
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          JOIN search_boundaries b ON t.account_id = b.acc_id
+          WHERE t.deleted_at IS NULL
+            AND j.deleted_at IS NULL
+            AND j.status IN (${placeholders})
+            AND t.transaction_date <= ?
+            ${minTransactionDate !== undefined ? 'AND t.transaction_date >= ?' : ''}
+            AND (
+              b.last_id = '' 
+              OR t.transaction_date > b.last_date 
+              OR (t.transaction_date = b.last_date AND t.created_at > b.last_created)
+              OR (t.transaction_date = b.last_date AND t.created_at = b.last_created AND t.id > b.last_id)
+            )
+          GROUP BY t.account_id
+        )
+        SELECT 
+          b.acc_id as accountId,
+          lb.runningBalance as runningBalance,
+          IFNULL(dc.count, 0) as deltaCount
+        FROM search_boundaries b
+        LEFT JOIN LatestBalance lb ON b.acc_id = lb.accountId
+        LEFT JOIN DeltaCounts dc ON b.acc_id = dc.accountId
+      `;
+
+      const queryParams: (string | number)[] = [
+        ...boundaryParams,
+        ...accountIds,
+        endDate,
+        workplaceId,
+        ...ACTIVE_JOURNAL_STATUSES,
+        ...ACTIVE_JOURNAL_STATUSES,
+        endDate,
+      ];
+      if (minTransactionDate !== undefined) queryParams.push(minTransactionDate);
+
+      const raws = await this.queryRaw<{
+        accountId: AccountId;
+        runningBalance: number;
+        deltaCount: number;
+      }>(sql, queryParams);
+
+      if (raws) {
+        for (const row of raws) {
+          balances.set(row.accountId, row.runningBalance || 0);
+          counts.set(row.accountId, row.deltaCount || 0);
+        }
+      } else {
+        // Simple fallback
+        const [balMap, countMap] = await Promise.all([
+          this.getLatestBalancesRaw(workplaceId, accountIds, endDate),
+          this.getAccountTransactionCountsRaw(chunk, endDate, minTransactionDate),
+        ]);
+        for (const [id, val] of balMap) balances.set(id, val);
+        for (const [id, val] of countMap) counts.set(id, val);
+      }
+    }
+
+    return { balances, counts };
+  }
+
+  /**
+   * Fetches lightweight transaction metadata for analysis (e.g., InsightService).
+   * Bypasses full model instantiation to save memory and CPU.
+   */
+  async getTransactionsMetadataRaw(
+    workplaceId: WorkplaceId,
+    accountIds: string[],
+    startDate: number,
+    endDate: number,
+  ): Promise<
+    {
+      id: TransactionId;
+      journalId: JournalId;
+      accountId: AccountId;
+      amount: number;
+      transactionDate: number;
+      transactionType: TransactionType;
+      currencyCode: string;
+    }[]
+  > {
+    if (accountIds.length === 0) return [];
+
+    const accountPlaceholders = accountIds.map(() => '?').join(',');
+    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+
+    const sql = `
+      SELECT
+        t.id,
+        t.journal_id as journalId,
+        t.account_id as accountId,
+        t.amount,
+        t.transaction_date as transactionDate,
+        t.transaction_type as transactionType,
+        t.currency_code as currencyCode
+      FROM transactions t
+      JOIN journals j ON t.journal_id = j.id
+      WHERE t.account_id IN (${accountPlaceholders})
+        AND t.transaction_date >= ?
+        AND t.transaction_date <= ?
+        AND t.deleted_at IS NULL
+        AND j.deleted_at IS NULL
+        AND j.workplace_id = ?
+        AND j.status IN (${placeholders})
+      ORDER BY t.transaction_date DESC
+    `;
+
+    const results = await this.queryRaw<any>(sql, [
+      ...accountIds,
+      startDate,
+      endDate,
+      workplaceId,
+      ...ACTIVE_JOURNAL_STATUSES,
+    ]);
+
+    return (results || []) as any[];
   }
 
   /**

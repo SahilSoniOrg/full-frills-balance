@@ -40,20 +40,32 @@ export class AnalyticsService {
   }
 
   /**
-   * Initialize analytics provider.
-   * Guaranteed to be idempotent and safe to call multiple times.
-   * MUST be called at module level or very early boot to satisfy Sentry requirements.
+   * Stage 1: Early initialization of Sentry only.
+   * MUST be called at the very top of index.js to catch early boot errors.
    */
-  initialize() {
+  earlyInitializeSentry() {
     if (this._initialized) return;
+    this.initializeSentry();
+
+    // Register as the performance reporter early so we don't miss early traces
+    logger.setPerformanceReporter((metric, value, context) => {
+      this.trackPerformance(metric, value, context);
+    });
+  }
+
+  /**
+   * Stage 2: Delayed initialization of PostHog and session tracking.
+   * Called during the background stabilization phase to avoid blocking startup.
+   */
+  delayedInitializePostHog() {
+    if (this._posthog) return;
 
     const isPosthogEnabled =
       typeof POSTHOG_API_KEY === 'string' &&
       POSTHOG_API_KEY.trim().length > 0 &&
       AppConfig.features.enablePostHog;
 
-    // 1. Setup PostHog instance
-    if (!this._posthog && isPosthogEnabled) {
+    if (isPosthogEnabled) {
       try {
         this._posthog = new PostHog(POSTHOG_API_KEY, {
           host: POSTHOG_HOST,
@@ -72,30 +84,32 @@ export class AnalyticsService {
             captureLog: true,
           },
         });
+
+        // Sync user with Sentry once PostHog is ready
+        const distinctId = this._posthog.getDistinctId();
+        Sentry.setUser({ id: distinctId });
+
+        if (__DEV__) {
+          logger.info('[Analytics] PostHog client ready (debug mode)');
+        } else {
+          logger.info('[Analytics] PostHog client ready');
+          this.startSessionTracking();
+        }
       } catch (error) {
         logger.error('[Analytics] Failed to create PostHog instance', error);
       }
     }
 
-    // 2. Register as the performance reporter
-    logger.setPerformanceReporter((metric, value, context) => {
-      this.trackPerformance(metric, value, context);
-    });
-
-    // 3. Sentry Setup
-    this.initializeSentry();
-
-    // 4. Finalize
     this._initialized = true;
+  }
 
-    if (this._posthog) {
-      if (__DEV__) {
-        logger.info('[Analytics] PostHog client ready (debug mode)');
-      } else {
-        logger.info('[Analytics] PostHog client ready');
-        this.startSessionTracking();
-      }
-    }
+  /**
+   * Deprecated: Use earlyInitializeSentry and delayedInitializePostHog.
+   * Kept for backward compatibility during migration.
+   */
+  initialize() {
+    this.earlyInitializeSentry();
+    this.delayedInitializePostHog();
   }
 
   /**

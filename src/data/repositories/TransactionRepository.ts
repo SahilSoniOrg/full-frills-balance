@@ -341,6 +341,8 @@ export class TransactionRepository {
         'journal_id',
         'currency_code',
         'transaction_type',
+        'exchange_rate',
+        'updated_at',
       ]);
   }
 

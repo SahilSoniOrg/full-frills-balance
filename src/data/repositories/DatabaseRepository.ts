@@ -25,18 +25,30 @@ export class DatabaseRepository {
   async cleanupDeletedRecords(tables: string[]): Promise<number> {
     let totalDeleted = 0;
     await database.write(async () => {
-      for (const table of tables) {
-        const deletedRecords = await database.collections
-          .get(table)
-          .query(Q.where('deleted_at', Q.notEq(null)))
-          .fetch();
+      // Parallelize fetching of deleted records across tables
+      const results = await Promise.all(
+        tables.map(async table => {
+          const deletedRecords = await database.collections
+            .get(table)
+            .query(Q.where('deleted_at', Q.notEq(null)))
+            .fetch();
+          return { table, deletedRecords };
+        }),
+      );
+
+      const batchOps: any[] = [];
+      for (const { deletedRecords } of results) {
         const purgeable = deletedRecords.filter(
           (record: any) => record?._raw?._status === 'synced',
         );
         totalDeleted += purgeable.length;
         if (purgeable.length > 0) {
-          await database.batch(purgeable.map((record: any) => record.prepareDestroyPermanently()));
+          batchOps.push(...purgeable.map((record: any) => record.prepareDestroyPermanently()));
         }
+      }
+
+      if (batchOps.length > 0) {
+        await database.batch(batchOps);
       }
     });
     return totalDeleted;
@@ -48,8 +60,8 @@ export class DatabaseRepository {
       // This ensures all records (including soft-deleted ones hidden from ORM) are purged.
       const adapter = getRawAdapter(database);
       if (adapter && typeof adapter.queryRaw === 'function') {
+        // Sequentially execute raw SQL deletes to avoid SQLITE_BUSY locks
         for (const table of tables) {
-          // Use unsafeQueryRaw to execute DELETE
           await adapter.queryRaw(`DELETE FROM ${table} WHERE workplace_id = ?`, [workplaceId]);
         }
         logger.info(
@@ -62,14 +74,22 @@ export class DatabaseRepository {
       logger.warn(
         '[DatabaseRepository] purgeWorkplaceData falling back to ORM loop. Performance and integrity risk.',
       );
-      for (const table of tables) {
-        const records = await database.collections
-          .get(table)
-          .query(Q.where('workplace_id', workplaceId))
-          .fetch();
-        if (records.length > 0) {
-          await database.batch(records.map((record: any) => record.prepareDestroyPermanently()));
-        }
+
+      // Parallelize fetching of records to be purged
+      const results = await Promise.all(
+        tables.map(async table => {
+          const records = await database.collections
+            .get(table)
+            .query(Q.where('workplace_id', workplaceId))
+            .fetch();
+          return records;
+        }),
+      );
+
+      const batchOps = results.flat().map((record: any) => record.prepareDestroyPermanently());
+
+      if (batchOps.length > 0) {
+        await database.batch(batchOps);
       }
     });
   }

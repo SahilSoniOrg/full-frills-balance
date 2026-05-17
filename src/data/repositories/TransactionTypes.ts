@@ -52,6 +52,8 @@ export interface RecurringPattern {
   currencyCode: string;
   occurrenceCount: number;
   journalIds: string;
+  transactionDates: string; // Comma-separated timestamps
+  description?: string;
   firstDate: number;
   lastDate: number;
 }
