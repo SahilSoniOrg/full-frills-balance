@@ -112,10 +112,12 @@ function SplashOrchestrator() {
   const isFullyReady = isAppReady && (!hasCompletedOnboarding || isDataHydrated);
 
   useEffect(() => {
-    if (isFullyReady) {
+    // We hide the NATIVE splash as soon as the REACT branded splash is ready to show.
+    // If we wait for isFullyReady, the user stays stuck on the OS splash screen.
+    if (isAppReady) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isFullyReady]);
+  }, [isAppReady]);
 
   return <DesignedSplashScreen isReady={isFullyReady} />;
 }
