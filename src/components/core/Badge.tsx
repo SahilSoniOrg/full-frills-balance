@@ -1,7 +1,7 @@
 import { AppIcon, IconName } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
-import { resolveThemeColor } from '@/src/design-system/utils';
+import { resolveStyleColors, resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useMemo } from 'react';
@@ -44,14 +44,12 @@ export function Badge({
     const currentIconSize = size === 'sm' ? Typography.sizes.xs : Typography.sizes.sm;
 
     return {
-      badgeStyle: [styles.badge, sizeStyles, { backgroundColor }, style],
-      textStyle: [
-        textTypography,
-        {
-          color: textColor,
-          fontFamily: fonts.semibold,
-        },
-      ],
+      badgeStyle: [styles.badge, sizeStyles, { backgroundColor }, resolveStyleColors(theme, style)],
+      textStyle: {
+        ...textTypography,
+        color: textColor,
+        fontFamily: fonts.semibold,
+      },
       iconSize: currentIconSize,
       finalTextColor: textColor,
     };

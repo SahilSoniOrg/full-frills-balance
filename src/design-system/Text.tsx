@@ -60,7 +60,7 @@ export function Text({
 
     const baseStyle = {
       fontSize,
-      lineHeight: fontSize * lineHeightMultiplier,
+      lineHeight: Math.round(fontSize * lineHeightMultiplier),
       letterSpacing:
         letterSpacing ??
         (isHeading || variant === 'subheading'

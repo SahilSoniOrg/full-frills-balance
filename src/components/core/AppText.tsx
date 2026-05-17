@@ -63,17 +63,14 @@ export function AppText({
 
     const variantColors = getVariantColors(color);
 
-    const baseStyle = [
-      // Base styles (fontSize, lineHeight) - we intentionally override fontFamily below
-      typographyStyles,
-      {
-        color: variantColors.main,
-        textAlign: align,
-        fontFamily: resolvedFontFamily,
-        fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
-        fontVariant: (tabular ? ['tabular-nums'] : []) as any,
-      },
-    ];
+    const baseStyle = {
+      ...typographyStyles,
+      color: variantColors.main,
+      textAlign: align,
+      fontFamily: resolvedFontFamily,
+      fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
+      fontVariant: (tabular ? ['tabular-nums'] : []) as any,
+    };
 
     return [baseStyle, resolveStyleColors(theme, style)];
   }, [variant, weight, color, getVariantColors, theme, fonts, align, italic, tabular, style]);
@@ -84,37 +81,37 @@ export function AppText({
 const styles = StyleSheet.create({
   caption: {
     fontSize: Typography.sizes.xs,
-    lineHeight: Typography.sizes.xs * Typography.lineHeights.normal,
+    lineHeight: Math.round(Typography.sizes.xs * Typography.lineHeights.normal),
     letterSpacing: Typography.letterSpacing.normal,
   },
   body: {
     fontSize: Typography.sizes.base,
-    lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
+    lineHeight: Math.round(Typography.sizes.base * Typography.lineHeights.normal),
     letterSpacing: Typography.letterSpacing.normal,
   },
   subheading: {
     fontSize: Typography.sizes.lg,
-    lineHeight: Typography.sizes.lg * Typography.lineHeights.tight,
+    lineHeight: Math.round(Typography.sizes.lg * Typography.lineHeights.tight),
     letterSpacing: Typography.letterSpacing.tight,
   },
   heading: {
     fontSize: Typography.sizes.xl,
-    lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
+    lineHeight: Math.round(Typography.sizes.xl * Typography.lineHeights.tight),
     letterSpacing: Typography.letterSpacing.tight,
   },
   title: {
     fontSize: Typography.sizes.xxxl,
-    lineHeight: Typography.sizes.xxxl * Typography.lineHeights.tight,
+    lineHeight: Math.round(Typography.sizes.xxxl * Typography.lineHeights.tight),
     letterSpacing: Typography.letterSpacing.tight,
   },
   xl: {
     fontSize: Typography.sizes.xxl,
-    lineHeight: Typography.sizes.xxl * Typography.lineHeights.tight,
+    lineHeight: Math.round(Typography.sizes.xxl * Typography.lineHeights.tight),
     letterSpacing: Typography.letterSpacing.tight,
   },
   hero: {
     fontSize: Typography.sizes.hero,
-    lineHeight: Typography.sizes.hero * Typography.lineHeights.tight,
+    lineHeight: Math.round(Typography.sizes.hero * Typography.lineHeights.tight),
     letterSpacing: Typography.letterSpacing.tight,
   },
 });
