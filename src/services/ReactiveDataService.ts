@@ -235,7 +235,7 @@ class ReactiveDataService {
           wealthSummary,
         };
         // Persist for Instant Boot on next launch
-        snapshotService.saveDashboardSnapshot(data);
+        snapshotService.saveDashboardSnapshot(workplaceId, data);
         return data;
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -438,7 +438,7 @@ class ReactiveDataService {
           const wealthSummary = wealthService.calculateSummarySync(leafBalances, targetCurrency);
 
           // Persist summary snapshot (smaller, faster to load than full dashboard)
-          snapshotService.saveWealthSnapshot(wealthSummary);
+          snapshotService.saveWealthSnapshot(workplaceId, wealthSummary);
 
           return { accounts, balancesMap, wealthSummary };
         } catch (error) {

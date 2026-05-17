@@ -46,7 +46,7 @@ export function useWealthSummary(
       accounts: [],
       enrichedJournals: [],
       balances: [],
-      wealthSummary: snapshotService.getWealthSnapshot() || EMPTY_WEALTH_SUMMARY,
+      wealthSummary: snapshotService.getWealthSnapshot(workplaceId) || EMPTY_WEALTH_SUMMARY,
     }),
   );
 

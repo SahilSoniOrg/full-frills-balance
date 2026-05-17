@@ -87,7 +87,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     () =>
       isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
     [workplaceId, isAppReady],
-    () => snapshotService.getCustomSnapshot(`safe_to_spend_${workplaceId}`),
+    () => snapshotService.getCustomSnapshot(workplaceId, `safe_to_spend`),
   );
 
   const hasSafeToSpendData = !!safeToSpendData;
@@ -142,8 +142,11 @@ export function useDashboardViewModel(): DashboardViewModel {
       },
       defaultToCurrentMonth: false,
       initialItems: () => {
-        const snapshot = snapshotService.getDashboardSnapshot();
-        return snapshot?.enrichedJournals || [];
+        const snapshot = snapshotService.getDashboardSnapshot(workplaceId);
+        const items = snapshot?.enrichedJournals || [];
+        // Progressive Mount: Only show 5 items in the very first frame
+        // to keep the view hierarchy light for the splash hide animation.
+        return items.slice(0, 5);
       },
     },
     workplaceId,

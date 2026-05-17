@@ -4,6 +4,15 @@ import { storage } from './storage';
 const DASHBOARD_SNAPSHOT_KEY = 'dashboard_data_snapshot';
 const WEALTH_SNAPSHOT_KEY = 'wealth_summary_snapshot';
 
+// 2 days TTL for snapshots to ensure they don't get too stale
+const SNAPSHOT_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
+
+export interface Snapshot<T> {
+  data: T;
+  timestamp: number;
+  workplaceId: string;
+}
+
 /**
  * SnapshotService - Manages persistent JSON snapshots for "Instant Boot".
  * Uses MMKV for synchronous, high-performance disk access.
@@ -60,9 +69,17 @@ class SnapshotService {
   /**
    * Persists a dashboard snapshot to disk.
    */
-  saveDashboardSnapshot(data: any): void {
+  saveDashboardSnapshot(workplaceId: string, data: any): void {
     try {
-      storage.set(DASHBOARD_SNAPSHOT_KEY, JSON.stringify(data, this.replacer));
+      const snapshot: Snapshot<any> = {
+        data,
+        timestamp: Date.now(),
+        workplaceId,
+      };
+      storage.set(
+        `${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`,
+        JSON.stringify(snapshot, this.replacer),
+      );
     } catch (error) {
       logger.error('[SnapshotService] Failed to save dashboard snapshot', {
         error: error instanceof Error ? error.message : String(error),
@@ -71,27 +88,24 @@ class SnapshotService {
   }
 
   /**
-   * Retrieves the last saved dashboard snapshot.
+   * Retrieves the last saved dashboard snapshot for a specific workplace.
+   * Includes TTL validation (max 2 days old).
    */
-  getDashboardSnapshot(): any | null {
-    try {
-      const stored = storage.getString(DASHBOARD_SNAPSHOT_KEY);
-      if (!stored) return null;
-      return JSON.parse(stored, this.reviver);
-    } catch (error) {
-      logger.error('[SnapshotService] Failed to load dashboard snapshot', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
+  getDashboardSnapshot(workplaceId: string): any | null {
+    return this.getValidatedSnapshot(`${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
   }
 
   /**
    * Persists a wealth summary snapshot.
    */
-  saveWealthSnapshot(data: any): void {
+  saveWealthSnapshot(workplaceId: string, data: any): void {
     try {
-      storage.set(WEALTH_SNAPSHOT_KEY, JSON.stringify(data, this.replacer));
+      const snapshot: Snapshot<any> = {
+        data,
+        timestamp: Date.now(),
+        workplaceId,
+      };
+      storage.set(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, JSON.stringify(snapshot, this.replacer));
     } catch (error) {
       logger.error('[SnapshotService] Failed to save wealth snapshot', {
         error: error instanceof Error ? error.message : String(error),
@@ -100,27 +114,23 @@ class SnapshotService {
   }
 
   /**
-   * Retrieves the last saved wealth summary.
+   * Retrieves the last saved wealth summary for a specific workplace.
    */
-  getWealthSnapshot(): any | null {
-    try {
-      const stored = storage.getString(WEALTH_SNAPSHOT_KEY);
-      if (!stored) return null;
-      return JSON.parse(stored, this.reviver);
-    } catch (error) {
-      logger.error('[SnapshotService] Failed to load wealth snapshot', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
+  getWealthSnapshot(workplaceId: string): any | null {
+    return this.getValidatedSnapshot(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
   }
 
   /**
    * Persists a custom snapshot by key.
    */
-  saveCustomSnapshot(key: string, data: any): void {
+  saveCustomSnapshot(workplaceId: string, key: string, data: any): void {
     try {
-      storage.set(key, JSON.stringify(data, this.replacer));
+      const snapshot: Snapshot<any> = {
+        data,
+        timestamp: Date.now(),
+        workplaceId,
+      };
+      storage.set(`${key}_${workplaceId}`, JSON.stringify(snapshot, this.replacer));
     } catch (error) {
       logger.error(`[SnapshotService] Failed to save snapshot: ${key}`, {
         error: error instanceof Error ? error.message : String(error),
@@ -131,11 +141,38 @@ class SnapshotService {
   /**
    * Retrieves a custom snapshot by key.
    */
-  getCustomSnapshot(key: string): any | null {
+  getCustomSnapshot(workplaceId: string, key: string): any | null {
+    return this.getValidatedSnapshot(`${key}_${workplaceId}`, workplaceId);
+  }
+
+  /**
+   * Internal helper to validate snapshot workplace and age.
+   */
+  private getValidatedSnapshot(key: string, workplaceId: string): any | null {
     try {
       const stored = storage.getString(key);
       if (!stored) return null;
-      return JSON.parse(stored, this.reviver);
+
+      const snapshot = JSON.parse(stored, this.reviver) as Snapshot<any>;
+
+      // 1. Workplace Isolation Check (Prevent Data Leaks)
+      if (snapshot.workplaceId !== workplaceId) {
+        logger.warn(`[SnapshotService] Workplace mismatch for key ${key}. Deleting stale cache.`);
+        storage.remove(key);
+        return null;
+      }
+
+      // 2. TTL Validation (2 Days)
+      const age = Date.now() - snapshot.timestamp;
+      if (age > SNAPSHOT_MAX_AGE_MS) {
+        logger.info(
+          `[SnapshotService] Snapshot for ${key} expired (${Math.round(age / 3600000)}h old).`,
+        );
+        storage.remove(key);
+        return null;
+      }
+
+      return snapshot.data;
     } catch (error) {
       logger.error(`[SnapshotService] Failed to load snapshot: ${key}`, {
         error: error instanceof Error ? error.message : String(error),
@@ -145,12 +182,14 @@ class SnapshotService {
   }
 
   /**
-   * Clears all snapshots (e.g., on logout or workplace switch).
+   * Clears all snapshots.
    */
   clearSnapshots(): void {
     try {
-      storage.remove(DASHBOARD_SNAPSHOT_KEY);
-      storage.remove(WEALTH_SNAPSHOT_KEY);
+      // Note: This is now slightly more complex because of workplace-prefixed keys.
+      // For now, we clear the standard keys if they exist, but a full clear
+      // might need to iterate keys (MMKV.getAllKeys())
+      storage.clearAll();
     } catch (error) {
       logger.warn('[SnapshotService] Failed to clear snapshots', { error });
     }

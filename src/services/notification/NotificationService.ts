@@ -577,7 +577,7 @@ export class NotificationService {
               };
 
               // Persist for Instant Boot
-              snapshotService.saveCustomSnapshot(`safe_to_spend_${workplaceId}`, result);
+              snapshotService.saveCustomSnapshot(workplaceId, `safe_to_spend`, result);
 
               return result;
             }),
