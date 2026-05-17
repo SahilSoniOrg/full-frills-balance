@@ -1,4 +1,4 @@
-import { AppConfig } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
 import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';

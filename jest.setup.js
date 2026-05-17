@@ -215,6 +215,98 @@ global.fetch = jest.fn().mockImplementation(() =>
   }),
 );
 
+// Mock I18nManager
+jest.mock('react-native/Libraries/ReactNative/I18nManager', () => ({
+  isRTL: false,
+  allowRTL: jest.fn(),
+  forceRTL: jest.fn(),
+  getConstants: () => ({
+    isRTL: false,
+  }),
+}));
+
+// Mock Reanimated
+jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    default: {
+      call: jest.fn(),
+    },
+    useSharedValue: jest.fn(val => ({ value: val })),
+    useAnimatedStyle: jest.fn(fn => ({})),
+    useAnimatedGestureHandler: jest.fn(handlers => ({})),
+    useAnimatedScrollHandler: jest.fn(fn => ({})),
+    withTiming: jest.fn((toValue, config, cb) => toValue),
+    withSpring: jest.fn((toValue, config, cb) => toValue),
+    withDecay: jest.fn((config, cb) => 0),
+    cancelAnimation: jest.fn(),
+    runOnJS: jest.fn(fn => fn),
+    runOnUI: jest.fn(fn => fn),
+    interpolate: jest.fn((x, input, output, type) => 0),
+    Extrapolation: { CLAMP: 'clamp' },
+    View: View,
+    Text: View,
+    ScrollView: View,
+    Image: View,
+    createAnimatedComponent: jest.fn(c => c),
+    FadeIn: { duration: jest.fn(() => ({ delay: jest.fn() })) },
+    FadeOut: { duration: jest.fn(() => ({ delay: jest.fn() })) },
+    SlideInRight: { duration: jest.fn(() => ({ delay: jest.fn() })) },
+    SlideOutLeft: { duration: jest.fn(() => ({ delay: jest.fn() })) },
+  };
+});
+
+// Mock Moti
+jest.mock('moti', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    View,
+    AnimatePresence: ({ children }) => children,
+    MotiView: View,
+    useAnimationState: () => ({
+      transitionTo: jest.fn(),
+    }),
+    useDynamicAnimation: () => ({
+      animateTo: jest.fn(),
+    }),
+  };
+});
+
+// Mock Gesture Handler
+jest.mock('react-native-gesture-handler', () => {
+  const React = require('react');
+  const { View, ScrollView } = require('react-native');
+  return {
+    Swipeable: View,
+    DrawerLayout: View,
+    State: {},
+    ScrollView: ScrollView,
+    Slider: View,
+    Switch: View,
+    TextInput: View,
+    ToolbarAndroid: View,
+    ViewPagerAndroid: View,
+    WebView: View,
+    NativeViewGestureHandler: View,
+    TapGestureHandler: View,
+    FlingGestureHandler: View,
+    ForceTouchGestureHandler: View,
+    LongPressGestureHandler: View,
+    PanGestureHandler: View,
+    PinchGestureHandler: View,
+    RotationGestureHandler: View,
+    RawButton: View,
+    BaseButton: View,
+    RectButton: View,
+    BorderlessButton: View,
+    FlatList: View,
+    gestureHandlerRootHOC: jest.fn(c => c),
+    Directions: {},
+  };
+});
+
 // Flush rebuild queue and clear all mocks between tests
 afterEach(async () => {
   jest.clearAllMocks();

@@ -7,7 +7,7 @@
  * All database operations are delegated to ExchangeRateRepository.
  */
 
-import { AppConfig } from '@/src/constants';
+import { AppConfig } from '@/src/constants/app-config';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { logger } from '@/src/utils/logger';
 

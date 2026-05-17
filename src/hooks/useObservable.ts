@@ -49,9 +49,9 @@ export function useObservable<T>(
   const stableFactory = useCallback(() => factoryRef.current(), []);
 
   // Compute the absolute initial value (handles factory functions for cache lookups)
-  const resolvedInitialValue = useMemo(() => {
+  const [resolvedInitialValue] = useState<T>(() => {
     return typeof initialValue === 'function' ? (initialValue as () => T)() : initialValue;
-  }, []);
+  });
 
   const [data, setData] = useState<T>(resolvedInitialValue);
   const dataRef = useRef(data);

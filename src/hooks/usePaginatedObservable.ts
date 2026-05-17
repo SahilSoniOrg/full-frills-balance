@@ -71,10 +71,10 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
     initialItems,
   } = options;
 
-  const resolvedInitialItems = useMemo(() => {
+  const [resolvedInitialItems] = useState<E[]>(() => {
     if (!initialItems) return [];
     return typeof initialItems === 'function' ? (initialItems as () => E[])() : initialItems;
-  }, []);
+  });
 
   const [items, setItems] = useState<E[]>(resolvedInitialItems);
   const [isLoading, setIsLoading] = useState(resolvedInitialItems.length === 0);
@@ -209,7 +209,16 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [currentLimit, structuralKey, versionKey, retryKey, observe, enrich, pageSize]); // Added stable prop dependencies Log)
+  }, [
+    currentLimit,
+    structuralKey,
+    versionKey,
+    retryKey,
+    observe,
+    enrich,
+    pageSize,
+    resolvedInitialItems,
+  ]); // Added stable prop dependencies Log)
 
   const loadMore = useCallback(() => {
     if (isLoadingMore || !hasMore) return;

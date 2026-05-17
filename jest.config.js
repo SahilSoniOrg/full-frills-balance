@@ -2,7 +2,7 @@ module.exports = {
   preset: 'jest-expo',
   setupFilesAfterEnv: ['./jest.setup.js'],
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|@sentry/react-native|native-base|react-native-svg|@nozbe/watermelondb)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|@sentry/react-native|native-base|react-native-svg|@nozbe/watermelondb|moti)',
   ],
   testPathIgnorePatterns: ['/node_modules/', '/tests/', '/e2e/'],
   collectCoverage: true,
@@ -16,6 +16,8 @@ module.exports = {
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '^lucide-react-native/dist/esm/icons/(.*)$':
+      '<rootDir>/node_modules/lucide-react-native/dist/cjs/icons/$1',
     '^@/src/data/database/adapter$': '<rootDir>/src/data/database/adapter.ts',
     idGenerator$: '<rootDir>/src/data/database/idGenerator.ts',
     '^@/src/(.*)$': '<rootDir>/src/$1',
