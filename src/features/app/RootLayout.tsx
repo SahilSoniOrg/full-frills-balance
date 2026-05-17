@@ -20,7 +20,6 @@ import { database } from '@/src/data/database/Database';
 import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
-import { DesignedSplashScreen } from './components/DesignedSplashScreen';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
@@ -112,14 +111,12 @@ function SplashOrchestrator() {
   const isFullyReady = isAppReady && (!hasCompletedOnboarding || isDataHydrated);
 
   useEffect(() => {
-    // We hide the NATIVE splash as soon as the REACT branded splash is ready to show.
-    // If we wait for isFullyReady, the user stays stuck on the OS splash screen.
-    if (isAppReady) {
+    if (isFullyReady) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [isAppReady]);
+  }, [isFullyReady]);
 
-  return <DesignedSplashScreen isReady={isFullyReady} />;
+  return null;
 }
 
 function MaybeAnalyticsProvider({
