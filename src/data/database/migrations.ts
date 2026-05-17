@@ -750,5 +750,19 @@ export const migrations = schemaMigrations({
     `),
       ],
     },
+    {
+      toVersion: 27,
+      steps: [
+        unsafeExecuteSql(
+          'CREATE INDEX IF NOT EXISTS idx_transactions_active_wp_date ON transactions (workplace_id, deleted_at, transaction_date);',
+        ),
+        unsafeExecuteSql(
+          'CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions (account_id, deleted_at, transaction_date);',
+        ),
+        unsafeExecuteSql(
+          'CREATE INDEX IF NOT EXISTS idx_journals_active_wp_status ON journals (workplace_id, deleted_at, status);',
+        ),
+      ],
+    },
   ],
 });

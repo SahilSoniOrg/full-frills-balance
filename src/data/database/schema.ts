@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 26,
+  version: 27,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -89,7 +89,11 @@ FOR EACH ROW
 WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
 BEGIN
   SELECT RAISE(ABORT, 'Workplace ID cannot be empty on journals');
-END;`,
+END;
+
+-- P0 Compound Index for Journal List status filtering
+CREATE INDEX IF NOT EXISTS idx_journals_active_wp_status ON journals (workplace_id, deleted_at, status);
+`,
     }),
     tableSchema({
       name: 'transactions',
@@ -104,7 +108,7 @@ END;`,
         { name: 'exchange_rate', type: 'number', isOptional: true }, // For multi-currency transactions
         // Note: running_balance is a cache that can be rebuilt from transactions
         // It should only be written by rebuild process, not during normal operations
-        { name: 'running_balance', type: 'number', isOptional: true, isIndexed: false },
+        { name: 'running_balance', type: 'number', isOptional: true, isIndexed: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true, isIndexed: true },
@@ -117,7 +121,12 @@ FOR EACH ROW
 WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
 BEGIN
   SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transactions');
-END;`,
+END;
+
+-- P0 Compound Index for Dashboard/Account List hydration
+CREATE INDEX IF NOT EXISTS idx_transactions_active_wp_date ON transactions (workplace_id, deleted_at, transaction_date);
+CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions (account_id, deleted_at, transaction_date);
+`,
     }),
     tableSchema({
       name: 'exchange_rates',
