@@ -29,11 +29,17 @@ export function useJournals(
   searchQuery?: string,
   status?: JournalStatus[],
   plannedPaymentId?: string,
-  options?: { minAmount?: number; maxAmount?: number; displayType?: string; accountIds?: string[] },
+  options?: {
+    minAmount?: number;
+    maxAmount?: number;
+    displayType?: string;
+    accountIds?: string[];
+    initialItems?: EnrichedJournal[] | (() => EnrichedJournal[]);
+  },
 ) {
   // Destructure for stable dependency tracking
   const { startDate, endDate } = dateRange || {};
-  const { minAmount, maxAmount, displayType, accountIds } = options || {};
+  const { minAmount, maxAmount, displayType, accountIds, initialItems } = options || {};
 
   // Stabilize composite dependencies using content-based keys
   // This prevents 'invisible gremlins' where array literals cause cascading re-renders
@@ -110,6 +116,7 @@ export function useJournals(
       if (!f) return 'none';
       return `${f.startDate}-${f.endDate}-${f.plannedPaymentId}-${f.minAmount}-${f.maxAmount}-${f.displayType}-${f.accountIds?.join(',')}`;
     },
+    initialItems,
   });
 
   return { journals, isLoading, isLoadingMore, hasMore, loadMore, version };

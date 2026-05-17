@@ -41,6 +41,8 @@ export interface UsePaginatedObservableOptions<T, E = T, F = unknown> {
   getFilterKey?: (filter: F) => string;
   /** Optional version key getter to force reload on version bump */
   getVersionKey?: (filter: F) => number;
+  /** Optional initial items to show while the first page loads (e.g. from cache) */
+  initialItems?: E[] | (() => E[]);
 }
 
 export interface UsePaginatedObservableResult<E> {
@@ -66,10 +68,16 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
     suppressResetOnSearch = false,
     getFilterKey,
     getVersionKey,
+    initialItems,
   } = options;
 
-  const [items, setItems] = useState<E[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const resolvedInitialItems = useMemo(() => {
+    if (!initialItems) return [];
+    return typeof initialItems === 'function' ? (initialItems as () => E[])() : initialItems;
+  }, []);
+
+  const [items, setItems] = useState<E[]>(resolvedInitialItems);
+  const [isLoading, setIsLoading] = useState(resolvedInitialItems.length === 0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [currentLimit, setCurrentLimit] = useState(pageSize);
@@ -153,7 +161,16 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
 
       if (isStructuralChange) {
         if (!shouldSuppressReset) {
-          setItems([]); // Clear items ONLY on structural changes
+          // If we have initialItems and this is the VERY FIRST run, we preserve them
+          if (
+            sequence === 0 &&
+            itemsRef.current.length > 0 &&
+            itemsRef.current === resolvedInitialItems
+          ) {
+            // Keep initial items
+          } else {
+            setItems([]); // Clear items ONLY on structural changes
+          }
         }
         if (currentLimit !== AppPageSize) {
           setCurrentLimit(AppPageSize); // Reset pagination

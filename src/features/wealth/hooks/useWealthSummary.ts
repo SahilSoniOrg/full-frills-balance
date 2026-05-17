@@ -2,6 +2,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { WealthSummary } from '@/src/services/wealth-service';
 import { WorkplaceId } from '@/src/types/domain';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import { of } from 'rxjs';
 
 export interface WealthSummaryResult extends WealthSummary {
@@ -36,17 +37,17 @@ export function useWealthSummary(
         ? reactiveDataService.observeDashboardData(targetCurrency, workplaceId)
         : of({
             accounts: [],
-            transactions: [],
+            enrichedJournals: [],
             balances: [],
             wealthSummary: EMPTY_WEALTH_SUMMARY,
           }),
     [targetCurrency, workplaceId],
-    {
+    () => ({
       accounts: [],
-      transactions: [],
+      enrichedJournals: [],
       balances: [],
-      wealthSummary: EMPTY_WEALTH_SUMMARY,
-    },
+      wealthSummary: snapshotService.getWealthSnapshot() || EMPTY_WEALTH_SUMMARY,
+    }),
   );
 
   return {

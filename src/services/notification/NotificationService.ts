@@ -14,18 +14,19 @@ import { isLiquidAssetSubtype, LIQUID_ASSET_SUBTYPES } from '@/src/utils/account
 import { logger } from '@/src/utils/logger';
 import { Money, roundToPrecision } from '@/src/utils/money';
 import { preferences } from '@/src/utils/preferences';
+import { firstFastDebounce } from '@/src/utils/rxjs-operators';
+import { snapshotService } from '@/src/utils/SnapshotService';
+import { traceService } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { firstFastDebounce } from '@/src/utils/rxjs-operators';
-import { firstValueFrom, combineLatest, from, Observable, of } from 'rxjs';
+import { combineLatest, firstValueFrom, from, Observable, of } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, take } from 'rxjs/operators';
 import { balanceService } from '../BalanceService';
 import { Insight, insightService } from '../insight/InsightService';
 import { reactiveDataService } from '../ReactiveDataService';
 import { cashFlowSimulationService } from '../simulation/CashFlowSimulationService';
 import { FlowSource, FlowType, SimulationResult, SimulationRunResult } from '../simulation/types';
-import { traceService } from '@/src/utils/TraceService';
 
 export { Insight, insightService };
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -552,7 +553,7 @@ export class NotificationService {
               })();
 
               trace.end();
-              return {
+              const result = {
                 summary: {
                   ...runResult.simulationResult.summary,
                   ...runResult.report.summary,
@@ -574,6 +575,11 @@ export class NotificationService {
                 accountMap: runResult.accountMap,
                 safeToSpendDays,
               };
+
+              // Persist for Instant Boot
+              snapshotService.saveCustomSnapshot(`safe_to_spend_${workplaceId}`, result);
+
+              return result;
             }),
             catchError(err => {
               logger.error(

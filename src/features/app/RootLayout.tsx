@@ -1,5 +1,13 @@
+import { AlertContainer } from '@/src/components/common/AlertContainer';
+import { ToastContainer } from '@/src/components/common/Toast';
+import { ErrorBoundary } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
+import { UIProvider, useUI } from '@/src/contexts/UIContext';
+import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { database } from '@/src/data/database/Database';
+import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { analytics, navigationIntegration } from '@/src/services/analytics-service';
+import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
@@ -10,14 +18,6 @@ import React, { useEffect } from 'react';
 import { View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-
-import { AlertContainer } from '@/src/components/common/AlertContainer';
-import { ToastContainer } from '@/src/components/common/Toast';
-import { ErrorBoundary } from '@/src/components/core';
-import { UIProvider, useUI } from '@/src/contexts/UIContext';
-import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { database } from '@/src/data/database/Database';
-import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
@@ -111,9 +111,21 @@ function SplashOrchestrator() {
 
   useEffect(() => {
     if (isFullyReady) {
-      SplashScreen.hideAsync().catch(() => {});
+      const hideStart = performance.now();
+      logger.info(
+        `[Splash] Hiding splash screen at ${Math.round(hideStart)}ms (isAppReady: ${isAppReady}, isDataHydrated: ${isDataHydrated})`,
+      );
+      SplashScreen.hideAsync()
+        .then(() => {
+          logger.info(
+            `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms`,
+          );
+        })
+        .catch(err => {
+          logger.warn('[Splash] Failed to hide splash screen', err);
+        });
     }
-  }, [isFullyReady]);
+  }, [isFullyReady, isAppReady, isDataHydrated]);
 
   return null;
 }

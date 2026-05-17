@@ -31,30 +31,49 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     if (initStartedRef.current) return;
     initStartedRef.current = true;
 
-    const initializeApp = async () => {
+    const initializeApp = () => {
       const bootStart = performance.now();
-      logger.info('[Bootstrap] Starting initialization...');
+      logger.info(`[Bootstrap] Starting initialization at ${Math.round(bootStart)}ms`);
 
-      try {
-        // 1. Critical Data Seeding
-        await currencyInitService.initialize();
+      // 1. Unblock UI IMMEDIATELY
+      // This hides the splash screen and mounts the Dashboard.
+      // Dashboard hooks will hit the MMKV cache synchronously (<20ms).
+      logger.info(
+        `[Bootstrap] Triggering UI Hydration signal at ${Math.round(performance.now() - bootStart)}ms`,
+      );
+      setDataHydrated(true);
 
-        // 2. Lean Cache Warming (Shared SQL Streams)
-        await Promise.allSettled([
-          currencyRepository.getAllPrecisions(),
-          reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
-          insightService.preWarm(workplaceId),
-          notificationService.preWarm(workplaceId, defaultCurrencyCode),
-        ]);
-
+      // 2. Background Hydration (Completely Parallel)
+      // We wrap this in a timeout/interaction block to ensure the splash hide
+      // and initial frame paint happen before we saturate the bridge with DB work.
+      setTimeout(() => {
+        const bgHydrationStart = performance.now();
         logger.info(
-          `[Bootstrap] Core hydration complete in ${Math.round(performance.now() - bootStart)}ms.`,
+          `[Bootstrap] Starting background hydration at ${Math.round(bgHydrationStart - bootStart)}ms`,
         );
-        setDataHydrated(true);
-      } catch (error) {
-        logger.error('[Bootstrap] Initialization failed partially', error);
-        setDataHydrated(true);
-      }
+        (async () => {
+          try {
+            // Stage A: Critical Data Seeding
+            await currencyInitService.initialize();
+
+            // Stage B: Lean Cache Warming (Shared SQL Streams)
+            await Promise.allSettled([
+              currencyRepository.getAllPrecisions(),
+              reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
+              insightService.preWarm(workplaceId),
+              notificationService.preWarm(workplaceId, defaultCurrencyCode),
+            ]);
+
+            logger.info(
+              `[Bootstrap] Core background hydration complete in ${Math.round(
+                performance.now() - bgHydrationStart,
+              )}ms (Total since boot: ${Math.round(performance.now() - bootStart)}ms)`,
+            );
+          } catch (error) {
+            logger.error('[Bootstrap] Background initialization failed partially', error);
+          }
+        })();
+      }, 50); // 50ms is enough for one clear UI frame and splash hide
     };
 
     initializeApp();

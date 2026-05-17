@@ -12,6 +12,7 @@ import {
 import { smsService } from '@/src/services/sms-service';
 import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { EMPTY, of } from 'rxjs';
@@ -86,7 +87,7 @@ export function useDashboardViewModel(): DashboardViewModel {
     () =>
       isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
     [workplaceId, isAppReady],
-    null,
+    () => snapshotService.getCustomSnapshot(`safe_to_spend_${workplaceId}`),
   );
 
   const hasSafeToSpendData = !!safeToSpendData;
@@ -140,6 +141,10 @@ export function useDashboardViewModel(): DashboardViewModel {
         subtitle: strings.dashboard.emptySubtitle,
       },
       defaultToCurrentMonth: false,
+      initialItems: () => {
+        const snapshot = snapshotService.getDashboardSnapshot();
+        return snapshot?.enrichedJournals || [];
+      },
     },
     workplaceId,
   );

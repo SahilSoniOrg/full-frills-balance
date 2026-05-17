@@ -71,6 +71,7 @@ interface UseJournalListViewModelParams {
   loadingMoreText?: string;
   initialDateRange?: DateRange | null;
   defaultToCurrentMonth?: boolean;
+  initialItems?: EnrichedJournal[] | (() => EnrichedJournal[]);
 }
 
 const PLANNED_STATUS = [JournalStatus.PLANNED];
@@ -83,6 +84,7 @@ export function useJournalListViewModel(
     loadingMoreText = AppConfig.strings.common.loading,
     initialDateRange,
     defaultToCurrentMonth = true,
+    initialItems,
   }: UseJournalListViewModelParams,
   workplaceId: WorkplaceId,
 ): JournalListViewModel {
@@ -118,6 +120,9 @@ export function useJournalListViewModel(
     pageSize,
     effectiveDateRange,
     searchQuery,
+    undefined,
+    undefined,
+    { initialItems },
   );
 
   // Log Journal Query completion

@@ -34,13 +34,13 @@ export interface UseObservableOptions<T> {
  *
  * @param observableFactory - Factory function that returns the observable
  * @param deps - Dependencies for the observable factory
- * @param initialValue - Initial value for the data
+ * @param initialValue - Initial value for the data OR a factory function to compute it (e.g. from cache)
  * @param options - Additional options
  */
 export function useObservable<T>(
   observableFactory: () => Observable<T>,
   deps: DependencyList,
-  initialValue: T,
+  initialValue: T | (() => T),
   options: UseObservableOptions<T> = {},
 ): UseObservableResult<T> {
   const factoryRef = useRef(observableFactory);
@@ -48,13 +48,17 @@ export function useObservable<T>(
 
   const stableFactory = useCallback(() => factoryRef.current(), []);
 
-  // We capture the initial seed only once to use as a baseline for resets
-  const initialSeedRef = useRef(initialValue);
-  const [data, setData] = useState<T>(initialValue);
+  // Compute the absolute initial value (handles factory functions for cache lookups)
+  const resolvedInitialValue = useMemo(() => {
+    return typeof initialValue === 'function' ? (initialValue as () => T)() : initialValue;
+  }, []);
+
+  const [data, setData] = useState<T>(resolvedInitialValue);
   const dataRef = useRef(data);
   dataRef.current = data;
 
-  const [isLoading, setIsLoading] = useState(true);
+  // If we have a non-null initial value (cache hit), we are not "loading" the first frame
+  const [isLoading, setIsLoading] = useState(!!resolvedInitialValue);
   const [error, setError] = useState<Error | null>(null);
   const [version, setVersion] = useState(0);
 
@@ -83,9 +87,9 @@ export function useObservable<T>(
     const { keepPreviousData = true, comparator } = optionsRef.current;
 
     if (!keepPreviousData) {
-      setData(initialSeedRef.current);
+      setData(resolvedInitialValue);
       setIsLoading(true);
-    } else if (dataRef.current === initialSeedRef.current) {
+    } else if (dataRef.current === resolvedInitialValue) {
       setIsLoading(true);
     }
 
@@ -119,7 +123,7 @@ export function useObservable<T>(
       isActive = false;
       subscription.unsubscribe();
     };
-  }, [stableFactory, depsRevision]); // initialSeedRef is stable
+  }, [stableFactory, depsRevision, resolvedInitialValue]);
 
   return { data, isLoading, error, version };
 }
