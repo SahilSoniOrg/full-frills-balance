@@ -1,6 +1,13 @@
 import { execSync } from 'child_process';
 import { ConfigContext, ExpoConfig } from 'expo/config';
 
+// Automatically generate PNG assets from the SVG if they don't exist, are out of date, or during prebuild
+try {
+  execSync('node ./scripts/generate-assets.js', { stdio: ['ignore', 'ignore', 'inherit'] });
+} catch (e) {
+  console.warn('Asset generation failed:', e);
+}
+
 const getGitCommit = () => {
   try {
     return execSync('git rev-parse --short HEAD').toString().trim();
@@ -52,7 +59,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#0A0A0C',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -79,9 +86,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: './assets/images/icon.png',
         imageWidth: 180,
         resizeMode: 'contain',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#0A0A0C',
         dark: {
-          backgroundColor: '#000000',
+          backgroundColor: '#0A0A0C',
         },
       },
     ],
