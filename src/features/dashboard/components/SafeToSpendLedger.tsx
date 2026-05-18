@@ -1,4 +1,4 @@
-import { AppIcon, AppText, Badge } from '@/src/components/core';
+import { AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AccountSubtype, formatAccountSubtypeLabel } from '@/src/data/models/Account';
 import { Stack, Text } from '@/src/design-system';
@@ -172,7 +172,7 @@ export const SafeToSpendLedger = ({
                         }}
                       >
                         {acc.usageDetails.topOutflows.map((item, ii) => {
-                          let icon = 'arrowDown' as any;
+                          let icon: IconName = 'arrowDown';
                           if (item.source === 'BUDGET') icon = 'pieChart';
                           else if (item.source === 'PLANNED_PAYMENT') icon = 'calendar';
                           else if (item.source === 'LIABILITY') icon = 'creditCard';

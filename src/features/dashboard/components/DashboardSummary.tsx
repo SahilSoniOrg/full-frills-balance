@@ -1,11 +1,11 @@
 import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Size, withOpacity } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
+import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Box, Inline, Inset, Stack } from '@/src/design-system';
 
 interface DashboardSummaryProps {
   income: number;
@@ -46,7 +46,7 @@ export const DashboardSummary = ({
                 borderRadius="full"
                 alignItems="center"
                 justifyContent="center"
-                background={withOpacity(theme.income, Opacity.soft) as any}
+                unsafe_backgroundRaw={withOpacity(theme.income, Opacity.soft)}
               >
                 <AppIcon name="arrowDown" size={Size.xs} color={theme.income} />
               </Box>
@@ -72,7 +72,7 @@ export const DashboardSummary = ({
                 borderRadius="full"
                 alignItems="center"
                 justifyContent="center"
-                background={withOpacity(theme.expense, Opacity.soft) as any}
+                unsafe_backgroundRaw={withOpacity(theme.expense, Opacity.soft)}
               >
                 <AppIcon name="arrowUp" size={Size.xs} color={theme.expense} />
               </Box>

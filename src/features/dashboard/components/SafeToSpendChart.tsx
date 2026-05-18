@@ -154,7 +154,7 @@ export const SafeToSpendChart = ({
             analytics.trackFeatureUsage('safe_to_spend', 'chart_point_selected', {
               dayOffset: dayjs(point.x).diff(dayjs().startOf('day'), 'day'),
               isHistory: point.isHistory,
-              hasDetails: (point as any).details?.length > 0,
+              hasDetails: (point.details?.length ?? 0) > 0,
             });
           }}
           renderTooltipContent={index => {
@@ -180,7 +180,7 @@ export const SafeToSpendChart = ({
                   {formatValue(point.y)}
                 </AppText>
 
-                {((point as any).dailyBurn > 0 || ((point as any).details?.length || 0) > 0) && (
+                {((point.dailyBurn ?? 0) > 0 || (point.details?.length ?? 0) > 0) && (
                   <>
                     <Separator opacity={Opacity.hover} marginVertical="xs" />
 

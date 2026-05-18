@@ -2,6 +2,7 @@ import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import Budget from '@/src/data/models/Budget';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
@@ -11,7 +12,7 @@ import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { BudgetId, DisplayTransaction, JournalDisplayType } from '@/src/types/domain';
+import { BudgetId, DisplayTransaction, JournalDisplayType, PlainBudget } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { confirm } from '@/src/utils/alerts';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -71,16 +72,24 @@ export function useBudgetDetailViewModel() {
   const pCurrency = params.pCurrency as string;
   const pPeriod = params.pPeriod as string;
 
-  const budget = useMemo(() => {
+  const budget: Budget | PlainBudget | null = useMemo(() => {
     if (dbBudgetData) return dbBudgetData[0];
     if (pName) {
       return {
         id: budgetId,
         name: pName,
-        targetAmount: pAmount ? parseFloat(pAmount) : 0,
+        amount: pAmount ? parseFloat(pAmount) : 0,
         currencyCode: pCurrency || baseCurrency,
+        intervalType: pPeriod || 'MONTHLY',
         periodType: pPeriod || 'MONTHLY',
-      } as any;
+        intervalN: 1,
+        startDate: undefined,
+        recurrenceDay: undefined,
+        recurrenceMonth: undefined,
+        active: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
     }
     return null;
   }, [dbBudgetData, pName, pAmount, pCurrency, pPeriod, budgetId, baseCurrency]);
@@ -88,17 +97,16 @@ export function useBudgetDetailViewModel() {
   const usage = useMemo(() => {
     if (dbBudgetData) return dbBudgetData[1];
     if (pName) {
+      const target = pAmount ? parseFloat(pAmount) : 0;
       return {
-        budgetId,
-        spentAmount: 0,
-        targetAmount: pAmount ? parseFloat(pAmount) : 0,
-        percentage: 0,
-        isOverBudget: false,
-        currencyCode: pCurrency || baseCurrency,
-      } as any;
+        spent: 0,
+        remaining: target,
+        budgetAmount: target,
+        usagePercent: 0,
+      };
     }
     return null;
-  }, [dbBudgetData, pName, pAmount, pCurrency, budgetId, baseCurrency]);
+  }, [dbBudgetData, pName, pAmount]);
 
   const transactions = useMemo(() => (dbBudgetData ? dbBudgetData[2] : []), [dbBudgetData]);
 
@@ -158,7 +166,7 @@ export function useBudgetDetailViewModel() {
         const badges: TransactionBadge[] = [
           {
             text: tx.accountName || AppConfig.strings.journal.transaction,
-            variant: getAccountTypeVariant(tx.accountType as any),
+            variant: getAccountTypeVariant(tx.accountType || ''),
             icon: (tx.icon as IconName) || 'tag',
           },
         ];
@@ -313,8 +321,12 @@ export function useBudgetDetailViewModel() {
       destructive: true,
       onConfirm: async () => {
         try {
-          await budgetWriteService.deleteBudget(workplaceId, budget);
-          AppNavigation.back();
+          if (budget && 'destroyPermanently' in budget) {
+            await budgetWriteService.deleteBudget(workplaceId, budget);
+            AppNavigation.back();
+          } else {
+            logger.warn('Cannot delete preview/mock budget');
+          }
         } catch (e: any) {
           logger.error('Failed to delete budget', e);
         }

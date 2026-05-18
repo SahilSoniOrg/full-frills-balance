@@ -1,9 +1,12 @@
+import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
+import { ColorKey, Theme } from '@/src/constants/design-tokens';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import Account from '@/src/data/models/Account';
 import { useAccount } from '@/src/features/accounts';
 import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
 import { useTheme } from '@/src/hooks/use-theme';
-import { JournalDisplayType } from '@/src/types/domain';
+import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
 import { confirm } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
@@ -12,7 +15,46 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 
-export function usePlannedPaymentDetailsViewModel(id: string) {
+export interface PlannedPaymentDetailsViewModel {
+  theme: Theme;
+  isLoading: boolean;
+  isMissing: boolean;
+  onBack: () => void;
+
+  title?: string;
+  amountText?: string;
+  nameText?: string;
+  statusLabel?: string;
+  statusVariant?: 'success' | 'default';
+  typeLabel?: string;
+  typeColorKey?: ColorKey;
+  iconName?: IconName;
+  displayType?: JournalDisplayType;
+
+  intervalLabel?: string;
+  nextOccurrenceText?: string;
+  isAutoPost?: boolean;
+
+  fromAccount?: Account | null;
+  toAccount?: Account | null;
+  fromAccountColorKey?: string;
+  toAccountColorKey?: string;
+
+  history?: EnrichedJournal[];
+
+  rawAmount?: number;
+  rawName?: string;
+
+  headerActions?: {
+    onEdit: () => void;
+    onDelete: () => void;
+  };
+  onPost?: () => void;
+  onSkip?: () => void;
+  onToggleStatus?: () => void;
+}
+
+export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDetailsViewModel {
   const { theme } = useTheme();
   const { workplaceId } = useWorkplace();
   const params = useLocalSearchParams();
@@ -71,14 +113,14 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
           onPost: () => {},
           onSkip: () => {},
           onToggleStatus: handleToggleStatus,
-        } as any;
+        };
       }
       return {
         theme,
         isLoading,
         isMissing: true,
         onBack: () => AppNavigation.back(),
-      } as any;
+      };
     }
 
     const isIncome = item.amount > 0 && fromAccount?.accountType === 'INCOME';
@@ -93,7 +135,7 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
         : JournalDisplayType.EXPENSE;
 
     const presentation = journalPresenter.getPresentation(displayType);
-    const typeColorKey = presentation.colorKey as string;
+    const typeColorKey = presentation.colorKey as ColorKey;
     const typeLabel = presentation.label;
 
     // Interval label
@@ -241,5 +283,3 @@ export function usePlannedPaymentDetailsViewModel(id: string) {
     isLoadingVisible,
   ]);
 }
-
-export type PlannedPaymentDetailsViewModel = ReturnType<typeof usePlannedPaymentDetailsViewModel>;

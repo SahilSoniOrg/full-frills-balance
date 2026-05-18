@@ -39,6 +39,20 @@ export interface PlainAccount {
   deletedAt?: number;
 }
 
+export interface PlainBudget {
+  id: BudgetId;
+  name: string;
+  amount: number;
+  currencyCode: string;
+  intervalType?: string;
+  periodType?: string;
+  intervalN?: number;
+  startDate?: number;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
+  createdAt?: Date | number;
+}
+
 export enum JournalDisplayType {
   INCOME = 'INCOME',
   EXPENSE = 'EXPENSE',

@@ -1,16 +1,27 @@
 import dayjs from 'dayjs';
-import Budget from '@/src/data/models/Budget';
 
 export interface DateRange {
   startDate: number;
   endDate: number;
 }
 
+export interface BudgetPeriodInput {
+  intervalType?: string;
+  intervalN?: number;
+  startDate?: number;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
+  createdAt?: Date | number;
+}
+
 export class BudgetPeriodUtils {
   /**
    * Calculates the start and end dates for the budget cycle containing the reference date.
    */
-  static getCurrentPeriod(budget: Budget, referenceDate: number = Date.now()): DateRange {
+  static getCurrentPeriod(
+    budget: BudgetPeriodInput,
+    referenceDate: number = Date.now(),
+  ): DateRange {
     const ref = dayjs(referenceDate);
     const intervalType = budget.intervalType || 'MONTHLY';
     const intervalN = budget.intervalN || 1;
@@ -98,7 +109,7 @@ export class BudgetPeriodUtils {
   /**
    * Returns a human-readable string for the budget period.
    */
-  static getPeriodLabel(budget: Budget, referenceDate: number = Date.now()): string {
+  static getPeriodLabel(budget: BudgetPeriodInput, referenceDate: number = Date.now()): string {
     const { startDate, endDate } = this.getCurrentPeriod(budget, referenceDate);
     const start = dayjs(startDate);
     const end = dayjs(endDate);

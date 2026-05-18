@@ -95,7 +95,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
               borderRadius="full"
               alignItems="center"
               justifyContent="center"
-              background={typeColorKey as any}
+              background={typeColorKey}
               backgroundOpacity="soft"
             >
               <AppIcon name={iconName as IconName} size={32} color={accentColor} />
@@ -105,7 +105,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                 {nameText}
               </Text>
               <Row gap="xs" align="center" flexWrap="wrap">
-                <Badge variant={statusVariant as any} size="sm">
+                <Badge variant={statusVariant} size="sm">
                   {statusLabel}
                 </Badge>
                 <Badge variant="default" size="sm">
@@ -252,7 +252,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
           </AppSurface>
         ) : (
           <Column marginBottom="lg">
-            {history?.map((journal: any) => {
+            {history?.map(journal => {
               const dateValue = new Date(journal.journalDate).setHours(0, 0, 0, 0);
               const today = new Date().setHours(0, 0, 0, 0);
               const tomorrow = new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);

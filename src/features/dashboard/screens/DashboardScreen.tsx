@@ -17,13 +17,18 @@ export default function DashboardScreen() {
 
   // Track "First Paint" - Only fires once upon initial landing on Dashboard
   useEffect(() => {
-    const startTime = (global as any).__BOOT_START_TIME__;
+    interface GlobalBootState {
+      __BOOT_START_TIME__?: number;
+      __HAS_MOUNTED_BEFORE__?: boolean;
+    }
+    const globalState = globalThis as unknown as GlobalBootState;
+    const startTime = globalState.__BOOT_START_TIME__;
     if (startTime) {
       const duration = performance.now() - startTime;
 
       // TIGHTENED: Use real state flag instead of timing guess for higher fidelity
-      const isColdBoot = !(global as any).__HAS_MOUNTED_BEFORE__;
-      (global as any).__HAS_MOUNTED_BEFORE__ = true;
+      const isColdBoot = !globalState.__HAS_MOUNTED_BEFORE__;
+      globalState.__HAS_MOUNTED_BEFORE__ = true;
 
       // Record both a telemetry event and a metric for different analysis paths
       analytics.track('first_paint', {
@@ -33,7 +38,7 @@ export default function DashboardScreen() {
       logger.info(`[Performance] First Paint: ${Math.round(duration)}ms (Cold: ${isColdBoot})`);
 
       // Clear to prevent double tracking on subsequent HMR or re-mounts
-      (global as any).__BOOT_START_TIME__ = undefined;
+      globalState.__BOOT_START_TIME__ = undefined;
     }
   }, []);
 

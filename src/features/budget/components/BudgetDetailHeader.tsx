@@ -2,19 +2,22 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppButton, AppCard, AppIcon, AppText, IvyIcon } from '@/src/components/core';
 import { REPORT_CHART_LAYOUT, Shape, Size, Spacing } from '@/src/constants';
+import Budget from '@/src/data/models/Budget';
 import { resolveThemeColor } from '@/src/design-system/utils';
+import { useTheme } from '@/src/hooks/use-theme';
+import { BudgetUsage } from '@/src/services/budget/budgetReadService';
+import { PlainBudget } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
-import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface BudgetDetailHeaderProps {
-  budget: any;
-  usage: any;
+  budget: Budget | PlainBudget;
+  usage: BudgetUsage;
   periodLabel: string;
   isCurrentMonth: boolean;
-  chartData: any;
+  chartData: { data: { x: number; y: number }[]; domainX: [number, number] } | null;
   prevMonth: () => void;
   nextMonth: () => void;
   resetToToday: () => void;

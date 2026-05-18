@@ -1,13 +1,13 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
+import { Inset } from '@/src/design-system';
 import { DashboardHeader } from '@/src/features/dashboard/components/DashboardHeader';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import { JournalListView, PlannedPaymentsSection } from '@/src/features/journal';
-
-import { Inset } from '@/src/design-system';
+import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
 import React from 'react';
-import { View } from 'react-native';
-import { SafeToSpendCard } from './SafeToSpendCard';
+import { FlatList, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
+import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
 
@@ -22,7 +22,7 @@ export function DashboardScreenView({
   explanationModalState,
   legendModalState,
   isPrivacyMode,
-}: DashboardViewModel & { listRef?: React.RefObject<any> }) {
+}: DashboardViewModel & { listRef?: React.RefObject<FlatList | null> }) {
   const uiState = React.useMemo(
     () => ({
       isInfoVisible: explanationModalState.visible,
@@ -109,7 +109,7 @@ export function DashboardScreenView({
             <DashboardHeader {...headerProps} />
             <View style={{ zIndex: 10 }}>
               <SafeToSpendCard
-                {...(safeToSpendData || ({} as any))}
+                {...(safeToSpendData || ({} as unknown as SafeToSpendResult))}
                 viewModel={safeToSpendViewModel}
                 onInfoPress={() => safeToSpendViewModel.setInfoVisible(true)}
                 onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
