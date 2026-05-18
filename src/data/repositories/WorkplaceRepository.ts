@@ -1,6 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import Workplace from '@/src/data/models/Workplace';
 import { WorkplaceId } from '@/src/types/domain';
+import { Q } from '@nozbe/watermelondb';
+import { map } from 'rxjs/operators';
 
 export class WorkplaceRepository {
   private get workplaces() {
@@ -73,7 +75,10 @@ export class WorkplaceRepository {
   }
 
   observeById(id: WorkplaceId) {
-    return this.workplaces.findAndObserve(id);
+    return this.workplaces
+      .query(Q.where('id', id))
+      .observe()
+      .pipe(map(workplaces => workplaces[0] ?? null));
   }
 }
 

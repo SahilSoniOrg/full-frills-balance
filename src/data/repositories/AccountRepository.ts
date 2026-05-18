@@ -160,9 +160,13 @@ export class AccountRepository {
 
   observeById(workplaceId: WorkplaceId, accountId: AccountId) {
     return this.accounts
-      .findAndObserve(accountId)
+      .query(Q.where('id', accountId), Q.where('workplace_id', workplaceId))
+      .observe()
       .pipe(
-        map(account => (account.deletedAt || account.workplaceId !== workplaceId ? null : account)),
+        map(accounts => {
+          const account = accounts[0];
+          return account && !account.deletedAt ? account : null;
+        }),
       );
   }
 
