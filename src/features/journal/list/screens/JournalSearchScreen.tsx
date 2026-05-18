@@ -27,7 +27,7 @@ export default function JournalSearchScreen() {
       <View style={styles.filterContainer}>
         <View style={styles.filterRow}>
           <AppInput
-            placeholder="Search by description..."
+            placeholder="Search description or notes..."
             value={vm.searchQuery}
             onChangeText={vm.setSearchQuery}
             containerStyle={styles.searchInput}

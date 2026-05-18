@@ -318,4 +318,128 @@ describe('JournalRepository', () => {
       expect(deletedJournal?.deletedAt).toBeDefined();
     });
   });
+
+  describe('observeEnrichedJournals search functionality', () => {
+    it('should find journals by matching description', async () => {
+      await ledgerWriteService.createJournal(
+        {
+          description: 'Unique test description',
+          notes: 'Some notes',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const observable = journalService.observeEnrichedJournals(
+        'wp-1' as WorkplaceId,
+        10,
+        undefined,
+        'Unique test',
+      );
+
+      const results = await new Promise<any[]>(resolve => {
+        const subscription = observable.subscribe(data => {
+          subscription.unsubscribe();
+          resolve(data);
+        });
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0].description).toBe('Unique test description');
+    });
+
+    it('should find journals by matching notes', async () => {
+      await ledgerWriteService.createJournal(
+        {
+          description: 'Another entry',
+          notes: 'Unique test notes',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const observable = journalService.observeEnrichedJournals(
+        'wp-1' as WorkplaceId,
+        10,
+        undefined,
+        'Unique test notes',
+      );
+
+      const results = await new Promise<any[]>(resolve => {
+        const subscription = observable.subscribe(data => {
+          subscription.unsubscribe();
+          resolve(data);
+        });
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0].notes).toBe('Unique test notes');
+    });
+
+    it('should not find journals if query does not match description or notes', async () => {
+      await ledgerWriteService.createJournal(
+        {
+          description: 'Standard description',
+          notes: 'Standard notes',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const observable = journalService.observeEnrichedJournals(
+        'wp-1' as WorkplaceId,
+        10,
+        undefined,
+        'Non-existent match',
+      );
+
+      const results = await new Promise<any[]>(resolve => {
+        const subscription = observable.subscribe(data => {
+          subscription.unsubscribe();
+          resolve(data);
+        });
+      });
+
+      expect(results).toHaveLength(0);
+    });
+  });
 });

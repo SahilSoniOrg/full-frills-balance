@@ -629,7 +629,12 @@ export class JournalService {
     if (searchQuery) {
       const q = searchQuery.trim();
       if (q) {
-        clauses.push(Q.where('description', Q.like(`%${Q.sanitizeLikeString(q)}%`)));
+        clauses.push(
+          Q.or(
+            Q.where('description', Q.like(`%${Q.sanitizeLikeString(q)}%`)),
+            Q.where('notes', Q.like(`%${Q.sanitizeLikeString(q)}%`)),
+          ),
+        );
       }
     }
 
