@@ -1,26 +1,20 @@
 ---
-description: Review staged diff and produce a conventional commit message when safe
+description: Propose clean conventional commit message for staged changes
 ---
 
-Use this workflow on staged changes only (`git diff --cached`).
+# Propose Commit Message
+Analyze staged diff (`git diff --cached`) for correctness, then generate conventional commit message.
 
-## Steps
-1. Review staged changes for correctness and architectural rule compliance.
-2. If blocking issues exist, report them first and do not draft a commit message yet.
-3. If safe, propose one conventional commit message and optional alternatives.
-4. Commit message must not include file path.
+## 1. Quality Checklist
+- **Blockers**: Report any active rule or logic violations before proposing the commit.
+- **Rules**: Limit subject to <= 72 chars, use active imperative present tense (e.g. `add`, `fix`), do not include file paths.
+- **Vagueness**: Avoid vague subjects like "fix bug" or "update code".
 
-## Commit format
-`<type>(optional-scope): <short imperative summary>`
+## 2. Commit Format
+`<type>(optional-scope): <short summary>`
 
-Examples:
+### Examples:
 - `feat(journal): add transaction details hydration`
 - `fix(accounts): prevent invalid reorder persistence`
 - `refactor(reports): simplify date range derivation`
-- `test(data): cover journal repository edge cases`
-- `docs(agent): refresh architecture and coding practices`
-
-## Message quality bar
-- Subject <= 72 chars.
-- Reflect user-visible or architecture-relevant change.
-- Avoid vague subjects like "update stuff".
+- `test(data): cover journal edge cases`

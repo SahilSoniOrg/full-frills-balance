@@ -1,36 +1,24 @@
 ---
-description: Component architecture audit for entropy reduction in Expo React Native UI code
+description: Component architecture audit for targeted React Native UI areas
 ---
 
-Use this workflow to audit component structure and boundaries in targeted areas or across the repo.
+# Targeted Component Audit
+Audit component structure and boundaries in a specific UI area to reduce design and state entropy.
 
-## Goal
-Reduce long-term UI entropy by tightening ownership and removing harmful abstractions.
+## 1. Audit Checks
+- **Orchestration**: Do screens delegating domain actions avoid carrying calculations?
+- **Purity**: Do visual presentation components avoid direct data operations?
+- **State Location**: Do hooks/view-models encapsulate derived visual states?
+- **Repetitions**: Are there identical UI pieces or hook behaviors to consolidate?
+- **Abstractions**: Are base elements cluttered with speculative boolean flags?
 
-## Audit checks
-- Screens should orchestrate, not implement domain/business rules.
-- Presentational components should not fetch or persist data.
-- Hooks/view-models should own orchestration and derived view state.
-- Detect duplicated JSX/interaction patterns that should be consolidated.
-- Detect over-configured base components with weak cohesion.
+## 2. Action Protocol
+Select exactly one action for each issue:
+- `DELETE` | `MERGE` | `SPLIT` | `EXTRACT HOOK` | `INLINE INTO CALLER`
 
-## Action types
-For each finding, choose exactly one:
-- DELETE
-- MERGE
-- SPLIT
-- EXTRACT HOOK
-- INLINE INTO CALLER
-
-## Output format per finding
-A. Files involved
-B. What is wrong and why it increases entropy
-C. Action type
-D. Proposed structure (name + location + ownership)
-E. Minimal before/after sketch
-
-## Constraints
-- Prefer composition over boolean prop explosions.
-- Do not keep components for speculative future reuse.
-- Consolidate logic where duplication threatens correctness.
+## 3. Format per Finding
+- **Files**: Affected items.
+- **Problem**: Decay mechanism.
+- **Action**: One protocol keyword.
+- **Sketch**: Brief description of the planned structure change.
 

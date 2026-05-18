@@ -4,37 +4,46 @@ description: Repository-specific quirks, performance pitfalls, and lessons learn
 ---
 
 # Repository Quirks & Pitfalls
-
-This document captures "Lessons Learned" from past mistakes and specific repository quirks.
+Lessons learned from past issues, organized by principles.
 
 ## 1. WatermelonDB & Persistence
-- **Bridge Overload**: Large batch updates can freeze the React Native bridge. Keep batch sizes around 500 records.
-- **Atomic Batches**: Ensure related records (Journal/Transactions) are batched together.
-- **Record Caching**: `prepareCreate` records are NOT available until commit.
-- **Singleton Database**: Always import `database` from `@/src/data/database/Database`. Never re-instantiate.
+- **Bridge Overload [KISS]**: Batch updates > 500 records freeze the RN bridge; keep sizes bounded.
+- **Atomic Batches [KISS]**: Save related Journal/Transactions in a single transaction batch.
+- **Caching Boundary [KISS]**: `prepareCreate` records are not queryable until fully committed.
+- **Singleton DB [DRY]**: Always import the shared database from `@/src/data/database/Database`.
+- **Workplace Cache Isolation [KISS]**: Always prefix or wrap MMKV/Snapshot cache keys with `workplaceId` to prevent cross-workspace data leakage when switching workplaces.
+- **Cache TTL Validation [KISS]**: Implement strict maximum age validations (e.g., 2-day TTL) when loading snapshots from MMKV to prevent displaying stale cached states on boot.
 
 ## 2. Performance & UI
-- **Observable Overkill**: Don't observe everything. High-frequency updates can cause lag.
-- **Keyboard & Footers**: Layouts with bottom-anchored footers often break. Use `KeyboardAvoidingView`.
-- **Currency Precision**: Looking up precision in a loop is expensive. Use `BalanceService`.
-- **Custom Pickers**: Always use `@/src/components/common/CustomDateTimePicker`. Do not install external libraries.
+- **Observable Overkill [KISS]**: Selective and debounced observers only; high-frequency triggers lag.
+- **Footers & Keyboard [KISS]**: Always use `KeyboardAvoidingView` to prevent bottom footer breaks.
+- **Currency Precision [DRY]**: Avoid in-loop lookups; utilize `BalanceService` cache.
+- **Custom Pickers [DRY]**: Never install pickers; use `@/src/components/common/CustomDateTimePicker`.
+- **Instant Boot Cache [KISS]**: Cache simulation JSON via `SnapshotService` to MMKV; do not block boot.
+- **Android Text Clipping [Clean Code]**: Set parent `flexShrink: 1`/`flex: 1` and text `numberOfLines={1}`/`adjustsFontSizeToFit`.
+- **Rounded Line Heights [Clean Code]**: Use integer line heights to prevent Android font clipping.
+- **Unique List Keys [KISS]**: Always assign explicit unique React keys (like `id`) to mapped list item props/badges to avoid duplicate re-render loops during scroll updates.
 
 ## 3. State & Logic
-- **Rerender Loops**: Be careful with observable hooks in components that also update state.
-- **Net Worth Paradox**: Net worth must always be a pure projection. Never cache it in a separate DB table.
-- **Running Balance Cache**: The `running_balance` column is a cache only. Only `AccountingRebuildService` should write to it.
+- **Rerender Loops [KISS]**: Avoid components combining React state mutations with observable hooks.
+- **Net Worth Projection [KISS]**: Net worth must remain a pure projection; never cache in DB tables.
+- **Running Balance [DRY/SRP]**: `running_balance` is a cache written only by `AccountingRebuildService`.
+- **Search Recall [Clean Code]**: Overlays must search secondary fields (like notes) in addition to names.
+- **Telemetry Permission Warnings [Clean Code]**: Handle expected permission rejections (e.g., `PermissionError`) by logging them as warnings instead of errors to avoid alert telemetry pollution.
+- **Onboarding Transition [KISS]**: Force explicit routing using `AppNavigation.toDashboard()` upon onboarding wizard completion to guarantee screen boundary transitions.
 
 ## 4. Design System
-- **Color Token Blast Radius**: Changes to design-system primitives (`utils.ts`, color tokens) cascade to 15+ consuming files. Always verify downstream components after touching design-system internals.
+- **Color Cascade [Clean Code]**: Verifying downstream consumers is mandatory when updating color tokens.
 
 ## 5. Simulation & Accounting
-- **Sign Convention Consistency**: Debit-positive vs credit-positive sign conventions must be identical across simulation, reports, wealth-service, and accounting helpers. A single mismatch causes silent numerical errors app-wide.
-- **Multi-Currency Normalization**: Planned Payment and Planned Journal amounts must be normalized to the result/base currency before entering simulation engines. Omitting this produces silently wrong forecast totals.
-- **Inclusive Date Boundary Off-by-One**: Date range calculations (especially "today" inclusion) in services and simulations are a recurring bug source. Always verify inclusive vs exclusive boundaries and add edge-case tests.
+- **Sign Invariance [SRP/Clean Code]**: Debit/credit positive signs must be uniform across wealth, reports, and sims.
+- **Sim Normalization [DRY]**: Normalize amounts to base currency before processing in simulation engines.
+- **Off-by-Ones [Clean Code]**: Carefully test inclusive/exclusive boundaries for date range algorithms.
+- **Budget Invariant [SRP]**: Budgets require ≥ 1 source account; prevent empty account configurations.
 
-## 6. Charts & Visualization
-- **Chart Gesture Duplication**: All chart interaction/tooltip logic must go through `useChartInteraction`. Do not duplicate gesture handling in individual chart components (`AreaChart`, `BarChart`, `LineChart`, etc.).
+## 6. Charts & Gestures
+- **Gestures [DRY]**: All chart gesture logic must consume the unified `useChartInteraction` hook.
 
-## 7. Environment & Tooling
-- **Bun, Not npm**: This project uses `bun` as its package manager and script runner. Never use `npm install`, `npm run`, or `npx`. Use `bun install`, `bun run`, and `bunx` instead.
-- **Expo Versioning**: Upgrading Expo is high-risk. Always verify plugin compatibility (especially WatermelonDB) before committing. A previous Expo 55 upgrade had to be reverted.
+## 7. Tooling & Expo
+- **Bun Runner [KISS]**: Always run `bun install`, `bun run`, and `bunx` instead of npm.
+- **Expo Upgrades [KISS]**: Upgrades are high-risk; verify WatermelonDB plugin compatibility first.

@@ -1,25 +1,15 @@
----
-trigger: model_decision
-description: When working on creating things in the app
----
+# Agent Role
+Senior RN + Expo engineer enforcing KISS, DRY, YAGNI, SOLID, and Clean Code.
 
-# Agent Role Definition
-
-You are a senior React Native + Expo engineer operating as a pragmatic implementation partner.
-
-## Primary Objective
-Deliver correct, maintainable changes in this repository while preserving architectural boundaries and accounting correctness.
-
-## Operating Modes
-- **Build**: Implement changes end-to-end. Keep solutions simple and production-appropriate.
-- **Review**: Prioritize correctness, reliability, and architectural drift over style.
-
-## Non-Negotiable Priorities
-- Preserve accounting invariants and data integrity.
-- Preserve offline-first behavior.
-- Keep `app/` routes thin and feature boundaries strict.
+## Priorities & Principles
+1. **Accounting Invariants**: Absolute correctness & offline-first data integrity.
+2. **Scope**: Thin `app/` routes, strict feature boundaries, minimal correct diffs.
+3. **KISS**: Simple, linear flows over clever/reactive abstractions.
+4. **DRY**: Centralize logic (e.g., `BalanceService`, custom datetime picker). No duplicate math.
+5. **YAGNI**: Build only what's requested *now*. No speculative columns or entities.
+6. **SOLID/SRP**: UI renders, services calculate, repositories handle database.
+7. **Clean Code**: Zero `any` types, self-documenting naming, comment the *why*.
 
 ## Quality Bar
-- New logic should be testable.
-- Risky or migration-sensitive code paths must include verification steps.
-- Tradeoffs that increase complexity must have a clear payoff.
+- Code must be testable. Complexity requires clear payoff.
+- High-risk/migration paths need validation steps.

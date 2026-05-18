@@ -1,51 +1,30 @@
 ---
-description: Periodic architecture and reliability audit for the full Expo + WatermelonDB codebase
+description: Periodic architecture and reliability audit for Expo + WatermelonDB codebase
 ---
 
-Use this workflow for deep, periodic audits of the entire repository.
+# Codebase Architecture Audit
+Deep periodic audit of the entire repository to catch data integrity, reactivity, and performance risks.
 
-## Objective
-Find systemic risks that can cause data integrity issues, reactive bugs, offline failures, or long-term architectural drift.
+## 1. Audit Scope
+- **Boundaries**: Decoupling of screens, components, services, repos, and routes.
+- **Reactivity**: High-frequency trigger lag, re-render loop risks, missing observer cleanups.
+- **Data Invariants**: Unbalanced journal entries, non-base currency math, state mirroring (`useState`).
+- **Resilience**: Boot bottlenecks, background/resume behaviors, offline sync race conditions.
 
-## Audit scope
-- Architecture boundaries and dependency direction.
-- WatermelonDB read/write ownership and observable lifecycle.
-- State duplication across DB, hooks, contexts, and component state.
-- Performance under large local datasets and long-lived sessions.
-- Failure handling for background/resume and partial corruption scenarios.
+## 2. Methodology
+1. **Critical Flows**: Trace Onboarding, Accounts, Journal, Reports, and Import/Export.
+2. **Data Path**: Trace `query -> transform -> subscribe -> render -> mutate`. Identify stale reads or optimistic failures.
+3. **Guardrails**: Flag structural decay, source-of-truth breaches, and duplicate query engines.
 
-## Method
-1. Build a mental model of critical flows:
-   - onboarding
-   - account management
-   - journal entry/list/details
-   - reports and net worth
-   - import/export and recovery
-2. Trace data paths end-to-end (query -> transform -> subscribe -> render -> mutate).
-3. Flag anything that breaks source-of-truth guarantees or feature boundaries.
-4. Prioritize fixes that reduce correctness risk and architecture entropy.
+## 3. Output Format
+1. **Verdict**: Health Score (0-100) + top 2 systemic issues.
+2. **Findings (by Severity: Critical/High/Medium/Low)**:
+   - **Files**: Clickable paths.
+   - **Risk**: Pattern, failure mode, and correctness hazard.
+   - **Fix**: Non-obvious trade-off and implementation sketch.
+3. **Plan**: Immediate (critical bugs), Near-term (structure), and Deferred (cleanup).
 
-## Output format
-1. Executive verdict (overall risk level + top 1-2 systemic risks).
-2. Findings by severity:
-   - Critical
-   - High
-   - Medium
-   - Low
-3. For each finding:
-   - Files
-   - Problem pattern
-   - Why it is dangerous in this app
-   - Failure mode (when it breaks)
-   - Recommended fix and tradeoff
-4. Remediation plan:
-   - Immediate actions
-   - Near-term actions
-   - Deferred actions
-
-## Review posture
-- Be direct and specific.
-- Prefer correctness over convenience.
-- Do not praise or pad output.
-- Call out ambiguity explicitly.
+## 4. Auditor Posture
+- Direct and specific. No generic advice, filler, or fluff.
+- Call out underspecified behaviors and design tradeoffs.
 

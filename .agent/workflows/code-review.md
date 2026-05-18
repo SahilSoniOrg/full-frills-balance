@@ -1,38 +1,27 @@
 ---
-description: Changeset-focused production code review for staged Expo + WatermelonDB changes
+description: Production code review for staged changes
 ---
 
-Use this workflow to review staged changes (`git diff --cached`).
+# Changeset Code Review
+Audit staged changes (`git diff --cached`) for regressions and architectural drift before commit.
 
-## Objective
-Catch regressions and architecture drift before commit.
+## 1. Mandatory Scope & Checks
+- **No Scope Creep**: Audit only staged files and directly coupled neighbors.
+- **Ledger Invariant**: All accounting balances/journals must balance.
+- **WatermelonDB**: No state duplication in `useState`, proper observable lifecycles.
+- **Boundaries**: Thin route wiring, feature encapsulation, repository data accesses.
+- **Clean Constants**: No inline magic numbers, values, or colors (use `@/src/constants/`).
 
-## Scope
-- Review only staged changes plus directly impacted nearby code.
-- Do not expand into unrelated refactors.
+## 2. Core Doctrines
+- **KISS**: Synchronous, linear flow > complex reactive abstractions.
+- **DRY**: Use `BalanceService` / unified repository functions.
+- **YAGNI**: Reject unused properties, methods, columns, or files.
+- **SOLID**: Strict separation between view controllers, math services, and schemas.
+- **Clean Code**: Zero `any` types, self-documenting naming, comment the *why* of complex blocks.
 
-## Mandatory checks
-- Accounting correctness and balancing invariants.
-- WatermelonDB usage correctness (actions/queries/observables/lifecycle).
-- No state duplication across DB, hooks, and component state.
-- No boundary violations (`app` thin routing, feature encapsulation, repository ownership).
-- No obvious performance regressions in render/subscription paths.
-- No magic numbers, hard coded strings or constants. They should all be in the src/constants dir.
+## 3. Output Format
+1. **Verdict**: `SAFE` | `RISKY` | `BLOCKED`
+2. **Blocking Issues**: Must resolve before merge.
+3. **Observations**: Non-blocking improvements & suggestions.
 
-## Principles
-- DRY: avoid duplicated logic and query paths.
-- YAGNI: avoid abstractions without current usage.
-- Single source of truth: no mirrored domain state without invalidation strategy.
-- Explicit ownership: UI vs service vs repository boundaries must be clear.
-
-## Output format
-1. Summary verdict (safe / risky / blocked).
-2. Blocking issues (must fix before merge).
-3. Non-blocking issues (important but not merge-blocking).
-4. Suggested simplifications (optional).
-
-For each issue include:
-- File(s)
-- Exact pattern
-- Why it is a problem here
-- Concrete fix
+For each issue, specify: `File | Pattern | Correctness Risk | Concrete Fix`.
