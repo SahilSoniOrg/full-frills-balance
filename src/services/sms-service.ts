@@ -18,6 +18,7 @@ import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/p
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, EMPTY_ACCOUNT_ID, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { PermissionError } from '@/src/utils/errors';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
 import { Model, Q } from '@nozbe/watermelondb';
@@ -179,7 +180,7 @@ class SmsService {
       });
 
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        throw new Error('READ_SMS permission denied by user.');
+        throw new PermissionError('READ_SMS permission denied by user.');
       }
     }
 

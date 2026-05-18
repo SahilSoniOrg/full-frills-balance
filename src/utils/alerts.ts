@@ -188,11 +188,18 @@ export const showErrorAlert = (
 ) => {
   const appError = handleError(error);
 
-  logger.error('App Error', error, {
-    message: appError.message,
-    code: appError.code,
-    statusCode: appError.statusCode,
-  });
+  if (appError.code === 'PERMISSION_DENIED') {
+    logger.warn('Permission Denied', {
+      message: appError.message,
+      code: appError.code,
+    });
+  } else {
+    logger.error('App Error', error, {
+      message: appError.message,
+      code: appError.code,
+      statusCode: appError.statusCode,
+    });
+  }
 
   let title = customTitle || AppConfig.strings.alerts.error;
   let message = appError.message;
@@ -208,6 +215,9 @@ export const showErrorAlert = (
         break;
       case 'NETWORK_ERROR':
         title = AppConfig.strings.alerts.connectionError;
+        break;
+      case 'PERMISSION_DENIED':
+        title = 'Permission Denied';
         break;
     }
   }
