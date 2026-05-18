@@ -57,8 +57,8 @@ export const useKeyboard = () => {
     );
 
     return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
+      showSubscription?.remove();
+      hideSubscription?.remove();
     };
   }, [insets.bottom]);
 

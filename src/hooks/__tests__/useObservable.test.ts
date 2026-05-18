@@ -129,6 +129,24 @@ describe('useObservable', () => {
       expect(result.current.data).toBe('Updated');
     });
   });
+
+  it('should handle rapid synchronous emissions correctly with comparator', async () => {
+    const subject = new Subject<string>();
+    const comparator = (prev: string, next: string) => prev.toLowerCase() === next.toLowerCase();
+
+    const { result } = renderHook(() =>
+      useObservable(() => subject, [], 'Initial', { comparator }),
+    );
+
+    act(() => {
+      subject.next('Updated');
+      subject.next('updated'); // Synchronous second emission, should be skipped because of immediately-updated ref
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBe('Updated');
+    });
+  });
 });
 
 describe('useObservableWithEnrichment', () => {

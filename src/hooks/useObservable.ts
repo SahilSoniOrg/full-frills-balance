@@ -115,17 +115,15 @@ export function useObservable<T>(
       next: result => {
         if (!isActive) return;
 
-        setData(prevData => {
-          // Apply comparator if provided to avoid redundant updates
-          if (comparator && comparator(prevData, result)) {
-            setIsLoading(false);
-            return prevData;
-          }
-
-          setVersion(v => v + 1);
+        if (comparator && comparator(dataRef.current, result)) {
           setIsLoading(false);
-          return result;
-        });
+          return;
+        }
+
+        dataRef.current = result;
+        setData(result);
+        setVersion(v => v + 1);
+        setIsLoading(false);
       },
       error: err => {
         if (!isActive) return;
@@ -221,16 +219,15 @@ export function useObservableWithEnrichment<T, E>(
           const enriched = await stableEnricher(result);
           if (!isActive || current !== sequence) return;
 
-          setData(prevData => {
-            if (comparator && comparator(prevData, enriched)) {
-              setIsLoading(false);
-              return prevData;
-            }
-
-            setVersion(v => v + 1);
+          if (comparator && comparator(dataRef.current, enriched)) {
             setIsLoading(false);
-            return enriched;
-          });
+            return;
+          }
+
+          dataRef.current = enriched;
+          setData(enriched);
+          setVersion(v => v + 1);
+          setIsLoading(false);
         } catch (err) {
           if (!isActive || current !== sequence) return;
           setError(err instanceof Error ? err : new Error(String(err)));

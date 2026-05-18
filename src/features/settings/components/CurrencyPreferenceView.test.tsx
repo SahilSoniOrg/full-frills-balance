@@ -61,7 +61,7 @@ describe('CurrencyPreferenceView', () => {
     expect(getByText('Armenian Dram')).toBeTruthy();
 
     // Search for "Euro"
-    const searchInput = getByPlaceholderText('Search...');
+    const searchInput = getByPlaceholderText(/Search/i);
     fireEvent.changeText(searchInput, 'Euro');
 
     // Verify list is filtered
