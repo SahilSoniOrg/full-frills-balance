@@ -27,9 +27,6 @@ import { useWidgetSync } from './hooks/useWidgetSync';
 
 import '@/src/services/audit-handlers';
 
-// Prevent splash from hiding until we control it
-SplashScreen.preventAutoHideAsync().catch(() => {});
-
 /**
  * Root Layout
  */
@@ -108,6 +105,12 @@ function SplashOrchestrator() {
   // If onboarding is done, we wait for both UI and Data hydration.
   // Otherwise, we just wait for UI assets to show the onboarding shell.
   const isFullyReady = isAppReady && (!hasCompletedOnboarding || isDataHydrated);
+
+  useEffect(() => {
+    logger.debug(
+      `[Splash] Status update: isAppReady=${isAppReady}, isDataHydrated=${isDataHydrated}, hasCompletedOnboarding=${hasCompletedOnboarding}, isFullyReady=${isFullyReady}`,
+    );
+  }, [isAppReady, isDataHydrated, hasCompletedOnboarding, isFullyReady]);
 
   useEffect(() => {
     if (isFullyReady) {

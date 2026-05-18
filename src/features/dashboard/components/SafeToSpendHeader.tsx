@@ -24,12 +24,14 @@ export const SafeToSpendHeader = ({
 
   return (
     <Column gap="xs">
-      <Row align="center" justify="space-between">
+      <Row align="center" justify="space-between" gap="sm">
         <Text
           variant="xs"
           weight="bold"
           color={isOverCommitted ? 'error' : 'secondary'}
-          style={{ letterSpacing: 1.2, textTransform: 'uppercase' }}
+          style={{ letterSpacing: 1.2, textTransform: 'uppercase', flex: 1 }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
         >
           {isOverCommitted ? strings.shortfall : strings.safeToSpendTitle}
         </Text>

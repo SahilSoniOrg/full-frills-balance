@@ -21,7 +21,7 @@ class Logger {
   private isDevelopment = __DEV__;
   private performanceReporter?: PerformanceReporter;
   private logBuffer: string[] = [];
-  private readonly MAX_BUFFER_SIZE = 100;
+  private readonly MAX_BUFFER_SIZE = 1000;
 
   /**
    * Set a reporter to handle performance-related metric events

@@ -9,6 +9,22 @@ import {
 } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/utils/color-math';
 
+import { Platform } from 'react-native';
+
+/**
+ * processTextChildren
+ *
+ * Centralized utility to handle platform-specific text processing.
+ * On Android, we append a space to prevent custom fonts from clipping
+ * the last character (common on OnePlus/Samsung).
+ */
+export function processTextChildren(children: React.ReactNode): React.ReactNode {
+  if (Platform.OS === 'android' && typeof children === 'string') {
+    return `${children} `;
+  }
+  return children;
+}
+
 /**
  * Common spacing resolver (Padding cannot be 'auto' in semantics)
  */

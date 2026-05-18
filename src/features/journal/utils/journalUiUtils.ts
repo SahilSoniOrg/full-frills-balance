@@ -41,6 +41,7 @@ export function mapJournalToCardProps(
         : '';
 
     return {
+      id: acc.id,
       text: `${showPrefix}${acc.name}`,
       variant: getAccountTypeVariant(acc.accountType),
       icon: acc.icon,

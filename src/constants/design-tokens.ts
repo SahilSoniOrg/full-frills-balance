@@ -100,6 +100,7 @@
  * ========================================
  */
 
+import { Platform } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
 
 // === SPACING SCALE ===
@@ -249,6 +250,15 @@ export const Typography = {
     normal: 0,
     wide: 0.5,
   },
+
+  // Android-specific fixes for custom fonts
+  androidDefaults: Platform.select({
+    android: {
+      includeFontPadding: false,
+      textBreakStrategy: 'simple' as const,
+    },
+    default: {},
+  }),
 } as const;
 
 // === FONT SCHEMES ===

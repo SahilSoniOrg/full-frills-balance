@@ -62,42 +62,42 @@ export const SafeToSpendBreakdownBar = ({
       </Box>
 
       <Row gap="sm" wrap="wrap" justify="space-between">
-        <TouchableOpacity onPress={() => onLegendPress('safe')}>
+        <TouchableOpacity onPress={() => onLegendPress('safe')} style={{ flexShrink: 1 }}>
           <Row align="center" gap="xs">
             <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.primary} />
-            <Row gap="xs">
-              <AppText variant="caption" color="secondary">
+            <Row gap="xs" style={{ flexShrink: 1 }}>
+              <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.safePrefix}
               </AppText>
-              <AppText variant="caption" weight="bold" color="primary">
+              <AppText variant="caption" weight="bold" color="primary" numberOfLines={1}>
                 {displaySafe}
               </AppText>
             </Row>
           </Row>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => onLegendPress('committed')}>
+        <TouchableOpacity onPress={() => onLegendPress('committed')} style={{ flexShrink: 1 }}>
           <Row align="center" gap="xs">
             <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.warning} />
-            <Row gap="xs">
-              <AppText variant="caption" color="secondary">
+            <Row gap="xs" style={{ flexShrink: 1 }}>
+              <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.committedPrefix}
               </AppText>
-              <AppText variant="caption" weight="bold" color="warning">
+              <AppText variant="caption" weight="bold" color="warning" numberOfLines={1}>
                 {displayCommitted}
               </AppText>
             </Row>
           </Row>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => onLegendPress('debts')}>
+        <TouchableOpacity onPress={() => onLegendPress('debts')} style={{ flexShrink: 1 }}>
           <Row align="center" gap="xs">
             <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.error} />
-            <Row gap="xs">
-              <AppText variant="caption" color="secondary">
+            <Row gap="xs" style={{ flexShrink: 1 }}>
+              <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.debtsPrefix}
               </AppText>
-              <AppText variant="caption" weight="bold" color="error">
+              <AppText variant="caption" weight="bold" color="error" numberOfLines={1}>
                 {displayDebts}
               </AppText>
             </Row>

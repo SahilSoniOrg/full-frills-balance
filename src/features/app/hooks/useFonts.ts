@@ -1,5 +1,6 @@
 import { FontIds } from '@/src/constants/design-tokens';
 import { useUI } from '@/src/contexts/UIContext';
+import { logger } from '@/src/utils/logger';
 import { CrimsonText_400Regular } from '@expo-google-fonts/crimson-text/400Regular';
 import { CrimsonText_700Bold } from '@expo-google-fonts/crimson-text/700Bold';
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display/400Regular';
@@ -56,14 +57,19 @@ export function useFonts() {
     let isActive = true;
 
     async function loadFontSet() {
+      const start = performance.now();
+      logger.info(`[Fonts] Starting load for: ${fontId}`);
+
       if (loadedFontSetsRef.current.has(fontId)) {
-        if (isActive) setFontsReady(true);
+        logger.debug(`[Fonts] Font already loaded: ${fontId}`);
+        if (isActive) setFontsReady(true, fontId);
         return;
       }
 
       const fontsToLoad = FONT_MAP[fontId];
       if (!fontsToLoad) {
-        if (isActive) setFontsReady(true);
+        logger.warn(`[Fonts] No configuration found for: ${fontId}`);
+        if (isActive) setFontsReady(true, fontId);
         return;
       }
 
@@ -74,12 +80,16 @@ export function useFonts() {
           await Font.loadAsync(fontsToLoad);
         }
 
+        const duration = Math.round(performance.now() - start);
+        logger.info(`[Fonts] Successfully loaded: ${fontId} in ${duration}ms`);
+
         if (isActive) {
           loadedFontSetsRef.current.add(fontId);
-          setFontsReady(true);
+          setFontsReady(true, fontId);
         }
-      } catch {
-        if (isActive) setFontsReady(true);
+      } catch (err) {
+        logger.error(`[Fonts] Failed to load: ${fontId}`, err);
+        if (isActive) setFontsReady(true, fontId);
       }
     }
 

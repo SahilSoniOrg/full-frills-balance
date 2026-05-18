@@ -3,7 +3,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import React, { useMemo } from 'react';
 import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
-import { resolveMarginSpacing, resolveStyleColors } from './utils';
+import { processTextChildren, resolveMarginSpacing, resolveStyleColors } from './utils';
 
 export type TextProps = RNTextProps & {
   variant?: keyof typeof Typography.sizes | 'subheading' | 'heading';
@@ -31,9 +31,12 @@ export function Text({
   opacity,
   letterSpacing,
   style,
+  children,
   ...props
 }: TextProps) {
   const { fonts, getVariantColors, theme } = useTheme();
+
+  const processedChildren = useMemo(() => processTextChildren(children), [children]);
 
   const textStyle = useMemo(() => {
     const fontSize = (() => {
@@ -74,6 +77,7 @@ export function Text({
       marginBottom: resolveMarginSpacing(marginBottom) as any,
       marginHorizontal: resolveMarginSpacing(marginHorizontal) as any,
       opacity,
+      ...Typography.androidDefaults,
     };
 
     return [baseStyle, resolveStyleColors(theme, style)];
@@ -94,5 +98,13 @@ export function Text({
     style,
   ]);
 
-  return <RNText style={textStyle} {...props} />;
+  return (
+    <RNText
+      textBreakStrategy={Typography.androidDefaults.textBreakStrategy}
+      style={textStyle}
+      {...props}
+    >
+      {processedChildren}
+    </RNText>
+  );
 }

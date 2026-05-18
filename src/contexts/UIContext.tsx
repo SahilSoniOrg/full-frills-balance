@@ -63,6 +63,7 @@ interface UIState {
   isAppActive: boolean; // Track OS AppState in global context
   isLockAuthenticating: boolean; // Track if biometric prompt is visible
   fontsReady: boolean; // Track if fonts are loaded
+  loadedFontId: FontId | null; // Track which font set is currently loaded
 
   // Account Display
   showAccountMonthlyStats: boolean;
@@ -92,7 +93,7 @@ interface UIContextType extends UIState {
   isAppReady: boolean; // Ready to show UI shell (Prefs + Fonts)
 
   // Setters for boot process
-  setFontsReady: (ready: boolean) => void;
+  setFontsReady: (ready: boolean, fontId?: FontId) => void;
   setDataHydrated: (hydrated: boolean) => void;
 
   // Actions for UI state only
@@ -163,6 +164,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     notificationMinute: AppConfig.defaults.notifications.defaultMinute,
     notificationWeekday: AppConfig.defaults.notifications.defaultWeekday,
     fontsReady: false,
+    loadedFontId: null,
     defaultShareFormat: ShareFormat.TEXT,
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
     isSmsImportEnabled: false,
@@ -178,7 +180,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
         const loadedPreferences = await preferences.loadPreferences();
         const themePreference = loadedPreferences.theme || 'system';
         const themeId = loadedPreferences.themeId || ThemeIds.DEEP_SPACE;
-        const fontId = loadedPreferences.fontId || ThemeIds.DEEP_SPACE;
+        const fontId = loadedPreferences.fontId || FontIds.DEEP_SPACE;
 
         setUIState(prev => ({
           ...prev,
@@ -226,8 +228,12 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const setFontsReady = useCallback((fontsReady: boolean) => {
-    setUIState(prev => ({ ...prev, fontsReady }));
+  const setFontsReady = useCallback((fontsReady: boolean, fontId?: FontId) => {
+    setUIState(prev => ({
+      ...prev,
+      fontsReady,
+      loadedFontId: fontsReady ? (fontId ?? prev.fontId) : null,
+    }));
   }, []);
 
   const setDataHydrated = useCallback((isDataHydrated: boolean) => {
@@ -489,8 +495,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   const isAppReady = useMemo(
-    () => uiState.isInitialized && uiState.fontsReady,
-    [uiState.isInitialized, uiState.fontsReady],
+    () => uiState.isInitialized && uiState.fontsReady && uiState.loadedFontId === uiState.fontId,
+    [uiState.isInitialized, uiState.fontsReady, uiState.loadedFontId, uiState.fontId],
   );
 
   const value = useMemo<UIContextType>(

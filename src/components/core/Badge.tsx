@@ -4,7 +4,7 @@ import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { resolveStyleColors, resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
-import { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { StyleSheet, View, type ViewProps } from 'react-native';
 
 export type BadgeProps = ViewProps & {
@@ -18,7 +18,7 @@ export type BadgeProps = ViewProps & {
   textColor?: string;
 };
 
-export function Badge({
+export const Badge = memo(function Badge({
   children,
   variant = 'default',
   size = 'md',
@@ -73,7 +73,7 @@ export function Badge({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   badge: {

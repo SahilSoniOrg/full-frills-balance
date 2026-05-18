@@ -2,10 +2,18 @@
 import 'react-native-get-random-values';
 
 // Stage 1: Early Bootstrap (Critical Error Tracking)
+import * as SplashScreen from 'expo-splash-screen';
 import { analytics } from './src/services/analytics-service';
+import '@/src/features/app/hooks/useFonts';
+import { logger } from './src/utils/logger';
 
 // Global anchor for boot performance telemetry
 import 'expo-router/entry';
+
+logger.info('[Boot] JS execution started');
+
+// Prevent splash from hiding until we control it
+SplashScreen.preventAutoHideAsync().catch(() => {});
 analytics.earlyInitializeSentry();
 
 if (typeof global !== 'undefined') {

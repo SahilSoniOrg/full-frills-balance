@@ -156,7 +156,7 @@ export class NotificationService {
 
     const hasPermission = await this.checkPermissions();
     if (!hasPermission) {
-      logger.warn('Cannot schedule notification: permissions not granted');
+      logger.debug('Cannot schedule notification: permissions not granted');
       return;
     }
 

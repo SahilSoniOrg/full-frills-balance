@@ -1,8 +1,10 @@
 import { Typography } from '@/src/constants/design-tokens';
-import { resolveStyleColors } from '@/src/design-system/utils';
+import { useUI } from '@/src/contexts/UIContext';
+import { processTextChildren, resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
+import { logger } from '@/src/utils/logger';
 import { ComponentVariant } from '@/src/utils/style-helpers';
-import { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 export type AppTextProps = TextProps & {
@@ -14,7 +16,7 @@ export type AppTextProps = TextProps & {
   tabular?: boolean;
 };
 
-export function AppText({
+export const AppText = memo(function AppText({
   variant = 'body',
   color = 'text',
   align = 'auto',
@@ -22,9 +24,13 @@ export function AppText({
   italic = false,
   tabular = false,
   style,
+  children,
   ...props
 }: AppTextProps) {
   const { fonts, getVariantColors, theme } = useTheme();
+  const { fontsReady, loadedFontId, fontId } = useUI();
+
+  const processedChildren = useMemo(() => processTextChildren(children), [children]);
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
@@ -61,6 +67,14 @@ export function AppText({
       return fonts[weight] || fonts.regular;
     })();
 
+    // Safety: If fonts are not ready, log it to help diagnose rendering issues
+    if (!fontsReady || loadedFontId !== fontId) {
+      // Don't spam logger too much, just once per component mount if it happens
+      logger.debug(
+        `[AppText] Rendering before fonts ready! (fontsReady: ${fontsReady}, loaded: ${loadedFontId}, expected: ${fontId}, text: ${String(children).slice(0, 20)})`,
+      );
+    }
+
     const variantColors = getVariantColors(color);
 
     const baseStyle = {
@@ -70,13 +84,37 @@ export function AppText({
       fontFamily: resolvedFontFamily,
       fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
       fontVariant: (tabular ? ['tabular-nums'] : []) as any,
+      ...Typography.androidDefaults,
     };
 
     return [baseStyle, resolveStyleColors(theme, style)];
-  }, [variant, weight, color, getVariantColors, theme, fonts, align, italic, tabular, style]);
+  }, [
+    variant,
+    weight,
+    color,
+    getVariantColors,
+    theme,
+    fonts,
+    align,
+    italic,
+    tabular,
+    style,
+    fontsReady,
+    loadedFontId,
+    fontId,
+    children,
+  ]);
 
-  return <Text style={textStyle} {...props} />;
-}
+  return (
+    <Text
+      textBreakStrategy={Typography.androidDefaults.textBreakStrategy}
+      style={textStyle}
+      {...props}
+    >
+      {processedChildren}
+    </Text>
+  );
+});
 
 const styles = StyleSheet.create({
   caption: {
