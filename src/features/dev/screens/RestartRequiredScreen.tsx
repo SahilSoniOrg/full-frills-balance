@@ -30,6 +30,20 @@ export const RestartRequiredScreen = () => {
   }, []);
 
   const isImport = restartType === 'IMPORT';
+  const isSeedMock = restartType === 'SEED_MOCK';
+  const isSuccess = isImport || isSeedMock;
+
+  const titleText = isImport
+    ? AppConfig.strings.maintenance.importSuccess
+    : isSeedMock
+      ? AppConfig.strings.maintenance.seedMockComplete
+      : AppConfig.strings.maintenance.resetComplete;
+
+  const descText = isImport
+    ? AppConfig.strings.maintenance.importDesc
+    : isSeedMock
+      ? AppConfig.strings.maintenance.seedMockDesc
+      : AppConfig.strings.maintenance.resetDesc;
 
   return (
     <Page>
@@ -38,32 +52,28 @@ export const RestartRequiredScreen = () => {
           style={[
             styles.iconContainer,
             {
-              backgroundColor: isImport
+              backgroundColor: isSuccess
                 ? withOpacity(theme.success, Opacity.soft)
                 : withOpacity(theme.error, Opacity.soft),
             },
           ]}
         >
           <IvyIcon
-            name={isImport ? 'checkCircle' : 'delete'}
+            name={isSuccess ? 'checkCircle' : 'delete'}
             size={Size.avatarMd}
-            color={isImport ? theme.success : theme.error}
+            color={isSuccess ? theme.success : theme.error}
           />
         </View>
 
         <AppText variant="title" align="center" style={styles.title}>
-          {isImport
-            ? AppConfig.strings.maintenance.importSuccess
-            : AppConfig.strings.maintenance.resetComplete}
+          {titleText}
         </AppText>
 
         <AppText variant="body" color="secondary" align="center" style={styles.description}>
-          {isImport
-            ? AppConfig.strings.maintenance.importDesc
-            : AppConfig.strings.maintenance.resetDesc}
+          {descText}
         </AppText>
 
-        {isImport && importStats && (
+        {isSuccess && importStats && (
           <AppCard padding="lg" elevation="sm" style={styles.statsCard}>
             <View style={{ gap: Spacing.md }}>
               <View style={styles.statRow}>

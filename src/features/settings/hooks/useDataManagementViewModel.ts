@@ -4,6 +4,7 @@ import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsAct
 import { useImport } from '@/src/hooks/use-import';
 import { analytics } from '@/src/services/analytics-service';
 import { sharingService } from '@/src/services/SharingService';
+import { mockDataSeederService } from '@/src/services/import/MockDataSeederService';
 import { ShareFormat } from '@/src/types/sharing';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
@@ -34,11 +35,15 @@ export interface DataManagementViewModel {
   onFactoryReset: () => void;
   defaultShareFormat: ShareFormat;
   setDefaultShareFormat: (value: ShareFormat) => void;
+  isSeeding: boolean;
+  seedingProgress: number;
+  seedingProgressMessage: string;
+  onSeedMockData: () => void;
 }
 
 export function useDataManagementViewModel(): DataManagementViewModel {
   const { workplaceId } = useWorkplace();
-  const { defaultShareFormat, setDefaultShareFormat } = useUI();
+  const { defaultShareFormat, setDefaultShareFormat, requireRestart } = useUI();
   const { exportToJSON, runIntegrityCheck, cleanupDatabase, resetApp } =
     useSettingsActions(workplaceId);
   const { isImporting } = useImport();
@@ -53,6 +58,9 @@ export function useDataManagementViewModel(): DataManagementViewModel {
   const [exportFilename, setExportFilename] = useState('');
   const [exportProgress, setExportProgress] = useState(0);
   const [exportProgressMessage, setExportProgressMessage] = useState('');
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedingProgress, setSeedingProgress] = useState(0);
+  const [seedingProgressMessage, setSeedingProgressMessage] = useState('');
 
   const onExport = useCallback(() => {
     setIsNamingExport(true);
@@ -188,6 +196,52 @@ export function useDataManagementViewModel(): DataManagementViewModel {
     });
   }, [resetApp]);
 
+  const onSeedMockData = useCallback(() => {
+    confirm.show({
+      title: 'Setup Demo Workspace',
+      message:
+        'This will create a dedicated "Demo Workspace" and populate it with realistic sample data, switching your active workspace to it. Your existing workspace(s) and data will remain completely untouched. Continue?',
+      confirmText: 'Generate',
+      destructive: false,
+      onConfirm: async () => {
+        try {
+          setIsSeeding(true);
+          setSeedingProgress(0);
+          setSeedingProgressMessage('Initializing seeder...');
+
+          const stats = await mockDataSeederService.seedMockData((message, progress) => {
+            setSeedingProgressMessage(message);
+            setSeedingProgress(progress ?? 0);
+          });
+
+          setIsSeeding(false);
+          logger.info('[onSeedMockData] Seeding complete. Requesting restart...');
+
+          analytics.trackFeatureUsage('settings', 'seed_mock_data', {
+            accounts: stats.accounts,
+            journals: stats.journals,
+            transactions: stats.transactions,
+          });
+
+          requireRestart({
+            type: 'SEED_MOCK',
+            stats: {
+              accounts: stats.accounts,
+              journals: stats.journals,
+              transactions: stats.transactions,
+              skippedTransactions: 0,
+            },
+          });
+        } catch (error) {
+          setIsSeeding(false);
+          const msg = error instanceof Error ? error.message : String(error);
+          logger.error('[onSeedMockData] Seeding failed', error);
+          alert.show({ title: 'Error', message: `Seeding failed: ${msg}`, type: 'error' });
+        }
+      },
+    });
+  }, [workplaceId, requireRestart]);
+
   return {
     isExporting,
     isImporting,
@@ -211,5 +265,9 @@ export function useDataManagementViewModel(): DataManagementViewModel {
     onFactoryReset,
     defaultShareFormat,
     setDefaultShareFormat,
+    isSeeding,
+    seedingProgress,
+    seedingProgressMessage,
+    onSeedMockData,
   };
 }

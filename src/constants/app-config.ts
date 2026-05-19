@@ -494,6 +494,12 @@ export const AppConfig = {
         integrityTitle: 'Verifying Books',
         integrityWait: 'Checking balances…',
         integrityHint: 'This check runs while the app stays open.',
+        seedMockDesc:
+          'Create a dedicated workspace populated with realistic mock transactions for testing and screenshots.',
+        seedMockBtn: 'Setup Demo Workspace',
+        seedMockTitle: 'Setting Up Demo Workspace',
+        seedMockWait: 'Populating mock ledger…',
+        seedMockHint: 'This will not affect your existing workspaces.',
       },
       danger: {
         cleanupDesc: 'Permanently remove records already marked deleted.',
@@ -788,8 +794,10 @@ export const AppConfig = {
     maintenance: {
       importSuccess: 'Import Complete',
       resetComplete: 'Reset Complete',
+      seedMockComplete: 'Demo Workspace Ready',
       importDesc: 'The backup replaced the data stored on this device.',
       resetDesc: 'All data on this device was permanently erased.',
+      seedMockDesc: 'A dedicated Demo Workspace has been created with realistic mock data.',
       stats: {
         accounts: 'Accounts',
         journals: 'Journals',

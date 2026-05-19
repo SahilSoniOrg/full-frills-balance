@@ -21,6 +21,15 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           onPress={vm.onFixIntegrity}
           loading={vm.isMaintenanceMode}
         />
+        {__DEV__ && (
+          <SettingsMenuItem
+            leftIcon="database"
+            title={AppConfig.strings.settings.maintenance.seedMockBtn}
+            description={AppConfig.strings.settings.maintenance.seedMockDesc}
+            onPress={vm.onSeedMockData}
+            loading={vm.isSeeding}
+          />
+        )}
         <SettingsMenuItem
           leftIcon="delete"
           title={AppConfig.strings.settings.danger.cleanupBtn}
@@ -50,6 +59,17 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
         }
         hint={AppConfig.strings.settings.maintenance.integrityHint}
         icon="search"
+      />
+
+      <SettingsMaintenanceOverlay
+        isVisible={vm.isSeeding}
+        title={AppConfig.strings.settings.maintenance.seedMockTitle}
+        progress={vm.seedingProgress}
+        progressMessage={
+          vm.seedingProgressMessage || AppConfig.strings.settings.maintenance.seedMockWait
+        }
+        hint={AppConfig.strings.settings.maintenance.seedMockHint}
+        icon="database"
       />
     </SettingsLayout>
   );

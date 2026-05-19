@@ -33,7 +33,7 @@ export interface ImportStats {
 }
 
 export interface RestartOptions {
-  type: 'IMPORT' | 'RESET';
+  type: 'IMPORT' | 'RESET' | 'SEED_MOCK';
   stats?: ImportStats;
 }
 
@@ -73,7 +73,7 @@ interface UIState {
 
   // App Lifecycle
   isRestartRequired: boolean;
-  restartType: 'IMPORT' | 'RESET' | null;
+  restartType: 'IMPORT' | 'RESET' | 'SEED_MOCK' | null;
   importStats: ImportStats | null;
   archetype: string;
   notificationCadence: 'none' | 'daily' | 'weekly';

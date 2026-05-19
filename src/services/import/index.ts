@@ -21,11 +21,11 @@ importRegistry.register(cashewPlugin);
 
 // Re-export public API
 export {
-    decodeContent,
-    extractIfZip,
-    readFileAsBytes,
-    sanitizeContent
+  decodeContent,
+  extractIfZip,
+  readFileAsBytes,
+  sanitizeContent,
 } from '@/src/services/import/orchestrator';
 export { importRegistry } from '@/src/services/import/registry';
 export type { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
-
+export { mockDataSeederService } from '@/src/services/import/MockDataSeederService';
