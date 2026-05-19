@@ -15,6 +15,7 @@ if (!fs.existsSync(ASSETS_DIR)) {
 const checkUpToDate = () => {
   try {
     const iconPath = path.join(ASSETS_DIR, 'icon.png');
+    const playStoreIconPath = path.join(ASSETS_DIR, 'play-store-icon.png');
     const foregroundPath = path.join(ASSETS_DIR, 'android-icon-foreground.png');
     const backgroundPath = path.join(ASSETS_DIR, 'android-icon-background.png');
     const monochromePath = path.join(ASSETS_DIR, 'android-icon-monochrome.png');
@@ -23,6 +24,7 @@ const checkUpToDate = () => {
 
     const requiredFiles = [
       iconPath,
+      playStoreIconPath,
       foregroundPath,
       backgroundPath,
       monochromePath,
@@ -186,6 +188,16 @@ const generateSplashIcon = async () => {
   console.log('✓ splash-icon.png generated.');
 };
 
+// 8. Generate play-store-icon.png (512x512) - required for Play Store listing
+const generatePlayStoreIcon = async () => {
+  console.log('Generating play-store-icon.png...');
+  await sharp(Buffer.from(originalSvg))
+    .resize(512, 512)
+    .png()
+    .toFile(path.join(ASSETS_DIR, 'play-store-icon.png'));
+  console.log('✓ play-store-icon.png generated.');
+};
+
 const main = async () => {
   try {
     await generateIcon();
@@ -194,6 +206,7 @@ const main = async () => {
     await generateAndroidForeground();
     await generateAndroidMonochrome();
     await generateSplashIcon();
+    await generatePlayStoreIcon();
     console.log('🎉 All assets successfully generated dynamically!');
   } catch (error) {
     console.error('Error generating assets:', error);
