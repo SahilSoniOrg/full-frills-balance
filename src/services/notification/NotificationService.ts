@@ -98,6 +98,10 @@ export class NotificationService {
     }
   }
 
+  clearCache(): void {
+    this.safeToSpendByWorkplace.clear();
+  }
+
   async requestPermissions(): Promise<boolean> {
     if (Platform.OS === 'web') return false;
 
@@ -237,9 +241,15 @@ export class NotificationService {
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
   ): Observable<SafeToSpendResult> {
-    const cached = this.safeToSpendByWorkplace.get(workplaceId);
+    const cacheKey = `${workplaceId}_${defaultCurrencyCode}`;
+    const cached = this.safeToSpendByWorkplace.get(cacheKey);
     if (cached) {
       return cached;
+    }
+
+    // Evict old cache entries to prevent memory leak if currency or workplace changes
+    if (this.safeToSpendByWorkplace.size > 0) {
+      this.safeToSpendByWorkplace.clear();
     }
 
     const obs = combineLatest([preferences.observe('safeToSpendDays')]).pipe(
@@ -599,7 +609,7 @@ export class NotificationService {
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    this.safeToSpendByWorkplace.set(workplaceId, obs);
+    this.safeToSpendByWorkplace.set(cacheKey, obs);
     return obs;
   }
 

@@ -15,7 +15,7 @@ export function useJournal(
   } = useObservable(
     () =>
       journalId ? journalRepository.observeById(workplaceId, journalId, includeDeleted) : of(null),
-    [journalId, includeDeleted],
+    [workplaceId, journalId, includeDeleted],
     null,
   );
   return { journal, isLoading, version };

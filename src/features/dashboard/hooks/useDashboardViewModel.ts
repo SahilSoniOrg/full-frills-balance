@@ -86,7 +86,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
     () =>
       isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
-    [workplaceId, isAppReady],
+    [workplaceId, defaultCurrencyCode, isAppReady],
     () => snapshotService.getCustomSnapshot(workplaceId, `safe_to_spend`),
   );
 

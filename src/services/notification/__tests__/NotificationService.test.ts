@@ -44,6 +44,7 @@ describe('NotificationService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     reactiveDataService.clearCache();
+    notificationService.clearCache();
 
     // Default simple mocks
     (accountRepository.observeByType as jest.Mock).mockReturnValue(of([]));
@@ -148,6 +149,70 @@ describe('NotificationService', () => {
         // Net Cash = 5000 - 1000 = 4000
         expect(result.totalLiquidAssets).toBe(5000);
         expect(result.summary.safeToSpend).toBe(4000);
+        done();
+      });
+    });
+
+    it('should generate a new observable and calculate using the new currency when defaultCurrencyCode changes', done => {
+      const mockAssets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      (accountRepository.observeByType as jest.Mock).mockReturnValue(of(mockAssets));
+      (accountRepository.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
+      (balanceService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 5000 },
+      ]);
+
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
+        (
+          _startingBalances,
+          _plannedPayments,
+          _plannedJournals,
+          _liquidAssetIds,
+          _liabilityAccountBalances,
+          _budgets,
+          _usages,
+          _allAccounts,
+          currency,
+        ) => {
+          return Promise.resolve({
+            simulationResult: {
+              summary: { safeToSpend: 5000, shortfall: 0, trajectoryMinBalance: 5000 },
+              projections: [],
+            },
+            report: {
+              summary: {
+                totalFutureInflow: 0,
+                totalPlannedInflow: 0,
+                totalPlannedOutflow: 0,
+                totalCommittedPlanned: 0,
+              },
+              budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 30 },
+              allFlows: [],
+              liabilities: {
+                total: 0,
+                totalCreditCard: 0,
+                totalOther: 0,
+                committed: 0,
+                committedCreditCard: 0,
+                committedOther: 0,
+              },
+            },
+            accountSummaries: [],
+            accountMap: new Map(),
+          });
+        },
+      );
+
+      // Call once with USD
+      const usdObs = notificationService.observeSafeToSpend('test-wp' as WorkplaceId, 'USD');
+      // Call again with EUR
+      const eurObs = notificationService.observeSafeToSpend('test-wp' as WorkplaceId, 'EUR');
+
+      expect(usdObs).not.toBe(eurObs);
+
+      eurObs.subscribe(result => {
+        expect(result.currencyCode).toBe('EUR');
         done();
       });
     });
