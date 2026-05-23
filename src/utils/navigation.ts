@@ -469,10 +469,18 @@ export const AppNavigation = {
   },
 
   /**
+   * Navigate to the unified Transaction Inbox.
+   */
+  toTransactionInbox: () => {
+    router.push('/sms-inbox' as any);
+  },
+
+  /**
    * Navigate to SMS inbox.
+   * @deprecated Use toTransactionInbox instead.
    */
   toSmsInbox: () => {
-    router.push('/sms-inbox' as any);
+    AppNavigation.toTransactionInbox();
   },
 
   /**

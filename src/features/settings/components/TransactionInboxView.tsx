@@ -2,18 +2,18 @@ import { AppButton, AppText, EmptyStateView } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SmsInboxItemCardView } from '@/src/features/settings/components/SmsInboxItemCardView';
-import { SmsInboxViewModel } from '@/src/features/settings/hooks/useSmsInboxViewModel';
+import { TransactionInboxItemCardView } from '@/src/features/settings/components/TransactionInboxItemCardView';
+import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { ActivityIndicator, FlatList, Keyboard, Platform, StyleSheet, View } from 'react-native';
 
-interface SmsInboxViewProps {
-  vm: SmsInboxViewModel;
+interface TransactionInboxViewProps {
+  vm: TransactionInboxViewModel;
 }
 
-export function SmsInboxView({ vm }: SmsInboxViewProps) {
+export function TransactionInboxView({ vm }: TransactionInboxViewProps) {
   const { theme } = useTheme();
   const {
     filter,
@@ -35,22 +35,11 @@ export function SmsInboxView({ vm }: SmsInboxViewProps) {
     defaultCurrencyCode,
   } = vm;
 
-  if (Platform.OS !== 'android') {
-    return (
-      <SettingsLayout title="SMS Inbox" hideFooter={true}>
-        <View style={styles.center}>
-          <EmptyStateView
-            title="Not Supported"
-            subtitle="SMS transaction import is only available on Android devices."
-          />
-        </View>
-      </SettingsLayout>
-    );
-  }
+  const isAndroid = Platform.OS === 'android';
 
   return (
     <SettingsLayout
-      title="SMS Inbox"
+      title="Transaction Inbox"
       scrollable={false}
       hideFooter={true}
       headerActions={
@@ -58,13 +47,29 @@ export function SmsInboxView({ vm }: SmsInboxViewProps) {
           <AppButton variant="ghost" size="sm" onPress={AppNavigation.toSmsRules}>
             Rules
           </AppButton>
-          <AppButton variant="ghost" size="sm" loading={isRefreshing} onPress={handleRefresh}>
-            Refresh
-          </AppButton>
+          {isAndroid && (
+            <AppButton variant="ghost" size="sm" loading={isRefreshing} onPress={handleRefresh}>
+              Refresh SMS
+            </AppButton>
+          )}
         </View>
       }
     >
       <View style={styles.container}>
+        {!isAndroid && filter === 'pending' && (
+          <View
+            style={[
+              styles.platformNotice,
+              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
+            ]}
+          >
+            <AppText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+              Note: SMS transaction scanning is only supported on Android devices. Voice input
+              drafts are fully supported.
+            </AppText>
+          </View>
+        )}
+
         <FlatList
           data={items}
           keyExtractor={item => item.id}
@@ -87,7 +92,7 @@ export function SmsInboxView({ vm }: SmsInboxViewProps) {
             </View>
           }
           renderItem={({ item }) => (
-            <SmsInboxItemCardView
+            <TransactionInboxItemCardView
               item={item}
               currencyCode={defaultCurrencyCode}
               handleDismiss={handleDismiss}
@@ -103,18 +108,22 @@ export function SmsInboxView({ vm }: SmsInboxViewProps) {
               <View style={styles.center}>
                 <ActivityIndicator color={theme.primary} />
                 <AppText variant="caption" color="secondary" style={{ marginTop: Spacing.sm }}>
-                  Scanning SMS inbox...
+                  {isAndroid ? 'Scanning SMS and pending inputs...' : 'Loading pending items...'}
                 </AppText>
               </View>
             ) : (
               <EmptyStateView
-                title="No SMS records"
-                subtitle="Try refreshing or loading older messages."
+                title="No pending transactions"
+                subtitle={
+                  isAndroid
+                    ? 'Try refreshing or loading older messages.'
+                    : 'Your pending draft queue is empty.'
+                }
               />
             )
           }
           ListFooterComponent={
-            hasMore || items.length > 0 || isLoadingMore || isScanningOlder ? (
+            isAndroid && (hasMore || items.length > 0 || isLoadingMore || isScanningOlder) ? (
               <Stack space="lg" style={styles.footer}>
                 {(isLoadingMore || isScanningOlder) && <ActivityIndicator color={theme.primary} />}
                 {hasMore && (
@@ -143,6 +152,13 @@ const styles = StyleSheet.create({
   content: {
     paddingVertical: Spacing.md,
     gap: Spacing.md,
+  },
+  platformNotice: {
+    padding: Spacing.md,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginHorizontal: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   filters: {
     flexDirection: 'row',

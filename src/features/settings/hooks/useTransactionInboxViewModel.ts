@@ -25,7 +25,7 @@ function normalizeForMatch(value?: string) {
   return (value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-export interface SmsInboxViewModel {
+export interface TransactionInboxViewModel {
   filter: InboxFilter;
   setFilter: (filter: InboxFilter) => void;
   items: TransactionInboxItem[];
@@ -45,7 +45,7 @@ export interface SmsInboxViewModel {
   defaultCurrencyCode: string;
 }
 
-export function useSmsInboxViewModel(): SmsInboxViewModel {
+export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
 
@@ -138,7 +138,7 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
           setScanCursor(result.cursor);
         }
       } catch (error) {
-        showErrorAlert(error, 'SMS Inbox', true);
+        showErrorAlert(error, 'Transaction Inbox', true);
       }
     };
     prime();
@@ -152,9 +152,9 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
     try {
       const result = await smsService.refreshLatestSms(workplaceId, PAGE_SIZE * 2);
       setScanCursor(result.cursor);
-      toast.success('SMS inbox refreshed');
+      toast.success('Transaction inbox refreshed');
     } catch (error) {
-      showErrorAlert(error, 'SMS Inbox', true);
+      showErrorAlert(error, 'Transaction Inbox', true);
     } finally {
       setIsRefreshing(false);
     }
@@ -168,7 +168,7 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
       setScanCursor(result.cursor);
       loadMore();
     } catch (error) {
-      showErrorAlert(error, 'SMS Inbox', true);
+      showErrorAlert(error, 'Transaction Inbox', true);
     } finally {
       setIsScanningOlder(false);
     }
@@ -176,7 +176,9 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
 
   const handleDismiss = useCallback(async (item: TransactionInboxItem) => {
     await smsService.markInboxRecordStatus(item.id, InboxProcessingStatus.DISMISSED);
-    await smsService.markSmsAsProcessed(item.deviceSourceId);
+    if (item.channel === 'sms') {
+      await smsService.markSmsAsProcessed(item.deviceSourceId);
+    }
   }, []);
 
   const handleUndismiss = useCallback(async (item: TransactionInboxItem) => {
@@ -228,10 +230,19 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
         type = 'transfer';
       }
 
+      let notesText = '';
+      if (item.channel === 'voice') {
+        notesText = `Spoken transcript: ${item.rawBody}`;
+      } else if (item.channel === 'sms') {
+        notesText = `Imported from SMS: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${(item.rawBody || '').substring(0, AppConfig.input.sms.previewBodyChars)}...`;
+      } else {
+        notesText = `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\\n\\n${(item.rawBody || '').substring(0, 100)}...`;
+      }
+
       const params: Record<string, string> = {
         type,
         amount: String(item.parsedAmount || ''),
-        notes: `Imported from: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${(item.rawBody || '').substring(0, AppConfig.input.sms.previewBodyChars)}...`,
+        notes: notesText,
       };
 
       if (item.direction === 'debit') {
@@ -243,7 +254,7 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
       }
 
       AppNavigation.toJournalEntry({
-        smsId: item.deviceSourceId,
+        smsId: item.channel === 'sms' ? item.deviceSourceId : undefined,
         smsRecordId: item.id,
         smsSender: item.senderAddress,
         rawSmsBody: item.rawBody,

@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppText, Badge } from '@/src/components/core';
+import { AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxItem } from '@/src/types/domain';
@@ -9,7 +9,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-interface SmsInboxItemCardViewProps {
+interface TransactionInboxItemCardViewProps {
   item: TransactionInboxItem;
   currencyCode: string;
   handleDismiss: (item: TransactionInboxItem) => Promise<void>;
@@ -19,7 +19,7 @@ interface SmsInboxItemCardViewProps {
   onOpenJournal: (item: TransactionInboxItem) => void;
 }
 
-export function SmsInboxItemCardView({
+export function TransactionInboxItemCardView({
   item,
   currencyCode,
   handleDismiss,
@@ -27,13 +27,30 @@ export function SmsInboxItemCardView({
   handleImport,
   onCompareDuplicate,
   onOpenJournal,
-}: SmsInboxItemCardViewProps) {
+}: TransactionInboxItemCardViewProps) {
   const { theme } = useTheme();
+
+  // Channel icon and label mapping
+  const channelIcon =
+    item.channel === 'voice' ? 'mic' : item.channel === 'sms' ? 'messageSquare' : 'receipt';
+  const channelLabel =
+    item.channel === 'voice' ? 'Spoken' : item.channel === 'sms' ? 'SMS' : 'Email';
+
   return (
     <AppCard style={styles.card}>
       <View style={styles.cardTop}>
         <View style={{ flex: 1 }}>
-          <AppText variant="subheading">{item.parsedMerchant || item.senderAddress}</AppText>
+          <View style={styles.channelHeader}>
+            <AppIcon name={channelIcon} size={14} color={theme.textTertiary} />
+            <AppText variant="caption" color="secondary" weight="bold">
+              {channelLabel}
+            </AppText>
+          </View>
+          <AppText variant="subheading">
+            {item.channel === 'voice'
+              ? 'Spoken Draft'
+              : item.parsedMerchant || item.senderAddress || 'Unknown Origin'}
+          </AppText>
           <AppText variant="caption" color="secondary">
             {dayjs(item.inputDate).format('MMM D, YYYY h:mm A')}
           </AppText>
@@ -91,7 +108,7 @@ export function SmsInboxItemCardView({
       </AppText>
 
       {item.parseReason && (
-        <AppText variant="caption" color="secondary">
+        <AppText variant="caption" color="secondary" style={styles.parseReason}>
           {item.parseReason}
         </AppText>
       )}
@@ -136,7 +153,13 @@ export function SmsInboxItemCardView({
           size="sm"
           variant="ghost"
           onPress={() =>
-            alert.show({ title: item.senderAddress || 'Unknown', message: item.rawBody || '' })
+            alert.show({
+              title:
+                item.channel === 'voice'
+                  ? 'Raw Voice Transcript'
+                  : item.senderAddress || 'Raw Message',
+              message: item.rawBody || '',
+            })
           }
         >
           View Raw
@@ -155,6 +178,12 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     marginBottom: Spacing.sm,
   },
+  channelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
   amountColumn: {
     alignItems: 'flex-end',
   },
@@ -165,6 +194,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   bodyPreview: {
+    marginBottom: Spacing.sm,
+  },
+  parseReason: {
     marginBottom: Spacing.sm,
   },
   actions: {
