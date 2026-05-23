@@ -13,6 +13,7 @@ import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJou
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { VoiceInputModal } from './VoiceInputModal';
 
 export function JournalEntryView(vm: JournalEntryViewModel) {
   const { theme } = useTheme();
@@ -29,6 +30,10 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
     isSubmitDisabled,
     handleSubmit,
     setIsAmountFocused,
+    workplaceId,
+    isVoiceModalVisible,
+    setIsVoiceModalVisible,
+    handleApplyVoiceInput,
   } = vm;
 
   // Reset hide suggestions when user focuses or types
@@ -116,6 +121,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
           suggestions={vm.suggestions}
           hideSuggestions={hideSuggestions}
           onDescriptionFocus={() => setHideSuggestions(false)}
+          onVoiceInputPress={() => setIsVoiceModalVisible(true)}
         />
 
         {isGuidedMode ? (
@@ -151,6 +157,12 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         onClose={vm.onCloseAccountPicker}
         onCreateRequest={vm.onCreateAccountRequest}
         excludeParentAccounts={true}
+      />
+      <VoiceInputModal
+        visible={isVoiceModalVisible}
+        onClose={() => setIsVoiceModalVisible(false)}
+        onApply={handleApplyVoiceInput}
+        workplaceId={workplaceId}
       />
     </Page>
   );

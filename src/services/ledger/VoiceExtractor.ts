@@ -53,48 +53,57 @@ export class VoiceExtractor implements TransactionExtractor {
     let sourceHint: string | undefined;
     let targetHint: string | undefined;
 
-    const fromIndex = descriptiveText.indexOf(' from ');
-    const usingIndex = descriptiveText.indexOf(' using ');
-    const viaIndex = descriptiveText.indexOf(' via ');
-    const forIndex = descriptiveText.indexOf(' for ');
-    const onIndex = descriptiveText.indexOf(' on ');
-    const toIndex = descriptiveText.indexOf(' to ');
+    const fromMatch = this.findPrepositionIndex(descriptiveText, 'from');
+    const usingMatch = this.findPrepositionIndex(descriptiveText, 'using');
+    const viaMatch = this.findPrepositionIndex(descriptiveText, 'via');
 
-    // Identify where the source account starts
-    const sourceIndex = Math.max(fromIndex, usingIndex, viaIndex);
+    let sourceMatch = { index: -1, length: 0 };
+    if (fromMatch.index !== -1) sourceMatch = fromMatch;
+    if (usingMatch.index !== -1 && usingMatch.index > sourceMatch.index) sourceMatch = usingMatch;
+    if (viaMatch.index !== -1 && viaMatch.index > sourceMatch.index) sourceMatch = viaMatch;
 
-    if (sourceIndex !== -1) {
-      let sourceMarkerLength = 0;
-      if (sourceIndex === fromIndex) sourceMarkerLength = 6;
-      else if (sourceIndex === usingIndex) sourceMarkerLength = 7;
-      else if (sourceIndex === viaIndex) sourceMarkerLength = 5;
+    if (sourceMatch.index !== -1) {
+      sourceHint = descriptiveText.substring(sourceMatch.index + sourceMatch.length).trim();
 
-      sourceHint = descriptiveText.substring(sourceIndex + sourceMarkerLength).trim();
+      const forMatch = this.findPrepositionIndex(descriptiveText, 'for');
+      const onMatch = this.findPrepositionIndex(descriptiveText, 'on');
+      const toMatch = this.findPrepositionIndex(descriptiveText, 'to');
 
-      // The target is between the category marker and source marker
-      const targetMarkerIndex = Math.max(forIndex, onIndex, toIndex);
-      if (targetMarkerIndex !== -1 && targetMarkerIndex < sourceIndex) {
-        let markerLength = 0;
-        if (targetMarkerIndex === forIndex) markerLength = 5;
-        else if (targetMarkerIndex === onIndex) markerLength = 4;
-        else if (targetMarkerIndex === toIndex) markerLength = 4;
+      let targetMatch = { index: -1, length: 0 };
+      if (forMatch.index !== -1 && forMatch.index < sourceMatch.index) targetMatch = forMatch;
+      if (
+        onMatch.index !== -1 &&
+        onMatch.index < sourceMatch.index &&
+        onMatch.index > targetMatch.index
+      )
+        targetMatch = onMatch;
+      if (
+        toMatch.index !== -1 &&
+        toMatch.index < sourceMatch.index &&
+        toMatch.index > targetMatch.index
+      )
+        targetMatch = toMatch;
 
+      if (targetMatch.index !== -1) {
         targetHint = descriptiveText
-          .substring(targetMarkerIndex + markerLength, sourceIndex)
+          .substring(targetMatch.index + targetMatch.length, sourceMatch.index)
           .trim();
       } else {
-        targetHint = descriptiveText.substring(0, sourceIndex).trim();
+        targetHint = descriptiveText.substring(0, sourceMatch.index).trim();
       }
     } else {
       // No source marker found, check if there is a category marker
-      const targetMarkerIndex = Math.max(forIndex, onIndex, toIndex);
-      if (targetMarkerIndex !== -1) {
-        let markerLength = 0;
-        if (targetMarkerIndex === forIndex) markerLength = 5;
-        else if (targetMarkerIndex === onIndex) markerLength = 4;
-        else if (targetMarkerIndex === toIndex) markerLength = 4;
+      const forMatch = this.findPrepositionIndex(descriptiveText, 'for');
+      const onMatch = this.findPrepositionIndex(descriptiveText, 'on');
+      const toMatch = this.findPrepositionIndex(descriptiveText, 'to');
 
-        targetHint = descriptiveText.substring(targetMarkerIndex + markerLength).trim();
+      let targetMatch = { index: -1, length: 0 };
+      if (forMatch.index !== -1) targetMatch = forMatch;
+      if (onMatch.index !== -1 && onMatch.index > targetMatch.index) targetMatch = onMatch;
+      if (toMatch.index !== -1 && toMatch.index > targetMatch.index) targetMatch = toMatch;
+
+      if (targetMatch.index !== -1) {
+        targetHint = descriptiveText.substring(targetMatch.index + targetMatch.length).trim();
       } else {
         targetHint = descriptiveText;
       }
@@ -119,6 +128,15 @@ export class VoiceExtractor implements TransactionExtractor {
       merchantName: targetHint || undefined,
       date: input.date,
     };
+  }
+
+  private findPrepositionIndex(text: string, prep: string): { index: number; length: number } {
+    const regex = new RegExp(`\\b${prep}\\b`, 'i');
+    const match = text.match(regex);
+    if (match && match.index !== undefined) {
+      return { index: match.index, length: match[0].length };
+    }
+    return { index: -1, length: 0 };
   }
 
   private normalizeCurrencyCode(raw: string): string | null {

@@ -24,6 +24,7 @@ interface JournalMetaCardProps {
   suggestions?: string[];
   hideSuggestions?: boolean;
   onDescriptionFocus?: () => void;
+  onVoiceInputPress?: () => void;
 }
 
 export function JournalMetaCard({
@@ -42,6 +43,7 @@ export function JournalMetaCard({
   suggestions = [],
   hideSuggestions = false,
   onDescriptionFocus,
+  onVoiceInputPress,
 }: JournalMetaCardProps) {
   const { theme } = useTheme();
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -62,27 +64,47 @@ export function JournalMetaCard({
       )}
 
       <View style={{ zIndex: 10, position: 'relative' }}>
-        <AppInput
-          value={description}
-          onChangeText={setDescription}
-          onFocus={() => {
-            setIsDescriptionFocused(true);
-            onDescriptionFocus?.();
-          }}
-          onPressIn={() => {
-            onDescriptionFocus?.();
-          }}
-          onBlur={() => {
-            // Small delay to allow tapping suggestions before they disappear
-            setTimeout(() => setIsDescriptionFocused(false), 200);
-          }}
-          placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-          variant="minimal"
-          style={{
-            fontSize: isMinimal ? 16 : 18,
-            fontWeight: isMinimal ? '500' : '600',
-          }}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <AppInput
+            value={description}
+            onChangeText={setDescription}
+            onFocus={() => {
+              setIsDescriptionFocused(true);
+              onDescriptionFocus?.();
+            }}
+            onPressIn={() => {
+              onDescriptionFocus?.();
+            }}
+            onBlur={() => {
+              // Small delay to allow tapping suggestions before they disappear
+              setTimeout(() => setIsDescriptionFocused(false), 200);
+            }}
+            placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
+            variant="minimal"
+            flex={1}
+            width="auto"
+            style={{
+              fontSize: isMinimal ? 16 : 18,
+              fontWeight: isMinimal ? '500' : '600',
+            }}
+          />
+          {onVoiceInputPress && (
+            <TouchableOpacity
+              onPress={onVoiceInputPress}
+              style={{
+                padding: Spacing.sm,
+                marginLeft: Spacing.xs,
+              }}
+              activeOpacity={0.7}
+            >
+              <AppIcon
+                name="mic"
+                size={isMinimal ? Size.iconXs : Size.iconSm}
+                color={theme.primary}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
 
         {isDescriptionFocused && !hideSuggestions && suggestions.length > 0 && (
           <JournalSuggestions

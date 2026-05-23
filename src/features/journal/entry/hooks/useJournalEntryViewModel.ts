@@ -9,7 +9,13 @@ import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSi
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, AccountRole, JournalId } from '@/src/types/domain';
+import {
+  AccountId,
+  AccountRole,
+  JournalId,
+  TransactionType,
+  WorkplaceId,
+} from '@/src/types/domain';
 import { getAllowedAccountTypes, getInferredAccountType } from '@/src/utils/accountCategory';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -60,6 +66,17 @@ export interface JournalEntryViewModel {
   setIsAmountFocused: (focused: boolean) => void;
   suggestions: string[];
   workplaceCurrency: string;
+  workplaceId: WorkplaceId;
+  isVoiceModalVisible: boolean;
+  setIsVoiceModalVisible: (visible: boolean) => void;
+  handleApplyVoiceInput: (params: {
+    amount?: number;
+    merchantName?: string;
+    direction: 'debit' | 'credit' | 'unknown';
+    sourceAccountId: AccountId;
+    categoryAccountId: AccountId;
+    transcription: string;
+  }) => void;
 }
 
 /**
@@ -143,6 +160,89 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
   const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
+
+  const handleApplyVoiceInput = useCallback(
+    (params: {
+      amount?: number;
+      merchantName?: string;
+      direction: 'debit' | 'credit' | 'unknown';
+      sourceAccountId: AccountId;
+      categoryAccountId: AccountId;
+      transcription: string;
+    }) => {
+      const { amount, merchantName, direction, sourceAccountId, categoryAccountId, transcription } =
+        params;
+
+      // 1. Set description and notes
+      if (merchantName) {
+        editor.setDescription(merchantName);
+      }
+      if (transcription) {
+        editor.setNotes(`Spoken transcript: ${transcription}`);
+      }
+
+      // 2. Set guided or advanced mode properties
+      const mappedType = direction === 'credit' ? 'income' : 'expense';
+
+      if (editor.isGuidedMode) {
+        // Guided mode sync
+        simpleEditor.setType(mappedType);
+        if (amount) {
+          simpleEditor.setAmount(String(amount));
+        }
+
+        if (mappedType === 'income') {
+          // For Income: source is the Income category, destination is the Asset account
+          if (categoryAccountId) {
+            simpleEditor.setSourceId(categoryAccountId);
+          }
+          if (sourceAccountId) {
+            simpleEditor.setDestinationId(sourceAccountId);
+          }
+        } else {
+          // For Expense: source is the Asset account, destination is the Expense category
+          if (sourceAccountId) {
+            simpleEditor.setSourceId(sourceAccountId);
+          }
+          if (categoryAccountId) {
+            simpleEditor.setDestinationId(categoryAccountId);
+          }
+        }
+      } else {
+        // Advanced mode lines sync
+        editor.setTransactionType(mappedType);
+        editor.setLines(prev =>
+          prev.map(line => {
+            const isDebit = line.transactionType === TransactionType.DEBIT;
+
+            // For Income: Debit line is Asset (sourceAccountId), Credit line is Income (categoryAccountId)
+            // For Expense: Debit line is Expense (categoryAccountId), Credit line is Asset (sourceAccountId)
+            const lineAccountId =
+              mappedType === 'income'
+                ? isDebit
+                  ? sourceAccountId
+                  : categoryAccountId
+                : isDebit
+                  ? categoryAccountId
+                  : sourceAccountId;
+
+            const account = accounts.find(a => a.id === lineAccountId);
+
+            return {
+              ...line,
+              accountId: lineAccountId,
+              accountName: account?.name || '',
+              accountType: account?.accountType || AccountType.ASSET,
+              accountCurrency: account?.currencyCode,
+              amount: amount ? String(amount) : line.amount,
+            };
+          }),
+        );
+      }
+    },
+    [editor, simpleEditor, accounts],
+  );
 
   const onSelectAccountRequest = useCallback(
     (idOrRole: string) => {
@@ -411,6 +511,10 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       setIsAmountFocused,
       suggestions,
       workplaceCurrency,
+      workplaceId,
+      isVoiceModalVisible,
+      setIsVoiceModalVisible,
+      handleApplyVoiceInput,
     }),
     [
       editor,
@@ -445,6 +549,10 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       isAmountFocused,
       suggestions,
       workplaceCurrency,
+      workplaceId,
+      isVoiceModalVisible,
+      setIsVoiceModalVisible,
+      handleApplyVoiceInput,
     ],
   );
 }

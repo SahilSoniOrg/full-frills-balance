@@ -129,6 +129,43 @@ class LocalTransactionClassifier {
   }
 }
 
+const SYNONYM_DICTIONARY: Record<string, string> = {
+  tea: 'food',
+  coffee: 'food',
+  cafe: 'food',
+  starbucks: 'food',
+  restaurant: 'food',
+  lunch: 'food',
+  dinner: 'food',
+  breakfast: 'food',
+  swiggy: 'food',
+  zomato: 'food',
+  groceries: 'groceries',
+  supermarket: 'groceries',
+  milk: 'groceries',
+  vegetables: 'groceries',
+  fruits: 'groceries',
+  uber: 'transport',
+  ola: 'transport',
+  taxi: 'transport',
+  cab: 'transport',
+  metro: 'transport',
+  petrol: 'transport',
+  fuel: 'transport',
+  rent: 'rent',
+  electricity: 'utilities',
+  water: 'utilities',
+  power: 'utilities',
+  internet: 'utilities',
+  wifi: 'utilities',
+  broadband: 'utilities',
+  phone: 'utilities',
+  recharge: 'utilities',
+  salary: 'salary',
+  dividend: 'income',
+  interest: 'income',
+};
+
 export class AccountResolutionService {
   /**
    * Resolves raw hints to source and category accounts.
@@ -156,30 +193,55 @@ export class AccountResolutionService {
     let resolvedCategoryId: AccountId | undefined;
     let sourceScore = 0;
     let categoryScore = 0;
-    let strategyUsed: ResolutionResult['strategyUsed'] = 'default';
+    let sourceStrategy: ResolutionResult['strategyUsed'] = 'default';
+    let categoryStrategy: ResolutionResult['strategyUsed'] = 'default';
 
     // 1. Fuzzy match for Source Account
-    if (sourceHint && assetAccounts.length > 0) {
-      const bestSource = this.fuzzyMatch(sourceHint, assetAccounts);
-      if (bestSource && bestSource.score > 0.85) {
+    const primarySourceHint = sourceHint || destinationHint;
+    if (primarySourceHint && assetAccounts.length > 0) {
+      const bestSource = this.fuzzyMatch(primarySourceHint, assetAccounts);
+      // If using the fallback hint (destinationHint), require a slightly more conservative threshold (e.g. >= 0.70)
+      const threshold = sourceHint ? 0.85 : 0.7;
+      if (bestSource && bestSource.score >= threshold) {
         resolvedSourceId = bestSource.account.id as AccountId;
         sourceScore = bestSource.score;
-        strategyUsed = 'fuzzy';
+        sourceStrategy = 'fuzzy';
       }
     }
 
     // 2. Fuzzy match for Category Account
-    if (destinationHint && categoryAccounts.length > 0) {
-      const bestCategory = this.fuzzyMatch(destinationHint, categoryAccounts);
-      if (bestCategory && bestCategory.score > 0.85) {
+    const primaryCategoryHint = destinationHint || sourceHint;
+    if (primaryCategoryHint && categoryAccounts.length > 0) {
+      const bestCategory = this.fuzzyMatch(primaryCategoryHint, categoryAccounts);
+      // If using the fallback hint (sourceHint), require a slightly more conservative threshold (e.g. >= 0.70)
+      const threshold = destinationHint ? 0.85 : 0.7;
+      if (bestCategory && bestCategory.score >= threshold) {
         resolvedCategoryId = bestCategory.account.id as AccountId;
         categoryScore = bestCategory.score;
-        strategyUsed = 'fuzzy';
+        categoryStrategy = 'fuzzy';
+      } else {
+        // Synonym lookup as a secondary fuzzy match strategy
+        const words = primaryCategoryHint
+          .toLowerCase()
+          .split(/[\s,._\-\/]+/)
+          .filter(w => w.length > 1);
+        for (const word of words) {
+          const synonym = SYNONYM_DICTIONARY[word];
+          if (synonym) {
+            const bestSynonymMatch = this.fuzzyMatch(synonym, categoryAccounts);
+            if (bestSynonymMatch && bestSynonymMatch.score >= 0.85) {
+              resolvedCategoryId = bestSynonymMatch.account.id as AccountId;
+              categoryScore = bestSynonymMatch.score * 0.9; // Small penalty for synonym indirection
+              categoryStrategy = 'fuzzy';
+              break;
+            }
+          }
+        }
       }
     }
 
     // If fuzzy matching resolved both with high confidence, return immediately
-    if (resolvedSourceId && resolvedCategoryId && sourceScore > 0.85 && categoryScore > 0.85) {
+    if (resolvedSourceId && resolvedCategoryId && sourceScore >= 0.85 && categoryScore >= 0.85) {
       return this.buildResult(
         resolvedSourceId,
         resolvedCategoryId,
@@ -189,21 +251,34 @@ export class AccountResolutionService {
       );
     }
 
-    // 3. Historical Miner Lookup
-    if (destinationHint || sourceHint) {
-      const hint = destinationHint || sourceHint || '';
-      const historyResult = await this.resolveFromHistory(hint, direction, workplaceId);
-      if (historyResult && historyResult.confidence > 0.75) {
-        const source = resolvedSourceId || historyResult.sourceAccountId;
-        const category = resolvedCategoryId || historyResult.categoryAccountId;
-        if (source && category) {
-          return this.buildResult(source, category, historyResult.confidence, 'history', accounts);
+    // 3. Historical Miner Lookup (Only for unresolved parts!)
+    if (!resolvedSourceId || !resolvedCategoryId) {
+      if (destinationHint || sourceHint) {
+        const hint = destinationHint || sourceHint || '';
+        const historyResult = await this.resolveFromHistory(
+          hint,
+          direction,
+          workplaceId,
+          assetAccounts,
+          categoryAccounts,
+        );
+        if (historyResult && historyResult.confidence > 0.75) {
+          if (!resolvedSourceId && historyResult.sourceAccountId) {
+            resolvedSourceId = historyResult.sourceAccountId;
+            sourceScore = historyResult.confidence;
+            sourceStrategy = 'history';
+          }
+          if (!resolvedCategoryId && historyResult.categoryAccountId) {
+            resolvedCategoryId = historyResult.categoryAccountId;
+            categoryScore = historyResult.confidence;
+            categoryStrategy = 'history';
+          }
         }
       }
     }
 
-    // 4. Local Naive Bayes Classification
-    if (destinationHint || sourceHint) {
+    // 4. Local Naive Bayes Classification (Only if category is still unresolved!)
+    if (!resolvedCategoryId && (destinationHint || sourceHint)) {
       const hint = destinationHint || sourceHint || '';
       const trainingSamples = await this.getBayesTrainingData(workplaceId);
       if (trainingSamples.length > 0) {
@@ -213,21 +288,56 @@ export class AccountResolutionService {
         if (classification.length > 0 && classification[0].probability > 0.7) {
           resolvedCategoryId = classification[0].categoryAccountId as AccountId;
           categoryScore = classification[0].probability;
-          strategyUsed = 'bayes';
+          categoryStrategy = 'bayes';
         }
       }
     }
 
-    // 5. Default Fallbacks if still unresolved
+    // Ensure source and destination are never the same account
+    if (resolvedSourceId === resolvedCategoryId && resolvedSourceId) {
+      if (sourceScore >= categoryScore) {
+        resolvedCategoryId = undefined;
+        categoryScore = 0;
+      } else {
+        resolvedSourceId = undefined;
+        sourceScore = 0;
+      }
+    }
+
+    // 5. Default Fallbacks if still unresolved (filter by direction so Expenses get Expense accounts, not Income/Salary)
+    const expenseAccounts = categoryAccounts.filter(acc => acc.accountType === AccountType.EXPENSE);
+    const incomeAccounts = categoryAccounts.filter(acc => acc.accountType === AccountType.INCOME);
+
+    const defaultCategory =
+      direction === 'credit'
+        ? incomeAccounts[0]?.id || categoryAccounts[0]?.id || ('' as AccountId)
+        : expenseAccounts[0]?.id || categoryAccounts[0]?.id || ('' as AccountId);
+
     const fallbackSource = resolvedSourceId || assetAccounts[0]?.id || ('' as AccountId);
-    const fallbackCategory = resolvedCategoryId || categoryAccounts[0]?.id || ('' as AccountId);
-    const finalConfidence = Math.max(sourceScore, categoryScore, 0.4);
+    const fallbackCategory = resolvedCategoryId || defaultCategory;
+
+    // Penalize strategy and confidence if only one of the sides resolved successfully
+    const finalStrategy =
+      resolvedSourceId && resolvedCategoryId
+        ? 'fuzzy'
+        : resolvedSourceId || resolvedCategoryId
+          ? resolvedSourceId
+            ? sourceStrategy
+            : categoryStrategy
+          : 'default';
+
+    const finalConfidence =
+      resolvedSourceId && resolvedCategoryId
+        ? (sourceScore + categoryScore) / 2
+        : resolvedSourceId || resolvedCategoryId
+          ? Math.max(sourceScore, categoryScore) * 0.9 // Small penalty if only one side matched
+          : 0.4;
 
     return this.buildResult(
       fallbackSource,
       fallbackCategory,
       finalConfidence,
-      resolvedSourceId && resolvedCategoryId ? 'fuzzy' : strategyUsed,
+      finalStrategy,
       accounts,
     );
   }
@@ -238,23 +348,35 @@ export class AccountResolutionService {
   ): { account: Account; score: number } | null {
     let bestMatch: { account: Account; score: number } | null = null;
     const cleanHint = hint.toLowerCase().trim();
+    const hintWords = cleanHint.split(/[\s,._\-\/]+/).filter(w => w.length > 1);
 
     for (const account of candidates) {
       const cleanName = account.name.toLowerCase().trim();
+      const nameWords = cleanName.split(/[\s,._\-\/]+/).filter(w => w.length > 1);
 
-      // Exact substring or equal match
+      // 1. Exact match
       if (cleanName === cleanHint) {
         return { account, score: 1.0 };
       }
 
       let score = 0;
-      if (cleanName.includes(cleanHint) || cleanHint.includes(cleanName)) {
-        score =
-          (Math.min(cleanHint.length, cleanName.length) /
-            Math.max(cleanHint.length, cleanName.length)) *
-          0.95;
+
+      // 2. Exact word subset matches
+      const isNameSubset = nameWords.length > 0 && nameWords.every(w => hintWords.includes(w));
+      const isHintSubset = hintWords.length > 0 && hintWords.every(w => nameWords.includes(w));
+
+      if (isNameSubset || isHintSubset) {
+        score = 0.95;
       } else {
-        score = getStringSimilarity(cleanHint, cleanName);
+        // 3. Word overlap match
+        const matchingWords = nameWords.filter(w => hintWords.includes(w));
+        if (matchingWords.length > 0) {
+          const overlapRatio = matchingWords.length / Math.max(nameWords.length, hintWords.length);
+          score = 0.6 + overlapRatio * 0.3;
+        } else {
+          // 4. Fallback to Levenshtein similarity
+          score = getStringSimilarity(cleanHint, cleanName);
+        }
       }
 
       if (!bestMatch || score > bestMatch.score) {
@@ -267,8 +389,10 @@ export class AccountResolutionService {
 
   private async resolveFromHistory(
     keyword: string,
-    direction: 'debit' | 'credit' | 'unknown',
+    _direction: 'debit' | 'credit' | 'unknown',
     workplaceId: WorkplaceId,
+    assetAccounts: Account[],
+    categoryAccounts: Account[],
   ): Promise<{
     sourceAccountId: AccountId;
     categoryAccountId: AccountId;
@@ -304,14 +428,13 @@ export class AccountResolutionService {
     const categoryFrequency: Record<string, number> = {};
     let matchedCount = 0;
 
+    const assetAccountIds = new Set(assetAccounts.map(a => a.id));
+    const categoryAccountIds = new Set(categoryAccounts.map(a => a.id));
+
     for (const journal of journals) {
       const txs = transactionsByJournal.get(journal.id) || [];
-      const sourceTx = txs.find(
-        tx => tx.transactionType === (direction === 'credit' ? 'DEBIT' : 'CREDIT'),
-      );
-      const categoryTx = txs.find(
-        tx => tx.transactionType === (direction === 'credit' ? 'CREDIT' : 'DEBIT'),
-      );
+      const sourceTx = txs.find(tx => assetAccountIds.has(tx.accountId));
+      const categoryTx = txs.find(tx => categoryAccountIds.has(tx.accountId));
 
       if (sourceTx) {
         sourceFrequency[sourceTx.accountId] = (sourceFrequency[sourceTx.accountId] || 0) + 1;
