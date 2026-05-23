@@ -1,7 +1,7 @@
 import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader';
 import { AppCard, AppText, EmptyStateView, FloatingActionButton } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
-import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SmsRuleCardView } from '@/src/features/settings/components/SmsRuleCardView';
 import type { SmsRuleSuggestion } from '@/src/services/sms-service';
@@ -10,13 +10,13 @@ import React, { useCallback } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRulesViewProps {
-  rules: SmsAutoPostRule[];
+  rules: TransactionAutoPostRule[];
   suggestions: SmsRuleSuggestion[];
   accountMap: Map<string, string>;
 }
 
 export function SmsRulesView({ rules, suggestions, accountMap }: SmsRulesViewProps) {
-  const handleRulePress = useCallback((item: SmsAutoPostRule) => {
+  const handleRulePress = useCallback((item: TransactionAutoPostRule) => {
     AppNavigation.toSmsRuleForm(item.id);
   }, []);
 

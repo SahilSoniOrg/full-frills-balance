@@ -173,7 +173,7 @@ describe('NotificationService', () => {
           _budgets,
           _usages,
           _allAccounts,
-          currency,
+          _currency,
         ) => {
           return Promise.resolve({
             simulationResult: {

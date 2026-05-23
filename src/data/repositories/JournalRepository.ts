@@ -3,7 +3,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { AccountType } from '@/src/data/models/Account';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import {
   AccountId,
@@ -341,7 +341,7 @@ export class JournalRepository {
   }
 
   async findJournalByOriginalSmsId(
-    originalSmsId: string, // SMS ID is still string
+    originalSmsId: string,
     workplaceId: WorkplaceId,
   ): Promise<Journal | null> {
     const metadata = await this.journalMetadata
@@ -353,7 +353,7 @@ export class JournalRepository {
   }
 
   async findJournalsByOriginalSmsIds(
-    smsIds: string[], // SMS IDs are still string
+    smsIds: string[],
     workplaceId: WorkplaceId,
   ): Promise<Map<string, Journal>> {
     if (smsIds.length === 0) return new Map();
@@ -381,10 +381,13 @@ export class JournalRepository {
     smsFingerprint: string,
     workplaceId: WorkplaceId,
   ): Promise<Journal | null> {
-    // Optimized: Query indexed inbox records instead of scanning metadata JSON
     const inboxRecords = await database.collections
-      .get<SmsInboxRecord>('sms_inbox_records')
-      .query(Q.where('sms_fingerprint', smsFingerprint), Q.where('workplace_id', workplaceId))
+      .get<TransactionInboxRecord>('transaction_inbox_records')
+      .query(
+        Q.where('input_fingerprint', smsFingerprint),
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+      )
       .fetch();
 
     const record = inboxRecords.find(r => r.linkedJournalId);
@@ -399,12 +402,12 @@ export class JournalRepository {
   ): Promise<Map<string, Journal>> {
     if (fingerprints.length === 0) return new Map();
 
-    // Optimized: Use indexed sms_inbox_records to find linked journals in O(Log N)
     const inboxRecords = await database.collections
-      .get<SmsInboxRecord>('sms_inbox_records')
+      .get<TransactionInboxRecord>('transaction_inbox_records')
       .query(
-        Q.where('sms_fingerprint', Q.oneOf(fingerprints)),
+        Q.where('input_fingerprint', Q.oneOf(fingerprints)),
         Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
       )
       .fetch();
 
@@ -413,7 +416,7 @@ export class JournalRepository {
 
     for (const record of inboxRecords) {
       const linkedJournalId = record.linkedJournalId;
-      const smsFingerprint = record.smsFingerprint;
+      const smsFingerprint = record.inputFingerprint;
       if (linkedJournalId && smsFingerprint) {
         journalIds.push(linkedJournalId);
         fingerprintToJournalId.set(smsFingerprint, linkedJournalId);

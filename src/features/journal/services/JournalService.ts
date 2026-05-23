@@ -3,7 +3,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { AuditAction } from '@/src/data/models/AuditLog';
 import Journal, { JournalStatus } from '@/src/data/models/Journal';
-import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -500,16 +500,16 @@ export class JournalService {
       let smsMetadataJson: string | undefined;
       if (smsRecordId) {
         try {
-          const smsRecord = await database.collections
-            .get<SmsInboxRecord>('sms_inbox_records')
+          const inboxRecord = await database.collections
+            .get<TransactionInboxRecord>('transaction_inbox_records')
             .find(smsRecordId);
           smsMetadataJson = JSON.stringify({
-            smsFingerprint: smsRecord.smsFingerprint,
-            parsedAmount: smsRecord.parsedAmount ?? null,
-            parsedCurrencyCode: smsRecord.parsedCurrencyCode ?? null,
-            parsedMerchant: smsRecord.parsedMerchant ?? null,
-            referenceNumber: smsRecord.referenceNumber ?? null,
-            accountSource: smsRecord.parsedAccountSource ?? null,
+            smsFingerprint: inboxRecord.inputFingerprint,
+            parsedAmount: inboxRecord.parsedAmount ?? null,
+            parsedCurrencyCode: inboxRecord.parsedCurrencyCode ?? null,
+            parsedMerchant: inboxRecord.parsedMerchant ?? null,
+            referenceNumber: inboxRecord.referenceNumber ?? null,
+            accountSource: inboxRecord.parsedAccountSource ?? null,
           });
         } catch {
           smsMetadataJson = undefined;

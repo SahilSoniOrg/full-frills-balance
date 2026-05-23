@@ -1,10 +1,17 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import SmsInboxRecord, { SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord';
+import TransactionInboxRecord, {
+  InboxProcessingStatus,
+} from '@/src/data/models/TransactionInboxRecord';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useAccounts } from '@/src/features/accounts';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { smsService } from '@/src/services/sms-service';
-import { AccountId, JournalId, SmsDuplicateCandidate, SmsInboxItem } from '@/src/types/domain';
+import {
+  AccountId,
+  JournalId,
+  TransactionDuplicateCandidate,
+  TransactionInboxItem,
+} from '@/src/types/domain';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { AppConfig } from '@/src/constants/app-config';
@@ -21,7 +28,7 @@ function normalizeForMatch(value?: string) {
 export interface SmsInboxViewModel {
   filter: InboxFilter;
   setFilter: (filter: InboxFilter) => void;
-  items: SmsInboxItem[];
+  items: TransactionInboxItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -29,11 +36,11 @@ export interface SmsInboxViewModel {
   isScanningOlder: boolean;
   handleRefresh: () => Promise<void>;
   handleLoadOlder: () => Promise<void>;
-  handleDismiss: (item: SmsInboxItem) => Promise<void>;
-  handleUndismiss: (item: SmsInboxItem) => Promise<void>;
-  handleImport: (item: SmsInboxItem) => void;
-  handleCompareDuplicate: (item: SmsInboxItem) => void;
-  handleOpenJournal: (item: SmsInboxItem) => void;
+  handleDismiss: (item: TransactionInboxItem) => Promise<void>;
+  handleUndismiss: (item: TransactionInboxItem) => Promise<void>;
+  handleImport: (item: TransactionInboxItem) => void;
+  handleCompareDuplicate: (item: TransactionInboxItem) => void;
+  handleOpenJournal: (item: TransactionInboxItem) => void;
   filterButtons: { key: InboxFilter; label: string }[];
   defaultCurrencyCode: string;
 }
@@ -53,7 +60,7 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
   );
 
   const enrich = useCallback(
-    async (records: SmsInboxRecord[]) => {
+    async (records: TransactionInboxRecord[]) => {
       const linkedIds = Array.from(
         new Set(records.map(record => record.linkedJournalId).filter(Boolean) as JournalId[]),
       );
@@ -66,24 +73,27 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
       );
       const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 
-      return records.map((record): SmsInboxItem => {
+      return records.map((record): TransactionInboxItem => {
         const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
-        const duplicateCandidate: SmsDuplicateCandidate | undefined = record.duplicateJournalId
-          ? {
-              journalId: record.duplicateJournalId,
-              journalDate: journalMap.get(record.duplicateJournalId)?.journalDate || record.smsDate,
-              description: journalMap.get(record.duplicateJournalId)?.description,
-              score: record.duplicateConfidence || 0,
-              reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
-            }
-          : undefined;
+        const duplicateCandidate: TransactionDuplicateCandidate | undefined =
+          record.duplicateJournalId
+            ? {
+                journalId: record.duplicateJournalId,
+                journalDate:
+                  journalMap.get(record.duplicateJournalId)?.journalDate || record.inputDate,
+                description: journalMap.get(record.duplicateJournalId)?.description,
+                score: record.duplicateConfidence || 0,
+                reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
+              }
+            : undefined;
 
         return {
           id: record.id,
-          deviceSmsId: record.deviceSmsId,
-          senderAddress: record.senderAddress,
-          rawBody: record.rawBody,
-          smsDate: record.smsDate,
+          channel: record.channel,
+          deviceSourceId: record.deviceSourceId,
+          senderAddress: record.senderAddress || '',
+          rawBody: record.rawBody || '',
+          inputDate: record.inputDate,
           parseStatus: record.parseStatus,
           processingStatus: record.processingStatus,
           parsedAmount: record.parsedAmount,
@@ -98,7 +108,8 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
             ? {
                 journalId: record.linkedJournalId,
                 description: journalMap.get(record.linkedJournalId)?.description,
-                journalDate: journalMap.get(record.linkedJournalId)?.journalDate || record.smsDate,
+                journalDate:
+                  journalMap.get(record.linkedJournalId)?.journalDate || record.inputDate,
                 status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
               }
             : undefined,
@@ -110,8 +121,8 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
   );
 
   const { items, isLoading, isLoadingMore, hasMore, loadMore } = usePaginatedObservable<
-    SmsInboxRecord,
-    SmsInboxItem
+    TransactionInboxRecord,
+    TransactionInboxItem
   >({
     pageSize: PAGE_SIZE,
     observe,
@@ -163,20 +174,22 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
     }
   }, [isScanningOlder, loadMore, scanCursor, workplaceId]);
 
-  const handleDismiss = useCallback(async (item: SmsInboxItem) => {
-    await smsService.markInboxRecordStatus(item.id, SmsProcessingStatus.DISMISSED);
-    await smsService.markSmsAsProcessed(item.deviceSmsId);
+  const handleDismiss = useCallback(async (item: TransactionInboxItem) => {
+    await smsService.markInboxRecordStatus(item.id, InboxProcessingStatus.DISMISSED);
+    await smsService.markSmsAsProcessed(item.deviceSourceId);
   }, []);
 
-  const handleUndismiss = useCallback(async (item: SmsInboxItem) => {
+  const handleUndismiss = useCallback(async (item: TransactionInboxItem) => {
     await smsService.markInboxRecordStatus(
       item.id,
-      item.duplicateCandidate ? SmsProcessingStatus.DUPLICATE_FLAGGED : SmsProcessingStatus.PENDING,
+      item.duplicateCandidate
+        ? InboxProcessingStatus.DUPLICATE_FLAGGED
+        : InboxProcessingStatus.PENDING,
     );
   }, []);
 
   const handleImport = useCallback(
-    (item: SmsInboxItem) => {
+    (item: TransactionInboxItem) => {
       let matchedBankAccountId: AccountId | undefined;
       let matchedCounterpartyId: string | undefined;
 
@@ -218,7 +231,7 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
       const params: Record<string, string> = {
         type,
         amount: String(item.parsedAmount || ''),
-        notes: `Imported from: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${item.rawBody.substring(0, AppConfig.input.sms.previewBodyChars)}...`,
+        notes: `Imported from: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${(item.rawBody || '').substring(0, AppConfig.input.sms.previewBodyChars)}...`,
       };
 
       if (item.direction === 'debit') {
@@ -230,11 +243,11 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
       }
 
       AppNavigation.toJournalEntry({
-        smsId: item.deviceSmsId,
+        smsId: item.deviceSourceId,
         smsRecordId: item.id,
         smsSender: item.senderAddress,
         rawSmsBody: item.rawBody,
-        initialDate: new Date(item.smsDate).toISOString(),
+        initialDate: new Date(item.inputDate).toISOString(),
         params,
       });
     },
@@ -242,10 +255,11 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
   );
 
   const handleCompareDuplicate = useCallback(
-    (item: SmsInboxItem) => {
+    (item: TransactionInboxItem) => {
       if (!item.duplicateCandidate) return;
       AppNavigation.toTransactionDetails(item.duplicateCandidate.journalId, {
-        title: item.duplicateCandidate.description || item.parsedMerchant || item.senderAddress,
+        title:
+          item.duplicateCandidate.description || item.parsedMerchant || item.senderAddress || '',
         amount: item.parsedAmount || 0,
         currencyCode: item.parsedCurrencyCode || defaultCurrencyCode,
         date: item.duplicateCandidate.journalDate,
@@ -256,10 +270,10 @@ export function useSmsInboxViewModel(): SmsInboxViewModel {
   );
 
   const handleOpenJournal = useCallback(
-    (item: SmsInboxItem) => {
+    (item: TransactionInboxItem) => {
       if (!item.linkedJournal) return;
       AppNavigation.toTransactionDetails(item.linkedJournal.journalId, {
-        title: item.linkedJournal.description || item.parsedMerchant || item.senderAddress,
+        title: item.linkedJournal.description || item.parsedMerchant || item.senderAddress || '',
         amount: item.parsedAmount || 0,
         currencyCode: item.parsedCurrencyCode || defaultCurrencyCode,
         date: item.linkedJournal.journalDate,

@@ -764,5 +764,112 @@ export const migrations = schemaMigrations({
         ),
       ],
     },
+    {
+      toVersion: 28,
+      steps: [
+        createTable({
+          name: 'transaction_auto_post_rules',
+          columns: [
+            { name: 'channels_json', type: 'string', isOptional: true },
+            { name: 'sender_match', type: 'string', isOptional: true, isIndexed: true },
+            { name: 'body_match', type: 'string', isOptional: true },
+            { name: 'conditions_json', type: 'string', isOptional: true },
+            { name: 'actions_json', type: 'string', isOptional: true },
+            { name: 'priority', type: 'number', isOptional: true, isIndexed: true },
+            { name: 'source_account_id', type: 'string', isIndexed: true },
+            { name: 'category_account_id', type: 'string', isIndexed: true },
+            { name: 'is_active', type: 'boolean' },
+            { name: 'created_at', type: 'number', isIndexed: true },
+            { name: 'updated_at', type: 'number' },
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+          ],
+        }),
+        createTable({
+          name: 'transaction_inbox_records',
+          columns: [
+            { name: 'channel', type: 'string', isIndexed: true },
+            { name: 'device_source_id', type: 'string', isIndexed: true },
+            { name: 'sender_address', type: 'string', isOptional: true, isIndexed: true },
+            { name: 'raw_body', type: 'string', isOptional: true },
+            { name: 'input_date', type: 'number', isIndexed: true },
+            { name: 'input_fingerprint', type: 'string', isIndexed: true },
+            { name: 'parse_status', type: 'string', isIndexed: true },
+            { name: 'parsed_amount', type: 'number', isOptional: true },
+            { name: 'parsed_currency_code', type: 'string', isOptional: true },
+            { name: 'parsed_merchant', type: 'string', isOptional: true },
+            { name: 'parsed_account_source', type: 'string', isOptional: true },
+            { name: 'reference_number', type: 'string', isOptional: true },
+            { name: 'direction', type: 'string', isIndexed: true },
+            { name: 'processing_status', type: 'string', isIndexed: true },
+            { name: 'linked_journal_id', type: 'string', isOptional: true, isIndexed: true },
+            { name: 'duplicate_journal_id', type: 'string', isOptional: true, isIndexed: true },
+            { name: 'duplicate_confidence', type: 'number', isOptional: true },
+            { name: 'parse_confidence', type: 'number', isOptional: true },
+            { name: 'parse_reason', type: 'string', isOptional: true },
+            { name: 'metadata_json', type: 'string', isOptional: true },
+            { name: 'first_seen_at', type: 'number', isIndexed: true },
+            { name: 'last_scanned_at', type: 'number', isIndexed: true },
+            { name: 'processed_at', type: 'number', isOptional: true, isIndexed: true },
+            { name: 'created_at', type: 'number', isIndexed: true },
+            { name: 'updated_at', type: 'number' },
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_transaction_auto_post_rules_workplace_id_check
+          BEFORE INSERT ON transaction_auto_post_rules
+          FOR EACH ROW
+          WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+          BEGIN
+            SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transaction_auto_post_rules');
+          END;
+        `),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_transaction_inbox_records_workplace_id_check
+          BEFORE INSERT ON transaction_inbox_records
+          FOR EACH ROW
+          WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+          BEGIN
+            SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transaction_inbox_records');
+          END;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_transaction_inbox_records_workplace_processing
+          ON transaction_inbox_records (
+            workplace_id,
+            processing_status,
+            input_date DESC
+          );
+        `),
+        unsafeExecuteSql(`
+          INSERT INTO transaction_auto_post_rules (
+            id, sender_match, body_match, conditions_json, actions_json, priority, 
+            source_account_id, category_account_id, is_active, created_at, updated_at, workplace_id, channels_json
+          )
+          SELECT 
+            id, sender_match, body_match, conditions_json, actions_json, priority, 
+            source_account_id, category_account_id, is_active, created_at, updated_at, workplace_id, '["sms"]'
+          FROM sms_auto_post_rules;
+        `),
+        unsafeExecuteSql(`
+          INSERT INTO transaction_inbox_records (
+            id, channel, device_source_id, sender_address, raw_body, input_date, input_fingerprint,
+            parse_status, parsed_amount, parsed_currency_code, parsed_merchant, parsed_account_source,
+            reference_number, direction, processing_status, linked_journal_id, duplicate_journal_id,
+            duplicate_confidence, parse_confidence, parse_reason, metadata_json, first_seen_at,
+            last_scanned_at, processed_at, created_at, updated_at, workplace_id
+          )
+          SELECT 
+            id, 'sms', device_sms_id, sender_address, raw_body, sms_date, sms_fingerprint,
+            parse_status, parsed_amount, parsed_currency_code, parsed_merchant, parsed_account_source,
+            reference_number, direction, processing_status, linked_journal_id, duplicate_journal_id,
+            duplicate_confidence, parse_confidence, parse_reason, metadata_json, first_seen_at,
+            last_scanned_at, processed_at, created_at, updated_at, workplace_id
+          FROM sms_inbox_records;
+        `),
+        unsafeExecuteSql('DROP TABLE IF EXISTS sms_auto_post_rules;'),
+        unsafeExecuteSql('DROP TABLE IF EXISTS sms_inbox_records;'),
+      ],
+    },
   ],
 });

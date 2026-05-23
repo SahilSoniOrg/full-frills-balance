@@ -1,6 +1,6 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
-import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { useAccounts } from '@/src/features/accounts';
 import { SmsRulesView } from '@/src/features/settings/components/SmsRulesView';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -12,7 +12,7 @@ import { from } from 'rxjs';
 import { WorkplaceId } from '@/src/types/domain';
 
 interface RulesProps {
-  rules: SmsAutoPostRule[];
+  rules: TransactionAutoPostRule[];
   workplaceId: WorkplaceId;
 }
 
@@ -36,7 +36,7 @@ const EnhancedSmsRulesContainer = withObservables(
   ['workplaceId'],
   ({ workplaceId }: { workplaceId: WorkplaceId }) => ({
     rules: database.collections
-      .get<SmsAutoPostRule>('sms_auto_post_rules')
+      .get<TransactionAutoPostRule>('transaction_auto_post_rules')
       .query(Q.where('workplace_id', workplaceId))
       .observe(),
   }),

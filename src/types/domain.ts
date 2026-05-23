@@ -242,7 +242,7 @@ export interface EnrichedJournal {
   plannedPaymentId?: PlannedPaymentId;
 }
 
-export interface SmsDuplicateCandidate {
+export interface TransactionDuplicateCandidate {
   journalId: JournalId;
   journalDate: number;
   description?: string;
@@ -250,19 +250,20 @@ export interface SmsDuplicateCandidate {
   reasons: string[];
 }
 
-export interface SmsLinkedJournalInfo {
+export interface TransactionLinkedJournalInfo {
   journalId: JournalId;
   description?: string;
   journalDate: number;
   status: string;
 }
 
-export interface SmsInboxItem {
-  id: string; // Internal record ID, keeping as string for now as it's not a primary domain entity yet
-  deviceSmsId: string;
-  senderAddress: string;
-  rawBody: string;
-  smsDate: number;
+export interface TransactionInboxItem {
+  id: string; // Internal record ID
+  channel: 'sms' | 'voice' | 'email';
+  deviceSourceId: string;
+  senderAddress?: string;
+  rawBody?: string;
+  inputDate: number;
   parseStatus: string;
   processingStatus: string;
   parsedAmount?: number;
@@ -273,8 +274,8 @@ export interface SmsInboxItem {
   direction: 'debit' | 'credit' | 'unknown';
   parseConfidence?: number;
   parseReason?: string;
-  linkedJournal?: SmsLinkedJournalInfo;
-  duplicateCandidate?: SmsDuplicateCandidate;
+  linkedJournal?: TransactionLinkedJournalInfo;
+  duplicateCandidate?: TransactionDuplicateCandidate;
 }
 
 /**

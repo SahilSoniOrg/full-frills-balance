@@ -138,7 +138,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
                 accountSource: parsedMetadata.accountSource || inboxRecord?.parsedAccountSource,
                 parseReason: inboxRecord?.parseReason,
                 smsDate: inboxRecord
-                  ? formatDate(inboxRecord.smsDate, { includeTime: true })
+                  ? formatDate(inboxRecord.inputDate, { includeTime: true })
                   : undefined,
                 inboxRecordId: inboxRecord?.id,
               };

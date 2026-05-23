@@ -261,7 +261,7 @@ export const cashewPlugin: ImportPlugin = {
         accountMetadata: [],
         journalMetadata: [],
         balanceSnapshots: [],
-        smsAutoPostRules: [],
+        transactionAutoPostRules: [],
       };
 
       const currencyMap = new Map<string, string>();
@@ -642,13 +642,13 @@ export const cashewPlugin: ImportPlugin = {
       }
 
       // 7. Map SMS Rules
-      if (scannerTemplates.length > 0 && data.smsAutoPostRules) {
+      if (scannerTemplates.length > 0 && data.transactionAutoPostRules) {
         for (const st of scannerTemplates) {
           const sourceAccId = accountsMap.get(st.wallet_fk);
           const categoryAccId = categoriesMap.get(st.default_category_fk);
 
           if (sourceAccId && categoryAccId) {
-            data.smsAutoPostRules.push({
+            data.transactionAutoPostRules.push({
               id: generator(),
               senderMatch: '*',
               bodyMatch: st.contains,

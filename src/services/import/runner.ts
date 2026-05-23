@@ -1,6 +1,10 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { database } from '@/src/data/database/Database';
-import { BatchImportData, importRepository } from '@/src/data/repositories/ImportRepository';
+import {
+  BatchImportData,
+  ImportedTransactionInboxRecord,
+  importRepository,
+} from '@/src/data/repositories/ImportRepository';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
@@ -37,7 +41,10 @@ export class ImportRunner {
     data.transactions?.forEach(t => t.currencyCode && codes.add(t.currencyCode));
     data.budgets?.forEach(b => b.currencyCode && codes.add(b.currencyCode));
     data.plannedPayments?.forEach(p => p.currencyCode && codes.add(p.currencyCode));
-    data.smsInboxRecords?.forEach(s => s.parsedCurrencyCode && codes.add(s.parsedCurrencyCode));
+    data.transactionInboxRecords?.forEach(
+      (s: ImportedTransactionInboxRecord) =>
+        s.parsedCurrencyCode && codes.add(s.parsedCurrencyCode),
+    );
 
     return [...codes].filter(Boolean);
   }

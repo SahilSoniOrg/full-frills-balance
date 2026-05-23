@@ -1,4 +1,4 @@
-import { SmsParseStatus } from '@/src/data/models/SmsInboxRecord';
+import { InboxParseStatus } from '@/src/data/models/TransactionInboxRecord';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
 
@@ -10,15 +10,15 @@ jest.mock('@/modules/expo-sms-inbox', () => ({
 jest.mock('@/src/utils/logger');
 
 describe('smsService.parseTransactionMessage', () => {
-  it('parses INR debit messages with merchant and account source', () => {
-    const parsed = smsService.parseTransactionMessage({
+  it('parses INR debit messages with merchant and account source', async () => {
+    const parsed = await smsService.parseTransactionMessageAsync({
       id: 'sms-1',
       address: 'HDFCBK',
       body: 'Your card XX1234 is debited by INR 1,299.50 at SWIGGY on 07-03. Ref 12345678',
       date: 1700000000000,
     });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSED);
+    expect(parsed.parseStatus).toBe(InboxParseStatus.PARSED);
     expect(parsed.type).toBe('debit');
     expect(parsed.amount).toBe(1299.5);
     expect(parsed.currencyCode).toBe('INR');
@@ -27,42 +27,42 @@ describe('smsService.parseTransactionMessage', () => {
     expect(parsed.referenceNumber).toBe('12345678');
   });
 
-  it('parses symbol-based foreign currency messages', () => {
-    const parsed = smsService.parseTransactionMessage({
+  it('parses symbol-based foreign currency messages', async () => {
+    const parsed = await smsService.parseTransactionMessageAsync({
       id: 'sms-2',
       address: 'AMEX',
       body: 'Amt $24.99 spent at NETFLIX on your card 9876',
       date: 1700000001000,
     });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSED);
+    expect(parsed.parseStatus).toBe(InboxParseStatus.PARSED);
     expect(parsed.amount).toBe(24.99);
     expect(parsed.currencyCode).toBe('USD');
     expect(parsed.merchant).toBe('NETFLIX');
     expect(parsed.type).toBe('debit');
   });
 
-  it('marks transaction-like messages without amount as parse failed', () => {
-    const parsed = smsService.parseTransactionMessage({
+  it('marks transaction-like messages without amount as parse failed', async () => {
+    const parsed = await smsService.parseTransactionMessageAsync({
       id: 'sms-3',
       address: 'ICICIB',
       body: 'Your account was debited at AMAZON. Balance available is 5000.',
       date: 1700000002000,
     });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.PARSE_FAILED);
+    expect(parsed.parseStatus).toBe(InboxParseStatus.PARSE_FAILED);
     expect(parsed.parseReason).toContain('supported amount');
   });
 
-  it('ignores personal sender messages', () => {
-    const parsed = smsService.parseTransactionMessage({
+  it('ignores personal sender messages', async () => {
+    const parsed = await smsService.parseTransactionMessageAsync({
       id: 'sms-4',
       address: '+919999999999',
       body: 'Paid INR 100 to friend',
       date: 1700000003000,
     });
 
-    expect(parsed.parseStatus).toBe(SmsParseStatus.IGNORED);
+    expect(parsed.parseStatus).toBe(InboxParseStatus.IGNORED);
     expect(parsed.parseReason).toContain('Personal');
   });
 });

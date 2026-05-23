@@ -1,7 +1,7 @@
 import { AppButton, AppCard, AppText, Badge } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
-import { SmsProcessingStatus } from '@/src/data/models/SmsInboxRecord';
-import { SmsInboxItem } from '@/src/types/domain';
+import { InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
+import { TransactionInboxItem } from '@/src/types/domain';
 import { alert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
@@ -10,13 +10,13 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface SmsInboxItemCardViewProps {
-  item: SmsInboxItem;
+  item: TransactionInboxItem;
   currencyCode: string;
-  handleDismiss: (item: SmsInboxItem) => Promise<void>;
-  handleUndismiss: (item: SmsInboxItem) => Promise<void>;
-  handleImport: (item: SmsInboxItem) => void;
-  onCompareDuplicate: (item: SmsInboxItem) => void;
-  onOpenJournal: (item: SmsInboxItem) => void;
+  handleDismiss: (item: TransactionInboxItem) => Promise<void>;
+  handleUndismiss: (item: TransactionInboxItem) => Promise<void>;
+  handleImport: (item: TransactionInboxItem) => void;
+  onCompareDuplicate: (item: TransactionInboxItem) => void;
+  onOpenJournal: (item: TransactionInboxItem) => void;
 }
 
 export function SmsInboxItemCardView({
@@ -35,7 +35,7 @@ export function SmsInboxItemCardView({
         <View style={{ flex: 1 }}>
           <AppText variant="subheading">{item.parsedMerchant || item.senderAddress}</AppText>
           <AppText variant="caption" color="secondary">
-            {dayjs(item.smsDate).format('MMM D, YYYY h:mm A')}
+            {dayjs(item.inputDate).format('MMM D, YYYY h:mm A')}
           </AppText>
         </View>
         <View style={styles.amountColumn}>
@@ -116,13 +116,13 @@ export function SmsInboxItemCardView({
           <AppButton
             size="sm"
             onPress={() => handleImport(item)}
-            disabled={item.processingStatus === SmsProcessingStatus.PARSE_FAILED}
+            disabled={item.processingStatus === InboxProcessingStatus.PARSE_FAILED}
           >
             Import / Review
           </AppButton>
         )}
 
-        {item.processingStatus === SmsProcessingStatus.DISMISSED ? (
+        {item.processingStatus === InboxProcessingStatus.DISMISSED ? (
           <AppButton size="sm" variant="secondary" onPress={() => handleUndismiss(item)}>
             Undo
           </AppButton>
@@ -135,7 +135,9 @@ export function SmsInboxItemCardView({
         <AppButton
           size="sm"
           variant="ghost"
-          onPress={() => alert.show({ title: item.senderAddress, message: item.rawBody })}
+          onPress={() =>
+            alert.show({ title: item.senderAddress || 'Unknown', message: item.rawBody || '' })
+          }
         >
           View Raw
         </AppButton>

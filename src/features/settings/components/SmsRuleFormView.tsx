@@ -268,7 +268,7 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
                 <View key={match.id} style={styles.previewItem}>
                   <AppText variant="body">{match.parsedMerchant || match.senderAddress}</AppText>
                   <AppText variant="caption" color="secondary">
-                    {dayjs(match.smsDate).format('MMM D, h:mm A')}
+                    {dayjs(match.inputDate).format('MMM D, h:mm A')}
                   </AppText>
                   <AppText variant="caption" color="secondary" numberOfLines={2}>
                     {match.rawBody}

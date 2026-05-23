@@ -1,8 +1,8 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
-import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
-import SmsInboxRecord from '@/src/data/models/SmsInboxRecord';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { useAccounts } from '@/src/features/accounts';
 import { analytics } from '@/src/services/analytics-service';
 import {
@@ -61,7 +61,7 @@ export interface SmsRuleFormViewModel {
   handleSave: () => Promise<void>;
   handleDelete: () => Promise<void>;
   accounts: Account[];
-  previewMatches: SmsInboxRecord[];
+  previewMatches: TransactionInboxRecord[];
   showAccountMapping: boolean;
 }
 
@@ -72,7 +72,7 @@ type SeedInput = {
   categoryAccountId?: AccountId;
 };
 
-function parseConditions(rule: SmsAutoPostRule): SmsRuleCondition[] {
+function parseConditions(rule: TransactionAutoPostRule): SmsRuleCondition[] {
   if (!rule.conditionsJson) return [];
   try {
     const parsed = JSON.parse(rule.conditionsJson);
@@ -82,7 +82,7 @@ function parseConditions(rule: SmsAutoPostRule): SmsRuleCondition[] {
   }
 }
 
-function parseActions(rule: SmsAutoPostRule): SmsRuleActions {
+function parseActions(rule: TransactionAutoPostRule): SmsRuleActions {
   if (rule.actionsJson) {
     try {
       const parsed = JSON.parse(rule.actionsJson);
@@ -108,9 +108,10 @@ function parseActions(rule: SmsAutoPostRule): SmsRuleActions {
   };
 }
 
+type ConditionField = SmsRuleCondition['field'];
 function getConditionValue(
   conditions: SmsRuleCondition[],
-  field: SmsRuleCondition['field'],
+  field: ConditionField,
 ): SmsRuleCondition | undefined {
   return conditions.find(condition => condition.field === field);
 }
@@ -140,7 +141,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
   const [isActive, setIsActive] = useState(true);
   const [pickingAccountFor, setPickingAccountFor] = useState<'source' | 'category' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewMatches, setPreviewMatches] = useState<SmsInboxRecord[]>([]);
+  const [previewMatches, setPreviewMatches] = useState<TransactionInboxRecord[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -148,7 +149,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     const loadRule = async () => {
       try {
         const rule = await database.collections
-          .get<SmsAutoPostRule>('sms_auto_post_rules')
+          .get<TransactionAutoPostRule>('transaction_auto_post_rules')
           .find(id);
         const conditions = parseConditions(rule);
         const actions = parseActions(rule);

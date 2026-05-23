@@ -4,13 +4,13 @@ import { JournalId } from '@/src/types/domain';
 import { Relation } from '@nozbe/watermelondb';
 import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
 
-export enum SmsParseStatus {
+export enum InboxParseStatus {
   PARSED = 'parsed',
   PARSE_FAILED = 'parse_failed',
   IGNORED = 'ignored',
 }
 
-export enum SmsProcessingStatus {
+export enum InboxProcessingStatus {
   PENDING = 'pending',
   IMPORTED = 'imported',
   AUTO_POSTED = 'auto_posted',
@@ -19,31 +19,34 @@ export enum SmsProcessingStatus {
   PARSE_FAILED = 'parse_failed',
 }
 
-export enum SmsDirection {
+export enum TransactionDirection {
   DEBIT = 'debit',
   CREDIT = 'credit',
   UNKNOWN = 'unknown',
 }
 
-export default class SmsInboxRecord extends BaseScopedModel {
-  static table = 'sms_inbox_records';
+export type TransactionChannel = 'sms' | 'voice' | 'email';
+
+export default class TransactionInboxRecord extends BaseScopedModel {
+  static table = 'transaction_inbox_records';
   static associations = {
     journals: { type: 'belongs_to', key: 'linked_journal_id' },
   } as const;
 
-  @field('device_sms_id') deviceSmsId!: string;
-  @field('sender_address') senderAddress!: string;
-  @field('raw_body') rawBody!: string;
-  @field('sms_date') smsDate!: number;
-  @field('sms_fingerprint') smsFingerprint!: string;
-  @field('parse_status') parseStatus!: SmsParseStatus;
+  @field('channel') channel!: TransactionChannel;
+  @field('device_source_id') deviceSourceId!: string;
+  @field('sender_address') senderAddress?: string;
+  @field('raw_body') rawBody?: string;
+  @field('input_date') inputDate!: number;
+  @field('input_fingerprint') inputFingerprint!: string;
+  @field('parse_status') parseStatus!: InboxParseStatus;
   @field('parsed_amount') parsedAmount?: number;
   @field('parsed_currency_code') parsedCurrencyCode?: string;
   @field('parsed_merchant') parsedMerchant?: string;
   @field('parsed_account_source') parsedAccountSource?: string;
   @field('reference_number') referenceNumber?: string;
-  @field('direction') direction!: SmsDirection;
-  @field('processing_status') processingStatus!: SmsProcessingStatus;
+  @field('direction') direction!: TransactionDirection;
+  @field('processing_status') processingStatus!: InboxProcessingStatus;
   @field('linked_journal_id') linkedJournalId?: JournalId;
   @field('duplicate_journal_id') duplicateJournalId?: JournalId;
   @field('duplicate_confidence') duplicateConfidence?: number;

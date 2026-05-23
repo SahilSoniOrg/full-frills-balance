@@ -19,12 +19,13 @@ import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
-import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
-import SmsInboxRecord, {
-  SmsDirection,
-  SmsParseStatus,
-  SmsProcessingStatus,
-} from '@/src/data/models/SmsInboxRecord';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import TransactionInboxRecord, {
+  TransactionDirection,
+  InboxParseStatus,
+  InboxProcessingStatus,
+  TransactionChannel,
+} from '@/src/data/models/TransactionInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import {
   AccountId,
@@ -193,13 +194,14 @@ export interface ImportedJournalMetadata {
   updatedAt?: number;
 }
 
-export interface ImportedSmsInboxRecord {
+export interface ImportedTransactionInboxRecord {
   id: string;
-  deviceSmsId: string;
-  senderAddress: string;
-  rawBody: string;
-  smsDate: number;
-  smsFingerprint: string;
+  channel: string;
+  deviceSourceId: string;
+  senderAddress?: string;
+  rawBody?: string;
+  inputDate: number;
+  inputFingerprint: string;
   parseStatus: string;
   parsedAmount?: number;
   parsedCurrencyCode?: string;
@@ -221,9 +223,10 @@ export interface ImportedSmsInboxRecord {
   updatedAt?: number;
 }
 
-export interface ImportedSmsAutoPostRule {
+export interface ImportedTransactionAutoPostRule {
   id: string;
-  senderMatch: string;
+  channelsJson?: string;
+  senderMatch?: string;
   bodyMatch?: string;
   conditionsJson?: string;
   actionsJson?: string;
@@ -264,8 +267,8 @@ export interface BatchImportData {
   accountMetadata?: ImportedAccountMetadata[];
   plannedPayments?: ImportedPlannedPayment[];
   journalMetadata?: ImportedJournalMetadata[];
-  smsAutoPostRules?: ImportedSmsAutoPostRule[];
-  smsInboxRecords?: ImportedSmsInboxRecord[];
+  transactionAutoPostRules?: ImportedTransactionAutoPostRule[];
+  transactionInboxRecords?: ImportedTransactionInboxRecord[];
   balanceSnapshots?: ImportedBalanceSnapshot[];
 }
 
@@ -305,22 +308,22 @@ function toAuditAction(value: string): AuditAction {
   return actions.includes(value as AuditAction) ? (value as AuditAction) : AuditAction.UPDATE;
 }
 
-function toSmsParseStatus(value: string): SmsParseStatus {
-  return Object.values(SmsParseStatus).includes(value as SmsParseStatus)
-    ? (value as SmsParseStatus)
-    : SmsParseStatus.PARSE_FAILED;
+function toInboxParseStatus(value: string): InboxParseStatus {
+  return Object.values(InboxParseStatus).includes(value as InboxParseStatus)
+    ? (value as InboxParseStatus)
+    : InboxParseStatus.PARSE_FAILED;
 }
 
-function toSmsProcessingStatus(value: string): SmsProcessingStatus {
-  return Object.values(SmsProcessingStatus).includes(value as SmsProcessingStatus)
-    ? (value as SmsProcessingStatus)
-    : SmsProcessingStatus.PENDING;
+function toInboxProcessingStatus(value: string): InboxProcessingStatus {
+  return Object.values(InboxProcessingStatus).includes(value as InboxProcessingStatus)
+    ? (value as InboxProcessingStatus)
+    : InboxProcessingStatus.PENDING;
 }
 
-function toSmsDirection(value: string): SmsDirection {
-  return Object.values(SmsDirection).includes(value as SmsDirection)
-    ? (value as SmsDirection)
-    : SmsDirection.UNKNOWN;
+function toTransactionDirection(value: string): TransactionDirection {
+  return Object.values(TransactionDirection).includes(value as TransactionDirection)
+    ? (value as TransactionDirection)
+    : TransactionDirection.UNKNOWN;
 }
 
 export class ImportRepository {
@@ -405,9 +408,12 @@ export class ImportRepository {
         database.collections.get<PlannedPayment>('planned_payments');
       const journalMetadataCollection =
         database.collections.get<JournalMetadata>('journal_metadata');
-      const smsAutoPostRulesCollection =
-        database.collections.get<SmsAutoPostRule>('sms_auto_post_rules');
-      const smsInboxCollection = database.collections.get<SmsInboxRecord>('sms_inbox_records');
+      const transactionAutoPostRulesCollection = database.collections.get<TransactionAutoPostRule>(
+        'transaction_auto_post_rules',
+      );
+      const transactionInboxCollection = database.collections.get<TransactionInboxRecord>(
+        'transaction_inbox_records',
+      );
       const balanceSnapshotsCollection =
         database.collections.get<BalanceSnapshot>('balance_snapshots');
 
@@ -577,10 +583,11 @@ export class ImportRepository {
         }),
       );
 
-      const smsAutoPostRulePrepares = (data.smsAutoPostRules || []).map(rule =>
-        smsAutoPostRulesCollection.prepareCreate(record => {
+      const autoPostRulePrepares = (data.transactionAutoPostRules || []).map(rule =>
+        transactionAutoPostRulesCollection.prepareCreate(record => {
           record._raw.id = rule.id;
           record.workplaceId = workplaceId;
+          record.channelsJson = rule.channelsJson;
           record.senderMatch = rule.senderMatch;
           record.bodyMatch = rule.bodyMatch;
           record.conditionsJson = rule.conditionsJson;
@@ -595,35 +602,36 @@ export class ImportRepository {
         }),
       );
 
-      const smsInboxPrepares = (data.smsInboxRecords || []).map(sms =>
-        smsInboxCollection.prepareCreate(record => {
-          record._raw.id = sms.id;
+      const inboxPrepares = (data.transactionInboxRecords || []).map(inbox =>
+        transactionInboxCollection.prepareCreate(record => {
+          record._raw.id = inbox.id;
           record.workplaceId = workplaceId;
-          record.deviceSmsId = sms.deviceSmsId;
-          record.senderAddress = sms.senderAddress;
-          record.rawBody = sms.rawBody || '';
-          record.smsDate = sms.smsDate;
-          record.smsFingerprint = sms.smsFingerprint;
-          record.parseStatus = toSmsParseStatus(sms.parseStatus);
-          record.parsedAmount = sms.parsedAmount;
-          record.parsedCurrencyCode = sms.parsedCurrencyCode;
-          record.parsedMerchant = sms.parsedMerchant;
-          record.parsedAccountSource = sms.parsedAccountSource;
-          record.referenceNumber = sms.referenceNumber;
-          record.direction = toSmsDirection(sms.direction);
-          record.processingStatus = toSmsProcessingStatus(sms.processingStatus);
-          record.linkedJournalId = sms.linkedJournalId;
-          record.duplicateJournalId = sms.duplicateJournalId;
-          record.duplicateConfidence = sms.duplicateConfidence;
-          record.parseConfidence = sms.parseConfidence;
-          record.parseReason = sms.parseReason;
-          record.metadataJson = sms.metadataJson;
-          record.firstSeenAt = sms.firstSeenAt;
-          record.lastScannedAt = sms.lastScannedAt;
-          record.processedAt = sms.processedAt;
+          record.channel = inbox.channel as TransactionChannel;
+          record.deviceSourceId = inbox.deviceSourceId;
+          record.senderAddress = inbox.senderAddress;
+          record.rawBody = inbox.rawBody;
+          record.inputDate = inbox.inputDate;
+          record.inputFingerprint = inbox.inputFingerprint;
+          record.parseStatus = toInboxParseStatus(inbox.parseStatus);
+          record.parsedAmount = inbox.parsedAmount;
+          record.parsedCurrencyCode = inbox.parsedCurrencyCode;
+          record.parsedMerchant = inbox.parsedMerchant;
+          record.parsedAccountSource = inbox.parsedAccountSource;
+          record.referenceNumber = inbox.referenceNumber;
+          record.direction = toTransactionDirection(inbox.direction);
+          record.processingStatus = toInboxProcessingStatus(inbox.processingStatus);
+          record.linkedJournalId = inbox.linkedJournalId;
+          record.duplicateJournalId = inbox.duplicateJournalId;
+          record.duplicateConfidence = inbox.duplicateConfidence;
+          record.parseConfidence = inbox.parseConfidence;
+          record.parseReason = inbox.parseReason;
+          record.metadataJson = inbox.metadataJson;
+          record.firstSeenAt = inbox.firstSeenAt;
+          record.lastScannedAt = inbox.lastScannedAt;
+          record.processedAt = inbox.processedAt;
           record._raw._status = 'synced';
-          if (sms.createdAt) (record as any)._raw.created_at = sms.createdAt;
-          if (sms.updatedAt) (record as any)._raw.updated_at = sms.updatedAt;
+          if (inbox.createdAt) (record as any)._raw.created_at = inbox.createdAt;
+          if (inbox.updatedAt) (record as any)._raw.updated_at = inbox.updatedAt;
         }),
       );
 
@@ -652,8 +660,8 @@ export class ImportRepository {
         ...accountMetadataPrepares,
         ...plannedPaymentPrepares,
         ...journalMetadataPrepares,
-        ...smsAutoPostRulePrepares,
-        ...smsInboxPrepares,
+        ...autoPostRulePrepares,
+        ...inboxPrepares,
         ...balanceSnapshotPrepares,
       ];
 

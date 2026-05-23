@@ -212,9 +212,10 @@ export interface SmsInboxRecordExport {
   updatedAt: string;
 }
 
-export interface SmsAutoPostRuleExport {
+export interface TransactionAutoPostRuleExport {
   id: string;
-  senderMatch: string;
+  channelsJson?: string;
+  senderMatch?: string;
   bodyMatch?: string;
   conditionsJson?: string;
   actionsJson?: string;
@@ -261,7 +262,7 @@ export interface ExportData {
   accountMetadata: AccountMetadataExport[];
   plannedPayments: PlannedPaymentExport[];
   journalMetadata: JournalMetadataExport[];
-  smsAutoPostRules: SmsAutoPostRuleExport[];
+  transactionAutoPostRules: TransactionAutoPostRuleExport[];
   balanceSnapshots: BalanceSnapshotExport[];
   workplace?: WorkplaceExport;
 }
@@ -278,8 +279,8 @@ interface ExportSummary {
   accountMetadata: number;
   plannedPayments: number;
   journalMetadata: number;
-  smsAutoPostRules: number;
-  smsInboxRecords: number;
+  transactionAutoPostRules: number;
+  transactionInboxRecords: number;
   balanceSnapshots: number;
 }
 
@@ -437,7 +438,7 @@ class ExportService {
         { name: 'Metadata', table: 'account_metadata' },
         { name: 'Planned Payments', table: 'planned_payments' },
         { name: 'Journal Metadata', table: 'journal_metadata' },
-        { name: 'Rules', table: 'sms_auto_post_rules' },
+        { name: 'Rules', table: 'transaction_auto_post_rules' },
       ];
 
       // Track sub-progress of each parallel task
@@ -482,7 +483,7 @@ class ExportService {
         accountMetadata,
         plannedPayments,
         journalMetadata,
-        smsAutoPostRules,
+        transactionAutoPostRules,
       ] = fetchResults;
 
       onProgress?.('Processing preferences...', 0.53);
@@ -528,7 +529,7 @@ class ExportService {
         { key: 'accountMetadata', data: accountMetadata },
         { key: 'plannedPayments', data: plannedPayments },
         { key: 'journalMetadata', data: journalMetadata },
-        { key: 'smsAutoPostRules', data: smsAutoPostRules },
+        { key: 'transactionAutoPostRules', data: transactionAutoPostRules },
       ];
 
       let currentProgress = 0.55;
@@ -566,7 +567,7 @@ class ExportService {
         accountMetadata: accountMetadata.length,
         plannedPayments: plannedPayments.length,
         journalMetadata: journalMetadata.length,
-        smsAutoPostRules: smsAutoPostRules.length,
+        transactionAutoPostRules: transactionAutoPostRules.length,
       });
 
       onProgress?.('Compressing ZIP archive...', 0.75);
@@ -622,8 +623,8 @@ class ExportService {
       accountMetadata,
       plannedPayments,
       journalMetadata,
-      smsAutoPostRules,
-      smsInboxRecords,
+      transactionAutoPostRules,
+      transactionInboxRecords,
       balanceSnapshots,
     ] = await Promise.all([
       getCount('accounts'),
@@ -637,8 +638,8 @@ class ExportService {
       getCount('account_metadata'),
       getCount('planned_payments'),
       getCount('journal_metadata'),
-      getCount('sms_auto_post_rules'),
-      getCount('sms_inbox_records'),
+      getCount('transaction_auto_post_rules'),
+      getCount('transaction_inbox_records'),
       getCount('balance_snapshots'),
     ]);
 
@@ -654,8 +655,8 @@ class ExportService {
       accountMetadata,
       plannedPayments,
       journalMetadata,
-      smsAutoPostRules,
-      smsInboxRecords,
+      transactionAutoPostRules,
+      transactionInboxRecords,
       balanceSnapshots,
     };
   }

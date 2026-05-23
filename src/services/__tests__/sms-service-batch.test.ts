@@ -113,8 +113,8 @@ describe('SmsService Batching', () => {
     };
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
-      if (name === 'sms_inbox_records') return mockInboxCollection;
-      if (name === 'sms_auto_post_rules') return mockRulesCollection;
+      if (name === 'transaction_inbox_records') return mockInboxCollection;
+      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
       return null;
     });
 
@@ -169,8 +169,8 @@ describe('SmsService Batching', () => {
     };
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
-      if (name === 'sms_inbox_records') return mockInboxCollection;
-      if (name === 'sms_auto_post_rules') return mockRulesCollection;
+      if (name === 'transaction_inbox_records') return mockInboxCollection;
+      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
       return null;
     });
 

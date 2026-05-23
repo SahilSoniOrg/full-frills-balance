@@ -3,12 +3,12 @@ import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { JournalStatus } from '@/src/data/models/Journal';
-import SmsAutoPostRule from '@/src/data/models/SmsAutoPostRule';
-import SmsInboxRecord, {
-  SmsDirection,
-  SmsParseStatus,
-  SmsProcessingStatus,
-} from '@/src/data/models/SmsInboxRecord';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import TransactionInboxRecord, {
+  InboxParseStatus,
+  InboxProcessingStatus,
+  TransactionDirection,
+} from '@/src/data/models/TransactionInboxRecord';
 import Transaction, { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -25,9 +25,11 @@ import { Model, Q } from '@nozbe/watermelondb';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Observable } from 'rxjs';
 import { rebuildQueueService } from './RebuildQueueService';
+import { SmsExtractor } from './ledger/SmsExtractor';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
+const smsExtractor = new SmsExtractor();
 
 export interface ParsedTransaction {
   id: string;
@@ -41,7 +43,7 @@ export interface ParsedTransaction {
   referenceNumber?: string;
   currencyCode?: string;
   confidence: number;
-  parseStatus: SmsParseStatus;
+  parseStatus: InboxParseStatus;
   parseReason: string;
 }
 
@@ -50,7 +52,7 @@ export interface SmsMatchData {
   rawBody: string;
   parsedMerchant?: string;
   parsedAccountSource?: string;
-  direction: SmsDirection;
+  direction: TransactionDirection;
   parsedCurrencyCode?: string;
   parsedAmount?: number;
 }
@@ -139,10 +141,10 @@ interface SmsAnalysisResult {
   message: SmsMessage;
   parsed: ParsedTransaction;
   fingerprint: string;
-  existingRecord: SmsInboxRecord | null;
+  existingRecord: TransactionInboxRecord | null;
   duplicate: DuplicateMatch;
   exactJournalId?: JournalId;
-  finalStatus: SmsProcessingStatus;
+  finalStatus: InboxProcessingStatus;
   autoPost?: {
     ruleId: string;
     journalData: CreateJournalData;
@@ -154,11 +156,11 @@ class SmsService {
   private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
 
   private get rules() {
-    return database.collections.get<SmsAutoPostRule>('sms_auto_post_rules');
+    return database.collections.get<TransactionAutoPostRule>('transaction_auto_post_rules');
   }
 
   private get inbox() {
-    return database.collections.get<SmsInboxRecord>('sms_inbox_records');
+    return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
   }
 
   async getLatestMessages(
@@ -222,9 +224,10 @@ class SmsService {
   }
 
   observeInbox(workplaceId: WorkplaceId, limit: number, filter?: SmsInboxFilterOptions) {
-    const clauses: any[] = [
+    const clauses: Q.Clause[] = [
       Q.where('workplace_id', workplaceId),
-      Q.sortBy('sms_date', Q.desc),
+      Q.where('channel', 'sms'),
+      Q.sortBy('input_date', Q.desc),
       Q.take(limit),
     ];
     const statuses = this.getProcessingStatusesForFilter(filter?.status);
@@ -243,9 +246,10 @@ class SmsService {
         'linked_journal_id',
         'duplicate_journal_id',
         'duplicate_confidence',
+        'parse_confidence',
         'parse_reason',
         'processed_at',
-        'sms_date',
+        'input_date',
       ]);
   }
 
@@ -253,12 +257,13 @@ class SmsService {
     return this.inbox
       .query(
         Q.where('workplace_id', workplaceId),
-        Q.where('processing_status', SmsProcessingStatus.PENDING),
+        Q.where('channel', 'sms'),
+        Q.where('processing_status', InboxProcessingStatus.PENDING),
       )
       .observeCount();
   }
 
-  async getInboxRecord(id: string): Promise<SmsInboxRecord | null> {
+  async getInboxRecord(id: string): Promise<TransactionInboxRecord | null> {
     try {
       return await this.inbox.find(id);
     } catch {
@@ -266,14 +271,14 @@ class SmsService {
     }
   }
 
-  async findByLinkedJournalId(journalId: string): Promise<SmsInboxRecord | null> {
+  async findByLinkedJournalId(journalId: string): Promise<TransactionInboxRecord | null> {
     const records = await this.inbox
       .query(Q.where('linked_journal_id', journalId), Q.take(1))
       .fetch();
     return records[0] || null;
   }
 
-  async markInboxRecordStatus(id: string, status: SmsProcessingStatus): Promise<void> {
+  async markInboxRecordStatus(id: string, status: InboxProcessingStatus): Promise<void> {
     const record = await this.getInboxRecord(id);
     if (!record) return;
 
@@ -288,7 +293,7 @@ class SmsService {
   async linkSmsToJournal(
     recordId: string,
     journalId: JournalId,
-    disposition: SmsProcessingStatus.IMPORTED | SmsProcessingStatus.AUTO_POSTED,
+    disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
   ): Promise<void> {
     const record = await this.getInboxRecord(recordId);
     if (!record) return;
@@ -303,7 +308,7 @@ class SmsService {
   }
 
   async finalizeManualImport(recordId: string, journalId: JournalId): Promise<void> {
-    await this.linkSmsToJournal(recordId, journalId, SmsProcessingStatus.IMPORTED);
+    await this.linkSmsToJournal(recordId, journalId, InboxProcessingStatus.IMPORTED);
   }
 
   clearProcessedMessages(): void {
@@ -313,13 +318,15 @@ class SmsService {
   async previewRuleMatches(
     inputOrSender: SmsRulePreviewInput | string,
     bodyMatch?: string,
-  ): Promise<SmsInboxRecord[]> {
+  ): Promise<TransactionInboxRecord[]> {
     const previewInput: SmsRulePreviewInput =
       typeof inputOrSender === 'string'
         ? { mode: 'regex', senderMatch: inputOrSender, bodyMatch }
         : inputOrSender;
 
-    const items = await this.inbox.query(Q.sortBy('sms_date', Q.desc), Q.take(50)).fetch();
+    const items = await this.inbox
+      .query(Q.where('channel', 'sms'), Q.sortBy('input_date', Q.desc), Q.take(50))
+      .fetch();
     return items.filter(item => this.matchesPreviewRule(item, previewInput)).slice(0, 5);
   }
 
@@ -327,12 +334,13 @@ class SmsService {
     const existingRules = await this.rules.query().fetch();
     const records = await this.inbox
       .query(
+        Q.where('channel', 'sms'),
         Q.where('linked_journal_id', Q.notEq(null)),
         Q.where(
           'processing_status',
-          Q.oneOf([SmsProcessingStatus.IMPORTED, SmsProcessingStatus.AUTO_POSTED]),
+          Q.oneOf([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED]),
         ),
-        Q.sortBy('sms_date', Q.desc),
+        Q.sortBy('input_date', Q.desc),
         Q.take(200),
       )
       .fetch();
@@ -349,6 +357,7 @@ class SmsService {
     >();
 
     for (const record of records) {
+      if (!record.senderAddress) continue;
       const key = `${record.senderAddress.toUpperCase()}::${(record.parsedMerchant || '').toUpperCase()}`;
       const current = grouped.get(key);
       if (current) {
@@ -386,8 +395,15 @@ class SmsService {
     return suggestions.sort((a, b) => b.sampleCount - a.sampleCount).slice(0, 5);
   }
 
-  parseTransactionMessage(sms: SmsMessage): ParsedTransaction {
-    const text = sms.body.toLowerCase();
+  async parseTransactionMessageAsync(sms: SmsMessage): Promise<ParsedTransaction> {
+    const info = await smsExtractor.extract({
+      channel: 'sms',
+      id: sms.id,
+      rawText: sms.body,
+      date: sms.date,
+      senderAddress: sms.address,
+    });
+
     const isPhoneNumber = /^\+?\d{10,14}$/.test(sms.address);
     if (isPhoneNumber) {
       return {
@@ -397,62 +413,56 @@ class SmsService {
         rawBody: sms.body,
         address: sms.address,
         confidence: 0,
-        parseStatus: SmsParseStatus.IGNORED,
+        parseStatus: InboxParseStatus.IGNORED,
         parseReason: 'Personal sender address',
       };
     }
 
-    const direction = this.classifyDirection(text);
-    const currencyMatch = this.extractCurrencyAndAmount(sms.body);
-    const merchant = this.extractMerchant(sms.body, direction);
-    const accountSource = this.extractAccountSource(sms.body);
-    const referenceNumber = this.extractReferenceNumber(sms.body);
-
-    if (direction === SmsDirection.UNKNOWN) {
+    if (info.direction === 'unknown') {
       return {
         id: sms.id,
         type: 'unknown',
         date: sms.date,
         rawBody: sms.body,
         address: sms.address,
-        accountSource,
-        referenceNumber,
+        accountSource: info.sourceAccountHint,
+        referenceNumber: info.referenceNumber,
         confidence: 0.2,
-        parseStatus: SmsParseStatus.IGNORED,
+        parseStatus: InboxParseStatus.IGNORED,
         parseReason: 'Not classified as transaction-like',
       };
     }
 
-    if (!currencyMatch) {
+    if (!info.amount) {
       return {
         id: sms.id,
-        merchant,
-        type: direction,
+        merchant: info.merchantName,
+        type: info.direction === 'debit' ? 'debit' : 'credit',
         date: sms.date,
         rawBody: sms.body,
         address: sms.address,
-        accountSource,
-        referenceNumber,
+        accountSource: info.sourceAccountHint,
+        referenceNumber: info.referenceNumber,
         confidence: 0.45,
-        parseStatus: SmsParseStatus.PARSE_FAILED,
+        parseStatus: InboxParseStatus.PARSE_FAILED,
         parseReason: 'Could not find a supported amount',
       };
     }
 
     return {
       id: sms.id,
-      amount: currencyMatch.amount,
-      merchant,
-      type: direction,
+      amount: info.amount,
+      merchant: info.merchantName,
+      type: info.direction === 'debit' ? 'debit' : 'credit',
       date: sms.date,
       rawBody: sms.body,
       address: sms.address,
-      accountSource,
-      referenceNumber,
-      currencyCode: currencyMatch.currencyCode || undefined,
-      confidence: merchant ? 0.92 : 0.82,
-      parseStatus: SmsParseStatus.PARSED,
-      parseReason: currencyMatch.currencyCode
+      accountSource: info.sourceAccountHint,
+      referenceNumber: info.referenceNumber,
+      currencyCode: info.currencyCode,
+      confidence: info.merchantName ? 0.92 : 0.82,
+      parseStatus: InboxParseStatus.PARSED,
+      parseReason: info.currencyCode
         ? 'Parsed transaction and currency hint'
         : 'Parsed transaction amount',
     };
@@ -481,6 +491,7 @@ class SmsService {
       if (data.id) {
         const rule = await this.rules.find(data.id);
         await rule.update(record => {
+          record.channelsJson = JSON.stringify(['sms']);
           record.senderMatch = senderFallback;
           record.bodyMatch = bodyFallback;
           record.conditionsJson =
@@ -494,6 +505,7 @@ class SmsService {
       } else {
         await this.rules.create(record => {
           record.workplaceId = workplaceId;
+          record.channelsJson = JSON.stringify(['sms']);
           record.senderMatch = senderFallback;
           record.bodyMatch = bodyFallback;
           record.conditionsJson =
@@ -528,15 +540,20 @@ class SmsService {
 
     const processedIds = new Set(this.getProcessedSmsIds());
     const existing = await this.inbox
-      .query(Q.where('device_sms_id', Q.oneOf(messages.map(message => message.id))))
+      .query(
+        Q.where('channel', 'sms'),
+        Q.where('device_source_id', Q.oneOf(messages.map(message => message.id))),
+      )
       .fetch();
-    const existingMap = new Map(existing.map(record => [record.deviceSmsId, record]));
+    const existingMap = new Map(existing.map(record => [record.deviceSourceId, record]));
 
-    const parsedMessages = messages.map(msg => {
-      const parsed = this.parseTransactionMessage(msg);
-      const fingerprint = this.computeSmsFingerprint(msg.address, msg.body, msg.date);
-      return { message: msg, parsed, fingerprint };
-    });
+    const parsedMessages = await Promise.all(
+      messages.map(async msg => {
+        const parsed = await this.parseTransactionMessageAsync(msg);
+        const fingerprint = this.computeSmsFingerprint(msg.address, msg.body, msg.date);
+        return { message: msg, parsed, fingerprint };
+      }),
+    );
 
     const messageIds = messages.map(m => m.id);
     const fingerprints = parsedMessages.map(m => m.fingerprint);
@@ -547,7 +564,7 @@ class SmsService {
     ]);
 
     const parsedWithAmounts = parsedMessages.filter(
-      m => m.parsed.parseStatus === SmsParseStatus.PARSED && m.parsed.amount,
+      m => m.parsed.parseStatus === InboxParseStatus.PARSED && m.parsed.amount,
     );
 
     const allCandidateJournals = await this.findManyDuplicateCandidates(
@@ -559,7 +576,7 @@ class SmsService {
     const analysisResults: SmsAnalysisResult[] = [];
 
     for (const { message, parsed, fingerprint } of parsedMessages) {
-      if (parsed.parseStatus === SmsParseStatus.IGNORED) {
+      if (parsed.parseStatus === InboxParseStatus.IGNORED) {
         continue;
       }
 
@@ -583,21 +600,20 @@ class SmsService {
       let finalJournalId = exactJournal?.id || fingerprintJournal?.id || undefined;
 
       if (
-        parsed.parseStatus === SmsParseStatus.PARSED &&
-        nextStatus === SmsProcessingStatus.PENDING
+        parsed.parseStatus === InboxParseStatus.PARSED &&
+        nextStatus === InboxProcessingStatus.PENDING
       ) {
         const ruleResult = await this.analyzeAutoPost(message, parsed, activeRules, workplaceId);
         if (ruleResult) {
           if (ruleResult.disposition === 'ignore') {
-            finalStatus = SmsProcessingStatus.DISMISSED;
+            finalStatus = InboxProcessingStatus.DISMISSED;
           } else if (ruleResult.disposition === 'auto_post' && ruleResult.createData) {
             autoPost = {
               ruleId: ruleResult.ruleId,
               journalData: ruleResult.createData.journalData,
               preparedJournal: ruleResult.createData.preparedJournal,
             };
-            finalStatus = SmsProcessingStatus.AUTO_POSTED;
-            // Note: Journal ID is generated synchronously later during batching
+            finalStatus = InboxProcessingStatus.AUTO_POSTED;
           }
         }
       }
@@ -637,7 +653,6 @@ class SmsService {
             linkedJournalId = journal.id;
             importedCount += 1;
 
-            // Side effects that are safe to run in current tick
             analytics.logSmsRuleTriggered(result.autoPost.ruleId, true);
             this.markSmsAsProcessed(result.message.id);
           }
@@ -655,7 +670,6 @@ class SmsService {
           allOps.push(...upsertOps);
         }
 
-        // Execute batch in chunks
         for (let i = 0; i < allOps.length; i += SMS_CONFIG.batchOpChunkSize) {
           const chunk = allOps.slice(i, i + SMS_CONFIG.batchOpChunkSize);
           await database.batch(chunk);
@@ -690,7 +704,6 @@ class SmsService {
     const maxDate =
       Math.max(...parsedItems.map(p => p.message.date)) + DUPLICATE_CONFIG.dayWindowMs;
 
-    // Fetch all journals that match any of the amounts and are within the date range
     const journals = await journalRepository.findNearbyJournals(
       {
         centerDate: (minDate + maxDate) / 2,
@@ -703,7 +716,6 @@ class SmsService {
 
     if (journals.length === 0) return results;
 
-    // For each parsed item, find best match from the pre-fetched journals
     for (const { message, parsed } of parsedItems) {
       const nearby = journals.filter(
         j =>
@@ -749,7 +761,7 @@ class SmsService {
   private async analyzeAutoPost(
     message: SmsMessage,
     parsed: ParsedTransaction,
-    activeRules: SmsAutoPostRule[],
+    activeRules: TransactionAutoPostRule[],
     workplaceId: WorkplaceId,
   ): Promise<{
     disposition: SmsRuleDisposition;
@@ -848,12 +860,12 @@ class SmsService {
     sms: SmsMessage,
     parsed: ParsedTransaction,
     smsFingerprint: string,
-    existing: SmsInboxRecord | null,
-    processingStatus: SmsProcessingStatus,
+    existing: TransactionInboxRecord | null,
+    processingStatus: InboxProcessingStatus,
     workplaceId: WorkplaceId,
     linkedJournalId?: JournalId,
     duplicate?: DuplicateMatch,
-  ): { record: SmsInboxRecord; ops: Model[] } {
+  ): { record: TransactionInboxRecord; ops: Model[] } {
     const now = Date.now();
     const metadataJson = JSON.stringify({
       duplicateReasons: duplicate?.reasons || [],
@@ -869,8 +881,8 @@ class SmsService {
       const op = existing.prepareUpdate(entry => {
         entry.senderAddress = sms.address;
         entry.rawBody = sms.body;
-        entry.smsDate = sms.date;
-        entry.smsFingerprint = smsFingerprint;
+        entry.inputDate = sms.date;
+        entry.inputFingerprint = smsFingerprint;
         entry.parseStatus = parsed.parseStatus;
         entry.parsedAmount = parsed.amount;
         entry.parsedCurrencyCode = parsed.currencyCode;
@@ -893,12 +905,13 @@ class SmsService {
     }
 
     const created = this.inbox.prepareCreate(entry => {
+      entry.channel = 'sms';
       entry.workplaceId = workplaceId;
-      entry.deviceSmsId = sms.id;
+      entry.deviceSourceId = sms.id;
       entry.senderAddress = sms.address;
       entry.rawBody = sms.body;
-      entry.smsDate = sms.date;
-      entry.smsFingerprint = smsFingerprint;
+      entry.inputDate = sms.date;
+      entry.inputFingerprint = smsFingerprint;
       entry.parseStatus = parsed.parseStatus;
       entry.parsedAmount = parsed.amount;
       entry.parsedCurrencyCode = parsed.currencyCode;
@@ -921,127 +934,10 @@ class SmsService {
     return { record: created, ops: [created] };
   }
 
-  private classifyDirection(text: string): 'debit' | 'credit' | 'unknown' {
-    const isDebit = ['debited', 'spent', 'paid', 'purchase', 'withdrawn', 'txn'].some(keyword =>
-      text.includes(keyword),
-    );
-    const isCredit = ['credited', 'received', 'deposited', 'refund', 'reversed'].some(keyword =>
-      text.includes(keyword),
-    );
-
-    if (isDebit && !isCredit) return 'debit';
-    if (isCredit && !isDebit) return 'credit';
-    if (isDebit) return 'debit';
-    return 'unknown';
-  }
-
-  private extractCurrencyAndAmount(
-    body: string,
-  ): { amount: number; currencyCode: string | null } | null {
-    const patterns: { regex: RegExp; currencyGroup?: number; amountGroup: number }[] = [
-      {
-        regex:
-          /(?:amt|amount|txn(?: of)?|debited(?: by)?|credited(?: with)?|spent|paid|received|deposited)[^\dA-Z₹$€£¥]*((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY|₹|Rs\.?|INR\.?|US\$|A\$|C\$|\$|€|£|¥)?)\s*([\d,.]+(?:\.\d+)?)/i,
-        currencyGroup: 1,
-        amountGroup: 2,
-      },
-      {
-        regex:
-          /((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY|₹|Rs\.?|INR\.?|US\$|A\$|C\$|\$|€|£|¥))\s*([\d,.]+(?:\.\d+)?)/i,
-        currencyGroup: 1,
-        amountGroup: 2,
-      },
-      {
-        regex: /([\d,.]+(?:\.\d+)?)\s*((?:INR|USD|EUR|GBP|AED|SAR|CAD|AUD|SGD|JPY|CHF|HKD|CNY))/i,
-        currencyGroup: 2,
-        amountGroup: 1,
-      },
-    ];
-
-    for (const pattern of patterns) {
-      const match = body.match(pattern.regex);
-      if (!match) continue;
-      const amount = this.normalizeAmount(match[pattern.amountGroup]);
-      if (!amount || amount <= 0) continue;
-      const currencyCode = this.normalizeCurrencyCode(
-        pattern.currencyGroup ? match[pattern.currencyGroup] : undefined,
-      );
-      return { amount, currencyCode };
-    }
-
-    return null;
-  }
-
-  private extractMerchant(
-    body: string,
-    direction: 'debit' | 'credit' | 'unknown',
-  ): string | undefined {
-    const patterns =
-      direction === 'credit'
-        ? [/(?:from|by)\s+([a-zA-Z0-9.\s@&-]+?)(?:\s+(?:on|ref|utr|txn|bal)|[,.]|$)/i]
-        : [/(?:to|at|vpa|info[:]?)\s+([a-zA-Z0-9.\s@&-]+?)(?:\s+(?:on|ref|utr|by|bal)|[,.]|$)/i];
-
-    for (const regex of patterns) {
-      const match = body.match(regex);
-      const value = match?.[1]?.trim();
-      if (value && value.length > 1) {
-        return value.replace(/\s+/g, ' ');
-      }
-    }
-
-    return undefined;
-  }
-
-  private extractAccountSource(body: string): string | undefined {
-    const sourceRegex =
-      /(?:a\/c|acct|acc|card)\s*[:\-]?\s*[*xX.-]*(\d{3,6})|by\s+(UPI)|([xX*.]{2,}[\s\-]?\d{3,6})/i;
-    const match = body.match(sourceRegex);
-    if (!match) return undefined;
-    if (match[1]) {
-      const prefixMatch = body.match(/card/i);
-      return `${prefixMatch ? 'Card' : 'A/c'} ${match[1]}`;
-    }
-    if (match[2]) return 'UPI';
-    if (match[3]) return `A/c ${match[3].replace(/[^0-9]/g, '')}`;
-    return undefined;
-  }
-
-  private extractReferenceNumber(body: string): string | undefined {
-    const match = body.match(
-      /(?:utr|ref(?:\s*no)?|txn\s*id|transaction\s*id|rrn|cheque(?:\s*no)?)\s*[:\-]?\s*([a-zA-Z0-9]{6,30})/i,
-    );
-    return match?.[1];
-  }
-
-  private normalizeAmount(raw: string): number | null {
-    const normalized = raw.replace(/,/g, '');
-    const amount = parseFloat(normalized);
-    return Number.isFinite(amount) ? amount : null;
-  }
-
-  private normalizeCurrencyCode(raw?: string): string | null {
-    if (!raw) return null;
-    const normalized = raw.trim().toUpperCase();
-    const symbolMap: Record<string, string> = {
-      '₹': 'INR',
-      RS: 'INR',
-      'RS.': 'INR',
-      $: 'USD',
-      US$: 'USD',
-      A$: 'AUD',
-      C$: 'CAD',
-      '€': 'EUR',
-      '£': 'GBP',
-      '¥': 'JPY',
-    };
-
-    return symbolMap[normalized] || normalized.replace(/\./g, '');
-  }
-
-  private toDirection(type: 'debit' | 'credit' | 'unknown'): SmsDirection {
-    if (type === 'debit') return SmsDirection.DEBIT;
-    if (type === 'credit') return SmsDirection.CREDIT;
-    return SmsDirection.UNKNOWN;
+  private toDirection(type: 'debit' | 'credit' | 'unknown'): TransactionDirection {
+    if (type === 'debit') return TransactionDirection.DEBIT;
+    if (type === 'credit') return TransactionDirection.CREDIT;
+    return TransactionDirection.UNKNOWN;
   }
 
   private resolveProcessingStatus(params: {
@@ -1049,51 +945,52 @@ class SmsService {
     processedIds: Set<string>;
     exactJournalId?: string;
     duplicate: DuplicateMatch;
-    existingStatus?: SmsProcessingStatus;
-  }): SmsProcessingStatus {
+    existingStatus?: InboxProcessingStatus;
+  }): InboxProcessingStatus {
     const { parsed, processedIds, exactJournalId, duplicate, existingStatus } = params;
 
-    if (exactJournalId) return SmsProcessingStatus.IMPORTED;
-    if (parsed.parseStatus === SmsParseStatus.PARSE_FAILED) return SmsProcessingStatus.PARSE_FAILED;
+    if (exactJournalId) return InboxProcessingStatus.IMPORTED;
+    if (parsed.parseStatus === InboxParseStatus.PARSE_FAILED)
+      return InboxProcessingStatus.PARSE_FAILED;
     if (
-      existingStatus === SmsProcessingStatus.AUTO_POSTED ||
-      existingStatus === SmsProcessingStatus.IMPORTED
+      existingStatus === InboxProcessingStatus.AUTO_POSTED ||
+      existingStatus === InboxProcessingStatus.IMPORTED
     ) {
       return existingStatus;
     }
-    if (duplicate) return SmsProcessingStatus.DUPLICATE_FLAGGED;
-    if (processedIds.has(parsed.id)) return SmsProcessingStatus.DISMISSED;
-    return SmsProcessingStatus.PENDING;
+    if (duplicate) return InboxProcessingStatus.DUPLICATE_FLAGGED;
+    if (processedIds.has(parsed.id)) return InboxProcessingStatus.DISMISSED;
+    return InboxProcessingStatus.PENDING;
   }
 
   private getProcessingStatusesForFilter(
     filter?: SmsInboxFilterOptions['status'],
-  ): SmsProcessingStatus[] {
+  ): InboxProcessingStatus[] {
     switch (filter) {
       case 'pending':
-        return [SmsProcessingStatus.PENDING];
+        return [InboxProcessingStatus.PENDING];
       case 'processed':
         return [
-          SmsProcessingStatus.IMPORTED,
-          SmsProcessingStatus.AUTO_POSTED,
-          SmsProcessingStatus.DISMISSED,
+          InboxProcessingStatus.IMPORTED,
+          InboxProcessingStatus.AUTO_POSTED,
+          InboxProcessingStatus.DISMISSED,
         ];
       case 'auto_posted':
-        return [SmsProcessingStatus.AUTO_POSTED];
+        return [InboxProcessingStatus.AUTO_POSTED];
       case 'duplicates':
-        return [SmsProcessingStatus.DUPLICATE_FLAGGED];
+        return [InboxProcessingStatus.DUPLICATE_FLAGGED];
       case 'failed':
-        return [SmsProcessingStatus.PARSE_FAILED];
+        return [InboxProcessingStatus.PARSE_FAILED];
       default:
         return [];
     }
   }
 
-  private isProcessedStatus(status: SmsProcessingStatus): boolean {
+  private isProcessedStatus(status: InboxProcessingStatus): boolean {
     return [
-      SmsProcessingStatus.IMPORTED,
-      SmsProcessingStatus.AUTO_POSTED,
-      SmsProcessingStatus.DISMISSED,
+      InboxProcessingStatus.IMPORTED,
+      InboxProcessingStatus.AUTO_POSTED,
+      InboxProcessingStatus.DISMISSED,
     ].includes(status);
   }
 
@@ -1106,7 +1003,7 @@ class SmsService {
     }
   }
 
-  private matchesPreviewRule(data: SmsMatchData, input: SmsRulePreviewInput): boolean {
+  private matchesPreviewRule(data: TransactionInboxRecord, input: SmsRulePreviewInput): boolean {
     if (input.mode === 'builder') {
       const conditions = (input.conditions || []).filter(condition =>
         this.isMeaningfulCondition(condition),
@@ -1118,19 +1015,19 @@ class SmsService {
     const senderRegex = this.buildRegex(input.senderMatch);
     const bodyRegex = input.bodyMatch ? this.buildRegex(input.bodyMatch) : null;
     const senderOk = senderRegex?.test(
-      data.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength),
+      (data.senderAddress || '').substring(0, AppConfig.input.sms.maxSenderMatchLength),
     );
     const bodyOk = bodyRegex
-      ? bodyRegex.test(data.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength))
+      ? bodyRegex.test((data.rawBody || '').substring(0, AppConfig.input.sms.maxBodyMatchLength))
       : true;
     return !!senderOk && bodyOk;
   }
 
-  private getRulePriority(rule: SmsAutoPostRule): number {
+  private getRulePriority(rule: TransactionAutoPostRule): number {
     return typeof rule.priority === 'number' ? rule.priority : 100;
   }
 
-  private getRuleDefinition(rule: SmsAutoPostRule): ResolvedSmsRule {
+  private getRuleDefinition(rule: TransactionAutoPostRule): ResolvedSmsRule {
     let conditions: SmsRuleCondition[] = [];
     let actions: SmsRuleActions = {
       disposition: 'auto_post',
@@ -1189,44 +1086,58 @@ class SmsService {
     return !!senderOk && bodyOk;
   }
 
-  private matchesStructuredConditions(data: SmsMatchData, conditions: SmsRuleCondition[]): boolean {
+  private matchesStructuredConditions(
+    data: TransactionInboxRecord | SmsMatchData,
+    conditions: SmsRuleCondition[],
+  ): boolean {
     return conditions.every(condition => this.matchesCondition(data, condition));
   }
 
-  private matchesCondition(data: SmsMatchData, condition: SmsRuleCondition): boolean {
+  private matchesCondition(
+    data: TransactionInboxRecord | SmsMatchData,
+    condition: SmsRuleCondition,
+  ): boolean {
     const normalizedValue = condition.value?.trim();
+
+    const sender = data.senderAddress;
+    const rawBody = data.rawBody;
+    const parsedMerchant = data.parsedMerchant;
+    const parsedAccountSource = data.parsedAccountSource;
+    const direction = data.direction;
+    const parsedCurrencyCode = data.parsedCurrencyCode;
+    const parsedAmount = data.parsedAmount;
 
     switch (condition.field) {
       case 'sender':
         return this.matchesStringCondition(
-          data.senderAddress,
+          sender,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'body':
         return this.matchesStringCondition(
-          data.rawBody,
+          rawBody,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'merchant':
         return this.matchesStringCondition(
-          data.parsedMerchant,
+          parsedMerchant,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'account_source':
         return this.matchesStringCondition(
-          data.parsedAccountSource,
+          parsedAccountSource,
           condition.operator as SmsRuleStringOperator,
           normalizedValue,
         );
       case 'direction':
-        return this.matchesStringCondition(data.direction, 'is', normalizedValue);
+        return this.matchesStringCondition(direction, 'is', normalizedValue);
       case 'currency':
-        return this.matchesStringCondition(data.parsedCurrencyCode, 'is', normalizedValue);
+        return this.matchesStringCondition(parsedCurrencyCode, 'is', normalizedValue);
       case 'amount':
-        return this.matchesAmountCondition(data.parsedAmount, condition);
+        return this.matchesAmountCondition(parsedAmount, condition);
       default:
         return false;
     }
@@ -1391,14 +1302,11 @@ class SmsService {
     };
   }
 
-  /**
-   * Prepares WatermelonDB operations to merge auto-post rules from source accounts to a target account.
-   */
   async prepareMergeOperations(
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
-  ): Promise<SmsAutoPostRule[]> {
+  ): Promise<TransactionAutoPostRule[]> {
     const rulesSource = await this.rules
       .query(
         Q.where('workplace_id', workplaceId),
@@ -1412,10 +1320,9 @@ class SmsService {
       )
       .fetch();
 
-    // Use a Map to aggregate mutations for the same record
     const mutations = new Map<
       string,
-      { source?: AccountId; category?: AccountId; record: SmsAutoPostRule }
+      { source?: AccountId; category?: AccountId; record: TransactionAutoPostRule }
     >();
 
     rulesSource.forEach(rule => {
@@ -1432,9 +1339,8 @@ class SmsService {
       mutations.get(rule.id)!.category = targetAccountId;
     });
 
-    // Emit exactly one prepareUpdate per record
     return Array.from(mutations.values()).map(({ record, source, category }) => {
-      return record.prepareUpdate((r: SmsAutoPostRule) => {
+      return record.prepareUpdate((r: TransactionAutoPostRule) => {
         if (source) r.sourceAccountId = source;
         if (category) r.categoryAccountId = category;
         r.updatedAt = new Date();

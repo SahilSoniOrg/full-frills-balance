@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 27,
+  version: 28,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -291,9 +291,10 @@ BEGIN
 END;`,
     }),
     tableSchema({
-      name: 'sms_auto_post_rules',
+      name: 'transaction_auto_post_rules',
       columns: [
-        { name: 'sender_match', type: 'string', isIndexed: true },
+        { name: 'channels_json', type: 'string', isOptional: true },
+        { name: 'sender_match', type: 'string', isOptional: true, isIndexed: true },
         { name: 'body_match', type: 'string', isOptional: true },
         { name: 'conditions_json', type: 'string', isOptional: true },
         { name: 'actions_json', type: 'string', isOptional: true },
@@ -306,22 +307,23 @@ END;`,
         { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
       unsafeSql: sql => `${sql};
-CREATE TRIGGER IF NOT EXISTS trg_sms_auto_post_rules_workplace_id_check
-BEFORE INSERT ON sms_auto_post_rules
+CREATE TRIGGER IF NOT EXISTS trg_transaction_auto_post_rules_workplace_id_check
+BEFORE INSERT ON transaction_auto_post_rules
 FOR EACH ROW
 WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
 BEGIN
-  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on sms_auto_post_rules');
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transaction_auto_post_rules');
 END;`,
     }),
     tableSchema({
-      name: 'sms_inbox_records',
+      name: 'transaction_inbox_records',
       columns: [
-        { name: 'device_sms_id', type: 'string', isIndexed: true },
-        { name: 'sender_address', type: 'string', isIndexed: true },
-        { name: 'raw_body', type: 'string' },
-        { name: 'sms_date', type: 'number', isIndexed: true },
-        { name: 'sms_fingerprint', type: 'string', isIndexed: true },
+        { name: 'channel', type: 'string', isIndexed: true },
+        { name: 'device_source_id', type: 'string', isIndexed: true },
+        { name: 'sender_address', type: 'string', isOptional: true, isIndexed: true },
+        { name: 'raw_body', type: 'string', isOptional: true },
+        { name: 'input_date', type: 'number', isIndexed: true },
+        { name: 'input_fingerprint', type: 'string', isIndexed: true },
         { name: 'parse_status', type: 'string', isIndexed: true },
         { name: 'parsed_amount', type: 'number', isOptional: true },
         { name: 'parsed_currency_code', type: 'string', isOptional: true },
@@ -344,12 +346,12 @@ END;`,
         { name: 'workplace_id', type: 'string', isIndexed: true },
       ],
       unsafeSql: sql => `${sql};
-CREATE TRIGGER IF NOT EXISTS trg_sms_inbox_records_workplace_id_check
-BEFORE INSERT ON sms_inbox_records
+CREATE TRIGGER IF NOT EXISTS trg_transaction_inbox_records_workplace_id_check
+BEFORE INSERT ON transaction_inbox_records
 FOR EACH ROW
 WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
 BEGIN
-  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on sms_inbox_records');
+  SELECT RAISE(ABORT, 'Workplace ID cannot be empty on transaction_inbox_records');
 END;`,
     }),
     tableSchema({
