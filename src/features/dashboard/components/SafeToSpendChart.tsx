@@ -32,6 +32,16 @@ export const SafeToSpendChart = ({
   const { theme } = useTheme();
   const labels = AppConfig.strings.dashboard.safeToSpendUi;
 
+  const analyticsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (analyticsTimeoutRef.current) {
+        clearTimeout(analyticsTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const historyPoints = projection?.history || [];
   const projectionPoints = projection?.projection || [];
 
@@ -147,15 +157,28 @@ export const SafeToSpendChart = ({
           extraHorizontalLines={extraHorizontalLines}
           avoidPointVertical={true}
           onPress={index => {
-            if (index === -1) return;
+            if (index === -1) {
+              if (analyticsTimeoutRef.current) {
+                clearTimeout(analyticsTimeoutRef.current);
+                analyticsTimeoutRef.current = null;
+              }
+              return;
+            }
             const point = data[index];
             if (!point) return;
 
-            analytics.trackFeatureUsage('safe_to_spend', 'chart_point_selected', {
-              dayOffset: dayjs(point.x).diff(dayjs().startOf('day'), 'day'),
-              isHistory: point.isHistory,
-              hasDetails: (point.details?.length ?? 0) > 0,
-            });
+            if (analyticsTimeoutRef.current) {
+              clearTimeout(analyticsTimeoutRef.current);
+            }
+
+            analyticsTimeoutRef.current = setTimeout(() => {
+              analytics.trackFeatureUsage('safe_to_spend', 'chart_point_selected', {
+                dayOffset: dayjs(point.x).diff(dayjs().startOf('day'), 'day'),
+                isHistory: point.isHistory,
+                hasDetails: (point.details?.length ?? 0) > 0,
+              });
+              analyticsTimeoutRef.current = null;
+            }, 1000); // 1-second debounce to avoid tracking rapid scrubbing/swiping
           }}
           renderTooltipContent={index => {
             const point = data[index];
