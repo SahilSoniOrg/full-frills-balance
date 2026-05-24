@@ -59,6 +59,10 @@
     <string>Allow $(PRODUCT_NAME) to use Face ID</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Allow Full Frills to access the microphone for transaction parsing.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Allow Full Frills to recognize your speech.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

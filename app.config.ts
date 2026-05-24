@@ -137,6 +137,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'llama.rn',
+    [
+      'expo-speech-recognition',
+      {
+        microphonePermission: 'Allow Full Frills to access the microphone for transaction parsing.',
+        speechRecognitionPermission: 'Allow Full Frills to recognize your speech.',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

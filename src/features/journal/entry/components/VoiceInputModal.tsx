@@ -5,6 +5,7 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -54,6 +55,34 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
   const [isRecording, setIsRecording] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
+
+  // Real-time voice events
+  useSpeechRecognitionEvent('start', () => setIsRecording(true));
+  useSpeechRecognitionEvent('end', () => setIsRecording(false));
+  useSpeechRecognitionEvent('result', event => {
+    const text = event.results[0]?.transcript || '';
+    setTranscription(text);
+  });
+  useSpeechRecognitionEvent('error', event => {
+    logger.error('[VoiceInputModal] Speech recognition error', event.error);
+    setIsRecording(false);
+  });
+
+  // Vertical bar visualizer driven by real volume
+  useSpeechRecognitionEvent('volumechange', event => {
+    // Value is typically -2 to 10. Normalize to a scale factor.
+    const volume = event.value;
+    const scale = Math.max(1, (volume + 2) / 3); // Map to ~1.0 to 4.0
+
+    animValues.forEach((anim, i) => {
+      Animated.spring(anim, {
+        toValue: scale * (0.8 + Math.random() * 0.4), // Add some variation per bar
+        useNativeDriver: true,
+        friction: 7,
+        tension: 40,
+      }).start();
+    });
+  });
 
   // Animated bars for voice pulsing visualizer
   const animValues = useRef([
@@ -118,20 +147,28 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     setParserOutput(null);
   }, [visible]);
 
-  const handleStartSimulatedSpeech = () => {
-    setIsRecording(true);
+  const handleStartRecording = async () => {
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      logger.warn('[VoiceInputModal] Speech permissions denied');
+      return;
+    }
+
     setParserOutput(null);
     setTranscription('');
 
-    // Simulate raw audio capturing over a brief period
-    setTimeout(() => {
-      setIsRecording(false);
-      // Default to a random pre-canned template as simulated capture
-      const randomTemplate =
-        PREDEFINED_TEMPLATES[Math.floor(Math.random() * PREDEFINED_TEMPLATES.length)];
-      setTranscription(randomTemplate);
-      triggerExtraction(randomTemplate);
-    }, 2200);
+    ExpoSpeechRecognitionModule.start({
+      lang: 'en-IN', // Indian English is common for this userbase
+      interimResults: true,
+      volumeChangeEventOptions: {
+        enabled: true,
+        intervalMillis: 50,
+      },
+    });
+  };
+
+  const handleStopRecording = () => {
+    ExpoSpeechRecognitionModule.stop();
   };
 
   const triggerExtraction = async (textToParse: string, forceAi: boolean = false) => {
@@ -208,7 +245,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             <View style={styles.visualizerContainer}>
               <View style={[styles.visualizerBacking, { backgroundColor: theme.surfaceSecondary }]}>
                 {isRecording ? (
-                  <View style={styles.barGroup}>
+                  <TouchableOpacity onPress={handleStopRecording} style={styles.barGroup}>
                     {animValues.map((anim, idx) => (
                       <Animated.View
                         key={idx}
@@ -221,10 +258,10 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                         ]}
                       />
                     ))}
-                  </View>
+                  </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    onPress={handleStartSimulatedSpeech}
+                    onPress={handleStartRecording}
                     style={[styles.micIconTouch, { backgroundColor: theme.primary }]}
                   >
                     <AppIcon name="mic" size={28} color={theme.onPrimary} />
@@ -234,8 +271,8 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
 
               <AppText variant="caption" color="secondary" style={styles.recordingStateLabel}>
                 {isRecording
-                  ? 'Listening... Speak your transaction clearly.'
-                  : 'Tap the microphone to simulate spoken voice input.'}
+                  ? 'Listening... Tap to stop speaking.'
+                  : 'Tap the microphone to start speaking.'}
               </AppText>
             </View>
 
