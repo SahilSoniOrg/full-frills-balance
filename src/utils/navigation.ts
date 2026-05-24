@@ -628,6 +628,20 @@ export const AppNavigation = {
   },
 
   /**
+   * Navigate to a custom route.
+   */
+  navigate: (route: string) => {
+    router.push(route as any);
+  },
+
+  /**
+   * Navigate to the AI Benchmark screen.
+   */
+  toAiBenchmark: () => {
+    router.push('/ai-benchmark' as any);
+  },
+
+  /**
    * Dismiss current modal or navigate back.
    */
   dismiss: () => {

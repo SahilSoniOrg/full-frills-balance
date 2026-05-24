@@ -62,7 +62,16 @@ export class DatabaseRepository {
       if (adapter && typeof adapter.queryRaw === 'function') {
         // Sequentially execute raw SQL deletes to avoid SQLITE_BUSY locks
         for (const table of tables) {
-          await adapter.queryRaw(`DELETE FROM ${table} WHERE workplace_id = ?`, [workplaceId]);
+          try {
+            await adapter.queryRaw(`DELETE FROM ${table} WHERE workplace_id = ?`, [workplaceId]);
+          } catch (err) {
+            // Ignore "no such table" errors during reset - common after migrations
+            const errorMsg = String(err);
+            if (!errorMsg.includes('no such table')) {
+              logger.error(`[DatabaseRepository] Failed to purge table ${table}`, err);
+              throw err;
+            }
+          }
         }
         logger.info(
           `[DatabaseRepository] Purged ${tables.length} tables for workplace ${workplaceId} using raw SQL.`,

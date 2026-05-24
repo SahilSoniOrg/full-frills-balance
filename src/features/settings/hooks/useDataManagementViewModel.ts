@@ -240,7 +240,7 @@ export function useDataManagementViewModel(): DataManagementViewModel {
         }
       },
     });
-  }, [workplaceId, requireRestart]);
+  }, [requireRestart]);
 
   return {
     isExporting,

@@ -99,12 +99,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           enableMinifyInReleaseBuilds: true,
           shrinkResources: true,
           packagingOptions: {
-            pickFirst: ['**/libc++_shared.so'],
+            pickFirst: ['**/libc++_shared.so', '**/librnllama.so', '**/librnllama_jni.so'],
             jniLibs: {
               useLegacyPackaging: false,
             },
           },
           ndkVersion: '27.1.12297006',
+          extraProguardRules: `
+            -keep class com.rnllama.** { *; }
+          `,
         },
         ios: {
           deploymentTarget: '16.1',
@@ -133,6 +136,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         organization: 'full-frills-balance',
       },
     ],
+    'llama.rn',
   ],
   experiments: {
     typedRoutes: true,

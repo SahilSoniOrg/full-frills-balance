@@ -167,12 +167,20 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       amount?: number;
       merchantName?: string;
       direction: 'debit' | 'credit' | 'unknown';
+      transactionType?: 'expense' | 'income' | 'transfer';
       sourceAccountId: AccountId;
       categoryAccountId: AccountId;
       transcription: string;
     }) => {
-      const { amount, merchantName, direction, sourceAccountId, categoryAccountId, transcription } =
-        params;
+      const {
+        amount,
+        merchantName,
+        direction,
+        transactionType,
+        sourceAccountId,
+        categoryAccountId,
+        transcription,
+      } = params;
 
       // 1. Set description and notes
       if (merchantName) {
@@ -183,11 +191,12 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       }
 
       // 2. Set guided or advanced mode properties
-      const mappedType = direction === 'credit' ? 'income' : 'expense';
+      const mappedType = transactionType || (direction === 'credit' ? 'income' : 'expense');
 
       if (editor.isGuidedMode) {
         // Guided mode sync
         simpleEditor.setType(mappedType);
+
         if (amount) {
           simpleEditor.setAmount(String(amount));
         }

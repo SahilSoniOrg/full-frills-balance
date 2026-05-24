@@ -35,6 +35,9 @@ export interface UIPreferences {
   notificationMinute: number;
   notificationWeekday: number; // 1-7 (Mon-Sun)
   isSmsImportEnabled: boolean;
+  isNativeAiEnabled: boolean;
+  preferredAiModelId?: string;
+  aiInferenceMode: 'single' | 'multi';
   defaultShareFormat?: ShareFormat;
   safeToSpendDays: number;
   activeWorkplaceId?: WorkplaceId;
@@ -58,6 +61,9 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationMinute: 0,
   notificationWeekday: 1, // Monday
   isSmsImportEnabled: false,
+  isNativeAiEnabled: false,
+  preferredAiModelId: 'qwen-2.5-0.5b',
+  aiInferenceMode: 'multi',
   defaultShareFormat: ShareFormat.TEXT,
   safeToSpendDays: AppConfig.defaults.safeToSpendDays,
   activeWorkplaceId: undefined,
@@ -406,6 +412,30 @@ class PreferencesHelper {
 
   setIsSmsImportEnabled(enabled: boolean): void {
     this.updatePreferences({ isSmsImportEnabled: enabled });
+  }
+
+  get isNativeAiEnabled(): boolean {
+    return this.preferences.isNativeAiEnabled ?? false;
+  }
+
+  setIsNativeAiEnabled(enabled: boolean): void {
+    this.updatePreferences({ isNativeAiEnabled: enabled });
+  }
+
+  get preferredAiModelId(): string | undefined {
+    return this.preferences.preferredAiModelId;
+  }
+
+  setPreferredAiModelId(modelId: string): void {
+    this.updatePreferences({ preferredAiModelId: modelId });
+  }
+
+  get aiInferenceMode(): 'single' | 'multi' {
+    return this.preferences.aiInferenceMode || 'multi';
+  }
+
+  setAiInferenceMode(mode: 'single' | 'multi'): void {
+    this.updatePreferences({ aiInferenceMode: mode });
   }
 
   get defaultShareFormat(): ShareFormat {

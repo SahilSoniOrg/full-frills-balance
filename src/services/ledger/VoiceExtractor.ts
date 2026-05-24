@@ -11,7 +11,11 @@ export class VoiceExtractor implements TransactionExtractor {
   }
 
   async extract(input: RawTransactionInput): Promise<ExtractedInfo> {
-    const text = input.rawText.toLowerCase().trim();
+    let text = input.rawText.toLowerCase().trim();
+
+    // 0. Pre-process for local currency terms (lakh, crore)
+    text = text.replace(/(\d+)\s*lakh(s)?/g, (_, n) => (parseInt(n) * 100000).toString());
+    text = text.replace(/(\d+)\s*crore(s)?/g, (_, n) => (parseInt(n) * 10000000).toString());
 
     // 1. Extract Amount and Currency
     let amount: number | undefined;
@@ -44,8 +48,11 @@ export class VoiceExtractor implements TransactionExtractor {
     }
 
     // 2. Classify Direction (Expense vs. Income)
-    const isExpense = !['received', 'deposited', 'salary', 'income', 'refund'].some(keyword =>
-      descriptiveText.includes(keyword),
+    const reversalVerbs = ['refund', 'cashback', 'chargeback', 'reversal', 'cancel', 'reverse'];
+    const isReversal = reversalVerbs.some(verb => text.includes(verb));
+
+    const isExpense = !['received', 'deposited', 'salary', 'income', ...reversalVerbs].some(
+      keyword => descriptiveText.includes(keyword),
     );
     const direction = isExpense ? 'debit' : 'credit';
 
@@ -121,12 +128,14 @@ export class VoiceExtractor implements TransactionExtractor {
 
     return {
       amount: amount && amount > 0 ? amount : undefined,
-      currencyCode,
+      currencyCode: currencyCode || (input.metadata?.defaultCurrencyCode as string),
       direction,
       sourceAccountHint: sourceHint || undefined,
       destinationCategoryHint: targetHint || undefined,
       merchantName: targetHint || undefined,
       date: input.date,
+      isReversal,
+      channel: 'voice',
     };
   }
 

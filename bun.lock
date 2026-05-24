@@ -47,6 +47,7 @@
         "expo-system-ui": "~55.0.15",
         "expo-updates": "~55.0.20",
         "expo-web-browser": "~55.0.14",
+        "llama.rn": "^0.12.3",
         "lucide-react-native": "^0.563.0",
         "moti": "^0.30.0",
         "posthog-react-native": "^4.42.1",
@@ -100,6 +101,7 @@
     },
   },
   "trustedDependencies": [
+    "llama.rn",
     "unrs-resolver",
   ],
   "packages": {
@@ -1742,6 +1744,8 @@
     "lint-staged": ["lint-staged@15.5.2", "", { "dependencies": { "chalk": "^5.4.1", "commander": "^13.1.0", "debug": "^4.4.0", "execa": "^8.0.1", "lilconfig": "^3.1.3", "listr2": "^8.2.5", "micromatch": "^4.0.8", "pidtree": "^0.6.0", "string-argv": "^0.3.2", "yaml": "^2.7.0" }, "bin": { "lint-staged": "bin/lint-staged.js" } }, "sha512-YUSOLq9VeRNAo/CTaVmhGDKG+LBtA8KF1X4K5+ykMSwWST1vDxJRB2kv2COgLb1fvpCo+A/y9A0G0znNVmdx4w=="],
 
     "listr2": ["listr2@8.3.3", "", { "dependencies": { "cli-truncate": "^4.0.0", "colorette": "^2.0.20", "eventemitter3": "^5.0.1", "log-update": "^6.1.0", "rfdc": "^1.4.1", "wrap-ansi": "^9.0.0" } }, "sha512-LWzX2KsqcB1wqQ4AHgYb4RsDXauQiqhjLk+6hjbaeHG4zpjjVAB6wC/gz6X0l+Du1cN3pUB5ZlrvTbhGSNnUQQ=="],
+
+    "llama.rn": ["llama.rn@0.12.3", "", { "peerDependencies": { "react": "*", "react-native": "*" }, "bin": { "llama-rn-download-artifacts": "install/download-native-artifacts.js" } }, "sha512-SAMQ0Zj2CpngHNpqzxmIydo64tO3UYiOFeIHWwKc3yWMI5esjv4BJGvZj3Ca+rQWEoF7x+a/BjloiHp6+F141Q=="],
 
     "locate-path": ["locate-path@6.0.0", "", { "dependencies": { "p-locate": "^5.0.0" } }, "sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw=="],
 

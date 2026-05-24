@@ -326,6 +326,31 @@ export class AnalyticsService {
     this.track('export_completed', { format });
   }
 
+  logAiIngestion(
+    event:
+      | 'deterministic_success'
+      | 'ai_fallback_triggered'
+      | 'ai_forced'
+      | 'ai_timeout'
+      | 'ai_failure'
+      | 'ai_success'
+      | 'reversal_detected'
+      | 'amount_missing',
+    properties?: Record<string, any>,
+  ) {
+    this.track(`parse_${event}`, properties);
+  }
+
+  logAiCorrection(
+    type: 'account' | 'category' | 'amount' | 'undo_autosave' | 'edit_after_autosave',
+  ) {
+    this.track(`user_correction_${type}`);
+  }
+
+  logAiModelLoad(success: boolean, properties?: Record<string, any>) {
+    this.track(success ? 'model_load_success' : 'model_load_failure', properties);
+  }
+
   logFactoryReset() {
     this.track('factory_reset');
   }

@@ -95,4 +95,54 @@ describe('VoiceExtractor', () => {
     expect(result2.sourceAccountHint).toBeUndefined(); // no source preposition found
     expect(result2.destinationCategoryHint).toBe('card'); // last target preposition is "on", so everything after it
   });
+
+  it('normalizes lakh and crore', async () => {
+    const resultLakh = await extractor.extract({
+      channel: 'voice',
+      id: 'voice-lakh',
+      rawText: 'received 1 lakh from bank',
+      date: 1000,
+    });
+    expect(resultLakh.amount).toBe(100000);
+
+    const resultCrore = await extractor.extract({
+      channel: 'voice',
+      id: 'voice-crore',
+      rawText: 'spent 2 crores on mansion',
+      date: 1000,
+    });
+    expect(resultCrore.amount).toBe(20000000);
+  });
+
+  it('detects reversals', async () => {
+    const resultRefund = await extractor.extract({
+      channel: 'voice',
+      id: 'voice-refund',
+      rawText: 'refund 500 from amazon',
+      date: 1000,
+    });
+    expect(resultRefund.isReversal).toBe(true);
+    expect(resultRefund.direction).toBe('credit');
+
+    const resultCashback = await extractor.extract({
+      channel: 'voice',
+      id: 'voice-cashback',
+      rawText: 'got 50 cashback',
+      date: 1000,
+    });
+    expect(resultCashback.isReversal).toBe(true);
+    expect(resultCashback.direction).toBe('credit');
+  });
+
+  it('uses default currency from metadata if missing in text', async () => {
+    const result = await extractor.extract({
+      channel: 'voice',
+      id: 'voice-no-currency',
+      rawText: 'spent 200 on banana',
+      date: 1000,
+      metadata: { defaultCurrencyCode: 'USD' },
+    });
+    expect(result.amount).toBe(200);
+    expect(result.currencyCode).toBe('USD');
+  });
 });

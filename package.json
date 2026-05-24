@@ -61,6 +61,7 @@
     "expo-system-ui": "~55.0.15",
     "expo-updates": "~55.0.20",
     "expo-web-browser": "~55.0.14",
+    "llama.rn": "^0.12.3",
     "lucide-react-native": "^0.563.0",
     "moti": "^0.30.0",
     "posthog-react-native": "^4.42.1",
@@ -120,7 +121,8 @@
   "private": true,
   "trustedDependencies": [
     "@shopify/react-native-skia",
-    "unrs-resolver"
+    "unrs-resolver",
+    "llama.rn"
   ],
   "experiments": {
     "reactCompiler": true

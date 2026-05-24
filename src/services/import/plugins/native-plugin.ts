@@ -19,6 +19,7 @@ import {
   ImportedPlannedPayment,
   ImportedTransactionAutoPostRule,
   ImportedTransaction,
+  ImportedTransactionInboxRecord,
 } from '@/src/data/repositories/ImportRepository';
 
 import { ImportFileContext, ImportPlugin, ParsedImportResult } from '@/src/services/import/types';
@@ -44,8 +45,13 @@ interface NativeImportData {
   accountMetadata?: ImportedAccountMetadata[];
   plannedPayments?: ImportedPlannedPayment[];
   journalMetadata?: ImportedJournalMetadata[];
+  // Support both snake_case and camelCase for legacy compatibility
+  sms_auto_post_rules?: ImportedTransactionAutoPostRule[];
   smsAutoPostRules?: ImportedTransactionAutoPostRule[];
   transactionAutoPostRules?: ImportedTransactionAutoPostRule[];
+  sms_inbox_records?: ImportedTransactionInboxRecord[];
+  smsInboxRecords?: ImportedTransactionInboxRecord[];
+  transactionInboxRecords?: ImportedTransactionInboxRecord[];
   balanceSnapshots?: ImportedBalanceSnapshot[];
   workplace?: {
     name: string;
@@ -294,6 +300,7 @@ export const nativePlugin: ImportPlugin = {
         transactionAutoPostRules: (
           data.transactionAutoPostRules ||
           data.smsAutoPostRules ||
+          data.sms_auto_post_rules ||
           []
         ).map(rule => ({
           id: generateId(),
@@ -307,6 +314,43 @@ export const nativePlugin: ImportPlugin = {
           isActive: rule.isActive,
           createdAt: parseTimestamp(rule.createdAt),
           updatedAt: parseTimestamp(rule.updatedAt),
+        })),
+        transactionInboxRecords: (
+          data.transactionInboxRecords ||
+          data.smsInboxRecords ||
+          data.sms_inbox_records ||
+          []
+        ).map(inbox => ({
+          id: generateId(),
+          channel: inbox.channel,
+          deviceSourceId: inbox.deviceSourceId,
+          senderAddress: inbox.senderAddress,
+          rawBody: inbox.rawBody,
+          inputDate: parseTimestamp(inbox.inputDate) ?? Date.now(),
+          inputFingerprint: inbox.inputFingerprint,
+          parseStatus: inbox.parseStatus,
+          parsedAmount: inbox.parsedAmount,
+          parsedCurrencyCode: inbox.parsedCurrencyCode,
+          parsedMerchant: inbox.parsedMerchant,
+          parsedAccountSource: inbox.parsedAccountSource,
+          referenceNumber: inbox.referenceNumber,
+          direction: inbox.direction,
+          processingStatus: inbox.processingStatus,
+          linkedJournalId: inbox.linkedJournalId
+            ? journalMap.get(inbox.linkedJournalId)
+            : undefined,
+          duplicateJournalId: inbox.duplicateJournalId
+            ? journalMap.get(inbox.duplicateJournalId)
+            : undefined,
+          duplicateConfidence: inbox.duplicateConfidence,
+          parseConfidence: inbox.parseConfidence,
+          parseReason: inbox.parseReason,
+          metadataJson: inbox.metadataJson,
+          firstSeenAt: parseTimestamp(inbox.firstSeenAt) ?? Date.now(),
+          lastScannedAt: parseTimestamp(inbox.lastScannedAt) ?? Date.now(),
+          processedAt: parseTimestamp(inbox.processedAt),
+          createdAt: parseTimestamp(inbox.createdAt),
+          updatedAt: parseTimestamp(inbox.updatedAt),
         })),
         balanceSnapshots: (data.balanceSnapshots || []).map(snapshot => ({
           id: generateId(),

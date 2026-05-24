@@ -16,11 +16,26 @@ export interface NotificationSettingsViewModel {
   onSendTestNotification: () => void;
   isSmsImportEnabled: boolean;
   setIsSmsImportEnabled: (enabled: boolean) => void;
+  isNativeAiEnabled: boolean;
+  setIsNativeAiEnabled: (enabled: boolean) => void;
+  preferredAiModelId?: string;
+  setPreferredAiModelId: (modelId: string) => void;
+  aiInferenceMode: 'single' | 'multi';
+  setAiInferenceMode: (mode: 'single' | 'multi') => void;
 }
 
 export function useNotificationSettingsViewModel(): NotificationSettingsViewModel {
   const ui = useUI();
-  const { isSmsImportEnabled, setIsSmsImportEnabled } = ui;
+  const {
+    isSmsImportEnabled,
+    setIsSmsImportEnabled,
+    isNativeAiEnabled,
+    setIsNativeAiEnabled,
+    preferredAiModelId,
+    setPreferredAiModelId,
+    aiInferenceMode,
+    setAiInferenceMode,
+  } = ui;
 
   const onUpdateNotificationCadence = useCallback(
     async (cadence: NotificationCadence) => {
@@ -79,5 +94,11 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
     onSendTestNotification: () => notificationService.sendImmediateTest(),
     isSmsImportEnabled,
     setIsSmsImportEnabled: handleSetIsSmsImportEnabled,
+    isNativeAiEnabled,
+    setIsNativeAiEnabled,
+    preferredAiModelId,
+    setPreferredAiModelId,
+    aiInferenceMode,
+    setAiInferenceMode,
   };
 }

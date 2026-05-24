@@ -83,9 +83,11 @@ interface UIState {
   defaultShareFormat: ShareFormat;
   safeToSpendDays: number;
   isSmsImportEnabled: boolean;
+  isNativeAiEnabled: boolean;
+  preferredAiModelId: string;
+  aiInferenceMode: 'single' | 'multi';
   isDataHydrated: boolean; // Tracks if core domain data is primed
 }
-
 interface UIContextType extends UIState {
   // Computed values
   themeMode: 'light' | 'dark';
@@ -117,9 +119,11 @@ interface UIContextType extends UIState {
   setDefaultShareFormat: (format: ShareFormat) => void;
   setSafeToSpendDays: (days: number) => Promise<void>;
   setIsSmsImportEnabled: (enabled: boolean) => Promise<void>;
+  setIsNativeAiEnabled: (enabled: boolean) => Promise<void>;
+  setPreferredAiModelId: (modelId: string) => Promise<void>;
+  setAiInferenceMode: (mode: 'single' | 'multi') => Promise<void>;
   requireRestart: (options: RestartOptions) => void;
 }
-
 export const UIContext = createContext<UIContextType | undefined>(undefined);
 
 // Support for local theme overrides (e.g. Design Preview)
@@ -168,6 +172,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     defaultShareFormat: ShareFormat.TEXT,
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
     isSmsImportEnabled: false,
+    isNativeAiEnabled: false,
+    preferredAiModelId: 'qwen-2.5-0.5b',
+    aiInferenceMode: 'multi',
     isDataHydrated: false,
   });
 
@@ -207,6 +214,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           defaultShareFormat: loadedPreferences.defaultShareFormat || ShareFormat.TEXT,
           safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
           isSmsImportEnabled: loadedPreferences.isSmsImportEnabled || false,
+          isNativeAiEnabled: loadedPreferences.isNativeAiEnabled || false,
+          preferredAiModelId: loadedPreferences.preferredAiModelId || 'qwen-2.5-0.5b',
+          aiInferenceMode: loadedPreferences.aiInferenceMode || 'multi',
         }));
       } catch (error) {
         logger.warn('[UIProvider] Failed to load preferences', { error });
@@ -456,6 +466,33 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setIsNativeAiEnabled = useCallback(async (enabled: boolean) => {
+    try {
+      await preferences.setIsNativeAiEnabled(enabled);
+      setUIState(prev => ({ ...prev, isNativeAiEnabled: enabled }));
+    } catch (error) {
+      logger.warn('[UIContext] Failed to set native AI preference', { error });
+    }
+  }, []);
+
+  const setPreferredAiModelId = useCallback(async (modelId: string) => {
+    try {
+      await preferences.setPreferredAiModelId(modelId);
+      setUIState(prev => ({ ...prev, preferredAiModelId: modelId }));
+    } catch (error) {
+      logger.warn('[UIContext] Failed to set preferred AI model', { error });
+    }
+  }, []);
+
+  const setAiInferenceMode = useCallback(async (mode: 'single' | 'multi') => {
+    try {
+      await preferences.setAiInferenceMode(mode);
+      setUIState(prev => ({ ...prev, aiInferenceMode: mode }));
+    } catch (error) {
+      logger.warn('[UIContext] Failed to set AI inference mode', { error });
+    }
+  }, []);
+
   const requireRestart = useCallback((options: RestartOptions) => {
     setUIState(prev => ({
       ...prev,
@@ -527,6 +564,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setDefaultShareFormat,
       setSafeToSpendDays,
       setIsSmsImportEnabled,
+      setIsNativeAiEnabled,
+      setPreferredAiModelId,
+      setAiInferenceMode,
       requireRestart,
     }),
     [
@@ -556,6 +596,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       setDefaultShareFormat,
       setSafeToSpendDays,
       setIsSmsImportEnabled,
+      setIsNativeAiEnabled,
+      setPreferredAiModelId,
+      setAiInferenceMode,
       requireRestart,
     ],
   );

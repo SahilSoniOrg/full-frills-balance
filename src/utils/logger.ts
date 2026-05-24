@@ -71,20 +71,26 @@ class Logger {
     // Safety: Ensure we never pass anything but a string to console methods
     const outputMessage = String(logMessage || `[${timestamp}] [${level.toUpperCase()}] (Empty)`);
 
-    switch (level) {
-      case 'debug':
-        console.log(outputMessage);
-        break;
-      case 'info':
-      case 'metric':
-        console.info(outputMessage);
-        break;
-      case 'warn':
-        console.warn(outputMessage);
-        break;
-      case 'error':
-        console.error(outputMessage);
-        break;
+    try {
+      switch (level) {
+        case 'debug':
+          console.log(`[FFB] ${outputMessage}`);
+          break;
+        case 'info':
+        case 'metric':
+          console.info(`[FFB] ${outputMessage}`);
+          break;
+        case 'warn':
+          console.warn(`[FFB] ${outputMessage}`);
+          break;
+        case 'error':
+          // Use warn instead of error because some dev environments (Expo/Hermes)
+          // crash or show "ERROR null" when console.error is called with complex payloads.
+          console.warn(`[FFB-ERROR] ${outputMessage}`);
+          break;
+      }
+    } catch {
+      // If even console methods fail, we are in deep trouble, but don't crash
     }
   }
 
@@ -93,11 +99,15 @@ class Logger {
    * Bypasses regex parsing and goes directly to the analytics reporter.
    */
   metric(name: string, duration: number, context?: LogContext) {
-    const threshold = AppConfig.performance.slowTraceThresholdMs;
+    try {
+      const threshold = AppConfig.performance.slowTraceThresholdMs;
 
-    // 1. Report to consolidated analytics if it's "Slow"
-    if (this.performanceReporter && duration >= threshold) {
-      this.performanceReporter(name, duration, context);
+      // 1. Report to consolidated analytics if it's "Slow"
+      if (this.performanceReporter && duration >= threshold) {
+        this.performanceReporter(name, duration, context);
+      }
+    } catch {
+      // Ignore reporter errors
     }
 
     // 2. Log to console for visibility (if enabled)
@@ -117,37 +127,46 @@ class Logger {
   }
 
   error(message: string | unknown, error?: Error | unknown, context?: LogContext) {
-    const safeMessage =
-      message !== null && message !== undefined ? String(message) : 'Unknown Error';
+    try {
+      const safeMessage =
+        message !== null && message !== undefined ? String(message) : 'Unknown Error';
 
-    const errorContext = {
-      ...context,
-      error:
-        error instanceof Error
-          ? {
-              message: error.message,
-              stack: error.stack,
-            }
-          : error !== undefined && error !== null
-            ? error
-            : undefined,
-    };
+      const errorContext = {
+        ...context,
+        error:
+          error instanceof Error
+            ? {
+                message: error.message,
+                stack: error.stack,
+              }
+            : error !== undefined && error !== null
+              ? error
+              : undefined,
+      };
 
-    this.log('error', safeMessage, errorContext);
+      this.log('error', safeMessage, errorContext);
 
-    // Report to Sentry
-    if (error instanceof Error) {
-      Sentry.captureException(error, { extra: context });
-    } else if (typeof error === 'string' && error) {
-      Sentry.captureMessage(error, { extra: context });
-    } else if (error && error !== null) {
-      // For non-Error, non-string but truthy objects, create a wrapper
-      Sentry.captureException(new Error(String(error)), {
-        extra: { ...context, originalError: error },
-      });
-    } else if (safeMessage !== 'Unknown Error') {
-      // If we only have a message, capture it
-      Sentry.captureMessage(safeMessage, { extra: context });
+      // Report to Sentry (defensively)
+      try {
+        if (error instanceof Error) {
+          Sentry.captureException(error, { extra: context });
+        } else if (typeof error === 'string' && error) {
+          Sentry.captureMessage(error, { extra: context });
+        } else if (error && error !== null) {
+          // For non-Error, non-string but truthy objects, create a wrapper
+          Sentry.captureException(new Error(String(error)), {
+            extra: { ...context, originalError: error },
+          });
+        } else if (safeMessage !== 'Unknown Error') {
+          // If we only have a message, capture it
+          Sentry.captureMessage(safeMessage, { extra: context });
+        }
+      } catch {
+        // Ignore Sentry errors to prevent infinite loops or crashes
+      }
+    } catch (globalErr) {
+      // Absolute fallback if logger itself fails
+      console.log('Logger.error critically failed', String(globalErr));
     }
   }
 

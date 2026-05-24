@@ -503,8 +503,8 @@ export class IntegrityService {
         'account_metadata',
         'planned_payments',
         'journal_metadata',
-        'sms_auto_post_rules',
-        'sms_inbox_records',
+        'transaction_auto_post_rules',
+        'transaction_inbox_records',
         'balance_snapshots',
       ];
 

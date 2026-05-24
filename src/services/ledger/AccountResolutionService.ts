@@ -13,6 +13,8 @@ export interface ResolutionResult {
   categoryAccountName?: string;
   confidence: number;
   strategyUsed: 'fuzzy' | 'history' | 'bayes' | 'default';
+  semanticType?: string;
+  isReversal?: boolean;
 }
 
 function getLevenshteinDistance(a: string, b: string): number {
@@ -175,8 +177,19 @@ export class AccountResolutionService {
     destinationHint?: string;
     direction: 'debit' | 'credit' | 'unknown';
     workplaceId: WorkplaceId;
+    isReversal?: boolean;
+    rawText?: string;
+    unconstrained?: boolean; // If true, allows matching sourceHint to category and vice versa
   }): Promise<ResolutionResult> {
-    const { sourceHint, destinationHint, direction, workplaceId } = params;
+    const {
+      sourceHint,
+      destinationHint,
+      direction,
+      workplaceId,
+      isReversal,
+      rawText,
+      unconstrained,
+    } = params;
 
     // Fetch active accounts in workspace
     const accounts = await accountRepository.findAll(workplaceId);
@@ -198,8 +211,11 @@ export class AccountResolutionService {
 
     // 1. Fuzzy match for Source Account
     const primarySourceHint = sourceHint || destinationHint;
-    if (primarySourceHint && assetAccounts.length > 0) {
-      const bestSource = this.fuzzyMatch(primarySourceHint, assetAccounts);
+    if (primarySourceHint && (unconstrained ? accounts : assetAccounts).length > 0) {
+      const bestSource = this.fuzzyMatch(
+        primarySourceHint,
+        unconstrained ? accounts : assetAccounts,
+      );
       // If using the fallback hint (destinationHint), require a slightly more conservative threshold (e.g. >= 0.70)
       const threshold = sourceHint ? 0.85 : 0.7;
       if (bestSource && bestSource.score >= threshold) {
@@ -211,8 +227,11 @@ export class AccountResolutionService {
 
     // 2. Fuzzy match for Category Account
     const primaryCategoryHint = destinationHint || sourceHint;
-    if (primaryCategoryHint && categoryAccounts.length > 0) {
-      const bestCategory = this.fuzzyMatch(primaryCategoryHint, categoryAccounts);
+    if (primaryCategoryHint && (unconstrained ? accounts : categoryAccounts).length > 0) {
+      const bestCategory = this.fuzzyMatch(
+        primaryCategoryHint,
+        unconstrained ? accounts : categoryAccounts,
+      );
       // If using the fallback hint (sourceHint), require a slightly more conservative threshold (e.g. >= 0.70)
       const threshold = destinationHint ? 0.85 : 0.7;
       if (bestCategory && bestCategory.score >= threshold) {
@@ -220,7 +239,7 @@ export class AccountResolutionService {
         categoryScore = bestCategory.score;
         categoryStrategy = 'fuzzy';
       } else {
-        // Synonym lookup as a secondary fuzzy match strategy
+        // Synonym lookup (Only for actual categories if not unconstrained)
         const words = primaryCategoryHint
           .toLowerCase()
           .split(/[\s,._\-\/]+/)
@@ -228,7 +247,10 @@ export class AccountResolutionService {
         for (const word of words) {
           const synonym = SYNONYM_DICTIONARY[word];
           if (synonym) {
-            const bestSynonymMatch = this.fuzzyMatch(synonym, categoryAccounts);
+            const bestSynonymMatch = this.fuzzyMatch(
+              synonym,
+              unconstrained ? accounts : categoryAccounts,
+            );
             if (bestSynonymMatch && bestSynonymMatch.score >= 0.85) {
               resolvedCategoryId = bestSynonymMatch.account.id as AccountId;
               categoryScore = bestSynonymMatch.score * 0.9; // Small penalty for synonym indirection
@@ -239,7 +261,6 @@ export class AccountResolutionService {
         }
       }
     }
-
     // If fuzzy matching resolved both with high confidence, return immediately
     if (resolvedSourceId && resolvedCategoryId && sourceScore >= 0.85 && categoryScore >= 0.85) {
       return this.buildResult(
@@ -248,6 +269,8 @@ export class AccountResolutionService {
         (sourceScore + categoryScore) / 2,
         'fuzzy',
         accounts,
+        undefined, // semanticType unknown yet
+        isReversal,
       );
     }
 
@@ -313,8 +336,11 @@ export class AccountResolutionService {
         ? incomeAccounts[0]?.id || categoryAccounts[0]?.id || ('' as AccountId)
         : expenseAccounts[0]?.id || categoryAccounts[0]?.id || ('' as AccountId);
 
-    const fallbackSource = resolvedSourceId || assetAccounts[0]?.id || ('' as AccountId);
-    const fallbackCategory = resolvedCategoryId || defaultCategory;
+    const fallbackSource =
+      resolvedSourceId || (unconstrained ? undefined : assetAccounts[0]?.id) || ('' as AccountId);
+    const fallbackCategory = (resolvedCategoryId ||
+      (unconstrained ? undefined : defaultCategory) ||
+      ('' as AccountId)) as AccountId;
 
     // Penalize strategy and confidence if only one of the sides resolved successfully
     const finalStrategy =
@@ -331,7 +357,24 @@ export class AccountResolutionService {
         ? (sourceScore + categoryScore) / 2
         : resolvedSourceId || resolvedCategoryId
           ? Math.max(sourceScore, categoryScore) * 0.9 // Small penalty if only one side matched
-          : 0.4;
+          : unconstrained
+            ? 0
+            : 0.4; // Zero confidence if AI second-pass failed to match anything
+
+    // 6. Semantic Tagging
+    let semanticType: string | undefined;
+    if (isReversal) {
+      const text = (rawText || '').toLowerCase();
+      if (text.includes('cashback')) {
+        semanticType = 'CASHBACK';
+      } else if (text.includes('chargeback')) {
+        semanticType = 'CHARGEBACK';
+      } else if (text.includes('refund')) {
+        semanticType = 'REFUND';
+      } else {
+        semanticType = direction === 'credit' ? 'REFUND' : 'EXPENSE_REVERSAL';
+      }
+    }
 
     return this.buildResult(
       fallbackSource,
@@ -339,6 +382,8 @@ export class AccountResolutionService {
       finalConfidence,
       finalStrategy,
       accounts,
+      semanticType,
+      isReversal,
     );
   }
 
@@ -348,34 +393,54 @@ export class AccountResolutionService {
   ): { account: Account; score: number } | null {
     let bestMatch: { account: Account; score: number } | null = null;
     const cleanHint = hint.toLowerCase().trim();
-    const hintWords = cleanHint.split(/[\s,._\-\/]+/).filter(w => w.length > 1);
+    const hintWords = cleanHint.split(/[\s,._\-\/]+/).filter(w => w.length > 0);
 
     for (const account of candidates) {
       const cleanName = account.name.toLowerCase().trim();
-      const nameWords = cleanName.split(/[\s,._\-\/]+/).filter(w => w.length > 1);
+      const nameWords = cleanName.split(/[\s,._\-\/]+/).filter(w => w.length > 0);
 
-      // 1. Exact match
+      // 1. Exact match (Ultimate Tier)
       if (cleanName === cleanHint) {
         return { account, score: 1.0 };
       }
 
       let score = 0;
 
-      // 2. Exact word subset matches
-      const isNameSubset = nameWords.length > 0 && nameWords.every(w => hintWords.includes(w));
-      const isHintSubset = hintWords.length > 0 && hintWords.every(w => nameWords.includes(w));
-
-      if (isNameSubset || isHintSubset) {
+      // 2. Starts-with match (Very strong for banks like "HDFC...")
+      if (cleanName.startsWith(cleanHint) || cleanHint.startsWith(cleanName)) {
         score = 0.95;
       } else {
-        // 3. Word overlap match
-        const matchingWords = nameWords.filter(w => hintWords.includes(w));
-        if (matchingWords.length > 0) {
-          const overlapRatio = matchingWords.length / Math.max(nameWords.length, hintWords.length);
-          score = 0.6 + overlapRatio * 0.3;
+        // 3. Exact word subset matches
+        const isNameSubset = nameWords.length > 0 && nameWords.every(w => hintWords.includes(w));
+        const isHintSubset = hintWords.length > 0 && hintWords.every(w => nameWords.includes(w));
+
+        if (isNameSubset || isHintSubset) {
+          score = 0.94;
         } else {
-          // 4. Fallback to Levenshtein similarity
-          score = getStringSimilarity(cleanHint, cleanName);
+          // 4. Word overlap match with sequence bonus
+          const matchingWords = nameWords.filter(w => hintWords.includes(w));
+          if (matchingWords.length > 0) {
+            const overlapRatio =
+              matchingWords.length / Math.max(nameWords.length, hintWords.length);
+
+            // Sequence bonus: Are matching words in the same order?
+            let sequenceMatches = 0;
+            let lastIdx = -1;
+            for (const word of matchingWords) {
+              const idx = hintWords.indexOf(word);
+              if (idx > lastIdx) {
+                sequenceMatches++;
+                lastIdx = idx;
+              }
+            }
+            const sequenceRatio = sequenceMatches / matchingWords.length;
+
+            // Combined word score (Base 0.6 + overlap + sequence)
+            score = 0.5 + overlapRatio * 0.2 + sequenceRatio * 0.2;
+          } else {
+            // 5. Fallback to Levenshtein similarity (highly penalized)
+            score = getStringSimilarity(cleanHint, cleanName) * 0.6;
+          }
         }
       }
 
@@ -542,6 +607,8 @@ export class AccountResolutionService {
     confidence: number,
     strategy: ResolutionResult['strategyUsed'],
     accounts: Account[],
+    semanticType?: string,
+    isReversal?: boolean,
   ): ResolutionResult {
     const sourceAcc = accounts.find(a => a.id === sourceId);
     const categoryAcc = accounts.find(a => a.id === categoryId);
@@ -553,6 +620,8 @@ export class AccountResolutionService {
       categoryAccountName: categoryAcc?.name,
       confidence,
       strategyUsed: strategy,
+      semanticType,
+      isReversal,
     };
   }
 }

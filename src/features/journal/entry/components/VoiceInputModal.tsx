@@ -1,16 +1,13 @@
 import { AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
+import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
-import { transactionExtractorRegistry } from '@/src/services/ledger';
-import {
-  accountResolutionService,
-  ResolutionResult,
-} from '@/src/services/ledger/AccountResolutionService';
-import { ExtractedInfo } from '@/src/services/ledger/TransactionExtractor';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { logger } from '@/src/utils/logger';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Keyboard,
@@ -22,6 +19,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { transactionIngestionService } from '../../services/TransactionIngestionService';
+import { ParserOutput } from '../../types/ai-parsing';
 
 interface VoiceInputModalProps {
   visible: boolean;
@@ -30,6 +29,7 @@ interface VoiceInputModalProps {
     amount?: number;
     merchantName?: string;
     direction: 'debit' | 'credit' | 'unknown';
+    transactionType?: 'expense' | 'income' | 'transfer';
     sourceAccountId: AccountId;
     categoryAccountId: AccountId;
     transcription: string;
@@ -47,13 +47,13 @@ const PREDEFINED_TEMPLATES = [
 
 export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: VoiceInputModalProps) {
   const { theme } = useTheme();
+  const { isNativeAiEnabled } = useUI();
   const insets = useSafeAreaInsets();
 
   const [transcription, setTranscription] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
-  const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo | null>(null);
-  const [resolution, setResolution] = useState<ResolutionResult | null>(null);
+  const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
 
   // Animated bars for voice pulsing visualizer
   const animValues = useRef([
@@ -115,14 +115,12 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     setTranscription('');
     setIsRecording(false);
     setIsParsing(false);
-    setExtractedInfo(null);
-    setResolution(null);
+    setParserOutput(null);
   }, [visible]);
 
   const handleStartSimulatedSpeech = () => {
     setIsRecording(true);
-    setExtractedInfo(null);
-    setResolution(null);
+    setParserOutput(null);
     setTranscription('');
 
     // Simulate raw audio capturing over a brief period
@@ -136,36 +134,17 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     }, 2200);
   };
 
-  const triggerExtraction = async (textToParse: string) => {
+  const triggerExtraction = async (textToParse: string, forceAi: boolean = false) => {
     if (!textToParse.trim()) return;
     setIsParsing(true);
     Keyboard.dismiss();
 
     try {
-      // 1. Run text through unified Voice Extractor
-      const rawInput = {
-        channel: 'voice' as const,
-        id: `voice-${Date.now()}`,
-        rawText: textToParse,
-        date: Date.now(),
-      };
-      const extractor = transactionExtractorRegistry.getExtractorFor(rawInput);
-      const parsed = await extractor.extract(rawInput);
-
-      setExtractedInfo(parsed);
-
-      // 2. Resolve entities in workspace
-      const resolved = await accountResolutionService.resolve({
-        sourceHint: parsed.sourceAccountHint,
-        destinationHint: parsed.destinationCategoryHint,
-        direction: parsed.direction,
-        workplaceId,
-      });
-
-      setResolution(resolved);
-    } catch {
-      setExtractedInfo(null);
-      setResolution(null);
+      const output = await transactionIngestionService.ingest(textToParse, workplaceId, forceAi);
+      setParserOutput(output);
+    } catch (err) {
+      logger.error('[VoiceInputModal] Extraction failed', err);
+      setParserOutput(null);
     } finally {
       setIsParsing(false);
     }
@@ -177,13 +156,17 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
   };
 
   const handleApply = () => {
-    if (!resolution || !extractedInfo) return;
+    if (!parserOutput || parserOutput.transactions.length === 0) return;
+    const result = parserOutput.transactions[0];
+
     onApply({
-      amount: extractedInfo.amount,
-      merchantName: extractedInfo.merchantName,
-      direction: extractedInfo.direction,
-      sourceAccountId: resolution.sourceAccountId,
-      categoryAccountId: resolution.categoryAccountId,
+      amount: result.amount,
+      merchantName: result.categoryNameHint || result.description,
+      direction: result.type === 'income' ? 'credit' : 'debit',
+      transactionType:
+        result.type === 'unknown' ? undefined : (result.type as 'expense' | 'income' | 'transfer'),
+      sourceAccountId: (result.accountId as AccountId) || ('' as AccountId),
+      categoryAccountId: (result.categoryId as AccountId) || ('' as AccountId),
       transcription: transcription.trim(),
     });
     onClose();
@@ -191,8 +174,9 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
-        <Pressable
+      <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View
           style={[
             styles.content,
             {
@@ -200,7 +184,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
               paddingBottom: insets.bottom + Spacing.md,
             },
           ]}
-          onPress={e => e.stopPropagation()}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -216,7 +199,11 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             <View style={{ width: Size.md + Spacing.md }} />
           </View>
 
-          <ScrollView style={styles.scrollableArea} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={styles.scrollableArea}
+            contentContainerStyle={styles.scrollableContent}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Pulsing Visualizer Section */}
             <View style={styles.visualizerContainer}>
               <View style={[styles.visualizerBacking, { backgroundColor: theme.surfaceSecondary }]}>
@@ -274,17 +261,43 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                   width="auto"
                   style={styles.textArea}
                 />
-                {transcription.trim().length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => triggerExtraction(transcription)}
-                    disabled={isParsing}
-                    style={[styles.parseTextTouch, { backgroundColor: theme.primary }]}
-                  >
-                    <AppText variant="caption" weight="bold" style={{ color: theme.onPrimary }}>
-                      {isParsing ? 'Parsing...' : 'Parse'}
-                    </AppText>
-                  </TouchableOpacity>
-                )}
+                <View style={styles.parseActionsGroup}>
+                  {transcription.trim().length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => triggerExtraction(transcription)}
+                      disabled={isParsing}
+                      style={[
+                        styles.parseTextTouch,
+                        {
+                          backgroundColor: theme.surfaceSecondary,
+                          borderColor: theme.border,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <AppText variant="caption" weight="bold" color="primary">
+                        {isParsing ? '...' : 'Auto'}
+                      </AppText>
+                    </TouchableOpacity>
+                  )}
+                  {isNativeAiEnabled && transcription.trim().length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => triggerExtraction(transcription, true)}
+                      disabled={isParsing}
+                      style={[styles.parseTextTouch, { backgroundColor: theme.primary }]}
+                    >
+                      <AppIcon
+                        name="sparkles"
+                        size={12}
+                        color={theme.onPrimary}
+                        style={{ marginRight: 4 }}
+                      />
+                      <AppText variant="caption" weight="bold" style={{ color: theme.onPrimary }}>
+                        {isParsing ? '...' : 'AI'}
+                      </AppText>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
 
               <AppText
@@ -326,12 +339,17 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             {isParsing && (
               <View style={styles.resolutionContainer}>
                 <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                  Resolving semantic properties...
+                  Resolving with on-device AI...
                 </AppText>
+                <ActivityIndicator
+                  size="small"
+                  color={theme.primary}
+                  style={{ marginTop: Spacing.sm }}
+                />
               </View>
             )}
 
-            {!isParsing && extractedInfo && resolution && (
+            {!isParsing && parserOutput && parserOutput.transactions.length > 0 && (
               <View
                 style={[
                   styles.resolutionContainer,
@@ -342,15 +360,33 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                 ]}
               >
                 <View style={styles.resolutionTop}>
-                  <AppText variant="subheading" weight="bold">
-                    Extraction Output
-                  </AppText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                    <AppText variant="subheading" weight="bold">
+                      {parserOutput.isHighConfidence
+                        ? 'Auto-Resolved Output'
+                        : 'Suggested Resolution'}
+                    </AppText>
+                    {parserOutput.provider === 'ai' && (
+                      <View
+                        style={{
+                          backgroundColor: theme.primary + '20',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 4,
+                        }}
+                      >
+                        <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>
+                          NATIVE AI
+                        </AppText>
+                      </View>
+                    )}
+                  </View>
                   <View
                     style={[
                       styles.directionBadge,
                       {
                         backgroundColor:
-                          extractedInfo.direction === 'credit'
+                          parserOutput.transactions[0].type === 'income'
                             ? theme.success + '20'
                             : theme.error + '20',
                       },
@@ -360,10 +396,15 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                       variant="caption"
                       weight="bold"
                       style={{
-                        color: extractedInfo.direction === 'credit' ? theme.success : theme.error,
+                        color:
+                          parserOutput.transactions[0].type === 'income'
+                            ? theme.success
+                            : theme.error,
                       }}
                     >
-                      {extractedInfo.direction === 'credit' ? 'Income (+)' : 'Expense (-)'}
+                      {parserOutput.transactions[0].type === 'income'
+                        ? 'Income (+)'
+                        : 'Expense (-)'}
                     </AppText>
                   </View>
                 </View>
@@ -376,8 +417,8 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                       Amount
                     </AppText>
                     <AppText variant="body" weight="semibold">
-                      {extractedInfo.amount
-                        ? `${extractedInfo.currencyCode || 'INR'} ${extractedInfo.amount}`
+                      {parserOutput.transactions[0].amount
+                        ? `${parserOutput.transactions[0].currencyCode || 'INR'} ${parserOutput.transactions[0].amount}`
                         : 'Not detected'}
                     </AppText>
                   </View>
@@ -387,36 +428,47 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                       Merchant / Note
                     </AppText>
                     <AppText variant="body" weight="semibold">
-                      {extractedInfo.merchantName || 'Not detected'}
+                      {parserOutput.transactions[0].categoryNameHint ||
+                        parserOutput.transactions[0].description ||
+                        'Not detected'}
                     </AppText>
                   </View>
 
                   <View style={styles.gridRow}>
                     <AppText variant="caption" color="secondary">
-                      {extractedInfo.direction === 'credit'
+                      {parserOutput.transactions[0].type === 'income'
                         ? 'Resolved Asset (Destination)'
                         : 'Resolved Asset (Source)'}
                     </AppText>
                     <View style={styles.resolvedAccountBox}>
                       <AppIcon name="creditCard" size={14} color={theme.textSecondary} />
                       <AppText variant="body" weight="bold">
-                        {resolution.sourceAccountName || 'Default account'}
+                        {parserOutput.transactions[0].accountNameHint || 'Default account'}
                       </AppText>
                     </View>
                   </View>
 
                   <View style={styles.gridRow}>
                     <AppText variant="caption" color="secondary">
-                      {extractedInfo.direction === 'credit'
+                      {parserOutput.transactions[0].type === 'income'
                         ? 'Resolved Category (Source)'
                         : 'Resolved Category (Destination)'}
                     </AppText>
                     <View style={styles.resolvedAccountBox}>
                       <AppIcon name="tag" size={14} color={theme.textSecondary} />
                       <AppText variant="body" weight="bold">
-                        {resolution.categoryAccountName || 'Default category'}
+                        {parserOutput.transactions[0].categoryNameHint || 'Default category'}
                       </AppText>
                     </View>
+                  </View>
+
+                  <View style={styles.gridRow}>
+                    <AppText variant="caption" color="secondary">
+                      Processing Time
+                    </AppText>
+                    <AppText variant="body" weight="semibold">
+                      {parserOutput.processTimeMs ? `${parserOutput.processTimeMs}ms` : '--'}
+                    </AppText>
                   </View>
 
                   <View style={styles.gridRow}>
@@ -428,15 +480,14 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                       weight="bold"
                       style={{
                         color:
-                          resolution.confidence > 0.8
+                          parserOutput.confidenceScore > 0.8
                             ? theme.success
-                            : resolution.confidence > 0.6
+                            : parserOutput.confidenceScore > 0.6
                               ? theme.warning
                               : theme.textSecondary,
                       }}
                     >
-                      {Math.round(resolution.confidence * 100)}% ({resolution.strategyUsed}{' '}
-                      strategy)
+                      {Math.round(parserOutput.confidenceScore * 100)}%
                     </AppText>
                   </View>
                 </View>
@@ -447,12 +498,16 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
           {/* Actions */}
           <Separator style={styles.divider} />
           <View style={styles.footerActions}>
-            <AppButton variant="primary" disabled={!resolution || isParsing} onPress={handleApply}>
+            <AppButton
+              variant="primary"
+              disabled={!parserOutput || isParsing}
+              onPress={handleApply}
+            >
               Confirm & Apply
             </AppButton>
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -466,21 +521,25 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Shape.radius.r2,
     borderTopRightRadius: Shape.radius.r2,
     paddingTop: Spacing.md,
-    maxHeight: '85%',
+    height: '85%',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   headerTitle: {
     alignItems: 'center',
     gap: 2,
   },
   scrollableArea: {
+    flex: 1,
+  },
+  scrollableContent: {
     paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.xl,
   },
   visualizerContainer: {
     alignItems: 'center',
@@ -533,6 +592,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  parseActionsGroup: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
   },
   textArea: {
     flex: 1,

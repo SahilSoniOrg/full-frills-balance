@@ -18,6 +18,8 @@ export interface ExtractedInfo {
   destinationCategoryHint?: string; // e.g., "banana", "uber", "groceries"
   merchantName?: string; // e.g., "Starbucks", "Uber India"
   date?: number;
+  isReversal?: boolean;
+  channel?: TransactionChannel;
 }
 
 export interface TransactionExtractor {

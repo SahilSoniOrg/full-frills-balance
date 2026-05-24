@@ -16,3 +16,8 @@
 
       -keep class com.nozbe.watermelondb.** { *; }
       
+# @generated begin expo-build-properties - expo prebuild (DO NOT MODIFY)
+
+            -keep class com.rnllama.** { *; }
+          
+# @generated end expo-build-properties

@@ -263,6 +263,7 @@ export interface ExportData {
   plannedPayments: PlannedPaymentExport[];
   journalMetadata: JournalMetadataExport[];
   transactionAutoPostRules: TransactionAutoPostRuleExport[];
+  transactionInboxRecords: SmsInboxRecordExport[];
   balanceSnapshots: BalanceSnapshotExport[];
   workplace?: WorkplaceExport;
 }
@@ -439,6 +440,7 @@ class ExportService {
         { name: 'Planned Payments', table: 'planned_payments' },
         { name: 'Journal Metadata', table: 'journal_metadata' },
         { name: 'Rules', table: 'transaction_auto_post_rules' },
+        { name: 'Inbox', table: 'transaction_inbox_records' },
       ];
 
       // Track sub-progress of each parallel task
@@ -484,6 +486,7 @@ class ExportService {
         plannedPayments,
         journalMetadata,
         transactionAutoPostRules,
+        transactionInboxRecords,
       ] = fetchResults;
 
       onProgress?.('Processing preferences...', 0.53);
@@ -530,6 +533,7 @@ class ExportService {
         { key: 'plannedPayments', data: plannedPayments },
         { key: 'journalMetadata', data: journalMetadata },
         { key: 'transactionAutoPostRules', data: transactionAutoPostRules },
+        { key: 'transactionInboxRecords', data: transactionInboxRecords },
       ];
 
       let currentProgress = 0.55;

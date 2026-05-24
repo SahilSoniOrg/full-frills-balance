@@ -40,6 +40,8 @@
         <data android:scheme="exp+full-frills-balance"/>
       </intent-filter>
     </activity>
+    <uses-native-library android:name="libOpenCL.so" android:required="false"/>
+    <uses-native-library android:name="libcdsprpc.so" android:required="false"/>
     <receiver android:name=".JournalLauncherWidgetProvider" android:exported="true">
       <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
