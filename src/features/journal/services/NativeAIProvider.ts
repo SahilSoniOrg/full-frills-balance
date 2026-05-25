@@ -1,5 +1,5 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
+import type { LLMEngine } from '@/src/services/ai/types';
 import { logger } from '@/src/utils/logger';
 import {
   AIContext,
@@ -10,24 +10,13 @@ import {
 import { createEntityResolutionPrompt, createTypeClassificationPrompt } from '../utils/ai-prompts';
 
 export class NativeAIProvider implements TransactionFallbackAIProvider {
-  private currentModelId: string = AppConfig.defaults.defaultAiModelId;
   private currentRequestId: number = 0;
   private transactionCount = 0;
 
-  getLoadedModelId(): string | null {
-    // This is no longer meaningful internally, but we can return the currently configured model
-    return this.currentModelId;
-  }
-
-  async preload(modelId: string): Promise<void> {
-    // The underlying engine is now lazy-loaded on the first generation call.
-    // If we wanted to, we could add an explicit pre-warm function to smallModelProvider.
-    // For now, we'll just set the target model ID so the next parse() uses it.
-    this.currentModelId = modelId;
-  }
+  constructor(private engine: LLMEngine) {}
 
   async unload(): Promise<void> {
-    await smallModelProvider.dispose();
+    await this.engine.dispose();
   }
 
   async parse(
@@ -111,7 +100,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
     if (requestId !== this.currentRequestId) return null;
 
     logger.info(`[NativeAIProvider] Single-pass Prompt: ${prompt}`);
-    const response = await smallModelProvider.generate(prompt, this.currentModelId, {
+    const response = await this.engine.generate(prompt, {
       resetContext: shouldReset,
     });
 
@@ -142,7 +131,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       const typePrompt = createTypeClassificationPrompt(transcript);
       logger.info(`[NativeAIProvider] Pass 1 Prompt: ${typePrompt}`);
 
-      const typeResponse = await smallModelProvider.generate(typePrompt, this.currentModelId, {
+      const typeResponse = await this.engine.generate(typePrompt, {
         resetContext: shouldReset,
       });
       if (typeResponse.stats)
@@ -166,7 +155,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       );
       logger.info(`[NativeAIProvider] Pass 2 Prompt: ${sourcePrompt}`);
 
-      const sourceResponse = await smallModelProvider.generate(sourcePrompt, this.currentModelId, {
+      const sourceResponse = await this.engine.generate(sourcePrompt, {
         resetContext: false,
       });
       if (sourceResponse.stats)
@@ -194,7 +183,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       );
       logger.info(`[NativeAIProvider] Pass 3 Prompt: ${targetPrompt}`);
 
-      const targetResponse = await smallModelProvider.generate(targetPrompt, this.currentModelId, {
+      const targetResponse = await this.engine.generate(targetPrompt, {
         resetContext: false,
       });
       if (targetResponse.stats)
@@ -273,14 +262,10 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       : null;
   }
 
-  setModel(modelId: string) {
-    this.currentModelId = modelId;
-  }
-
   async abort() {
     logger.info('[NativeAIProvider] Explicitly aborting ongoing requests...');
     this.currentRequestId++;
   }
 }
 
-export const nativeAIProvider = new NativeAIProvider();
+export const nativeAIProvider = new NativeAIProvider(smallModelProvider);

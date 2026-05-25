@@ -15,6 +15,7 @@ import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { nativeAIProvider } from '../services/NativeAIProvider';
+import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
 import { mockAIProvider } from '../services/TransactionFallbackAIProvider';
 import { transactionIngestionService } from '../services/TransactionIngestionService';
 
@@ -61,7 +62,7 @@ export function AiBenchmarkView() {
     modelManagementService.addListener(handleProgress);
 
     // Init loaded model state
-    setLoadedModelId(nativeAIProvider.getLoadedModelId());
+    setLoadedModelId(smallModelProvider.getLoadedModelId());
 
     return () => modelManagementService.removeListener(handleProgress);
   }, []);
@@ -100,8 +101,8 @@ export function AiBenchmarkView() {
   const handleLoadModel = async (modelId: string) => {
     setIsLoadingMemory(true);
     try {
-      await nativeAIProvider.preload(modelId);
-      setLoadedModelId(nativeAIProvider.getLoadedModelId());
+      await smallModelProvider.switchModel(modelId);
+      setLoadedModelId(smallModelProvider.getLoadedModelId());
     } catch (e) {
       Alert.alert('Load Failed', String(e));
     } finally {
@@ -152,7 +153,7 @@ export function AiBenchmarkView() {
     setBenchmarkingId(modelId);
     setBenchmarkResults([]);
     isCancelledRef.current = false;
-    nativeAIProvider.setModel(modelId);
+    await smallModelProvider.switchModel(modelId);
 
     const results = [];
     for (const transcript of TEST_TRANSCRIPTS) {
@@ -202,14 +203,14 @@ export function AiBenchmarkView() {
         setBenchmarkingId(null);
       }
     }
-    setLoadedModelId(nativeAIProvider.getLoadedModelId());
+    setLoadedModelId(smallModelProvider.getLoadedModelId());
   };
 
   const abortBenchmark = () => {
     isCancelledRef.current = true;
     setBenchmarkingId(null);
     nativeAIProvider.abort();
-    setLoadedModelId(nativeAIProvider.getLoadedModelId());
+    setLoadedModelId(smallModelProvider.getLoadedModelId());
   };
 
   const renderModelCard = (model: AIModelMetadata) => {

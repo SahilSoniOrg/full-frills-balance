@@ -17,6 +17,7 @@ import {
 } from '../types/ai-parsing';
 import { nativeAIProvider } from './NativeAIProvider';
 import { mockAIProvider } from './TransactionFallbackAIProvider';
+import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
 
 export class TransactionIngestionService {
   private customAiProvider: TransactionFallbackAIProvider | null = null;
@@ -29,7 +30,7 @@ export class TransactionIngestionService {
     if (this.customAiProvider) return this.customAiProvider;
 
     if (preferences.isNativeAiEnabled) {
-      nativeAIProvider.setModel(
+      smallModelProvider.switchModel(
         preferences.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
       );
       return nativeAIProvider;

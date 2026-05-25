@@ -60,12 +60,16 @@ export interface GenerateResult {
 }
 
 export interface LLMEngine {
-  generate(prompt: string, modelId: string, options?: AIGenerateOptions): Promise<GenerateResult>;
+  generate(prompt: string, options?: AIGenerateOptions): Promise<GenerateResult>;
   generateStream?(
     prompt: string,
-    modelId: string,
     onToken: (token: string, done: boolean) => void,
     options?: AIGenerateOptions,
   ): Promise<void>;
   dispose(): Promise<void>;
+}
+
+export interface DynamicLLMEngine extends LLMEngine {
+  switchModel(modelId: string): Promise<void>;
+  getLoadedModelId(): string | null;
 }

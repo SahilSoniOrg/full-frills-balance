@@ -6,14 +6,24 @@ import {
   type Backend,
   type LiteRTLMInstance,
 } from 'react-native-litert-lm';
-import type { AIGenerateOptions, LLMEngine, GenerateResult, InferenceStats } from './types';
+import { AppConfig } from '@/src/constants/app-config';
+import type { AIGenerateOptions, DynamicLLMEngine, GenerateResult, InferenceStats } from './types';
 import { modelManagementService } from './ModelManagementService';
 
-export class SmallModelProvider implements LLMEngine {
+export class SmallModelProvider implements DynamicLLMEngine {
   private llm: LiteRTLMInstance | null = null;
   private currentModelId: string | null = null;
+  private defaultModelId: string;
+
+  constructor(defaultModelId: string = AppConfig.defaults.defaultAiModelId) {
+    this.defaultModelId = defaultModelId;
+  }
 
   private executionQueue: Promise<any> = Promise.resolve();
+
+  getLoadedModelId(): string | null {
+    return this.currentModelId;
+  }
 
   private async ensureModelLoaded(modelId: string): Promise<void> {
     if (this.currentModelId === modelId && this.llm) {
@@ -78,26 +88,34 @@ export class SmallModelProvider implements LLMEngine {
     }
   }
 
-  async generate(
-    prompt: string,
-    modelId: string,
-    options?: AIGenerateOptions,
-  ): Promise<GenerateResult> {
-    const nextInQueue = this.executionQueue.then(() =>
-      this.generateInternal(prompt, modelId, options),
-    );
+  async switchModel(modelId: string): Promise<void> {
+    const nextInQueue = this.executionQueue.then(() => this.switchModelInternal(modelId));
+    this.executionQueue = nextInQueue.catch(() => {});
+    return nextInQueue;
+  }
+
+  private async switchModelInternal(modelId: string): Promise<void> {
+    if (this.currentModelId === modelId && this.llm) {
+      return;
+    }
+    await this.disposeInternal();
+    this.defaultModelId = modelId;
+    await this.ensureModelLoaded(modelId);
+  }
+
+  async generate(prompt: string, options?: AIGenerateOptions): Promise<GenerateResult> {
+    const nextInQueue = this.executionQueue.then(() => this.generateInternal(prompt, options));
     this.executionQueue = nextInQueue.catch(() => {});
     return nextInQueue;
   }
 
   async generateStream(
     prompt: string,
-    modelId: string,
     onToken: (token: string, done: boolean) => void,
     options?: AIGenerateOptions,
   ): Promise<void> {
     const nextInQueue = this.executionQueue.then(() =>
-      this.generateStreamInternal(prompt, modelId, onToken, options),
+      this.generateStreamInternal(prompt, onToken, options),
     );
     this.executionQueue = nextInQueue.catch(() => {});
     return nextInQueue;
@@ -105,18 +123,18 @@ export class SmallModelProvider implements LLMEngine {
 
   private async generateInternal(
     prompt: string,
-    modelId: string,
     options?: AIGenerateOptions,
     retryCount = 0,
   ): Promise<GenerateResult> {
-    await this.ensureModelLoaded(modelId);
+    const targetModelId = this.currentModelId || this.defaultModelId;
+    await this.ensureModelLoaded(targetModelId);
     if (!this.llm) throw new Error('Provider not initialized');
 
     if (options?.resetContext !== false) {
       this.llm.resetConversation();
     }
 
-    logger.info(`[SmallModelProvider] Generating completion for ${modelId}...`);
+    logger.info(`[SmallModelProvider] Generating completion for ${targetModelId}...`);
 
     try {
       const formattedPrompt = `Output valid JSON only. No explanations. Do not use <think> tags.\n\n${prompt}`;
@@ -139,7 +157,7 @@ export class SmallModelProvider implements LLMEngine {
         const backoff = (retryCount + 1) * 300;
         logger.warn(`[SmallModelProvider] Native busy, retrying in ${backoff}ms...`);
         await new Promise(r => setTimeout(r, backoff));
-        return this.generateInternal(prompt, modelId, options, retryCount + 1);
+        return this.generateInternal(prompt, options, retryCount + 1);
       }
 
       throw e;
@@ -148,11 +166,11 @@ export class SmallModelProvider implements LLMEngine {
 
   private async generateStreamInternal(
     prompt: string,
-    modelId: string,
     onToken: (token: string, done: boolean) => void,
     options?: AIGenerateOptions,
   ): Promise<void> {
-    await this.ensureModelLoaded(modelId);
+    const targetModelId = this.currentModelId || this.defaultModelId;
+    await this.ensureModelLoaded(targetModelId);
     if (!this.llm) throw new Error('Provider not initialized');
 
     if (options?.resetContext !== false) {
