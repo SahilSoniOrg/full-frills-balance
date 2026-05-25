@@ -1,147 +1,197 @@
 import { logger } from '@/src/utils/logger';
-import { File } from 'expo-file-system';
-import * as llamaModule from 'llama.rn';
 import { Platform } from 'react-native';
-import { AIProvider } from './types';
-
-// We dynamically import llama.rn to avoid issues on platforms where it's not supported
-// or during build time if native modules are not linked.
-let initLlama: any;
-try {
-  initLlama = llamaModule?.initLlama;
-  if (initLlama) {
-    logger.info('[SmallModelProvider] llama.rn module loaded successfully');
-  } else {
-    logger.warn('[SmallModelProvider] llama.rn module loaded but initLlama is missing');
-  }
-} catch (_e) {
-  // Silent at top level, error will be thrown during initialize() if used
-}
+import {
+  checkBackendSupport,
+  createLLM,
+  type Backend,
+  type LiteRTLMInstance,
+} from 'react-native-litert-lm';
+import type { AIGenerateOptions, AIProvider, AIProviderInitOptions, InferenceStats } from './types';
 
 export class SmallModelProvider implements AIProvider {
-  private context: any = null;
-  private executionQueue: Promise<any> = Promise.resolve();
+  private llm: LiteRTLMInstance | null = null;
 
-  async initialize(modelPath: string): Promise<void> {
+  private executionQueue: Promise<any> = Promise.resolve();
+  private lastStats: InferenceStats | null = null;
+
+  async initialize(modelPath: string, options?: AIProviderInitOptions): Promise<void> {
     // Initialization also needs to be part of the queue to avoid clashing with late generations
     return (this.executionQueue = this.executionQueue.then(async () => {
-      if (!initLlama) {
-        throw new Error(
-          'llama.rn is not available on this platform/build. Did you rebuild the native app?',
+      // Strip file:// for both platforms to ensure C++ FFI gets a clean absolute UNIX path
+      const normalizedPath = modelPath.replace(/^file:\/\//, '');
+
+      // Determine optimal backend: prefer GPU on iOS (Metal always available),
+      // fall back to CPU if backend is unsupported on this device
+      const requestedBackend: Backend = options?.backend ?? (Platform.OS === 'ios' ? 'gpu' : 'cpu');
+      const backendWarning = checkBackendSupport(requestedBackend);
+      const backend: Backend = backendWarning ? 'cpu' : requestedBackend;
+
+      if (backendWarning) {
+        logger.warn(
+          `[SmallModelProvider] Backend '${requestedBackend}' unsupported: ${backendWarning}. Falling back to CPU.`,
         );
       }
 
-      if (this.context) {
-        await this.disposeInternal();
-      }
-
-      const normalizedPath =
-        Platform.OS === 'android' ? modelPath.replace('file://', '') : modelPath;
+      logger.info(
+        `[SmallModelProvider] Initializing model at ${normalizedPath} (backend: ${backend})`,
+      );
 
       try {
-        const file = new File(modelPath);
-        if (!file.exists) throw new Error(`Model file not found at path: ${modelPath}`);
-      } catch (fileErr) {
-        logger.error(`[SmallModelProvider] File verification failed: ${modelPath}`, fileErr);
-        throw fileErr;
-      }
+        // IMPORTANT: Reuse the same native instance across re-initializations.
+        // Each HybridLiteRTLM creates its own serial DispatchQueue ("dev.litert.engine").
+        // If we close() the old instance and createLLM() a new one, the old engine teardown
+        // and new engine creation run on DIFFERENT queues, causing a race condition where
+        // litert_lm_engine_delete and litert_lm_engine_create overlap and corrupt shared
+        // global state in the LiteRT C library (SIGSEGV in ReplaceMagicNumbersIfAny).
+        //
+        // The native loadModel() already calls closeInternal() at the start of its async block,
+        // which properly tears down the old engine + conversation on the SAME serial queue
+        // before creating the new one — eliminating the race.
+        if (!this.llm) {
+          this.llm = createLLM({ enableMemoryTracking: true });
+        }
 
-      logger.info(`[SmallModelProvider] Initializing model at ${normalizedPath}`);
-
-      try {
-        this.context = await initLlama({
-          model: normalizedPath,
-          n_ctx: 2048,
-          n_threads: Platform.OS === 'android' ? 6 : 4,
-          n_gpu_layers: Platform.OS === 'ios' ? 1 : 0,
+        await this.llm.loadModel(normalizedPath, {
+          backend,
+          maxTokens: options?.maxTokens ?? 1024,
+          systemPrompt: options?.systemPrompt,
+          temperature: options?.temperature ?? 0.7,
+          topK: options?.topK ?? 40,
+          topP: options?.topP ?? 0.95,
         });
-        logger.info(
-          `[SmallModelProvider] Model initialized with ${Platform.OS === 'android' ? 6 : 4} threads`,
-        );
+        this.lastStats = null;
+        logger.info(`[SmallModelProvider] Model initialized`);
       } catch (e) {
         const errorMsg = e instanceof Error ? e.message : String(e);
-        logger.error(`[SmallModelProvider] initLlama failed: ${errorMsg}`, e);
+        logger.error(`[SmallModelProvider] loadModel failed: ${errorMsg}`, e);
         throw e;
       }
     }));
   }
 
-  async generate(prompt: string, options?: { timeout?: number }): Promise<string> {
+  async generate(prompt: string, options?: AIGenerateOptions): Promise<string> {
     // Chain onto the execution queue to ensure serial access to the native context
     const nextInQueue = this.executionQueue.then(() => this.generateInternal(prompt, options));
     this.executionQueue = nextInQueue.catch(() => {}); // Continue queue even if one fails
     return nextInQueue;
   }
 
+  async generateStream(
+    prompt: string,
+    onToken: (token: string, done: boolean) => void,
+    options?: AIGenerateOptions,
+  ): Promise<void> {
+    const nextInQueue = this.executionQueue.then(() =>
+      this.generateStreamInternal(prompt, onToken, options),
+    );
+    this.executionQueue = nextInQueue.catch(() => {});
+    return nextInQueue;
+  }
+
+  getStats(): InferenceStats | null {
+    return this.lastStats;
+  }
+
   private async generateInternal(
     prompt: string,
-    options?: { timeout?: number },
+    options?: AIGenerateOptions,
     retryCount = 0,
   ): Promise<string> {
-    if (!this.context) throw new Error('Provider not initialized');
+    if (!this.llm) throw new Error('Provider not initialized');
 
-    const timeout = options?.timeout || 10000;
+    // For isolated prompts (default), reset context to avoid prior conversation
+    // bleeding into JSON parsing results. The multi-pass pipeline runs 3 sequential
+    // generate() calls — without reset, Pass 2 sees Pass 1's response in context.
+    if (options?.resetContext !== false) {
+      this.llm.resetConversation();
+    }
 
     logger.info('[SmallModelProvider] Generating completion...');
 
-    // 1. The native completion call
-    const completionPromise = this.context.completion({
-      messages: [
-        { role: 'system', content: 'Output valid JSON only. No explanations.' },
-        { role: 'user', content: prompt },
-      ],
-      n_predict: 128,
-      sampling: { temp: 0.1 },
-    });
-
-    // 2. The JS timeout monitor
-    let timeoutId: any;
-    const timeoutPromise = new Promise<string>(resolve => {
-      timeoutId = setTimeout(() => resolve('ERROR_AI_TIMEOUT'), timeout);
-    });
-
     try {
-      const result: any = await Promise.race([completionPromise, timeoutPromise]);
-      clearTimeout(timeoutId);
+      // Prepend instructions to avoid breaking Gemma's native chat template
+      // and explicitly instruct reasoning models to skip thought traces
+      const formattedPrompt = `Output valid JSON only. No explanations. Do not use <think> tags.\n\n${prompt}`;
 
-      if (result === 'ERROR_AI_TIMEOUT') {
-        logger.warn('[SmallModelProvider] Generation timed out, stopping native task');
-        try {
-          await this.context.stopCompletion();
-        } catch {}
-        throw new Error('AI_TIMEOUT');
+      let result = await this.llm.sendMessage(formattedPrompt);
+
+      logger.info('[SmallModelProvider] Raw response received:', { text: result });
+
+      // Some distillation models (like DeepSeek R1) omit the opening <think> tag
+      // and only output the reasoning followed by </think>.
+      if (result.includes('</think>')) {
+        result = result.substring(result.indexOf('</think>') + 8);
       }
+      // Also strip any standard enclosed <think>...</think> blocks just in case
+      result = result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-      logger.info('[SmallModelProvider] Raw response received:', { text: result.text });
-      return result.text;
+      // Capture inference stats for diagnostics and benchmarking
+      this.captureStats();
+
+      return result;
     } catch (e) {
-      if (timeoutId) clearTimeout(timeoutId);
-
       const errorMsg = String(e);
-      if (errorMsg.includes('Context is busy') && retryCount < 3) {
+      if (errorMsg.includes('busy') && retryCount < 3) {
         const backoff = (retryCount + 1) * 300;
         logger.warn(`[SmallModelProvider] Native busy, retrying in ${backoff}ms...`);
         await new Promise(r => setTimeout(r, backoff));
         return this.generateInternal(prompt, options, retryCount + 1);
       }
 
-      try {
-        await this.context.stopCompletion();
-      } catch {}
       throw e;
     }
   }
 
-  private async disposeInternal(): Promise<void> {
-    if (this.context) {
-      logger.info('[SmallModelProvider] Disposing context');
+  private async generateStreamInternal(
+    prompt: string,
+    onToken: (token: string, done: boolean) => void,
+    options?: AIGenerateOptions,
+  ): Promise<void> {
+    if (!this.llm) throw new Error('Provider not initialized');
+
+    if (options?.resetContext !== false) {
+      this.llm.resetConversation();
+    }
+
+    return new Promise<void>((resolve, reject) => {
       try {
-        await this.context.stopCompletion();
-      } catch {}
-      if (typeof this.context.release === 'function') {
-        await this.context.release();
+        this.llm!.sendMessageAsync(prompt, (token: string, done: boolean) => {
+          onToken(token, done);
+          if (done) {
+            this.captureStats();
+            resolve();
+          }
+        });
+      } catch (e) {
+        reject(e);
       }
-      this.context = null;
+    });
+  }
+
+  private captureStats(): void {
+    if (!this.llm) return;
+    try {
+      const stats = this.llm.getStats();
+      this.lastStats = {
+        tokensPerSecond: stats.tokensPerSecond,
+        timeToFirstTokenMs: stats.timeToFirstToken,
+        completionTokens: stats.completionTokens,
+        totalDurationMs:
+          stats.tokensPerSecond > 0 ? (stats.completionTokens / stats.tokensPerSecond) * 1000 : 0,
+      };
+    } catch {
+      // Stats may not be available on all platforms/configurations
+    }
+  }
+
+  private async disposeInternal(): Promise<void> {
+    if (this.llm) {
+      logger.info('[SmallModelProvider] Disposing LLM context');
+      try {
+        this.llm.close();
+      } catch {}
+      this.llm = null;
+      this.lastStats = null;
     }
   }
 

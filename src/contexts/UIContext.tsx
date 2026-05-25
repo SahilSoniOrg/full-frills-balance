@@ -173,7 +173,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     safeToSpendDays: AppConfig.defaults.safeToSpendDays,
     isSmsImportEnabled: false,
     isNativeAiEnabled: false,
-    preferredAiModelId: 'qwen-2.5-0.5b',
+    preferredAiModelId: AppConfig.defaults.defaultAiModelId,
     aiInferenceMode: 'multi',
     isDataHydrated: false,
   });
@@ -215,7 +215,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
           safeToSpendDays: loadedPreferences.safeToSpendDays || AppConfig.defaults.safeToSpendDays,
           isSmsImportEnabled: loadedPreferences.isSmsImportEnabled || false,
           isNativeAiEnabled: loadedPreferences.isNativeAiEnabled || false,
-          preferredAiModelId: loadedPreferences.preferredAiModelId || 'qwen-2.5-0.5b',
+          preferredAiModelId:
+            loadedPreferences.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
           aiInferenceMode: loadedPreferences.aiInferenceMode || 'multi',
         }));
       } catch (error) {

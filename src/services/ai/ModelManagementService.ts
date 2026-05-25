@@ -1,107 +1,227 @@
+import { logger } from '@/src/utils/logger';
+import { storage } from '@/src/utils/storage';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
-import { storage } from '@/src/utils/storage';
-import { AIModelMetadata, ModelDownloadStatus } from './types';
-import { logger } from '@/src/utils/logger';
+import { Platform } from 'react-native';
+import type { AIModelMetadata, ModelDownloadStatus } from './types';
 
 const MODEL_DIR = `${Paths.document.uri}models/`;
 const STORAGE_PREFIX = 'ai_model_status_';
 const CUSTOM_MODELS_KEY = 'ai_custom_models';
 
+/**
+ * Supported model catalog.
+ * Metadata aligned with Gallery allowlist schema and LiteRT-LM capabilities API.
+ * See: gallery/model_allowlists/1_0_15.json, gallery/model_allowlists/ios_1_0_0.json
+ */
 export const SUPPORTED_MODELS: AIModelMetadata[] = [
   {
-    id: 'qwen-2.5-0.5b',
-    name: 'Qwen 2.5 0.5B',
-    description: 'Ultra-lightweight from Alibaba. Extremely fast, decent accuracy.',
-    url: 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
-    sizeBytes: 398000000,
-    parameters: '0.5B',
-    quantization: 'Q4_K_M',
-    filename: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+    id: 'gemma-4-e2b-it',
+    name: 'Gemma 4 E2B Instruct',
+    description: 'Recommended: 2B parameters, latest generation with multimodal support.',
+    url: 'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm',
+    sizeBytes: 2580000000,
+    parameters: '2B',
+    quantization: 'INT8',
+    filename: 'gemma-4-E2B-it.litertlm',
+    minDeviceMemoryGb: 8,
+    capabilities: ['llm_thinking', 'speculative_decoding'],
+    supportsImage: true,
+    supportsAudio: true,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 4000,
+      accelerators: 'gpu,cpu',
+    },
   },
   {
-    id: 'qwen-2.5-1.5b',
-    name: 'Qwen 2.5 1.5B',
-    description: 'Bigger brother of 0.5B. Significantly smarter, still fast.',
-    url: 'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
-    sizeBytes: 980000000,
-    parameters: '1.5B',
-    quantization: 'Q4_K_M',
-    filename: 'qwen2.5-1.5b-instruct-q4_k_m.gguf',
+    id: 'gemma-4-e4b-it',
+    name: 'Gemma 4 E4B Instruct',
+    description: '4B parameters, higher quality than E2B but requires more device memory.',
+    url: 'https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm',
+    sizeBytes: 3650000000,
+    parameters: '4B',
+    quantization: 'INT8',
+    filename: 'gemma-4-E4B-it.litertlm',
+    minDeviceMemoryGb: 12,
+    capabilities: ['llm_thinking', 'speculative_decoding'],
+    supportsImage: true,
+    supportsAudio: true,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 4000,
+      accelerators: 'gpu,cpu',
+    },
   },
   {
-    id: 'deepseek-r1-1.5b',
-    name: 'DeepSeek R1 Distill 1.5B',
-    description: 'Reasoning model distilled from DeepSeek-R1. High logical accuracy.',
-    url: 'https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf',
-    sizeBytes: 1100000000,
-    parameters: '1.5B',
-    quantization: 'Q4_K_M',
-    filename: 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf',
-  },
-  {
-    id: 'smollm2-360m',
-    name: 'SmolLM2 360M IT',
-    description: 'Ultra-tiny but capable model from Hugging Face. Very fast on low-end hardware.',
-    url: 'https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf',
-    sizeBytes: 210000000,
-    parameters: '360M',
-    quantization: 'Q4_K_M',
-    filename: 'smollm2-360m-instruct-q4_k_m.gguf',
-  },
-  {
-    id: 'llama-3.2-1b',
-    name: 'Llama 3.2 1B',
-    description: "Meta's mobile-optimized model. Excellent reasoning.",
-    url: 'https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf',
-    sizeBytes: 750000000,
-    parameters: '1B',
-    quantization: 'Q4_K_M',
-    filename: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf',
-  },
-  {
-    id: 'llama-3.2-3b',
-    name: 'Llama 3.2 3B',
-    description: 'High-performance Meta model. Needs 4GB+ RAM.',
-    url: 'https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf',
-    sizeBytes: 2000000000,
-    parameters: '3B',
-    quantization: 'Q4_K_M',
-    filename: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf',
+    id: 'gemma-3n-e2b-it-int4',
+    name: 'Gemma 3N E2B IT INT4',
+    description:
+      'Smaller footprint INT4 model with multimodal support. Works without iOS extended addressing entitlement.',
+    url: 'https://litert.dev/gemma-3n-E2B-it-int4.litertlm',
+    sizeBytes: 1530000000,
+    parameters: '2B',
+    quantization: 'INT4',
+    filename: 'gemma-3n-e2b-it-int4.litertlm',
+    minDeviceMemoryGb: 6,
+    supportsImage: true,
+    supportsAudio: true,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 1024,
+      accelerators: 'cpu,gpu',
+    },
   },
   {
     id: 'gemma-3-1b',
-    name: 'Gemma 3 1B IT (Unsloth)',
-    description: "Google's brand new lightweight model, optimized by Unsloth for high performance.",
-    url: 'https://huggingface.co/unsloth/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-UD-Q4_K_XL.gguf',
-    sizeBytes: 807000000,
+    name: 'Gemma 3 1B',
+    description: 'Smallest Gemma model for very fast inference. Text only.',
+    url: 'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096.litertlm',
+    sizeBytes: 1200000000,
     parameters: '1B',
-    quantization: 'UD-Q4_K_XL',
-    filename: 'gemma-3-1b-it-UD-Q4_K_XL.gguf',
+    quantization: 'Q4',
+    filename: 'Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096.litertlm',
+    minDeviceMemoryGb: 4,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 1024,
+      accelerators: 'gpu,cpu',
+    },
   },
   {
-    id: 'gemma-2-2b',
-    name: 'Gemma 2 2B',
-    description: "Google's best small model. Very high accuracy.",
-    url: 'https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf',
-    sizeBytes: 1600000000,
+    id: 'phi-4-mini',
+    name: 'Phi-4 Mini Instruct',
+    description: 'Microsoft Phi-4 Mini, strong reasoning capabilities. Text only.',
+    url: 'https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    sizeBytes: 2400000000,
+    parameters: 'Mini',
+    quantization: 'Q8',
+    filename: 'Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    minDeviceMemoryGb: 6,
+    defaultConfig: {
+      topK: 40,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 1024,
+      accelerators: 'cpu',
+    },
+  },
+  {
+    id: 'qwen-2.5-1.5b',
+    name: 'Qwen 2.5 1.5B Instruct',
+    description: 'Fast multilingual model from Alibaba. Text only.',
+    url: 'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    sizeBytes: 1800000000,
+    parameters: '1.5B',
+    quantization: 'Q8',
+    filename: 'Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    minDeviceMemoryGb: 6,
+    defaultConfig: {
+      topK: 20,
+      topP: 0.8,
+      temperature: 0.7,
+      maxTokens: 1024,
+      accelerators: 'cpu',
+    },
+  },
+  {
+    id: 'qwen-3.5-2b-q4',
+    name: 'Qwen 3.5 2B Q4 Base',
+    description:
+      'Uses a hybrid GatedDeltaNet Linear Attention mechanism that replaces traditional KV cache with a recurrent hidden state.',
+    url: 'https://huggingface.co/paulsp94/Qwen3.5-2B-LiteRT-LM/resolve/main/qwen35_2b_q4.litertlm',
+    sizeBytes: 1070000000,
     parameters: '2B',
-    quantization: 'Q4_K_M',
-    filename: 'gemma-2-2b-it-Q4_K_M.gguf',
+    quantization: 'INT4',
+    filename: 'qwen35_2b_q4.litertlm',
+    minDeviceMemoryGb: 6,
+    capabilities: ['llm_thinking', 'speculative_decoding'],
+    supportsImage: false,
+    supportsAudio: false,
+    defaultConfig: {
+      topK: 50,
+      topP: 0.95,
+      temperature: 0.8,
+      maxTokens: 4000,
+      accelerators: 'cpu,gpu',
+    },
   },
   {
-    id: 'gemma-2-9b',
-    name: 'Gemma 2 9B',
-    description: 'Powerhouse. Desktop-class accuracy. Needs 8GB+ RAM.',
-    url: 'https://huggingface.co/bartowski/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q4_K_M.gguf',
-    sizeBytes: 5400000000,
-    parameters: '9B',
-    quantization: 'Q4_K_M',
-    filename: 'gemma-2-9b-it-Q4_K_M.gguf',
+    id: 'qwen-3-4b-it',
+    name: 'Qwen 3 4B Instruct',
+    description:
+      'Optimized 4B parameter model featuring channel-wise weight quantization and an uncompressed Float32 KV cache.',
+    url: 'https://huggingface.co/litert-community/Qwen3-4B/resolve/main/qwen3_4b_channelwise_int8_float32kv.litertlm',
+    sizeBytes: 5280000000,
+    parameters: '4B',
+    quantization: 'INT8',
+    filename: 'qwen3_4b_channelwise_int8_float32kv.litertlm',
+    minDeviceMemoryGb: 12,
+    capabilities: ['llm_thinking', 'speculative_decoding'],
+    supportsImage: false,
+    supportsAudio: false,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 4000,
+      accelerators: 'cpu,gpu',
+    },
+  },
+  {
+    id: 'phi-4-mini-instruct',
+    name: 'Phi 4 Mini Instruct',
+    description:
+      "Microsoft's high-performance mini model, configured with multi-prefill parameters to handle complex context setups.",
+    url: 'https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    sizeBytes: 3910000000,
+    parameters: '3.8B',
+    quantization: 'INT8',
+    filename: 'Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    minDeviceMemoryGb: 12,
+    capabilities: ['llm_thinking', 'speculative_decoding'],
+    supportsImage: false,
+    supportsAudio: false,
+    defaultConfig: {
+      topK: 50,
+      topP: 0.9,
+      temperature: 0.7,
+      maxTokens: 4096,
+      accelerators: 'cpu,gpu',
+    },
   },
 ];
 
 export class ModelManagementService {
+  private activeDownloads = new Map<string, FileSystemLegacy.DownloadResumable>();
+  private progressListeners = new Set<
+    (modelId: string, progress: number, isComplete: boolean) => void
+  >();
+
+  addListener(listener: (modelId: string, progress: number, isComplete: boolean) => void) {
+    this.progressListeners.add(listener);
+  }
+
+  removeListener(listener: (modelId: string, progress: number, isComplete: boolean) => void) {
+    this.progressListeners.delete(listener);
+  }
+
+  private emitProgress(modelId: string, progress: number, isComplete: boolean) {
+    this.progressListeners.forEach(listener => listener(modelId, progress, isComplete));
+  }
+
+  isDownloading(modelId: string): boolean {
+    return this.activeDownloads.has(modelId);
+  }
+
   async ensureModelDirectory(): Promise<void> {
     const dir = new Directory(MODEL_DIR);
     if (!dir.exists) {
@@ -115,7 +235,37 @@ export class ModelManagementService {
   }
 
   getAllModels(): AIModelMetadata[] {
-    return [...SUPPORTED_MODELS, ...this.getCustomModels()];
+    const models = [...SUPPORTED_MODELS, ...this.getCustomModels()];
+    return models.filter(
+      m => !m.supportedPlatforms || m.supportedPlatforms.includes(Platform.OS as any),
+    );
+  }
+
+  /**
+   * Returns the recommended model for the device.
+   * Prefers the default model (gemma-3n-e2b-it-int4 — smallest, no iOS entitlement needed).
+   * Falls back to any downloaded model (preferring smallest), or the default if none downloaded.
+   */
+  async getRecommendedModel(): Promise<AIModelMetadata> {
+    const allModels = this.getAllModels();
+    const defaultId = 'gemma-3n-e2b-it-int4';
+
+    // Prefer default if downloaded
+    const defaultModel = allModels.find(m => m.id === defaultId);
+    if (defaultModel) {
+      const status = await this.getDownloadStatus(defaultModel.id);
+      if (status.isDownloaded) return defaultModel;
+    }
+
+    // Otherwise return any downloaded model, preferring smallest
+    const sortedBySize = [...allModels].sort((a, b) => a.sizeBytes - b.sizeBytes);
+    for (const model of sortedBySize) {
+      const status = await this.getDownloadStatus(model.id);
+      if (status.isDownloaded) return model;
+    }
+
+    // No model downloaded — return the default anyway for download prompt
+    return defaultModel ?? allModels[0];
   }
 
   async registerCustomModel(model: Omit<AIModelMetadata, 'isCustom'>): Promise<void> {
@@ -148,6 +298,7 @@ export class ModelManagementService {
       isDownloaded: file.exists,
       progress: file.exists ? 1 : persistedStatus?.progress || 0,
       localPath: file.exists ? localPath : undefined,
+      bytesWritten: persistedStatus?.bytesWritten,
     };
   }
 
@@ -163,6 +314,14 @@ export class ModelManagementService {
       return localPath;
     }
 
+    if (this.activeDownloads.has(modelId)) {
+      logger.info(`Download already in progress for ${modelId}`);
+      // If there's an ongoing request, we don't return the path immediately,
+      // but the caller might just want to wait for it. We'll just return undefined
+      // or we could return a stored Promise. For now, we return empty string.
+      return '';
+    }
+
     // Downloading still uses legacy API for resumable downloads
     const downloadResumable = FileSystemLegacy.createDownloadResumable(
       model.url,
@@ -172,20 +331,54 @@ export class ModelManagementService {
         const progress =
           downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
         onProgress?.(progress);
-        this.saveStatus(modelId, { isDownloaded: false, progress });
+        this.emitProgress(modelId, progress, false);
+        this.saveStatus(modelId, {
+          isDownloaded: false,
+          progress,
+          bytesWritten: downloadProgress.totalBytesWritten,
+        });
       },
     );
+
+    this.activeDownloads.set(modelId, downloadResumable);
 
     try {
       const result = await downloadResumable.downloadAsync();
       if (!result) throw new Error('Download failed');
 
       this.saveStatus(modelId, { isDownloaded: true, progress: 1 });
+      this.activeDownloads.delete(modelId);
+      this.emitProgress(modelId, 1, true);
       return result.uri;
     } catch (e) {
+      this.activeDownloads.delete(modelId);
       logger.error(`Failed to download model ${modelId}`, e);
       throw e;
     }
+  }
+
+  async cancelDownload(modelId: string): Promise<void> {
+    const resumable = this.activeDownloads.get(modelId);
+    if (resumable) {
+      try {
+        await resumable.pauseAsync();
+      } catch (e) {
+        logger.warn(`Failed to pause download for ${modelId}:`, e as unknown as any);
+      }
+      this.activeDownloads.delete(modelId);
+    }
+
+    // Cleanup partial file and status
+    const model = this.getAllModels().find(m => m.id === modelId);
+    if (model) {
+      const localPath = `${MODEL_DIR}${model.filename}`;
+      const file = new File(localPath);
+      if (file.exists) {
+        file.delete();
+      }
+    }
+    storage.remove(`${STORAGE_PREFIX}${modelId}`);
+    this.emitProgress(modelId, 0, false);
   }
 
   private saveStatus(modelId: string, status: Partial<ModelDownloadStatus>): void {
@@ -201,11 +394,24 @@ export class ModelManagementService {
     const model = this.getAllModels().find(m => m.id === modelId);
     if (!model) return;
 
-    const localPath = `${MODEL_DIR}${model.filename}`;
-    const file = new File(localPath);
-    if (file.exists) {
-      file.delete();
+    try {
+      // Find all files that start with the model's filename to clean up compilation caches
+      const files = await FileSystemLegacy.readDirectoryAsync(MODEL_DIR);
+      const associatedFiles = files.filter(f => f.startsWith(model.filename));
+
+      for (const f of associatedFiles) {
+        await FileSystemLegacy.deleteAsync(`${MODEL_DIR}${f}`, { idempotent: true });
+      }
+    } catch (e) {
+      logger.error(`Failed to clean up cache files for ${modelId}`, e as any);
+      // Fallback to deleting just the main file if directory read fails
+      const localPath = `${MODEL_DIR}${model.filename}`;
+      const file = new File(localPath);
+      if (file.exists) {
+        file.delete();
+      }
     }
+
     storage.remove(`${STORAGE_PREFIX}${modelId}`);
 
     if (model.isCustom) {

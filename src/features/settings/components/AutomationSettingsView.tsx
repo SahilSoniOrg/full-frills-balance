@@ -44,7 +44,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
 
   const activeModel =
     downloadedModels.find(m => m.id === vm.preferredAiModelId) ||
-    downloadedModels.find(m => m.id === 'qwen-2.5-0.5b') ||
+    downloadedModels.find(m => m.id === AppConfig.defaults.defaultAiModelId) ||
     downloadedModels[0];
 
   return (
@@ -157,7 +157,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
           visible={isModelPickerVisible}
           title="Select Active Model"
           options={modelOptions}
-          selectedValue={vm.preferredAiModelId || 'qwen-2.5-0.5b'}
+          selectedValue={vm.preferredAiModelId || AppConfig.defaults.defaultAiModelId}
           onClose={() => setIsModelPickerVisible(false)}
           onSelect={vm.setPreferredAiModelId}
         />

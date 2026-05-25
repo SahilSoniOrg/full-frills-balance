@@ -1,7 +1,7 @@
 import { AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
-import { Separator } from '@/src/design-system';
 import { useUI } from '@/src/contexts/UIContext';
+import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -74,7 +74,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     const volume = event.value;
     const scale = Math.max(1, (volume + 2) / 3); // Map to ~1.0 to 4.0
 
-    animValues.forEach((anim, i) => {
+    animValues.forEach((anim, _i) => {
       Animated.spring(anim, {
         toValue: scale * (0.8 + Math.random() * 0.4), // Add some variation per bar
         useNativeDriver: true,

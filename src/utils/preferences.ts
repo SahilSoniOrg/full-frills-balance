@@ -62,7 +62,7 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   notificationWeekday: 1, // Monday
   isSmsImportEnabled: false,
   isNativeAiEnabled: false,
-  preferredAiModelId: 'qwen-2.5-0.5b',
+  preferredAiModelId: AppConfig.defaults.defaultAiModelId,
   aiInferenceMode: 'multi',
   defaultShareFormat: ShareFormat.TEXT,
   safeToSpendDays: AppConfig.defaults.safeToSpendDays,

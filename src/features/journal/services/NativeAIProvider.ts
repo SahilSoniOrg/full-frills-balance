@@ -1,69 +1,120 @@
+import { AppConfig } from '@/src/constants/app-config';
+import { modelManagementService } from '@/src/services/ai/ModelManagementService';
+import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
+import { logger } from '@/src/utils/logger';
 import {
   AIContext,
   ParserOutput,
   TransactionFallbackAIProvider,
   TransactionType,
 } from '../types/ai-parsing';
-import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
-import { modelManagementService } from '@/src/services/ai/ModelManagementService';
-import { createTypeClassificationPrompt, createEntityResolutionPrompt } from '../utils/ai-prompts';
-import { logger } from '@/src/utils/logger';
+import { createEntityResolutionPrompt, createTypeClassificationPrompt } from '../utils/ai-prompts';
 
 export class NativeAIProvider implements TransactionFallbackAIProvider {
-  private currentModelId: string = 'qwen-2.5-0.5b';
+  private currentModelId: string = AppConfig.defaults.defaultAiModelId;
   private initializedModelId: string | null = null;
   private currentRequestId: number = 0;
+  private transactionCount = 0;
+
+  getLoadedModelId(): string | null {
+    return this.initializedModelId;
+  }
+
+  async preload(modelId: string): Promise<void> {
+    const status = await modelManagementService.getDownloadStatus(modelId);
+    if (!status.isDownloaded || !status.localPath) return;
+
+    const model = modelManagementService.getAllModels().find(m => m.id === modelId);
+    const preferredBackend =
+      (model?.defaultConfig?.accelerators?.split(',')[0] as 'cpu' | 'gpu' | 'npu') || 'cpu';
+
+    await smallModelProvider.initialize(status.localPath, {
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
+      maxTokens: model?.defaultConfig?.maxTokens ?? 1024,
+      temperature: model?.defaultConfig?.temperature ?? 0.7,
+      topK: model?.defaultConfig?.topK ?? 40,
+      topP: model?.defaultConfig?.topP ?? 0.95,
+      backend: preferredBackend,
+    });
+    this.currentModelId = modelId;
+    this.initializedModelId = modelId;
+  }
+
+  async unload(): Promise<void> {
+    await smallModelProvider.dispose();
+    this.initializedModelId = null;
+  }
 
   async parse(
     transcript: string,
     context: AIContext,
-    options?: { mode?: 'single' | 'multi'; timeout?: number },
+    options?: { mode?: 'single' | 'multi' },
   ): Promise<ParserOutput | null> {
     const requestId = ++this.currentRequestId;
+    this.transactionCount++;
+    const shouldReset = this.transactionCount % 5 === 1;
+
+    logger.info(
+      `[NativeAIProvider] Parse called. TransactionCount: ${this.transactionCount}, shouldReset: ${shouldReset}`,
+    );
 
     try {
       const status = await modelManagementService.getDownloadStatus(this.currentModelId);
       if (!status.isDownloaded || !status.localPath) return null;
 
       if (this.initializedModelId !== this.currentModelId) {
-        await smallModelProvider.initialize(status.localPath);
+        // Forward model-specific config for optimal inference parameters
+        const model = modelManagementService.getAllModels().find(m => m.id === this.currentModelId);
+        const preferredBackend =
+          (model?.defaultConfig?.accelerators?.split(',')[0] as 'cpu' | 'gpu' | 'npu') || 'cpu';
+        await smallModelProvider.initialize(status.localPath, {
+          systemPrompt:
+            'You are a high-precision financial transaction parser. Output valid JSON only.',
+          maxTokens: model?.defaultConfig?.maxTokens ?? 1024,
+          temperature: model?.defaultConfig?.temperature ?? 0.7,
+          topK: model?.defaultConfig?.topK ?? 40,
+          topP: model?.defaultConfig?.topP ?? 0.95,
+          backend: preferredBackend,
+        });
         this.initializedModelId = this.currentModelId;
       }
 
       const mode = options?.mode || 'multi';
-      const timeout = options?.timeout || (mode === 'single' ? 5000 : 15000);
 
-      // Wrap the entire parsing process in a global timeout
-      let timeoutId: any;
-      const timeoutPromise = new Promise<null>(resolve => {
-        timeoutId = setTimeout(() => resolve(null), timeout);
-      });
+      const result = await (mode === 'single'
+        ? this.parseSinglePass(transcript, context, requestId, shouldReset)
+        : this.parseMultiPass(transcript, context, requestId, shouldReset));
 
-      const parsePromise =
-        mode === 'single'
-          ? this.parseSinglePass(transcript, context, requestId)
-          : this.parseMultiPass(transcript, context, requestId);
-
-      const result = await Promise.race([parsePromise, timeoutPromise]);
-
-      if (!result) {
-        logger.warn(
-          `[NativeAIProvider] Global timeout reached (${timeout}ms) for request ${requestId}`,
-        );
-        // If timeout reached, we must ensure any background tasks stop before returning
-        // to prevent the loop from starting a new request while the context is busy.
-        if (requestId === this.currentRequestId) {
-          logger.info('[NativeAIProvider] Forcing context reset after timeout...');
-          await smallModelProvider.dispose();
-          this.initializedModelId = null;
-        }
-      }
-
-      if (timeoutId) clearTimeout(timeoutId);
       return result;
     } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      logger.error(`[NativeAIProvider] Parse failed: ${errorMsg}`, e);
+      const error = e instanceof Error ? e : new Error(String(e));
+
+      const errorDetails = {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        raw: JSON.stringify(e, Object.getOwnPropertyNames(e), 2),
+
+        // useful local LLM debugging
+        transcriptLength: transcript?.length,
+        timestamp: new Date().toISOString(),
+      };
+
+      logger.error(`[NativeAIProvider] Parse failed`, errorDetails);
+
+      // specifically detect LiteRT failures
+      if (error.message.includes('LiteRT-LM')) {
+        logger.error(`[NativeAIProvider] LiteRT runtime failure detected`, {
+          likelyCauses: [
+            'context overflow',
+            'OOM / memory pressure',
+            'invalid session state',
+            'concurrent inference',
+          ],
+        });
+      }
+
       return null;
     }
   }
@@ -72,6 +123,7 @@ export class NativeAIProvider implements TransactionFallbackAIProvider {
     transcript: string,
     context: AIContext,
     requestId: number,
+    shouldReset: boolean,
   ): Promise<ParserOutput | null> {
     const prompt = `
 Role: High-precision financial transaction parser.
@@ -98,7 +150,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
     if (requestId !== this.currentRequestId) return null;
 
     logger.info(`[NativeAIProvider] Single-pass Prompt: ${prompt}`);
-    const response = await smallModelProvider.generate(prompt, { timeout: 8000 });
+    const response = await smallModelProvider.generate(prompt, { resetContext: shouldReset });
 
     // Check cancellation again after native call
     if (requestId !== this.currentRequestId) return null;
@@ -110,6 +162,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
     transcript: string,
     context: AIContext,
     requestId: number,
+    shouldReset: boolean,
   ): Promise<ParserOutput | null> {
     const timings: Record<string, number> = {};
     const startTime = Date.now();
@@ -126,7 +179,12 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       const p1Start = Date.now();
       const typePrompt = createTypeClassificationPrompt(transcript);
       logger.info(`[NativeAIProvider] Pass 1 Prompt: ${typePrompt}`);
-      const typeResponse = await smallModelProvider.generate(typePrompt, { timeout: 4000 });
+      const typeResponse = await smallModelProvider.generate(typePrompt, {
+        resetContext: shouldReset,
+      });
+      const p1Stats = smallModelProvider.getStats();
+      if (p1Stats) logger.info(`[NativeAIProvider] Pass 1 Stats: ${JSON.stringify(p1Stats)}`);
+
       const parsedType = this.safeParseJSON(typeResponse) || {};
       let type = String(parsedType.type || 'expense')
         .toLowerCase()
@@ -145,7 +203,12 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         p2Entities,
       );
       logger.info(`[NativeAIProvider] Pass 2 Prompt: ${sourcePrompt}`);
-      const sourceResponse = await smallModelProvider.generate(sourcePrompt, { timeout: 4000 });
+      const sourceResponse = await smallModelProvider.generate(sourcePrompt, {
+        resetContext: false,
+      });
+      const p2Stats = smallModelProvider.getStats();
+      if (p2Stats) logger.info(`[NativeAIProvider] Pass 2 Stats: ${JSON.stringify(p2Stats)}`);
+
       const parsedSource = this.safeParseJSON(sourceResponse) || {};
       const source = typeof parsedSource.name === 'string' ? parsedSource.name : 'unknown';
       timings['Pass 2: Source'] = Date.now() - p2Start;
@@ -154,8 +217,13 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       checkCancellation();
       const p3Start = Date.now();
       // For Income: Target is an Asset. For Expense: Target is a Category. For Transfer: Target is an Asset.
-      const p3Entities =
+      let p3Entities =
         type === 'income' || type === 'transfer' ? context.accounts : context.categories;
+
+      if (type === 'transfer' && source !== 'unknown') {
+        p3Entities = p3Entities.filter(e => e !== source);
+      }
+
       const targetPrompt = createEntityResolutionPrompt(
         transcript,
         type,
@@ -163,7 +231,9 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         p3Entities,
       );
       logger.info(`[NativeAIProvider] Pass 3 Prompt: ${targetPrompt}`);
-      const targetResponse = await smallModelProvider.generate(targetPrompt, { timeout: 4000 });
+      const targetResponse = await smallModelProvider.generate(targetPrompt, {
+        resetContext: false,
+      });
       const parsedTarget = this.safeParseJSON(targetResponse) || {};
       const target = typeof parsedTarget.name === 'string' ? parsedTarget.name : 'unknown';
       timings['Pass 3: Target'] = Date.now() - p3Start;
@@ -192,6 +262,12 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         finalCategoryHint = resolvedTarget;
       }
 
+      // Capture final pass inference stats for diagnostics
+      const lastStats = smallModelProvider.getStats();
+      if (lastStats) {
+        logger.info(`[NativeAIProvider] Pass 3 Stats: ${JSON.stringify(lastStats)}`);
+      }
+
       return {
         transactions: [
           {
@@ -212,6 +288,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         debugMetrics: {
           passTimings: timings,
           totalInferenceMs: finalInferenceTime,
+          lastPassStats: lastStats ?? undefined,
         },
       };
     } catch (e) {
@@ -242,6 +319,11 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
 
   setModel(modelId: string) {
     this.currentModelId = modelId;
+  }
+
+  async abort() {
+    logger.info('[NativeAIProvider] Explicitly aborting ongoing requests...');
+    this.currentRequestId++; // Cancel any multipass tasks
   }
 }
 

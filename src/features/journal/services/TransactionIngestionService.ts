@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Account, { AccountType } from '@/src/data/models/Account';
+import { AppConfig } from '@/src/constants/app-config';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { analytics } from '@/src/services/analytics-service';
 import { accountResolutionService } from '@/src/services/ledger/AccountResolutionService';
@@ -28,7 +29,9 @@ export class TransactionIngestionService {
     if (this.customAiProvider) return this.customAiProvider;
 
     if (preferences.isNativeAiEnabled) {
-      nativeAIProvider.setModel(preferences.preferredAiModelId || 'qwen-2.5-0.5b');
+      nativeAIProvider.setModel(
+        preferences.preferredAiModelId || AppConfig.defaults.defaultAiModelId,
+      );
       return nativeAIProvider;
     }
 

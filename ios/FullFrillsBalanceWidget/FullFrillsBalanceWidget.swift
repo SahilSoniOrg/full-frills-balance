@@ -185,7 +185,7 @@ struct JournalLauncherWidgetView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(family == .systemSmall ? 10 : 14)
 
-    if #available(iOSApplicationExtension 17.0, *) {
+    if #available(iOS 17.0, *) {
       content
         .containerBackground(for: .widget) {
           theme.backgroundStartColor
@@ -344,7 +344,9 @@ struct JournalLauncherWidgetView: View {
   }
 }
 
+#if WIDGET
 @main
+#endif
 struct FullFrillsBalanceWidget: Widget {
   let kind: String = "FullFrillsBalanceJournalLauncher"
 

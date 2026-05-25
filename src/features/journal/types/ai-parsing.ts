@@ -1,3 +1,5 @@
+import type { InferenceStats } from '@/src/services/ai/types';
+
 export type TransactionType = 'expense' | 'income' | 'transfer' | 'unknown';
 
 export type TransactionSemanticTag = 'refund' | 'cashback' | 'chargeback' | 'reversal' | undefined;
@@ -27,6 +29,7 @@ export interface ParserOutput {
   debugMetrics?: {
     passTimings?: Record<string, number>;
     totalInferenceMs?: number;
+    lastPassStats?: InferenceStats;
   };
 }
 

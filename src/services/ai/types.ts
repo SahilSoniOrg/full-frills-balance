@@ -2,12 +2,33 @@ export interface AIModelMetadata {
   id: string;
   name: string;
   description: string;
-  url: string; // URL to download the GGUF file
+  url: string;
   sizeBytes: number;
-  parameters: string; // e.g., "0.5B", "1B"
-  quantization: string; // e.g., "Q4_K_M"
+  parameters: string; // e.g., "2B", "1B"
+  quantization: string; // e.g., "INT8", "Q4"
   filename: string;
   isCustom?: boolean;
+  /** Minimum device RAM in GB required to load this model */
+  minDeviceMemoryGb?: number;
+  /** Model capabilities: e.g., 'speculative_decoding', 'llm_thinking' */
+  capabilities?: string[];
+  /** Whether this model supports image input */
+  supportsImage?: boolean;
+  /** Whether this model supports audio input */
+  supportsAudio?: boolean;
+  /** Supported platforms for this model */
+  supportedPlatforms?: ('ios' | 'android')[];
+  /** Default inference config recommended for this model */
+  defaultConfig?: ModelDefaultConfig;
+}
+
+export interface ModelDefaultConfig {
+  topK?: number;
+  topP?: number;
+  temperature?: number;
+  maxTokens?: number;
+  /** Preferred backend order, e.g. 'gpu,cpu' */
+  accelerators?: string;
 }
 
 export interface ModelDownloadStatus {
@@ -15,10 +36,41 @@ export interface ModelDownloadStatus {
   isDownloaded: boolean;
   progress: number;
   localPath?: string;
+  /** Total bytes downloaded so far (for resume tracking) */
+  bytesWritten?: number;
+}
+
+/** Performance stats from the last inference call */
+export interface InferenceStats {
+  tokensPerSecond: number;
+  timeToFirstTokenMs: number;
+  completionTokens: number;
+  totalDurationMs: number;
+}
+
+export interface AIProviderInitOptions {
+  systemPrompt?: string;
+  maxTokens?: number;
+  temperature?: number;
+  topK?: number;
+  topP?: number;
+  backend?: 'cpu' | 'gpu' | 'npu';
+}
+
+export interface AIGenerateOptions {
+  timeout?: number;
+  /** If true, reset conversation context before this prompt (default: true) */
+  resetContext?: boolean;
 }
 
 export interface AIProvider {
-  initialize(modelPath: string): Promise<void>;
-  generate(prompt: string, options?: { timeout?: number }): Promise<string>;
+  initialize(modelPath: string, options?: AIProviderInitOptions): Promise<void>;
+  generate(prompt: string, options?: AIGenerateOptions): Promise<string>;
+  generateStream?(
+    prompt: string,
+    onToken: (token: string, done: boolean) => void,
+    options?: AIGenerateOptions,
+  ): Promise<void>;
+  getStats?(): InferenceStats | null;
   dispose(): Promise<void>;
 }

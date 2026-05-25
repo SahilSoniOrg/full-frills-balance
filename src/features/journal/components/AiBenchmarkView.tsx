@@ -8,12 +8,12 @@ import {
 } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
+import { modelManagementService } from '@/src/services/ai/ModelManagementService';
+import type { AIModelMetadata, ModelDownloadStatus } from '@/src/services/ai/types';
 import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
 import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { modelManagementService } from '../../../services/ai/ModelManagementService';
-import { AIModelMetadata, ModelDownloadStatus } from '../../../services/ai/types';
 import { nativeAIProvider } from '../services/NativeAIProvider';
 import { mockAIProvider } from '../services/TransactionFallbackAIProvider';
 import { transactionIngestionService } from '../services/TransactionIngestionService';
@@ -29,13 +29,14 @@ export function AiBenchmarkView() {
   const { theme } = useTheme();
   const [availableModels, setAllModels] = useState<AIModelMetadata[]>([]);
   const [statuses, setStatuses] = useState<Record<string, ModelDownloadStatus>>({});
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
+  const [isLoadingMemory, setIsLoadingMemory] = useState(false);
   const [benchmarkingId, setBenchmarkingId] = useState<string | null>(null);
   const [benchmarkResults, setBenchmarkResults] = useState<any[]>([]);
   const [isNativeEnabled, setIsNativeEnabled] = useState(false);
   const [inferenceMode, setInferenceMode] = useState<'single' | 'multi'>('multi');
-  const [benchmarkTimeout, setBenchmarkTimeout] = useState(15000);
+
+  const isCancelledRef = React.useRef(false);
 
   // Custom Model Form State
   const [isAddingCustom, setIsAddingCustom] = useState(false);
@@ -44,6 +45,25 @@ export function AiBenchmarkView() {
 
   useEffect(() => {
     refreshData();
+
+    // Subscribe to global download progress
+    const handleProgress = (modelId: string, progress: number, isComplete: boolean) => {
+      setStatuses(prev => ({
+        ...prev,
+        [modelId]: {
+          ...prev[modelId],
+          progress,
+          isDownloaded: isComplete,
+        },
+      }));
+      if (isComplete) refreshData();
+    };
+    modelManagementService.addListener(handleProgress);
+
+    // Init loaded model state
+    setLoadedModelId(nativeAIProvider.getLoadedModelId());
+
+    return () => modelManagementService.removeListener(handleProgress);
   }, []);
 
   const refreshData = async () => {
@@ -65,16 +85,39 @@ export function AiBenchmarkView() {
 
   const handleDownload = async (modelId: string) => {
     try {
-      setDownloadingId(modelId);
-      setDownloadProgress(0);
-      await modelManagementService.downloadModel(modelId, progress => {
-        setDownloadProgress(progress);
-      });
+      await modelManagementService.downloadModel(modelId);
       await refreshData();
     } catch (e) {
       Alert.alert('Download Failed', String(e));
+    }
+  };
+
+  const handleCancelDownload = async (modelId: string) => {
+    await modelManagementService.cancelDownload(modelId);
+    await refreshData();
+  };
+
+  const handleLoadModel = async (modelId: string) => {
+    setIsLoadingMemory(true);
+    try {
+      await nativeAIProvider.preload(modelId);
+      setLoadedModelId(nativeAIProvider.getLoadedModelId());
+    } catch (e) {
+      Alert.alert('Load Failed', String(e));
     } finally {
-      setDownloadingId(null);
+      setIsLoadingMemory(false);
+    }
+  };
+
+  const handleUnloadModel = async () => {
+    setIsLoadingMemory(true);
+    try {
+      await nativeAIProvider.unload();
+      setLoadedModelId(null);
+    } catch (e) {
+      Alert.alert('Unload Failed', String(e));
+    } finally {
+      setIsLoadingMemory(false);
     }
   };
 
@@ -108,6 +151,7 @@ export function AiBenchmarkView() {
   const runBenchmark = async (modelId: string) => {
     setBenchmarkingId(modelId);
     setBenchmarkResults([]);
+    isCancelledRef.current = false;
     nativeAIProvider.setModel(modelId);
 
     const results = [];
@@ -142,8 +186,9 @@ export function AiBenchmarkView() {
             rawItem: parsed.destinationCategoryHint,
           },
         },
-        { mode: inferenceMode, timeout: benchmarkTimeout },
+        { mode: inferenceMode },
       );
+      if (isCancelledRef.current) break;
       const duration = Date.now() - startTime;
 
       results.push({
@@ -153,14 +198,30 @@ export function AiBenchmarkView() {
         output,
       });
       setBenchmarkResults([...results]);
+      if (!isCancelledRef.current) {
+        setBenchmarkingId(null);
+      }
     }
+    setLoadedModelId(nativeAIProvider.getLoadedModelId());
+  };
+
+  const abortBenchmark = () => {
+    isCancelledRef.current = true;
     setBenchmarkingId(null);
+    nativeAIProvider.abort();
+    setLoadedModelId(nativeAIProvider.getLoadedModelId());
   };
 
   const renderModelCard = (model: AIModelMetadata) => {
     const status = statuses[model.id];
-    const isDownloading = downloadingId === model.id;
+    const isDownloading = modelManagementService.isDownloading(model.id);
+    const progress = status?.progress || 0;
     const isBenchmarking = benchmarkingId === model.id;
+    const isLoaded = loadedModelId === model.id;
+    const sizeStr =
+      model.sizeBytes > 1024 * 1024 * 1024
+        ? `${(model.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+        : `${(model.sizeBytes / 1024 / 1024).toFixed(0)} MB`;
 
     return (
       <View
@@ -173,7 +234,7 @@ export function AiBenchmarkView() {
               {model.name}
             </AppText>
             <AppText variant="caption" color="secondary">
-              {model.parameters} • {model.quantization}
+              {model.parameters} • {model.quantization} • {sizeStr}
             </AppText>
           </View>
           {status?.isDownloaded ? (
@@ -186,48 +247,61 @@ export function AiBenchmarkView() {
         </AppText>
 
         {isDownloading ? (
-          <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { backgroundColor: theme.primary, width: `${downloadProgress * 100}%` },
-                ]}
-              />
+          <View style={{ gap: Spacing.sm }}>
+            <View style={styles.progressContainer}>
+              <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { backgroundColor: theme.primary, width: `${progress * 100}%` },
+                  ]}
+                />
+              </View>
+              <AppText variant="caption" style={styles.progressText}>
+                {Math.round(progress * 100)}%
+              </AppText>
             </View>
-            <AppText variant="caption" style={styles.progressText}>
-              {Math.round(downloadProgress * 100)}%
-            </AppText>
+            <AppButton variant="secondary" size="sm" onPress={() => handleCancelDownload(model.id)}>
+              Cancel Download
+            </AppButton>
           </View>
         ) : (
           <View style={styles.actions}>
             {!status?.isDownloaded ? (
-              <AppButton
-                variant="secondary"
-                size="sm"
-                onPress={() => handleDownload(model.id)}
-                disabled={!!downloadingId}
-              >
-                {`Download (~${(model.sizeBytes / 1024 / 1024).toFixed(0)}MB)`}
+              <AppButton variant="secondary" size="sm" onPress={() => handleDownload(model.id)}>
+                Download
               </AppButton>
             ) : (
-              <AppButton
-                variant="primary"
-                size="sm"
-                onPress={() => runBenchmark(model.id)}
-                disabled={!!benchmarkingId || !!downloadingId}
-                loading={isBenchmarking}
-              >
-                Run Benchmark
-              </AppButton>
-            )}
-            {status?.isDownloaded && (
-              <IconButton
-                name="delete"
-                onPress={() => {
-                  modelManagementService.deleteModel(model.id).then(refreshData);
-                }}
-              />
+              <>
+                <AppButton
+                  variant={isLoaded ? 'secondary' : 'primary'}
+                  size="sm"
+                  disabled={isLoadingMemory}
+                  onPress={() => (isLoaded ? handleUnloadModel() : handleLoadModel(model.id))}
+                >
+                  {isLoaded ? 'Unload Model' : 'Load in Memory'}
+                </AppButton>
+                {isBenchmarking ? (
+                  <AppButton variant="primary" size="sm" onPress={abortBenchmark}>
+                    Stop Benchmark
+                  </AppButton>
+                ) : (
+                  <AppButton
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => runBenchmark(model.id)}
+                    disabled={!!benchmarkingId}
+                  >
+                    Benchmark
+                  </AppButton>
+                )}
+                <IconButton
+                  name="delete"
+                  onPress={() => {
+                    modelManagementService.deleteModel(model.id).then(refreshData);
+                  }}
+                />
+              </>
             )}
           </View>
         )}
@@ -274,29 +348,6 @@ export function AiBenchmarkView() {
             ]}
             size="sm"
             itemWidth={150}
-          />
-        </View>
-
-        <View style={styles.modeSelector}>
-          <AppText
-            variant="caption"
-            weight="bold"
-            color="secondary"
-            style={{ marginBottom: Spacing.xs }}
-          >
-            BENCHMARK TIMEOUT:
-          </AppText>
-          <AppSegmentedControl
-            value={benchmarkTimeout}
-            onChange={setBenchmarkTimeout}
-            options={[
-              { id: 5000, label: '5s' },
-              { id: 15000, label: '15s' },
-              { id: 30000, label: '30s' },
-              { id: 60000, label: '60s' },
-            ]}
-            size="sm"
-            itemWidth={60}
           />
         </View>
       </View>
