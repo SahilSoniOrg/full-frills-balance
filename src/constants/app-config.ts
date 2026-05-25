@@ -901,7 +901,7 @@ export const AppConfig = {
 
   // Default Values
   defaults: {
-    defaultAiModelId: 'gemma-3n-e2b-it-int4',
+    defaultAiModelId: 'gemma-4-e2b-it',
     reportDays: 30,
     safeToSpendDays: 30,
     chartTickCount: 5,
