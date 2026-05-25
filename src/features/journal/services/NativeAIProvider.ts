@@ -26,7 +26,7 @@ export class NativeAIProvider implements TransactionFallbackAIProvider {
   ): Promise<ParserOutput | null> {
     const requestId = ++this.currentRequestId;
     this.transactionCount++;
-    const shouldReset = this.transactionCount % 5 === 1;
+    const shouldReset = true; // Always reset context for a new transaction
 
     logger.info(
       `[NativeAIProvider] Parse called. TransactionCount: ${this.transactionCount}, shouldReset: ${shouldReset}`,
