@@ -48,29 +48,24 @@ export interface InferenceStats {
   totalDurationMs: number;
 }
 
-export interface AIProviderInitOptions {
-  systemPrompt?: string;
-  maxTokens?: number;
-  temperature?: number;
-  topK?: number;
-  topP?: number;
-  backend?: 'cpu' | 'gpu' | 'npu';
-}
-
 export interface AIGenerateOptions {
   timeout?: number;
   /** If true, reset conversation context before this prompt (default: true) */
   resetContext?: boolean;
 }
 
-export interface AIProvider {
-  initialize(modelPath: string, options?: AIProviderInitOptions): Promise<void>;
-  generate(prompt: string, options?: AIGenerateOptions): Promise<string>;
+export interface GenerateResult {
+  text: string;
+  stats?: InferenceStats;
+}
+
+export interface LLMEngine {
+  generate(prompt: string, modelId: string, options?: AIGenerateOptions): Promise<GenerateResult>;
   generateStream?(
     prompt: string,
+    modelId: string,
     onToken: (token: string, done: boolean) => void,
     options?: AIGenerateOptions,
   ): Promise<void>;
-  getStats?(): InferenceStats | null;
   dispose(): Promise<void>;
 }

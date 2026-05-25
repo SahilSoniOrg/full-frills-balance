@@ -6,136 +6,140 @@ import {
   type Backend,
   type LiteRTLMInstance,
 } from 'react-native-litert-lm';
-import type { AIGenerateOptions, AIProvider, AIProviderInitOptions, InferenceStats } from './types';
+import type { AIGenerateOptions, LLMEngine, GenerateResult, InferenceStats } from './types';
+import { modelManagementService } from './ModelManagementService';
 
-export class SmallModelProvider implements AIProvider {
+export class SmallModelProvider implements LLMEngine {
   private llm: LiteRTLMInstance | null = null;
+  private currentModelId: string | null = null;
 
   private executionQueue: Promise<any> = Promise.resolve();
-  private lastStats: InferenceStats | null = null;
 
-  async initialize(modelPath: string, options?: AIProviderInitOptions): Promise<void> {
-    // Initialization also needs to be part of the queue to avoid clashing with late generations
-    return (this.executionQueue = this.executionQueue.then(async () => {
-      // Strip file:// for both platforms to ensure C++ FFI gets a clean absolute UNIX path
-      const normalizedPath = modelPath.replace(/^file:\/\//, '');
+  private async ensureModelLoaded(modelId: string): Promise<void> {
+    if (this.currentModelId === modelId && this.llm) {
+      return;
+    }
 
-      // Determine optimal backend: prefer GPU on iOS (Metal always available),
-      // fall back to CPU if backend is unsupported on this device
-      const requestedBackend: Backend = options?.backend ?? (Platform.OS === 'ios' ? 'gpu' : 'cpu');
-      const backendWarning = checkBackendSupport(requestedBackend);
-      const backend: Backend = backendWarning ? 'cpu' : requestedBackend;
+    const status = await modelManagementService.getDownloadStatus(modelId);
+    if (!status.isDownloaded || !status.localPath) {
+      throw new Error(`Model ${modelId} is not downloaded.`);
+    }
 
-      if (backendWarning) {
-        logger.warn(
-          `[SmallModelProvider] Backend '${requestedBackend}' unsupported: ${backendWarning}. Falling back to CPU.`,
-        );
-      }
+    const model = modelManagementService.getAllModels().find(m => m.id === modelId);
+    if (!model) {
+      throw new Error(`Model ${modelId} not found in catalog.`);
+    }
 
-      logger.info(
-        `[SmallModelProvider] Initializing model at ${normalizedPath} (backend: ${backend})`,
+    const normalizedPath = status.localPath.replace(/^file:\/\//, '');
+
+    const preferredBackend = (model.defaultConfig?.accelerators?.split(',')[0] as Backend) || 'cpu';
+    const requestedBackend: Backend =
+      preferredBackend === 'gpu' || preferredBackend === 'cpu' || preferredBackend === 'npu'
+        ? preferredBackend
+        : Platform.OS === 'ios'
+          ? 'gpu'
+          : 'cpu';
+
+    const backendWarning = checkBackendSupport(requestedBackend);
+    const backend: Backend = backendWarning ? 'cpu' : requestedBackend;
+
+    if (backendWarning) {
+      logger.warn(
+        `[SmallModelProvider] Backend '${requestedBackend}' unsupported: ${backendWarning}. Falling back to CPU.`,
       );
+    }
 
-      try {
-        // IMPORTANT: Reuse the same native instance across re-initializations.
-        // Each HybridLiteRTLM creates its own serial DispatchQueue ("dev.litert.engine").
-        // If we close() the old instance and createLLM() a new one, the old engine teardown
-        // and new engine creation run on DIFFERENT queues, causing a race condition where
-        // litert_lm_engine_delete and litert_lm_engine_create overlap and corrupt shared
-        // global state in the LiteRT C library (SIGSEGV in ReplaceMagicNumbersIfAny).
-        //
-        // The native loadModel() already calls closeInternal() at the start of its async block,
-        // which properly tears down the old engine + conversation on the SAME serial queue
-        // before creating the new one — eliminating the race.
-        if (!this.llm) {
-          this.llm = createLLM({ enableMemoryTracking: true });
-        }
+    logger.info(
+      `[SmallModelProvider] Initializing model ${modelId} at ${normalizedPath} (backend: ${backend})`,
+    );
 
-        await this.llm.loadModel(normalizedPath, {
-          backend,
-          maxTokens: options?.maxTokens ?? 1024,
-          systemPrompt: options?.systemPrompt,
-          temperature: options?.temperature ?? 0.7,
-          topK: options?.topK ?? 40,
-          topP: options?.topP ?? 0.95,
-        });
-        this.lastStats = null;
-        logger.info(`[SmallModelProvider] Model initialized`);
-      } catch (e) {
-        const errorMsg = e instanceof Error ? e.message : String(e);
-        logger.error(`[SmallModelProvider] loadModel failed: ${errorMsg}`, e);
-        throw e;
+    try {
+      if (!this.llm) {
+        this.llm = createLLM({ enableMemoryTracking: true });
       }
-    }));
+
+      await this.llm.loadModel(normalizedPath, {
+        backend,
+        maxTokens: model.defaultConfig?.maxTokens ?? 1024,
+        systemPrompt:
+          'You are a high-precision financial transaction parser. Output valid JSON only.',
+        temperature: model.defaultConfig?.temperature ?? 0.7,
+        topK: model.defaultConfig?.topK ?? 40,
+        topP: model.defaultConfig?.topP ?? 0.95,
+      });
+
+      this.currentModelId = modelId;
+      logger.info(`[SmallModelProvider] Model ${modelId} initialized`);
+    } catch (e) {
+      this.currentModelId = null;
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      logger.error(`[SmallModelProvider] loadModel failed: ${errorMsg}`, e);
+      throw e;
+    }
   }
 
-  async generate(prompt: string, options?: AIGenerateOptions): Promise<string> {
-    // Chain onto the execution queue to ensure serial access to the native context
-    const nextInQueue = this.executionQueue.then(() => this.generateInternal(prompt, options));
-    this.executionQueue = nextInQueue.catch(() => {}); // Continue queue even if one fails
-    return nextInQueue;
-  }
-
-  async generateStream(
+  async generate(
     prompt: string,
-    onToken: (token: string, done: boolean) => void,
+    modelId: string,
     options?: AIGenerateOptions,
-  ): Promise<void> {
+  ): Promise<GenerateResult> {
     const nextInQueue = this.executionQueue.then(() =>
-      this.generateStreamInternal(prompt, onToken, options),
+      this.generateInternal(prompt, modelId, options),
     );
     this.executionQueue = nextInQueue.catch(() => {});
     return nextInQueue;
   }
 
-  getStats(): InferenceStats | null {
-    return this.lastStats;
+  async generateStream(
+    prompt: string,
+    modelId: string,
+    onToken: (token: string, done: boolean) => void,
+    options?: AIGenerateOptions,
+  ): Promise<void> {
+    const nextInQueue = this.executionQueue.then(() =>
+      this.generateStreamInternal(prompt, modelId, onToken, options),
+    );
+    this.executionQueue = nextInQueue.catch(() => {});
+    return nextInQueue;
   }
 
   private async generateInternal(
     prompt: string,
+    modelId: string,
     options?: AIGenerateOptions,
     retryCount = 0,
-  ): Promise<string> {
+  ): Promise<GenerateResult> {
+    await this.ensureModelLoaded(modelId);
     if (!this.llm) throw new Error('Provider not initialized');
 
-    // For isolated prompts (default), reset context to avoid prior conversation
-    // bleeding into JSON parsing results. The multi-pass pipeline runs 3 sequential
-    // generate() calls — without reset, Pass 2 sees Pass 1's response in context.
     if (options?.resetContext !== false) {
       this.llm.resetConversation();
     }
 
-    logger.info('[SmallModelProvider] Generating completion...');
+    logger.info(`[SmallModelProvider] Generating completion for ${modelId}...`);
 
     try {
-      // Prepend instructions to avoid breaking Gemma's native chat template
-      // and explicitly instruct reasoning models to skip thought traces
       const formattedPrompt = `Output valid JSON only. No explanations. Do not use <think> tags.\n\n${prompt}`;
 
       let result = await this.llm.sendMessage(formattedPrompt);
 
       logger.info('[SmallModelProvider] Raw response received:', { text: result });
 
-      // Some distillation models (like DeepSeek R1) omit the opening <think> tag
-      // and only output the reasoning followed by </think>.
       if (result.includes('</think>')) {
         result = result.substring(result.indexOf('</think>') + 8);
       }
-      // Also strip any standard enclosed <think>...</think> blocks just in case
       result = result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-      // Capture inference stats for diagnostics and benchmarking
-      this.captureStats();
+      const stats = this.captureStats();
 
-      return result;
+      return { text: result, stats: stats || undefined };
     } catch (e) {
       const errorMsg = String(e);
       if (errorMsg.includes('busy') && retryCount < 3) {
         const backoff = (retryCount + 1) * 300;
         logger.warn(`[SmallModelProvider] Native busy, retrying in ${backoff}ms...`);
         await new Promise(r => setTimeout(r, backoff));
-        return this.generateInternal(prompt, options, retryCount + 1);
+        return this.generateInternal(prompt, modelId, options, retryCount + 1);
       }
 
       throw e;
@@ -144,9 +148,11 @@ export class SmallModelProvider implements AIProvider {
 
   private async generateStreamInternal(
     prompt: string,
+    modelId: string,
     onToken: (token: string, done: boolean) => void,
     options?: AIGenerateOptions,
   ): Promise<void> {
+    await this.ensureModelLoaded(modelId);
     if (!this.llm) throw new Error('Provider not initialized');
 
     if (options?.resetContext !== false) {
@@ -158,7 +164,6 @@ export class SmallModelProvider implements AIProvider {
         this.llm!.sendMessageAsync(prompt, (token: string, done: boolean) => {
           onToken(token, done);
           if (done) {
-            this.captureStats();
             resolve();
           }
         });
@@ -168,11 +173,11 @@ export class SmallModelProvider implements AIProvider {
     });
   }
 
-  private captureStats(): void {
-    if (!this.llm) return;
+  private captureStats(): InferenceStats | null {
+    if (!this.llm) return null;
     try {
       const stats = this.llm.getStats();
-      this.lastStats = {
+      return {
         tokensPerSecond: stats.tokensPerSecond,
         timeToFirstTokenMs: stats.timeToFirstToken,
         completionTokens: stats.completionTokens,
@@ -180,7 +185,7 @@ export class SmallModelProvider implements AIProvider {
           stats.tokensPerSecond > 0 ? (stats.completionTokens / stats.tokensPerSecond) * 1000 : 0,
       };
     } catch {
-      // Stats may not be available on all platforms/configurations
+      return null;
     }
   }
 
@@ -191,7 +196,7 @@ export class SmallModelProvider implements AIProvider {
         this.llm.close();
       } catch {}
       this.llm = null;
-      this.lastStats = null;
+      this.currentModelId = null;
     }
   }
 

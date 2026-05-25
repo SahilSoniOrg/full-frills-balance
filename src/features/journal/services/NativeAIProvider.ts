@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { modelManagementService } from '@/src/services/ai/ModelManagementService';
 import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
 import { logger } from '@/src/utils/logger';
 import {
@@ -12,38 +11,23 @@ import { createEntityResolutionPrompt, createTypeClassificationPrompt } from '..
 
 export class NativeAIProvider implements TransactionFallbackAIProvider {
   private currentModelId: string = AppConfig.defaults.defaultAiModelId;
-  private initializedModelId: string | null = null;
   private currentRequestId: number = 0;
   private transactionCount = 0;
 
   getLoadedModelId(): string | null {
-    return this.initializedModelId;
+    // This is no longer meaningful internally, but we can return the currently configured model
+    return this.currentModelId;
   }
 
   async preload(modelId: string): Promise<void> {
-    const status = await modelManagementService.getDownloadStatus(modelId);
-    if (!status.isDownloaded || !status.localPath) return;
-
-    const model = modelManagementService.getAllModels().find(m => m.id === modelId);
-    const preferredBackend =
-      (model?.defaultConfig?.accelerators?.split(',')[0] as 'cpu' | 'gpu' | 'npu') || 'cpu';
-
-    await smallModelProvider.initialize(status.localPath, {
-      systemPrompt:
-        'You are a high-precision financial transaction parser. Output valid JSON only.',
-      maxTokens: model?.defaultConfig?.maxTokens ?? 1024,
-      temperature: model?.defaultConfig?.temperature ?? 0.7,
-      topK: model?.defaultConfig?.topK ?? 40,
-      topP: model?.defaultConfig?.topP ?? 0.95,
-      backend: preferredBackend,
-    });
+    // The underlying engine is now lazy-loaded on the first generation call.
+    // If we wanted to, we could add an explicit pre-warm function to smallModelProvider.
+    // For now, we'll just set the target model ID so the next parse() uses it.
     this.currentModelId = modelId;
-    this.initializedModelId = modelId;
   }
 
   async unload(): Promise<void> {
     await smallModelProvider.dispose();
-    this.initializedModelId = null;
   }
 
   async parse(
@@ -60,26 +44,6 @@ export class NativeAIProvider implements TransactionFallbackAIProvider {
     );
 
     try {
-      const status = await modelManagementService.getDownloadStatus(this.currentModelId);
-      if (!status.isDownloaded || !status.localPath) return null;
-
-      if (this.initializedModelId !== this.currentModelId) {
-        // Forward model-specific config for optimal inference parameters
-        const model = modelManagementService.getAllModels().find(m => m.id === this.currentModelId);
-        const preferredBackend =
-          (model?.defaultConfig?.accelerators?.split(',')[0] as 'cpu' | 'gpu' | 'npu') || 'cpu';
-        await smallModelProvider.initialize(status.localPath, {
-          systemPrompt:
-            'You are a high-precision financial transaction parser. Output valid JSON only.',
-          maxTokens: model?.defaultConfig?.maxTokens ?? 1024,
-          temperature: model?.defaultConfig?.temperature ?? 0.7,
-          topK: model?.defaultConfig?.topK ?? 40,
-          topP: model?.defaultConfig?.topP ?? 0.95,
-          backend: preferredBackend,
-        });
-        this.initializedModelId = this.currentModelId;
-      }
-
       const mode = options?.mode || 'multi';
 
       const result = await (mode === 'single'
@@ -95,15 +59,12 @@ export class NativeAIProvider implements TransactionFallbackAIProvider {
         name: error.name,
         stack: error.stack,
         raw: JSON.stringify(e, Object.getOwnPropertyNames(e), 2),
-
-        // useful local LLM debugging
         transcriptLength: transcript?.length,
         timestamp: new Date().toISOString(),
       };
 
       logger.error(`[NativeAIProvider] Parse failed`, errorDetails);
 
-      // specifically detect LiteRT failures
       if (error.message.includes('LiteRT-LM')) {
         logger.error(`[NativeAIProvider] LiteRT runtime failure detected`, {
           likelyCauses: [
@@ -150,12 +111,13 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
     if (requestId !== this.currentRequestId) return null;
 
     logger.info(`[NativeAIProvider] Single-pass Prompt: ${prompt}`);
-    const response = await smallModelProvider.generate(prompt, { resetContext: shouldReset });
+    const response = await smallModelProvider.generate(prompt, this.currentModelId, {
+      resetContext: shouldReset,
+    });
 
-    // Check cancellation again after native call
     if (requestId !== this.currentRequestId) return null;
 
-    return this.cleanAndParseJSON(response);
+    return this.cleanAndParseJSON(response.text);
   }
 
   private async parseMultiPass(
@@ -179,13 +141,14 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       const p1Start = Date.now();
       const typePrompt = createTypeClassificationPrompt(transcript);
       logger.info(`[NativeAIProvider] Pass 1 Prompt: ${typePrompt}`);
-      const typeResponse = await smallModelProvider.generate(typePrompt, {
+
+      const typeResponse = await smallModelProvider.generate(typePrompt, this.currentModelId, {
         resetContext: shouldReset,
       });
-      const p1Stats = smallModelProvider.getStats();
-      if (p1Stats) logger.info(`[NativeAIProvider] Pass 1 Stats: ${JSON.stringify(p1Stats)}`);
+      if (typeResponse.stats)
+        logger.info(`[NativeAIProvider] Pass 1 Stats: ${JSON.stringify(typeResponse.stats)}`);
 
-      const parsedType = this.safeParseJSON(typeResponse) || {};
+      const parsedType = this.safeParseJSON(typeResponse.text) || {};
       let type = String(parsedType.type || 'expense')
         .toLowerCase()
         .trim();
@@ -194,7 +157,6 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       // PASS 2: Source Resolution
       checkCancellation();
       const p2Start = Date.now();
-      // For Income: Source is a Category. For Expense/Transfer: Source is an Asset.
       const p2Entities = type === 'income' ? context.categories : context.accounts;
       const sourcePrompt = createEntityResolutionPrompt(
         transcript,
@@ -203,20 +165,20 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         p2Entities,
       );
       logger.info(`[NativeAIProvider] Pass 2 Prompt: ${sourcePrompt}`);
-      const sourceResponse = await smallModelProvider.generate(sourcePrompt, {
+
+      const sourceResponse = await smallModelProvider.generate(sourcePrompt, this.currentModelId, {
         resetContext: false,
       });
-      const p2Stats = smallModelProvider.getStats();
-      if (p2Stats) logger.info(`[NativeAIProvider] Pass 2 Stats: ${JSON.stringify(p2Stats)}`);
+      if (sourceResponse.stats)
+        logger.info(`[NativeAIProvider] Pass 2 Stats: ${JSON.stringify(sourceResponse.stats)}`);
 
-      const parsedSource = this.safeParseJSON(sourceResponse) || {};
+      const parsedSource = this.safeParseJSON(sourceResponse.text) || {};
       const source = typeof parsedSource.name === 'string' ? parsedSource.name : 'unknown';
       timings['Pass 2: Source'] = Date.now() - p2Start;
 
       // PASS 3: Target Resolution
       checkCancellation();
       const p3Start = Date.now();
-      // For Income: Target is an Asset. For Expense: Target is a Category. For Transfer: Target is an Asset.
       let p3Entities =
         type === 'income' || type === 'transfer' ? context.accounts : context.categories;
 
@@ -231,10 +193,14 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         p3Entities,
       );
       logger.info(`[NativeAIProvider] Pass 3 Prompt: ${targetPrompt}`);
-      const targetResponse = await smallModelProvider.generate(targetPrompt, {
+
+      const targetResponse = await smallModelProvider.generate(targetPrompt, this.currentModelId, {
         resetContext: false,
       });
-      const parsedTarget = this.safeParseJSON(targetResponse) || {};
+      if (targetResponse.stats)
+        logger.info(`[NativeAIProvider] Pass 3 Stats: ${JSON.stringify(targetResponse.stats)}`);
+
+      const parsedTarget = this.safeParseJSON(targetResponse.text) || {};
       const target = typeof parsedTarget.name === 'string' ? parsedTarget.name : 'unknown';
       timings['Pass 3: Target'] = Date.now() - p3Start;
 
@@ -242,30 +208,20 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       checkCancellation();
       const finalInferenceTime = Date.now() - startTime;
 
-      // Use deterministic hints if AI didn't find anything better
       const resolvedSource =
         source !== 'unknown' && source !== 'null' ? source : context.parserHints.rawAccount;
       const resolvedTarget =
         target !== 'unknown' && target !== 'null' ? target : context.parserHints.rawItem;
 
-      // Role Mapping: accountNameHint is always the ASSET side, categoryNameHint is always the CATEGORY side.
       let finalAssetHint = resolvedSource;
       let finalCategoryHint = resolvedTarget;
 
       if (type === 'income') {
-        // Income: Pass 2 was Category (Source), Pass 3 was Asset (Target)
         finalAssetHint = resolvedTarget;
         finalCategoryHint = resolvedSource;
       } else if (type === 'transfer') {
-        // Transfer: Pass 2 was Asset (From), Pass 3 was Asset (To)
         finalAssetHint = resolvedSource;
         finalCategoryHint = resolvedTarget;
-      }
-
-      // Capture final pass inference stats for diagnostics
-      const lastStats = smallModelProvider.getStats();
-      if (lastStats) {
-        logger.info(`[NativeAIProvider] Pass 3 Stats: ${JSON.stringify(lastStats)}`);
       }
 
       return {
@@ -288,7 +244,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         debugMetrics: {
           passTimings: timings,
           totalInferenceMs: finalInferenceTime,
-          lastPassStats: lastStats ?? undefined,
+          lastPassStats: targetResponse.stats,
         },
       };
     } catch (e) {
@@ -323,7 +279,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
 
   async abort() {
     logger.info('[NativeAIProvider] Explicitly aborting ongoing requests...');
-    this.currentRequestId++; // Cancel any multipass tasks
+    this.currentRequestId++;
   }
 }
 
