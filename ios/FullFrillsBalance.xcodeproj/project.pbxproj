@@ -13,11 +13,11 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13D98E2496FD4B21BD222F20 /* FullFrillsBalanceWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 4D3CA8EB36464567BF6ECC05 /* FullFrillsBalanceWidget.appex */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		A0696176C0124B3EBFC07D9D /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECC98385EE042EDA8667CCB /* FullFrillsBalanceWidget.swift */; };
 		B71BB0971DA69B7333F51A11 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 087FD1B208EF33DB3BB44C8A /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		C73DCFD78E5C410182ADC9F9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BC1B000C11EB498BAC4082E2 /* SwiftUI.framework */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		280B0A64E0224FD5AAB0FDFC /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECC98385EE042EDA8667CCB /* FullFrillsBalanceWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -187,8 +187,8 @@
 				B146169DCB6F4747BBD80DD0 /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
 				C7A9FFFA11084E84A9A778CD /* Copy Files */,
 				B963582EE645977981698B8A /* [CP] Embed Pods Frameworks */,
-				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				6C005E6FB9BE46BD98D30528 /* Upload Debug Symbols to Sentry */,
+				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 			);
 			buildRules = (
 			);
@@ -460,7 +460,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				A0696176C0124B3EBFC07D9D /* FullFrillsBalanceWidget.swift in Sources */,
 				03976F89AEA4C30554E10828 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -469,6 +468,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				280B0A64E0224FD5AAB0FDFC /* FullFrillsBalanceWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -503,7 +503,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = FullFrillsBalance;
+				PRODUCT_NAME = "FullFrillsBalance";
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -535,7 +535,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = FullFrillsBalance;
+				PRODUCT_NAME = "FullFrillsBalance";
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -555,7 +555,7 @@
 					"$(inherited)",
 				);
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
+				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -580,7 +580,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
+				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
