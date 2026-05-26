@@ -450,7 +450,10 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const resolveActiveLineId = useCallback(
     (roleOrId: string): string => {
       if (isGuidedMode) {
-        return getLineIdByRole(roleOrId as AccountRole) || roleOrId;
+        if (roleOrId === 'source' || roleOrId === 'destination') {
+          return getLineIdByRole(roleOrId as AccountRole) || roleOrId;
+        }
+        return roleOrId;
       }
       return roleOrId;
     },
