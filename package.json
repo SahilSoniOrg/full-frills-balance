@@ -122,8 +122,7 @@
   "private": true,
   "trustedDependencies": [
     "@shopify/react-native-skia",
-    "unrs-resolver",
-    "react-native-litert-lm"
+    "unrs-resolver"
   ],
   "experiments": {
     "reactCompiler": true
