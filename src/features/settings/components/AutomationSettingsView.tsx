@@ -1,5 +1,5 @@
 import { SelectionPickerSheet } from '@/src/components/common/SelectionPickerSheet';
-import { AppSegmentedControl, AppText } from '@/src/components/core';
+import { AppSegmentedControl, AppText, AppToggle } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { NotificationPreferenceView } from '@/src/features/settings/components/NotificationPreferenceView';
@@ -11,7 +11,7 @@ import { modelManagementService } from '@/src/services/ai/ModelManagementService
 import { AIModelMetadata } from '@/src/services/ai/types';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useEffect, useState } from 'react';
-import { Platform, Switch } from 'react-native';
+import { Platform } from 'react-native';
 
 interface AutomationSettingsViewProps {
   vm: NotificationSettingsViewModel;
@@ -76,7 +76,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
               description="Automatically scan for transaction messages"
               hasArrow={false}
               rightContent={
-                <Switch value={vm.isSmsImportEnabled} onValueChange={vm.setIsSmsImportEnabled} />
+                <AppToggle value={vm.isSmsImportEnabled} onValueChange={vm.setIsSmsImportEnabled} />
               }
             />
             <SettingsMenuItem
@@ -105,7 +105,7 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
             description="Use on-device LLM when deterministic parsing fails"
             hasArrow={false}
             rightContent={
-              <Switch value={vm.isNativeAiEnabled} onValueChange={vm.setIsNativeAiEnabled} />
+              <AppToggle value={vm.isNativeAiEnabled} onValueChange={vm.setIsNativeAiEnabled} />
             }
           />
 

@@ -11,9 +11,10 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { modelManagementService } from '@/src/services/ai/ModelManagementService';
 import type { AIModelMetadata, ModelDownloadStatus } from '@/src/services/ai/types';
 import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
+import { Screen } from '@/src/components/layout';
 import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { nativeAIProvider } from '../services/NativeAIProvider';
 import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
 import { mockAIProvider } from '../services/TransactionFallbackAIProvider';
@@ -311,11 +312,8 @@ export function AiBenchmarkView() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+    <Screen title="AI Benchmarking" scrollable withPadding>
       <View style={styles.header}>
-        <AppText variant="title" weight="bold">
-          AI Benchmarking
-        </AppText>
         <AppText variant="body" color="secondary">
           Test on-device LLM performance for transaction parsing.
         </AppText>
@@ -460,17 +458,14 @@ export function AiBenchmarkView() {
           ))}
         </View>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
   header: {
     marginBottom: Spacing.xl,
+    marginTop: Spacing.md,
   },
   globalToggle: {
     marginTop: Spacing.md,
