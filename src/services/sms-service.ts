@@ -26,6 +26,31 @@ import { PermissionsAndroid, Platform } from 'react-native';
 import { Observable } from 'rxjs';
 import { rebuildQueueService } from './RebuildQueueService';
 import { SmsExtractor } from './ledger/SmsExtractor';
+import {
+  RuleMatcher,
+  SmsMatchData,
+  SmsRuleMode,
+  SmsRuleDisposition,
+  SmsRuleField,
+  SmsRuleStringOperator,
+  SmsRuleAmountOperator,
+  SmsRuleCondition,
+  SmsRuleActions,
+  ResolvedSmsRule,
+} from './ledger/RuleMatcher';
+
+export {
+  RuleMatcher,
+  SmsMatchData,
+  SmsRuleMode,
+  SmsRuleDisposition,
+  SmsRuleField,
+  SmsRuleStringOperator,
+  SmsRuleAmountOperator,
+  SmsRuleCondition,
+  SmsRuleActions,
+  ResolvedSmsRule,
+};
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
@@ -45,16 +70,6 @@ export interface ParsedTransaction {
   confidence: number;
   parseStatus: InboxParseStatus;
   parseReason: string;
-}
-
-export interface SmsMatchData {
-  senderAddress: string;
-  rawBody: string;
-  parsedMerchant?: string;
-  parsedAccountSource?: string;
-  direction: TransactionDirection;
-  parsedCurrencyCode?: string;
-  parsedAmount?: number;
 }
 
 export interface SmsInboxFilterOptions {
@@ -77,33 +92,6 @@ export interface SmsRuleSuggestion {
   sampleMerchants: string[];
 }
 
-export type SmsRuleMode = 'builder' | 'regex';
-export type SmsRuleDisposition = 'auto_post' | 'review' | 'ignore';
-export type SmsRuleField =
-  | 'sender'
-  | 'body'
-  | 'merchant'
-  | 'account_source'
-  | 'direction'
-  | 'currency'
-  | 'amount';
-export type SmsRuleStringOperator = 'contains' | 'is';
-export type SmsRuleAmountOperator = 'eq' | 'gt' | 'lt' | 'between';
-
-export interface SmsRuleCondition {
-  field: SmsRuleField;
-  operator: SmsRuleStringOperator | SmsRuleAmountOperator | 'is';
-  value?: string;
-  minValue?: number;
-  maxValue?: number;
-}
-
-export interface SmsRuleActions {
-  disposition: SmsRuleDisposition;
-  sourceAccountId?: AccountId;
-  categoryAccountId?: AccountId;
-}
-
 export interface SmsRuleDraftInput {
   id?: string;
   mode: SmsRuleMode;
@@ -121,15 +109,6 @@ export interface SmsRulePreviewInput {
   bodyMatch?: string;
   conditions?: SmsRuleCondition[];
 }
-
-type ResolvedSmsRule = {
-  mode: SmsRuleMode;
-  senderMatch?: string;
-  bodyMatch?: string;
-  conditions: SmsRuleCondition[];
-  actions: SmsRuleActions;
-  priority: number;
-};
 
 type DuplicateMatch = {
   journalId: JournalId;
@@ -525,6 +504,38 @@ class SmsService {
       const rule = await this.rules.find(id);
       await rule.destroyPermanently();
     });
+  }
+
+  async getMatchingRule(
+    address: string,
+    body: string,
+    parsed: ParsedTransaction,
+    workplaceId: WorkplaceId,
+  ): Promise<TransactionAutoPostRule | null> {
+    const activeRules = (
+      await this.rules
+        .query(Q.where('is_active', true), Q.where('workplace_id', workplaceId))
+        .fetch()
+    ).sort((a, b) => this.getRulePriority(b) - this.getRulePriority(a));
+
+    const matchData: SmsMatchData = {
+      senderAddress: address,
+      rawBody: body,
+      parsedMerchant: parsed.merchant,
+      parsedAccountSource: parsed.accountSource,
+      direction: this.toDirection(parsed.type),
+      parsedCurrencyCode: parsed.currencyCode,
+      parsedAmount: parsed.amount,
+    };
+
+    for (const rule of activeRules) {
+      const definition = this.getRuleDefinition(rule);
+      if (this.matchesResolvedRule(matchData, definition)) {
+        return rule;
+      }
+    }
+
+    return null;
   }
 
   private async scanInbox(workplaceId: WorkplaceId, limit: number): Promise<number> {
@@ -994,33 +1005,27 @@ class SmsService {
     ].includes(status);
   }
 
-  private buildRegex(pattern?: string): RegExp | null {
-    if (!pattern?.trim()) return null;
-    try {
-      return new RegExp(pattern, 'i');
-    } catch {
-      return null;
-    }
-  }
-
   private matchesPreviewRule(data: TransactionInboxRecord, input: SmsRulePreviewInput): boolean {
-    if (input.mode === 'builder') {
-      const conditions = (input.conditions || []).filter(condition =>
+    const parsedRule: ResolvedSmsRule = {
+      mode: input.mode,
+      senderMatch: input.senderMatch,
+      bodyMatch: input.bodyMatch,
+      conditions: (input.conditions || []).filter(condition =>
         this.isMeaningfulCondition(condition),
-      );
-      if (conditions.length === 0) return false;
-      return this.matchesStructuredConditions(data, conditions);
-    }
-
-    const senderRegex = this.buildRegex(input.senderMatch);
-    const bodyRegex = input.bodyMatch ? this.buildRegex(input.bodyMatch) : null;
-    const senderOk = senderRegex?.test(
-      (data.senderAddress || '').substring(0, AppConfig.input.sms.maxSenderMatchLength),
-    );
-    const bodyOk = bodyRegex
-      ? bodyRegex.test((data.rawBody || '').substring(0, AppConfig.input.sms.maxBodyMatchLength))
-      : true;
-    return !!senderOk && bodyOk;
+      ),
+      actions: { disposition: 'review' },
+      priority: 100,
+    };
+    const matchData: SmsMatchData = {
+      senderAddress: data.senderAddress || '',
+      rawBody: data.rawBody || '',
+      parsedMerchant: data.parsedMerchant || undefined,
+      parsedAccountSource: data.parsedAccountSource || undefined,
+      direction: data.direction,
+      parsedCurrencyCode: data.parsedCurrencyCode || undefined,
+      parsedAmount: data.parsedAmount || undefined,
+    };
+    return RuleMatcher.compileRule(parsedRule)(matchData);
   }
 
   private getRulePriority(rule: TransactionAutoPostRule): number {
@@ -1071,110 +1076,7 @@ class SmsService {
   }
 
   private matchesResolvedRule(data: SmsMatchData, definition: ResolvedSmsRule): boolean {
-    if (definition.mode === 'builder' && definition.conditions.length > 0) {
-      return this.matchesStructuredConditions(data, definition.conditions);
-    }
-
-    const senderRegex = this.buildRegex(definition.senderMatch);
-    const bodyRegex = definition.bodyMatch ? this.buildRegex(definition.bodyMatch) : null;
-    const senderOk = senderRegex?.test(
-      data.senderAddress.substring(0, AppConfig.input.sms.maxSenderMatchLength),
-    );
-    const bodyOk = bodyRegex
-      ? bodyRegex.test(data.rawBody.substring(0, AppConfig.input.sms.maxBodyMatchLength))
-      : true;
-    return !!senderOk && bodyOk;
-  }
-
-  private matchesStructuredConditions(
-    data: TransactionInboxRecord | SmsMatchData,
-    conditions: SmsRuleCondition[],
-  ): boolean {
-    return conditions.every(condition => this.matchesCondition(data, condition));
-  }
-
-  private matchesCondition(
-    data: TransactionInboxRecord | SmsMatchData,
-    condition: SmsRuleCondition,
-  ): boolean {
-    const normalizedValue = condition.value?.trim();
-
-    const sender = data.senderAddress;
-    const rawBody = data.rawBody;
-    const parsedMerchant = data.parsedMerchant;
-    const parsedAccountSource = data.parsedAccountSource;
-    const direction = data.direction;
-    const parsedCurrencyCode = data.parsedCurrencyCode;
-    const parsedAmount = data.parsedAmount;
-
-    switch (condition.field) {
-      case 'sender':
-        return this.matchesStringCondition(
-          sender,
-          condition.operator as SmsRuleStringOperator,
-          normalizedValue,
-        );
-      case 'body':
-        return this.matchesStringCondition(
-          rawBody,
-          condition.operator as SmsRuleStringOperator,
-          normalizedValue,
-        );
-      case 'merchant':
-        return this.matchesStringCondition(
-          parsedMerchant,
-          condition.operator as SmsRuleStringOperator,
-          normalizedValue,
-        );
-      case 'account_source':
-        return this.matchesStringCondition(
-          parsedAccountSource,
-          condition.operator as SmsRuleStringOperator,
-          normalizedValue,
-        );
-      case 'direction':
-        return this.matchesStringCondition(direction, 'is', normalizedValue);
-      case 'currency':
-        return this.matchesStringCondition(parsedCurrencyCode, 'is', normalizedValue);
-      case 'amount':
-        return this.matchesAmountCondition(parsedAmount, condition);
-      default:
-        return false;
-    }
-  }
-
-  private matchesStringCondition(
-    source: string | undefined,
-    operator: SmsRuleStringOperator,
-    value?: string,
-  ): boolean {
-    if (!source || !value) return false;
-    const left = source.toLowerCase();
-    const right = value.toLowerCase();
-    return operator === 'is' ? left === right : left.includes(right);
-  }
-
-  private matchesAmountCondition(amount: number | undefined, condition: SmsRuleCondition): boolean {
-    if (typeof amount !== 'number') return false;
-    const operator = condition.operator as SmsRuleAmountOperator;
-    const minValue = typeof condition.minValue === 'number' ? condition.minValue : undefined;
-    const maxValue = typeof condition.maxValue === 'number' ? condition.maxValue : undefined;
-    const exactValue = typeof condition.minValue === 'number' ? condition.minValue : undefined;
-
-    switch (operator) {
-      case 'eq':
-        return exactValue !== undefined ? Math.abs(amount - exactValue) < 0.0001 : false;
-      case 'gt':
-        return minValue !== undefined ? amount > minValue : false;
-      case 'lt':
-        return minValue !== undefined ? amount < minValue : false;
-      case 'between':
-        return minValue !== undefined && maxValue !== undefined
-          ? amount >= Math.min(minValue, maxValue) && amount <= Math.max(minValue, maxValue)
-          : false;
-      default:
-        return false;
-    }
+    return RuleMatcher.compileRule(definition)(data);
   }
 
   private isMeaningfulCondition(

@@ -109,3 +109,56 @@ describe('smsService.prepareMergeOperations', () => {
     databaseSpy.mockRestore();
   });
 });
+
+describe('smsService.getMatchingRule', () => {
+  it('returns the matching rule for a parsed transaction', async () => {
+    const mockRule = {
+      id: 'rule-1',
+      senderMatch: 'HDFCBK',
+      bodyMatch: undefined,
+      conditionsJson: undefined,
+      actionsJson: JSON.stringify({
+        disposition: 'review',
+        sourceAccountId: 'hdfc-acc-id',
+      }),
+      priority: 100,
+      sourceAccountId: 'hdfc-acc-id',
+      categoryAccountId: '',
+      isActive: true,
+    };
+
+    const mockQuery = {
+      fetch: jest.fn().mockResolvedValue([mockRule]),
+    };
+
+    const databaseSpy = jest.spyOn(database.collections, 'get').mockReturnValue({
+      query: jest.fn().mockReturnValue(mockQuery),
+    } as any);
+
+    const parsedTx = {
+      id: 'sms-hdfc',
+      amount: 1990,
+      merchant: undefined,
+      type: 'debit' as const,
+      date: Date.now(),
+      rawBody: 'Your card XX1990 is debited',
+      address: 'HDFCBK',
+      confidence: 0.9,
+      parseStatus: InboxParseStatus.PARSED,
+      parseReason: 'Parsed amount',
+    };
+
+    const rule = await smsService.getMatchingRule(
+      'HDFCBK',
+      'Your card XX1990 is debited',
+      parsedTx,
+      'wp-1' as any,
+    );
+
+    expect(rule).not.toBeNull();
+    expect(rule?.id).toBe('rule-1');
+    expect(rule?.sourceAccountId).toBe('hdfc-acc-id');
+
+    databaseSpy.mockRestore();
+  });
+});

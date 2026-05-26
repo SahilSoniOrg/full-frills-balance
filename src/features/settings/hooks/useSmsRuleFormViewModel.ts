@@ -296,7 +296,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     };
   }, [legacyBodyMatch, legacySenderMatch, mode, structuredConditions]);
 
-  const showAccountMapping = disposition === 'auto_post';
+  const showAccountMapping = disposition === 'auto_post' || disposition === 'review';
   const hasBuilderConditions = structuredConditions.length > 0;
   const hasRegexConditions = legacySenderMatch.trim().length > 0;
   const priorityNumber = priority.trim() ? Number(priority.trim()) : 100;
@@ -305,11 +305,17 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     ? amountValue.trim().length > 0 &&
       (amountOperator !== 'between' || amountSecondaryValue.trim().length > 0)
     : true;
+
+  const accountsAreValid =
+    disposition === 'auto_post'
+      ? sourceAccountId !== EMPTY_ACCOUNT_ID && categoryAccountId !== EMPTY_ACCOUNT_ID
+      : true;
+
   const isValid =
     (mode === 'builder' ? hasBuilderConditions : hasRegexConditions) &&
     amountIsValid &&
     priorityIsValid &&
-    (!showAccountMapping || (!!sourceAccountId && !!categoryAccountId));
+    accountsAreValid;
 
   const handleSave = async () => {
     if (!isValid) return;

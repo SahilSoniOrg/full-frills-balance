@@ -1,17 +1,20 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import TransactionInboxRecord, {
+  InboxParseStatus,
   InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useAccounts } from '@/src/features/accounts';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
-import { smsService } from '@/src/services/sms-service';
+import { ParsedTransaction, smsService } from '@/src/services/sms-service';
 import {
   AccountId,
+  EMPTY_ACCOUNT_ID,
   JournalId,
   TransactionDuplicateCandidate,
   TransactionInboxItem,
 } from '@/src/types/domain';
+import { logger } from '@/src/utils/logger';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { AppConfig } from '@/src/constants/app-config';
@@ -191,11 +194,52 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   }, []);
 
   const handleImport = useCallback(
-    (item: TransactionInboxItem) => {
+    async (item: TransactionInboxItem) => {
       let matchedBankAccountId: AccountId | undefined;
       let matchedCounterpartyId: string | undefined;
 
-      if (item.parsedAccountSource) {
+      // 1. Try to find a matching rule to pre-fill accounts
+      let matchedRule: any = null;
+      try {
+        const parsedTx: ParsedTransaction = {
+          id: item.deviceSourceId,
+          amount: item.parsedAmount,
+          merchant: item.parsedMerchant,
+          type:
+            item.direction === 'credit'
+              ? 'credit'
+              : item.direction === 'debit'
+                ? 'debit'
+                : 'unknown',
+          date: item.inputDate,
+          rawBody: item.rawBody || '',
+          address: item.senderAddress || '',
+          accountSource: item.parsedAccountSource,
+          confidence: item.parseConfidence ?? 0,
+          parseStatus: item.parseStatus as InboxParseStatus,
+          parseReason: item.parseReason || '',
+        };
+        matchedRule = await smsService.getMatchingRule(
+          item.senderAddress || '',
+          item.rawBody || '',
+          parsedTx,
+          workplaceId,
+        );
+      } catch (error) {
+        logger.error('Failed to search matching rules in handleImport', error);
+      }
+
+      if (matchedRule) {
+        if (matchedRule.sourceAccountId && matchedRule.sourceAccountId !== EMPTY_ACCOUNT_ID) {
+          matchedBankAccountId = matchedRule.sourceAccountId;
+        }
+        if (matchedRule.categoryAccountId && matchedRule.categoryAccountId !== EMPTY_ACCOUNT_ID) {
+          matchedCounterpartyId = matchedRule.categoryAccountId;
+        }
+      }
+
+      // 2. Fall back to heuristics if rule didn't pre-fill
+      if (!matchedBankAccountId && item.parsedAccountSource) {
         const normalizedSource = normalizeForMatch(item.parsedAccountSource);
         const sourceDigits = item.parsedAccountSource.match(/(\d{3,6})/)?.[1];
         const bestAccount = accounts.find(account => {
@@ -213,7 +257,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
         matchedBankAccountId = bestAccount?.id;
       }
 
-      if (item.parsedMerchant) {
+      if (!matchedCounterpartyId && item.parsedMerchant) {
         const normalizedMerchant = normalizeForMatch(item.parsedMerchant);
         const bestAccount = accounts.find(account => {
           const name = normalizeForMatch(account.name);
@@ -262,7 +306,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
         params,
       });
     },
-    [accounts],
+    [accounts, workplaceId],
   );
 
   const handleCompareDuplicate = useCallback(

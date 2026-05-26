@@ -8,7 +8,7 @@ import { SelectionTileList } from '@/src/components/common/SelectionTileList';
 import { AppInput, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { SmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
-import { AccountId } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
 import dayjs from 'dayjs';
 import { StyleSheet, Switch, View } from 'react-native';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -286,9 +286,9 @@ export function SmsRuleFormView(vm: SmsRuleFormViewModel) {
         onClose={() => setPickingAccountFor(null)}
         onSelect={(accountId: AccountId) => {
           if (pickingAccountFor === 'source') {
-            setSourceAccountId(accountId);
+            setSourceAccountId(sourceAccountId === accountId ? EMPTY_ACCOUNT_ID : accountId);
           } else {
-            setCategoryAccountId(accountId);
+            setCategoryAccountId(categoryAccountId === accountId ? EMPTY_ACCOUNT_ID : accountId);
           }
           setPickingAccountFor(null);
         }}
