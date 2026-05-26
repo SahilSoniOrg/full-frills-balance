@@ -4,7 +4,7 @@ import { AppConfig, Opacity, withOpacity } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface WorkplaceCurrencyStepProps {
   selectedCurrency: string;

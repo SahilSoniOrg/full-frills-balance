@@ -2,7 +2,6 @@ import { AppIcon, IconName, isValidIconName } from '@/src/components/core/AppIco
 import { AppText } from '@/src/components/core/AppText';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 
 interface IvyIconProps {

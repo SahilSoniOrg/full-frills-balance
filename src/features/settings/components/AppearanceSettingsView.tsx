@@ -8,7 +8,6 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelectorView';
 import type { AppearanceSettingsViewModel } from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';
-import React from 'react';
 
 interface AppearanceSettingsViewProps {
   vm: AppearanceSettingsViewModel;

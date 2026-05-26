@@ -2,7 +2,6 @@ import { Spacing } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { AccountTileList } from '@/src/features/journal/components/AccountTileList';
 import { AccountId, AccountRole as DomainAccountRole } from '@/src/types/domain';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface SimpleFormAccountSectionsProps {

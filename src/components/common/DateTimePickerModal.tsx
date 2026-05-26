@@ -5,7 +5,7 @@ import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -52,8 +52,10 @@ export function DateTimePickerModal({
   useEffect(() => {
     if (!visible) return;
     const nextValue = dayjs(`${date}T${time}`);
-    setSelectedValue(nextValue.isValid() ? nextValue : dayjs());
-    setSelectedWeekday(weekday);
+    setTimeout(() => {
+      setSelectedValue(nextValue.isValid() ? nextValue : dayjs());
+      setSelectedWeekday(weekday);
+    }, 0);
   }, [visible, date, time, weekday]);
 
   const handleApply = () => {

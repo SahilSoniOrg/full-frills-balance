@@ -7,7 +7,7 @@ import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { MotiView } from 'moti';
-import React, { memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface TransactionBadge {

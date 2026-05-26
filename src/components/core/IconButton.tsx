@@ -6,7 +6,6 @@
 import { AppIcon, IconName } from '@/src/components/core/AppIcon';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import {
   Keyboard,
   StyleSheet,

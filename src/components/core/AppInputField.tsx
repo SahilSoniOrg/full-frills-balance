@@ -3,7 +3,7 @@ import { ColorKey, Size, Spacing, Typography } from '@/src/constants/design-toke
 import { Box, BoxBaseProps } from '@/src/design-system/Box';
 import { extractBoxProps } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { StyleSheet, TextInput, type TextInputProps, View } from 'react-native';
 
 export type AppInputFieldBaseProps = BoxBaseProps & {

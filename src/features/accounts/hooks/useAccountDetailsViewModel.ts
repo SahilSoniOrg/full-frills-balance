@@ -278,12 +278,12 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   const balance = dbBalanceData?.balance || 0;
   const transactionCount = balanceData?.transactionCount || 0;
   const isDeleted = account?.deletedAt != null;
-  const reconciledAt = useMemo(() => {
+  const reconciledAt = (() => {
     if (!account?.reconciledAt) return null;
     return account.reconciledAt instanceof Date
       ? account.reconciledAt
       : new Date(account.reconciledAt);
-  }, [account?.reconciledAt]);
+  })();
 
   const accountSubtypeLabel = account?.accountSubtype
     ? formatAccountSubtypeLabel(account.accountSubtype)
@@ -473,12 +473,12 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     );
   }, [accountId, recoverAction]);
 
+  const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
+
   const onReconcile = useCallback(() => {
     setIsReconcileModalVisible(true);
   }, []);
-
-  const [isReconcileModalVisible, setIsReconcileModalVisible] = useState(false);
-  const onConfirmReconcile = useCallback(async () => {
+  const onConfirmReconcile = async () => {
     setIsReconcileModalVisible(false);
     try {
       await reconcileAccount(accountId, new Date());
@@ -489,7 +489,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         `Could not reconcile account: ${error instanceof Error ? error.message : 'Unknown'}`,
       );
     }
-  }, [accountId, reconcileAccount]);
+  };
 
   const [isMergeModalVisible, setIsMergeModalVisible] = useState(false);
   const mergeCandidates = useMemo(() => {
@@ -714,7 +714,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
   }, [rawGroupedItems, reconciledAt]);
 
   // --- Selection Actions ---
-  const onShareSelected = useCallback(async () => {
+  const onShareSelected = async () => {
     if (selectedIds.size === 0) return;
     try {
       const selectedTransactions = transactions.filter(t => selectedIds.has(t.id));
@@ -739,7 +739,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     } catch (error) {
       logger.error('Failed to share transactions', error);
     }
-  }, [selectedIds, transactions, account?.name, defaultShareFormat, workplaceCurrency]);
+  };
 
   const selectAll = useCallback(() => {
     const visibleIds = transactionItems.filter(i => i.type === 'transaction').map(i => i.id);
@@ -802,12 +802,17 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     const firstWithBalance = chartTransactions.find(
       t => t.runningBalance !== undefined && t.runningBalance !== null,
     );
-    let lastValidBalance = firstWithBalance?.runningBalance || 0;
-    const pts = chartTransactions.map((t: Transaction) => {
-      if (t.runningBalance !== undefined && t.runningBalance !== null)
-        lastValidBalance = t.runningBalance;
-      return { x: t.transactionDate, y: lastValidBalance };
-    });
+    const pts = chartTransactions.reduce(
+      (acc, t: Transaction) => {
+        const lastBal =
+          acc.length > 0 ? acc[acc.length - 1].y : firstWithBalance?.runningBalance || 0;
+        const y =
+          t.runningBalance !== undefined && t.runningBalance !== null ? t.runningBalance : lastBal;
+        acc.push({ x: t.transactionDate, y });
+        return acc;
+      },
+      [] as { x: number; y: number }[],
+    );
 
     const MS_PER_DAY = AppConfig.time.msPerDay;
     const visibleStart = dateRange ? dateRange.startDate : pts[0].x;

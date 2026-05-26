@@ -9,7 +9,7 @@
  * - loadMore function
  * - Versioning to force re-renders on same-reference emissions
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 
 export interface DateRange {
@@ -103,10 +103,11 @@ export function usePaginatedObservable<T, E = T, F = unknown>(
     suppressResetOnSearch,
     pageSize,
   });
-  propsRef.current = { observe, enrich, filter, searchQuery, suppressResetOnSearch, pageSize };
-
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+  useLayoutEffect(() => {
+    propsRef.current = { observe, enrich, filter, searchQuery, suppressResetOnSearch, pageSize };
+    itemsRef.current = items;
+  });
 
   // Version key for re-fetching without clearing (if filter object supports it)
   const versionKey = filter && getVersionKey ? getVersionKey(filter) : 0;

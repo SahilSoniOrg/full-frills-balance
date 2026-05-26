@@ -53,7 +53,7 @@ export function JournalMetaCard({
 
   React.useEffect(() => {
     if (notes) {
-      setShowNotes(true);
+      setTimeout(() => setShowNotes(true), 0);
     }
   }, [notes]);
 

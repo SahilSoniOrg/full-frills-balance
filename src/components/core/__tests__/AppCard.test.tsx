@@ -1,6 +1,5 @@
 import { AppCard } from '@/src/components/core/AppCard';
 import { render, screen } from '@/src/utils/test-utils';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 describe('AppCard', () => {

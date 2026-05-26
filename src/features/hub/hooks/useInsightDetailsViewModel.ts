@@ -1,3 +1,4 @@
+import { getNow } from '@/src/utils/dateHelpers';
 import { TransactionBadge } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
@@ -39,7 +40,7 @@ export function useInsightDetailsViewModel({
       AppConfig.defaults.insightDetailsFetchLimit,
       {
         startDate: 0,
-        endDate: Date.now() + AppConfig.time.msPerDay,
+        endDate: getNow() + AppConfig.time.msPerDay,
         journalIds: journalIds,
       },
     );

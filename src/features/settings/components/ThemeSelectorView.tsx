@@ -1,7 +1,6 @@
 import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/constants';
 import { AppIcon, AppText } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
 

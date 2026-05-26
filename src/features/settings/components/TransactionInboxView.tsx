@@ -6,7 +6,6 @@ import { TransactionInboxItemCardView } from '@/src/features/settings/components
 import { TransactionInboxViewModel } from '@/src/features/settings/hooks/useTransactionInboxViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { ActivityIndicator, FlatList, Keyboard, Platform, StyleSheet, View } from 'react-native';
 
 interface TransactionInboxViewProps {

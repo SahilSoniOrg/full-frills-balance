@@ -15,7 +15,7 @@ import { AccountTypeSelector } from '@/src/features/accounts/components/AccountT
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 

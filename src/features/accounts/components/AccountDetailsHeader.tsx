@@ -8,7 +8,6 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, formatRelativeReconciledDate, formatShortDate } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
-import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 interface AccountDetailsHeaderProps {

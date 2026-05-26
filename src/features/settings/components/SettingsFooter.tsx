@@ -4,7 +4,6 @@ import { Box, Inline } from '@/src/design-system';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 
 export function SettingsFooter() {
   const { theme } = useTheme();

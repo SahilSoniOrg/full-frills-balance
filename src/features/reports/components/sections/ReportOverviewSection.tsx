@@ -10,7 +10,7 @@ import {
 } from '@/src/features/reports/components/ReportTooltip';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 const NET_WORTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;

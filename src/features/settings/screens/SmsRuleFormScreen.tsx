@@ -2,7 +2,6 @@ import { SmsRuleFormView } from '@/src/features/settings/components/SmsRuleFormV
 import { useSmsRuleFormViewModel } from '@/src/features/settings/hooks/useSmsRuleFormViewModel';
 import { AccountId } from '@/src/types/domain';
 import { useLocalSearchParams } from 'expo-router';
-import React from 'react';
 
 export default function SmsRuleFormScreen() {
   const params = useLocalSearchParams<{

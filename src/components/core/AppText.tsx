@@ -4,7 +4,7 @@ import { processTextChildren, resolveStyleColors } from '@/src/design-system/uti
 import { useTheme } from '@/src/hooks/use-theme';
 import { logger } from '@/src/utils/logger';
 import { ComponentVariant } from '@/src/utils/style-helpers';
-import React, { memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 export type AppTextProps = TextProps & {

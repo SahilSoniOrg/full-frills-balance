@@ -1,7 +1,6 @@
 import { AppButton, AppIcon, AppInput, AppText, IconName } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { Keyboard, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface WorkplaceBasicInfoStepProps {

@@ -2,7 +2,6 @@ import { AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalSummaryProps {

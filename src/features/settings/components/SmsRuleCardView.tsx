@@ -3,7 +3,6 @@ import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleCondition } from '@/src/services/sms-service';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRuleCardViewProps {

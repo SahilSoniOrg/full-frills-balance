@@ -6,7 +6,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -56,6 +56,14 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
   const [isParsing, setIsParsing] = useState(false);
   const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
 
+  // Animated bars for voice pulsing visualizer
+  const [animValues] = useState(() => [
+    new Animated.Value(1),
+    new Animated.Value(1),
+    new Animated.Value(1),
+    new Animated.Value(1),
+    new Animated.Value(1),
+  ]);
   // Real-time voice events
   useSpeechRecognitionEvent('start', () => setIsRecording(true));
   useSpeechRecognitionEvent('end', () => setIsRecording(false));
@@ -83,15 +91,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
       }).start();
     });
   });
-
-  // Animated bars for voice pulsing visualizer
-  const animValues = useRef([
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-  ]).current;
 
   const animLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -141,10 +140,12 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
   // Reset local state when opened/closed
   useEffect(() => {
     if (!visible) return;
-    setTranscription('');
-    setIsRecording(false);
-    setIsParsing(false);
-    setParserOutput(null);
+    setTimeout(() => {
+      setTranscription('');
+      setIsRecording(false);
+      setIsParsing(false);
+      setParserOutput(null);
+    }, 0);
   }, [visible]);
 
   const handleStartRecording = async () => {

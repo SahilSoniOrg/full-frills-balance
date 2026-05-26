@@ -11,7 +11,6 @@ import { FadeIn, Stack } from '@/src/design-system';
 import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useLocalSearchParams } from 'expo-router';
-import React from 'react';
 import { StyleSheet } from 'react-native';
 
 export default function PlannedPaymentFormScreen() {

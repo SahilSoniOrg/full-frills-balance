@@ -2,7 +2,6 @@ import { ProgressBar } from '@/src/components/common/ProgressBar';
 import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 
 interface SettingsMaintenanceOverlayProps {

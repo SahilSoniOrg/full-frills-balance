@@ -42,15 +42,17 @@ export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
       firstLineCurrency &&
       firstLineCurrency !== selectedCurrency
     ) {
-      setSelectedCurrency(firstLineCurrency);
+      setTimeout(() => setSelectedCurrency(firstLineCurrency), 0);
     }
   }, [firstLineCurrency, isCurrencyManuallySelected, selectedCurrency]);
 
   // Keep selected currency valid if available currencies change.
   useEffect(() => {
     if (!availableCurrencies.includes(selectedCurrency)) {
-      setSelectedCurrency(availableCurrencies[0] || defaultCurrency);
-      setIsCurrencyManuallySelected(false);
+      setTimeout(() => {
+        setSelectedCurrency(availableCurrencies[0] || defaultCurrency);
+        setIsCurrencyManuallySelected(false);
+      }, 0);
     }
   }, [availableCurrencies, selectedCurrency, defaultCurrency]);
 

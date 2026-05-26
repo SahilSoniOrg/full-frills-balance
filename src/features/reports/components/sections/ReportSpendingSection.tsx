@@ -6,7 +6,6 @@ import { BreakdownDonutCard } from '@/src/features/reports/components/BreakdownD
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import { ReportNoData } from '@/src/features/reports/components/ReportNoData';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
-import React from 'react';
 import { StyleSheet } from 'react-native';
 
 interface ReportSpendingSectionProps {

@@ -11,7 +11,7 @@ import {
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useJournalSearchViewModel } from '../hooks/useJournalSearchViewModel';

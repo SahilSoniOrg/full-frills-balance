@@ -8,7 +8,7 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import type { PersonalizationViewModel } from '@/src/features/settings/hooks/usePersonalizationViewModel';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 
 interface PersonalizationSettingsViewProps {

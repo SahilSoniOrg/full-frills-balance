@@ -5,7 +5,6 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 

@@ -7,7 +7,6 @@ import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface LegendRow {

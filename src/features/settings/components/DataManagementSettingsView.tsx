@@ -7,7 +7,6 @@ import { ShareFormatPreferenceView } from '@/src/features/settings/components/Sh
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import type { DataManagementViewModel } from '@/src/features/settings/hooks/useDataManagementViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 
 interface DataManagementSettingsViewProps {

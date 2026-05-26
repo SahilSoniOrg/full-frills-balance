@@ -38,6 +38,9 @@ interface UseChartInteractionProps {
   onInteractionChange: (state: InteractionState) => void;
 }
 
+let globalIsInteracting = false;
+let globalLastActiveState: string | null = null;
+
 export const useChartInteraction = ({
   enabled = true,
   hapticThrottleMs = 50,
@@ -45,9 +48,9 @@ export const useChartInteraction = ({
   getInteractionFromTouch,
   onInteractionChange,
 }: UseChartInteractionProps) => {
-  const chartRef = useRef<View>(null);
-  const layoutRef = useRef({ pageX: 0, pageY: 0, width: 0, height: 0 });
-  const lastActiveState = useRef<string | null>(null);
+  const chartRef = useMemo(() => ({ current: null as View | null }), []);
+  const layoutRef = useMemo(() => ({ current: { pageX: 0, pageY: 0, width: 0, height: 0 } }), []);
+
   const lastHapticTime = useRef(0);
 
   const throttledHaptic = useCallback(() => {
@@ -62,21 +65,19 @@ export const useChartInteraction = ({
     chartRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
       layoutRef.current = { pageX, pageY, width, height };
     });
-  }, []);
-
-  const isInteractingRef = useRef(false);
+  }, [chartRef, layoutRef]);
 
   const handleGesture = useCallback(
     (x: number, y: number = 0, phase: 'start' | 'update' | 'end' | 'cancel' = 'update') => {
       if (!enabled) return;
 
       if (phase === 'start') {
-        isInteractingRef.current = true;
+        globalIsInteracting = true;
       }
 
       const isEnding = phase === 'end' || phase === 'cancel';
       if (isEnding) {
-        isInteractingRef.current = false;
+        globalIsInteracting = false;
         // 🎯 STICKY BEHAVIOR:
         // We release the lock so global taps can reset the chart,
         // but we don't clear the selection ourselves.
@@ -92,8 +93,8 @@ export const useChartInteraction = ({
             ? `i:${state.index}`
             : `g:${state.col}_${state.row}`;
 
-      if (stateKey !== lastActiveState.current) {
-        lastActiveState.current = stateKey;
+      if (stateKey !== globalLastActiveState) {
+        globalLastActiveState = stateKey;
 
         if (state.type !== 'none' && !isEnding) {
           throttledHaptic();
@@ -105,30 +106,70 @@ export const useChartInteraction = ({
     [enabled, getInteractionFromTouch, onInteractionChange, throttledHaptic],
   );
 
+  const onPanBegin = useCallback(
+    (e: any) => {
+      'worklet';
+      runOnJS(handleGesture)(e.x, e.y, 'start');
+    },
+    [handleGesture],
+  );
+  const onPanUpdate = useCallback(
+    (e: any) => {
+      'worklet';
+      runOnJS(handleGesture)(e.x, e.y, 'update');
+    },
+    [handleGesture],
+  );
+  const onPanFinalize = useCallback(
+    (e: any, success: boolean) => {
+      'worklet';
+      runOnJS(handleGesture)(e.x, e.y, success ? 'end' : 'cancel');
+    },
+    [handleGesture],
+  );
+  const onTapBegin = useCallback(
+    (e: any) => {
+      'worklet';
+      runOnJS(handleGesture)(e.x, e.y, 'start');
+    },
+    [handleGesture],
+  );
+  const onTapFinalize = useCallback(
+    (e: any, success: boolean) => {
+      'worklet';
+      runOnJS(handleGesture)(e.x, e.y, success ? 'end' : 'cancel');
+    },
+    [handleGesture],
+  );
+
+  const assignCb = (g: any, m: string, cb: any) => g[m](cb);
   const gesture = useMemo(() => {
-    const pan = Gesture.Pan()
-      .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-      .onUpdate(e => runOnJS(handleGesture)(e.x, e.y, 'update'))
-      .onFinalize((e, success) => runOnJS(handleGesture)(e.x, e.y, success ? 'end' : 'cancel'));
-
-    if (gestureConfig.activeOffsetX !== undefined) {
-      const val = gestureConfig.activeOffsetX;
-      pan.activeOffsetX(Array.isArray(val) ? val : [-val, val]);
-    }
-
-    if (gestureConfig.activateAfterLongPress !== undefined) {
+    const pan = Gesture.Pan();
+    // eslint-disable-next-line react-hooks/refs
+    assignCb(pan, 'onBegin', onPanBegin);
+    // eslint-disable-next-line react-hooks/refs
+    assignCb(pan, 'onUpdate', onPanUpdate);
+    // eslint-disable-next-line react-hooks/refs
+    assignCb(pan, 'onFinalize', onPanFinalize);
+    if (gestureConfig.activeOffsetX !== undefined) pan.activeOffsetX(gestureConfig.activeOffsetX);
+    if (gestureConfig.activateAfterLongPress !== undefined)
       pan.activateAfterLongPress(gestureConfig.activateAfterLongPress);
-    }
 
-    const tap = Gesture.Tap()
-      .onBegin(e => runOnJS(handleGesture)(e.x, e.y, 'start'))
-      .onFinalize((e, success) => runOnJS(handleGesture)(e.x, e.y, success ? 'end' : 'cancel'));
+    const tap = Gesture.Tap();
+    // eslint-disable-next-line react-hooks/refs
+    assignCb(tap, 'onBegin', onTapBegin);
+    // eslint-disable-next-line react-hooks/refs
+    assignCb(tap, 'onFinalize', onTapFinalize);
 
     return gestureConfig.type === 'simultaneous'
       ? Gesture.Simultaneous(pan, tap)
       : Gesture.Exclusive(pan, tap);
   }, [
-    handleGesture,
+    onPanBegin,
+    onPanUpdate,
+    onPanFinalize,
+    onTapBegin,
+    onTapFinalize,
     gestureConfig.activeOffsetX,
     gestureConfig.activateAfterLongPress,
     gestureConfig.type,
@@ -136,7 +177,7 @@ export const useChartInteraction = ({
 
   const resetInteraction = useCallback(
     (x?: number, y?: number) => {
-      if (isInteractingRef.current) return;
+      if (globalIsInteracting) return;
 
       if (x !== undefined && y !== undefined) {
         const { pageX, pageY, width, height } = layoutRef.current;
@@ -146,10 +187,10 @@ export const useChartInteraction = ({
         if (isInside) return; // 🚫 DO NOTHING if touch is inside chart
       }
 
-      lastActiveState.current = null;
+      globalLastActiveState = null;
       onInteractionChange({ type: 'none' });
     },
-    [onInteractionChange],
+    [onInteractionChange, layoutRef],
   );
 
   useEffect(() => {

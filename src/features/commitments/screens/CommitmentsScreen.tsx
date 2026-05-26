@@ -6,7 +6,7 @@ import { BudgetListView } from '@/src/features/budget';
 import { PlannedPaymentListView } from '@/src/features/planned-payments';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Tab = 'budgets' | 'planned';
 

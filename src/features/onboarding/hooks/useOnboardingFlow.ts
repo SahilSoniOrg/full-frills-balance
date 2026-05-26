@@ -55,51 +55,20 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
       const draft = storage.getString(ONBOARDING_DRAFT_KEY);
       if (draft) {
         const data = JSON.parse(draft);
-        if (data.step) setStep(data.step);
-        if (data.name) setName(data.name);
-        if (data.selectedCurrency) setSelectedCurrency(data.selectedCurrency);
-        if (data.selectedAccounts) {
-          // Normalize selectedAccounts: Map lowercase IDs to capitalized names if they exist in defaults
-          const normalized = data.selectedAccounts.map((id: string) => {
-            const def = DEFAULT_ACCOUNTS.find(da => da.id.toLowerCase() === id.toLowerCase());
-            return def ? def.name : id;
-          });
-          // Unique set
-          setSelectedAccounts(Array.from(new Set(normalized)));
-        }
-        if (data.customAccounts) {
-          // Deduplicate custom accounts against defaults
-          const filtered = data.customAccounts.filter(
-            (ca: any) =>
-              !DEFAULT_ACCOUNTS.some(
-                da =>
-                  da.name.toLowerCase() === ca.name.toLowerCase() ||
-                  da.id.toLowerCase() === ca.name.toLowerCase(),
-              ),
-          );
-          setCustomAccounts(filtered);
-        }
-        if (data.selectedCategories) {
-          // Normalize selectedCategories
-          const normalized = data.selectedCategories.map((id: string) => {
-            const def = DEFAULT_CATEGORIES.find(dc => dc.id.toLowerCase() === id.toLowerCase());
-            return def ? def.name : id;
-          });
-          setSelectedCategories(Array.from(new Set(normalized)));
-        }
-        if (data.customCategories) {
-          // Deduplicate custom categories against defaults
-          const filtered = data.customCategories.filter(
-            (cc: any) =>
-              !DEFAULT_CATEGORIES.some(
-                dc =>
-                  dc.name.toLowerCase() === cc.name.toLowerCase() ||
-                  dc.id.toLowerCase() === cc.name.toLowerCase(),
-              ),
-          );
-          setCustomCategories(filtered);
-        }
-        logger.info('[Onboarding] Rehydrated and cleaned draft from disk');
+        setTimeout(() => {
+          if (data.step) setStep(data.step);
+          if (data.name) setName(data.name);
+          if (data.selectedCurrency) setSelectedCurrency(data.selectedCurrency);
+          if (data.selectedAccounts) {
+            setSelectedAccounts(Array.from(new Set<string>(data.selectedAccounts)));
+          }
+          if (data.selectedCategories) {
+            setSelectedCategories(Array.from<string>(new Set(data.selectedCategories)));
+          }
+          if (data.customCategories) {
+            setCustomCategories(data.customCategories);
+          }
+        }, 0);
       }
     } catch (error) {
       logger.error('[Onboarding] Failed to rehydrate draft', error);
@@ -138,12 +107,12 @@ export function useOnboardingFlow(): OnboardingFlowViewModel {
 
   const onContinue = useCallback(() => {
     void triggerHaptic('medium');
-    setStep(prev => prev + 1);
+    setStep((prev: number) => prev + 1);
   }, []);
 
   const onBack = useCallback(() => {
     void triggerHaptic('light');
-    setStep(prev => prev - 1);
+    setStep((prev: number) => prev - 1);
   }, []);
 
   const onToggleAccount = useCallback((accountName: string) => {

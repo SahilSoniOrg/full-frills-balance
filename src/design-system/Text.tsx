@@ -1,7 +1,7 @@
 import { SpacingKey, Typography } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ComponentVariant } from '@/src/utils/style-helpers';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 import { processTextChildren, resolveMarginSpacing, resolveStyleColors } from './utils';
 

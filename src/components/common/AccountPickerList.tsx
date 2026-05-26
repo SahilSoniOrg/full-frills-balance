@@ -174,7 +174,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
 
   // Sync with prop changes using fresh cloning
   useEffect(() => {
-    setLocalSelected(new Set(selectedIds));
+    setTimeout(() => setLocalSelected(new Set(selectedIds)), 0);
   }, [selectedIds]);
 
   const {

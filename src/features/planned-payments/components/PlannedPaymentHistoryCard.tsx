@@ -4,7 +4,6 @@ import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
-import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentHistoryCardProps {

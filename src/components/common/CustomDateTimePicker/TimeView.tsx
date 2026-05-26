@@ -2,7 +2,6 @@ import { AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface TimeViewProps {

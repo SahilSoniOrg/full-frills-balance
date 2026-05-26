@@ -1,3 +1,4 @@
+import { getPerfNow } from '@/src/utils/dateHelpers';
 import { IconName } from '@/src/components/core/AppIcon';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -69,7 +70,10 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { showAccountMonthlyStats, isPrivacyMode } = useUI();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
-  const mountTimeRef = useRef(performance.now());
+  const mountTimeRef = useRef<number>(0);
+  useEffect(() => {
+    mountTimeRef.current = getPerfNow();
+  }, []);
 
   // Log UI Mount
   useEffect(() => {
@@ -80,7 +84,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   // Sync with global privacy mode when it changes (e.g. from settings)
   useEffect(() => {
-    setIsLocalPrivacyMode(isPrivacyMode);
+    setTimeout(() => setIsLocalPrivacyMode(isPrivacyMode), 0);
   }, [isPrivacyMode]);
 
   const targetCurrency = workplaceCurrency;
@@ -125,7 +129,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   // Log Data Arrival
   useEffect(() => {
     if (hasData) {
-      const duration = Math.round(performance.now() - mountTimeRef.current);
+      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
       logger.info(`[AccountsList] Data Loaded in ${duration}ms`);
       logger.metric('AccountsList.DataLoaded', duration);
     }

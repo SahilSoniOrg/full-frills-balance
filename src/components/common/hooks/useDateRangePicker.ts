@@ -49,28 +49,30 @@ export function useDateRangePicker({
 
   useEffect(() => {
     if (visible) {
-      setDraftFilter(currentFilter);
-      setView('MENU');
+      setTimeout(() => {
+        setDraftFilter(currentFilter);
+        setView('MENU');
 
-      if (
-        currentFilter.type === 'CUSTOM' &&
-        (currentFilter.startDate !== undefined || currentFilter.endDate !== undefined)
-      ) {
-        setCustomRange({
-          startDate: currentFilter.startDate ? dayjs(currentFilter.startDate) : null,
-          endDate: currentFilter.endDate ? dayjs(currentFilter.endDate) : null,
-        });
-      } else {
-        setCustomRange({ startDate: null, endDate: null });
-      }
+        if (
+          currentFilter.type === 'CUSTOM' &&
+          (currentFilter.startDate !== undefined || currentFilter.endDate !== undefined)
+        ) {
+          setCustomRange({
+            startDate: currentFilter.startDate ? dayjs(currentFilter.startDate) : null,
+            endDate: currentFilter.endDate ? dayjs(currentFilter.endDate) : null,
+          });
+        } else {
+          setCustomRange({ startDate: null, endDate: null });
+        }
 
-      if (currentFilter.type === 'LAST_N') {
-        setLastNValue((currentFilter.lastN ?? 7).toString());
-        setLastNUnit(currentFilter.lastNUnit ?? 'days');
-      } else {
-        setLastNValue('7');
-        setLastNUnit('days');
-      }
+        if (currentFilter.type === 'LAST_N') {
+          setLastNValue((currentFilter.lastN ?? 7).toString());
+          setLastNUnit(currentFilter.lastNUnit ?? 'days');
+        } else {
+          setLastNValue('7');
+          setLastNUnit('days');
+        }
+      }, 0);
     }
   }, [visible, currentFilter, monthList]);
 

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { AppIcon, IconName } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AppConfig } from '@/src/constants';
@@ -5,7 +6,6 @@ import { Size, Spacing, ZIndex, Typography } from '@/src/constants/design-tokens
 import { useTheme } from '@/src/hooks/use-theme';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
 import { ToastPayload } from '@/src/utils/alerts';
-import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, TouchableOpacity } from 'react-native';
 
 export function ToastContainer() {
@@ -24,8 +24,8 @@ export function ToastContainer() {
 
 function ToastItemView({ toast }: { toast: ToastItem }) {
   const { theme } = useTheme();
-  const animatedValue = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [animatedValue] = useState(() => new Animated.Value(0));
+  const [opacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.parallel([

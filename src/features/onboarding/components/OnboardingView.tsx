@@ -6,7 +6,6 @@ import { OnboardingThemeStep } from '@/src/features/onboarding/components/Onboar
 import { StepFinalize } from '@/src/features/onboarding/components/StepFinalize';
 import { StepSplash } from '@/src/features/onboarding/components/StepSplash';
 import { OnboardingFlowViewModel } from '@/src/features/onboarding/hooks/useOnboardingFlow';
-import React from 'react';
 
 export function OnboardingView(vm: OnboardingFlowViewModel) {
   const {

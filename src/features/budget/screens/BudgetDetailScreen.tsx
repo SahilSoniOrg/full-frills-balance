@@ -5,7 +5,6 @@ import { Screen } from '@/src/components/layout';
 import { Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BudgetDetailHeader } from '../components/BudgetDetailHeader';
 import { useBudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';

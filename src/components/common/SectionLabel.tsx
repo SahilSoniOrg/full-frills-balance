@@ -1,6 +1,5 @@
 import { AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import React from 'react';
 import { StyleProp, TextStyle } from 'react-native';
 
 interface SectionLabelProps {

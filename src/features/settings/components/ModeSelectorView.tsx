@@ -1,6 +1,5 @@
 import { AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 type ThemePreference = 'system' | 'light' | 'dark';

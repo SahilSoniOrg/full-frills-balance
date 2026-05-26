@@ -6,7 +6,7 @@ import { ReportChartCard } from '@/src/features/reports/components/ReportChartCa
 import { IncomeExpenseTooltipContent } from '@/src/features/reports/components/ReportTooltip';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 const WEALTH_CHART_HEIGHT = REPORT_CHART_LAYOUT.netWorthChartHeight;

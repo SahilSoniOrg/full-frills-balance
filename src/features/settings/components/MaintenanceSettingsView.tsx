@@ -4,7 +4,6 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import type { DataManagementViewModel } from '@/src/features/settings/hooks/useDataManagementViewModel';
-import React from 'react';
 
 interface MaintenanceSettingsViewProps {
   vm: DataManagementViewModel;

@@ -7,7 +7,6 @@ import {
   useAuditLogDiffViewModel,
 } from '@/src/features/audit/hooks/useAuditLogDiffViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 interface AuditLogItemProps {

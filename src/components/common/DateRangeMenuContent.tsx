@@ -3,7 +3,6 @@ import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
-import React from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface DateRangeMenuContentProps {

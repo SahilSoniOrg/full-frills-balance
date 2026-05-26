@@ -10,6 +10,8 @@ import { blendColors, getWCAGContrastColor } from '@/src/utils/color-math';
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
 import { useCallback, useMemo } from 'react';
 
+const _contrastCache = new Map<string, string>();
+
 export function useTheme() {
   const { themeMode: uiThemeMode, themeId, fontId } = useUI();
   const themeOverride = useThemeOverride();
@@ -24,17 +26,16 @@ export function useTheme() {
    * Contrast Engine - Memoized to prevent redundant calculations
    */
   const onContrastRaw = useMemo(() => {
-    const cache = new Map<string, string>();
     return (color: string) => {
       if (!color) return theme.text;
-      if (cache.has(color)) return cache.get(color)!;
+      if (_contrastCache.has(color)) return _contrastCache.get(color)!;
 
       const result = getWCAGContrastColor(
         color,
         theme.onHighContrastSurface,
         theme.onLowContrastSurface,
       );
-      cache.set(color, result);
+      _contrastCache.set(color, result);
       return result;
     };
   }, [theme.onHighContrastSurface, theme.onLowContrastSurface, theme.text]);

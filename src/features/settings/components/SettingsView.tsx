@@ -4,7 +4,6 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { AppNavigation } from '@/src/utils/navigation';
-import React from 'react';
 
 export function SettingsView() {
   return (

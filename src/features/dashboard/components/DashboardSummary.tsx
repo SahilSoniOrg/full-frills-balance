@@ -4,7 +4,6 @@ import { useUI } from '@/src/contexts/UIContext';
 import { Box, Inline, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import React from 'react';
 import { StyleSheet } from 'react-native';
 
 interface DashboardSummaryProps {

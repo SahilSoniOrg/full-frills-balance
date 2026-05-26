@@ -2,7 +2,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { ARCHETYPES, getArchetypeById } from '@/src/constants/archetypes';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 

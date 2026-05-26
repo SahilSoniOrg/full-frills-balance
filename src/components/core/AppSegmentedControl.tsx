@@ -2,7 +2,7 @@ import { Opacity, Shape, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system/Box';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   DimensionValue,
@@ -234,7 +234,7 @@ export const AppSegmentedControl = <T extends string | number>({
     return idx === -1 ? 0 : idx;
   }, [options, value]);
 
-  const scrollValue = useRef(new Animated.Value(selectedIndex)).current;
+  const [scrollValue] = useState(() => new Animated.Value(selectedIndex));
 
   useEffect(() => {
     const hasSize = isVertical ? containerSize.height > 0 : containerSize.width > 0;

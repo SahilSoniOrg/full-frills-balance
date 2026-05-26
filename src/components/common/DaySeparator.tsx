@@ -8,7 +8,6 @@ import {
 } from '@/src/utils/dateUtils';
 import { formatCurrency } from '@/src/utils/money';
 import { useUI } from '@/src/contexts/UIContext';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface DaySeparatorProps {

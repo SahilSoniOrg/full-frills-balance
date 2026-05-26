@@ -1,3 +1,4 @@
+import { getNow, getSmartDateLabel } from '@/src/utils/dateHelpers';
 import { AppIcon, AppSurface, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
@@ -7,8 +8,6 @@ import PlannedPayment, {
 } from '@/src/data/models/PlannedPayment';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { getSmartDateLabel } from '@/src/utils/dateHelpers';
-import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentCardProps {
@@ -38,8 +37,8 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
   };
 
   const dateValue = new Date(item.nextOccurrence).setHours(0, 0, 0, 0);
-  const today = new Date().setHours(0, 0, 0, 0);
-  const tomorrow = new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
+  const today = new Date(getNow()).setHours(0, 0, 0, 0);
+  const tomorrow = new Date(getNow() + 86400000).setHours(0, 0, 0, 0);
   const isActive = item.status === PlannedPaymentStatus.ACTIVE;
 
   const isOverdue = isActive && dateValue < today;

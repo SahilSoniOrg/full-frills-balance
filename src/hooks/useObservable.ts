@@ -12,7 +12,7 @@
  * If passing 'data' to React.memo components, you MUST pass 'version' as a prop or key
  * to ensure re-rendering.
  */
-import { DependencyList, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DependencyList, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
 
 export interface UseObservableResult<T> {
@@ -44,7 +44,9 @@ export function useObservable<T>(
   options: UseObservableOptions<T> = {},
 ): UseObservableResult<T> {
   const factoryRef = useRef(observableFactory);
-  factoryRef.current = observableFactory;
+  useLayoutEffect(() => {
+    factoryRef.current = observableFactory;
+  });
 
   const stableFactory = useCallback(() => factoryRef.current(), []);
 
@@ -55,7 +57,9 @@ export function useObservable<T>(
 
   const [data, setData] = useState<T>(resolvedInitialValue);
   const dataRef = useRef(data);
-  dataRef.current = data;
+  useLayoutEffect(() => {
+    dataRef.current = data;
+  });
 
   // If we have a non-null initial value (cache hit), we are not "loading" the first frame.
   // Standard initial values like empty arrays [], empty maps/sets, or null/undefined are treated as loading.
@@ -79,23 +83,23 @@ export function useObservable<T>(
 
   // Track options in a ref to keep them out of the dependency array safely
   const optionsRef = useRef(options);
-  optionsRef.current = options;
+  useLayoutEffect(() => {
+    optionsRef.current = options;
+  });
 
   // Use a ref and useMemo to track dependency changes without triggering render-time setState
-  const depsRef = useRef(deps);
-  const revisionRef = useRef(0);
-  const depsRevision = useMemo(() => {
-    const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
-      if (oldDeps.length !== newDeps.length) return false;
-      return oldDeps.every((dep, i) => dep === newDeps[i]);
-    };
 
-    if (!areDepsEqual(depsRef.current, deps)) {
-      depsRef.current = deps;
-      revisionRef.current += 1;
-    }
-    return revisionRef.current;
-  }, [deps]);
+  const [prevDeps, setPrevDeps] = useState(deps);
+  const [depsRevision, setDepsRevision] = useState(0);
+
+  const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
+    if (oldDeps.length !== newDeps.length) return false;
+    return oldDeps.every((dep, i) => dep === newDeps[i]);
+  };
+  if (!areDepsEqual(prevDeps, deps)) {
+    setPrevDeps(deps);
+    setDepsRevision(r => r + 1);
+  }
 
   useEffect(() => {
     let isActive = true;
@@ -109,7 +113,7 @@ export function useObservable<T>(
     }
 
     // Reset error state
-    setError(null);
+    setTimeout(() => setError(null), 0);
 
     const subscription = stableFactory().subscribe({
       next: result => {
@@ -160,17 +164,20 @@ export function useObservableWithEnrichment<T, E>(
   options: UseObservableOptions<E> = {},
 ): UseObservableResult<E> {
   const factoryRef = useRef(observableFactory);
-  factoryRef.current = observableFactory;
-
   const enricherRef = useRef(enricher);
-  enricherRef.current = enricher;
+  useLayoutEffect(() => {
+    factoryRef.current = observableFactory;
+    enricherRef.current = enricher;
+  });
 
   const stableFactory = useCallback(() => factoryRef.current(), []);
   const stableEnricher = useCallback((d: T) => enricherRef.current(d), []);
 
   const [data, setData] = useState<E>(initialValue);
   const dataRef = useRef(data);
-  dataRef.current = data;
+  useLayoutEffect(() => {
+    dataRef.current = data;
+  });
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -178,24 +185,24 @@ export function useObservableWithEnrichment<T, E>(
 
   // Track refs to keep them out of the dependency array safely
   const optionsRef = useRef(options);
-  optionsRef.current = options;
+  useLayoutEffect(() => {
+    optionsRef.current = options;
+  });
 
   // We capture the initial seed only once to use as a baseline for resets
   const initialSeedRef = useRef(initialValue);
 
-  const depsRef = useRef(deps);
-  const revisionRef = useRef(0);
-  const depsRevision = useMemo(() => {
-    const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
-      if (oldDeps.length !== newDeps.length) return false;
-      return oldDeps.every((dep, i) => dep === newDeps[i]);
-    };
-    if (!areDepsEqual(depsRef.current, deps)) {
-      depsRef.current = deps;
-      revisionRef.current += 1;
-    }
-    return revisionRef.current;
-  }, [deps]);
+  const [prevDeps, setPrevDeps] = useState(deps);
+  const [depsRevision, setDepsRevision] = useState(0);
+
+  const areDepsEqual = (oldDeps: DependencyList, newDeps: DependencyList) => {
+    if (oldDeps.length !== newDeps.length) return false;
+    return oldDeps.every((dep, i) => dep === newDeps[i]);
+  };
+  if (!areDepsEqual(prevDeps, deps)) {
+    setPrevDeps(deps);
+    setDepsRevision(r => r + 1);
+  }
 
   useEffect(() => {
     let isActive = true;
@@ -210,7 +217,7 @@ export function useObservableWithEnrichment<T, E>(
     }
 
     // Reset error state
-    setError(null);
+    setTimeout(() => setError(null), 0);
 
     const subscription = stableFactory().subscribe({
       next: async result => {

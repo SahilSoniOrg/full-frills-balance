@@ -2,7 +2,6 @@ import { AppConfig } from '@/src/constants';
 import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { ShareFormat } from '@/src/types/sharing';
-import React from 'react';
 
 interface ShareFormatPreferenceViewProps {
   value: ShareFormat;

@@ -1,7 +1,6 @@
 import { useUI } from '@/src/contexts/UIContext';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { Stack } from 'expo-router';
-import React from 'react';
 
 /**
  * Orchestrates the main app content based on onboarding and restart state.

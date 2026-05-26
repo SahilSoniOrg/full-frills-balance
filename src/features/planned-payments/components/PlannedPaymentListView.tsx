@@ -5,7 +5,6 @@ import { PlannedPaymentCard } from '@/src/features/planned-payments/components/P
 import { usePlannedPayments } from '@/src/features/planned-payments/hooks/usePlannedPayments';
 import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function PlannedPaymentListView() {

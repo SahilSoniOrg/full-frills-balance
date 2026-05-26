@@ -12,7 +12,7 @@ import { CurrencySelector } from '@/src/features/accounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useBudgetEditViewModel } from '../hooks/useBudgetEditViewModel';
 
 export default function BudgetEditScreen() {

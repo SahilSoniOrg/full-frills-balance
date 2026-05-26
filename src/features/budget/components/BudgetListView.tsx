@@ -5,7 +5,6 @@ import { Column, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
 import { FlashList } from '@shopify/flash-list';
-import React from 'react';
 import { useBudgetListViewModel } from '../hooks/useBudgetListViewModel';
 import { BudgetItem } from '../types';
 import { BudgetCard } from './BudgetCard';

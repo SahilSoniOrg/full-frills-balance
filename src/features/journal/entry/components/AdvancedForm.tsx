@@ -4,7 +4,7 @@ import { useAccounts } from '@/src/features/accounts';
 import { JournalLineItem } from '@/src/features/journal/entry/components/JournalLineItem';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 interface AdvancedFormProps {

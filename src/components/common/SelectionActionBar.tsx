@@ -3,7 +3,7 @@ import { Shape, Size, Spacing, withOpacity, Opacity } from '@/src/constants';
 import { Inline, Inset, Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AnimatePresence, MotiView } from 'moti';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

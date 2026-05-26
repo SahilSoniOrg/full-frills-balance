@@ -8,7 +8,7 @@ import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useInsightDetailsViewModel } from '../hooks/useInsightDetailsViewModel';
 

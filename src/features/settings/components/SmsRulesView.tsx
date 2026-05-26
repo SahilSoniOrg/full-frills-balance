@@ -6,7 +6,7 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SmsRuleCardView } from '@/src/features/settings/components/SmsRuleCardView';
 import type { SmsRuleSuggestion } from '@/src/services/sms-service';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SmsRulesViewProps {

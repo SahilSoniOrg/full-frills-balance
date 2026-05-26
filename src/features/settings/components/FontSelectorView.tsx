@@ -1,7 +1,6 @@
 import { AppConfig, FontId, FontIds, FontSchemes, Opacity } from '@/src/constants';
 import { AppIcon, AppText } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 type FontSelectorProps = {

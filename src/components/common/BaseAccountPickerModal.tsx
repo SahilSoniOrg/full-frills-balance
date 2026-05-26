@@ -1,7 +1,7 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { Modal, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 
 export interface BaseAccountPickerModalProps {
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   modalContent: {
     borderTopLeftRadius: Shape.radius.r2,

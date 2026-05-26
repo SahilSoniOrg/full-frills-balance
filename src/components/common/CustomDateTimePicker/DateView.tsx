@@ -2,7 +2,7 @@ import { AppText, IconButton } from '@/src/components/core';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface DateViewProps {

@@ -11,7 +11,6 @@ import { AccountReconcileDialog } from '@/src/features/accounts/components/Accou
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function AccountDetailsView(vm: AccountDetailsViewModel) {

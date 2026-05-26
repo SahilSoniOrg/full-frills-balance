@@ -129,7 +129,7 @@ export function useAppLockEngine() {
   // Use our own system-checked 'isAppActive' flag instead of raw AppState snapshot.
   useEffect(() => {
     if (isAppLockEnabled && !isUnlocked && isAppActive) {
-      handleUnlock(false);
+      setTimeout(() => handleUnlock(false), 0);
     }
   }, [isAppLockEnabled, isUnlocked, isAppActive, handleUnlock]);
 

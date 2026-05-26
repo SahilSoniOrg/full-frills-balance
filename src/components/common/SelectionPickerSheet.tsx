@@ -1,7 +1,7 @@
 import { AppIcon, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, Keyboard, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface SelectionOption<T extends string | number = string> {

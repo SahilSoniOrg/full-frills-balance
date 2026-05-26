@@ -5,7 +5,6 @@ import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { ACCOUNT_TYPE_ORDER, getAccountTypeColorKey } from '@/src/utils/accountCategory';
-import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface HierarchyTreeProps {

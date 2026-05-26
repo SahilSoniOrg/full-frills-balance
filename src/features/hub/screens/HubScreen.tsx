@@ -8,7 +8,7 @@ import { useHub } from '@/src/features/hub/hooks/useHub';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/notification/NotificationService';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 type Tab = 'active' | 'dismissed';
 

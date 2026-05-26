@@ -2,7 +2,6 @@ import { AppIcon, type IconName } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { Opacity, Shape, Size, Spacing, ZIndex } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 
 interface FABProps {

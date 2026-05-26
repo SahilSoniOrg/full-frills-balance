@@ -6,7 +6,6 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import type { AboutSupportViewModel } from '@/src/features/settings/hooks/useAboutSupportViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
 interface AboutSupportSettingsViewProps {

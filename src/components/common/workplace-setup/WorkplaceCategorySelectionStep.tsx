@@ -4,7 +4,7 @@ import { AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { DEFAULT_CATEGORIES } from '@/src/constants/defaults';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 interface WorkplaceCategorySelectionStepProps {
   selectedCategories: string[];

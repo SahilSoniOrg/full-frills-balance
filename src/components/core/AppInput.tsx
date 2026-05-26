@@ -3,7 +3,7 @@ import { AppText } from '@/src/components/core/AppText';
 import { Spacing } from '@/src/constants/design-tokens';
 import { Box, BoxBaseProps } from '@/src/design-system/Box';
 import { extractBoxProps } from '@/src/design-system/utils';
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { StyleProp, StyleSheet, TextInput, type TextInputProps, ViewStyle } from 'react-native';
 import { AppInputField } from './AppInputField';
 

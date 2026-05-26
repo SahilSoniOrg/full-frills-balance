@@ -3,7 +3,6 @@ import { CurrencySelector } from '@/src/features/accounts';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import Currency from '@/src/data/models/Currency';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 
 interface CurrencyPreferenceViewProps {
   selectedCurrency: string;

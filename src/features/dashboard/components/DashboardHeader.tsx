@@ -2,7 +2,6 @@ import { AppText, IconButton } from '@/src/components/core';
 import { Size } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface DashboardHeaderProps {

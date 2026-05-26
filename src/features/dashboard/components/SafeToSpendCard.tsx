@@ -1,7 +1,6 @@
 import { AppSurface } from '@/src/components/core';
 import { Column, Separator } from '@/src/design-system';
 import { SafeToSpendResult } from '@/src/services/notification/NotificationService';
-import React from 'react';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendChart } from './SafeToSpendChart';

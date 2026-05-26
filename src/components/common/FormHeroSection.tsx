@@ -2,7 +2,7 @@ import { AppInput } from '@/src/components/core/AppInput';
 import { Spacing, Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { HeroNumberInput } from './HeroNumberInput';
 import { SectionLabel } from './SectionLabel';
 

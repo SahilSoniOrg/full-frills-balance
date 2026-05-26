@@ -4,7 +4,8 @@ import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EnrichedJournal } from '@/src/types/domain';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import React, { useMemo, useState } from 'react';
+import { getNow } from '@/src/utils/dateHelpers';
+import { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
 
@@ -85,7 +86,7 @@ export function PlannedPaymentsSection({
 
             const isTomorrow =
               new Date(mapped.transactionDate).setHours(0, 0, 0, 0) ===
-              new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
+              new Date(getNow() + 86400000).setHours(0, 0, 0, 0);
 
             const isOverdue =
               new Date(mapped.transactionDate).setHours(0, 0, 0, 0) <

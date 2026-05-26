@@ -2,7 +2,7 @@ import { AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange, formatDate, formatShortDate } from '@/src/utils/dateUtils';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Keyboard, StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface DateRangeTriggerProps {

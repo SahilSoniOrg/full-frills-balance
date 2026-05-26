@@ -1,3 +1,4 @@
+import { getNow } from '@/src/utils/dateHelpers';
 import { ScreenHeaderActions } from '@/src/components/common/ScreenHeaderActions';
 import { AppButton, AppIcon, AppSurface, Badge, IconName, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
@@ -6,7 +7,6 @@ import { Box, Column, Row, Text } from '@/src/design-system';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
-import React from 'react';
 
 export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
   const {
@@ -253,8 +253,8 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
           <Column marginBottom="lg">
             {history?.map(journal => {
               const dateValue = new Date(journal.journalDate).setHours(0, 0, 0, 0);
-              const today = new Date().setHours(0, 0, 0, 0);
-              const tomorrow = new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
+              const today = new Date(getNow()).setHours(0, 0, 0, 0);
+              const tomorrow = new Date(getNow() + 86400000).setHours(0, 0, 0, 0);
 
               const isOverdue = journal.status === 'PLANNED' && dateValue < today;
               const isDueSoon =

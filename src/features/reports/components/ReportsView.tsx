@@ -8,7 +8,6 @@ import { ReportSpendingSection } from '@/src/features/reports/components/section
 import { ReportWealthSection } from '@/src/features/reports/components/sections/ReportWealthSection';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { RefreshControl, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 

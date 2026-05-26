@@ -20,3 +20,6 @@ export function getSmartDateLabel(date: Date | string | number): string {
 
   return d.format('MMM D, YYYY');
 }
+export const getPerfNow = () => performance.now();
+
+export const getNow = () => Date.now();

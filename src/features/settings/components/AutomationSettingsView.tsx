@@ -10,7 +10,7 @@ import type { NotificationSettingsViewModel } from '@/src/features/settings/hook
 import { modelManagementService } from '@/src/services/ai/ModelManagementService';
 import { AIModelMetadata } from '@/src/services/ai/types';
 import { AppNavigation } from '@/src/utils/navigation';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Switch } from 'react-native';
 
 interface AutomationSettingsViewProps {

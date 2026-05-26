@@ -3,7 +3,6 @@ import { AppCard, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography, withOpacity } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 

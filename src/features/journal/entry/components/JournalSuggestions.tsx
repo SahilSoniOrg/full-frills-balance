@@ -1,7 +1,6 @@
 import { AppIcon, AppText } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { Keyboard, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface JournalSuggestionsProps {

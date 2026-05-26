@@ -2,7 +2,6 @@ import { AppButton, AppText } from '@/src/components/core';
 import { Opacity, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AppNavigation } from '@/src/utils/navigation';
-import React from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 
 interface SmsImportSheetProps {

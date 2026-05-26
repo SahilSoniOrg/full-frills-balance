@@ -5,7 +5,7 @@ import { Box, Stack } from '@/src/design-system';
 import { NotificationCadence } from '@/src/services/notification/NotificationService';
 import dayjs from 'dayjs';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 
 interface NotificationPreferenceViewProps {

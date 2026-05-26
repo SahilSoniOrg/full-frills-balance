@@ -47,8 +47,10 @@ export function ConfirmDialog({
   // Reset input when visibility changes
   React.useEffect(() => {
     if (!visible) {
-      setInputValue('');
-      setError(undefined);
+      setTimeout(() => {
+        setInputValue('');
+        setError(undefined);
+      }, 0);
     }
   }, [visible]);
 

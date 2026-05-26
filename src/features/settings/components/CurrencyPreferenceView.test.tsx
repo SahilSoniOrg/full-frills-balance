@@ -1,5 +1,4 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import React from 'react';
 import { CurrencyPreferenceView } from './CurrencyPreferenceView';
 
 // Mock dependencies

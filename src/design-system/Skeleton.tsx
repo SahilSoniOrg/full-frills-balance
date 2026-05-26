@@ -1,4 +1,3 @@
-import React from 'react';
 import { DimensionValue, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { useTheme } from '@/src/hooks/use-theme';

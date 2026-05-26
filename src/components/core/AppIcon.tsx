@@ -97,7 +97,6 @@ import {
   Mail,
   Terminal,
 } from 'lucide-react-native';
-import React from 'react';
 import { ViewStyle } from 'react-native';
 
 // Map internal names to Lucide components

@@ -4,7 +4,6 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import type { PrivacySettingsViewModel } from '@/src/features/settings/hooks/usePrivacySettingsViewModel';
-import React from 'react';
 
 interface PrivacySecuritySettingsViewProps {
   vm: PrivacySettingsViewModel;

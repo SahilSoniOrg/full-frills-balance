@@ -1,7 +1,6 @@
 import { AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
-import React from 'react';
 
 interface SafeToSpendPreferenceViewProps {
   days: number;

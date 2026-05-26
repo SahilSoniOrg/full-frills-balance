@@ -8,7 +8,7 @@ import { useJournalRouteDateRange } from '@/src/features/journal/list/hooks/useJ
 import { analytics } from '@/src/services/analytics-service';
 import { AppNavigation } from '@/src/utils/navigation';
 import { router } from 'expo-router';
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export default function JournalScreen() {

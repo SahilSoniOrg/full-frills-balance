@@ -1,6 +1,6 @@
 import { Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
 import { AppText } from '../core/AppText';
 
@@ -13,7 +13,7 @@ interface ProgressBarProps {
 
 export function ProgressBar({ progress, label, showPercentage = true, style }: ProgressBarProps) {
   const { theme } = useTheme();
-  const animatedValue = useRef(new Animated.Value(progress)).current;
+  const [animatedValue] = useState(() => new Animated.Value(progress));
   const [width, setWidth] = React.useState(0);
 
   useEffect(() => {

@@ -7,7 +7,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { SmsRuleSuggestion, smsService } from '@/src/services/sms-service';
 import { Q } from '@nozbe/watermelondb';
 import { withObservables } from '@nozbe/watermelondb/react';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { from } from 'rxjs';
 import { WorkplaceId } from '@/src/types/domain';
 

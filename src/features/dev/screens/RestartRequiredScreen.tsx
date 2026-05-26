@@ -5,7 +5,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
 import { logger } from '@/src/utils/logger';
 import * as Updates from 'expo-updates';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 /**

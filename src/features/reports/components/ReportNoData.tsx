@@ -1,6 +1,5 @@
 import { AppCard, AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
-import React from 'react';
 import { StyleSheet } from 'react-native';
 
 interface ReportNoDataProps {

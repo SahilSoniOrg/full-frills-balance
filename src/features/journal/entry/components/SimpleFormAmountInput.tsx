@@ -3,7 +3,6 @@ import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/co
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 interface SimpleFormAmountInputProps {

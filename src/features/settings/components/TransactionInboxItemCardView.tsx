@@ -6,7 +6,6 @@ import { alert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface TransactionInboxItemCardViewProps {

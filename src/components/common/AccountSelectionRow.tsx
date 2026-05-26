@@ -4,7 +4,7 @@ import { Box } from '@/src/design-system/Box';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 
 type AccountSelectionRowProps = {

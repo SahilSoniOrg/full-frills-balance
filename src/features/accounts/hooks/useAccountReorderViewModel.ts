@@ -33,7 +33,7 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
         // Then by OrderNum
         return (a.orderNum || 0) - (b.orderNum || 0);
       });
-      setAccounts(sorted);
+      setTimeout(() => setAccounts(sorted), 0);
     }
   }, [initialAccounts, isLoading]);
 

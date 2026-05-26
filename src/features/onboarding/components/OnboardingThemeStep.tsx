@@ -10,21 +10,21 @@ import {
 } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { Box, Stack } from '@/src/design-system';
+import { SafeToSpendCard } from '@/src/features/dashboard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerHaptic } from '@/src/utils/haptics';
-import React, { useRef, useState } from 'react';
+import dayjs from 'dayjs';
+import { MotiView } from 'moti';
+import { useState, useEffect } from 'react';
 import {
+  GestureResponderEvent,
+  PanResponder,
+  PanResponderGestureState,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
-  PanResponder,
-  GestureResponderEvent,
-  PanResponderGestureState,
 } from 'react-native';
-import dayjs from 'dayjs';
-import { MotiView } from 'moti';
-import { SafeToSpendCard } from '@/src/features/dashboard';
 
 type OnboardingThemeStepProps = {
   onContinue: () => void;
@@ -141,6 +141,8 @@ const MOCK_SAFE_TO_SPEND_PROPS: any = {
   },
 };
 
+let globalThemeId: any = null;
+
 export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
   const { theme } = useTheme();
   const ui = useUI();
@@ -165,12 +167,13 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
     ThemeIds.EDITORIAL,
   ];
 
-  const themeIdRef = useRef(ui.themeId);
-  themeIdRef.current = ui.themeId;
+  useEffect(() => {
+    globalThemeId = ui.themeId;
+  }, [ui.themeId]);
   const [slideDirection, setSlideDirection] = useState<number>(1);
 
   const cycleTheme = (direction: number) => {
-    const currentIndex = THEME_ORDER.indexOf(themeIdRef.current as any);
+    const currentIndex = THEME_ORDER.indexOf(globalThemeId as any);
     if (currentIndex === -1) return;
 
     let nextIndex = currentIndex + direction;
@@ -182,7 +185,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
     handleSelectTheme(THEME_ORDER[nextIndex]);
   };
 
-  const panResponder = useRef(
+  const [panResponder] = useState(() =>
     PanResponder.create({
       onMoveShouldSetPanResponder: (
         _evt: GestureResponderEvent,
@@ -206,7 +209,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
         }
       },
     }),
-  ).current;
+  );
 
   const styles = StyleSheet.create({
     optionsContainer: {

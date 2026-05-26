@@ -3,7 +3,6 @@ import { SelectableGrid, SelectableItem } from '@/src/components/common/Selectab
 import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { DEFAULT_ACCOUNTS } from '@/src/constants/defaults';
-import React from 'react';
 
 interface WorkplaceAccountSelectionStepProps {
   selectedAccounts: string[];

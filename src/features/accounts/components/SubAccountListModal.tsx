@@ -1,8 +1,8 @@
+import { useState, useEffect } from 'react';
 import { AppButton, AppIcon, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -24,7 +24,7 @@ export function SubAccountListModal({
 }: SubAccountListModalProps) {
   const { theme } = useTheme();
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
 
   useEffect(() => {
     if (visible) {

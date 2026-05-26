@@ -1,7 +1,6 @@
 import { AppIcon } from '@/src/components/core';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Tabs } from 'expo-router';
-import React from 'react';
 
 export function TabsLayout() {
   const { theme } = useTheme();
@@ -23,7 +22,12 @@ export function TabsLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, size, focused }) => (
-            <AppIcon name="home" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <AppIcon
+              name="home"
+              size={size}
+              color={color as string}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
         }}
       />
@@ -32,7 +36,12 @@ export function TabsLayout() {
         options={{
           title: 'Accounts',
           tabBarIcon: ({ color, size, focused }) => (
-            <AppIcon name="wallet" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <AppIcon
+              name="wallet"
+              size={size}
+              color={color as string}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
         }}
       />
@@ -41,7 +50,12 @@ export function TabsLayout() {
         options={{
           title: 'Commitments',
           tabBarIcon: ({ color, size, focused }) => (
-            <AppIcon name="handshake" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <AppIcon
+              name="handshake"
+              size={size}
+              color={color as string}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
         }}
       />
@@ -50,7 +64,12 @@ export function TabsLayout() {
         options={{
           title: 'Activity',
           tabBarIcon: ({ color, size, focused }) => (
-            <AppIcon name="activity" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <AppIcon
+              name="activity"
+              size={size}
+              color={color as string}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
         }}
       />
@@ -59,7 +78,12 @@ export function TabsLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size, focused }) => (
-            <AppIcon name="settings" size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <AppIcon
+              name="settings"
+              size={size}
+              color={color as string}
+              strokeWidth={focused ? 2.5 : 2}
+            />
           ),
         }}
       />

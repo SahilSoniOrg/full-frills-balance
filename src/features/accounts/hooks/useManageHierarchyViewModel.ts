@@ -61,17 +61,21 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     }
 
     if (expanded.size > 0) {
-      setExpandedAccountIds(prev => new Set([...prev, ...expanded]));
+      setTimeout(() => setExpandedAccountIds(prev => new Set([...prev, ...expanded])), 0);
     }
 
     // Ensure category is expanded
     const focusedAccount = accounts.find((a: Account) => a.id === initialFocusedId);
     if (focusedAccount) {
-      setCollapsedCategories(prev => {
-        const next = new Set(prev);
-        next.delete(focusedAccount.accountType);
-        return next;
-      });
+      setTimeout(
+        () =>
+          setCollapsedCategories(prev => {
+            const next = new Set(prev);
+            next.delete(focusedAccount.accountType);
+            return next;
+          }),
+        0,
+      );
     }
   }, [initialFocusedId, accounts]);
 

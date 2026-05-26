@@ -3,7 +3,6 @@ import { Layout, Opacity, Shape, Spacing, Typography, withOpacity } from '@/src/
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import type { Dayjs } from 'dayjs';
-import React from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { EdgeInsets } from 'react-native-safe-area-context';
 import { DateRangeCalendarStep } from './DateRangeCalendarStep';

@@ -1,6 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Opacity, Shape } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, TouchableOpacity } from 'react-native';
 
 export interface AppToggleProps {
@@ -15,7 +15,7 @@ export interface AppToggleProps {
  */
 export const AppToggle = ({ value, onValueChange, disabled = false }: AppToggleProps) => {
   const { theme } = useTheme();
-  const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const [animatedValue] = useState(() => new Animated.Value(value ? 1 : 0));
 
   useEffect(() => {
     Animated.spring(animatedValue, {

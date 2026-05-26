@@ -1,3 +1,4 @@
+import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -93,7 +94,8 @@ export function useJournalListViewModel(
   const baseCurrency = workplaceCurrency;
   const { rateMap: exchangeRateMap } = useExchangeRates(isInitialized ? baseCurrency : undefined);
 
-  const mountTimeRef = useRef(performance.now());
+  const mountTimeRef = useRef<number | null>(null);
+  if (mountTimeRef.current === null) mountTimeRef.current = getPerfNow();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchGlobal, setIsSearchGlobal] = useState(true);
@@ -128,7 +130,7 @@ export function useJournalListViewModel(
   // Log Journal Query completion
   useEffect(() => {
     if (!isLoading && journals.length > 0) {
-      const duration = Math.round(performance.now() - mountTimeRef.current);
+      const duration = Math.round(getPerfNow() - (mountTimeRef.current ?? 0));
       logger.info(`[JournalList] Data Loaded (Count: ${journals.length}) in ${duration}ms`);
       logger.metric('JournalList.LoadTime', duration);
     }

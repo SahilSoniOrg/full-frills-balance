@@ -193,34 +193,36 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   // Load existing account data
   useEffect(() => {
     if (existingAccount) {
-      setAccountName(existingAccount.name);
-      setAccountType(existingAccount.accountType);
-      setAccountSubtype(
-        existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
-      );
-      setSelectedCurrency(existingAccount.currencyCode);
-      setSelectedIcon(existingAccount.icon || 'wallet');
-      setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
+      setTimeout(() => {
+        setAccountName(existingAccount.name);
+        setAccountType(existingAccount.accountType);
+        setAccountSubtype(
+          existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
+        );
+        setSelectedCurrency(existingAccount.currencyCode);
+        setSelectedIcon(existingAccount.icon || 'wallet');
+        setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
 
-      if (balanceData && initialBalance === '' && !hasInjectedRef.current) {
-        setInitialBalance(balanceData.balance.toString());
-      }
+        if (balanceData && initialBalance === '' && !hasInjectedRef.current) {
+          setInitialBalance(balanceData.balance.toString());
+        }
 
-      // Load metadata
-      if (existingMetadata && !hasInjectedRef.current) {
-        setStatementDay(existingMetadata.statementDay?.toString() || '');
-        setDueDay(existingMetadata.dueDay?.toString() || '');
-        setCreditLimitAmount(existingMetadata.creditLimitAmount?.toString() || '');
-        // apr is managed as aprBps in the repo persistence input, but let's see what model has
-        setApr(existingMetadata.aprBps ? (existingMetadata.aprBps / 100).toString() : '');
-        setEmiDay(existingMetadata.emiDay?.toString() || '');
-        setLoanTenureMonths(existingMetadata.loanTenureMonths?.toString() || '');
-        setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
-        setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
-        setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
-        setPayFromAccountId(existingMetadata.payFromAccountId || EMPTY_ACCOUNT_ID);
-        setNotes(existingMetadata.notes || '');
-      }
+        // Load metadata
+        if (existingMetadata && !hasInjectedRef.current) {
+          setStatementDay(existingMetadata.statementDay?.toString() || '');
+          setDueDay(existingMetadata.dueDay?.toString() || '');
+          setCreditLimitAmount(existingMetadata.creditLimitAmount?.toString() || '');
+          // apr is managed as aprBps in the repo persistence input, but let's see what model has
+          setApr(existingMetadata.aprBps ? (existingMetadata.aprBps / 100).toString() : '');
+          setEmiDay(existingMetadata.emiDay?.toString() || '');
+          setLoanTenureMonths(existingMetadata.loanTenureMonths?.toString() || '');
+          setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
+          setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
+          setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
+          setPayFromAccountId(existingMetadata.payFromAccountId || EMPTY_ACCOUNT_ID);
+          setNotes(existingMetadata.notes || '');
+        }
+      }, 0);
 
       if (existingAccount && (balanceData || !isBalanceLoading)) {
         hasInjectedRef.current = true;

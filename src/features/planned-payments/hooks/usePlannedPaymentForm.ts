@@ -28,7 +28,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
 
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
-  const [form, setForm] = useState<PlannedPaymentFormState>({
+  const [form, setForm] = useState<PlannedPaymentFormState>(() => ({
     name: '',
     amount: '',
     currencyCode: workplaceCurrency,
@@ -40,7 +40,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     isAutoPost: false,
     recurrenceDay: new Date().getDate(),
     recurrenceMonth: undefined,
-  });
+  }));
 
   // Load initial values if editing
   useEffect(() => {

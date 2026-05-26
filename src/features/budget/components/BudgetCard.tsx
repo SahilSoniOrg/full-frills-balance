@@ -4,7 +4,6 @@ import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
-import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { BudgetItem } from '../types';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';

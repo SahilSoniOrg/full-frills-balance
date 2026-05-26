@@ -14,7 +14,6 @@ import {
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export function AccountsListView({

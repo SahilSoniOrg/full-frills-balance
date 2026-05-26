@@ -7,7 +7,7 @@ import {
 } from '@/src/constants/design-tokens';
 import { Box, BoxBaseProps } from '@/src/design-system/Box';
 import { extractBoxProps } from '@/src/design-system/utils';
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { View, type ViewProps } from 'react-native';
 
 type AppCardPadding = 'none' | 'sm' | 'md' | 'lg';

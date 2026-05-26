@@ -16,7 +16,7 @@ export function useHub(workplaceId: WorkplaceId) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
+    setTimeout(() => setIsLoading(true), 0);
     const activeSub = insightService.observePatterns(workplaceId).subscribe(insights => {
       setActiveInsights(insights);
       setIsLoading(false);

@@ -3,7 +3,7 @@ import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface NetWorthCardProps {
@@ -32,7 +32,7 @@ export const NetWorthCard = ({
 
   // Sync with global privacy mode when it changes (e.g. from settings)
   useEffect(() => {
-    setInternalHidden(isPrivacyMode);
+    setTimeout(() => setInternalHidden(isPrivacyMode), 0);
   }, [isPrivacyMode]);
 
   const isActuallyHidden = controlledHidden !== undefined ? controlledHidden : internalHidden;

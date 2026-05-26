@@ -3,7 +3,6 @@ import { AppIcon, AppText, IconButton } from '@/src/components/core';
 import { Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface DateRangeCalendarStepProps {

@@ -1,3 +1,4 @@
+import { getNow } from '@/src/utils/dateHelpers';
 import { IconName } from '@/src/components/core';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -172,13 +173,13 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
     if (paramTitle || paramAmount) {
       return {
         description: paramTitle || 'Loading...',
-        date: paramDate ? Number(paramDate) : Date.now(),
+        date: paramDate ? Number(paramDate) : getNow(),
         status: 'DRAFT', // Default to draft until loaded
         currency: paramCurrency || workplaceCurrency,
         displayType: paramDisplayType || 'EXPENSE',
         totalAmount: paramAmount ? Number(paramAmount) : 0,
         plannedPaymentId: null,
-        journalDate: paramDate ? Number(paramDate) : Date.now(),
+        journalDate: paramDate ? Number(paramDate) : getNow(),
       };
     }
 

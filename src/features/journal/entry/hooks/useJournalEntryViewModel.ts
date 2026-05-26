@@ -258,13 +258,13 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       setActiveLineId(editor.resolveActiveLineId(idOrRole));
       setShowAccountPicker(true);
     },
-    [editor],
+    [editor, setActiveLineId, setShowAccountPicker],
   );
 
   const onCloseAccountPicker = useCallback(() => {
     setShowAccountPicker(false);
     setActiveLineId(null);
-  }, []);
+  }, [setShowAccountPicker, setActiveLineId]);
 
   const onAccountSelected = useCallback(
     (accountId: AccountId) => {
@@ -282,7 +282,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       setShowAccountPicker(false);
       setActiveLineId(null);
     },
-    [accounts, activeLineId, editor],
+    [accounts, activeLineId, editor, setActiveLineId, setShowAccountPicker],
   );
 
   const onCreateAccountRequest = useCallback(
@@ -479,89 +479,49 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     simpleEditor.type,
   ]);
 
-  return useMemo(
-    () => ({
-      editor,
-      simpleEditor,
-      accounts,
-      isLoading: isLoadingAccounts || editor.isLoading,
-      headerTitle,
-      showEditBanner: editor.isEdit,
-      editBannerText: AppConfig.strings.transactionFlow.banners.editing,
-      isGuidedMode: editor.isGuidedMode,
-      onToggleGuidedMode,
-      showAccountPicker,
-      onCloseAccountPicker,
+  return {
+    editor,
+    simpleEditor,
+    accounts,
+    isLoading: isLoadingAccounts || editor.isLoading,
+    headerTitle,
+    showEditBanner: editor.isEdit,
+    editBannerText: AppConfig.strings.transactionFlow.banners.editing,
+    isGuidedMode: editor.isGuidedMode,
+    onToggleGuidedMode,
+    showAccountPicker,
+    onCloseAccountPicker,
+    onSelectAccountRequest,
+    onAccountSelected,
+    selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
+    simpleFormIsValid: isSimpleValid,
+    advancedFormIsValid: isAdvancedValid,
+    advancedFormConfig: {
       onSelectAccountRequest,
-      onAccountSelected,
-      selectedAccountId: editor.lines.find(l => l.id === activeLineId)?.accountId,
-      simpleFormIsValid: isSimpleValid,
-      advancedFormIsValid: isAdvancedValid,
-      advancedFormConfig: {
-        onSelectAccountRequest,
-      },
-      selectableAccounts,
-      isSimpleModeDisabled,
-      isBalanced,
-      isBalancedDisplay,
-      primaryDisplayAmount,
-      primaryDisplayCurrency,
-      availableCurrencies,
-      selectedCurrency,
-      onSelectCurrency: setSelectedCurrency,
-      totalDebits,
-      totalCredits,
-      launchSource: typeof params.source === 'string' ? params.source : undefined,
-      onCreateAccountRequest,
-      submitLabel,
-      isSubmitDisabled,
-      handleSubmit,
-      isAmountFocused,
-      setIsAmountFocused,
-      suggestions,
-      workplaceCurrency,
-      workplaceId,
-      isVoiceModalVisible,
-      setIsVoiceModalVisible,
-      handleApplyVoiceInput,
-    }),
-    [
-      editor,
-      simpleEditor,
-      accounts,
-      isLoadingAccounts,
-      headerTitle,
-      onToggleGuidedMode,
-      showAccountPicker,
-      onCloseAccountPicker,
-      onSelectAccountRequest,
-      onAccountSelected,
-      activeLineId,
-      isSimpleValid,
-      isAdvancedValid,
-      selectableAccounts,
-      isSimpleModeDisabled,
-      isBalanced,
-      isBalancedDisplay,
-      primaryDisplayAmount,
-      primaryDisplayCurrency,
-      availableCurrencies,
-      selectedCurrency,
-      setSelectedCurrency,
-      totalDebits,
-      totalCredits,
-      params.source,
-      onCreateAccountRequest,
-      submitLabel,
-      isSubmitDisabled,
-      handleSubmit,
-      isAmountFocused,
-      suggestions,
-      workplaceCurrency,
-      workplaceId,
-      isVoiceModalVisible,
-      setIsVoiceModalVisible,
-      handleApplyVoiceInput,
-    ],
-  );
+    },
+    selectableAccounts,
+    isSimpleModeDisabled,
+    isBalanced,
+    isBalancedDisplay,
+    primaryDisplayAmount,
+    primaryDisplayCurrency,
+    availableCurrencies,
+    selectedCurrency,
+    onSelectCurrency: setSelectedCurrency,
+    totalDebits,
+    totalCredits,
+    launchSource: typeof params.source === 'string' ? params.source : undefined,
+    onCreateAccountRequest,
+    submitLabel,
+    isSubmitDisabled,
+    handleSubmit,
+    isAmountFocused,
+    setIsAmountFocused,
+    suggestions,
+    workplaceCurrency,
+    workplaceId,
+    isVoiceModalVisible,
+    setIsVoiceModalVisible,
+    handleApplyVoiceInput,
+  };
 }

@@ -1,7 +1,6 @@
 import { AppInput } from '@/src/components/core/AppInput';
 import { Typography } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { StyleProp, View, ViewStyle } from 'react-native';
 
 interface HeroNumberInputProps {

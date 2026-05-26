@@ -1,3 +1,4 @@
+import { getPerfNow } from '@/src/utils/dateHelpers';
 import { AppConfig } from '@/src/constants';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -62,12 +63,15 @@ export function useDashboardViewModel(): DashboardViewModel {
     isSmsImportEnabled,
   } = useUI();
 
-  const mountTimeRef = useRef(performance.now());
+  const mountTimeRef = useRef<number>(0);
+  useEffect(() => {
+    mountTimeRef.current = getPerfNow();
+  }, []);
 
   // Log UI Initialization (Prefs Loaded)
   useEffect(() => {
     if (isInitialized) {
-      const duration = Math.round(performance.now() - mountTimeRef.current);
+      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] UI Initialized (Prefs Loaded) in ${duration}ms`);
     }
   }, [isInitialized]);
@@ -76,7 +80,7 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   // Sync with global privacy mode when it changes (e.g. from settings)
   React.useEffect(() => {
-    setIsLocalPrivacyMode(isPrivacyMode);
+    setTimeout(() => setIsLocalPrivacyMode(isPrivacyMode), 0);
   }, [isPrivacyMode]);
 
   const onTogglePrivacy = useCallback(() => {
@@ -94,7 +98,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   // Log Safe To Spend Data arrival
   useEffect(() => {
     if (hasSafeToSpendData) {
-      const duration = Math.round(performance.now() - mountTimeRef.current);
+      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] SafeToSpend Data Loaded in ${duration}ms`);
     }
   }, [hasSafeToSpendData]);
@@ -109,7 +113,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   // Log Insights arrival
   useEffect(() => {
     if (hasInsights) {
-      const duration = Math.round(performance.now() - mountTimeRef.current);
+      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] Insights Loaded in ${duration}ms`);
     }
   }, [hasInsights]);
@@ -156,7 +160,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   // Log Journal List arrival
   useEffect(() => {
     if (hasJournalItems) {
-      const duration = Math.round(performance.now() - mountTimeRef.current);
+      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] Journal List Items Loaded in ${duration}ms`);
     }
   }, [hasJournalItems]);
@@ -164,7 +168,7 @@ export function useDashboardViewModel(): DashboardViewModel {
   // Log "Fully Ready" state
   useEffect(() => {
     if (isInitialized && hasSafeToSpendData && hasJournalItems) {
-      const duration = Math.round(performance.now() - mountTimeRef.current);
+      const duration = Math.round(getPerfNow() - (mountTimeRef.current || 0));
       appLogger.info(`[Dashboard] Fully Ready in ${duration}ms`);
       appLogger.metric('Dashboard.FullyReady', duration);
     }

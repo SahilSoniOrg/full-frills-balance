@@ -1,7 +1,7 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { useExpandableSearch } from './hooks/useExpandableSearch';
 

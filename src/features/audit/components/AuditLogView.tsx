@@ -5,7 +5,6 @@ import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
 import { AuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { FlashList } from '@shopify/flash-list';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export function AuditLogView(vm: AuditLogViewModel) {

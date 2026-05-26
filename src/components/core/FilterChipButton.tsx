@@ -1,7 +1,7 @@
 import { Shape, Spacing } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { Keyboard, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { AppIcon, IconName } from './AppIcon';
 import { AppText } from './AppText';

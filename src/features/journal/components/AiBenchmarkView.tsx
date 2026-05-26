@@ -45,7 +45,7 @@ export function AiBenchmarkView() {
   const [customUrl, setCustomUrl] = useState('');
 
   useEffect(() => {
-    refreshData();
+    setTimeout(() => refreshData(), 0);
 
     // Subscribe to global download progress
     const handleProgress = (modelId: string, progress: number, isComplete: boolean) => {
@@ -62,12 +62,12 @@ export function AiBenchmarkView() {
     modelManagementService.addListener(handleProgress);
 
     // Init loaded model state
-    setLoadedModelId(smallModelProvider.getLoadedModelId());
+    setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
 
     return () => modelManagementService.removeListener(handleProgress);
   }, []);
 
-  const refreshData = async () => {
+  async function refreshData() {
     const allModels = modelManagementService.getAllModels();
     setAllModels(allModels);
 
@@ -76,7 +76,7 @@ export function AiBenchmarkView() {
       newStatuses[model.id] = await modelManagementService.getDownloadStatus(model.id);
     }
     setStatuses(newStatuses);
-  };
+  }
 
   const toggleGlobalNative = () => {
     const nextValue = !isNativeEnabled;
@@ -102,7 +102,7 @@ export function AiBenchmarkView() {
     setIsLoadingMemory(true);
     try {
       await smallModelProvider.switchModel(modelId);
-      setLoadedModelId(smallModelProvider.getLoadedModelId());
+      setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
     } catch (e) {
       Alert.alert('Load Failed', String(e));
     } finally {
@@ -203,14 +203,14 @@ export function AiBenchmarkView() {
         setBenchmarkingId(null);
       }
     }
-    setLoadedModelId(smallModelProvider.getLoadedModelId());
+    setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
   };
 
   const abortBenchmark = () => {
     isCancelledRef.current = true;
     setBenchmarkingId(null);
     nativeAIProvider.abort();
-    setLoadedModelId(smallModelProvider.getLoadedModelId());
+    setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
   };
 
   const renderModelCard = (model: AIModelMetadata) => {

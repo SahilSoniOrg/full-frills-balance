@@ -1,5 +1,4 @@
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DateRangePickerView } from './DateRangePickerView';
 import { useDateRangePicker } from './hooks/useDateRangePicker';

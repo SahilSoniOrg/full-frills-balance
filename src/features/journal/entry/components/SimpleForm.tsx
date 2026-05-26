@@ -3,7 +3,6 @@ import { AppText } from '@/src/components/core/AppText';
 import { AppConfig, Opacity, Shape, Size, Spacing, withOpacity } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId, AccountRole, TabType } from '@/src/types/domain';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SimpleFormSection } from '../hooks/useSimpleJournalEditor';
 import { SimpleFormAccountSections } from './SimpleFormAccountSections';

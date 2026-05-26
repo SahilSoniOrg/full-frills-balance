@@ -4,7 +4,6 @@ import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
-import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface HierarchyMoveModalProps {

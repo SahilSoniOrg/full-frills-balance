@@ -1,6 +1,5 @@
 import { Box } from '@/src/design-system/Box';
 import { render, screen } from '@/src/utils/test-utils';
-import React from 'react';
 import { Pressable } from 'react-native';
 
 describe('Box', () => {

@@ -1,7 +1,7 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { ImportPlugin } from '@/src/services/import/types';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';

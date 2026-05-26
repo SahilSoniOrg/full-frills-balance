@@ -8,7 +8,6 @@ import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { WorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useWorkplaceSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { CreateWorkplaceDialog } from './CreateWorkplaceDialog';
 import { Opacity } from '@/src/constants/design-tokens';
