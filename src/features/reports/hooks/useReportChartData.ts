@@ -1,7 +1,7 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { HeatmapPoint, SankeyData } from '@/src/services/report-service';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { WorkplaceId } from '@/src/types/domain';
 
 interface UseReportChartDataProps {
@@ -42,24 +42,8 @@ export function useReportChartData({
   workplaceId: _workplaceId,
 }: UseReportChartDataProps) {
   const { defaultCurrencyCode } = useWorkplace();
-  const [selectedNetWorthIndex, setSelectedNetWorthIndex] = useState<number | undefined>();
-  const [selectedIncomeExpenseIndex, setSelectedIncomeExpenseIndex] = useState<
-    number | undefined
-  >();
-
-  const [selectedWealthIndex, setSelectedWealthIndex] = useState<number | undefined>();
-
-  const onNetWorthPointSelect = useCallback((index: number) => {
-    setSelectedNetWorthIndex(prev => (prev === index ? undefined : index));
-  }, []);
-
-  const onIncomeExpensePointSelect = useCallback((index: number) => {
-    setSelectedIncomeExpenseIndex(prev => (prev === index ? undefined : index));
-  }, []);
-
-  const onWealthPointSelect = useCallback((index: number) => {
-    setSelectedWealthIndex(prev => (prev === index ? undefined : index));
-  }, []);
+  const displayedIncome = incomeVsExpense.income;
+  const displayedExpense = incomeVsExpense.expense;
 
   const currentNetWorth = useMemo(() => {
     return netWorthHistory.length > 0 ? netWorthHistory[netWorthHistory.length - 1].netWorth : 0;
@@ -68,26 +52,6 @@ export function useReportChartData({
   const displayedNetWorthText = useMemo(() => {
     return CurrencyFormatter.format(currentNetWorth, defaultCurrencyCode);
   }, [currentNetWorth, defaultCurrencyCode]);
-
-  const displayedIncome = useMemo(() => {
-    if (
-      selectedIncomeExpenseIndex !== undefined &&
-      incomeVsExpenseHistory[selectedIncomeExpenseIndex]
-    ) {
-      return incomeVsExpenseHistory[selectedIncomeExpenseIndex].income;
-    }
-    return incomeVsExpense.income;
-  }, [selectedIncomeExpenseIndex, incomeVsExpenseHistory, incomeVsExpense.income]);
-
-  const displayedExpense = useMemo(() => {
-    if (
-      selectedIncomeExpenseIndex !== undefined &&
-      incomeVsExpenseHistory[selectedIncomeExpenseIndex]
-    ) {
-      return incomeVsExpenseHistory[selectedIncomeExpenseIndex].expense;
-    }
-    return incomeVsExpense.expense;
-  }, [selectedIncomeExpenseIndex, incomeVsExpenseHistory, incomeVsExpense.expense]);
 
   const dailyData = useMemo(() => {
     const incomeMap = new Map(dailyIncomeVsExpense.map(d => [d.date, d]));
@@ -133,24 +97,15 @@ export function useReportChartData({
   }, [incomeVsExpenseHistory, theme.success, theme.error]);
 
   return {
-    selectedNetWorthIndex,
-    selectedIncomeExpenseIndex,
-    onNetWorthPointSelect,
-    onIncomeExpensePointSelect,
     displayedNetWorthText,
     displayedIncomeText: CurrencyFormatter.format(displayedIncome, defaultCurrencyCode),
     displayedExpenseText: CurrencyFormatter.format(displayedExpense, defaultCurrencyCode),
     netWorthSeries,
     wealthAreaSeries,
-    selectedWealthIndex,
-    onWealthPointSelect,
     dailyData,
     barChartData,
     sankeyData,
     spendingHeatmap,
     calendarHeatmap,
-    setSelectedNetWorthIndex,
-    setSelectedIncomeExpenseIndex,
-    setSelectedWealthIndex,
   };
 }

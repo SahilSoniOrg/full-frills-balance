@@ -19,7 +19,7 @@ interface UseReportBreakdownDetailsProps {
   expenseCategories: CategoryBreakdown[];
   incomeCategories: CategoryBreakdown[];
   incomeVsExpenseHistory: IncomeVsExpense[];
-  selectedIncomeExpenseIndex: number | undefined;
+  selectedIncomeExpenseIndex?: number;
   targetCurrency: string;
   theme: Theme;
   workplaceId: WorkplaceId;

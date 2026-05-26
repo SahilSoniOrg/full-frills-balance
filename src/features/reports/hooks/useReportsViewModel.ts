@@ -71,10 +71,6 @@ export interface ReportsViewModel {
     startDate: number;
     endDate: number;
   }[];
-  selectedNetWorthIndex: number | undefined;
-  onNetWorthPointSelect: (index: number) => void;
-  selectedIncomeExpenseIndex: number | undefined;
-  onIncomeExpensePointSelect: (index: number) => void;
   displayedNetWorthText: string;
   displayedIncomeText: string;
   displayedExpenseText: string;
@@ -92,8 +88,6 @@ export interface ReportsViewModel {
 
   // Advanced Charts
   wealthAreaSeries: { x: number; y: number }[][];
-  selectedWealthIndex: number | undefined;
-  onWealthPointSelect: (index: number) => void;
   sankeyData: SankeyData;
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[];
@@ -189,18 +183,15 @@ export function useReportsViewModel(): ReportsViewModel {
     expenseCategories,
     incomeCategories,
     incomeVsExpenseHistory,
-    selectedIncomeExpenseIndex: chartData.selectedIncomeExpenseIndex,
     targetCurrency,
     theme,
     workplaceId: workplaceId,
   });
 
   const resetSelections = useCallback(() => {
-    chartData.setSelectedNetWorthIndex(undefined);
-    chartData.setSelectedIncomeExpenseIndex(undefined);
     breakdownDetails.setExpandedExpenses(false);
     breakdownDetails.setExpandedIncome(false);
-  }, [chartData, breakdownDetails]);
+  }, [breakdownDetails]);
 
   const dateFilter = useReportDateFilter({
     workplaceId,
@@ -265,21 +256,6 @@ export function useReportsViewModel(): ReportsViewModel {
     incomeBarFlex: incomeVsExpense.income || 1,
     expenseBarFlex: incomeVsExpense.expense || 1,
     barChartData: chartData.barChartData,
-    selectedNetWorthIndex: chartData.selectedNetWorthIndex,
-    onNetWorthPointSelect: (index: number) => {
-      chartData.onNetWorthPointSelect(index);
-      if (index !== undefined) {
-        const point = chartData.netWorthSeries[index];
-        if (point) analytics.logChartInteracted('net_worth', 'point_select');
-      }
-    },
-    selectedIncomeExpenseIndex: chartData.selectedIncomeExpenseIndex,
-    onIncomeExpensePointSelect: (index: number) => {
-      chartData.onIncomeExpensePointSelect(index);
-      if (index !== undefined) {
-        analytics.logChartInteracted('income_expense', 'point_select');
-      }
-    },
     displayedNetWorthText: chartData.displayedNetWorthText,
     displayedIncomeText: chartData.displayedIncomeText,
     displayedExpenseText: chartData.displayedExpenseText,
@@ -303,13 +279,6 @@ export function useReportsViewModel(): ReportsViewModel {
 
     // Advanced charts
     wealthAreaSeries: chartData.wealthAreaSeries,
-    selectedWealthIndex: chartData.selectedWealthIndex,
-    onWealthPointSelect: (index: number) => {
-      chartData.onWealthPointSelect(index);
-      if (index !== undefined) {
-        analytics.logChartInteracted('wealth', 'point_select');
-      }
-    },
     sankeyData: chartData.sankeyData,
     spendingHeatmap: chartData.spendingHeatmap,
     calendarHeatmap: chartData.calendarHeatmap,
