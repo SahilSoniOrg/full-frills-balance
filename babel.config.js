@@ -32,7 +32,7 @@ module.exports = function (api) {
     ],
     overrides: [
       {
-        test: /src\/data\/models\/.*\.ts$/,
+        test: (fileName) => fileName != null && /src\/data\/models\/.*\.ts$/.test(fileName),
         plugins: [
           ['@babel/plugin-transform-class-properties', { loose: true }],
           ['@babel/plugin-transform-private-methods', { loose: true }],

@@ -3,7 +3,7 @@ import { useDashboardViewModel } from '@/src/features/dashboard/hooks/useDashboa
 import { analytics } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop } from "expo-router/react-navigation";
 import React, { useCallback, useEffect, useRef } from 'react';
 
 export default function DashboardScreen() {

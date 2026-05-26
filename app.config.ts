@@ -52,7 +52,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/images/icon.png',
   scheme: 'fullfrillsbalance',
   userInterfaceStyle: 'automatic',
-  jsEngine: 'hermes',
   ios: {
     supportsTablet: true,
     bundleIdentifier: appConfig.bundleIdentifier,
@@ -107,7 +106,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           ndkVersion: '27.1.12297006',
         },
         ios: {
-          deploymentTarget: '16.1',
+          deploymentTarget: '16.4',
         },
       },
     ],
@@ -117,6 +116,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withGradleOptimizations',
     './plugins/withRemoveMediaPermissions',
     './plugins/withJournalLauncherWidget',
+    './plugins/withXcodeAmbiguousDependencies',
     [
       'expo-notifications',
       {
@@ -133,6 +133,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         organization: 'full-frills-balance',
       },
     ],
+    "@sentry/react-native",
     'react-native-litert-lm',
     [
       'expo-speech-recognition',

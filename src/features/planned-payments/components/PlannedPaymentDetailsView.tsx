@@ -6,7 +6,6 @@ import { Box, Column, Row, Text } from '@/src/design-system';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 
 export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
@@ -172,7 +171,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
               </Row>
 
               <Row align="center" paddingLeft="xs" marginVertical={-2}>
-                <Ionicons name="arrow-down" size={14} color={theme.textTertiary} />
+                <AppIcon name="arrowDown" size={14} color={theme.textTertiary} />
               </Row>
 
               <Row align="center" gap="md">
