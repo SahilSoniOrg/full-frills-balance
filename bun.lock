@@ -102,6 +102,7 @@
     },
   },
   "trustedDependencies": [
+    "react-native-litert-lm",
     "unrs-resolver",
   ],
   "packages": {

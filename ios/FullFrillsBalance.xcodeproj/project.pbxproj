@@ -12,8 +12,8 @@
 		175C506D7BD5212D339742D9 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8007A5F86DAF388BCCEB4347 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		72A0E43C17688FAAC7F04DE0 /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E3BC942F8A6F1BD25E84B294 /* libPods-FullFrillsBalance.a */; };
+		72F76C169B0B470C89FAA729 /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E169D868704D5294C6427D /* FullFrillsBalanceWidget.swift */; };
 		7A63AF0180A047B3AB5863AC /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9232C3688E1A4FD6979972CE /* WidgetKit.framework */; };
-		A1CC2184F9274614AF3AA7F3 /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8E169D868704D5294C6427D /* FullFrillsBalanceWidget.swift */; };
 		A2724B9B407A4A31B50249B4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 22EAFCCBB11242C7B1100A39 /* SwiftUI.framework */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
@@ -440,7 +440,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				A1CC2184F9274614AF3AA7F3 /* FullFrillsBalanceWidget.swift in Sources */,
 				175C506D7BD5212D339742D9 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -449,6 +448,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				72F76C169B0B470C89FAA729 /* FullFrillsBalanceWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
