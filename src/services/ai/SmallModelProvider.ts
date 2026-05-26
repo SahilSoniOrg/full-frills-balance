@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
 import {
@@ -6,14 +7,14 @@ import {
   type Backend,
   type LiteRTLMInstance,
 } from 'react-native-litert-lm';
-import { AppConfig } from '@/src/constants/app-config';
-import type { AIGenerateOptions, DynamicLLMEngine, GenerateResult, InferenceStats } from './types';
 import { modelManagementService } from './ModelManagementService';
+import type { AIGenerateOptions, DynamicLLMEngine, GenerateResult, InferenceStats } from './types';
 
 export class SmallModelProvider implements DynamicLLMEngine {
   private llm: LiteRTLMInstance | null = null;
   private currentModelId: string | null = null;
-  private defaultModelId: string;
+  private defaultModelId: string = AppConfig.defaults.defaultAiModelId;
+  private lastTeardownTime = 0;
 
   constructor(defaultModelId: string = AppConfig.defaults.defaultAiModelId) {
     this.defaultModelId = defaultModelId;
@@ -28,6 +29,13 @@ export class SmallModelProvider implements DynamicLLMEngine {
   private async ensureModelLoaded(modelId: string): Promise<void> {
     if (this.currentModelId === modelId && this.llm) {
       return;
+    }
+
+    const timeSinceTeardown = Date.now() - this.lastTeardownTime;
+    if (timeSinceTeardown < 1500) {
+      const waitTime = 1500 - timeSinceTeardown;
+      logger.info(`[SmallModelProvider] Waiting ${waitTime}ms for C++ thread pool teardown...`);
+      await new Promise(r => setTimeout(r, waitTime));
     }
 
     const status = await modelManagementService.getDownloadStatus(modelId);
@@ -98,7 +106,9 @@ export class SmallModelProvider implements DynamicLLMEngine {
     if (this.currentModelId === modelId && this.llm) {
       return;
     }
-    await this.disposeInternal();
+    if (this.llm) {
+      await this.disposeInternal();
+    }
     this.defaultModelId = modelId;
     await this.ensureModelLoaded(modelId);
   }
@@ -215,6 +225,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       } catch {}
       this.llm = null;
       this.currentModelId = null;
+      this.lastTeardownTime = Date.now();
     }
   }
 
