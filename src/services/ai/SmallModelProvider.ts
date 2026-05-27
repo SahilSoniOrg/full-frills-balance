@@ -50,45 +50,91 @@ export class SmallModelProvider implements DynamicLLMEngine {
 
     const normalizedPath = status.localPath.replace(/^file:\/\//, '');
 
-    const preferredBackend = (model.defaultConfig?.accelerators?.split(',')[0] as Backend) || 'cpu';
-    const requestedBackend: Backend =
-      preferredBackend === 'gpu' || preferredBackend === 'cpu' || preferredBackend === 'npu'
-        ? preferredBackend
-        : Platform.OS === 'ios'
-          ? 'gpu'
-          : 'cpu';
+    // Select the best hardware accelerator supported by the model:
+    // - On Android, we prefer 'npu' (Hexagon DSP) if supported by the model, then 'gpu', falling back to 'cpu'.
+    // - On iOS, we prefer 'gpu' (Metal), falling back to 'cpu'.
+    let requestedBackend: Backend = 'cpu';
+    if (Platform.OS === 'android') {
+      if (model.defaultConfig?.accelerators?.includes('npu')) {
+        requestedBackend = 'npu';
+      } else if (model.defaultConfig?.accelerators?.includes('gpu')) {
+        requestedBackend = 'gpu';
+      }
+    } else {
+      if (model.defaultConfig?.accelerators?.includes('gpu')) {
+        requestedBackend = 'gpu';
+      }
+    }
 
     const backendWarning = checkBackendSupport(requestedBackend);
-    const backend: Backend = backendWarning ? 'cpu' : requestedBackend;
-
     if (backendWarning) {
-      logger.warn(
-        `[SmallModelProvider] Backend '${requestedBackend}' unsupported: ${backendWarning}. Falling back to CPU.`,
+      logger.info(
+        `[SmallModelProvider] Backend warning for '${requestedBackend}': ${backendWarning}`,
       );
     }
 
     logger.info(
-      `[SmallModelProvider] Initializing model ${modelId} at ${normalizedPath} (backend: ${backend})`,
+      `[SmallModelProvider] Initializing model ${modelId} at ${normalizedPath} (requested backend: ${requestedBackend})`,
     );
 
-    try {
-      if (!this.llm) {
+    // Ensure the LLM engine instance is created first
+    if (!this.llm) {
+      try {
         this.llm = createLLM({ enableMemoryTracking: true });
+      } catch (creationError) {
+        logger.error(`[SmallModelProvider] Failed to create LLM engine context:`, creationError);
+        throw creationError;
       }
+    }
 
+    const enableSpeculativeDecoding = model.capabilities?.includes('speculative_decoding') ?? false;
+
+    // Load the model in its own try-catch block for clean fallback handling
+    try {
       await this.llm.loadModel(normalizedPath, {
-        backend,
+        backend: requestedBackend,
         maxTokens: model.defaultConfig?.maxTokens ?? 1024,
         systemPrompt:
           'You are a high-precision financial transaction parser. Output valid JSON only.',
         temperature: model.defaultConfig?.temperature ?? 0.7,
         topK: model.defaultConfig?.topK ?? 40,
         topP: model.defaultConfig?.topP ?? 0.95,
+        enableSpeculativeDecoding,
       });
 
       this.currentModelId = modelId;
-      logger.info(`[SmallModelProvider] Model ${modelId} initialized`);
+      logger.info(
+        `[SmallModelProvider] Model ${modelId} initialized successfully with backend: ${requestedBackend}`,
+      );
     } catch (e) {
+      // Dynamic Hardware Fallback:
+      // If we requested NPU or GPU and it failed to load natively, try falling back to CPU
+      if (requestedBackend !== 'cpu' && this.llm) {
+        logger.warn(
+          `[SmallModelProvider] Native load failed for '${requestedBackend}'. Gracefully falling back to CPU...`,
+          e as any,
+        );
+        try {
+          await this.llm.loadModel(normalizedPath, {
+            backend: 'cpu',
+            maxTokens: model.defaultConfig?.maxTokens ?? 1024,
+            systemPrompt:
+              'You are a high-precision financial transaction parser. Output valid JSON only.',
+            temperature: model.defaultConfig?.temperature ?? 0.7,
+            topK: model.defaultConfig?.topK ?? 40,
+            topP: model.defaultConfig?.topP ?? 0.95,
+          });
+          this.currentModelId = modelId;
+          logger.info(
+            `[SmallModelProvider] Model ${modelId} successfully initialized with CPU fallback`,
+          );
+          return;
+        } catch (fallbackError) {
+          this.currentModelId = null;
+          logger.error(`[SmallModelProvider] CPU fallback failed:`, fallbackError);
+          throw fallbackError;
+        }
+      }
       this.currentModelId = null;
       const errorMsg = e instanceof Error ? e.message : String(e);
       logger.error(`[SmallModelProvider] loadModel failed: ${errorMsg}`, e);

@@ -33,7 +33,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topP: 0.95,
       temperature: 1.0,
       maxTokens: 4000,
-      accelerators: 'gpu,cpu',
+      accelerators: 'gpu,npu,cpu',
     },
   },
   {
@@ -54,7 +54,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topP: 0.95,
       temperature: 1.0,
       maxTokens: 4000,
-      accelerators: 'gpu,cpu',
+      accelerators: 'gpu,npu,cpu',
     },
   },
   {
@@ -75,7 +75,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topP: 0.95,
       temperature: 1.0,
       maxTokens: 1024,
-      accelerators: 'cpu,gpu',
+      accelerators: 'gpu,npu,cpu',
     },
   },
   {
@@ -93,7 +93,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topP: 0.95,
       temperature: 1.0,
       maxTokens: 1024,
-      accelerators: 'gpu,cpu',
+      accelerators: 'gpu,npu,cpu',
     },
   },
   {
@@ -151,7 +151,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topP: 0.95,
       temperature: 0.8,
       maxTokens: 4000,
-      accelerators: 'cpu,gpu',
+      accelerators: 'gpu,npu,cpu',
     },
   },
   {
@@ -173,7 +173,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topP: 0.95,
       temperature: 1.0,
       maxTokens: 4000,
-      accelerators: 'cpu,gpu',
+      accelerators: 'gpu,npu,cpu',
     },
   },
   {
@@ -195,7 +195,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topP: 0.9,
       temperature: 0.7,
       maxTokens: 4096,
-      accelerators: 'cpu,gpu',
+      accelerators: 'gpu,npu,cpu',
     },
   },
 ];
