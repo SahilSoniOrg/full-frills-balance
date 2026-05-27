@@ -162,3 +162,41 @@ describe('smsService.getMatchingRule', () => {
     databaseSpy.mockRestore();
   });
 });
+
+describe('useTransactionInboxViewModel custom description template parsing', () => {
+  it('substitutes merchant, amount, reference number, and sender correctly', () => {
+    const customDescription = 'Ingested: {merchant} of value {amount} with Ref {ref} from {sender}';
+    const item = {
+      parsedMerchant: 'ZOMATO',
+      parsedAmount: 349.5,
+      referenceNumber: 'REF112233',
+      senderAddress: 'ICICIBK',
+    };
+
+    const resolved = customDescription
+      .replace(/{merchant}/gi, item.parsedMerchant || 'Unknown Merchant')
+      .replace(/{amount}/gi, item.parsedAmount != null ? String(item.parsedAmount) : '0.00')
+      .replace(/{ref}/gi, item.referenceNumber || '')
+      .replace(/{sender}/gi, item.senderAddress || '');
+
+    expect(resolved).toBe('Ingested: ZOMATO of value 349.5 with Ref REF112233 from ICICIBK');
+  });
+
+  it('handles empty properties gracefully by using fallbacks', () => {
+    const customDescription = 'Transaction at {merchant} with Ref {ref}';
+    const item = {
+      parsedMerchant: undefined,
+      parsedAmount: undefined,
+      referenceNumber: undefined,
+      senderAddress: 'HDFCBK',
+    };
+
+    const resolved = customDescription
+      .replace(/{merchant}/gi, item.parsedMerchant || 'Unknown Merchant')
+      .replace(/{amount}/gi, item.parsedAmount != null ? String(item.parsedAmount) : '0.00')
+      .replace(/{ref}/gi, item.referenceNumber || '')
+      .replace(/{sender}/gi, item.senderAddress || '');
+
+    expect(resolved).toBe('Transaction at Unknown Merchant with Ref ');
+  });
+});

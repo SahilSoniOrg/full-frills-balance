@@ -229,12 +229,23 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
         logger.error('Failed to search matching rules in handleImport', error);
       }
 
+      let customDescription: string | undefined;
       if (matchedRule) {
         if (matchedRule.sourceAccountId && matchedRule.sourceAccountId !== EMPTY_ACCOUNT_ID) {
           matchedBankAccountId = matchedRule.sourceAccountId;
         }
         if (matchedRule.categoryAccountId && matchedRule.categoryAccountId !== EMPTY_ACCOUNT_ID) {
           matchedCounterpartyId = matchedRule.categoryAccountId;
+        }
+        if (matchedRule.actionsJson) {
+          try {
+            const actions = JSON.parse(matchedRule.actionsJson);
+            if (actions && typeof actions === 'object' && actions.journalDescription) {
+              customDescription = actions.journalDescription;
+            }
+          } catch {
+            // ignore
+          }
         }
       }
 
@@ -275,12 +286,22 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
       }
 
       let notesText = '';
-      if (item.channel === 'voice') {
-        notesText = `Spoken transcript: ${item.rawBody}`;
-      } else if (item.channel === 'sms') {
-        notesText = `Imported from SMS: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\\nRef: ${item.referenceNumber}` : ''}\\n\\n${(item.rawBody || '').substring(0, AppConfig.input.sms.previewBodyChars)}...`;
+      if (customDescription?.trim()) {
+        notesText = customDescription
+          .trim()
+          .replace(/{merchant}/gi, item.parsedMerchant || 'Unknown Merchant')
+          .replace(/{amount}/gi, item.parsedAmount != null ? String(item.parsedAmount) : '0.00')
+          .replace(/{ref}/gi, item.referenceNumber || '')
+          .replace(/{sender}/gi, item.senderAddress || '')
+          .replace(/\\n/g, '\n');
       } else {
-        notesText = `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\\n\\n${(item.rawBody || '').substring(0, 100)}...`;
+        if (item.channel === 'voice') {
+          notesText = `Spoken transcript: ${item.rawBody}`;
+        } else if (item.channel === 'sms') {
+          notesText = `Imported from SMS: ${item.parsedMerchant || item.senderAddress}${item.referenceNumber ? `\nRef: ${item.referenceNumber}` : ''}\n\n${(item.rawBody || '').substring(0, AppConfig.input.sms.previewBodyChars)}...`;
+        } else {
+          notesText = `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\n\n${(item.rawBody || '').substring(0, 100)}...`;
+        }
       }
 
       const params: Record<string, string> = {

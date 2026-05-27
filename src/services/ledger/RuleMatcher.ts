@@ -37,6 +37,7 @@ export interface SmsRuleActions {
   disposition: SmsRuleDisposition;
   sourceAccountId?: AccountId;
   categoryAccountId?: AccountId;
+  journalDescription?: string;
 }
 
 export type ResolvedSmsRule = {

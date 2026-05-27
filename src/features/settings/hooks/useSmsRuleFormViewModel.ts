@@ -52,6 +52,8 @@ export interface SmsRuleFormViewModel {
   setSourceAccountId: (val: AccountId) => void;
   categoryAccountId: AccountId;
   setCategoryAccountId: (val: AccountId) => void;
+  journalDescription: string;
+  setJournalDescription: (val: string) => void;
   isActive: boolean;
   setIsActive: (val: boolean) => void;
   pickingAccountFor: 'source' | 'category' | null;
@@ -94,6 +96,7 @@ function parseActions(rule: TransactionAutoPostRule): SmsRuleActions {
               : 'auto_post',
           sourceAccountId: parsed.sourceAccountId || rule.sourceAccountId || undefined,
           categoryAccountId: parsed.categoryAccountId || rule.categoryAccountId || undefined,
+          journalDescription: parsed.journalDescription || undefined,
         };
       }
     } catch {
@@ -138,6 +141,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
   const [categoryAccountId, setCategoryAccountId] = useState(
     seed?.categoryAccountId || EMPTY_ACCOUNT_ID,
   );
+  const [journalDescription, setJournalDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [pickingAccountFor, setPickingAccountFor] = useState<'source' | 'category' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,6 +165,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
         setDisposition(actions.disposition);
         setSourceAccountId(actions.sourceAccountId || EMPTY_ACCOUNT_ID);
         setCategoryAccountId(actions.categoryAccountId || EMPTY_ACCOUNT_ID);
+        setJournalDescription(actions.journalDescription || '');
         setPriority(String(rule.priority ?? 100));
         setIsActive(rule.isActive);
 
@@ -343,6 +348,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
             disposition,
             sourceAccountId: showAccountMapping ? sourceAccountId : undefined,
             categoryAccountId: showAccountMapping ? categoryAccountId : undefined,
+            journalDescription: journalDescription.trim() || undefined,
           },
           isActive,
           priority: priorityNumber,
@@ -425,6 +431,8 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     setSourceAccountId,
     categoryAccountId,
     setCategoryAccountId,
+    journalDescription,
+    setJournalDescription,
     isActive,
     setIsActive,
     pickingAccountFor,

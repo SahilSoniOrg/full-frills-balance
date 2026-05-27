@@ -455,6 +455,7 @@ class SmsService {
       disposition: data.actions.disposition,
       sourceAccountId: data.actions.sourceAccountId || undefined,
       categoryAccountId: data.actions.categoryAccountId || undefined,
+      journalDescription: data.actions.journalDescription || undefined,
     };
     const senderFallback =
       data.mode === 'regex'
@@ -815,11 +816,21 @@ class SmsService {
       const currencyCode = await workplaceService.getCurrency(workplaceId);
       const isExpense = parsed.type === 'debit';
 
+      const customDesc = definition.actions.journalDescription?.trim();
+      let resolvedDescription = 'Auto-Posted SMS Transaction';
+      if (customDesc) {
+        resolvedDescription = customDesc
+          .replace(/{merchant}/gi, parsed.merchant || 'Unknown Merchant')
+          .replace(/{amount}/gi, parsed.amount != null ? String(parsed.amount) : '0.00')
+          .replace(/{ref}/gi, parsed.referenceNumber || '')
+          .replace(/{sender}/gi, parsed.address || '');
+      } else if (parsed.merchant) {
+        resolvedDescription = `Auto-Posted: ${parsed.merchant}`;
+      }
+
       const journalData: CreateJournalData = {
         journalDate: parsed.date || Date.now(),
-        description: parsed.merchant
-          ? `Auto-Posted: ${parsed.merchant}`
-          : 'Auto-Posted SMS Transaction',
+        description: resolvedDescription,
         currencyCode,
         status: JournalStatus.POSTED,
         metadata: {
