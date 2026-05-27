@@ -109,7 +109,7 @@ class ExchangeRateRepository {
         }),
       );
 
-      await database.batch(...operations);
+      await database.batch(operations);
     });
   }
 

@@ -870,7 +870,7 @@ export class ImportRepository {
       }
 
       if (ops.length > 0) {
-        await database.batch(...ops);
+        await database.batch(ops);
       }
     });
   }

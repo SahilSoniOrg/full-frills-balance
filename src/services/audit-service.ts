@@ -106,7 +106,7 @@ export class AuditService {
 
       for (const batch of batches) {
         await database.batch(
-          ...batch.map(log =>
+          batch.map(log =>
             log.prepareUpdate(record => {
               record.entityType = log.entityType.toLowerCase() as AuditEntityType;
             }),

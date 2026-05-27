@@ -154,7 +154,7 @@ export class JournalService {
         workplaceId,
       );
 
-      await database.batch(journalOp, ...txOps, auditOp);
+      await database.batch([journalOp, ...txOps, auditOp]);
     });
 
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
@@ -194,7 +194,7 @@ export class JournalService {
         workplaceId,
       );
 
-      await database.batch(journalOp, ...txOps, auditOp);
+      await database.batch([journalOp, ...txOps, auditOp]);
     });
 
     const accountIds = Array.from(new Set(transactions.map((t: Transaction) => t.accountId)));
@@ -305,7 +305,7 @@ export class JournalService {
 
     // Single atomic write: metadata + journal status + transaction dates.
     await database.write(async () => {
-      await database.batch(metadataOp, journalOp, ...txOps);
+      await database.batch([metadataOp, journalOp, ...txOps]);
     });
 
     // 2. Audit log

@@ -305,7 +305,7 @@ export class PlannedPaymentService {
 
         // Single atomic write: metadata + journal + transactions.
         await database.write(async () => {
-          await database.batch(metadataOp, journalOp, ...txOps);
+          await database.batch([metadataOp, journalOp, ...txOps]);
         });
         // Rebuild balance for affected accounts.
         rebuildQueueService.enqueueMany(

@@ -140,7 +140,7 @@ export class BalanceSnapshotRepository {
 
     if (snapshotsToDelete.length > 0) {
       await database.write(async () => {
-        await database.batch(...snapshotsToDelete.map(s => s.prepareDestroyPermanently()));
+        await database.batch(snapshotsToDelete.map(s => s.prepareDestroyPermanently()));
       });
     }
   }

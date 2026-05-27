@@ -115,7 +115,7 @@ export class BudgetRepository {
         }),
       );
 
-      await this.db.batch(...scopeCreates);
+      await this.db.batch(scopeCreates);
       analytics.logBudgetCreated(data.amount, data.currencyCode);
       return budget;
     });
@@ -170,7 +170,7 @@ export class BudgetRepository {
 
       const removeOps = toRemove.map(scope => scope.prepareDestroyPermanently());
 
-      await this.db.batch(updateOp, ...addOps, ...removeOps);
+      await this.db.batch([updateOp, ...addOps, ...removeOps]);
       return budget;
     });
   }
@@ -185,7 +185,7 @@ export class BudgetRepository {
       const scopes = await this.budgetScopes.query(Q.where('budget_id', budget.id)).fetch();
       const removeScopes = scopes.map(s => s.prepareDestroyPermanently());
       const removeBudget = budget.prepareDestroyPermanently();
-      await this.db.batch(...removeScopes, removeBudget);
+      await this.db.batch([...removeScopes, removeBudget]);
     });
   }
 
