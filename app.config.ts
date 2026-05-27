@@ -117,6 +117,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withRemoveMediaPermissions',
     './plugins/withJournalLauncherWidget',
     './plugins/withXcodeAmbiguousDependencies',
+    './plugins/withLiteRTNativeLibraries',
     [
       'expo-notifications',
       {
@@ -133,7 +134,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         organization: 'full-frills-balance',
       },
     ],
-    "@sentry/react-native",
+    '@sentry/react-native',
     'react-native-litert-lm',
     [
       'expo-speech-recognition',
