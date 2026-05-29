@@ -1,24 +1,25 @@
+import { FormSelectorField } from '@/src/components/common/FormSelectorField';
+import { SelectionPickerSheet } from '@/src/components/common/SelectionPickerSheet';
 import {
   AppButton,
   AppIcon,
-  AppInput,
   AppSegmentedControl,
   AppText,
   IconButton,
 } from '@/src/components/core';
+import { Screen } from '@/src/components/layout';
 import { Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { modelManagementService } from '@/src/services/ai/ModelManagementService';
+import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
 import type { AIModelMetadata, ModelDownloadStatus } from '@/src/services/ai/types';
 import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
-import { Screen } from '@/src/components/layout';
+import { alert, confirm } from '@/src/utils/alerts';
 import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { checkBackendSupport } from 'react-native-litert-lm';
 import { nativeAIProvider } from '../services/NativeAIProvider';
-import { smallModelProvider } from '@/src/services/ai/SmallModelProvider';
-import { mockAIProvider } from '../services/TransactionFallbackAIProvider';
-import { transactionIngestionService } from '../services/TransactionIngestionService';
 
 const TEST_TRANSCRIPTS = [
   'spent 250 rs for coffee at starbucks using hdfc card',
@@ -35,30 +36,46 @@ export function AiBenchmarkView() {
   const [isLoadingMemory, setIsLoadingMemory] = useState(false);
   const [benchmarkingId, setBenchmarkingId] = useState<string | null>(null);
   const [benchmarkResults, setBenchmarkResults] = useState<any[]>([]);
-  const [isNativeEnabled, setIsNativeEnabled] = useState(false);
   const [inferenceMode, setInferenceMode] = useState<'single' | 'multi'>('multi');
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [backendOverride, setBackendOverride] = useState<'auto' | 'cpu' | 'gpu' | 'npu'>('auto');
+
+  const backendOptions = React.useMemo(() => {
+    const opts = [
+      { id: 'auto', label: 'Auto' },
+      { id: 'cpu', label: 'CPU' },
+    ];
+    if (!checkBackendSupport('gpu')) opts.push({ id: 'gpu', label: 'GPU' });
+    if (!checkBackendSupport('npu')) opts.push({ id: 'npu', label: 'NPU' });
+    return opts;
+  }, []);
 
   const isCancelledRef = React.useRef(false);
 
-  // Custom Model Form State
-  const [isAddingCustom, setIsAddingCustom] = useState(false);
-  const [customName, setCustomName] = useState('');
-  const [customUrl, setCustomUrl] = useState('');
+  const lastUpdateRef = React.useRef<Record<string, number>>({});
 
   useEffect(() => {
     setTimeout(() => refreshData(), 0);
 
     // Subscribe to global download progress
     const handleProgress = (modelId: string, progress: number, isComplete: boolean) => {
-      setStatuses(prev => ({
-        ...prev,
-        [modelId]: {
-          ...prev[modelId],
-          progress,
-          isDownloaded: isComplete,
-        },
-      }));
-      if (isComplete) refreshData();
+      const now = Date.now();
+      const lastUpdate = lastUpdateRef.current[modelId] || 0;
+
+      // Throttle updates to ~10fps (every 100ms) to prevent UI thread/Skia overload
+      if (now - lastUpdate > 100 || isComplete || progress === 0) {
+        lastUpdateRef.current[modelId] = now;
+        setStatuses(prev => ({
+          ...prev,
+          [modelId]: {
+            ...prev[modelId],
+            progress,
+            isDownloaded: isComplete,
+          },
+        }));
+        if (isComplete) refreshData();
+      }
     };
     modelManagementService.addListener(handleProgress);
 
@@ -72,6 +89,12 @@ export function AiBenchmarkView() {
     const allModels = modelManagementService.getAllModels();
     setAllModels(allModels);
 
+    if (allModels.length > 0) {
+      setSelectedModelId(prev =>
+        prev && allModels.some(m => m.id === prev) ? prev : allModels[0].id,
+      );
+    }
+
     const newStatuses: Record<string, ModelDownloadStatus> = {};
     for (const model of allModels) {
       newStatuses[model.id] = await modelManagementService.getDownloadStatus(model.id);
@@ -79,18 +102,12 @@ export function AiBenchmarkView() {
     setStatuses(newStatuses);
   }
 
-  const toggleGlobalNative = () => {
-    const nextValue = !isNativeEnabled;
-    setIsNativeEnabled(nextValue);
-    transactionIngestionService.setAiProvider(nextValue ? nativeAIProvider : mockAIProvider);
-  };
-
   const handleDownload = async (modelId: string) => {
     try {
       await modelManagementService.downloadModel(modelId);
       await refreshData();
     } catch (e) {
-      Alert.alert('Download Failed', String(e));
+      alert.show({ title: 'Download Failed', message: String(e), type: 'error' });
     }
   };
 
@@ -100,12 +117,27 @@ export function AiBenchmarkView() {
   };
 
   const handleLoadModel = async (modelId: string) => {
+    if (loadedModelId && loadedModelId !== modelId) {
+      confirm.show({
+        title: 'Switch Model',
+        message:
+          'Loading this model will unload the currently loaded model. Are you sure you want to proceed?',
+        confirmText: 'Switch',
+        destructive: true,
+        onConfirm: () => performLoadModel(modelId),
+      });
+    } else {
+      performLoadModel(modelId);
+    }
+  };
+
+  const performLoadModel = async (modelId: string) => {
     setIsLoadingMemory(true);
     try {
-      await smallModelProvider.switchModel(modelId);
+      await smallModelProvider.switchModel(modelId, backendOverride);
       setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
     } catch (e) {
-      Alert.alert('Load Failed', String(e));
+      alert.show({ title: 'Load Failed', message: String(e), type: 'error' });
     } finally {
       setIsLoadingMemory(false);
     }
@@ -117,36 +149,9 @@ export function AiBenchmarkView() {
       await nativeAIProvider.unload();
       setLoadedModelId(null);
     } catch (e) {
-      Alert.alert('Unload Failed', String(e));
+      alert.show({ title: 'Unload Failed', message: String(e), type: 'error' });
     } finally {
       setIsLoadingMemory(false);
-    }
-  };
-
-  const handleAddCustom = async () => {
-    if (!customName || !customUrl) {
-      Alert.alert('Missing Info', 'Please provide both name and URL.');
-      return;
-    }
-
-    try {
-      const filename = customUrl.split('/').pop()?.split('?')[0] || 'custom-model.gguf';
-      await modelManagementService.registerCustomModel({
-        id: `custom-${Date.now()}`,
-        name: customName,
-        description: 'User-provided custom model.',
-        url: customUrl,
-        sizeBytes: 0,
-        parameters: 'Custom',
-        quantization: 'Unknown',
-        filename,
-      });
-      setCustomName('');
-      setCustomUrl('');
-      setIsAddingCustom(false);
-      await refreshData();
-    } catch (e) {
-      Alert.alert('Error', String(e));
     }
   };
 
@@ -154,7 +159,8 @@ export function AiBenchmarkView() {
     setBenchmarkingId(modelId);
     setBenchmarkResults([]);
     isCancelledRef.current = false;
-    await smallModelProvider.switchModel(modelId);
+
+    await smallModelProvider.switchModel(modelId, backendOverride);
 
     const results = [];
     for (const transcript of TEST_TRANSCRIPTS) {
@@ -214,102 +220,19 @@ export function AiBenchmarkView() {
     setTimeout(() => setLoadedModelId(smallModelProvider.getLoadedModelId()), 0);
   };
 
-  const renderModelCard = (model: AIModelMetadata) => {
-    const status = statuses[model.id];
-    const isDownloading = modelManagementService.isDownloading(model.id);
-    const progress = status?.progress || 0;
-    const isBenchmarking = benchmarkingId === model.id;
-    const isLoaded = loadedModelId === model.id;
-    const sizeStr =
-      model.sizeBytes > 1024 * 1024 * 1024
-        ? `${(model.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
-        : `${(model.sizeBytes / 1024 / 1024).toFixed(0)} MB`;
-
-    return (
-      <View
-        key={model.id}
-        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-      >
-        <View style={styles.cardHeader}>
-          <View>
-            <AppText variant="subheading" weight="bold">
-              {model.name}
-            </AppText>
-            <AppText variant="caption" color="secondary">
-              {model.parameters} • {model.quantization} • {sizeStr}
-            </AppText>
-          </View>
-          {status?.isDownloaded ? (
-            <AppIcon name="checkCircle" color={theme.success} size={20} />
-          ) : null}
-        </View>
-
-        <AppText variant="body" style={styles.description}>
-          {model.description}
-        </AppText>
-
-        {isDownloading ? (
-          <View style={{ gap: Spacing.sm }}>
-            <View style={styles.progressContainer}>
-              <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { backgroundColor: theme.primary, width: `${progress * 100}%` },
-                  ]}
-                />
-              </View>
-              <AppText variant="caption" style={styles.progressText}>
-                {Math.round(progress * 100)}%
-              </AppText>
-            </View>
-            <AppButton variant="secondary" size="sm" onPress={() => handleCancelDownload(model.id)}>
-              Cancel Download
-            </AppButton>
-          </View>
-        ) : (
-          <View style={styles.actions}>
-            {!status?.isDownloaded ? (
-              <AppButton variant="secondary" size="sm" onPress={() => handleDownload(model.id)}>
-                Download
-              </AppButton>
-            ) : (
-              <>
-                <AppButton
-                  variant={isLoaded ? 'secondary' : 'primary'}
-                  size="sm"
-                  disabled={isLoadingMemory}
-                  onPress={() => (isLoaded ? handleUnloadModel() : handleLoadModel(model.id))}
-                >
-                  {isLoaded ? 'Unload Model' : 'Load in Memory'}
-                </AppButton>
-                {isBenchmarking ? (
-                  <AppButton variant="primary" size="sm" onPress={abortBenchmark}>
-                    Stop Benchmark
-                  </AppButton>
-                ) : (
-                  <AppButton
-                    variant="secondary"
-                    size="sm"
-                    onPress={() => runBenchmark(model.id)}
-                    disabled={!!benchmarkingId}
-                  >
-                    Benchmark
-                  </AppButton>
-                )}
-                <IconButton
-                  name="delete"
-                  onPress={() => {
-                    modelManagementService.deleteModel(model.id).then(refreshData);
-                  }}
-                />
-              </>
-            )}
-          </View>
-        )}
-      </View>
-    );
-  };
+  const selectedModel = availableModels.find(m => m.id === selectedModelId);
+  const status = selectedModel ? statuses[selectedModel.id] : null;
+  const isDownloading = selectedModel
+    ? modelManagementService.isDownloading(selectedModel.id)
+    : false;
+  const progress = status?.progress || 0;
+  const isLoaded = selectedModel ? loadedModelId === selectedModel.id : false;
+  const isBenchmarking = selectedModel ? benchmarkingId === selectedModel.id : false;
+  const sizeStr = selectedModel
+    ? selectedModel.sizeBytes > 1024 * 1024 * 1024
+      ? `${(selectedModel.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+      : `${(selectedModel.sizeBytes / 1024 / 1024).toFixed(0)} MB`
+    : '';
 
   return (
     <Screen title="AI Benchmarking" scrollable withPadding>
@@ -317,19 +240,143 @@ export function AiBenchmarkView() {
         <AppText variant="body" color="secondary">
           Test on-device LLM performance for transaction parsing.
         </AppText>
-        <View style={styles.globalToggle}>
-          <AppButton
-            variant={isNativeEnabled ? 'primary' : 'secondary'}
-            size="sm"
-            onPress={toggleGlobalNative}
-          >
-            {isNativeEnabled
-              ? 'Native AI Enabled Globally'
-              : 'Using Mock AI (Tap to Enable Native)'}
-          </AppButton>
-        </View>
+      </View>
 
-        <View style={styles.modeSelector}>
+      <View style={styles.section}>
+        <FormSelectorField
+          value={(() => {
+            if (!selectedModel) return '';
+            const tag = isLoaded ? '(Loaded)' : status?.isDownloaded ? '(Downloaded)' : '';
+            return `${selectedModel.name} ${tag}`.trim();
+          })()}
+          placeholder="Select a model..."
+          onPress={() => setIsDropdownOpen(true)}
+        />
+
+        {selectedModel && (
+          <View style={{ marginTop: Spacing.lg, marginBottom: Spacing.xl }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <AppText variant="subheading" weight="bold">
+                  {selectedModel.name}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {selectedModel.parameters} • {selectedModel.quantization} • {sizeStr}
+                </AppText>
+              </View>
+              {status?.isDownloaded && (
+                <AppIcon name="checkCircle" color={theme.success} size={20} />
+              )}
+            </View>
+
+            <AppText variant="body" style={{ marginVertical: Spacing.md }}>
+              {selectedModel.description}
+            </AppText>
+
+            {isDownloading ? (
+              <View style={{ gap: Spacing.sm }}>
+                <View style={styles.progressContainer}>
+                  <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { backgroundColor: theme.primary, width: `${progress * 100}%` },
+                      ]}
+                    />
+                  </View>
+                  <AppText variant="caption" style={styles.progressText}>
+                    {Math.round(progress * 100)}%
+                  </AppText>
+                </View>
+                <AppButton
+                  variant="secondary"
+                  size="sm"
+                  onPress={() => handleCancelDownload(selectedModel.id)}
+                >
+                  Cancel Download
+                </AppButton>
+              </View>
+            ) : (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: Spacing.sm,
+                  alignItems: 'center',
+                }}
+              >
+                {!status?.isDownloaded ? (
+                  <AppButton
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => handleDownload(selectedModel.id)}
+                  >
+                    Download Model
+                  </AppButton>
+                ) : (
+                  <>
+                    <AppButton
+                      variant={isLoaded ? 'secondary' : 'primary'}
+                      size="sm"
+                      disabled={isLoadingMemory}
+                      onPress={() =>
+                        isLoaded ? handleUnloadModel() : handleLoadModel(selectedModel.id)
+                      }
+                    >
+                      {isLoaded ? 'Unload Model' : 'Load in Memory'}
+                    </AppButton>
+                    <IconButton
+                      name="delete"
+                      onPress={() => {
+                        modelManagementService.deleteModel(selectedModel.id).then(refreshData);
+                      }}
+                    />
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        <SelectionPickerSheet
+          visible={isDropdownOpen}
+          title="Select AI Model"
+          options={availableModels.map(model => {
+            const sizeStr =
+              model.sizeBytes > 1024 * 1024 * 1024
+                ? `${(model.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+                : `${(model.sizeBytes / 1024 / 1024).toFixed(0)} MB`;
+            const isLoaded = loadedModelId === model.id;
+            const isDownloaded = statuses[model.id]?.isDownloaded;
+            let iconName = undefined;
+            if (isLoaded) iconName = 'database';
+            else if (isDownloaded) iconName = 'checkCircle';
+
+            return {
+              id: model.id,
+              label: model.name,
+              description: `${model.parameters} • ${model.quantization} • ${sizeStr}`,
+              icon: iconName,
+            };
+          })}
+          selectedValue={selectedModelId || ''}
+          onClose={() => setIsDropdownOpen(false)}
+          onSelect={val => setSelectedModelId(val)}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <AppText variant="subheading" weight="bold" style={styles.sectionTitle}>
+          Configuration
+        </AppText>
+
+        <View style={{ marginBottom: Spacing.md }}>
           <AppText
             variant="caption"
             weight="bold"
@@ -340,76 +387,48 @@ export function AiBenchmarkView() {
           </AppText>
           <AppSegmentedControl
             value={inferenceMode}
-            onChange={setInferenceMode}
+            onChange={setInferenceMode as (val: string) => void}
             options={[
-              { id: 'single', label: 'Fast (Single-Pass)' },
-              { id: 'multi', label: 'Accurate (Multi-Pass)' },
+              { id: 'single', label: 'Single-Pass' },
+              { id: 'multi', label: 'Multi-Pass' },
             ]}
             size="sm"
-            itemWidth={150}
+            flex
           />
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: Spacing.md,
-          }}
-        >
-          <AppText variant="subheading" weight="bold">
-            Available Models
-          </AppText>
-          <AppButton
-            variant="secondary"
-            size="sm"
-            onPress={() => setIsAddingCustom(!isAddingCustom)}
+        <View style={{ marginBottom: Spacing.xl }}>
+          <AppText
+            variant="caption"
+            weight="bold"
+            color="secondary"
+            style={{ marginBottom: Spacing.xs }}
           >
-            {isAddingCustom ? 'Cancel' : 'Add Custom'}
-          </AppButton>
+            BACKEND CONFIGURATION:
+          </AppText>
+          <AppSegmentedControl
+            value={backendOverride}
+            onChange={setBackendOverride as (val: string) => void}
+            options={backendOptions}
+            size="sm"
+            flex
+          />
         </View>
 
-        {isAddingCustom && (
-          <MotiView
-            from={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            style={[
-              styles.customForm,
-              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-            ]}
+        {isBenchmarking ? (
+          <AppButton variant="primary" size="lg" onPress={abortBenchmark}>
+            Stop Benchmark
+          </AppButton>
+        ) : (
+          <AppButton
+            variant="primary"
+            size="lg"
+            onPress={() => selectedModel && runBenchmark(selectedModel.id)}
+            disabled={!selectedModel || !status?.isDownloaded}
           >
-            <AppText variant="body" weight="bold" style={{ marginBottom: Spacing.sm }}>
-              Register Custom Model
-            </AppText>
-            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
-              MODEL NAME
-            </AppText>
-            <AppInput
-              value={customName}
-              onChangeText={setCustomName}
-              placeholder="e.g. My Llama 1B"
-              style={{ marginBottom: Spacing.sm }}
-            />
-            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
-              GGUF DOWNLOAD URL
-            </AppText>
-            <AppInput
-              value={customUrl}
-              onChangeText={setCustomUrl}
-              placeholder="https://huggingface.co/..."
-              multiline
-              style={{ marginBottom: Spacing.md }}
-            />
-            <AppButton variant="primary" size="sm" onPress={handleAddCustom}>
-              Register Model
-            </AppButton>
-          </MotiView>
+            Run Benchmark
+          </AppButton>
         )}
-
-        {availableModels.map(renderModelCard)}
       </View>
 
       {benchmarkResults.length > 0 && (
@@ -467,13 +486,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
     marginTop: Spacing.md,
   },
-  globalToggle: {
-    marginTop: Spacing.md,
-    flexDirection: 'row',
-  },
-  modeSelector: {
-    marginTop: Spacing.lg,
-  },
   section: {
     marginBottom: Spacing.xl,
   },
@@ -490,7 +502,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: Shape.radius.r2,
     borderWidth: 1,
-    marginBottom: Spacing.md,
   },
   cardHeader: {
     flexDirection: 'row',

@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 import { Directory, File, Paths } from 'expo-file-system';
@@ -13,14 +14,100 @@ const CUSTOM_MODELS_KEY = 'ai_custom_models';
  * Supported model catalog.
  * Metadata aligned with Gallery allowlist schema and LiteRT-LM capabilities API.
  * See: gallery/model_allowlists/1_0_15.json, gallery/model_allowlists/ios_1_0_0.json
+ *
+ * Design intent: prefer small, gallery-verified models that run reliably on
+ * mid-range edge devices (≤ 6 GB device RAM). Larger models (≥ 4B, > 12 GB)
+ * are included only if they are present in the official gallery allowlist.
  */
 export const SUPPORTED_MODELS: AIModelMetadata[] = [
   {
+    id: 'qwen-2.5-1.5b',
+    name: 'Qwen 2.5 1.5B Instruct',
+    description:
+      'Compact multilingual model from Alibaba. Reliable JSON output. Good for SMS/transaction parsing. Text only.',
+    // Source: gallery/model_allowlists/1_0_15.json — litert-community/Qwen2.5-1.5B-Instruct (verified public)
+    url: 'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    sizeBytes: 1597931520,
+    parameters: '1.5B',
+    quantization: 'Q8',
+    filename: 'Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    minDeviceMemoryGb: 6,
+    defaultConfig: {
+      topK: 20,
+      topP: 0.8,
+      temperature: 0.7,
+      maxTokens: 1024,
+      accelerators: 'gpu,npu,cpu',
+    },
+  },
+  {
+    id: 'gemma-3-1b-it',
+    name: 'Gemma 3 1B Instruct',
+    description:
+      'Ultra-compact Google Gemma 3 model. Extremely fast execution. Requires Hugging Face authentication token to download.',
+    // Source: gallery/model_allowlists/1_0_15.json — litert-community/Gemma3-1B-IT (gated repo)
+    url: 'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.litertlm',
+    sizeBytes: 584417280,
+    parameters: '1B',
+    quantization: 'INT4',
+    filename: 'gemma3-1b-it-int4.litertlm',
+    minDeviceMemoryGb: 3,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 1024,
+      accelerators: 'gpu,npu,cpu',
+    },
+  },
+  {
+    id: 'deepseek-r1-distill-qwen-1.5b',
+    name: 'DeepSeek R1 Distill 1.5B',
+    description:
+      'DeepSeek R1 reasoning distilled to 1.5B. Strong chain-of-thought reasoning at edge scale. Text only.',
+    // Source: gallery/model_allowlists/1_0_15.json — litert-community/DeepSeek-R1-Distill-Qwen-1.5B (verified public)
+    url: 'https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm',
+    sizeBytes: 1833451520,
+    parameters: '1.5B',
+    quantization: 'Q8',
+    filename: 'DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.litertlm',
+    minDeviceMemoryGb: 6,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 1024,
+      accelerators: 'gpu,cpu',
+    },
+  },
+  {
+    id: 'phi-4-mini-instruct',
+    name: 'Phi-4 Mini Instruct',
+    description:
+      'Microsoft Phi-4 Mini 3.8B — strong reasoning and structured-output quality. Text only.',
+    // Source: gallery/model_allowlists/1_0_9.json — litert-community/Phi-4-mini-instruct (verified public)
+    url: 'https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    sizeBytes: 3910090752,
+    parameters: '3.8B',
+    quantization: 'Q8',
+    filename: 'Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
+    minDeviceMemoryGb: 6,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 1024,
+      accelerators: 'gpu,cpu',
+    },
+  },
+  {
     id: 'gemma-4-e2b-it',
     name: 'Gemma 4 E2B Instruct',
-    description: 'Recommended: 2B parameters, latest generation with multimodal support.',
+    description:
+      'Latest Gemma 4, 2B parameters with multimodal (image + audio) support and 32K context.',
+    // Source: gallery/model_allowlists/1_0_15.json — litert-community/gemma-4-E2B-it-litert-lm (verified public)
     url: 'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm',
-    sizeBytes: 2580000000,
+    sizeBytes: 2588147712,
     parameters: '2B',
     quantization: 'INT8',
     filename: 'gemma-4-E2B-it.litertlm',
@@ -32,16 +119,17 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 4000,
+      maxTokens: 1024,
       accelerators: 'gpu,npu,cpu',
     },
   },
   {
     id: 'gemma-4-e4b-it',
     name: 'Gemma 4 E4B Instruct',
-    description: '4B parameters, higher quality than E2B but requires more device memory.',
+    description: '4B parameter Gemma 4, higher quality multimodal model. Needs 12 GB+ device RAM.',
+    // Source: gallery/model_allowlists/1_0_15.json — litert-community/gemma-4-E4B-it-litert-lm (verified public)
     url: 'https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm',
-    sizeBytes: 3650000000,
+    sizeBytes: 3659530240,
     parameters: '4B',
     quantization: 'INT8',
     filename: 'gemma-4-E4B-it.litertlm',
@@ -53,148 +141,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 4000,
-      accelerators: 'gpu,npu,cpu',
-    },
-  },
-  {
-    id: 'gemma-3n-e2b-it-int4',
-    name: 'Gemma 3N E2B IT INT4',
-    description:
-      'Smaller footprint INT4 model with multimodal support. Works without iOS extended addressing entitlement.',
-    url: 'https://litert.dev/gemma-3n-E2B-it-int4.litertlm',
-    sizeBytes: 1530000000,
-    parameters: '2B',
-    quantization: 'INT4',
-    filename: 'gemma-3n-e2b-it-int4.litertlm',
-    minDeviceMemoryGb: 6,
-    supportsImage: true,
-    supportsAudio: true,
-    defaultConfig: {
-      topK: 64,
-      topP: 0.95,
-      temperature: 1.0,
       maxTokens: 1024,
-      accelerators: 'gpu,npu,cpu',
-    },
-  },
-  {
-    id: 'gemma-3-1b',
-    name: 'Gemma 3 1B',
-    description: 'Smallest Gemma model for very fast inference. Text only.',
-    url: 'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096.litertlm',
-    sizeBytes: 1200000000,
-    parameters: '1B',
-    quantization: 'Q4',
-    filename: 'Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096.litertlm',
-    minDeviceMemoryGb: 4,
-    defaultConfig: {
-      topK: 64,
-      topP: 0.95,
-      temperature: 1.0,
-      maxTokens: 1024,
-      accelerators: 'gpu,npu,cpu',
-    },
-  },
-  {
-    id: 'phi-4-mini',
-    name: 'Phi-4 Mini Instruct',
-    description: 'Microsoft Phi-4 Mini, strong reasoning capabilities. Text only.',
-    url: 'https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
-    sizeBytes: 2400000000,
-    parameters: 'Mini',
-    quantization: 'Q8',
-    filename: 'Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
-    minDeviceMemoryGb: 6,
-    defaultConfig: {
-      topK: 40,
-      topP: 0.95,
-      temperature: 1.0,
-      maxTokens: 1024,
-      accelerators: 'cpu',
-    },
-  },
-  {
-    id: 'qwen-2.5-1.5b',
-    name: 'Qwen 2.5 1.5B Instruct',
-    description: 'Fast multilingual model from Alibaba. Text only.',
-    url: 'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
-    sizeBytes: 1800000000,
-    parameters: '1.5B',
-    quantization: 'Q8',
-    filename: 'Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm',
-    minDeviceMemoryGb: 6,
-    defaultConfig: {
-      topK: 20,
-      topP: 0.8,
-      temperature: 0.7,
-      maxTokens: 1024,
-      accelerators: 'cpu',
-    },
-  },
-  {
-    id: 'qwen-3.5-2b-q4',
-    name: 'Qwen 3.5 2B Q4 Base',
-    description:
-      'Uses a hybrid GatedDeltaNet Linear Attention mechanism that replaces traditional KV cache with a recurrent hidden state.',
-    url: 'https://huggingface.co/paulsp94/Qwen3.5-2B-LiteRT-LM/resolve/main/qwen35_2b_q4.litertlm',
-    sizeBytes: 1070000000,
-    parameters: '2B',
-    quantization: 'INT4',
-    filename: 'qwen35_2b_q4.litertlm',
-    minDeviceMemoryGb: 6,
-    capabilities: ['llm_thinking', 'speculative_decoding'],
-    supportsImage: false,
-    supportsAudio: false,
-    defaultConfig: {
-      topK: 50,
-      topP: 0.95,
-      temperature: 0.8,
-      maxTokens: 4000,
-      accelerators: 'gpu,npu,cpu',
-    },
-  },
-  {
-    id: 'qwen-3-4b-it',
-    name: 'Qwen 3 4B Instruct',
-    description:
-      'Optimized 4B parameter model featuring channel-wise weight quantization and an uncompressed Float32 KV cache.',
-    url: 'https://huggingface.co/litert-community/Qwen3-4B/resolve/main/qwen3_4b_channelwise_int8_float32kv.litertlm',
-    sizeBytes: 5280000000,
-    parameters: '4B',
-    quantization: 'INT8',
-    filename: 'qwen3_4b_channelwise_int8_float32kv.litertlm',
-    minDeviceMemoryGb: 12,
-    capabilities: ['llm_thinking', 'speculative_decoding'],
-    supportsImage: false,
-    supportsAudio: false,
-    defaultConfig: {
-      topK: 64,
-      topP: 0.95,
-      temperature: 1.0,
-      maxTokens: 4000,
-      accelerators: 'gpu,npu,cpu',
-    },
-  },
-  {
-    id: 'phi-4-mini-instruct',
-    name: 'Phi 4 Mini Instruct',
-    description:
-      "Microsoft's high-performance mini model, configured with multi-prefill parameters to handle complex context setups.",
-    url: 'https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
-    sizeBytes: 3910000000,
-    parameters: '3.8B',
-    quantization: 'INT8',
-    filename: 'Phi-4-mini-instruct_multi-prefill-seq_q8_ekv4096.litertlm',
-    minDeviceMemoryGb: 12,
-    capabilities: ['llm_thinking', 'speculative_decoding'],
-    supportsImage: false,
-    supportsAudio: false,
-    defaultConfig: {
-      topK: 50,
-      topP: 0.9,
-      temperature: 0.7,
-      maxTokens: 4096,
       accelerators: 'gpu,npu,cpu',
     },
   },
@@ -243,12 +190,12 @@ export class ModelManagementService {
 
   /**
    * Returns the recommended model for the device.
-   * Prefers the default model (gemma-3n-e2b-it-int4 — smallest, no iOS entitlement needed).
-   * Falls back to any downloaded model (preferring smallest), or the default if none downloaded.
+   * Prefers qwen-2.5-1.5b (smallest confirmed-public model at 1.5 GB, 6 GB RAM).
+   * Falls back to any other downloaded model (smallest first), or the default for download prompt.
    */
   async getRecommendedModel(): Promise<AIModelMetadata> {
     const allModels = this.getAllModels();
-    const defaultId = 'gemma-3n-e2b-it-int4';
+    const defaultId = AppConfig.defaults.defaultAiModelId;
 
     // Prefer default if downloaded
     const defaultModel = allModels.find(m => m.id === defaultId);
@@ -322,11 +269,17 @@ export class ModelManagementService {
       return '';
     }
 
+    const headers: Record<string, string> = {};
+    const hfToken = process.env.EXPO_PUBLIC_HF_TOKEN;
+    if (hfToken && model.url.includes('huggingface.co')) {
+      headers['Authorization'] = `Bearer ${hfToken}`;
+    }
+
     // Downloading still uses legacy API for resumable downloads
     const downloadResumable = FileSystemLegacy.createDownloadResumable(
       model.url,
       localPath,
-      {},
+      { headers },
       downloadProgress => {
         const progress =
           downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;

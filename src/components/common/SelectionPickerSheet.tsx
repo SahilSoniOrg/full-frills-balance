@@ -94,6 +94,14 @@ export function SelectionPickerSheet<T extends string | number>({
                   ]}
                   onPress={() => handleSelect(item.id)}
                 >
+                  {item.icon && (
+                    <AppIcon
+                      name={item.icon as any}
+                      size={20}
+                      color={isSelected ? theme.primary : theme.textSecondary}
+                      style={{ marginRight: Spacing.md }}
+                    />
+                  )}
                   <View style={{ flex: 1 }}>
                     <AppText variant="body" weight={isSelected ? 'bold' : 'medium'}>
                       {item.label}

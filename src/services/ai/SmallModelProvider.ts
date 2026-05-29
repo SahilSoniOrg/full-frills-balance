@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import {
   checkBackendSupport,
@@ -15,6 +16,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
   private currentModelId: string | null = null;
   private defaultModelId: string = AppConfig.defaults.defaultAiModelId;
   private lastTeardownTime = 0;
+  private activeBackend: Backend = 'cpu';
 
   constructor(defaultModelId: string = AppConfig.defaults.defaultAiModelId) {
     this.defaultModelId = defaultModelId;
@@ -26,15 +28,32 @@ export class SmallModelProvider implements DynamicLLMEngine {
     return this.currentModelId;
   }
 
-  private async ensureModelLoaded(modelId: string): Promise<void> {
-    if (this.currentModelId === modelId && this.llm) {
+  private async ensureModelLoaded(
+    modelId: string,
+    overrideBackend?: 'auto' | Backend,
+  ): Promise<void> {
+    // Force reload if backend override changes
+    if (
+      this.currentModelId === modelId &&
+      this.llm &&
+      (!overrideBackend || overrideBackend === 'auto' || this.activeBackend === overrideBackend)
+    ) {
       return;
     }
 
+    if (
+      this.llm &&
+      overrideBackend &&
+      overrideBackend !== 'auto' &&
+      this.activeBackend !== overrideBackend
+    ) {
+      await this.disposeInternal();
+    }
+
     const timeSinceTeardown = Date.now() - this.lastTeardownTime;
-    if (timeSinceTeardown < 1500) {
-      const waitTime = 1500 - timeSinceTeardown;
-      logger.info(`[SmallModelProvider] Waiting ${waitTime}ms for C++ thread pool teardown...`);
+    if (timeSinceTeardown < 3000) {
+      const waitTime = 3000 - timeSinceTeardown;
+      logger.info(`[SmallModelProvider] Waiting ${waitTime}ms for native teardown...`);
       await new Promise(r => setTimeout(r, waitTime));
     }
 
@@ -48,17 +67,33 @@ export class SmallModelProvider implements DynamicLLMEngine {
       throw new Error(`Model ${modelId} not found in catalog.`);
     }
 
+    // OOM Prevention: Check if the device has enough RAM to load the model
+    if (model.minDeviceMemoryGb && Device.totalMemory) {
+      // OS often reports slightly less than advertised RAM (e.g., 5.7GB for 6GB). Round up to nearest GB.
+      const totalMemoryGb = Math.round(Device.totalMemory / (1024 * 1024 * 1024));
+      if (totalMemoryGb < model.minDeviceMemoryGb) {
+        throw new Error(
+          `Insufficient device memory. Model requires ${model.minDeviceMemoryGb}GB RAM, but device only has ${totalMemoryGb}GB. Loading this model would cause a crash.`,
+        );
+      }
+    }
+
+    logger.info(`[SmallModelProvider] Found model metadata: ${JSON.stringify(model)}`);
+
     const normalizedPath = status.localPath.replace(/^file:\/\//, '');
 
     // Select the best hardware accelerator supported by the model:
     // - On Android, we prefer 'npu' (Hexagon DSP) if supported by the model, then 'gpu', falling back to 'cpu'.
     // - On iOS, we prefer 'gpu' (Metal), falling back to 'cpu'.
     let requestedBackend: Backend = 'cpu';
-    if (Platform.OS === 'android') {
-      if (model.defaultConfig?.accelerators?.includes('npu')) {
-        requestedBackend = 'npu';
-      } else if (model.defaultConfig?.accelerators?.includes('gpu')) {
+    if (overrideBackend && overrideBackend !== 'auto') {
+      requestedBackend = overrideBackend;
+    } else if (Platform.OS === 'android') {
+      // Prefer GPU over NPU in 'auto' mode to avoid missing QNN dispatch library errors on unsupported devices
+      if (model.defaultConfig?.accelerators?.includes('gpu')) {
         requestedBackend = 'gpu';
+      } else if (model.defaultConfig?.accelerators?.includes('npu')) {
+        requestedBackend = 'npu';
       }
     } else {
       if (model.defaultConfig?.accelerators?.includes('gpu')) {
@@ -100,9 +135,11 @@ export class SmallModelProvider implements DynamicLLMEngine {
         topK: model.defaultConfig?.topK ?? 40,
         topP: model.defaultConfig?.topP ?? 0.95,
         enableSpeculativeDecoding,
+        multimodal: requestedBackend === 'cpu' ? false : undefined,
       });
 
       this.currentModelId = modelId;
+      this.activeBackend = requestedBackend;
       logger.info(
         `[SmallModelProvider] Model ${modelId} initialized successfully with backend: ${requestedBackend}`,
       );
@@ -115,6 +152,18 @@ export class SmallModelProvider implements DynamicLLMEngine {
           e as any,
         );
         try {
+          // The previous llm instance is poisoned because loadModel failed.
+          // We must dispose it and create a new one before attempting fallback.
+          try {
+            this.llm.close();
+          } catch {}
+
+          logger.info(
+            `[SmallModelProvider] Waiting 3000ms for native C++ thread pool cooldown before CPU fallback...`,
+          );
+          await new Promise(r => setTimeout(r, 3000));
+          this.llm = createLLM({ enableMemoryTracking: true });
+
           await this.llm.loadModel(normalizedPath, {
             backend: 'cpu',
             maxTokens: model.defaultConfig?.maxTokens ?? 1024,
@@ -123,14 +172,17 @@ export class SmallModelProvider implements DynamicLLMEngine {
             temperature: model.defaultConfig?.temperature ?? 0.7,
             topK: model.defaultConfig?.topK ?? 40,
             topP: model.defaultConfig?.topP ?? 0.95,
+            multimodal: false,
           });
           this.currentModelId = modelId;
+          this.activeBackend = 'cpu';
           logger.info(
             `[SmallModelProvider] Model ${modelId} successfully initialized with CPU fallback`,
           );
           return;
         } catch (fallbackError) {
           this.currentModelId = null;
+          this.activeBackend = 'cpu';
           logger.error(`[SmallModelProvider] CPU fallback failed:`, fallbackError);
           throw fallbackError;
         }
@@ -142,21 +194,30 @@ export class SmallModelProvider implements DynamicLLMEngine {
     }
   }
 
-  async switchModel(modelId: string): Promise<void> {
-    const nextInQueue = this.executionQueue.then(() => this.switchModelInternal(modelId));
+  async switchModel(modelId: string, overrideBackend?: 'auto' | Backend): Promise<void> {
+    const nextInQueue = this.executionQueue.then(() =>
+      this.switchModelInternal(modelId, overrideBackend),
+    );
     this.executionQueue = nextInQueue.catch(() => {});
     return nextInQueue;
   }
 
-  private async switchModelInternal(modelId: string): Promise<void> {
-    if (this.currentModelId === modelId && this.llm) {
+  private async switchModelInternal(
+    modelId: string,
+    overrideBackend?: 'auto' | Backend,
+  ): Promise<void> {
+    if (
+      this.currentModelId === modelId &&
+      this.llm &&
+      (!overrideBackend || overrideBackend === 'auto' || this.activeBackend === overrideBackend)
+    ) {
       return;
     }
     if (this.llm) {
       await this.disposeInternal();
     }
     this.defaultModelId = modelId;
-    await this.ensureModelLoaded(modelId);
+    await this.ensureModelLoaded(modelId, overrideBackend);
   }
 
   async generate(prompt: string, options?: AIGenerateOptions): Promise<GenerateResult> {
@@ -216,6 +277,66 @@ export class SmallModelProvider implements DynamicLLMEngine {
         return this.generateInternal(prompt, options, retryCount + 1);
       }
 
+      // Dynamic Resiliency Fallback:
+      // If prompt execution failed (e.g. LiteRT sendMessage throws due to Metal GPU/OpenCL driver bugs)
+      // and we are currently loaded on a hardware accelerator (GPU/NPU), reload on CPU and retry.
+      if (this.activeBackend !== 'cpu' && this.currentModelId) {
+        logger.warn(
+          `[SmallModelProvider] Inference failed on '${this.activeBackend}'. Gracefully reloading on CPU...`,
+          e as any,
+        );
+        try {
+          const modelIdToReload = this.currentModelId;
+          await this.disposeInternal();
+
+          // Wait for C++ thread pool teardown cooldown of 3000ms before re-creating engine
+          logger.info(
+            `[SmallModelProvider] Resiliency: waiting 3000ms for native C++ thread pool cooldown...`,
+          );
+          await new Promise(r => setTimeout(r, 3000));
+
+          // Force load on CPU
+          this.llm = createLLM({ enableMemoryTracking: true });
+          const status = await modelManagementService.getDownloadStatus(modelIdToReload);
+          const model = modelManagementService.getAllModels().find(m => m.id === modelIdToReload);
+          if (status.localPath && model) {
+            const normalizedPath = status.localPath.replace(/^file:\/\//, '');
+            await this.llm.loadModel(normalizedPath, {
+              backend: 'cpu',
+              maxTokens: model.defaultConfig?.maxTokens ?? 1024,
+              systemPrompt:
+                'You are a high-precision financial transaction parser. Output valid JSON only.',
+              temperature: model.defaultConfig?.temperature ?? 0.7,
+              topK: model.defaultConfig?.topK ?? 40,
+              topP: model.defaultConfig?.topP ?? 0.95,
+              multimodal: false,
+            });
+            this.currentModelId = modelIdToReload;
+            this.activeBackend = 'cpu';
+            logger.info(
+              `[SmallModelProvider] Resiliency CPU reload successful. Retrying inference...`,
+            );
+
+            // Re-attempt inference on CPU
+            if (options?.resetContext !== false) {
+              this.llm.resetConversation();
+            }
+            const formattedPrompt = `Output valid JSON only. No explanations. Do not use <think> tags.\n\n${prompt}`;
+            let result = await this.llm.sendMessage(formattedPrompt);
+            logger.info('[SmallModelProvider] Resiliency CPU response received:', { text: result });
+
+            if (result.includes('</think>')) {
+              result = result.substring(result.indexOf('</think>') + 8);
+            }
+            result = result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+            const stats = this.captureStats();
+            return { text: result, stats: stats || undefined };
+          }
+        } catch (fallbackError) {
+          logger.error(`[SmallModelProvider] Resiliency CPU fallback failed:`, fallbackError);
+        }
+      }
+
       throw e;
     }
   }
@@ -271,6 +392,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       } catch {}
       this.llm = null;
       this.currentModelId = null;
+      this.activeBackend = 'cpu';
       this.lastTeardownTime = Date.now();
     }
   }
