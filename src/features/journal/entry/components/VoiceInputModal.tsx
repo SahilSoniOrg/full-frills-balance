@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFeatureFlags } from '@/src/hooks/useFeatureFlags';
 import { transactionIngestionService } from '../../services/TransactionIngestionService';
 import { ParserOutput } from '../../types/ai-parsing';
 
@@ -49,6 +50,7 @@ const PREDEFINED_TEMPLATES = [
 export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: VoiceInputModalProps) {
   const { theme } = useTheme();
   const { isNativeAiEnabled } = useUI();
+  const { isLocalAiEnabled } = useFeatureFlags();
   const insets = useSafeAreaInsets();
 
   const [transcription, setTranscription] = useState('');
@@ -318,7 +320,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                       </AppText>
                     </TouchableOpacity>
                   )}
-                  {isNativeAiEnabled && transcription.trim().length > 0 && (
+                  {isLocalAiEnabled && isNativeAiEnabled && transcription.trim().length > 0 && (
                     <TouchableOpacity
                       onPress={() => triggerExtraction(transcription, true)}
                       disabled={isParsing}

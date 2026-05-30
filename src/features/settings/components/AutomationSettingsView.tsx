@@ -12,12 +12,15 @@ import { AIModelMetadata } from '@/src/services/ai/types';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import { useFeatureFlags } from '@/src/hooks/useFeatureFlags';
 
 interface AutomationSettingsViewProps {
   vm: NotificationSettingsViewModel;
 }
 
 export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
+  const { isLocalAiEnabled } = useFeatureFlags();
+
   const [downloadedModels, setDownloadedModels] = useState<AIModelMetadata[]>([]);
   const [isModelPickerVisible, setIsModelPickerVisible] = useState(false);
 
@@ -98,60 +101,62 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
           </SettingsMenu>
         )}
 
-        <SettingsMenu header="Voice AI Ingestion">
-          <SettingsMenuItem
-            leftIcon="mic"
-            title="Local AI Fallback"
-            description="Use on-device LLM when deterministic parsing fails"
-            hasArrow={false}
-            rightContent={
-              <AppToggle value={vm.isNativeAiEnabled} onValueChange={vm.setIsNativeAiEnabled} />
-            }
-          />
+        {isLocalAiEnabled && (
+          <SettingsMenu header="Voice AI Ingestion">
+            <SettingsMenuItem
+              leftIcon="mic"
+              title="Local AI Fallback"
+              description="Use on-device LLM when deterministic parsing fails"
+              hasArrow={false}
+              rightContent={
+                <AppToggle value={vm.isNativeAiEnabled} onValueChange={vm.setIsNativeAiEnabled} />
+              }
+            />
 
-          {vm.isNativeAiEnabled && (
-            <>
-              <SettingsMenuItem
-                leftIcon="activity"
-                title="Inference Mode"
-                description="Choose between speed or accuracy"
-                hasArrow={false}
-                rightContent={
-                  <AppSegmentedControl
-                    value={vm.aiInferenceMode}
-                    onChange={vm.setAiInferenceMode}
-                    options={[
-                      { id: 'single', label: 'Fast' },
-                      { id: 'multi', label: 'Accurate' },
-                    ]}
-                    size="sm"
-                    itemWidth={80}
-                  />
-                }
-              />
-              {modelOptions.length > 0 && (
+            {vm.isNativeAiEnabled && (
+              <>
                 <SettingsMenuItem
-                  leftIcon="database"
-                  title="Active Model"
-                  description={activeModel?.name || 'Choose which model to use'}
-                  onPress={() => setIsModelPickerVisible(true)}
+                  leftIcon="activity"
+                  title="Inference Mode"
+                  description="Choose between speed or accuracy"
+                  hasArrow={false}
                   rightContent={
-                    <AppText variant="caption" weight="bold" color="primary">
-                      {activeModel ? activeModel.parameters : 'Select'}
-                    </AppText>
+                    <AppSegmentedControl
+                      value={vm.aiInferenceMode}
+                      onChange={vm.setAiInferenceMode}
+                      options={[
+                        { id: 'single', label: 'Fast' },
+                        { id: 'multi', label: 'Accurate' },
+                      ]}
+                      size="sm"
+                      itemWidth={80}
+                    />
                   }
                 />
-              )}
-            </>
-          )}
+                {modelOptions.length > 0 && (
+                  <SettingsMenuItem
+                    leftIcon="database"
+                    title="Active Model"
+                    description={activeModel?.name || 'Choose which model to use'}
+                    onPress={() => setIsModelPickerVisible(true)}
+                    rightContent={
+                      <AppText variant="caption" weight="bold" color="primary">
+                        {activeModel ? activeModel.parameters : 'Select'}
+                      </AppText>
+                    }
+                  />
+                )}
+              </>
+            )}
 
-          <SettingsMenuItem
-            leftIcon="terminal"
-            title="AI Benchmark Lab"
-            description="Download models and test performance"
-            onPress={AppNavigation.toAiBenchmark}
-          />
-        </SettingsMenu>
+            <SettingsMenuItem
+              leftIcon="terminal"
+              title="AI Benchmark Lab"
+              description="Download models and test performance"
+              onPress={AppNavigation.toAiBenchmark}
+            />
+          </SettingsMenu>
+        )}
 
         <SelectionPickerSheet
           visible={isModelPickerVisible}
