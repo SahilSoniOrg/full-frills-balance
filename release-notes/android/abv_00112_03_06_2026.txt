@@ -1,0 +1,33 @@
+New release 🚀
+
+This one introduces something massive: Local AI.
+
+You can now just type natural text and let the AI instantly convert it into a journal entry. 
+
+And the best part? It runs 100% locally on your device.
+Your financial data never leaves your phone.
+
+---
+
+Also in this update:
+
+* SMS rules are better: you can now add descriptions to them
+* Safe-to-Spend graph is much faster to swipe through
+* Reports look cleaner
+* Journal search works properly in simple mode
+* Added an AI Benchmark screen to test your phone's capabilities
+
+---
+
+Big difference you’ll notice:
+
+* You don't have to manually fill out journals anymore — just speak to it what happened
+* Everything feels a bit snappier
+
+---
+
+Under the hood, a ton of work went into building the new AI pipeline and rewriting our transaction engine to support Voice inputs in the future. We also upgraded the core framework to make the app more stable.
+
+---
+
+Try the new AI journal creation — curious to see how well it works for you.

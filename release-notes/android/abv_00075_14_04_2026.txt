@@ -1,0 +1,24 @@
+New release 🚀
+
+(Should be out in a few hours)
+
+The engine underneath just got a major upgrade — things should feel a lot more real now.
+
+What’s new
+
+* Rewrote the simulation engine (now tracks money day-by-day)
+* Smarter budgeting (no more double counting with planned payments)
+* Cascading money (uses other accounts if one runs out)
+* Credit cards → minimum payment support
+* Loans → EMI support
+* Restore deleted accounts/transactions from Audit
+* New theme: GoldObsidian
+* Faster startup + overall performance improvements
+
+Why this matters
+
+* “Safe to spend” is now based on actual timing, not rough math
+* Fewer false warnings about running out of money
+* Cleaner, more predictable behavior overall
+
+Less guesswork. More signal.

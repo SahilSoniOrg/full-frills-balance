@@ -1,0 +1,26 @@
+New release 🚀
+
+We've got a fresh look + a massive boost to speed and boot performance. 
+
+You'll also notice our brand new app icon! 
+
+What’s new:
+- New Icon: fresh new app icon design
+- Instant Boot: dashboard and wealth summaries load instantly from local snapshots
+- Faster SMS Syncing: batch processing prevents database locks and lag during bulk scans
+- Granular Import Progress: step-by-step 0-100% progress tracking for wallet imports
+- Search Notes: journal search now scans transaction notes
+- Redesigned Settings: refactored under the hood to run smoother
+- Android UI Fixes: no more text clipping in the Safe-to-Spend bar
+
+---
+
+Big difference you’ll notice:
+- A clean new face for the app on your home screen
+- The app is ready to use the millisecond it opens
+- Syncing and importing are seamless and don't block the UI
+- Finding past logs is much easier
+
+---
+
+Under the hood, a bunch of performance work to remove database bottlenecks and improve stability.

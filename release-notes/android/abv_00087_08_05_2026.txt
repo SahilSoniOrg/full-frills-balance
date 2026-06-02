@@ -1,0 +1,38 @@
+New release 🚀
+
+This one is a pretty big foundational update.
+
+You can now use multiple Workplaces inside the app.
+
+Think of them like separate books:
+
+* one for personal finances
+* one for business
+* one for anything else you want separated
+
+This is also the foundation for future features like:
+
+* multi-device sync
+* shared workplaces
+* view-only access
+* collaborative bookkeeping
+
+The app will still stay local-first.
+Online sync will be optional.
+
+---
+
+Also in this update:
+
+* redesigned account creation flow
+* redesigned journal creation + journal details pages
+* redesigned settings page
+* added notes support in journals
+* backups are now compressed ZIP files
+* exports are smaller + cleaner
+* added bug reporting in Settings
+* bunch of bug fixes + stability improvements
+
+---
+
+A lot of work in this release went into making the app more reliable internally and preparing the base for much larger features coming next.

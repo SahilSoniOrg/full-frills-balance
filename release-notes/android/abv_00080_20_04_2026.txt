@@ -1,0 +1,26 @@
+New release 🚀
+
+This one’s about speed + actually getting things done faster.
+
+You can now:
+- long press to select multiple transactions  
+- share them instantly  
+
+Also:
+- app starts faster  
+- reports feel much smoother  
+
+---
+
+Big difference you’ll notice:
+- less waiting  
+- less tapping one-by-one  
+- everything just flows better  
+
+---
+
+Under the hood, a bunch of performance work + infra upgrades to make the app more stable.
+
+---
+
+Try selecting a few transactions and sharing them — curious how that feels.

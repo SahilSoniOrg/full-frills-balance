@@ -1,0 +1,23 @@
+New release 🚀
+
+Know exactly which account will run dry — before it happens.
+
+We’ve added account-level Safe to Spend.
+
+Now you can see how much you can safely spend from each account, not just overall — so you don’t end up with money in one place and a shortage in another.
+
+What’s new
+
+- Per-account Safe to Spend (inside the dashboard breakdown)
+- Credit card payments → choose which account will pay it
+- Budgets → assign which accounts they spend from
+
+Why this matters
+
+You get a much clearer picture of:
+
+- which account needs money
+- where your spending is actually coming from
+- what might break before your next income
+
+Less guessing. Fewer surprises.
