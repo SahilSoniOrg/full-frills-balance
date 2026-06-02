@@ -628,6 +628,20 @@ export const AppNavigation = {
   },
 
   /**
+   * Navigate to the identity and account settings screen.
+   */
+  toIdentitySettings: () => {
+    router.push('/identity-settings' as any);
+  },
+
+  /**
+   * Navigate to account settings.
+   */
+  toAccountSettings: () => {
+    router.push('/account-settings' as any);
+  },
+
+  /**
    * Navigate to a custom route.
    */
   navigate: (route: string) => {

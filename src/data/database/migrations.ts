@@ -871,5 +871,16 @@ export const migrations = schemaMigrations({
         unsafeExecuteSql('DROP TABLE IF EXISTS sms_inbox_records;'),
       ],
     },
+    {
+      toVersion: 29,
+      steps: [
+        addColumns({
+          table: 'workplaces',
+          columns: [
+            { name: 'remote_workplace_id', type: 'string', isOptional: true, isIndexed: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

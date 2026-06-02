@@ -1,7 +1,9 @@
+export { default as AccountSettingsScreen } from './screens/AccountSettingsScreen';
 export { default as AppearanceSettingsScreen } from './screens/AppearanceSettingsScreen';
 export { default as AboutSupportSettingsScreen } from './screens/AboutSupportSettingsScreen';
 export { default as AutomationSettingsScreen } from './screens/AutomationSettingsScreen';
 export { default as DataManagementSettingsScreen } from './screens/DataManagementSettingsScreen';
+export { default as IdentitySettingsScreen } from './screens/IdentitySettingsScreen';
 export { default as ImportSelectionScreen } from './screens/ImportSelectionScreen';
 export { default as MaintenanceSettingsScreen } from './screens/MaintenanceSettingsScreen';
 export { default as PersonalizationSettingsScreen } from './screens/PersonalizationSettingsScreen';

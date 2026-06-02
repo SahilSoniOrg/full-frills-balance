@@ -13,6 +13,7 @@ export default class Workplace extends Model {
   @field('name') name!: string;
   @field('icon') icon!: string;
   @field('default_currency_code') defaultCurrencyCode!: string;
+  @field('remote_workplace_id') remoteWorkplaceId?: string;
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

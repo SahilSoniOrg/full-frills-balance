@@ -47,3 +47,7 @@ Lessons learned from past issues, organized by principles.
 ## 7. Tooling & Expo
 - **Bun Runner [KISS]**: Always run `bun install`, `bun run`, and `bunx` instead of npm.
 - **Expo Upgrades [KISS]**: Upgrades are high-risk; verify WatermelonDB plugin compatibility first.
+
+## 8. Backend & Sync
+- **Supabase Co-location [KISS]**: Supabase config and migrations (`supabase/` folder) must live at the root of this main app repository. This ensures atomic commits across UI, WatermelonDB, and remote schema changes.
+- **TypeScript Generation [DRY]**: Always generate Supabase types into the `src/` folder so the frontend stays strictly typed against the latest schema.

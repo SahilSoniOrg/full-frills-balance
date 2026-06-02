@@ -41,18 +41,6 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
     return () => sub.unsubscribe();
   }, [workplaceId]);
 
-  const setUserName = useCallback(
-    (newName: string) => {
-      if (newName.trim() && newName !== userName) {
-        updateUserDetails(newName.trim(), archetype);
-        analytics.trackFeatureUsage('settings', 'change_name', {
-          name_length: newName.trim().length,
-        });
-      }
-    },
-    [archetype, updateUserDetails, userName],
-  );
-
   const onUpdateArchetype = useCallback(
     async (id: string) => {
       await setArchetype(id);
@@ -77,6 +65,18 @@ export function usePersonalizationViewModel(): PersonalizationViewModel {
       });
     },
     [setUiSafeToSpendDays],
+  );
+
+  const setUserName = useCallback(
+    (newName: string) => {
+      if (newName.trim() && newName !== userName) {
+        updateUserDetails(newName.trim(), archetype);
+        analytics.trackFeatureUsage('settings', 'change_name', {
+          name_length: newName.trim().length,
+        });
+      }
+    },
+    [archetype, updateUserDetails, userName],
   );
 
   return {

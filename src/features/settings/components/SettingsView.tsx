@@ -4,16 +4,30 @@ import { SettingsLayout } from '@/src/features/settings/components/SettingsLayou
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useFeatureFlags } from '@/src/hooks/useFeatureFlags';
 
 export function SettingsView() {
+  const { isAccountEnabled } = useFeatureFlags();
+
   return (
     <SettingsLayout title="Settings" showBack={false}>
       <Stack space="xl">
+        {isAccountEnabled && (
+          <SettingsMenu header="Account">
+            <SettingsMenuItem
+              leftIcon="user"
+              title="Account & Identity"
+              description="Sign in, backup, and sync"
+              onPress={AppNavigation.toAccountSettings}
+              prominent
+            />
+          </SettingsMenu>
+        )}
         <SettingsMenu header={AppConfig.strings.settings.sections.moneySetup}>
           <SettingsMenuItem
-            leftIcon="user"
+            leftIcon="wallet"
             title={AppConfig.strings.settings.sections.personalization}
-            description="Name, default currency, and Safe-to-Spend forecast"
+            description="Default currency and Safe-to-Spend forecast"
             onPress={AppNavigation.toPersonalizationSettings}
             prominent
           />

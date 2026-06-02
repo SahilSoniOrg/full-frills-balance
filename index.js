@@ -10,6 +10,9 @@ import { logger } from './src/utils/logger';
 // Global anchor for boot performance telemetry
 import 'expo-router/entry';
 
+// Initialize user identity and auth listening
+import '@/src/features/auth/AuthService';
+
 logger.info('[Boot] JS execution started');
 
 // Prevent splash from hiding until we control it

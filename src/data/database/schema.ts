@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 28,
+  version: 29,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -362,6 +362,7 @@ END;`,
         { name: 'updated_at', type: 'number' },
         { name: 'icon', type: 'string', isOptional: true },
         { name: 'default_currency_code', type: 'string', isOptional: false },
+        { name: 'remote_workplace_id', type: 'string', isOptional: true, isIndexed: true },
       ],
     }),
   ],

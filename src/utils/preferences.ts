@@ -41,6 +41,8 @@ export interface UIPreferences {
   defaultShareFormat?: ShareFormat;
   safeToSpendDays: number;
   activeWorkplaceId?: WorkplaceId;
+  identityState: 'NOT_CREATED' | 'CREATING' | 'READY';
+  currentUser?: { id: string; email?: string | null; name?: string | null } | null;
 }
 
 const DEFAULT_UI_PREFERENCES: UIPreferences = {
@@ -67,6 +69,8 @@ const DEFAULT_UI_PREFERENCES: UIPreferences = {
   defaultShareFormat: ShareFormat.TEXT,
   safeToSpendDays: AppConfig.defaults.safeToSpendDays,
   activeWorkplaceId: undefined,
+  identityState: 'NOT_CREATED',
+  currentUser: null,
 };
 
 const LEGACY_PREFERENCE_KEYS = ['defaultCurrencyCode', 'defaultCurrency'] as const;
@@ -460,6 +464,22 @@ class PreferencesHelper {
 
   setActiveWorkplaceId(workplaceId?: WorkplaceId): void {
     this.updatePreferences({ activeWorkplaceId: workplaceId });
+  }
+
+  get identityState(): 'NOT_CREATED' | 'CREATING' | 'READY' {
+    return this.preferences.identityState || 'NOT_CREATED';
+  }
+
+  setIdentityState(state: 'NOT_CREATED' | 'CREATING' | 'READY'): void {
+    this.updatePreferences({ identityState: state });
+  }
+
+  get currentUser() {
+    return this.preferences.currentUser || null;
+  }
+
+  setCurrentUser(user: UIPreferences['currentUser']): void {
+    this.updatePreferences({ currentUser: user });
   }
 
   get dismissedPatternIds(): string[] {

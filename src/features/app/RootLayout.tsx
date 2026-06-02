@@ -4,12 +4,13 @@ import { ErrorBoundary } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { UIProvider, useUI } from '@/src/contexts/UIContext';
 import { WorkplaceProvider, useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { AuthProvider } from '@/src/features/auth';
 import { database } from '@/src/data/database/Database';
 import { resetAllCharts } from '@/src/hooks/chartInteractionRegistry';
 import { analytics, navigationIntegration } from '@/src/services/analytics-service';
 import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
-import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
+import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as Sentry from '@sentry/react-native';
 import { useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -54,20 +55,22 @@ function RootLayout() {
           <ErrorBoundary>
             <DatabaseProvider database={database}>
               <UIProvider>
-                <EarlyBootstrap />
-                <WorkplaceProvider>
-                  <MaybeAnalyticsProvider client={analytics.posthog}>
-                    <ThemeProvider value={theme}>
-                      <WorkplaceBootstrap />
-                      <AppLockInterceptor>
-                        <AppContent />
-                      </AppLockInterceptor>
-                      <AlertContainer />
-                      <ToastContainer />
-                      <SplashOrchestrator />
-                    </ThemeProvider>
-                  </MaybeAnalyticsProvider>
-                </WorkplaceProvider>
+                <AuthProvider>
+                  <EarlyBootstrap />
+                  <WorkplaceProvider>
+                    <MaybeAnalyticsProvider client={analytics.posthog}>
+                      <ThemeProvider value={theme}>
+                        <WorkplaceBootstrap />
+                        <AppLockInterceptor>
+                          <AppContent />
+                        </AppLockInterceptor>
+                        <AlertContainer />
+                        <ToastContainer />
+                        <SplashOrchestrator />
+                      </ThemeProvider>
+                    </MaybeAnalyticsProvider>
+                  </WorkplaceProvider>
+                </AuthProvider>
               </UIProvider>
             </DatabaseProvider>
           </ErrorBoundary>

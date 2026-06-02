@@ -388,7 +388,7 @@ export const AppConfig = {
     settings: {
       title: 'Settings',
       sections: {
-        personalization: 'Profile & Money Defaults',
+        personalization: 'Money Defaults',
         profile: 'Profile',
         forecasting: 'Forecasting',
         moneyDefaults: 'Money Defaults',

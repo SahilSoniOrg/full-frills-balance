@@ -14,5 +14,6 @@ export function useFeatureFlags() {
 
   return {
     isLocalAiEnabled: isFeatureEnabled('enable-local-ai', false),
+    isAccountEnabled: isFeatureEnabled('enable-account', false),
   };
 }
