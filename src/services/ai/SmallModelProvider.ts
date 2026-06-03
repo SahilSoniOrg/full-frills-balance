@@ -416,7 +416,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       const stats = this.llm.getStats();
       return {
         tokensPerSecond: stats.tokensPerSecond,
-        timeToFirstTokenMs: stats.timeToFirstToken,
+        timeToFirstTokenMs: stats.timeToFirstToken * 1000,
         completionTokens: stats.completionTokens,
         totalDurationMs:
           stats.tokensPerSecond > 0 ? (stats.completionTokens / stats.tokensPerSecond) * 1000 : 0,

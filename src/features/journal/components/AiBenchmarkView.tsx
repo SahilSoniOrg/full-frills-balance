@@ -498,6 +498,40 @@ export function AiBenchmarkView() {
                   </View>
                 </View>
               )}
+              {res.success && res.output?.debugMetrics?.lastPassStats && (
+                <View style={[styles.timingsContainer, { marginTop: 4, borderTopWidth: 0 }]}>
+                  {res.output.debugMetrics.lastPassStats.tokensPerSecond > 0 && (
+                    <View style={styles.timingRow}>
+                      <AppText variant="caption" color="secondary">
+                        Tokens/Sec
+                      </AppText>
+                      <AppText variant="caption" weight="bold">
+                        {res.output.debugMetrics.lastPassStats.tokensPerSecond.toFixed(1)} t/s
+                      </AppText>
+                    </View>
+                  )}
+                  {res.output.debugMetrics.lastPassStats.timeToFirstTokenMs > 0 && (
+                    <View style={styles.timingRow}>
+                      <AppText variant="caption" color="secondary">
+                        Time to First Token (TTFT)
+                      </AppText>
+                      <AppText variant="caption" weight="bold">
+                        {res.output.debugMetrics.lastPassStats.timeToFirstTokenMs.toFixed(0)} ms
+                      </AppText>
+                    </View>
+                  )}
+                  {res.output.debugMetrics.lastPassStats.completionTokens > 0 && (
+                    <View style={styles.timingRow}>
+                      <AppText variant="caption" color="secondary">
+                        Tokens Generated
+                      </AppText>
+                      <AppText variant="caption" weight="bold">
+                        {res.output.debugMetrics.lastPassStats.completionTokens.toFixed(0)} tokens
+                      </AppText>
+                    </View>
+                  )}
+                </View>
+              )}
               {res.success && (
                 <AppText variant="caption" style={styles.jsonOutput}>
                   {JSON.stringify(res.output.transactions[0], null, 2)}

@@ -145,11 +145,38 @@ jest.mock('expo-router', () => ({
   },
 }));
 
-jest.mock('expo-file-system', () => ({
-  documentDirectory: 'test-dir/',
-  writeAsStringAsync: jest.fn(),
-  readAsStringAsync: jest.fn(),
-}));
+jest.mock('expo-file-system', () => {
+  class MockDirectory {
+    uri;
+    exists = true;
+    constructor(uri) {
+      this.uri = uri;
+    }
+    create() {}
+  }
+  class MockFile {
+    uri;
+    exists = true;
+    constructor(uri) {
+      this.uri = uri;
+    }
+  }
+  return {
+    documentDirectory: 'test-dir/',
+    writeAsStringAsync: jest.fn(),
+    readAsStringAsync: jest.fn(),
+    Paths: {
+      document: {
+        uri: 'test-dir/',
+      },
+      cache: {
+        uri: 'test-cache-dir/',
+      },
+    },
+    Directory: MockDirectory,
+    File: MockFile,
+  };
+});
 
 jest.mock('expo-sharing', () => ({
   isAvailableAsync: jest.fn().mockResolvedValue(true),
