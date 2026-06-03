@@ -70,6 +70,7 @@ export interface LLMEngine {
     options?: AIGenerateOptions,
   ): Promise<void>;
   dispose(): Promise<void>;
+  getMemorySummary?(): any;
 }
 
 export interface DynamicLLMEngine extends LLMEngine {

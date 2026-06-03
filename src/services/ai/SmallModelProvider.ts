@@ -139,7 +139,12 @@ export class SmallModelProvider implements DynamicLLMEngine {
         topK: model.defaultConfig?.topK ?? 40,
         topP: model.defaultConfig?.topP ?? 0.95,
         enableSpeculativeDecoding,
-        multimodal: requestedBackend === 'cpu' ? false : undefined,
+        multimodal:
+          requestedBackend === 'cpu'
+            ? false
+            : model.supportsImage || model.supportsAudio
+              ? true
+              : undefined,
       });
 
       this.currentModelId = modelId;
@@ -433,6 +438,11 @@ export class SmallModelProvider implements DynamicLLMEngine {
       this.activeBackend = 'cpu';
       this.lastTeardownTime = Date.now();
     }
+  }
+
+  getMemorySummary(): any {
+    if (!this.llm) return null;
+    return this.llm.memoryTracker?.getSummary() || null;
   }
 
   async dispose(): Promise<void> {

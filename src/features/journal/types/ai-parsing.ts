@@ -30,6 +30,7 @@ export interface ParserOutput {
     passTimings?: Record<string, number>;
     totalInferenceMs?: number;
     lastPassStats?: InferenceStats;
+    memorySummary?: any;
   };
 }
 

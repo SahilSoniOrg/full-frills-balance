@@ -468,6 +468,36 @@ export function AiBenchmarkView() {
                   ))}
                 </View>
               )}
+              {res.success && res.output?.debugMetrics?.memorySummary && (
+                <View style={[styles.timingsContainer, { marginTop: 4, borderTopWidth: 0 }]}>
+                  <View style={styles.timingRow}>
+                    <AppText variant="caption" color="secondary">
+                      Peak Memory (RSS)
+                    </AppText>
+                    <AppText variant="caption" weight="bold">
+                      {(
+                        res.output.debugMetrics.memorySummary.peakResidentBytes /
+                        1024 /
+                        1024
+                      ).toFixed(1)}{' '}
+                      MB
+                    </AppText>
+                  </View>
+                  <View style={styles.timingRow}>
+                    <AppText variant="caption" color="secondary">
+                      Current Memory (RSS)
+                    </AppText>
+                    <AppText variant="caption" weight="bold">
+                      {(
+                        res.output.debugMetrics.memorySummary.currentResidentBytes /
+                        1024 /
+                        1024
+                      ).toFixed(1)}{' '}
+                      MB
+                    </AppText>
+                  </View>
+                </View>
+              )}
               {res.success && (
                 <AppText variant="caption" style={styles.jsonOutput}>
                   {JSON.stringify(res.output.transactions[0], null, 2)}

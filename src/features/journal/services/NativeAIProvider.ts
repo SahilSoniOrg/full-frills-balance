@@ -248,6 +248,7 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
           passTimings: timings,
           totalInferenceMs: finalInferenceTime,
           lastPassStats: targetResponse.stats,
+          memorySummary: this.engine.getMemorySummary?.() || undefined,
         },
       };
     } catch (e) {
