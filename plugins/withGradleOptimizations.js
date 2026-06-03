@@ -5,7 +5,6 @@ const OPTIMIZATIONS = {
   'org.gradle.caching': 'true',
   'android.enablePngCrunchInReleaseBuilds': 'false',
   reactNativeArchitectures: 'arm64-v8a,armeabi-v7a',
-  rnllamaBuildFromSource: 'true',
 };
 
 module.exports = function withGradleOptimizations(config) {
