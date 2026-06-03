@@ -359,7 +359,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - NitroModules (0.35.7):
+  - NitroModules (0.35.9):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1810,7 +1810,7 @@ PODS:
     - Yoga
   - react-native-get-random-values (1.11.0):
     - React-Core
-  - react-native-litert-lm (0.4.0):
+  - react-native-litert-lm (0.4.2):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -3127,7 +3127,7 @@ SPEC CHECKSUMS:
   hermes-engine: 20dedbe9e4dad3902f2fc11282f35ed4f4bb5899
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroMmkv: 4b4f95387a15161b346a6a93b9c7072c179e0e88
-  NitroModules: d9e08ab81a7b5f6d16acbbc6ea6091e45ce34a9f
+  NitroModules: 16bc17a076b12304d608f7c915b9d321f56dfc19
   OpenSSL-Universal: ecee7b138fa75a74ecf00d7ffd248fb584739b9e
   QuickCrypto: 78b9ff82f1fe3710345e250c980ceee93dcaad5a
   RCTDeprecation: a4c521821fab57cbb125b36effe84d897d0dfa12
@@ -3169,7 +3169,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: ab33a818d339f5a1da308893c11b487be66121a8
   React-mutationobservernativemodule: a42d1626651ccd7d0dc02a56e69d4ec77c248893
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
-  react-native-litert-lm: a2dd69b4ededf12954f91a83f5dbb93f28757360
+  react-native-litert-lm: eda032f439ed27c016222bbe92546604f984421c
   react-native-quick-base64: 53393ee5ea472a7486e6652ad3d7a640ebf6ebda
   react-native-safe-area-context: 6b4966397ada0f7dd481e4486a2ef936834861a1
   React-NativeModulesApple: deba264b03bd79c6bd61014fa30e40321b5e443a

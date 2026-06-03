@@ -14,10 +14,10 @@
 
 # Add any project specific keep options here:
 
-      -keep class com.nozbe.watermelondb.** { *; }
-
 # Keep LiteRT-LM classes to prevent JNI crashes due to Proguard/R8 obfuscation
 -keep class com.google.ai.edge.litertlm.** { *; }
 -keep interface com.google.ai.edge.litertlm.** { *; }
 -keep class dev.litert.litertlm.** { *; }
 -keep interface dev.litert.litertlm.** { *; }
+      -keep class com.nozbe.watermelondb.** { *; }
+      
