@@ -38,6 +38,8 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       temperature: 0.7,
       maxTokens: 1024,
       accelerators: 'gpu,npu,cpu',
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
     },
   },
   {
@@ -58,6 +60,8 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       temperature: 1.0,
       maxTokens: 1024,
       accelerators: 'gpu,npu,cpu',
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
     },
   },
   {
@@ -78,6 +82,8 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       temperature: 1.0,
       maxTokens: 1024,
       accelerators: 'gpu,cpu',
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
     },
   },
   {
@@ -98,6 +104,8 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       temperature: 1.0,
       maxTokens: 1024,
       accelerators: 'gpu,cpu',
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
     },
   },
   {
@@ -121,6 +129,8 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       temperature: 1.0,
       maxTokens: 1024,
       accelerators: 'gpu,npu,cpu',
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
     },
   },
   {
@@ -143,6 +153,8 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       temperature: 1.0,
       maxTokens: 1024,
       accelerators: 'gpu,npu,cpu',
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
     },
   },
 ];
@@ -173,6 +185,38 @@ export class ModelManagementService {
     const dir = new Directory(MODEL_DIR);
     if (!dir.exists) {
       dir.create();
+    } else {
+      // Background cleanup of orphaned/partial download files
+      this.cleanupOrphanedFiles().catch(() => {});
+    }
+  }
+
+  async cleanupOrphanedFiles(): Promise<void> {
+    try {
+      const allModels = this.getAllModels();
+      const activeDownloadIds = Array.from(this.activeDownloads.keys());
+      const activeFilenames = new Set(
+        activeDownloadIds
+          .map(id => allModels.find(m => m.id === id)?.filename)
+          .filter((f): f is string => !!f),
+      );
+
+      const files = await FileSystemLegacy.readDirectoryAsync(MODEL_DIR);
+      for (const f of files) {
+        // Find if this file is associated with any supported or custom model
+        const isAssociated = allModels.some(m => f.startsWith(m.filename));
+        // Find if this file belongs to an active download
+        const isActive = allModels.some(
+          m => f.startsWith(m.filename) && activeFilenames.has(m.filename),
+        );
+
+        if (!isAssociated && !isActive) {
+          logger.info(`[ModelManagementService] Cleaning up orphaned file: ${f}`);
+          await FileSystemLegacy.deleteAsync(`${MODEL_DIR}${f}`, { idempotent: true });
+        }
+      }
+    } catch (e) {
+      logger.warn('[ModelManagementService] Failed to clean up orphaned files:', e as any);
     }
   }
 

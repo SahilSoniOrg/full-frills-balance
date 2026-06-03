@@ -41,6 +41,7 @@ export interface AIContext {
     rawAccount?: string;
     rawItem?: string;
     intentHint?: string;
+    direction?: 'credit' | 'debit' | 'unknown';
   };
 }
 

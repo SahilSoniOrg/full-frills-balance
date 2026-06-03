@@ -52,10 +52,10 @@ export class NativeAIProvider implements TransactionFallbackAIProvider {
         timestamp: new Date().toISOString(),
       };
 
-      logger.error(`[NativeAIProvider] Parse failed`, errorDetails);
+      logger.error(`[NativeAIProvider] Parse failed`, error, errorDetails);
 
       if (error.message.includes('LiteRT-LM')) {
-        logger.error(`[NativeAIProvider] LiteRT runtime failure detected`, {
+        logger.error(`[NativeAIProvider] LiteRT runtime failure detected`, undefined, {
           likelyCauses: [
             'context overflow',
             'OOM / memory pressure',
@@ -125,23 +125,36 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
     };
 
     try {
-      // PASS 1: Type Classification
-      checkCancellation();
-      const p1Start = Date.now();
-      const typePrompt = createTypeClassificationPrompt(transcript);
-      logger.info(`[NativeAIProvider] Pass 1 Prompt: ${typePrompt}`);
+      let resetRequired = shouldReset;
+      let type = 'expense';
 
-      const typeResponse = await this.engine.generate(typePrompt, {
-        resetContext: shouldReset,
-      });
-      if (typeResponse.stats)
-        logger.info(`[NativeAIProvider] Pass 1 Stats: ${JSON.stringify(typeResponse.stats)}`);
+      // PASS 1: Type Classification (Skip if direction is deterministically known)
+      const direction = context.parserHints.direction;
+      if (direction && direction !== 'unknown') {
+        type = direction === 'credit' ? 'income' : 'expense';
+        logger.info(
+          `[NativeAIProvider] Bypassing Pass 1 Type Classification. Resolved from context: ${type}`,
+        );
+        timings['Pass 1: Type (Bypassed)'] = 0;
+      } else {
+        checkCancellation();
+        const p1Start = Date.now();
+        const typePrompt = createTypeClassificationPrompt(transcript);
+        logger.info(`[NativeAIProvider] Pass 1 Prompt: ${typePrompt}`);
 
-      const parsedType = this.safeParseJSON(typeResponse.text) || {};
-      let type = String(parsedType.type || 'expense')
-        .toLowerCase()
-        .trim();
-      timings['Pass 1: Type'] = Date.now() - p1Start;
+        const typeResponse = await this.engine.generate(typePrompt, {
+          resetContext: resetRequired,
+        });
+        resetRequired = false;
+        if (typeResponse.stats)
+          logger.info(`[NativeAIProvider] Pass 1 Stats: ${JSON.stringify(typeResponse.stats)}`);
+
+        const parsedType = this.safeParseJSON(typeResponse.text) || {};
+        type = String(parsedType.type || 'expense')
+          .toLowerCase()
+          .trim();
+        timings['Pass 1: Type'] = Date.now() - p1Start;
+      }
 
       // PASS 2: Source Resolution
       checkCancellation();
@@ -156,8 +169,9 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       logger.info(`[NativeAIProvider] Pass 2 Prompt: ${sourcePrompt}`);
 
       const sourceResponse = await this.engine.generate(sourcePrompt, {
-        resetContext: false,
+        resetContext: resetRequired,
       });
+      resetRequired = false;
       if (sourceResponse.stats)
         logger.info(`[NativeAIProvider] Pass 2 Stats: ${JSON.stringify(sourceResponse.stats)}`);
 

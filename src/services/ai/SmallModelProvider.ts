@@ -14,6 +14,7 @@ import type { AIGenerateOptions, DynamicLLMEngine, GenerateResult, InferenceStat
 export class SmallModelProvider implements DynamicLLMEngine {
   private llm: LiteRTLMInstance | null = null;
   private currentModelId: string | null = null;
+  private currentSystemPrompt: string | null = null;
   private defaultModelId: string = AppConfig.defaults.defaultAiModelId;
   private lastTeardownTime = 0;
   private activeBackend: Backend = 'cpu';
@@ -31,10 +32,20 @@ export class SmallModelProvider implements DynamicLLMEngine {
   private async ensureModelLoaded(
     modelId: string,
     overrideBackend?: 'auto' | Backend,
+    systemPromptOverride?: string,
   ): Promise<void> {
-    // Force reload if backend override changes
+    const model = modelManagementService.getAllModels().find(m => m.id === modelId);
+    if (!model) {
+      throw new Error(`Model ${modelId} not found in catalog.`);
+    }
+
+    const targetSystemPrompt =
+      systemPromptOverride || model.defaultConfig?.systemPrompt || 'You are a helpful assistant.';
+
+    // Force reload if backend override or system prompt changes
     if (
       this.currentModelId === modelId &&
+      this.currentSystemPrompt === targetSystemPrompt &&
       this.llm &&
       (!overrideBackend || overrideBackend === 'auto' || this.activeBackend === overrideBackend)
     ) {
@@ -43,9 +54,8 @@ export class SmallModelProvider implements DynamicLLMEngine {
 
     if (
       this.llm &&
-      overrideBackend &&
-      overrideBackend !== 'auto' &&
-      this.activeBackend !== overrideBackend
+      ((overrideBackend && overrideBackend !== 'auto' && this.activeBackend !== overrideBackend) ||
+        this.currentSystemPrompt !== targetSystemPrompt)
     ) {
       await this.disposeInternal();
     }
@@ -60,11 +70,6 @@ export class SmallModelProvider implements DynamicLLMEngine {
     const status = await modelManagementService.getDownloadStatus(modelId);
     if (!status.isDownloaded || !status.localPath) {
       throw new Error(`Model ${modelId} is not downloaded.`);
-    }
-
-    const model = modelManagementService.getAllModels().find(m => m.id === modelId);
-    if (!model) {
-      throw new Error(`Model ${modelId} not found in catalog.`);
     }
 
     // OOM Prevention: Check if the device has enough RAM to load the model
@@ -129,8 +134,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       await this.llm.loadModel(normalizedPath, {
         backend: requestedBackend,
         maxTokens: model.defaultConfig?.maxTokens ?? 1024,
-        systemPrompt:
-          'You are a high-precision financial transaction parser. Output valid JSON only.',
+        systemPrompt: targetSystemPrompt,
         temperature: model.defaultConfig?.temperature ?? 0.7,
         topK: model.defaultConfig?.topK ?? 40,
         topP: model.defaultConfig?.topP ?? 0.95,
@@ -139,6 +143,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       });
 
       this.currentModelId = modelId;
+      this.currentSystemPrompt = targetSystemPrompt;
       this.activeBackend = requestedBackend;
       logger.info(
         `[SmallModelProvider] Model ${modelId} initialized successfully with backend: ${requestedBackend}`,
@@ -167,36 +172,50 @@ export class SmallModelProvider implements DynamicLLMEngine {
           await this.llm.loadModel(normalizedPath, {
             backend: 'cpu',
             maxTokens: model.defaultConfig?.maxTokens ?? 1024,
-            systemPrompt:
-              'You are a high-precision financial transaction parser. Output valid JSON only.',
+            systemPrompt: targetSystemPrompt,
             temperature: model.defaultConfig?.temperature ?? 0.7,
             topK: model.defaultConfig?.topK ?? 40,
             topP: model.defaultConfig?.topP ?? 0.95,
             multimodal: false,
           });
           this.currentModelId = modelId;
+          this.currentSystemPrompt = targetSystemPrompt;
           this.activeBackend = 'cpu';
           logger.info(
             `[SmallModelProvider] Model ${modelId} successfully initialized with CPU fallback`,
           );
           return;
         } catch (fallbackError) {
+          try {
+            if (this.llm) this.llm.close();
+          } catch {}
+          this.llm = null;
           this.currentModelId = null;
+          this.currentSystemPrompt = null;
           this.activeBackend = 'cpu';
           logger.error(`[SmallModelProvider] CPU fallback failed:`, fallbackError);
           throw fallbackError;
         }
       }
+      try {
+        if (this.llm) this.llm.close();
+      } catch {}
+      this.llm = null;
       this.currentModelId = null;
+      this.currentSystemPrompt = null;
       const errorMsg = e instanceof Error ? e.message : String(e);
       logger.error(`[SmallModelProvider] loadModel failed: ${errorMsg}`, e);
       throw e;
     }
   }
 
-  async switchModel(modelId: string, overrideBackend?: 'auto' | Backend): Promise<void> {
+  async switchModel(
+    modelId: string,
+    overrideBackend?: 'auto' | Backend,
+    systemPrompt?: string,
+  ): Promise<void> {
     const nextInQueue = this.executionQueue.then(() =>
-      this.switchModelInternal(modelId, overrideBackend),
+      this.switchModelInternal(modelId, overrideBackend, systemPrompt),
     );
     this.executionQueue = nextInQueue.catch(() => {});
     return nextInQueue;
@@ -205,9 +224,15 @@ export class SmallModelProvider implements DynamicLLMEngine {
   private async switchModelInternal(
     modelId: string,
     overrideBackend?: 'auto' | Backend,
+    systemPrompt?: string,
   ): Promise<void> {
+    const model = modelManagementService.getAllModels().find(m => m.id === modelId);
+    const targetSystemPrompt =
+      systemPrompt || model?.defaultConfig?.systemPrompt || 'You are a helpful assistant.';
+
     if (
       this.currentModelId === modelId &&
+      this.currentSystemPrompt === targetSystemPrompt &&
       this.llm &&
       (!overrideBackend || overrideBackend === 'auto' || this.activeBackend === overrideBackend)
     ) {
@@ -217,7 +242,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       await this.disposeInternal();
     }
     this.defaultModelId = modelId;
-    await this.ensureModelLoaded(modelId, overrideBackend);
+    await this.ensureModelLoaded(modelId, overrideBackend, systemPrompt);
   }
 
   async generate(prompt: string, options?: AIGenerateOptions): Promise<GenerateResult> {
@@ -244,7 +269,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
     retryCount = 0,
   ): Promise<GenerateResult> {
     const targetModelId = this.currentModelId || this.defaultModelId;
-    await this.ensureModelLoaded(targetModelId);
+    await this.ensureModelLoaded(targetModelId, undefined, options?.systemPrompt);
     if (!this.llm) throw new Error('Provider not initialized');
 
     if (options?.resetContext !== false) {
@@ -301,17 +326,22 @@ export class SmallModelProvider implements DynamicLLMEngine {
           const model = modelManagementService.getAllModels().find(m => m.id === modelIdToReload);
           if (status.localPath && model) {
             const normalizedPath = status.localPath.replace(/^file:\/\//, '');
+            const targetSystemPrompt =
+              options?.systemPrompt ||
+              model.defaultConfig?.systemPrompt ||
+              'You are a helpful assistant.';
+
             await this.llm.loadModel(normalizedPath, {
               backend: 'cpu',
               maxTokens: model.defaultConfig?.maxTokens ?? 1024,
-              systemPrompt:
-                'You are a high-precision financial transaction parser. Output valid JSON only.',
+              systemPrompt: targetSystemPrompt,
               temperature: model.defaultConfig?.temperature ?? 0.7,
               topK: model.defaultConfig?.topK ?? 40,
               topP: model.defaultConfig?.topP ?? 0.95,
               multimodal: false,
             });
             this.currentModelId = modelIdToReload;
+            this.currentSystemPrompt = targetSystemPrompt;
             this.activeBackend = 'cpu';
             logger.info(
               `[SmallModelProvider] Resiliency CPU reload successful. Retrying inference...`,
@@ -333,6 +363,13 @@ export class SmallModelProvider implements DynamicLLMEngine {
             return { text: result, stats: stats || undefined };
           }
         } catch (fallbackError) {
+          try {
+            if (this.llm) this.llm.close();
+          } catch {}
+          this.llm = null;
+          this.currentModelId = null;
+          this.currentSystemPrompt = null;
+          this.activeBackend = 'cpu';
           logger.error(`[SmallModelProvider] Resiliency CPU fallback failed:`, fallbackError);
         }
       }
@@ -347,7 +384,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
     options?: AIGenerateOptions,
   ): Promise<void> {
     const targetModelId = this.currentModelId || this.defaultModelId;
-    await this.ensureModelLoaded(targetModelId);
+    await this.ensureModelLoaded(targetModelId, undefined, options?.systemPrompt);
     if (!this.llm) throw new Error('Provider not initialized');
 
     if (options?.resetContext !== false) {
@@ -392,6 +429,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       } catch {}
       this.llm = null;
       this.currentModelId = null;
+      this.currentSystemPrompt = null;
       this.activeBackend = 'cpu';
       this.lastTeardownTime = Date.now();
     }

@@ -74,7 +74,7 @@ export class IntegrityService {
         (workplaceId ? ` (Workplace: ${workplaceId})` : '') +
         ` Sample ID: ${sample.id}, Date: ${new Date(sample.transactionDate).toISOString()}`;
 
-      logger.error(`[IntegrityService] ${errorMsg}`, {
+      logger.error(`[IntegrityService] ${errorMsg}`, undefined, {
         count: nullAccountTxs.length,
         workplaceId,
         sampleId: sample.id,

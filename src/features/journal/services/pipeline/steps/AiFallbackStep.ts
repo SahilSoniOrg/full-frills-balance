@@ -29,6 +29,7 @@ export class AiFallbackStep implements PipelineStep {
         amount: parsed.amount,
         rawAccount: parsed.sourceAccountHint,
         rawItem: parsed.destinationCategoryHint,
+        direction: parsed.direction,
       },
     };
 

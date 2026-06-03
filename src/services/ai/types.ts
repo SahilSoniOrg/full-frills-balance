@@ -29,6 +29,7 @@ export interface ModelDefaultConfig {
   maxTokens?: number;
   /** Preferred backend order, e.g. 'gpu,cpu' */
   accelerators?: string;
+  systemPrompt?: string;
 }
 
 export interface ModelDownloadStatus {
@@ -52,6 +53,8 @@ export interface AIGenerateOptions {
   timeout?: number;
   /** If true, reset conversation context before this prompt (default: true) */
   resetContext?: boolean;
+  /** Optional system prompt override to customize engine behavior */
+  systemPrompt?: string;
 }
 
 export interface GenerateResult {
