@@ -65,6 +65,31 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
     },
   },
   {
+    id: 'gemma-3n-e2b-it-int4',
+    name: 'Gemma 3n E2B IT INT4',
+    description:
+      'Highly optimized Gemma 3n 2B model quantized to INT4. Extremely fast execution on mobile devices, public hosting on litert.dev (no token required).',
+    // Source: react-native-litert-lm index.ts GEMMA_3N_E2B_IT_INT4
+    url: 'https://litert.dev/gemma-3n-E2B-it-int4.litertlm',
+    sizeBytes: 1347012576,
+    parameters: '2B',
+    quantization: 'INT4',
+    filename: 'gemma-3n-E2B-it-int4.litertlm',
+    minDeviceMemoryGb: 4,
+    capabilities: ['llm_thinking', 'speculative_decoding'],
+    supportsImage: true,
+    supportsAudio: true,
+    defaultConfig: {
+      topK: 64,
+      topP: 0.95,
+      temperature: 1.0,
+      maxTokens: 1024,
+      accelerators: 'gpu,npu,cpu',
+      systemPrompt:
+        'You are a high-precision financial transaction parser. Output valid JSON only.',
+    },
+  },
+  {
     id: 'deepseek-r1-distill-qwen-1.5b',
     name: 'DeepSeek R1 Distill 1.5B',
     description:
