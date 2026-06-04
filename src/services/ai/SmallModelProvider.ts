@@ -2,7 +2,12 @@ import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import { createLLM, type Backend, type LiteRTLMInstance } from 'react-native-litert-lm';
+import {
+  createLLM,
+  type Backend,
+  type LiteRTLMInstance,
+  type MultimodalPart,
+} from 'react-native-litert-lm';
 import { modelManagementService } from './ModelManagementService';
 import type { AIGenerateOptions, DynamicLLMEngine, GenerateResult, InferenceStats } from './types';
 
@@ -68,6 +73,9 @@ export class SmallModelProvider implements DynamicLLMEngine {
     const normalizedPath = status.localPath.replace(/^file:\/\//, '');
 
     // Select the best hardware accelerator supported
+    // iOS: always use 'cpu' — the C engine uses Metal internally regardless.
+    // Explicitly requesting 'gpu' causes execute failures on iOS.
+    // Android: prefer 'gpu' if available for the model.
     let requestedBackend: Backend = 'cpu';
     if (overrideBackend && overrideBackend !== 'auto') {
       requestedBackend = overrideBackend;
@@ -76,10 +84,6 @@ export class SmallModelProvider implements DynamicLLMEngine {
         requestedBackend = 'gpu';
       } else if (model.defaultConfig?.accelerators?.includes('npu')) {
         requestedBackend = 'npu';
-      }
-    } else {
-      if (model.defaultConfig?.accelerators?.includes('gpu')) {
-        requestedBackend = 'gpu';
       }
     }
 
@@ -166,7 +170,8 @@ export class SmallModelProvider implements DynamicLLMEngine {
       logger.info(`[SmallModelProvider] Generating completion for ${targetModelId}...`);
       const formattedPrompt = `Output valid JSON only. No explanations. Do not use <think> tags.\n\n${prompt}`;
 
-      const result = await this.llm.sendMessage(formattedPrompt);
+      const parts: MultimodalPart[] = [{ type: 'text', text: formattedPrompt }];
+      const result = await this.llm.execute(parts);
       logger.info('[SmallModelProvider] Raw response received:', { text: result });
 
       // Clean think tags if any reasoning model was used
@@ -199,20 +204,14 @@ export class SmallModelProvider implements DynamicLLMEngine {
         this.llm.resetConversation();
       }
 
-      return new Promise<void>((resolve, reject) => {
-        try {
-          this.llm!.sendMessageAsync(prompt, (token: string, done: boolean) => {
-            onToken(token, done);
-            if (done) {
-              resolve();
-            }
-          });
-        } catch (e) {
-          reject(e);
-        }
+      const parts: MultimodalPart[] = [{ type: 'text', text: prompt }];
+      await this.llm.execute(parts, (token: string, done: boolean) => {
+        onToken(token, done);
       });
-    } finally {
       this.busy = false;
+    } catch (e) {
+      this.busy = false;
+      throw e;
     }
   }
 
