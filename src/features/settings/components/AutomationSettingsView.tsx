@@ -151,6 +151,12 @@ export function AutomationSettingsView({ vm }: AutomationSettingsViewProps) {
             description="Download models and test performance"
             onPress={AppNavigation.toAiBenchmark}
           />
+          <SettingsMenuItem
+            leftIcon="zap"
+            title="AI Example (Raw)"
+            description="Direct litert-lm test — no service layer"
+            onPress={AppNavigation.toAiExample}
+          />
         </SettingsMenu>
 
         <SelectionPickerSheet

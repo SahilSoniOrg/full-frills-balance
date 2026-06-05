@@ -1,13 +1,10 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
-import { Directory, File, Paths } from 'expo-file-system';
-import * as FileSystemLegacy from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
+import { ModelRegistry } from 'react-native-litert-lm';
 import type { AIModelMetadata, ModelDownloadStatus } from './types';
 
-const MODEL_DIR = `${Paths.document.uri}models/`;
-const STORAGE_PREFIX = 'ai_model_status_';
 const CUSTOM_MODELS_KEY = 'ai_custom_models';
 
 /**
@@ -36,7 +33,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 20,
       topP: 0.8,
       temperature: 0.7,
-      maxTokens: 1024,
+      maxTokens: 2048,
       accelerators: 'gpu,npu,cpu',
       systemPrompt:
         'You are a high-precision financial transaction parser. Output valid JSON only.',
@@ -58,7 +55,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 1024,
+      maxTokens: 2048,
       accelerators: 'gpu,npu,cpu',
       systemPrompt:
         'You are a high-precision financial transaction parser. Output valid JSON only.',
@@ -83,7 +80,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 1024,
+      maxTokens: 2048,
       accelerators: 'gpu,npu,cpu',
       systemPrompt:
         'You are a high-precision financial transaction parser. Output valid JSON only.',
@@ -105,7 +102,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 1024,
+      maxTokens: 2048,
       accelerators: 'gpu,cpu',
       systemPrompt:
         'You are a high-precision financial transaction parser. Output valid JSON only.',
@@ -127,7 +124,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 1024,
+      maxTokens: 2048,
       accelerators: 'gpu,cpu',
       systemPrompt:
         'You are a high-precision financial transaction parser. Output valid JSON only.',
@@ -152,7 +149,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 1024,
+      maxTokens: 2048,
       accelerators: 'gpu,npu,cpu',
       systemPrompt:
         'You are a high-precision financial transaction parser. Output valid JSON only.',
@@ -176,7 +173,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
       topK: 64,
       topP: 0.95,
       temperature: 1.0,
-      maxTokens: 1024,
+      maxTokens: 2048,
       accelerators: 'gpu,npu,cpu',
       systemPrompt:
         'You are a high-precision financial transaction parser. Output valid JSON only.',
@@ -185,7 +182,7 @@ export const SUPPORTED_MODELS: AIModelMetadata[] = [
 ];
 
 export class ModelManagementService {
-  private activeDownloads = new Map<string, FileSystemLegacy.DownloadResumable>();
+  private activeDownloads = new Map<string, boolean>();
   private progressListeners = new Set<
     (modelId: string, progress: number, isComplete: boolean) => void
   >();
@@ -206,45 +203,6 @@ export class ModelManagementService {
     return this.activeDownloads.has(modelId);
   }
 
-  async ensureModelDirectory(): Promise<void> {
-    const dir = new Directory(MODEL_DIR);
-    if (!dir.exists) {
-      dir.create();
-    } else {
-      // Background cleanup of orphaned/partial download files
-      this.cleanupOrphanedFiles().catch(() => {});
-    }
-  }
-
-  async cleanupOrphanedFiles(): Promise<void> {
-    try {
-      const allModels = this.getAllModels();
-      const activeDownloadIds = Array.from(this.activeDownloads.keys());
-      const activeFilenames = new Set(
-        activeDownloadIds
-          .map(id => allModels.find(m => m.id === id)?.filename)
-          .filter((f): f is string => !!f),
-      );
-
-      const files = await FileSystemLegacy.readDirectoryAsync(MODEL_DIR);
-      for (const f of files) {
-        // Find if this file is associated with any supported or custom model
-        const isAssociated = allModels.some(m => f.startsWith(m.filename));
-        // Find if this file belongs to an active download
-        const isActive = allModels.some(
-          m => f.startsWith(m.filename) && activeFilenames.has(m.filename),
-        );
-
-        if (!isAssociated && !isActive) {
-          logger.info(`[ModelManagementService] Cleaning up orphaned file: ${f}`);
-          await FileSystemLegacy.deleteAsync(`${MODEL_DIR}${f}`, { idempotent: true });
-        }
-      }
-    } catch (e) {
-      logger.warn('[ModelManagementService] Failed to clean up orphaned files:', e as any);
-    }
-  }
-
   getCustomModels(): AIModelMetadata[] {
     const stored = storage.getString(CUSTOM_MODELS_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -257,30 +215,22 @@ export class ModelManagementService {
     );
   }
 
-  /**
-   * Returns the recommended model for the device.
-   * Prefers qwen-2.5-1.5b (smallest confirmed-public model at 1.5 GB, 6 GB RAM).
-   * Falls back to any other downloaded model (smallest first), or the default for download prompt.
-   */
   async getRecommendedModel(): Promise<AIModelMetadata> {
     const allModels = this.getAllModels();
     const defaultId = AppConfig.defaults.defaultAiModelId;
 
-    // Prefer default if downloaded
     const defaultModel = allModels.find(m => m.id === defaultId);
     if (defaultModel) {
       const status = await this.getDownloadStatus(defaultModel.id);
       if (status.isDownloaded) return defaultModel;
     }
 
-    // Otherwise return any downloaded model, preferring smallest
     const sortedBySize = [...allModels].sort((a, b) => a.sizeBytes - b.sizeBytes);
     for (const model of sortedBySize) {
       const status = await this.getDownloadStatus(model.id);
       if (status.isDownloaded) return model;
     }
 
-    // No model downloaded — return the default anyway for download prompt
     return defaultModel ?? allModels[0];
   }
 
@@ -288,7 +238,6 @@ export class ModelManagementService {
     const customModels = this.getCustomModels();
     const newModel = { ...model, isCustom: true };
 
-    // Replace if exists, otherwise add
     const index = customModels.findIndex(m => m.id === model.id);
     if (index !== -1) {
       customModels[index] = newModel;
@@ -303,38 +252,25 @@ export class ModelManagementService {
     const model = this.getAllModels().find(m => m.id === modelId);
     if (!model) throw new Error(`Model ${modelId} not supported`);
 
-    const localPath = `${MODEL_DIR}${model.filename}`;
-    const file = new File(localPath);
-
-    const statusStr = storage.getString(`${STORAGE_PREFIX}${modelId}`);
-    const persistedStatus = statusStr ? JSON.parse(statusStr) : null;
+    const isDownloaded = ModelRegistry.isCached(model.url);
 
     return {
       modelId,
-      isDownloaded: file.exists,
-      progress: file.exists ? 1 : persistedStatus?.progress || 0,
-      localPath: file.exists ? localPath : undefined,
-      bytesWritten: persistedStatus?.bytesWritten,
+      isDownloaded,
+      progress: isDownloaded ? 1 : 0,
     };
   }
 
   async downloadModel(modelId: string, onProgress?: (progress: number) => void): Promise<string> {
-    await this.ensureModelDirectory();
     const model = this.getAllModels().find(m => m.id === modelId);
     if (!model) throw new Error(`Model ${modelId} not supported`);
 
-    const localPath = `${MODEL_DIR}${model.filename}`;
-    const file = new File(localPath);
-
-    if (file.exists) {
-      return localPath;
+    if (ModelRegistry.isCached(model.url)) {
+      return ModelRegistry.getFilePath(model.url);
     }
 
     if (this.activeDownloads.has(modelId)) {
       logger.info(`Download already in progress for ${modelId}`);
-      // If there's an ongoing request, we don't return the path immediately,
-      // but the caller might just want to wait for it. We'll just return undefined
-      // or we could return a stored Promise. For now, we return empty string.
       return '';
     }
 
@@ -344,72 +280,32 @@ export class ModelManagementService {
       headers['Authorization'] = `Bearer ${hfToken}`;
     }
 
-    // Downloading still uses legacy API for resumable downloads
-    const downloadResumable = FileSystemLegacy.createDownloadResumable(
-      model.url,
-      localPath,
-      { headers },
-      downloadProgress => {
-        const progress =
-          downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        onProgress?.(progress);
-        this.emitProgress(modelId, progress, false);
-        this.saveStatus(modelId, {
-          isDownloaded: false,
-          progress,
-          bytesWritten: downloadProgress.totalBytesWritten,
-        });
-      },
-    );
-
-    this.activeDownloads.set(modelId, downloadResumable);
+    this.activeDownloads.set(modelId, true);
+    this.emitProgress(modelId, 0, false);
 
     try {
-      const result = await downloadResumable.downloadAsync();
-      if (!result) throw new Error('Download failed');
+      const result = await ModelRegistry.resolveModel(model.url, {
+        headers,
+        onProgress: progress => {
+          onProgress?.(progress);
+          this.emitProgress(modelId, progress, false);
+        },
+      });
 
-      this.saveStatus(modelId, { isDownloaded: true, progress: 1 });
       this.activeDownloads.delete(modelId);
       this.emitProgress(modelId, 1, true);
-      return result.uri;
+      return result;
     } catch (e) {
       this.activeDownloads.delete(modelId);
+      this.emitProgress(modelId, 0, false);
       logger.error(`Failed to download model ${modelId}`, e);
       throw e;
     }
   }
 
   async cancelDownload(modelId: string): Promise<void> {
-    const resumable = this.activeDownloads.get(modelId);
-    if (resumable) {
-      try {
-        await resumable.pauseAsync();
-      } catch (e) {
-        logger.warn(`Failed to pause download for ${modelId}:`, e as unknown as any);
-      }
-      this.activeDownloads.delete(modelId);
-    }
-
-    // Cleanup partial file and status
-    const model = this.getAllModels().find(m => m.id === modelId);
-    if (model) {
-      const localPath = `${MODEL_DIR}${model.filename}`;
-      const file = new File(localPath);
-      if (file.exists) {
-        file.delete();
-      }
-    }
-    storage.remove(`${STORAGE_PREFIX}${modelId}`);
+    this.activeDownloads.delete(modelId);
     this.emitProgress(modelId, 0, false);
-  }
-
-  private saveStatus(modelId: string, status: Partial<ModelDownloadStatus>): void {
-    const currentStatus = storage.getString(`${STORAGE_PREFIX}${modelId}`);
-    const updated = {
-      ...(currentStatus ? JSON.parse(currentStatus) : {}),
-      ...status,
-    };
-    storage.set(`${STORAGE_PREFIX}${modelId}`, JSON.stringify(updated));
   }
 
   async deleteModel(modelId: string): Promise<void> {
@@ -417,24 +313,10 @@ export class ModelManagementService {
     if (!model) return;
 
     try {
-      // Find all files that start with the model's filename to clean up compilation caches
-      const files = await FileSystemLegacy.readDirectoryAsync(MODEL_DIR);
-      const associatedFiles = files.filter(f => f.startsWith(model.filename));
-
-      for (const f of associatedFiles) {
-        await FileSystemLegacy.deleteAsync(`${MODEL_DIR}${f}`, { idempotent: true });
-      }
+      ModelRegistry.deleteFile(model.url);
     } catch (e) {
-      logger.error(`Failed to clean up cache files for ${modelId}`, e as any);
-      // Fallback to deleting just the main file if directory read fails
-      const localPath = `${MODEL_DIR}${model.filename}`;
-      const file = new File(localPath);
-      if (file.exists) {
-        file.delete();
-      }
+      logger.error(`Failed to delete model ${modelId}`, e as any);
     }
-
-    storage.remove(`${STORAGE_PREFIX}${modelId}`);
 
     if (model.isCustom) {
       const customModels = this.getCustomModels().filter(m => m.id !== modelId);

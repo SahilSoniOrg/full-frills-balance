@@ -36,9 +36,6 @@ export interface ModelDownloadStatus {
   modelId: string;
   isDownloaded: boolean;
   progress: number;
-  localPath?: string;
-  /** Total bytes downloaded so far (for resume tracking) */
-  bytesWritten?: number;
 }
 
 /** Performance stats from the last inference call */

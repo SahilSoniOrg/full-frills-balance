@@ -14,3 +14,4 @@ export { transactionService } from './services/TransactionService';
 export { JournalListViewProps } from './components/JournalListView';
 export { useJournalListScreen } from './hooks/useJournalListScreen';
 export { AiBenchmarkView } from './components/AiBenchmarkView';
+export { AiExampleView } from './components/AiExampleView';

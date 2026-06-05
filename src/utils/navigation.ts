@@ -642,6 +642,13 @@ export const AppNavigation = {
   },
 
   /**
+   * Navigate to the AI Example replica screen (raw litert-lm test).
+   */
+  toAiExample: () => {
+    router.push('/ai-example' as any);
+  },
+
+  /**
    * Dismiss current modal or navigate back.
    */
   dismiss: () => {

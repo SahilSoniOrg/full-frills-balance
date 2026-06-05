@@ -66,11 +66,9 @@ export class SmallModelProvider implements DynamicLLMEngine {
     }
 
     const status = await modelManagementService.getDownloadStatus(modelId);
-    if (!status.isDownloaded || !status.localPath) {
+    if (!status.isDownloaded) {
       throw new Error(`Model ${modelId} is not downloaded.`);
     }
-
-    const normalizedPath = status.localPath.replace(/^file:\/\//, '');
 
     // Select the best hardware accelerator supported
     // iOS: always use 'cpu' — the C engine uses Metal internally regardless.
@@ -88,14 +86,14 @@ export class SmallModelProvider implements DynamicLLMEngine {
     }
 
     logger.info(
-      `[SmallModelProvider] Initializing model ${modelId} at ${normalizedPath} (backend: ${requestedBackend})`,
+      `[SmallModelProvider] Initializing model ${modelId} with URL ${model.url} (backend: ${requestedBackend})`,
     );
 
     this.llm = createLLM({ enableMemoryTracking: true });
 
     const enableSpeculativeDecoding = model.capabilities?.includes('speculative_decoding') ?? false;
 
-    await this.llm.loadModel(normalizedPath, {
+    await this.llm.loadModel(model.url, {
       backend: requestedBackend,
       maxTokens: model.defaultConfig?.maxTokens ?? 1024,
       systemPrompt: targetSystemPrompt,
@@ -103,7 +101,7 @@ export class SmallModelProvider implements DynamicLLMEngine {
       topK: model.defaultConfig?.topK ?? 40,
       topP: model.defaultConfig?.topP ?? 0.95,
       enableSpeculativeDecoding,
-      multimodal: model.supportsImage || model.supportsAudio ? true : undefined,
+      multimodal: !!(model.supportsImage || model.supportsAudio),
     });
 
     this.currentModelId = modelId;
