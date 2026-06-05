@@ -67,7 +67,15 @@ describe('NativeImportPlugin', () => {
   const validNativeData = {
     version: '1.4.0',
     preferences: { userName: 'Test User' },
-    accounts: [{ id: 'a1', name: 'Acc 1', accountType: 'ASSET', currencyCode: 'USD' }],
+    accounts: [
+      {
+        id: 'a1',
+        name: 'Acc 1',
+        accountType: 'ASSET',
+        currencyCode: 'USD',
+        reconciledAt: '2024-01-01T00:00:00Z',
+      },
+    ],
     journals: [
       {
         id: 'j1',
@@ -108,6 +116,12 @@ describe('NativeImportPlugin', () => {
         currencyCode: 'USD',
         startMonth: '2024-01',
         active: true,
+        intervalType: 'MONTHLY',
+        intervalN: 1,
+        startDate: '2024-01-01T00:00:00Z',
+        recurrenceDay: 1,
+        recurrenceMonth: 1,
+        assetAccountIds: 'a1',
       },
     ],
     budgetScopes: [{ id: 'bs1', budgetId: 'b1', accountId: 'a1' }],
@@ -122,7 +136,26 @@ describe('NativeImportPlugin', () => {
         source: 'manual',
       },
     ],
-    accountMetadata: [{ id: 'm1', accountId: 'a1', statementDay: 5 }],
+    accountMetadata: [
+      {
+        id: 'm1',
+        accountId: 'a1',
+        statementDay: 5,
+        payFromAccountId: 'a1',
+        minPaymentOnly: true,
+        minimumPaymentPercent: 5,
+      },
+    ],
+    transactionAutoPostRules: [
+      {
+        id: 'r1',
+        priority: 1,
+        sourceAccountId: 'a1',
+        categoryAccountId: 'a1',
+        isActive: true,
+        channelsJson: '["sms"]',
+      },
+    ],
     balanceSnapshots: [
       {
         id: 'bs1',
@@ -232,6 +265,23 @@ describe('NativeImportPlugin', () => {
       // Check audit log reference
       expect(data.auditLogs[0].entityId).toBe(newAccountId);
       expect(data.auditLogs[0].id).not.toBe(validNativeData.auditLogs[0].id);
+
+      // Check budget schedule mapping and ID remapping in assetAccountIds
+      expect(data.budgets[0].intervalType).toBe('MONTHLY');
+      expect(data.budgets[0].intervalN).toBe(1);
+      expect(data.budgets[0].startDate).toBeDefined();
+      expect(data.budgets[0].recurrenceDay).toBe(1);
+      expect(data.budgets[0].recurrenceMonth).toBe(1);
+      expect(data.budgets[0].assetAccountIds).toBe(newAccountId);
+
+      // Check account metadata mapping and ID remapping in payFromAccountId
+      expect(data.accountMetadata[0].payFromAccountId).toBe(newAccountId);
+      expect(data.accountMetadata[0].minPaymentOnly).toBe(true);
+      expect(data.accountMetadata[0].minimumPaymentPercent).toBe(5);
+
+      // Check transaction auto post rules mapping
+      expect(data.transactionAutoPostRules[0].channelsJson).toBe('["sms"]');
+      expect(data.transactionAutoPostRules[0].sourceAccountId).toBe(newAccountId);
     });
   });
 });

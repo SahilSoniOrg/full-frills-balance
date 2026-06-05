@@ -63,8 +63,8 @@ export class ImportRunner {
       WIPE: { start: 0.15, end: 0.25 },
       INIT: { start: 0.25, end: 0.3 },
       INSERT: { start: 0.3, end: 0.8 }, // Increased segment for insertion
-      RATES: { start: 0.8, end: 0.9 },
-      INTEGRITY: { start: 0.9, end: 1.0 },
+      RATES: { start: 0.8, end: 0.88 },
+      INTEGRITY: { start: 0.88, end: 1.0 },
     };
 
     // 1. Parse data using plugin
@@ -134,9 +134,14 @@ export class ImportRunner {
     );
 
     // 5. Update workplace defaults if provided
-    if (parsedResult.workplace?.name || parsedResult.workplace?.defaultCurrencyCode) {
+    if (
+      parsedResult.workplace?.name ||
+      parsedResult.workplace?.defaultCurrencyCode ||
+      parsedResult.workplace?.icon
+    ) {
       await workplaceService.updateWorkplace(workplaceId, {
         name: parsedResult.workplace.name,
+        icon: parsedResult.workplace.icon,
         defaultCurrencyCode: parsedResult.workplace.defaultCurrencyCode,
       });
       if (parsedResult.workplace.defaultCurrencyCode) {
@@ -182,7 +187,35 @@ export class ImportRunner {
       SEGMENTS.INTEGRITY.end,
     );
     integrityProgress('Verifying database integrity...', 0);
-    await integrityService.forceRunCheck(workplaceId, (msg, p) => integrityProgress(msg, p));
+    await integrityService.forceRunCheck(workplaceId, (msg, p) => integrityProgress(msg, p * 0.5));
+
+    // 7.5 Rebuild balance snapshots for performance checkpoints
+    try {
+      const { Q } = await import('@nozbe/watermelondb');
+      const accounts = await database.collections
+        .get<any>('accounts')
+        .query(Q.where('workplace_id', workplaceId))
+        .fetch();
+
+      if (accounts.length > 0) {
+        logger.info(
+          `[ImportRunner] Rebuilding balance snapshots for ${accounts.length} accounts...`,
+        );
+        const { accountingRebuildService } =
+          await import('@/src/services/AccountingRebuildService');
+        for (let i = 0; i < accounts.length; i++) {
+          const account = accounts[i];
+          const name = (account as any).name || 'Account';
+          integrityProgress(
+            `Rebuilding checkpoints: ${name} (${i + 1}/${accounts.length})`,
+            0.5 + (i / accounts.length) * 0.5,
+          );
+          await accountingRebuildService.rebuildAccountBalances(workplaceId, account.id);
+        }
+      }
+    } catch (error) {
+      logger.error('[ImportRunner] Failed to rebuild balance snapshots post-import:', error);
+    }
 
     // 8. Finalize preferences and set active workplace
     if (parsedResult.preferences) {

@@ -52,6 +52,7 @@ export interface ImportedAccount {
   description?: string;
   icon?: IconName;
   orderNum?: number;
+  reconciledAt?: number;
   createdAt?: number;
   updatedAt?: number;
   deletedAt?: number;
@@ -108,6 +109,12 @@ export interface ImportedBudget {
   currencyCode: string;
   startMonth: string;
   active: boolean;
+  intervalType?: string;
+  intervalN?: number;
+  startDate?: number;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
+  assetAccountIds?: string;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -155,6 +162,9 @@ export interface ImportedAccountMetadata {
   loanTenureMonths?: number;
   autopayEnabled?: boolean;
   gracePeriodDays?: number;
+  payFromAccountId?: AccountId;
+  minPaymentOnly?: boolean;
+  minimumPaymentPercent?: number;
   notes?: string;
   createdAt?: number;
   updatedAt?: number;
@@ -429,6 +439,9 @@ export class ImportRepository {
           record.description = acc.description;
           record.icon = acc.icon;
           record.orderNum = acc.orderNum;
+          if (acc.reconciledAt !== undefined && acc.reconciledAt !== null) {
+            record.reconciledAt = new Date(acc.reconciledAt);
+          }
           record._raw._status = 'synced';
           if (acc.createdAt) (record as any)._raw.created_at = acc.createdAt;
           if (acc.updatedAt) (record as any)._raw.updated_at = acc.updatedAt;
@@ -500,6 +513,12 @@ export class ImportRepository {
           record.amount = b.amount;
           record.currencyCode = b.currencyCode;
           record.startMonth = b.startMonth;
+          if (b.intervalType) record.intervalType = b.intervalType;
+          if (b.intervalN !== undefined) record.intervalN = b.intervalN;
+          if (b.startDate !== undefined && b.startDate !== null) record.startDate = b.startDate;
+          if (b.recurrenceDay !== undefined) record.recurrenceDay = b.recurrenceDay;
+          if (b.recurrenceMonth !== undefined) record.recurrenceMonth = b.recurrenceMonth;
+          if (b.assetAccountIds) record.assetAccountIds = b.assetAccountIds;
           record.active = b.active;
           record._raw._status = 'synced';
           if (b.createdAt) (record as any)._raw.created_at = b.createdAt;
@@ -534,6 +553,15 @@ export class ImportRepository {
           record.loanTenureMonths = metadata.loanTenureMonths;
           record.autopayEnabled = metadata.autopayEnabled;
           record.gracePeriodDays = metadata.gracePeriodDays;
+          if (metadata.payFromAccountId) {
+            record.payFromAccountId = metadata.payFromAccountId;
+          }
+          if (metadata.minPaymentOnly !== undefined) {
+            record.minPaymentOnly = metadata.minPaymentOnly;
+          }
+          if (metadata.minimumPaymentPercent !== undefined) {
+            record.minimumPaymentPercent = metadata.minimumPaymentPercent;
+          }
           record.notes = metadata.notes;
           record._raw._status = 'synced';
           if (metadata.createdAt) (record as any)._raw.created_at = metadata.createdAt;
@@ -784,6 +812,9 @@ export class ImportRepository {
           record.description = acc.description;
           record.icon = acc.icon as IconName;
           record.orderNum = acc.orderNum;
+          if (acc.reconciledAt !== undefined && acc.reconciledAt !== null) {
+            record.reconciledAt = new Date(acc.reconciledAt);
+          }
           if (acc.createdAt) (record as Model & { _raw: any })._raw.created_at = acc.createdAt;
           if (acc.updatedAt) (record as Model & { _raw: any })._raw.updated_at = acc.updatedAt;
           if (acc.deletedAt) {

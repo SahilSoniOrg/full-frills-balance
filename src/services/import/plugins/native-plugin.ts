@@ -160,6 +160,7 @@ export const nativePlugin: ImportPlugin = {
           description: acc.description,
           icon: acc.icon,
           orderNum: acc.orderNum,
+          reconciledAt: parseTimestamp(acc.reconciledAt),
           createdAt: parseTimestamp(acc.createdAt),
           updatedAt: parseTimestamp(acc.updatedAt),
           deletedAt: parseTimestamp(acc.deletedAt),
@@ -231,16 +232,31 @@ export const nativePlugin: ImportPlugin = {
             createdAt: parseTimestamp(log.createdAt),
           };
         }),
-        budgets: (data.budgets || []).map(budget => ({
-          id: budgetMap.get(budget.id)!,
-          name: budget.name,
-          amount: budget.amount,
-          currencyCode: budget.currencyCode || defaultCurrencyCode,
-          startMonth: budget.startMonth,
-          active: budget.active,
-          createdAt: parseTimestamp(budget.createdAt),
-          updatedAt: parseTimestamp(budget.updatedAt),
-        })),
+        budgets: (data.budgets || []).map(budget => {
+          let remappedAssetAccountIds = '';
+          if (budget.assetAccountIds) {
+            remappedAssetAccountIds = budget.assetAccountIds
+              .split(',')
+              .map(id => accountMap.get(id) || id)
+              .join(',');
+          }
+          return {
+            id: budgetMap.get(budget.id)!,
+            name: budget.name,
+            amount: budget.amount,
+            currencyCode: budget.currencyCode || defaultCurrencyCode,
+            startMonth: budget.startMonth,
+            active: budget.active,
+            intervalType: budget.intervalType,
+            intervalN: budget.intervalN,
+            startDate: parseTimestamp(budget.startDate),
+            recurrenceDay: budget.recurrenceDay,
+            recurrenceMonth: budget.recurrenceMonth,
+            assetAccountIds: remappedAssetAccountIds || undefined,
+            createdAt: parseTimestamp(budget.createdAt),
+            updatedAt: parseTimestamp(budget.updatedAt),
+          };
+        }),
         budgetScopes: (data.budgetScopes || []).map(scope => ({
           id: generateId(),
           budgetId: budgetMap.get(scope.budgetId)!,
@@ -261,6 +277,11 @@ export const nativePlugin: ImportPlugin = {
           loanTenureMonths: metadata.loanTenureMonths,
           autopayEnabled: metadata.autopayEnabled,
           gracePeriodDays: metadata.gracePeriodDays,
+          payFromAccountId: metadata.payFromAccountId
+            ? accountMap.get(metadata.payFromAccountId)
+            : undefined,
+          minPaymentOnly: metadata.minPaymentOnly,
+          minimumPaymentPercent: metadata.minimumPaymentPercent,
           notes: metadata.notes,
           createdAt: parseTimestamp(metadata.createdAt),
           updatedAt: parseTimestamp(metadata.updatedAt),
@@ -304,6 +325,7 @@ export const nativePlugin: ImportPlugin = {
           []
         ).map(rule => ({
           id: generateId(),
+          channelsJson: rule.channelsJson,
           senderMatch: rule.senderMatch,
           bodyMatch: rule.bodyMatch,
           conditionsJson: rule.conditionsJson,
@@ -370,6 +392,7 @@ export const nativePlugin: ImportPlugin = {
         preferences: data.preferences,
         workplace: {
           name: data.workplace?.name,
+          icon: data.workplace?.icon,
           defaultCurrencyCode: currencyCode,
         },
         stats: {
