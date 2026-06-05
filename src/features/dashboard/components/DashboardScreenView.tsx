@@ -93,6 +93,54 @@ export function DashboardScreenView({
     isLoading: !safeToSpendData,
   });
 
+  const enrichedPlannedJournals = React.useMemo(() => {
+    const planned = listViewProps.plannedJournals || [];
+    if (!safeToSpendData?.report?.allFlows) return planned;
+
+    const liabilityOutflows = safeToSpendData.report.allFlows.filter(
+      f => f.kind === 'OUTFLOW' && f.origin === 'LIABILITY',
+    );
+
+    const syntheticJournals = liabilityOutflows.map((f: any, index) => {
+      const todayMs = new Date().setHours(0, 0, 0, 0);
+      const dateMs = todayMs + f.dayOffset * 24 * 60 * 60 * 1000;
+      const payFromAccount = safeToSpendData.accountMap?.get(f.accountId);
+      const creditCardAccount = safeToSpendData.accountMap?.get(f.referenceId);
+      const payFromAccountName = payFromAccount?.name || 'Checking';
+
+      return {
+        id: `synthetic_cc_${f.referenceId}_${f.dayOffset}_${index}`,
+        journalDate: dateMs,
+        description: f.label,
+        totalAmount: f.amount,
+        currencyCode: safeToSpendData.currencyCode || 'INR',
+        displayType: 'EXPENSE',
+        status: 'PLANNED',
+        accounts: [
+          {
+            id: f.accountId,
+            name: payFromAccountName,
+            accountType: 'ASSET',
+            role: 'SOURCE',
+            icon: payFromAccount?.icon || 'wallet',
+          },
+          {
+            id: f.referenceId,
+            name: creditCardAccount?.name || f.label,
+            accountType: 'LIABILITY',
+            role: 'DESTINATION',
+            icon: creditCardAccount?.icon || 'creditCard',
+          },
+        ],
+        createdAt: dateMs,
+        updatedAt: dateMs,
+        version: 1,
+      } as any;
+    });
+
+    return [...planned, ...syntheticJournals];
+  }, [listViewProps.plannedJournals, safeToSpendData]);
+
   if (!hasCompletedOnboarding) {
     return null;
   }
@@ -119,7 +167,7 @@ export function DashboardScreenView({
             </View>
             <View style={{ zIndex: 1 }}>
               <PlannedPaymentsSection
-                items={listViewProps.plannedJournals || []}
+                items={enrichedPlannedJournals}
                 onItemPress={listViewProps.onPlannedJournalPress}
               />
             </View>

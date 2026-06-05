@@ -104,7 +104,7 @@ export const AppNavigation = {
    */
   toSimpleJournalEntry: (
     type: 'expense' | 'income' | 'transfer',
-    options?: { sourceAccountId?: string; destinationAccountId?: string },
+    options?: { sourceAccountId?: string; destinationAccountId?: string; amount?: string },
   ) => {
     const params: Record<string, string> = {
       mode: 'simple',
@@ -113,6 +113,9 @@ export const AppNavigation = {
 
     if (options?.destinationAccountId) {
       params.destinationAccountId = options.destinationAccountId;
+    }
+    if (options?.amount) {
+      params.amount = options.amount;
     }
 
     AppNavigation.toJournalEntry({

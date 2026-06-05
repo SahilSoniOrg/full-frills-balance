@@ -8,6 +8,8 @@ import { getNow } from '@/src/utils/dateHelpers';
 import { useMemo, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { mapJournalToCardProps } from '../utils/journalUiUtils';
+import { confirm } from '@/src/utils/alerts';
+import { AppNavigation } from '@/src/utils/navigation';
 
 export interface PlannedPaymentsSectionProps {
   items: EnrichedJournal[];
@@ -17,7 +19,6 @@ export interface PlannedPaymentsSectionProps {
 
 export function PlannedPaymentsSection({
   items,
-  onItemPress,
   isPrivacyMode: isPrivacyModeOverride,
 }: PlannedPaymentsSectionProps) {
   const { theme } = useTheme();
@@ -111,17 +112,64 @@ export function PlannedPaymentsSection({
               | string
               | undefined;
 
+            const isSynthetic = item.id.startsWith('synthetic_');
+
             return (
               <TouchableOpacity
                 key={item.id}
                 style={styles.row}
-                onPress={() => onItemPress?.(item)}
+                onPress={() => {
+                  const sourceAcc = item.accounts.find(a => a.role === 'SOURCE');
+                  const destAcc = item.accounts.find(a => a.role === 'DESTINATION');
+
+                  let type: 'expense' | 'income' | 'transfer' = 'expense';
+                  if (destAcc?.accountType === 'LIABILITY' || destAcc?.accountType === 'ASSET') {
+                    type = 'transfer';
+                  } else if (sourceAcc?.accountType === 'INCOME') {
+                    type = 'income';
+                  } else if (destAcc?.accountType === 'EXPENSE') {
+                    type = 'expense';
+                  } else {
+                    type = (item.displayType?.toLowerCase() || 'expense') as
+                      | 'expense'
+                      | 'income'
+                      | 'transfer';
+                  }
+
+                  const displayAmount = CurrencyFormatter.format(
+                    mapped.amount,
+                    mapped.currencyCode,
+                  );
+                  const displayTitle = mapped.title;
+
+                  confirm.show({
+                    title: 'Record Payment',
+                    message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,
+                    confirmText: 'Pay',
+                    cancelText: 'Cancel',
+                    onConfirm: () => {
+                      AppNavigation.toSimpleJournalEntry(type, {
+                        sourceAccountId: sourceAcc?.id,
+                        destinationAccountId: destAcc?.id,
+                        amount: String(mapped.amount),
+                      });
+                    },
+                  });
+                }}
+                disabled={isSynthetic && !item.accounts.find(a => a.role === 'DESTINATION')?.id}
                 activeOpacity={Opacity.heavy}
               >
                 <View style={styles.left}>
-                  <AppText variant="body" style={{ color: dateColor }}>
-                    {displayDate} — {mapped.title}
-                  </AppText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+                    <AppIcon
+                      name={isSynthetic ? 'creditCard' : 'calendar'}
+                      size={14}
+                      color={typeColor || theme.textSecondary}
+                    />
+                    <AppText variant="body" style={{ color: dateColor, flex: 1 }} numberOfLines={1}>
+                      {displayDate} — {mapped.title}
+                    </AppText>
+                  </View>
                 </View>
                 <AppText variant="body" weight="medium" style={{ color: typeColor || theme.text }}>
                   {mapped.presentation.amountPrefix || ''}
