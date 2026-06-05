@@ -183,6 +183,26 @@ export const SafeToSpendChart = ({
           renderTooltipContent={index => {
             const point = data[index];
             if (!point) return null;
+
+            const plannedDetails =
+              point.details?.filter(
+                d =>
+                  d.context === 'PLANNED' ||
+                  d.context === 'PLANNED_PAYMENT' ||
+                  d.context === 'PLANNED_JOURNAL' ||
+                  d.context === 'RESOLVED' ||
+                  d.context?.includes('PLANNED'),
+              ) || [];
+
+            const plannedInflowTotal = plannedDetails
+              .filter(d => d.type === 'INFLOW')
+              .reduce((sum, d) => sum + d.amount, 0);
+
+            const toBeSpentDetails =
+              point.details?.filter(d => d.type === 'OUTFLOW' && d.context !== 'BUDGET') || [];
+
+            const toBeSpentTotal = toBeSpentDetails.reduce((sum, d) => sum + d.amount, 0);
+
             return (
               <Stack gap="xs">
                 <Inline justifyContent="space-between" alignItems="center">
@@ -231,6 +251,46 @@ export const SafeToSpendChart = ({
                       </View>
                     )}
 
+                    {(plannedInflowTotal > 0 || toBeSpentTotal > 0) && (
+                      <View
+                        style={{
+                          backgroundColor: withOpacity(theme.warning, Opacity.shadow),
+                          paddingHorizontal: 6,
+                          paddingVertical: 4,
+                          borderRadius: 4,
+                          marginBottom: 2,
+                          gap: 2,
+                        }}
+                      >
+                        {plannedInflowTotal > 0 && (
+                          <Inline gap="xs" alignItems="center">
+                            <AppIcon name="calendar" size={10} color={theme.success} />
+                            <AppText
+                              variant="caption"
+                              weight="bold"
+                              color="success"
+                              style={{ fontSize: 10 }}
+                            >
+                              Planned Inflow: +{formatValue(plannedInflowTotal)}
+                            </AppText>
+                          </Inline>
+                        )}
+                        {toBeSpentTotal > 0 && (
+                          <Inline gap="xs" alignItems="center">
+                            <AppIcon name="creditCard" size={10} color={theme.error} />
+                            <AppText
+                              variant="caption"
+                              weight="bold"
+                              color="error"
+                              style={{ fontSize: 10 }}
+                            >
+                              To Be Spent: -{formatValue(toBeSpentTotal)}
+                            </AppText>
+                          </Inline>
+                        )}
+                      </View>
+                    )}
+
                     {point.details
                       ?.slice(0, AppConfig.defaults.maxTooltipDetails)
                       .map((detail, idx) => {
@@ -240,7 +300,12 @@ export const SafeToSpendChart = ({
                         // Map context/type to consistent icons
                         let iconName: any = 'receipt';
                         if (detail.context === 'BUDGET') iconName = 'pieChart';
-                        else if (detail.context === 'PLANNED' || detail.context === 'RESOLVED')
+                        else if (
+                          detail.context === 'PLANNED' ||
+                          detail.context === 'PLANNED_PAYMENT' ||
+                          detail.context === 'PLANNED_JOURNAL' ||
+                          detail.context === 'RESOLVED'
+                        )
                           iconName = 'calendar';
                         else if (detail.context === 'LIABILITY') iconName = 'creditCard';
                         else if (detail.context === 'TRANSFER') iconName = 'refresh';
@@ -250,7 +315,10 @@ export const SafeToSpendChart = ({
                           ? theme.success
                           : detail.context === 'LIABILITY' ||
                               detail.context === 'BUDGET' ||
-                              detail.context === 'RESOLVED'
+                              detail.context === 'RESOLVED' ||
+                              detail.context === 'PLANNED' ||
+                              detail.context === 'PLANNED_PAYMENT' ||
+                              detail.context === 'PLANNED_JOURNAL'
                             ? theme.error
                             : theme.textSecondary;
 

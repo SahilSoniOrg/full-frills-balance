@@ -232,7 +232,7 @@ export class LiabilityFlowGenerator {
               liabilityId: acc.id,
               amount: finalAmount,
               dueDayOffset,
-              label: `${i === 0 ? 'Current bill' : 'Bill ' + (i + 1)}: ${acc.name}${paymentModeLabel}`,
+              label: `${acc.name}${paymentModeLabel}`,
             });
           }
         }

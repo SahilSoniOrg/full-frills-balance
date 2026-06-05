@@ -52,12 +52,12 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       expect(obligations[0]).toMatchObject({
         amount: 100,
         dueDayOffset: 44, // 2026-05-15
-        label: 'Bill 2: Visa',
+        label: 'Visa',
       });
       expect(obligations[1]).toMatchObject({
         amount: 150,
         dueDayOffset: 75, // 2026-06-15
-        label: 'Bill 3: Visa',
+        label: 'Visa',
       });
     });
 
@@ -262,12 +262,12 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       // Should only owe 50 (the min payment), not 200 (the full statement)
       expect(obligations[0]).toMatchObject({
         amount: 50,
-        label: 'Current bill: Min CC (Min)',
+        label: 'Min CC (Min)',
       });
       // The rest (950) should roll to the next bill
       expect(obligations[1]).toMatchObject({
         amount: 50, // Projected min for next bill too
-        label: 'Bill 2: Min CC (Min)',
+        label: 'Min CC (Min)',
       });
     });
 
