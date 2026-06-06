@@ -7,7 +7,11 @@ import {
   TransactionFallbackAIProvider,
   TransactionType,
 } from '../types/ai-parsing';
-import { createEntityResolutionPrompt, createTypeClassificationPrompt } from '../utils/ai-prompts';
+import {
+  createCompactSinglePassPrompt,
+  createEntityResolutionPrompt,
+  createTypeClassificationPrompt,
+} from '../utils/ai-prompts';
 
 export class NativeAIProvider implements TransactionFallbackAIProvider {
   private currentRequestId: number = 0;
@@ -75,38 +79,92 @@ export class NativeAIProvider implements TransactionFallbackAIProvider {
     requestId: number,
     shouldReset: boolean,
   ): Promise<ParserOutput | null> {
-    const prompt = `
-Role: High-precision financial transaction parser.
-Task: Convert speech into a structured JSON transaction object.
+    const startTime = Date.now();
+    const prompt = createCompactSinglePassPrompt(transcript, context.accounts, context.categories);
 
-USER INPUT: "${transcript}"
-
-CANONICAL ASSET ACCOUNTS: ${context.accounts.join(', ')}
-CANONICAL CATEGORIES: ${context.categories.join(', ')}
-
-EXAMPLES:
-1. Input: "spent 500 on dinner using hdfc card"
-   Output: {"transactions":[{"type":"expense","amount":500,"currencyCode":"INR","accountNameHint":"HDFC Infinia","categoryNameHint":"Food & Drinks","description":"Dinner at restaurant","isReversal":false}],"confidenceScore":0.95,"isHighConfidence":true}
-
-RULES:
-1. Pick the EXACT NAME from the CANONICAL lists.
-2. For expenses, type is "expense". For salary/income, type is "income".
-3. Output valid minified JSON ONLY. No markdown.
-
-Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","accountNameHint":"","categoryNameHint":"","description":"","isReversal":false}],"confidenceScore":0.8,"isHighConfidence":false}
-`.trim();
-
-    logger.info('[NativeAIProvider] Single-pass parse starting...');
+    logger.info('[NativeAIProvider] Compact single-pass parse starting...');
     if (requestId !== this.currentRequestId) return null;
 
-    logger.info(`[NativeAIProvider] Single-pass Prompt: ${prompt}`);
+    logger.info(`[NativeAIProvider] Compact single-pass Prompt: ${prompt}`);
     const response = await this.engine.generate(prompt, {
       resetContext: shouldReset,
     });
 
     if (requestId !== this.currentRequestId) return null;
 
-    return this.cleanAndParseJSON(response.text);
+    const parsedCompact = this.safeParseJSON(response.text);
+    if (!Array.isArray(parsedCompact) || parsedCompact.length < 3) {
+      logger.warn(`[NativeAIProvider] Failed to parse compact array from: "${response.text}"`);
+      return null;
+    }
+
+    const t = typeof parsedCompact[0] === 'number' ? parsedCompact[0] : 0;
+    const s = typeof parsedCompact[1] === 'number' ? parsedCompact[1] : -1;
+    const g = typeof parsedCompact[2] === 'number' ? parsedCompact[2] : -1;
+
+    let type = 'expense';
+    if (t === 1) type = 'income';
+    else if (t === 2) type = 'transfer';
+
+    let source = 'unknown';
+    let target = 'unknown';
+
+    if (type === 'income') {
+      if (s >= 0 && s < context.categories.length) {
+        source = context.categories[s];
+      }
+      if (g >= 0 && g < context.accounts.length) {
+        target = context.accounts[g];
+      }
+    } else {
+      if (s >= 0 && s < context.accounts.length) {
+        source = context.accounts[s];
+      }
+      const targetList = type === 'expense' ? context.categories : context.accounts;
+      if (g >= 0 && g < targetList.length) {
+        target = targetList[g];
+      }
+    }
+
+    const resolvedSource =
+      source !== 'unknown' && source !== 'null' ? source : context.parserHints.rawAccount;
+    const resolvedTarget =
+      target !== 'unknown' && target !== 'null' ? target : context.parserHints.rawItem;
+
+    let finalAssetHint = resolvedSource;
+    let finalCategoryHint = resolvedTarget;
+
+    if (type === 'income') {
+      finalAssetHint = resolvedTarget;
+      finalCategoryHint = resolvedSource;
+    } else if (type === 'transfer') {
+      finalAssetHint = resolvedSource;
+      finalCategoryHint = resolvedTarget;
+    }
+
+    return {
+      transactions: [
+        {
+          type: type as TransactionType,
+          amount: context.parserHints.amount,
+          currencyCode: 'INR',
+          accountNameHint: finalAssetHint,
+          categoryNameHint: finalCategoryHint,
+          description: transcript,
+          isReversal:
+            transcript.toLowerCase().includes('refund') ||
+            transcript.toLowerCase().includes('cashback'),
+        },
+      ],
+      confidenceScore: 0.9,
+      isHighConfidence: true,
+      provider: 'ai',
+      debugMetrics: {
+        totalInferenceMs: Date.now() - startTime,
+        lastPassStats: response.stats,
+        memorySummary: this.engine.getMemorySummary?.() || undefined,
+      },
+    };
   }
 
   private async parseMultiPass(
@@ -149,10 +207,11 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
         if (typeResponse.stats)
           logger.info(`[NativeAIProvider] Pass 1 Stats: ${JSON.stringify(typeResponse.stats)}`);
 
-        const parsedType = this.safeParseJSON(typeResponse.text) || {};
-        type = String(parsedType.type || 'expense')
-          .toLowerCase()
-          .trim();
+        const parsedType = this.safeParseJSON(typeResponse.text);
+        const t = typeof parsedType === 'number' ? parsedType : 0;
+        type = 'expense';
+        if (t === 1) type = 'income';
+        else if (t === 2) type = 'transfer';
         timings['Pass 1: Type'] = Date.now() - p1Start;
       }
 
@@ -175,8 +234,9 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       if (sourceResponse.stats)
         logger.info(`[NativeAIProvider] Pass 2 Stats: ${JSON.stringify(sourceResponse.stats)}`);
 
-      const parsedSource = this.safeParseJSON(sourceResponse.text) || {};
-      const source = typeof parsedSource.name === 'string' ? parsedSource.name : 'unknown';
+      const parsedSource = this.safeParseJSON(sourceResponse.text);
+      const idx2 = typeof parsedSource === 'number' ? parsedSource : -1;
+      const source = idx2 >= 0 && idx2 < p2Entities.length ? p2Entities[idx2] : 'unknown';
       timings['Pass 2: Source'] = Date.now() - p2Start;
 
       // PASS 3: Target Resolution
@@ -203,8 +263,9 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
       if (targetResponse.stats)
         logger.info(`[NativeAIProvider] Pass 3 Stats: ${JSON.stringify(targetResponse.stats)}`);
 
-      const parsedTarget = this.safeParseJSON(targetResponse.text) || {};
-      const target = typeof parsedTarget.name === 'string' ? parsedTarget.name : 'unknown';
+      const parsedTarget = this.safeParseJSON(targetResponse.text);
+      const idx3 = typeof parsedTarget === 'number' ? parsedTarget : -1;
+      const target = idx3 >= 0 && idx3 < p3Entities.length ? p3Entities[idx3] : 'unknown';
       timings['Pass 3: Target'] = Date.now() - p3Start;
 
       // STEP 4: Code-based Synthesis
@@ -261,20 +322,24 @@ Format: {"transactions":[{"type":"expense","amount":0,"currencyCode":"INR","acco
     }
   }
 
-  private safeParseJSON(text: string): Record<string, unknown> | null {
+  private safeParseJSON(text: string): any {
     try {
-      const match = text.match(/\{[\s\S]*\}/);
-      return match ? JSON.parse(match[0]) : null;
+      const cleaned = text.trim();
+      return JSON.parse(cleaned);
     } catch {
+      try {
+        const match = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+        if (match) {
+          return JSON.parse(match[0]);
+        }
+      } catch {}
+
+      const numMatch = text.match(/-?\d+/);
+      if (numMatch) {
+        return parseInt(numMatch[0], 10);
+      }
       return null;
     }
-  }
-
-  private cleanAndParseJSON(text: string): ParserOutput | null {
-    const parsed = this.safeParseJSON(text);
-    return parsed && Array.isArray(parsed.transactions)
-      ? (parsed as unknown as ParserOutput)
-      : null;
   }
 
   async abort() {
