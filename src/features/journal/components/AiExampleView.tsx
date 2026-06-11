@@ -6,6 +6,8 @@
  * No SmallModelProvider, no NativeAIProvider, no service layer.
  */
 
+import { Screen } from '@/src/components/layout';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,22 +28,7 @@ import {
   type MultimodalPart,
 } from 'react-native-litert-lm';
 
-// ─── Theme (same as example app) ─────────────────────────────────────────────
-const T = {
-  bg: '#08080C',
-  surface: '#111118',
-  card: '#16161F',
-  elevated: '#1C1C28',
-  accent: '#6366F1',
-  accentGlow: '#818CF8',
-  success: '#34D399',
-  warning: '#FBBF24',
-  error: '#F87171',
-  cyan: '#22D3EE',
-  text: '#F1F1F4',
-  dim: '#6B7280',
-  border: '#23232F',
-};
+// Theme colors are now resolved dynamically from the active global theme.
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type ChatMsg = { role: 'user' | 'model'; text: string };
@@ -86,6 +73,29 @@ function tryParseJSON(text: string): any {
 }
 
 export function AiExampleView() {
+  const { theme } = useTheme();
+  const T = useMemo(
+    () => ({
+      bg: theme.background,
+      surface: theme.surface,
+      card: theme.surfaceSecondary,
+      elevated: theme.border,
+      accent: theme.primary,
+      accentGlow: theme.primary,
+      success: theme.success,
+      warning: theme.warning,
+      error: theme.error,
+      cyan: theme.asset,
+      text: theme.text,
+      dim: theme.textSecondary,
+      border: theme.border,
+      onPrimary: theme.onPrimary,
+    }),
+    [theme],
+  );
+
+  const s = useMemo(() => getStyles(T), [T]);
+
   const [sel, setSel] = useState<ModelKey>('gemma4');
   const [backend, setBackend] = useState<'cpu' | 'gpu'>('cpu');
   const [tab, setTab] = useState<TabKey>('chat');
@@ -257,7 +267,7 @@ export function AiExampleView() {
   }, [benchResults]);
 
   return (
-    <View style={s.root}>
+    <Screen style={s.root} edges={['top', 'bottom']} showBack>
       {/* Header */}
       <View style={s.header}>
         <Text style={s.title}>
@@ -291,11 +301,7 @@ export function AiExampleView() {
               key={b}
               disabled={!canInteract}
               onPress={() => setBackend(b)}
-              style={[
-                s.pill,
-                backend === b && s.pillActive,
-                !canInteract && { opacity: 0.4 },
-              ]}
+              style={[s.pill, backend === b && s.pillActive, !canInteract && { opacity: 0.4 }]}
             >
               <Text style={[s.pillText, backend === b && { color: T.accentGlow }]}>
                 {b.toUpperCase()}
@@ -306,9 +312,7 @@ export function AiExampleView() {
       </View>
       {backend === 'gpu' && !!gpuWarning && (
         <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
-          <Text style={{ fontSize: 11, color: T.warning, lineHeight: 16 }}>
-            ⚠️ {gpuWarning}
-          </Text>
+          <Text style={{ fontSize: 11, color: T.warning, lineHeight: 16 }}>⚠️ {gpuWarning}</Text>
         </View>
       )}
 
@@ -411,7 +415,7 @@ export function AiExampleView() {
                     m.role === 'user' ? { backgroundColor: T.accent } : { backgroundColor: T.card },
                   ]}
                 >
-                  <Text style={[s.bubbleText, m.role === 'user' && { color: '#fff' }]}>
+                  <Text style={[s.bubbleText, m.role === 'user' && { color: T.onPrimary }]}>
                     {m.text}
                   </Text>
                 </View>
@@ -449,7 +453,7 @@ export function AiExampleView() {
                 disabled={!input.trim() || busy}
               >
                 {busy ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={T.onPrimary} size="small" />
                 ) : (
                   <Text style={s.sendIcon}>↑</Text>
                 )}
@@ -486,16 +490,19 @@ export function AiExampleView() {
                   label="Pass Rate"
                   value={`${benchSummary.passed}/${benchSummary.total}`}
                   color={benchSummary.passed === benchSummary.total ? T.success : T.warning}
+                  s={s}
                 />
                 <SummaryItem
                   label="Avg Duration"
                   value={`${benchSummary.avgDuration}ms`}
                   color={T.cyan}
+                  s={s}
                 />
                 <SummaryItem
                   label="Avg Speed"
                   value={`${benchSummary.avgTPS} t/s`}
                   color={T.success}
+                  s={s}
                 />
               </View>
             </View>
@@ -548,11 +555,21 @@ export function AiExampleView() {
           )}
         </ScrollView>
       )}
-    </View>
+    </Screen>
   );
 }
 
-function SummaryItem({ label, value, color }: { label: string; value: string; color: string }) {
+function SummaryItem({
+  label,
+  value,
+  color,
+  s,
+}: {
+  label: string;
+  value: string;
+  color: string;
+  s: any;
+}) {
   return (
     <View style={s.summaryItem}>
       <Text style={s.summaryItemLabel}>{label}</Text>
@@ -561,229 +578,230 @@ function SummaryItem({ label, value, color }: { label: string; value: string; co
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: T.bg },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  title: { fontSize: 24, fontWeight: '900', color: T.text },
-  subtitle: { fontSize: 12, color: T.dim, marginTop: 2 },
-  row: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
-  pill: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: T.card,
-    borderWidth: 1,
-    borderColor: T.border,
-    alignItems: 'center',
-  },
-  pillActive: { borderColor: T.accent, backgroundColor: 'rgba(99,102,241,0.12)' },
-  pillText: { fontSize: 13, fontWeight: '700', color: T.dim },
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 16,
-    backgroundColor: T.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  statusTitle: { fontSize: 14, fontWeight: '600', color: T.text },
-  loadBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: T.accent,
-    marginLeft: 12,
-  },
-  loadBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  statsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
-  stat: {
-    flex: 1,
-    backgroundColor: T.card,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  statLabel: { fontSize: 10, fontWeight: '700', color: T.dim, letterSpacing: 1 },
-  statValue: { fontSize: 18, fontWeight: '800', marginTop: 2 },
-  statUnit: { fontSize: 12, fontWeight: '500' },
+const getStyles = (T: any) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: T.bg },
+    header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+    title: { fontSize: 24, fontWeight: '900', color: T.text },
+    subtitle: { fontSize: 12, color: T.dim, marginTop: 2 },
+    row: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+    pill: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      backgroundColor: T.card,
+      borderWidth: 1,
+      borderColor: T.border,
+      alignItems: 'center',
+    },
+    pillActive: { borderColor: T.accent, backgroundColor: 'rgba(99,102,241,0.12)' },
+    pillText: { fontSize: 13, fontWeight: '700', color: T.dim },
+    statusCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 16,
+      marginBottom: 8,
+      padding: 16,
+      backgroundColor: T.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: T.border,
+    },
+    statusTitle: { fontSize: 14, fontWeight: '600', color: T.text },
+    loadBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: T.accent,
+      marginLeft: 12,
+    },
+    loadBtnText: { color: T.onPrimary, fontWeight: '700', fontSize: 14 },
+    statsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+    stat: {
+      flex: 1,
+      backgroundColor: T.card,
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: T.border,
+    },
+    statLabel: { fontSize: 10, fontWeight: '700', color: T.dim, letterSpacing: 1 },
+    statValue: { fontSize: 18, fontWeight: '800', marginTop: 2 },
+    statUnit: { fontSize: 12, fontWeight: '500' },
 
-  // Tabs
-  tabRow: {
-    flexDirection: 'row',
-    gap: 0,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: T.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: T.border,
-    overflow: 'hidden',
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  tabBtnActive: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
-  },
-  tabText: { fontSize: 13, fontWeight: '700', color: T.dim },
-  tabTextActive: { color: T.accentGlow },
+    // Tabs
+    tabRow: {
+      flexDirection: 'row',
+      gap: 0,
+      marginHorizontal: 16,
+      marginBottom: 8,
+      backgroundColor: T.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: T.border,
+      overflow: 'hidden',
+    },
+    tabBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    tabBtnActive: {
+      backgroundColor: 'rgba(99,102,241,0.15)',
+    },
+    tabText: { fontSize: 13, fontWeight: '700', color: T.dim },
+    tabTextActive: { color: T.accentGlow },
 
-  // Chat
-  chatArea: { flex: 1 },
-  chatContent: { paddingHorizontal: 16, paddingBottom: 20 },
-  emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: T.text },
-  emptySub: { fontSize: 13, color: T.dim, marginTop: 4, textAlign: 'center', lineHeight: 20 },
-  suggestRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  suggestChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: T.card,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  suggestText: { fontSize: 12, color: T.accentGlow },
-  bubbleRow: { flexDirection: 'row', marginTop: 12 },
-  bubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 16,
-  },
-  bubbleText: { fontSize: 14, color: T.text, lineHeight: 20 },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: T.bg,
-    borderTopWidth: 1,
-    borderTopColor: T.border,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: T.card,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    color: T.text,
-    fontSize: 14,
-    maxHeight: 100,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  sendBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: T.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  sendIcon: { color: '#fff', fontSize: 18, fontWeight: '700' },
+    // Chat
+    chatArea: { flex: 1 },
+    chatContent: { paddingHorizontal: 16, paddingBottom: 20 },
+    emptyState: { alignItems: 'center', paddingTop: 60 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: T.text },
+    emptySub: { fontSize: 13, color: T.dim, marginTop: 4, textAlign: 'center', lineHeight: 20 },
+    suggestRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 16,
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+    },
+    suggestChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: T.card,
+      borderWidth: 1,
+      borderColor: T.border,
+    },
+    suggestText: { fontSize: 12, color: T.accentGlow },
+    bubbleRow: { flexDirection: 'row', marginTop: 12 },
+    bubble: {
+      maxWidth: '80%',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 16,
+    },
+    bubbleText: { fontSize: 14, color: T.text, lineHeight: 20 },
+    inputBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: T.bg,
+      borderTopWidth: 1,
+      borderTopColor: T.border,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: T.card,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      color: T.text,
+      fontSize: 14,
+      maxHeight: 100,
+      borderWidth: 1,
+      borderColor: T.border,
+    },
+    sendBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: T.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 8,
+    },
+    sendIcon: { color: T.onPrimary, fontSize: 18, fontWeight: '700' },
 
-  // Benchmark
-  benchBtn: {
-    backgroundColor: T.accent,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  benchBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  benchDesc: {
-    fontSize: 12,
-    color: T.dim,
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 18,
-  },
+    // Benchmark
+    benchBtn: {
+      backgroundColor: T.accent,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    benchBtnText: { color: T.onPrimary, fontSize: 15, fontWeight: '800' },
+    benchDesc: {
+      fontSize: 12,
+      color: T.dim,
+      textAlign: 'center',
+      marginBottom: 16,
+      lineHeight: 18,
+    },
 
-  // Summary
-  summaryCard: {
-    backgroundColor: T.surface,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: T.border,
-    marginBottom: 12,
-  },
-  summaryTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: T.dim,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  summaryRow: { flexDirection: 'row', gap: 8 },
-  summaryItem: {
-    flex: 1,
-    backgroundColor: T.card,
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
-  },
-  summaryItemLabel: { fontSize: 10, color: T.dim, fontWeight: '600' },
-  summaryItemValue: { fontSize: 16, fontWeight: '800', marginTop: 2 },
+    // Summary
+    summaryCard: {
+      backgroundColor: T.surface,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: T.border,
+      marginBottom: 12,
+    },
+    summaryTitle: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: T.dim,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 10,
+    },
+    summaryRow: { flexDirection: 'row', gap: 8 },
+    summaryItem: {
+      flex: 1,
+      backgroundColor: T.card,
+      borderRadius: 10,
+      padding: 10,
+      alignItems: 'center',
+    },
+    summaryItemLabel: { fontSize: 10, color: T.dim, fontWeight: '600' },
+    summaryItemValue: { fontSize: 16, fontWeight: '800', marginTop: 2 },
 
-  // Results
-  resultCard: {
-    backgroundColor: T.surface,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  resultTranscript: {
-    fontSize: 12,
-    color: T.dim,
-    fontStyle: 'italic',
-    marginBottom: 6,
-  },
-  resultMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  resultStatus: { fontSize: 14, fontWeight: '700' },
-  resultDuration: { fontSize: 14, fontWeight: '700' },
-  resultStats: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
-    paddingTop: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-  },
-  resultStatItem: { fontSize: 11, color: T.dim, fontWeight: '600' },
-  jsonBlock: {
-    backgroundColor: T.bg,
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 4,
-  },
-  jsonText: {
-    fontSize: 11,
-    color: T.accentGlow,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    lineHeight: 16,
-  },
-});
+    // Results
+    resultCard: {
+      backgroundColor: T.surface,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: T.border,
+    },
+    resultTranscript: {
+      fontSize: 12,
+      color: T.dim,
+      fontStyle: 'italic',
+      marginBottom: 6,
+    },
+    resultMetaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    resultStatus: { fontSize: 14, fontWeight: '700' },
+    resultDuration: { fontSize: 14, fontWeight: '700' },
+    resultStats: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 8,
+      paddingTop: 6,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: 'rgba(255,255,255,0.08)',
+    },
+    resultStatItem: { fontSize: 11, color: T.dim, fontWeight: '600' },
+    jsonBlock: {
+      backgroundColor: T.bg,
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 4,
+    },
+    jsonText: {
+      fontSize: 11,
+      color: T.accentGlow,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      lineHeight: 16,
+    },
+  });
