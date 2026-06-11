@@ -42,13 +42,12 @@ export function AiBenchmarkView() {
   const [backendOverride, setBackendOverride] = useState<'auto' | 'cpu' | 'gpu' | 'npu'>('auto');
 
   const backendOptions = React.useMemo(() => {
-    const opts = [
+    return [
       { id: 'auto', label: 'Auto' },
       { id: 'cpu', label: 'CPU' },
+      { id: 'gpu', label: 'GPU' },
+      { id: 'npu', label: 'NPU' },
     ];
-    if (!checkBackendSupport('gpu')) opts.push({ id: 'gpu', label: 'GPU' });
-    if (!checkBackendSupport('npu')) opts.push({ id: 'npu', label: 'NPU' });
-    return opts;
   }, []);
 
   const isCancelledRef = React.useRef(false);

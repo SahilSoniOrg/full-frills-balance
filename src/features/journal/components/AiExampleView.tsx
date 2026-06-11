@@ -286,26 +286,31 @@ export function AiExampleView() {
 
       <View style={s.row}>
         {(['cpu', 'gpu'] as const).map(b => {
-          const warn = b === 'gpu' ? gpuWarning : undefined;
           return (
             <TouchableOpacity
               key={b}
-              disabled={!canInteract || !!warn}
+              disabled={!canInteract}
               onPress={() => setBackend(b)}
               style={[
                 s.pill,
                 backend === b && s.pillActive,
-                (!canInteract || !!warn) && { opacity: 0.4 },
+                !canInteract && { opacity: 0.4 },
               ]}
             >
               <Text style={[s.pillText, backend === b && { color: T.accentGlow }]}>
                 {b.toUpperCase()}
               </Text>
-              {!!warn && <Text style={{ fontSize: 10, color: T.error, marginTop: 2 }}>N/A</Text>}
             </TouchableOpacity>
           );
         })}
       </View>
+      {backend === 'gpu' && !!gpuWarning && (
+        <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+          <Text style={{ fontSize: 11, color: T.warning, lineHeight: 16 }}>
+            ⚠️ {gpuWarning}
+          </Text>
+        </View>
+      )}
 
       {/* Status / Load */}
       {!isReady && (
