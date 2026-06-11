@@ -290,21 +290,21 @@ export class JournalService {
       MetadataSources.MANUAL_POST,
     );
 
-    const journalOp = journal.prepareUpdate((record: Journal) => {
-      record.status = JournalStatus.POSTED;
-      record.journalDate = postTime;
-      record.updatedAt = new Date();
-    });
-
-    const txOps = transactions.map(tx =>
-      tx.prepareUpdate((record: Transaction) => {
-        record.transactionDate = postTime;
-        record.updatedAt = new Date();
-      }),
-    );
-
     // Single atomic write: metadata + journal status + transaction dates.
     await database.write(async () => {
+      const journalOp = journal.prepareUpdate((record: Journal) => {
+        record.status = JournalStatus.POSTED;
+        record.journalDate = postTime;
+        record.updatedAt = new Date();
+      });
+
+      const txOps = transactions.map(tx =>
+        tx.prepareUpdate((record: Transaction) => {
+          record.transactionDate = postTime;
+          record.updatedAt = new Date();
+        }),
+      );
+
       await database.batch([metadataOp, journalOp, ...txOps]);
     });
 

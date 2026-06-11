@@ -36,6 +36,14 @@ jest.mock('@/src/hooks/useExchangeRate', () => ({
   })),
 }));
 
+// Mock useWorkplace
+jest.mock('@/src/contexts/WorkplaceContext', () => ({
+  useWorkplace: jest.fn(() => ({
+    workplaceId: 'test-workplace',
+    defaultCurrencyCode: 'USD',
+  })),
+}));
+
 describe('useJournalEditor', () => {
   beforeEach(() => {
     jest.clearAllMocks();

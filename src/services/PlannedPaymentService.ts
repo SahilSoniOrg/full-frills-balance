@@ -290,21 +290,21 @@ export class PlannedPaymentService {
           MetadataSources.MANUAL_POST,
         );
 
-        const journalOp = j.prepareUpdate((record: Journal) => {
-          record.status = JournalStatus.POSTED;
-          record.journalDate = postTime;
-          record.updatedAt = new Date();
-        });
-
-        const txOps = txs.map((tx: Transaction) =>
-          tx.prepareUpdate((record: Transaction) => {
-            record.transactionDate = postTime;
-            record.updatedAt = new Date();
-          }),
-        );
-
         // Single atomic write: metadata + journal + transactions.
         await database.write(async () => {
+          const journalOp = j.prepareUpdate((record: Journal) => {
+            record.status = JournalStatus.POSTED;
+            record.journalDate = postTime;
+            record.updatedAt = new Date();
+          });
+
+          const txOps = txs.map((tx: Transaction) =>
+            tx.prepareUpdate((record: Transaction) => {
+              record.transactionDate = postTime;
+              record.updatedAt = new Date();
+            }),
+          );
+
           await database.batch([metadataOp, journalOp, ...txOps]);
         });
         // Rebuild balance for affected accounts.

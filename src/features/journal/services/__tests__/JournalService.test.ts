@@ -20,6 +20,11 @@ jest.mock('@/src/services/ledger', () => ({
 jest.mock('@/src/utils/preferences', () => ({
   preferences: { defaultCurrencyCode: 'USD' },
 }));
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    getCurrency: jest.fn(() => Promise.resolve('USD')),
+  },
+}));
 
 describe('JournalService - saveJournalEntry', () => {
   let service: JournalService;
