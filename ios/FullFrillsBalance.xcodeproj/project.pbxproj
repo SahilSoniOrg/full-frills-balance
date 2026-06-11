@@ -8,10 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		2E57F63BEE5742748281CE2B /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82FABB6D8D7F45D1B2AA2A10 /* FullFrillsBalanceWidget.swift */; };
 		371FC7E5321D41E893D9A8E3 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9CBDBC5F3F64EDDBD27B6ED /* WidgetKit.framework */; };
 		38D6F4F031672564CB7E0D82 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEC546600324EACFCD9DB6A /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		900CF67553FA4772AF05484F /* FullFrillsBalanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82FABB6D8D7F45D1B2AA2A10 /* FullFrillsBalanceWidget.swift */; };
 		A357C0F9805E24EA6E6AECAF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5261D1F9E0DA0852DCF84773 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		C0A38668C61848A2D2A3C68B /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A50D9F14289D1A1361C21842 /* libPods-FullFrillsBalance.a */; };
@@ -186,9 +186,9 @@
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				55CF78C3144545DBB8A6F50D /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
 				A37E5AD4550845C38564CDB9 /* Upload Debug Symbols to Sentry */,
-				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				2EBEA1186AD542779383B08B /* Copy Files */,
 				6F65B9BD7BBD76C74E4A8BF8 /* [CP] Embed Pods Frameworks */,
+				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 			);
 			buildRules = (
 			);
@@ -462,7 +462,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				900CF67553FA4772AF05484F /* FullFrillsBalanceWidget.swift in Sources */,
 				38D6F4F031672564CB7E0D82 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -471,6 +470,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2E57F63BEE5742748281CE2B /* FullFrillsBalanceWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
