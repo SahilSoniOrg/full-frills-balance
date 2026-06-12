@@ -60,6 +60,7 @@ export interface ConfirmOptions {
   onCancel?: () => void;
   onClose?: () => void;
   destructive?: boolean; // If true, confirm button is red/destructive
+  destructiveCancel?: boolean; // If true, cancel button is red/destructive
   requiredConfirmationValue?: string; // If provided, user must type this value to confirm
 }
 

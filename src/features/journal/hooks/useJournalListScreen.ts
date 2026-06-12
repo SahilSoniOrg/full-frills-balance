@@ -41,15 +41,24 @@ export function useJournalListScreen(
       const displayTitle = mapped.title;
       const isSynthetic = item.id.startsWith('synthetic_');
 
-      confirm.show({
-        title: 'Record Payment',
-        message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,
-        confirmText: 'Pay',
-        cancelText: 'Cancel',
-        onConfirm: async () => {
-          if (!isSynthetic && item.plannedPaymentId) {
+      const primaryLabel = type === 'income' ? 'Receive' : type === 'transfer' ? 'Transfer' : 'Pay';
+      const dialogTitle =
+        type === 'income'
+          ? 'Record Income'
+          : type === 'transfer'
+            ? 'Record Transfer'
+            : 'Record Payment';
+
+      if (!isSynthetic && item.plannedPaymentId) {
+        confirm.show({
+          title: dialogTitle,
+          message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,
+          confirmText: primaryLabel,
+          cancelText: 'Skip',
+          destructiveCancel: true,
+          onConfirm: async () => {
             try {
-              const pp = await plannedPaymentRepository.find(workplaceId, item.plannedPaymentId);
+              const pp = await plannedPaymentRepository.find(workplaceId, item.plannedPaymentId!);
               if (pp) {
                 await plannedPaymentService.postOccurrence(workplaceId, pp, item.journalDate);
                 toast.success('Payment recorded successfully');
@@ -59,16 +68,54 @@ export function useJournalListScreen(
             } catch (err) {
               showErrorAlert(err);
             }
-          } else {
+          },
+          onCancel: async () => {
+            confirm.show({
+              title: 'Skip Occurrence',
+              message: `Are you sure you want to skip the occurrence for ${displayTitle}?`,
+              confirmText: 'Skip',
+              cancelText: 'Cancel',
+              destructive: true,
+              onConfirm: async () => {
+                try {
+                  const pp = await plannedPaymentRepository.find(
+                    workplaceId,
+                    item.plannedPaymentId!,
+                  );
+                  if (pp) {
+                    await plannedPaymentService.skipOccurrence(workplaceId, pp, item.journalDate);
+                    toast.success('Payment skipped successfully');
+                  } else {
+                    toast.error('Planned payment details not found');
+                  }
+                } catch (err) {
+                  showErrorAlert(err);
+                }
+              },
+              onCancel: () => {},
+              onClose: () => {},
+            });
+          },
+          onClose: () => {},
+        });
+      } else {
+        confirm.show({
+          title: dialogTitle,
+          message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,
+          confirmText: primaryLabel,
+          cancelText: 'Cancel',
+          onConfirm: () => {
             AppNavigation.toSimpleJournalEntry(type, {
               sourceAccountId: sourceAcc?.id,
               destinationAccountId: destAcc?.id,
               amount: String(mapped.amount),
               journalId: isSynthetic ? undefined : item.id,
             });
-          }
-        },
-      });
+          },
+          onCancel: () => {},
+          onClose: () => {},
+        });
+      }
     },
     [workplaceId],
   );

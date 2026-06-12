@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 export type AppButtonProps = TouchableOpacityProps & {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'destructive-outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   children: React.ReactNode;
@@ -31,7 +31,11 @@ export function AppButton({
 
   const { buttonCombinedStyle, textCombinedStyle, finalTextColor } = useMemo(() => {
     const helperVariant: ComponentVariant =
-      variant === 'secondary' ? 'default' : variant === 'destructive' ? 'error' : 'primary';
+      variant === 'secondary'
+        ? 'default'
+        : variant === 'destructive' || variant === 'destructive-outline'
+          ? 'error'
+          : 'primary';
     const variantColors = getVariantColors(helperVariant);
 
     const baseStyles = styles.buttonBase;
@@ -50,6 +54,14 @@ export function AppButton({
           backgroundColor: disabled ? theme.textTertiary : variantColors.main,
         };
         textColor = variantColors.contrast;
+        break;
+      case 'destructive-outline':
+        variantStyle = {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: disabled ? theme.textTertiary : variantColors.main,
+        };
+        textColor = disabled ? theme.textTertiary : variantColors.main;
         break;
       case 'secondary':
         variantStyle = {

@@ -7,7 +7,7 @@ import { ModalSurface } from './ModalSurface';
 type ConfirmDialogAction = {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'destructive-outline';
   disabled?: boolean;
 };
 

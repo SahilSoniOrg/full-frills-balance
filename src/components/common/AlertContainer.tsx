@@ -9,7 +9,7 @@ import {
   setAlertListener,
   setConfirmListener,
 } from '@/src/utils/alerts';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type AlertState =
   | {
@@ -24,13 +24,16 @@ type AlertState =
 
 export function AlertContainer() {
   const [activeAlert, setActiveAlert] = useState<AlertState>(null);
+  const activeAlertIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setAlertListener(payload => {
+      activeAlertIdRef.current = payload.id;
       setActiveAlert({ type: 'alert', payload });
     });
 
     setConfirmListener(payload => {
+      activeAlertIdRef.current = payload.id;
       setActiveAlert({ type: 'confirm', payload });
     });
 
@@ -73,16 +76,22 @@ export function AlertContainer() {
         secondaryAction={{
           label: payload.cancelText || AppConfig.strings.common.cancel,
           onPress: () => {
+            const currentId = payload.id;
             payload.onCancel();
-            setActiveAlert(null);
+            if (activeAlertIdRef.current === currentId) {
+              setActiveAlert(null);
+            }
           },
-          variant: 'outline',
+          variant: payload.destructiveCancel ? 'destructive-outline' : 'outline',
         }}
         primaryAction={{
           label: payload.confirmText || AppConfig.strings.common.confirm,
           onPress: () => {
+            const currentId = payload.id;
             payload.onConfirm();
-            setActiveAlert(null);
+            if (activeAlertIdRef.current === currentId) {
+              setActiveAlert(null);
+            }
           },
           variant: payload.destructive ? 'destructive' : 'primary',
         }}
