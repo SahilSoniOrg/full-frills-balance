@@ -10,6 +10,7 @@ export enum JournalStatus {
   REVERSED = 'REVERSED',
   PLANNED = 'PLANNED',
   SKIPPED = 'SKIPPED',
+  PAUSED = 'PAUSED',
 }
 
 export default class Journal extends BaseScopedModel<JournalId> {

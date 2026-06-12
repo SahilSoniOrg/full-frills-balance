@@ -282,16 +282,15 @@ export class PlannedPaymentService {
         const txs = await transactionRepository.findByJournal(workplaceId, j.id);
         const originalDate = j.journalDate;
 
-        // Prepare ops outside the write lock (reads are safe before write).
-        const metadataOp = await journalRepository.prepareMetadataPatch(
-          workplaceId,
-          j.id,
-          { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
-          MetadataSources.MANUAL_POST,
-        );
-
         // Single atomic write: metadata + journal + transactions.
         await database.write(async () => {
+          const metadataOp = await journalRepository.prepareMetadataPatch(
+            workplaceId,
+            j.id,
+            { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
+            MetadataSources.MANUAL_POST,
+          );
+
           const journalOp = j.prepareUpdate((record: Journal) => {
             record.status = JournalStatus.POSTED;
             record.journalDate = postTime;
@@ -628,6 +627,74 @@ export class PlannedPaymentService {
         r.updatedAt = new Date();
       });
     });
+  }
+
+  /**
+   * Toggles the status of a planned payment.
+   * If pausing, it cleans up (soft-deletes) future PLANNED journals and transactions.
+   * If resuming, it regenerates future occurrences.
+   */
+  async toggleStatus(workplaceId: WorkplaceId, pp: PlannedPayment): Promise<PlannedPaymentStatus> {
+    const newStatus =
+      pp.status === PlannedPaymentStatus.ACTIVE
+        ? PlannedPaymentStatus.PAUSED
+        : PlannedPaymentStatus.ACTIVE;
+
+    const isPausing = newStatus === PlannedPaymentStatus.PAUSED;
+    const targetStatus = isPausing ? JournalStatus.PLANNED : JournalStatus.PAUSED;
+
+    const targetJournals = await database.collections
+      .get<Journal>('journals')
+      .query(
+        Q.where('planned_payment_id', pp.id),
+        Q.where('workplace_id', workplaceId),
+        Q.where('status', targetStatus),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+
+    const nowMidnight = this.normalizeToStartOfDay(Date.now());
+    let updatedNextOccurrence = pp.nextOccurrence;
+
+    if (!isPausing) {
+      // Catch up nextOccurrence to the first occurrence on or after today
+      while (updatedNextOccurrence < nowMidnight) {
+        updatedNextOccurrence = this.calculateNextOccurrence(updatedNextOccurrence, pp);
+      }
+    }
+
+    await database.write(async () => {
+      const ppUpdate = pp.prepareUpdate((record: PlannedPayment) => {
+        record.status = newStatus;
+        if (!isPausing) {
+          record.nextOccurrence = updatedNextOccurrence;
+        }
+        record.updatedAt = new Date();
+      });
+
+      const journalUpdates = targetJournals.map(j =>
+        j.prepareUpdate((record: Journal) => {
+          if (isPausing) {
+            record.status = JournalStatus.PAUSED;
+          } else {
+            record.status =
+              this.normalizeToStartOfDay(j.journalDate) >= nowMidnight
+                ? JournalStatus.PLANNED
+                : JournalStatus.SKIPPED;
+          }
+          record.updatedAt = new Date();
+        }),
+      );
+
+      await database.batch([ppUpdate, ...journalUpdates]);
+    });
+
+    if (!isPausing) {
+      // Regenerate future occurrences
+      await this.processDuePayments(workplaceId);
+    }
+
+    return newStatus;
   }
 }
 

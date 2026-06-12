@@ -282,16 +282,15 @@ export class JournalService {
     // Update both the journal date and all associated transaction dates to "now".
     const originalDate = journal.journalDate;
 
-    // Prepare metadata op BEFORE the write block (read-only work outside the lock).
-    const metadataOp = await journalRepository.prepareMetadataPatch(
-      workplaceId,
-      journalId,
-      { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
-      MetadataSources.MANUAL_POST,
-    );
-
     // Single atomic write: metadata + journal status + transaction dates.
     await database.write(async () => {
+      const metadataOp = await journalRepository.prepareMetadataPatch(
+        workplaceId,
+        journalId,
+        { [MetadataKeys.ORIGINAL_PLANNED_DATE]: originalDate },
+        MetadataSources.MANUAL_POST,
+      );
+
       const journalOp = journal.prepareUpdate((record: Journal) => {
         record.status = JournalStatus.POSTED;
         record.journalDate = postTime;

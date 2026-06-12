@@ -66,7 +66,10 @@ export async function prepareJournalData(
   const accountsToRebuild = new Set<AccountId>(accountIds);
   const calculatedBalances = new Map<AccountId, number | null>();
 
-  const isInactive = data.status === JournalStatus.PLANNED || data.status === JournalStatus.SKIPPED;
+  const isInactive =
+    data.status === JournalStatus.PLANNED ||
+    data.status === JournalStatus.SKIPPED ||
+    data.status === JournalStatus.PAUSED;
   if (!isInactive) {
     // Parallelize fetching latest transactions for all accounts involved
     await Promise.all(

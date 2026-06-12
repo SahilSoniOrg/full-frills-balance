@@ -1,13 +1,15 @@
-import { getNow, getSmartDateLabel } from '@/src/utils/dateHelpers';
 import { AppIcon, AppSurface, Badge } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
-import { Box, Column, Row, Text } from '@/src/design-system';
+import { Theme } from '@/src/constants/design-tokens';
 import PlannedPayment, {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/data/models/PlannedPayment';
+import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { getNow, getSmartDateLabel } from '@/src/utils/dateHelpers';
+import { withObservables } from '@nozbe/watermelondb/react';
 import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentCardProps {
@@ -15,9 +17,26 @@ export interface PlannedPaymentCardProps {
   onPress: () => void;
 }
 
-export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
-  const { theme } = useTheme();
+export interface PlannedPaymentCardViewModel {
+  name: string;
+  amountText: string;
+  amountColor: 'error' | 'success';
+  intervalLabel: string;
+  statusBadge: {
+    variant: 'default' | 'error' | 'warning' | 'success';
+    icon: 'alert' | 'time' | 'calendar' | 'document';
+    text: string;
+  };
+  dateLabel: string;
+  dateColor: string;
+  iconName: 'trendingDown' | 'trendingUp';
+  isOverdue: boolean;
+}
 
+export function presentPlannedPaymentCard(
+  item: PlannedPayment,
+  theme: Theme,
+): PlannedPaymentCardViewModel {
   const getIntervalLabel = () => {
     const n = item.intervalN;
     const type = item.intervalType.toLowerCase();
@@ -48,6 +67,49 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
   if (isOverdue) dateColor = theme.error;
   else if (isDueSoon) dateColor = theme.warning;
 
+  let statusBadge: PlannedPaymentCardViewModel['statusBadge'] = {
+    variant: 'success',
+    icon: 'calendar',
+    text: 'Active',
+  };
+
+  if (item.status === PlannedPaymentStatus.PAUSED) {
+    statusBadge = {
+      variant: 'default',
+      icon: 'document',
+      text: AppConfig.strings.plannedPayments.statusPaused,
+    };
+  } else if (isOverdue) {
+    statusBadge = {
+      variant: 'error',
+      icon: 'alert',
+      text: 'Overdue',
+    };
+  } else if (isDueSoon) {
+    statusBadge = {
+      variant: 'warning',
+      icon: 'time',
+      text: 'Due Soon',
+    };
+  }
+
+  return {
+    name: item.name,
+    amountText: CurrencyFormatter.format(item.amount, item.currencyCode),
+    amountColor: item.amount < 0 ? 'error' : 'success',
+    intervalLabel: getIntervalLabel(),
+    statusBadge,
+    dateLabel: `Next: ${getSmartDateLabel(item.nextOccurrence)}`,
+    dateColor,
+    iconName: item.amount < 0 ? 'trendingDown' : 'trendingUp',
+    isOverdue,
+  };
+}
+
+function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps) {
+  const { theme } = useTheme();
+  const vm = presentPlannedPaymentCard(item, theme);
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -71,47 +133,29 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
                 borderRadius="md"
                 alignItems="center"
                 justifyContent="center"
-                background={item.amount < 0 ? 'error' : 'success'}
+                background={vm.amountColor === 'error' ? 'error' : 'success'}
                 backgroundOpacity="soft"
               >
-                <AppIcon
-                  name={item.amount < 0 ? 'trendingDown' : 'trendingUp'}
-                  color={item.amount < 0 ? 'error' : 'success'}
-                  size={20}
-                />
+                <AppIcon name={vm.iconName} color={vm.amountColor} size={20} />
               </Box>
               <Column flex={1}>
                 <Text variant="base" weight="bold" numberOfLines={1}>
-                  {item.name}
+                  {vm.name}
                 </Text>
                 <Row align="center" gap="sm" marginTop="xs">
                   <Text variant="xs" color="secondary" opacity={0.6}>
-                    {getIntervalLabel()}
+                    {vm.intervalLabel}
                   </Text>
-                  {item.status === PlannedPaymentStatus.PAUSED ? (
-                    <Badge variant="default" size="sm">
-                      {AppConfig.strings.plannedPayments.statusPaused}
-                    </Badge>
-                  ) : isOverdue ? (
-                    <Badge variant="error" size="sm" icon="alert">
-                      Overdue
-                    </Badge>
-                  ) : isDueSoon ? (
-                    <Badge variant="warning" size="sm" icon="time">
-                      Due Soon
-                    </Badge>
-                  ) : (
-                    <Badge variant="success" size="sm" icon="calendar">
-                      Active
-                    </Badge>
-                  )}
+                  <Badge variant={vm.statusBadge.variant} size="sm" icon={vm.statusBadge.icon}>
+                    {vm.statusBadge.text}
+                  </Badge>
                 </Row>
               </Column>
             </Row>
 
             <Column align="flex-end">
-              <Text variant="lg" weight="bold" color={item.amount < 0 ? 'error' : 'success'}>
-                {CurrencyFormatter.format(item.amount, item.currencyCode)}
+              <Text variant="lg" weight="bold" color={vm.amountColor}>
+                {vm.amountText}
               </Text>
             </Column>
           </Row>
@@ -120,9 +164,9 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
 
           <Row justify="space-between" align="center">
             <Row align="center" gap="xs">
-              <AppIcon name={isOverdue ? 'alert' : 'calendar'} size={14} color={dateColor} />
-              <Text variant="xs" weight="medium" style={{ color: dateColor }}>
-                Next: {getSmartDateLabel(item.nextOccurrence)}
+              <AppIcon name={vm.isOverdue ? 'alert' : 'calendar'} size={14} color={vm.dateColor} />
+              <Text variant="xs" weight="medium" style={{ color: vm.dateColor }}>
+                {vm.dateLabel}
               </Text>
             </Row>
             <AppIcon name="chevronRight" size={16} color={theme.textSecondary} opacity={0.4} />
@@ -132,3 +176,9 @@ export function PlannedPaymentCard({ item, onPress }: PlannedPaymentCardProps) {
     </TouchableOpacity>
   );
 }
+
+const enhance = withObservables(['item'], ({ item }) => ({
+  item: item.observe(),
+}));
+
+export const PlannedPaymentCard = enhance(PlannedPaymentCardComponent);

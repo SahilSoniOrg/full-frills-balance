@@ -1,5 +1,5 @@
 import { JournalStatus } from '@/src/data/models/Journal';
-import PlannedPayment, { PlannedPaymentStatus } from '@/src/data/models/PlannedPayment';
+import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { useJournals } from '@/src/features/journal';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -25,7 +25,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
     20,
     undefined,
     undefined,
-    [JournalStatus.POSTED, JournalStatus.PLANNED, JournalStatus.SKIPPED],
+    [JournalStatus.POSTED, JournalStatus.PLANNED, JournalStatus.SKIPPED, JournalStatus.PAUSED],
     id,
   );
 
@@ -46,11 +46,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
 
   const handleToggleStatus = useCallback(async () => {
     if (!item) return;
-    const newStatus =
-      item.status === PlannedPaymentStatus.ACTIVE
-        ? PlannedPaymentStatus.PAUSED
-        : PlannedPaymentStatus.ACTIVE;
-    await plannedPaymentRepository.update(workplaceId, item, { status: newStatus });
+    const newStatus = await plannedPaymentService.toggleStatus(workplaceId, item);
 
     // Track Analytics
     analytics.trackFeatureUsage('planned_payment', 'toggle_status', {

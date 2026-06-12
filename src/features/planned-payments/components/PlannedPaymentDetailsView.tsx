@@ -265,22 +265,27 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
                 if (dateValue === today) label = 'Due Today';
                 else if (dateValue === tomorrow) label = 'Due Tomorrow';
                 else label = 'Scheduled';
+              } else if (journal.status === 'SKIPPED') {
+                label = 'Skipped';
+              } else if (journal.status === 'PAUSED') {
+                label = 'Paused';
               }
-              if (journal.status === 'SKIPPED') label = 'Skipped';
 
               let typeColor = 'textSecondary';
               if (journal.status === 'PLANNED') {
                 if (isOverdue) typeColor = 'error';
                 else if (isDueSoon) typeColor = 'warning';
                 else typeColor = 'textSecondary';
-              } else if (journal.status === 'SKIPPED') typeColor = 'textSecondary';
-              else
+              } else if (journal.status === 'SKIPPED' || journal.status === 'PAUSED') {
+                typeColor = 'textSecondary';
+              } else {
                 typeColor =
                   journal.displayType === 'INCOME'
                     ? 'income'
                     : journal.displayType === 'EXPENSE'
                       ? 'expense'
                       : 'transfer';
+              }
 
               return (
                 <PlannedPaymentHistoryCard

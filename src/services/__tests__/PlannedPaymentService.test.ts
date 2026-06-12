@@ -402,4 +402,126 @@ describe('PlannedPaymentService', () => {
       expect(ops[0].toAccountId).toBe(targetAccountId);
     });
   });
+
+  describe('toggleStatus', () => {
+    test('Pausing: toggles status to PAUSED and marks future PLANNED journals as PAUSED', async () => {
+      const mockPP = {
+        id: 'pp-1',
+        status: PlannedPaymentStatus.ACTIVE,
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
+          const record = { id: 'pp-1', status: PlannedPaymentStatus.ACTIVE };
+          fn(record);
+          return record;
+        }),
+      };
+
+      const mockJournal = {
+        id: 'j-planned',
+        status: 'PLANNED',
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
+          fn(mockJournal);
+          return mockJournal;
+        }),
+      };
+
+      const journalsFetch = jest.fn().mockResolvedValue([mockJournal]);
+
+      (database.collections.get as jest.Mock).mockImplementation((name: string) => {
+        if (name === 'journals') {
+          return {
+            query: jest.fn().mockReturnThis(),
+            fetch: journalsFetch,
+          };
+        }
+        return {
+          query: jest.fn().mockReturnThis(),
+          fetch: jest.fn().mockResolvedValue([]),
+        };
+      });
+
+      const newStatus = await plannedPaymentService.toggleStatus(
+        'wp-1' as WorkplaceId,
+        mockPP as any,
+      );
+
+      expect(newStatus).toBe(PlannedPaymentStatus.PAUSED);
+      expect(mockPP.prepareUpdate).toHaveBeenCalled();
+      expect(mockJournal.prepareUpdate).toHaveBeenCalled();
+      expect(mockJournal.status).toBe('PAUSED');
+      expect(database.batch).toHaveBeenCalled();
+    });
+
+    test('Resuming: toggles status to ACTIVE, updates paused journals, and processes due payments', async () => {
+      const mockPP = {
+        id: 'pp-1',
+        status: PlannedPaymentStatus.PAUSED,
+        nextOccurrence: Date.now() - 100000000, // in the past
+        intervalN: 1,
+        intervalType: PlannedPaymentInterval.DAILY,
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
+          fn(mockPP);
+          return mockPP;
+        }),
+      };
+
+      const futureDate = Date.now() + 100000;
+      const pastDate = Date.now() - 100000000;
+
+      const mockFutureJournal = {
+        id: 'j-future',
+        journalDate: futureDate,
+        status: 'PAUSED',
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
+          fn(mockFutureJournal);
+          return mockFutureJournal;
+        }),
+      };
+
+      const mockPastJournal = {
+        id: 'j-past',
+        journalDate: pastDate,
+        status: 'PAUSED',
+        prepareUpdate: jest.fn().mockImplementation((fn: any) => {
+          fn(mockPastJournal);
+          return mockPastJournal;
+        }),
+      };
+
+      const journalsFetch = jest.fn().mockResolvedValue([mockFutureJournal, mockPastJournal]);
+
+      (database.collections.get as jest.Mock).mockImplementation((name: string) => {
+        if (name === 'journals') {
+          return {
+            query: jest.fn().mockReturnThis(),
+            fetch: journalsFetch,
+          };
+        }
+        return {
+          query: jest.fn().mockReturnThis(),
+          fetch: jest.fn().mockResolvedValue([]),
+        };
+      });
+
+      const processDueSpy = jest
+        .spyOn(plannedPaymentService, 'processDuePayments')
+        .mockResolvedValue(undefined);
+
+      const oldNextOccurrence = mockPP.nextOccurrence;
+      const newStatus = await plannedPaymentService.toggleStatus(
+        'wp-1' as WorkplaceId,
+        mockPP as any,
+      );
+
+      expect(newStatus).toBe(PlannedPaymentStatus.ACTIVE);
+      expect(mockPP.prepareUpdate).toHaveBeenCalled();
+      expect(mockPP.nextOccurrence).toBeGreaterThan(oldNextOccurrence);
+      expect(mockPP.nextOccurrence).toBeGreaterThanOrEqual(Date.now() - 86400000); // normalized to today midnight
+      expect(mockFutureJournal.prepareUpdate).toHaveBeenCalled();
+      expect(mockPastJournal.prepareUpdate).toHaveBeenCalled();
+      expect(mockFutureJournal.status).toBe('PLANNED');
+      expect(mockPastJournal.status).toBe('SKIPPED');
+      expect(processDueSpy).toHaveBeenCalledWith('wp-1');
+      processDueSpy.mockRestore();
+    });
+  });
 });
