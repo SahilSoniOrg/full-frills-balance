@@ -1,0 +1,32 @@
+New release 🚀
+
+This release takes local AI a step further with the introduction of a local LLM Chatbot!
+
+You can now chat directly with a private AI assistant on your device about your finances or general questions, without your data ever leaving your phone.
+
+---
+
+Also in this update:
+
+* Planned Credit Card Payments: Upcoming credit card payments now show up in your scheduled list, allowing you to instantly record them with a quick confirmation.
+* AI Hardware Selection: Switch between CPU and GPU/NPU backends on the fly for local AI processing.
+* Enhanced Benchmarking: AI Benchmark screen now tracks detailed memory (RAM) usage metrics and execution statistics.
+* Faster AI Parsing: Optimized local AI processing speed by reducing output tokens.
+* Smoother Charts: Improved the interactive projection tooltip on the Safe-to-Spend chart.
+* Import & Restore Fixes: Resolved a database backup import bug where schema fields were misaligned and restored balance snapshots properly.
+
+---
+
+Big difference you’ll notice:
+
+* You can chat with a completely local AI assistant in the app.
+* Recording upcoming credit card bills is now just a single tap away.
+* General performance improvements and upgraded dependencies for a more stable experience.
+
+---
+
+Under the hood, we updated Expo to SDK 56, upgraded core dependencies, resolved minor bugs, and streamlined lazy-loading of widget configurations to ensure faster, more stable app startups.
+
+---
+
+Try the new local AI chatbot and let us know how it runs!
