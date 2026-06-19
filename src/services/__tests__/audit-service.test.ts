@@ -1,8 +1,8 @@
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { accountService } from '@/src/features/accounts/services/AccountService';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { accountService } from '@/src/features/accounts';
+import { journalService } from '@/src/features/journal';
 import { auditService } from '@/src/services/audit-service';
 
 import { revertRegistry } from '@/src/services/revert-registry';
@@ -92,7 +92,7 @@ describe('AuditService', () => {
 
       await auditService.log(entry, 'wp-1' as WorkplaceId);
 
-      expect(auditRepository.log).toHaveBeenCalledWith(entry);
+      expect(auditRepository.log).toHaveBeenCalledWith(entry, 'wp-1');
     });
   });
 

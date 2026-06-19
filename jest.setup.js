@@ -198,7 +198,9 @@ jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
 }));
 
 jest.mock('react-native-nitro-modules', () => ({
-  NitroModules: {},
+  NitroModules: {
+    createHybridObject: jest.fn().mockReturnValue({}),
+  },
   createNitroModule: jest.fn(),
 }));
 

@@ -1,7 +1,7 @@
 import { AuditAction } from '@/src/data/models/AuditLog';
 import { JournalStatus } from '@/src/data/models/Journal';
-import { accountService } from '@/src/features/accounts/services/AccountService';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { accountService } from '@/src/features/accounts';
+import { journalService } from '@/src/features/journal';
 import { revertRegistry } from '@/src/services/revert-registry';
 import {
   AccountAuditState,

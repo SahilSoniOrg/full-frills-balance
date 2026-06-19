@@ -201,8 +201,19 @@ describe('PatternService', () => {
           accountId: 'acc1',
           amount: 10,
           currencyCode: 'USD',
-          occurrenceCount: 6,
-          journalIds: 'j1,j2,j3,j4,j5,j6',
+          description: 'Netflix',
+          occurrenceCount: 3,
+          journalIds: 'j1,j2,j3',
+          transactionDates: `${twoMonthsAgo},${oneMonthAgo},${now}`,
+        },
+        {
+          accountId: 'acc1',
+          amount: 10,
+          currencyCode: 'USD',
+          description: 'Spotify',
+          occurrenceCount: 3,
+          journalIds: 'j4,j5,j6',
+          transactionDates: `${twoMonthsAgo - 5000},${oneMonthAgo - 5000},${now - 5000}`,
         },
       ]);
       (transactionRepository.findByJournals as jest.Mock).mockResolvedValue(mockTransactions);

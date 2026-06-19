@@ -1,12 +1,15 @@
 import { accountService } from '@/src/features/accounts';
+import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { onboardingService } from '../OnboardingService';
 
 jest.mock('@/src/features/accounts/services/AccountService');
+jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     createWorkplace: jest
       .fn()
       .mockResolvedValue({ id: 'mock-workplace-id', name: 'Personal', icon: 'briefcase' }),
+    getAllWorkplaces: jest.fn().mockResolvedValue([]),
   },
 }));
 jest.mock('@/src/data/database/Database', () => ({
@@ -19,12 +22,14 @@ jest.mock('@/src/utils/preferences', () => ({
     setUserName: jest.fn(),
     setDefaultCurrencyCode: jest.fn(),
     setOnboardingCompleted: jest.fn(),
+    setActiveWorkplaceId: jest.fn(),
   },
 }));
 
 describe('OnboardingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (accountRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
 
   it('should complete onboarding by performing all steps transactionally', async () => {
@@ -57,6 +62,7 @@ describe('OnboardingService', () => {
         name: 'Cash',
         currencyCode: 'USD',
       }),
+      'mock-workplace-id',
     );
 
     // Verify category creation
@@ -65,6 +71,7 @@ describe('OnboardingService', () => {
         name: 'Food & Drink',
         currencyCode: 'USD',
       }),
+      'mock-workplace-id',
     );
   });
 });
