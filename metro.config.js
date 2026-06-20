@@ -19,20 +19,52 @@ const nativeNodePolyfills = {
 };
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Fix for "tslib.default is undefined" crash on web
-  if (moduleName === 'tslib') {
+  const currentPlatform = platform || context.platform;
+
+  if (currentPlatform === 'web' && moduleName.includes('turbomodule/NativeNitroModules')) {
     return context.resolveRequest(
       context,
-      path.resolve(__dirname, 'node_modules/tslib/tslib.es6.js'),
-      platform,
+      path.resolve(__dirname, 'src/mocks/NativeNitroModulesMock.ts'),
+      currentPlatform,
     );
   }
 
-  if (platform !== 'web' && nativeNodePolyfills[moduleName]) {
-    return context.resolveRequest(context, nativeNodePolyfills[moduleName], platform);
+  if (currentPlatform === 'web' && moduleName.includes('react-native/Libraries/')) {
+    return { type: 'empty' };
   }
 
-  return context.resolveRequest(context, moduleName, platform);
+  const result = (() => {
+    // Fix for "tslib.default is undefined" crash on web
+    if (moduleName === 'tslib') {
+      return context.resolveRequest(
+        context,
+        path.resolve(__dirname, 'node_modules/tslib/tslib.es6.js'),
+        currentPlatform,
+      );
+    }
+
+    if (currentPlatform !== 'web' && nativeNodePolyfills[moduleName]) {
+      return context.resolveRequest(context, nativeNodePolyfills[moduleName], currentPlatform);
+    }
+
+    return context.resolveRequest(context, moduleName, currentPlatform);
+  })();
+
+  let resolvedResult = result;
+  if (currentPlatform === 'web' && result && result.type === 'sourceFile' && result.filePath) {
+    if (result.filePath.includes('.native.')) {
+      const nonNativePath = result.filePath.replace('.native.', '.');
+      const fs = require('fs');
+      if (fs.existsSync(nonNativePath)) {
+        resolvedResult = {
+          ...result,
+          filePath: nonNativePath,
+        };
+      }
+    }
+  }
+
+  return resolvedResult;
 };
 
 module.exports = config;
