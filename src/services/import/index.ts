@@ -28,4 +28,3 @@ export {
 } from '@/src/services/import/orchestrator';
 export { importRegistry } from '@/src/services/import/registry';
 export type { ImportFileContext, ImportPlugin, ImportStats } from '@/src/services/import/types';
-export { mockDataSeederService } from '@/src/services/import/MockDataSeederService';

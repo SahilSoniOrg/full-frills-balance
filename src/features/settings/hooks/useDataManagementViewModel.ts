@@ -4,7 +4,6 @@ import { useSettingsActions } from '@/src/features/settings/hooks/useSettingsAct
 import { useImport } from '@/src/hooks/use-import';
 import { analytics } from '@/src/services/analytics-service';
 import { sharingService } from '@/src/services/SharingService';
-import { mockDataSeederService } from '@/src/services/import/MockDataSeederService';
 import { ShareFormat } from '@/src/types/sharing';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
@@ -209,6 +208,8 @@ export function useDataManagementViewModel(): DataManagementViewModel {
           setSeedingProgress(0);
           setSeedingProgressMessage('Initializing seeder...');
 
+          const { mockDataSeederService } =
+            await import('@/src/services/import/MockDataSeederService');
           const stats = await mockDataSeederService.seedMockData((message, progress) => {
             setSeedingProgressMessage(message);
             setSeedingProgress(progress ?? 0);
