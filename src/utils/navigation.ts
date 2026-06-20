@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Href, router } from 'expo-router';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/domain';
 
 /**
@@ -96,7 +96,7 @@ export const AppNavigation = {
     const queryString = queryParams.toString();
     const route = queryString ? `/journal-entry?${queryString}` : '/journal-entry';
 
-    router.push(route as any);
+    router.push(route as Href);
   },
 
   /**
@@ -161,7 +161,7 @@ export const AppNavigation = {
         startDate: startDate.toString(),
         endDate: endDate.toString(),
       },
-    } as any);
+    } as Href);
   },
 
   /**
@@ -193,7 +193,7 @@ export const AppNavigation = {
       if (preview.displayType) queryParams.append('displayType', preview.displayType);
     }
 
-    router.push(`/transaction-details?${queryParams.toString()}` as any);
+    router.push(`/transaction-details?${queryParams.toString()}` as Href);
   },
 
   /**
@@ -233,14 +233,14 @@ export const AppNavigation = {
     router.push({
       pathname: '/account-details',
       params,
-    } as any);
+    } as Href);
   },
 
   /**
    * Navigate to the Account Details screen, replacing the current route.
    */
   replaceToAccountDetails: (accountId: AccountId) => {
-    router.replace(`/account-details?accountId=${accountId}` as any);
+    router.replace(`/account-details?accountId=${accountId}` as Href);
   },
 
   /**
@@ -264,7 +264,7 @@ export const AppNavigation = {
       if (preview.icon) queryParams.append('pIcon', preview.icon);
     }
     const queryString = queryParams.toString();
-    router.push((queryString ? `/account-creation?${queryString}` : '/account-creation') as any);
+    router.push((queryString ? `/account-creation?${queryString}` : '/account-creation') as Href);
   },
 
   /**
@@ -272,9 +272,9 @@ export const AppNavigation = {
    */
   toAccountCreation: (type?: string) => {
     if (type) {
-      router.push(`/account-creation?type=${type}` as any);
+      router.push(`/account-creation?type=${type}` as Href);
     } else {
-      router.push('/account-creation' as any);
+      router.push('/account-creation' as Href);
     }
   },
 
@@ -298,7 +298,7 @@ export const AppNavigation = {
       if (preview.currency) queryParams.append('pCurrency', preview.currency);
       if (preview.period) queryParams.append('pPeriod', preview.period);
     }
-    router.push(`/budget-details?${queryParams.toString()}`);
+    router.push(`/budget-details?${queryParams.toString()}` as Href);
   },
 
   /**
@@ -320,63 +320,63 @@ export const AppNavigation = {
       if (preview.currency) queryParams.append('pCurrency', preview.currency);
     }
     const queryString = queryParams.toString();
-    router.push((queryString ? `/budget-edit?${queryString}` : '/budget-edit') as any);
+    router.push((queryString ? `/budget-edit?${queryString}` : '/budget-edit') as Href);
   },
 
   /**
    * Navigate to appearance settings.
    */
   toAppearanceSettings: () => {
-    router.push('/appearance-settings' as any);
+    router.push('/appearance-settings' as Href);
   },
 
   /**
    * Navigate to personalization settings.
    */
   toPersonalizationSettings: () => {
-    router.push('/personalization-settings' as any);
+    router.push('/personalization-settings' as Href);
   },
 
   /**
    * Navigate to data management settings.
    */
   toDataManagementSettings: () => {
-    router.push('/data-management-settings' as any);
+    router.push('/data-management-settings' as Href);
   },
 
   /**
    * Navigate to privacy and security settings.
    */
   toPrivacySecuritySettings: () => {
-    router.push('/privacy-security-settings' as any);
+    router.push('/privacy-security-settings' as Href);
   },
 
   /**
    * Navigate to reminders and automation settings.
    */
   toAutomationSettings: () => {
-    router.push('/automation-settings' as any);
+    router.push('/automation-settings' as Href);
   },
 
   /**
    * Navigate to maintenance and reset settings.
    */
   toMaintenanceSettings: () => {
-    router.push('/maintenance-settings' as any);
+    router.push('/maintenance-settings' as Href);
   },
 
   /**
    * Navigate to about and support settings.
    */
   toAboutSupportSettings: () => {
-    router.push('/about-support-settings' as any);
+    router.push('/about-support-settings' as Href);
   },
 
   /**
    * Navigate to workplace settings.
    */
   toWorkplaceSettings: () => {
-    router.push('/workplace-settings' as any);
+    router.push('/workplace-settings' as Href);
   },
 
   /**
@@ -388,14 +388,14 @@ export const AppNavigation = {
     if (options?.entityId) queryParams.append('entityId', options.entityId);
     const queryString = queryParams.toString();
     const route = queryString ? `/audit-log?${queryString}` : '/audit-log';
-    router.push(route as any);
+    router.push(route as Href);
   },
 
   /**
    * Navigate to the Account Reorder screen.
    */
   toAccountReorder: () => {
-    router.push('/account-reorder' as any);
+    router.push('/account-reorder' as Href);
   },
 
   /**
@@ -403,9 +403,9 @@ export const AppNavigation = {
    */
   toManageHierarchy: (options?: { accountId?: string }) => {
     if (options?.accountId) {
-      router.push(`/manage-hierarchy?accountId=${options.accountId}` as any);
+      router.push(`/manage-hierarchy?accountId=${options.accountId}` as Href);
     } else {
-      router.push('/manage-hierarchy' as any);
+      router.push('/manage-hierarchy' as Href);
     }
   },
 
@@ -413,7 +413,7 @@ export const AppNavigation = {
    * Navigate to the Planned Payments List screen.
    */
   toPlannedPayments: () => {
-    router.push('/planned-payments' as any);
+    router.push('/planned-payments' as Href);
   },
 
   /**
@@ -436,7 +436,7 @@ export const AppNavigation = {
       if (preview.currency) queryParams.append('pCurrency', preview.currency);
       if (preview.nextDate) queryParams.append('pDate', String(preview.nextDate));
     }
-    router.push(`/planned-payment-details?${queryParams.toString()}` as any);
+    router.push(`/planned-payment-details?${queryParams.toString()}` as Href);
   },
 
   /**
@@ -459,7 +459,7 @@ export const AppNavigation = {
     }
     const queryString = queryParams.toString();
     router.push(
-      (queryString ? `/planned-payment-form?${queryString}` : '/planned-payment-form') as any,
+      (queryString ? `/planned-payment-form?${queryString}` : '/planned-payment-form') as Href,
     );
   },
 
@@ -467,21 +467,21 @@ export const AppNavigation = {
    * Navigate to import selection screen.
    */
   toImportSelection: () => {
-    router.push('/import-selection' as any);
+    router.push('/import-selection' as Href);
   },
 
   /**
    * Navigate to SMS rules list.
    */
   toSmsRules: () => {
-    router.push('/sms-rules' as any);
+    router.push('/sms-rules' as Href);
   },
 
   /**
    * Navigate to the unified Transaction Inbox.
    */
   toTransactionInbox: () => {
-    router.push('/sms-inbox' as any);
+    router.push('/sms-inbox' as Href);
   },
 
   /**
@@ -511,9 +511,9 @@ export const AppNavigation = {
     if (seed?.categoryAccountId) seedParams.append('categoryAccountId', seed.categoryAccountId);
     const seedQuery = seedParams.toString();
     if (id) {
-      router.push(`/sms-rule-form?id=${id}` as any);
+      router.push(`/sms-rule-form?id=${id}` as Href);
     } else {
-      router.push((seedQuery ? `/sms-rule-form?${seedQuery}` : '/sms-rule-form') as any);
+      router.push((seedQuery ? `/sms-rule-form?${seedQuery}` : '/sms-rule-form') as Href);
     }
   },
 
@@ -521,7 +521,7 @@ export const AppNavigation = {
    * Navigate to the Hub (Notifications & Insights).
    */
   toHub: () => {
-    router.push('/hub' as any);
+    router.push('/hub' as Href);
   },
 
   /**
@@ -529,7 +529,7 @@ export const AppNavigation = {
    * @deprecated Use toHub instead
    */
   toNotifications: () => {
-    router.push('/hub' as any);
+    router.push('/hub' as Href);
   },
 
   /**
@@ -586,7 +586,7 @@ export const AppNavigation = {
         amount: typeof params.amount === 'number' ? String(params.amount) : undefined,
         currencyCode: params.currencyCode,
       },
-    } as any);
+    } as Href);
   },
 
   /**
@@ -601,7 +601,7 @@ export const AppNavigation = {
    * Navigate to the Reports screen.
    */
   toReports: () => {
-    router.push('/reports' as any);
+    router.push('/reports' as Href);
   },
 
   /**
@@ -626,35 +626,35 @@ export const AppNavigation = {
     if (params?.displayType) queryParams.append('displayType', params.displayType);
 
     const queryString = queryParams.toString();
-    router.push((queryString ? `/journal-search?${queryString}` : '/journal-search') as any);
+    router.push((queryString ? `/journal-search?${queryString}` : '/journal-search') as Href);
   },
 
   /**
    * Navigate to the Design Preview screen.
    */
   toDesignPreview: () => {
-    router.push('/_design-preview' as any);
+    router.push('/_design-preview' as Href);
   },
 
   /**
    * Navigate to a custom route.
    */
   navigate: (route: string) => {
-    router.push(route as any);
+    router.push(route as Href);
   },
 
   /**
    * Navigate to the AI Benchmark screen.
    */
   toAiBenchmark: () => {
-    router.push('/ai-benchmark' as any);
+    router.push('/ai-benchmark' as Href);
   },
 
   /**
    * Navigate to the AI Example replica screen (raw litert-lm test).
    */
   toAiExample: () => {
-    router.push('/ai-example' as any);
+    router.push('/ai-example' as Href);
   },
 
   /**
