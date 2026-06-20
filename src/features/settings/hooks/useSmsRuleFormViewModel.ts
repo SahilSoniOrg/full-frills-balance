@@ -1,5 +1,5 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { database } from '@/src/data/database/Database';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import Account from '@/src/data/models/Account';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
@@ -152,9 +152,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
 
     const loadRule = async () => {
       try {
-        const rule = await database.collections
-          .get<TransactionAutoPostRule>('transaction_auto_post_rules')
-          .find(id);
+        const rule = await transactionAutoPostRuleRepository.find(id);
         const conditions = parseConditions(rule);
         const actions = parseActions(rule);
         const structured = conditions.length > 0;
