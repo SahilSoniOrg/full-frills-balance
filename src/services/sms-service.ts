@@ -16,7 +16,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, EMPTY_ACCOUNT_ID, JournalId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
 import { PermissionError } from '@/src/utils/errors';
 import { safeParseJSON } from '@/src/utils/serialization';
@@ -25,7 +25,11 @@ import { Model, Q } from '@nozbe/watermelondb';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { Observable } from 'rxjs';
 import { rebuildQueueService } from './RebuildQueueService';
-import { SmsExtractor } from './ledger/SmsExtractor';
+import { SmsParser, ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import {
+  transactionAutoPostRuleRepository,
+  SmsRuleDraftInput,
+} from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import {
   RuleMatcher,
   SmsMatchData,
@@ -50,27 +54,11 @@ export {
   SmsRuleCondition,
   SmsRuleActions,
   ResolvedSmsRule,
+  ParsedTransaction,
 };
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
-const smsExtractor = new SmsExtractor();
-
-export interface ParsedTransaction {
-  id: string;
-  amount?: number;
-  merchant?: string;
-  type: 'debit' | 'credit' | 'unknown';
-  date: number;
-  rawBody: string;
-  address: string;
-  accountSource?: string;
-  referenceNumber?: string;
-  currencyCode?: string;
-  confidence: number;
-  parseStatus: InboxParseStatus;
-  parseReason: string;
-}
 
 export interface SmsInboxFilterOptions {
   status?: 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
@@ -90,17 +78,6 @@ export interface SmsRuleSuggestion {
   categoryAccountName: string;
   sampleCount: number;
   sampleMerchants: string[];
-}
-
-export interface SmsRuleDraftInput {
-  id?: string;
-  mode: SmsRuleMode;
-  senderMatch?: string;
-  bodyMatch?: string;
-  conditions?: SmsRuleCondition[];
-  actions: SmsRuleActions;
-  isActive: boolean;
-  priority?: number;
 }
 
 export interface SmsRulePreviewInput {
@@ -133,10 +110,6 @@ interface SmsAnalysisResult {
 
 class SmsService {
   private readonly PROCESSED_SMS_KEY = '@processed_sms_ids';
-
-  private get rules() {
-    return database.collections.get<TransactionAutoPostRule>('transaction_auto_post_rules');
-  }
 
   private get inbox() {
     return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
@@ -310,7 +283,7 @@ class SmsService {
   }
 
   async getRuleSuggestions(workplaceId: WorkplaceId): Promise<SmsRuleSuggestion[]> {
-    const existingRules = await this.rules.query().fetch();
+    const existingRules = await transactionAutoPostRuleRepository.findAllByWorkplace(workplaceId);
     const records = await this.inbox
       .query(
         Q.where('channel', 'sms'),
@@ -375,136 +348,15 @@ class SmsService {
   }
 
   async parseTransactionMessageAsync(sms: SmsMessage): Promise<ParsedTransaction> {
-    const info = await smsExtractor.extract({
-      channel: 'sms',
-      id: sms.id,
-      rawText: sms.body,
-      date: sms.date,
-      senderAddress: sms.address,
-    });
-
-    const isPhoneNumber = /^\+?\d{10,14}$/.test(sms.address);
-    if (isPhoneNumber) {
-      return {
-        id: sms.id,
-        type: 'unknown',
-        date: sms.date,
-        rawBody: sms.body,
-        address: sms.address,
-        confidence: 0,
-        parseStatus: InboxParseStatus.IGNORED,
-        parseReason: 'Personal sender address',
-      };
-    }
-
-    if (info.direction === 'unknown') {
-      return {
-        id: sms.id,
-        type: 'unknown',
-        date: sms.date,
-        rawBody: sms.body,
-        address: sms.address,
-        accountSource: info.sourceAccountHint,
-        referenceNumber: info.referenceNumber,
-        confidence: 0.2,
-        parseStatus: InboxParseStatus.IGNORED,
-        parseReason: 'Not classified as transaction-like',
-      };
-    }
-
-    if (!info.amount) {
-      return {
-        id: sms.id,
-        merchant: info.merchantName,
-        type: info.direction === 'debit' ? 'debit' : 'credit',
-        date: sms.date,
-        rawBody: sms.body,
-        address: sms.address,
-        accountSource: info.sourceAccountHint,
-        referenceNumber: info.referenceNumber,
-        confidence: 0.45,
-        parseStatus: InboxParseStatus.PARSE_FAILED,
-        parseReason: 'Could not find a supported amount',
-      };
-    }
-
-    return {
-      id: sms.id,
-      amount: info.amount,
-      merchant: info.merchantName,
-      type: info.direction === 'debit' ? 'debit' : 'credit',
-      date: sms.date,
-      rawBody: sms.body,
-      address: sms.address,
-      accountSource: info.sourceAccountHint,
-      referenceNumber: info.referenceNumber,
-      currencyCode: info.currencyCode,
-      confidence: info.merchantName ? 0.92 : 0.82,
-      parseStatus: InboxParseStatus.PARSED,
-      parseReason: info.currencyCode
-        ? 'Parsed transaction and currency hint'
-        : 'Parsed transaction amount',
-    };
+    return SmsParser.parse(sms);
   }
 
   async saveAutoPostRule(data: SmsRuleDraftInput, workplaceId: WorkplaceId) {
-    const normalizedConditions = (data.conditions || []).filter(condition =>
-      this.isMeaningfulCondition(condition),
-    );
-    const normalizedActions: SmsRuleActions = {
-      disposition: data.actions.disposition,
-      sourceAccountId: data.actions.sourceAccountId || undefined,
-      categoryAccountId: data.actions.categoryAccountId || undefined,
-      journalDescription: data.actions.journalDescription || undefined,
-    };
-    const senderFallback =
-      data.mode === 'regex'
-        ? data.senderMatch || ''
-        : normalizedConditions.find(condition => condition.field === 'sender')?.value ||
-          'structured';
-    const bodyFallback =
-      data.mode === 'regex'
-        ? data.bodyMatch || undefined
-        : normalizedConditions.find(condition => condition.field === 'body')?.value;
-
-    await database.write(async () => {
-      if (data.id) {
-        const rule = await this.rules.find(data.id);
-        await rule.update(record => {
-          record.channelsJson = JSON.stringify(['sms']);
-          record.senderMatch = senderFallback;
-          record.bodyMatch = bodyFallback;
-          record.conditionsJson =
-            data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
-          record.actionsJson = JSON.stringify(normalizedActions);
-          record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || EMPTY_ACCOUNT_ID;
-          record.categoryAccountId = normalizedActions.categoryAccountId || EMPTY_ACCOUNT_ID;
-          record.isActive = data.isActive;
-        });
-      } else {
-        await this.rules.create(record => {
-          record.workplaceId = workplaceId;
-          record.channelsJson = JSON.stringify(['sms']);
-          record.senderMatch = senderFallback;
-          record.bodyMatch = bodyFallback;
-          record.conditionsJson =
-            data.mode === 'builder' ? JSON.stringify(normalizedConditions) : undefined;
-          record.actionsJson = JSON.stringify(normalizedActions);
-          record.priority = data.priority ?? 100;
-          record.sourceAccountId = normalizedActions.sourceAccountId || EMPTY_ACCOUNT_ID;
-          record.categoryAccountId = normalizedActions.categoryAccountId || EMPTY_ACCOUNT_ID;
-          record.isActive = data.isActive;
-        });
-      }
-    });
+    await transactionAutoPostRuleRepository.save(data, workplaceId);
   }
 
   async deleteAutoPostRule(id: string) {
-    await database.write(async () => {
-      const rule = await this.rules.find(id);
-      await rule.destroyPermanently();
-    });
+    await transactionAutoPostRuleRepository.delete(id);
   }
 
   async getMatchingRule(
@@ -514,9 +366,7 @@ class SmsService {
     workplaceId: WorkplaceId,
   ): Promise<TransactionAutoPostRule | null> {
     const activeRules = (
-      await this.rules
-        .query(Q.where('is_active', true), Q.where('workplace_id', workplaceId))
-        .fetch()
+      await transactionAutoPostRuleRepository.findActiveByWorkplace(workplaceId)
     ).sort((a, b) => this.getRulePriority(b) - this.getRulePriority(a));
 
     const matchData: SmsMatchData = {
@@ -546,9 +396,9 @@ class SmsService {
       return 0;
     }
 
-    const activeRules = (await this.rules.query(Q.where('is_active', true)).fetch()).sort(
-      (a, b) => this.getRulePriority(b) - this.getRulePriority(a),
-    );
+    const activeRules = (
+      await transactionAutoPostRuleRepository.findActiveByWorkplace(workplaceId)
+    ).sort((a, b) => this.getRulePriority(b) - this.getRulePriority(a));
 
     const processedIds = new Set(this.getProcessedSmsIds());
     const existing = await this.inbox
@@ -1220,45 +1070,11 @@ class SmsService {
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
   ): Promise<TransactionAutoPostRule[]> {
-    const rulesSource = await this.rules
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('source_account_id', Q.oneOf(sourceAccountIds)),
-      )
-      .fetch();
-    const rulesCategory = await this.rules
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('category_account_id', Q.oneOf(sourceAccountIds)),
-      )
-      .fetch();
-
-    const mutations = new Map<
-      string,
-      { source?: AccountId; category?: AccountId; record: TransactionAutoPostRule }
-    >();
-
-    rulesSource.forEach(rule => {
-      if (!mutations.has(rule.id)) {
-        mutations.set(rule.id, { record: rule });
-      }
-      mutations.get(rule.id)!.source = targetAccountId;
-    });
-
-    rulesCategory.forEach(rule => {
-      if (!mutations.has(rule.id)) {
-        mutations.set(rule.id, { record: rule });
-      }
-      mutations.get(rule.id)!.category = targetAccountId;
-    });
-
-    return Array.from(mutations.values()).map(({ record, source, category }) => {
-      return record.prepareUpdate((r: TransactionAutoPostRule) => {
-        if (source) r.sourceAccountId = source;
-        if (category) r.categoryAccountId = category;
-        r.updatedAt = new Date();
-      });
-    });
+    return transactionAutoPostRuleRepository.prepareMergeOperations(
+      workplaceId,
+      sourceAccountIds,
+      targetAccountId,
+    );
   }
 }
 

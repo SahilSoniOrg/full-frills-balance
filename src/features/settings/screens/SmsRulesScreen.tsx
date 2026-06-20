@@ -1,15 +1,14 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { database } from '@/src/data/database/Database';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { useAccounts } from '@/src/features/accounts';
 import { SmsRulesView } from '@/src/features/settings/components/SmsRulesView';
 import { useObservable } from '@/src/hooks/useObservable';
 import { SmsRuleSuggestion, smsService } from '@/src/services/sms-service';
-import { Q } from '@nozbe/watermelondb';
 import { withObservables } from '@nozbe/watermelondb/react';
 import { useMemo } from 'react';
 import { from } from 'rxjs';
 import { WorkplaceId } from '@/src/types/domain';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 
 interface RulesProps {
   rules: TransactionAutoPostRule[];
@@ -35,10 +34,7 @@ function SmsRulesContainer({ rules, workplaceId }: RulesProps) {
 const EnhancedSmsRulesContainer = withObservables(
   ['workplaceId'],
   ({ workplaceId }: { workplaceId: WorkplaceId }) => ({
-    rules: database.collections
-      .get<TransactionAutoPostRule>('transaction_auto_post_rules')
-      .query(Q.where('workplace_id', workplaceId))
-      .observe(),
+    rules: transactionAutoPostRuleRepository.observeAllByWorkplace(workplaceId),
   }),
 )(SmsRulesContainer);
 

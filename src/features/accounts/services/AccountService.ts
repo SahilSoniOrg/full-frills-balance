@@ -19,7 +19,7 @@ import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { smsService } from '@/src/services/sms-service';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
@@ -645,7 +645,11 @@ export class AccountService {
           filteredSourceIds,
           targetAccountId,
         ),
-        smsService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
+        transactionAutoPostRuleRepository.prepareMergeOperations(
+          workplaceId,
+          filteredSourceIds,
+          targetAccountId,
+        ),
         budgetWriteService.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
         accountRepository.prepareMergeOperations(workplaceId, filteredSourceIds, targetAccountId),
         balanceSnapshotRepository.prepareMergeOperations(workplaceId, [

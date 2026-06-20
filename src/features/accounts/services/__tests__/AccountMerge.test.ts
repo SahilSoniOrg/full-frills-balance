@@ -5,13 +5,13 @@ import { transactionRepository } from '@/src/data/repositories/TransactionReposi
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
-import { smsService } from '@/src/services/sms-service';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { accountService } from '../AccountService';
 
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/services/PlannedPaymentService');
-jest.mock('@/src/services/sms-service');
+jest.mock('@/src/data/repositories/TransactionAutoPostRuleRepository');
 jest.mock('@/src/services/budget/budgetWriteService');
 jest.mock('@/src/data/repositories/BalanceSnapshotRepository');
 jest.mock('@/src/services/RebuildQueueService');
@@ -26,7 +26,7 @@ describe('AccountService.mergeAccounts', () => {
     // Default mock implementations to return empty arrays
     (transactionRepository.findAllByAccountIds as jest.Mock).mockResolvedValue([]);
     (plannedPaymentService.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
-    (smsService.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
+    (transactionAutoPostRuleRepository.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
     (budgetWriteService.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
     (balanceSnapshotRepository.prepareMergeOperations as jest.Mock).mockResolvedValue([]);
   });
