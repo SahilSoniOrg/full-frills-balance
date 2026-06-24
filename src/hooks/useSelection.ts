@@ -1,5 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { BackHandler } from 'react-native';
+import { useNavigation } from 'expo-router';
 
 export interface UseSelectionOptions<T> {
   onSelectionChange?: (selectedIds: Set<T>) => void;
@@ -83,6 +85,24 @@ export function useSelection<T>(
     options.onExitSelectionMode?.();
     options.onSelectionChange?.(new Set());
   }, [options]);
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    if (!isSelectionModeActive) return;
+
+    const backAction = () => {
+      const isFocused = navigation ? navigation.isFocused() : true;
+      if (isSelectionModeActive && isFocused) {
+        exitSelectionMode();
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [isSelectionModeActive, exitSelectionMode, navigation]);
 
   return {
     selectedIds,

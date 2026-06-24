@@ -1,4 +1,5 @@
-import { AppText, IconButton } from '@/src/components/core';
+import { AppText, IconButton, type IconName } from '@/src/components/core';
+import type { IconButtonProps } from '@/src/components/core/IconButton';
 import { Shape, Size, Spacing, withOpacity, Opacity } from '@/src/constants';
 import { Inline, Inset, Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -7,13 +8,24 @@ import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+export interface SelectionAction {
+  name: IconName;
+  onPress: () => void;
+  variant?: IconButtonProps['variant'];
+  iconColor?: string;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  testID?: string;
+}
+
 export interface SelectionActionBarProps {
   selectedCount: number;
   totalCount: number;
   onClear: () => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
-  onShare: () => void;
+  onShare?: () => void;
+  actions?: SelectionAction[];
   isVisible: boolean;
 }
 
@@ -28,10 +40,27 @@ export const SelectionActionBar = ({
   onSelectAll,
   onDeselectAll,
   onShare,
+  actions,
   isVisible,
 }: SelectionActionBarProps) => {
   const { theme, themeMode } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const finalActions = useMemo(() => {
+    if (actions) return actions;
+    if (onShare) {
+      return [
+        {
+          name: 'share' as IconName,
+          onPress: onShare,
+          variant: 'primary' as const,
+          disabled: selectedCount === 0,
+          accessibilityLabel: 'Share selected items',
+        },
+      ];
+    }
+    return [];
+  }, [actions, onShare, selectedCount]);
 
   // --- Selection State Logic
   const selectionState = useMemo(() => {
@@ -115,14 +144,19 @@ export const SelectionActionBar = ({
                     accessibilityLabel="Toggle all"
                   />
 
-                  <IconButton
-                    name="share"
-                    variant="primary"
-                    size={Size.iconMd}
-                    onPress={onShare}
-                    disabled={selectedCount === 0}
-                    accessibilityLabel="Share selected items"
-                  />
+                  {finalActions.map((action, index) => (
+                    <IconButton
+                      key={`${action.name}-${index}`}
+                      name={action.name}
+                      variant={action.variant ?? 'primary'}
+                      size={Size.iconMd}
+                      iconColor={action.iconColor}
+                      onPress={action.onPress}
+                      disabled={action.disabled ?? selectedCount === 0}
+                      accessibilityLabel={action.accessibilityLabel}
+                      testID={action.testID}
+                    />
+                  ))}
                 </Inline>
               </Inline>
             </Inset>

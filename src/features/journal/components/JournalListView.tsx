@@ -9,7 +9,10 @@ import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import React from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { SelectionActionBar } from '@/src/components/common/SelectionActionBar';
+import {
+  SelectionActionBar,
+  type SelectionAction,
+} from '@/src/components/common/SelectionActionBar';
 
 export interface JournalListViewProps {
   screenTitle?: string;
@@ -52,7 +55,8 @@ export interface JournalListViewProps {
     selectAll: () => void;
     clearItems: () => void;
     exitSelectionMode: () => void;
-    onShareSelected: () => void;
+    onShareSelected?: () => void;
+    actions?: SelectionAction[];
   };
 }
 
@@ -139,7 +143,8 @@ export const JournalListView = React.forwardRef<any, JournalListViewProps>((prop
           onClear={selection?.exitSelectionMode || (() => {})}
           onSelectAll={selection?.selectAll || (() => {})}
           onDeselectAll={selection?.clearItems || (() => {})}
-          onShare={selection?.onShareSelected || (() => {})}
+          onShare={selection?.onShareSelected}
+          actions={selection?.actions}
           isVisible={!!selection?.isSelectionModeActive}
         />
 
