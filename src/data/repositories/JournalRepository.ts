@@ -173,6 +173,7 @@ export class JournalRepository {
         'total_amount',
         'transaction_count',
         'display_type',
+        'updated_at',
         'deleted_at',
       ]);
   }
@@ -641,7 +642,7 @@ export class JournalRepository {
         j.totalAmount = totalAmount ?? j.totalAmount;
         j.transactionCount = transactionData.length;
         j.displayType = displayType ?? j.displayType;
-        j.updatedAt = new Date();
+        (j as any)._setRaw('updated_at', Date.now());
       });
 
       const batchOps: Model[] = [journalUpdate, ...deleteUpdates, ...createUpdates];
@@ -977,7 +978,40 @@ export class JournalRepository {
     `;
 
     const results = await transactionRawRepository.queryRaw<any>(sql, journalIds);
-    return (results || []) as any[];
+    if (results !== null) {
+      return results;
+    }
+
+    // Fallback for LokiJS/Test environment where queryRaw is not supported
+    const journals = await this.journals.query(Q.where('id', Q.oneOf(journalIds))).fetch();
+    const enriched: any[] = [];
+
+    for (const journal of journals) {
+      const txs = await this.transactions
+        .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
+        .fetch();
+
+      for (const tx of txs) {
+        try {
+          const account: any = await database.collections.get('accounts').find(tx.accountId);
+          if (account) {
+            enriched.push({
+              journal_id: journal.id,
+              account_id: tx.accountId,
+              amount: tx.amount,
+              transaction_type: tx.transactionType,
+              account_name: account.name,
+              account_type: account.accountType,
+              account_icon: account.icon,
+            });
+          }
+        } catch (e) {
+          // Account might be deleted/missing in tests
+        }
+      }
+    }
+
+    return enriched;
   }
 }
 

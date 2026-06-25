@@ -592,6 +592,7 @@ export class JournalService {
     options?: { minAmount?: number; maxAmount?: number; displayType?: string },
   ) {
     const clauses: any[] = [
+      Q.experimentalJoinTables(['transactions']),
       Q.where('workplace_id', workplaceId),
       Q.where('deleted_at', Q.eq(null)),
       Q.where('status', Q.oneOf(status || [...ACTIVE_JOURNAL_STATUSES])),
@@ -604,7 +605,6 @@ export class JournalService {
     const accountIds = dateRange?.accountIds || (dateRange?.accountId ? [dateRange.accountId] : []);
 
     if (accountIds.length > 0 && !dateRange?.plannedPaymentId) {
-      clauses.push(Q.experimentalJoinTables(['transactions']));
       clauses.push(Q.on('transactions', Q.where('account_id', Q.oneOf(accountIds))));
     }
 
@@ -658,11 +658,12 @@ export class JournalService {
         'total_amount',
         'transaction_count',
         'display_type',
+        'updated_at',
       ]);
 
-    // Optimized: Single pass enrichment using Raw SQL
     return journalsObservable.pipe(
       switchMap(async journals => {
+        logger.debug(`observeEnrichedJournals emission: length=${journals.length}`);
         if (journals.length === 0) return [] as EnrichedJournal[];
 
         const journalIds = journals.map(j => j.id);
@@ -740,13 +741,28 @@ export class JournalService {
             p.notes !== c.notes ||
             p.totalAmount !== c.totalAmount ||
             p.transactionCount !== c.transactionCount ||
+            p.journalDate !== c.journalDate ||
+            p.currencyCode !== c.currencyCode ||
+            p.displayType !== c.displayType ||
+            p.semanticType !== c.semanticType ||
+            p.semanticLabel !== c.semanticLabel ||
+            p.plannedPaymentId !== c.plannedPaymentId ||
             p.accounts.length !== c.accounts.length
           )
             return false;
 
           for (let j = 0; j < p.accounts.length; j++) {
-            if (p.accounts[j].id !== c.accounts[j].id || p.accounts[j].name !== c.accounts[j].name)
+            const pa = p.accounts[j];
+            const ca = c.accounts[j];
+            if (
+              pa.id !== ca.id ||
+              pa.name !== ca.name ||
+              pa.accountType !== ca.accountType ||
+              pa.role !== ca.role ||
+              pa.icon !== ca.icon
+            ) {
               return false;
+            }
           }
         }
         return true;

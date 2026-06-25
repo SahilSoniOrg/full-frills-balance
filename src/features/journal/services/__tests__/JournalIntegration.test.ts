@@ -442,4 +442,87 @@ describe('JournalRepository', () => {
       expect(results).toHaveLength(0);
     });
   });
+
+  describe('observeEnrichedJournals reactive updates', () => {
+    it('should emit updated accounts when a journal accounts are modified', async () => {
+      // 1. Create a journal with account A and account B
+      const journal = await ledgerWriteService.createJournal(
+        {
+          description: 'Reactive test',
+          notes: 'Standard notes',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      // 2. Observe the enriched journals
+      const observable = journalService.observeEnrichedJournals('wp-1' as WorkplaceId, 10);
+
+      const states: any[][] = [];
+      const sub = observable.subscribe(data => {
+        states.push(data);
+      });
+
+      // Wait a moment for initial emission to settle
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // 3. Create a new account C
+      const accountC = await accountRepository.create({
+        name: 'Account C',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'USD',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      // 4. Update the journal to use account C instead of expenseAccountId
+      const updated = await journalService.updateJournal(
+        journal.id as JournalId,
+        {
+          description: 'Reactive test',
+          notes: 'Standard notes',
+          journalDate: journal.journalDate,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: accountC.id as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      // Wait for async subscription notification to propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      sub.unsubscribe();
+
+      // Verify we received the update and it contains the new account
+      expect(states.length).toBeGreaterThan(1);
+      const lastState = states[states.length - 1];
+      const matchingJournal = lastState.find(j => j.id === journal.id);
+      expect(matchingJournal).toBeDefined();
+
+      const accountIds = matchingJournal!.accounts.map((a: any) => a.id);
+      expect(accountIds).toContain(accountC.id);
+    });
+  });
 });
