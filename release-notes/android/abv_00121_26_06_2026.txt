@@ -1,0 +1,17 @@
+New release 🚀
+
+A focused update on stability, performance, and under-the-hood improvements.
+
+---
+
+Also in this update:
+
+* Reactive Journal Updates: When you add, edit, or delete an account, the journal view now updates automatically without requiring a manual refresh.
+* Smarter SMS Rules: SMS rule management has been split into focused sub-components — match mode selection, recent matches preview, and a rule flow preview — making the setup experience cleaner and easier to follow.
+* Faster Startup: The mock data seeder now lazy-loads, cutting unnecessary work at app startup for a snappier first open.
+* Selection Toolbar Improvements: Cleaner selection UX across list views.
+* Safer Navigation: Navigation helpers now use proper type-safe routes, catching broken links at build time instead of runtime.
+
+---
+
+Under the hood, we refactored the SMS rule engine into a dedicated repository and parser, added web platform shims for Metro, and improved test coverage across journal, import, and audit flows.
