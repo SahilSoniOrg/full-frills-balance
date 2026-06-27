@@ -22,7 +22,7 @@ export const AppText = memo(function AppText({
   align = 'auto',
   weight = 'regular',
   italic = false,
-  tabular = false,
+  tabular = true,
   style,
   children,
   ...props
@@ -129,7 +129,8 @@ export const AppText = memo(function AppText({
 const styles = StyleSheet.create({
   caption: {
     fontSize: Typography.sizes.xs,
-    lineHeight: Math.round(Typography.sizes.xs * Typography.lineHeights.normal),
+    // Micro-copy (<30 chars) gets tight leading — compact labels, badges, dates
+    lineHeight: Math.round(Typography.sizes.xs * Typography.lineHeights.tight),
     letterSpacing: Typography.letterSpacing.normal,
   },
   body: {

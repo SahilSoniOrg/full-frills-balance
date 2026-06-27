@@ -48,8 +48,10 @@ export function Text({
     const isHeading = ['heading', 'title', 'xl', 'hero', 'xxl', 'xxxl'].includes(variant);
 
     // Line height logic based on variant
+    // Micro-copy (xs/caption) gets tight leading; body text gets normal;
+    // long-form content can pass explicit letterSpacing for relaxed.
     const lineHeightMultiplier =
-      isHeading || variant === 'subheading'
+      isHeading || variant === 'subheading' || variant === 'xs'
         ? Typography.lineHeights.tight
         : Typography.lineHeights.normal;
 

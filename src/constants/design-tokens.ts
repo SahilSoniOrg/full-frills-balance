@@ -238,10 +238,14 @@ export const Typography = {
   },
 
   // Line heights for readability
+  // Matched per Content Character Counter (micro <30 chars → 1.2, short-form 30-80 → 1.3,
+  // paragraph 80-300 → 1.5, long-form 300+ → 1.7).
+  // Caption (12px micro-copy) uses tight; body (16px) gets normal for comfortable short-form;
+  // explanatory content gets relaxed.
   lineHeights: {
     tight: 1.2,
-    normal: 1.4,
-    relaxed: 1.6,
+    normal: 1.5,
+    relaxed: 1.7,
   },
 
   // Letter spacing for clean typography
