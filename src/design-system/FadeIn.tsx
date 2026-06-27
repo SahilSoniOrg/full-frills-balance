@@ -1,22 +1,23 @@
-import { View as MotiView } from 'moti'
-import React from 'react'
-import { type ViewStyle } from 'react-native'
+import React from 'react';
+import { View, type ViewStyle } from 'react-native';
+import { View as MotiView } from 'moti';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 
 export type FadeInProps = {
-  children: React.ReactNode
-  delay?: number
-  duration?: number
-  fromY?: number
-  style?: ViewStyle
-}
+  children: React.ReactNode;
+  delay?: number;
+  duration?: number;
+  fromY?: number;
+  style?: ViewStyle;
+};
 
-export function FadeIn({
-  children,
-  delay = 0,
-  duration = 500,
-  fromY = 10,
-  style,
-}: FadeInProps) {
+export function FadeIn({ children, delay = 0, duration = 500, fromY = 10, style }: FadeInProps) {
+  const reduceMotion = useReducedMotion();
+
+  if (reduceMotion) {
+    return <View style={style}>{children}</View>;
+  }
+
   return (
     <MotiView
       from={{ opacity: 0, translateY: fromY }}
@@ -30,5 +31,5 @@ export function FadeIn({
     >
       {children}
     </MotiView>
-  )
+  );
 }

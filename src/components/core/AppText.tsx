@@ -27,7 +27,7 @@ export const AppText = memo(function AppText({
   children,
   ...props
 }: AppTextProps) {
-  const { fonts, getVariantColors, theme } = useTheme();
+  const { fonts, getVariantColors, theme, themeMode } = useTheme();
   const { fontsReady, loadedFontId, fontId } = useUI();
 
   const processedChildren = useMemo(() => processTextChildren(children), [children]);
@@ -63,8 +63,18 @@ export const AppText = memo(function AppText({
       if (variant === 'subheading') {
         return fonts.subheading;
       }
+      // Dark mode weight compensation: light-on-dark text reads optically thinner,
+      // so bump body/caption weight up one step for readability parity with light mode.
+      const compensatedWeight =
+        themeMode === 'dark' && ['body', 'caption'].includes(variant)
+          ? weight === 'regular'
+            ? 'medium'
+            : weight === 'medium'
+              ? 'semibold'
+              : weight
+          : weight;
       // For body/caption, delegate to the weight prop to select the right Sans-Serif file
-      return fonts[weight] || fonts.regular;
+      return fonts[compensatedWeight] || fonts.regular;
     })();
 
     // Safety: If fonts are not ready, log it to help diagnose rendering issues
