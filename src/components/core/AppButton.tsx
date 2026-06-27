@@ -130,6 +130,8 @@ export function AppButton({
       disabled={disabled || loading}
       onPress={onPress}
       activeOpacity={Opacity.heavy}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading }}
       {...props}
     >
       {loading ? (

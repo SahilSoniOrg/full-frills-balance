@@ -41,6 +41,8 @@ export const AppToggle = ({ value, onValueChange, disabled = false }: AppToggleP
       activeOpacity={Opacity.heavy}
       onPress={() => !disabled && onValueChange(!value)}
       disabled={disabled}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value, disabled }}
     >
       <Animated.View
         style={[

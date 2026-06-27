@@ -81,6 +81,8 @@ export function IconButton({
       style={[styles.button, { backgroundColor: config.backgroundColor }, config.elevation, style]}
       hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       {...props}
     >
       <AppIcon name={name} size={size} color={finalIconColor} />
