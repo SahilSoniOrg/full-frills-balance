@@ -125,8 +125,6 @@ const TransactionCardComponent = ({
           },
         ]}
       >
-        {/* ponytail: Color-blind-safe left accent bar — shape indicator alongside color */}
-        <View style={[styles.typeAccent, { backgroundColor: typeColor, opacity: Opacity.soft }]} />
         <Inset space="lg">
           <MotiView
             animate={{ scale: isSelected ? 0.96 : 1 }}
@@ -231,15 +229,6 @@ const styles = StyleSheet.create({
   },
   container: {
     overflow: 'hidden',
-  },
-  typeAccent: {
-    position: 'absolute',
-    left: 0,
-    top: Spacing.lg,
-    bottom: Spacing.lg,
-    width: 3,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
   },
   notes: {
     opacity: Opacity.heavy,
