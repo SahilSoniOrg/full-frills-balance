@@ -166,6 +166,7 @@ export const AccountCard = React.memo(
     prev.account.isExpanded === next.account.isExpanded &&
     prev.account.monthlyIncomeText === next.account.monthlyIncomeText &&
     prev.account.monthlyExpenseText === next.account.monthlyExpenseText &&
+    prev.account.reconciledAt?.getTime() === next.account.reconciledAt?.getTime() &&
     prev.surfaceColor === next.surfaceColor &&
     prev.dividerColor === next.dividerColor,
 );

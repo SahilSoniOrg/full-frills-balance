@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smell Report: Full Frills Balance</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0A0A0C; color: #F0ECE4; line-height: 1.6; padding: 2rem; }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+  .meta { color: #8A8694; font-size: 0.875rem; margin-bottom: 2rem; }
+  .score-hero { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 2.5rem; }
+  .score-number { font-size: 3.5rem; font-weight: 700; letter-spacing: -0.03em; color: #7DD3A8; }
+  .score-label { font-size: 1rem; color: #8A8694; }
+  .verdict { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; background: #1a3d2b; color: #7DD3A8; margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
+  .heuristic { background: #14141A; border-radius: 12px; padding: 1.25rem; margin-bottom: 0.75rem; }
+  .heuristic-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+  .heuristic-name { font-weight: 600; font-size: 1rem; }
+  .status-clean { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em; background: #1a3d2b; color: #7DD3A8; }
+  .status-detected { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.02em; background: #3d1a1a; color: #EB5757; }
+  .heuristic-evidence { color: #8A8694; font-size: 0.875rem; line-height: 1.5; }
+  hr { border: none; border-top: 1px solid #1E1E26; margin: 2rem 0; }
+  .prescription { background: #1E1E26; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.875rem; color: #8A8694; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Smell Report</h1>
+  <div class="meta">Full Frills Balance &middot; Product &middot; 2026-06-27</div>
+
+  <div class="score-hero">
+    <div class="score-number">10</div>
+    <div class="score-label">/10 &mdash; CLEAN</div>
+  </div>
+
+  <div class="verdict">CLEAN &mdash; 0 odors detected</div>
+
+  <h2>Heuristics</h2>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Tech gradient</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">No gradients anywhere. All surfaces use flat colors from semantic tokens.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Generic tech hue</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">Default theme uses mint #7DD3A8. Purple exists only in the Ivy theme with intentional Wallet heritage. Gold, slate, and mint cover the other three themes &mdash; none are the reflex blue-purple.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Feature tile grid</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">No marketing tile grids. Accounts use a SectionList with hierarchy indentation. Dashboard cards show real financial values, not feature tiles.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Accent rail</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">The TransactionCard left accent bar serves color-blind accessibility (shape indicator alongside color), not decorative structure.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Unearned blur</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">No glassmorphism or frosted glass. Modal overlays use solid withOpacity() backgrounds.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Stat monument</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">Hero amounts (72px Safe to Spend) are the product's core proof object. The job is "how much can I spend?" &mdash; the large number answers it directly.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Icon topper</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">Section headers are text-based. Icons appear in cards and list rows with data context, never as decorative toppers above headings.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Bounce everywhere</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">All animations use type: 'timing' with duration. Skeleton pulse is a simple opacity loop. No elastic or bounce easing.</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Default type</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">3 font schemes with project-specific reasoning per theme: Instrument Sans + DM Serif (Deep Space), Raleway (Ivy), Inter + Crimson Text (Editorial).</div>
+  </div>
+
+  <div class="heuristic">
+    <div class="heuristic-header">
+      <div class="heuristic-name">Center stack</div>
+      <span class="status-clean">Absent</span>
+    </div>
+    <div class="heuristic-evidence">Navigation is left-aligned. Section headers are left-aligned. List rows are left-aligned. Hero amounts are centered by domain convention (financial display).</div>
+  </div>
+
+  <hr />
+
+  <h2>Prescription</h2>
+
+  <div class="prescription">No color, type, composition, or voice changes needed. If refinement continues: <code>/design surface</code> for data state hardening, <code>/design interaction</code> for focus management and keyboard navigation.</div>
+</div>
+</body>
+</html>
