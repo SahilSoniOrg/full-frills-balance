@@ -1,6 +1,6 @@
 import { AreaChart } from '@/src/components/charts/AreaChart';
 import { BarChart } from '@/src/components/charts/BarChart';
-import { AppText } from '@/src/components/core';
+import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig, REPORT_CHART_LAYOUT, Spacing } from '@/src/constants';
 import { ReportChartCard } from '@/src/features/reports/components/ReportChartCard';
 import { IncomeExpenseTooltipContent } from '@/src/features/reports/components/ReportTooltip';
@@ -69,13 +69,13 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
         </View>
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.success }]} />
+            <ColoredDot color={theme.success} />
             <AppText variant="caption" color="secondary">
               {AppConfig.strings.reports.assets}
             </AppText>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.error }]} />
+            <ColoredDot color={theme.error} />
             <AppText variant="caption" color="secondary">
               {AppConfig.strings.reports.liabilities}
             </AppText>
@@ -114,11 +114,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  legendDot: {
-    width: Spacing.sm,
-    height: Spacing.sm,
-    borderRadius: Spacing.xs,
   },
   placeholderText: {
     textAlign: 'center',

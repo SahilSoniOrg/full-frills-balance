@@ -1,4 +1,4 @@
-import { AppText } from '@/src/components/core';
+import { AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -64,7 +64,7 @@ export const SafeToSpendBreakdownBar = ({
       <Row gap="sm" wrap="wrap" justify="space-between">
         <TouchableOpacity onPress={() => onLegendPress('safe')} style={{ flexShrink: 1 }}>
           <Row align="center" gap="xs">
-            <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.primary} />
+            <ColoredDot color={theme.primary} />
             <Row gap="xs" style={{ flexShrink: 1 }}>
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.safePrefix}
@@ -78,7 +78,7 @@ export const SafeToSpendBreakdownBar = ({
 
         <TouchableOpacity onPress={() => onLegendPress('committed')} style={{ flexShrink: 1 }}>
           <Row align="center" gap="xs">
-            <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.warning} />
+            <ColoredDot color={theme.warning} />
             <Row gap="xs" style={{ flexShrink: 1 }}>
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.committedPrefix}
@@ -92,7 +92,7 @@ export const SafeToSpendBreakdownBar = ({
 
         <TouchableOpacity onPress={() => onLegendPress('debts')} style={{ flexShrink: 1 }}>
           <Row align="center" gap="xs">
-            <Box width={8} height={8} borderRadius="full" unsafe_backgroundRaw={theme.error} />
+            <ColoredDot color={theme.error} />
             <Row gap="xs" style={{ flexShrink: 1 }}>
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {labels.debtsPrefix}

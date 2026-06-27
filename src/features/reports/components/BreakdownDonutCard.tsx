@@ -1,6 +1,6 @@
 import { DonutChart } from '@/src/components/charts/DonutChart';
-import { AppText } from '@/src/components/core';
-import { Shape, Spacing } from '@/src/constants';
+import { AppText, ColoredDot } from '@/src/components/core';
+import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
@@ -59,12 +59,7 @@ export function BreakdownDonutCard({
             onPress={() => onLegendRowPress(row.id)}
             activeOpacity={REPORT_CHART_LAYOUT.donutLegendRowActiveOpacity}
           >
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: resolveThemeColor(theme, row.color) || theme.border },
-              ]}
-            />
+            <ColoredDot color={resolveThemeColor(theme, row.color) || theme.border} />
             <View style={styles.legendNameWrap}>
               <AppText variant="caption" numberOfLines={1}>
                 {row.accountName}
@@ -114,12 +109,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing.xs,
-  },
-  dot: {
-    width: Spacing.sm,
-    height: Spacing.sm,
-    borderRadius: Shape.radius.full,
-    marginRight: Spacing.sm,
   },
   legendNameWrap: {
     flex: 1,
