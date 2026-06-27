@@ -16,6 +16,8 @@ export type ColoredDotProps = {
 export function ColoredDot({ color, size = 8, rounded = true, style }: ColoredDotProps) {
   return (
     <View
+      importantForAccessibility="no"
+      accessibilityElementsHidden
       style={[
         {
           width: size,

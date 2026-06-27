@@ -34,11 +34,11 @@ const VARIANTS: Record<
   (theme: ReturnType<typeof useTheme>['theme'], disabled: boolean) => VariantConfig
 > = {
   primary: (theme, disabled) => ({
-    backgroundColor: disabled ? theme.textTertiary : theme.primary,
+    backgroundColor: disabled ? theme.surfaceSecondary : theme.primary,
     iconColor: disabled ? theme.textTertiary : theme.onPrimary,
   }),
   surface: (theme, disabled) => ({
-    backgroundColor: disabled ? theme.textTertiary : theme.surface,
+    backgroundColor: disabled ? theme.surfaceSecondary : theme.surface,
     iconColor: disabled ? theme.textTertiary : theme.text,
     elevation: Shape.elevation.sm,
   }),
@@ -47,11 +47,11 @@ const VARIANTS: Record<
     iconColor: disabled ? theme.textTertiary : theme.primary,
   }),
   error: (theme, disabled) => ({
-    backgroundColor: disabled ? theme.textTertiary : theme.error,
+    backgroundColor: disabled ? theme.surfaceSecondary : theme.error,
     iconColor: disabled ? theme.textTertiary : theme.pureInverse,
   }),
   success: (theme, disabled) => ({
-    backgroundColor: disabled ? theme.textTertiary : theme.success,
+    backgroundColor: disabled ? theme.surfaceSecondary : theme.success,
     iconColor: disabled ? theme.textTertiary : theme.pureInverse,
   }),
 };

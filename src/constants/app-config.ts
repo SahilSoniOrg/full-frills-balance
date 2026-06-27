@@ -419,11 +419,11 @@ export const AppConfig = {
         modeTitle: 'Mode',
         deepSpace: {
           label: 'Deep Space',
-          desc: 'Dark blue, high contrast',
+          desc: 'Mint on obsidian, calm authority',
         },
         ivy: {
           label: 'Ivy',
-          desc: 'Clean white, minimal',
+          desc: 'White with purple, clean precision',
         },
         editorial: {
           label: 'Editorial',
@@ -431,19 +431,19 @@ export const AppConfig = {
         },
         goldObsidian: {
           label: 'Gold Obsidian',
-          desc: 'Deep gold and obsidian',
+          desc: 'Gold on obsidian, warm elegance',
         },
         serifSans: {
           label: 'Serif & Sans',
-          desc: 'DM Serif Display + Instrument Sans',
+          desc: 'Elegant serif with clean sans',
         },
         modernGeometric: {
           label: 'Modern Geometric',
-          desc: 'Raleway everywhere',
+          desc: 'Clean geometric sans-serif',
         },
         classicSerif: {
           label: 'Classic Serif',
-          desc: 'Crimson Text + Inter',
+          desc: 'Readable serif with versatile sans',
         },
         customize: 'Customize',
         preview: 'Aa',

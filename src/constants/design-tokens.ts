@@ -479,7 +479,7 @@ export const GoldObsidianPalette = {
   // Text (Bone/Paper)
   textPrimary: '#F0EDE8',
   textSecondary: '#8E8B86',
-  textTertiary: '#5C5A56',
+  textTertiary: '#7A7A7A',
 
   // Brand (Gold)
   gold: '#D4AF37', // Polished Satin Gold (was #C5A050)
@@ -592,7 +592,7 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     border: DeepSpacePalette.surfaceHighlight,
     text: DeepSpacePalette.textPrimary,
     textSecondary: DeepSpacePalette.textSecondary,
-    textTertiary: '#5A5666',
+    textTertiary: '#797979',
     icon: DeepSpacePalette.textSecondary,
     overlay: withOpacity('#000000', Opacity.heavy),
     divider: DeepSpacePalette.surfaceHighlight,
@@ -627,7 +627,7 @@ const IvyTheme: { light: Theme; dark: Theme } = {
     border: IvyPalette.extraLightGray,
     text: IvyPalette.black,
     textSecondary: IvyPalette.gray,
-    textTertiary: IvyPalette.lightGray,
+    textTertiary: '#9191A0',
     icon: IvyPalette.gray,
     overlay: withOpacity('#09090A', Opacity.medium),
     divider: IvyPalette.extraLightGray,
@@ -793,7 +793,7 @@ const GoldObsidianTheme: { light: Theme; dark: Theme } = {
     border: GoldObsidianPalette.surfaceHighlight,
     text: GoldObsidianPalette.textPrimary,
     textSecondary: GoldObsidianPalette.textSecondary,
-    textTertiary: GoldObsidianPalette.textTertiary,
+    textTertiary: '#7A7A7A',
     icon: GoldObsidianPalette.textSecondary,
     overlay: withOpacity('#000000', Opacity.strong),
     divider: GoldObsidianPalette.surfaceHighlight,
