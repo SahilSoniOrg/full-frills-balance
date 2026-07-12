@@ -3,13 +3,16 @@ import { IconName } from '@/src/components/core/AppIcon';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts';
+import { AccountType } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/domain';
 import { traceService } from '@/src/utils/TraceService';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
+import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
@@ -55,7 +58,16 @@ export interface AccountsListViewModel {
   netWorth: number;
   totalAssets: number;
   totalLiabilities: number;
+  totalIncome: number;
+  totalExpense: number;
+  inflowPeriod: 'overall' | 'month' | '30days';
+  setInflowPeriod: (period: 'overall' | 'month' | '30days') => void;
+  inflowIncome: number;
+  inflowExpense: number;
+  isPeriodLoading: boolean;
   currencyCode: string;
+  activeTab: 'accounts' | 'categories';
+  setActiveTab: (tab: 'accounts' | 'categories') => void;
   // Search
   searchQuery: string;
   isSearching: boolean;
@@ -147,10 +159,78 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const togglePrivacyMode = useCallback(() => setIsLocalPrivacyMode(prev => !prev), []);
 
+  const [activeTab, setActiveTab] = useState<'accounts' | 'categories'>('accounts');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(['Equity']));
   const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+
+  const [inflowPeriod, setInflowPeriodState] = useState<'overall' | 'month' | '30days'>('overall');
+  const [periodTotals, setPeriodTotals] = useState<{ income: number; expense: number } | null>(
+    null,
+  );
+  const [isPeriodLoading, setIsPeriodLoading] = useState(false);
+
+  const setInflowPeriod = useCallback((period: 'overall' | 'month' | '30days') => {
+    setInflowPeriodState(period);
+    if (period === 'overall') {
+      setPeriodTotals(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!workplaceId || inflowPeriod === 'overall') {
+      return;
+    }
+
+    let isMounted = true;
+    // Defer loading state update to avoid synchronous cascading render warning
+    Promise.resolve().then(() => {
+      if (isMounted) {
+        setIsPeriodLoading(true);
+      }
+    });
+
+    const fetchTotals = async () => {
+      try {
+        let startDate: number;
+        let endDate: number;
+
+        if (inflowPeriod === 'month') {
+          const range = getCurrentMonthRange();
+          startDate = range.startDate;
+          endDate = range.endDate;
+        } else {
+          const range = getLastNRange(30, 'days');
+          startDate = range.startDate;
+          endDate = range.endDate;
+        }
+
+        const totals = await reportService.getIncomeVsExpense(
+          workplaceId,
+          startDate,
+          endDate,
+          workplaceCurrency,
+        );
+
+        if (isMounted) {
+          setPeriodTotals(totals);
+          setIsPeriodLoading(false);
+        }
+      } catch (err) {
+        logger.error('Failed to fetch period totals:', err);
+        if (isMounted) {
+          setIsPeriodLoading(false);
+        }
+      }
+    };
+
+    fetchTotals();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [inflowPeriod, workplaceId, workplaceCurrency, version]);
 
   const onToggleSection = useCallback((title: string) => {
     setCollapsedSections(prev => {
@@ -200,12 +280,16 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   }, []);
 
   const onCreateAccount = useCallback(() => {
-    AppNavigation.toAccountCreation();
-  }, []);
+    if (activeTab === 'categories') {
+      AppNavigation.toCategoryCreation();
+    } else {
+      AppNavigation.toAccountCreation();
+    }
+  }, [activeTab]);
 
   const onReorderPress = useCallback(() => {
-    AppNavigation.toAccountReorder();
-  }, []);
+    AppNavigation.toAccountReorder(activeTab);
+  }, [activeTab]);
 
   const onTogglePrivacy = useCallback(() => {
     traceService.startTrace('Toggle Privacy Mode');
@@ -213,8 +297,8 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   }, [togglePrivacyMode]);
 
   const onManageHierarchy = useCallback(() => {
-    AppNavigation.toManageHierarchy();
-  }, []);
+    AppNavigation.toManageHierarchy({ filterMode: activeTab });
+  }, [activeTab]);
 
   const onRefresh = useCallback(() => {
     traceService.startTrace('Refresh Account List');
@@ -265,8 +349,29 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   );
 
   const sections = useMemo(() => {
-    return transformAccountsToSections(filteredAccounts, transformOptions);
-  }, [filteredAccounts, transformOptions]);
+    const accountsForTab = filteredAccounts.filter(a => {
+      const isCategory =
+        a.accountType === AccountType.INCOME || a.accountType === AccountType.EXPENSE;
+      return activeTab === 'categories' ? isCategory : !isCategory;
+    });
+    const rawSections = transformAccountsToSections(accountsForTab, transformOptions);
+    // Filter sections based on activeTab
+    if (activeTab === 'accounts') {
+      // Show Assets, Liabilities, Equity and fallback-other
+      return rawSections.filter(
+        s =>
+          !s.type ||
+          [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY].includes(
+            s.type as AccountType,
+          ),
+      );
+    } else {
+      // Show Income and Expense
+      return rawSections.filter(
+        s => s.type && [AccountType.INCOME, AccountType.EXPENSE].includes(s.type as AccountType),
+      );
+    }
+  }, [filteredAccounts, transformOptions, activeTab]);
 
   return {
     sections,
@@ -285,10 +390,19 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     netWorth,
     totalAssets,
     totalLiabilities,
+    totalIncome,
+    totalExpense,
+    inflowPeriod,
+    setInflowPeriod,
+    inflowIncome: inflowPeriod === 'overall' ? totalIncome : periodTotals?.income || 0,
+    inflowExpense: inflowPeriod === 'overall' ? totalExpense : periodTotals?.expense || 0,
+    isPeriodLoading,
     currencyCode: workplaceCurrency,
     searchQuery,
     isSearching,
     onSearchChange: setSearchQuery,
     setIsSearching,
+    activeTab,
+    setActiveTab,
   };
 }

@@ -1,6 +1,7 @@
 export { CurrencySelector } from './components/CurrencySelector';
 export { useAccount, useAccountActions, useAccountBalance, useAccounts } from './hooks/useAccounts';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
+export { default as CategoryCreationScreen } from './screens/CategoryCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';
 export { default as AccountReorderScreen } from './screens/AccountReorderScreen';
 export { default as AccountsListScreen } from './screens/AccountsListScreen';

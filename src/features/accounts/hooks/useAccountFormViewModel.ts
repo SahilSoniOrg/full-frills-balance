@@ -24,7 +24,7 @@ import { showErrorAlert } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, usePathname } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
@@ -60,6 +60,7 @@ export interface AccountFormViewModel {
   heroTitle: string;
   heroSubtitle: string;
   isEditMode: boolean;
+  isCategory: boolean;
   accountName: string;
   setAccountName: (value: string) => void;
   accountType: AccountType;
@@ -144,6 +145,8 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const pCurrency = params.pCurrency as string;
   const pIcon = params.pIcon as string;
 
+  const pathname = usePathname();
+
   const getInitialAccountType = (): AccountType => {
     if (pType) {
       const upperType = pType.toUpperCase() as keyof typeof AccountType;
@@ -157,17 +160,25 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         return upperType as AccountType;
       }
     }
+    if (pathname.includes('category-creation')) {
+      return AccountType.EXPENSE;
+    }
     return AccountType.ASSET;
   };
 
+  const initialType = getInitialAccountType();
+  const isCategory = initialType === AccountType.INCOME || initialType === AccountType.EXPENSE;
+
   // Form State
   const [accountName, setAccountName] = useState(pName || '');
-  const [accountType, setAccountType] = useState<AccountType>(getInitialAccountType());
+  const [accountType, setAccountType] = useState<AccountType>(initialType);
   const [accountSubtype, setAccountSubtype] = useState<AccountSubtype>(
-    getDefaultSubtypeForType(getInitialAccountType()),
+    getDefaultSubtypeForType(initialType),
   );
   const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || workplaceCurrency);
-  const [selectedIcon, setSelectedIcon] = useState<IconName>((pIcon as IconName) || 'wallet');
+  const [selectedIcon, setSelectedIcon] = useState<IconName>(
+    (pIcon as IconName) || (isCategory ? 'tag' : 'wallet'),
+  );
   const [initialBalance, setInitialBalance] = useState('');
   const [parentAccountId, setParentAccountId] = useState(EMPTY_ACCOUNT_ID);
   const [payFromAccountId, setPayFromAccountId] = useState(EMPTY_ACCOUNT_ID);
@@ -200,7 +211,12 @@ export function useAccountFormViewModel(): AccountFormViewModel {
           existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
         );
         setSelectedCurrency(existingAccount.currencyCode);
-        setSelectedIcon(existingAccount.icon || 'wallet');
+        setSelectedIcon(
+          existingAccount.icon ||
+            (existingAccount.accountType === 'INCOME' || existingAccount.accountType === 'EXPENSE'
+              ? 'tag'
+              : 'wallet'),
+        );
         setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
 
         if (balanceData && initialBalance === '' && !hasInjectedRef.current) {
@@ -264,12 +280,15 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const onSave = async () => {
     logger.info(`Saving account: ${accountName} (ID: ${accountId || 'new'})`);
 
-    if (initialBalance && isNaN(Number(initialBalance))) {
+    const isCurrentCategory =
+      accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
+
+    if (!isCurrentCategory && initialBalance && isNaN(Number(initialBalance))) {
       setLocalFormError('Initial balance must be a number');
       return;
     }
 
-    if (accountType === 'LIABILITY') {
+    if (!isCurrentCategory && accountType === 'LIABILITY') {
       const dayFields: Record<string, string> = {
         'Statement Day': statementDay,
         'Due Day': dueDay,
@@ -308,17 +327,20 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     }
 
     const metadata: any = {};
-    if (statementDay) metadata.statementDay = parseInt(statementDay, 10);
-    if (dueDay) metadata.dueDay = parseInt(dueDay, 10);
-    if (creditLimitAmount) metadata.creditLimitAmount = parseFloat(creditLimitAmount);
-    if (apr) metadata.aprBps = Math.round(parseFloat(apr) * 100);
-    if (emiDay) metadata.emiDay = parseInt(emiDay, 10);
-    if (loanTenureMonths) metadata.loanTenureMonths = parseInt(loanTenureMonths, 10);
-    if (minimumPaymentAmount) metadata.minimumPaymentAmount = parseFloat(minimumPaymentAmount);
-    if (minimumPaymentPercent) metadata.minimumPaymentPercent = parseFloat(minimumPaymentPercent);
-    metadata.minPaymentOnly = isMinPaymentOnly;
-    if (payFromAccountId) metadata.payFromAccountId = payFromAccountId;
-    if (notes) metadata.notes = notes;
+    if (!isCurrentCategory) {
+      if (statementDay) metadata.statementDay = parseInt(statementDay, 10);
+      if (dueDay) metadata.dueDay = parseInt(dueDay, 10);
+      if (creditLimitAmount) metadata.creditLimitAmount = parseFloat(creditLimitAmount);
+      if (apr) metadata.aprBps = Math.round(parseFloat(apr) * 100);
+      if (emiDay) metadata.emiDay = parseInt(emiDay, 10);
+      if (loanTenureMonths) metadata.loanTenureMonths = parseInt(loanTenureMonths, 10);
+      if (minimumPaymentAmount) metadata.minimumPaymentAmount = parseFloat(minimumPaymentAmount);
+      if (minimumPaymentPercent) metadata.minimumPaymentPercent = parseFloat(minimumPaymentPercent);
+      metadata.minPaymentOnly = isMinPaymentOnly;
+      if (payFromAccountId) metadata.payFromAccountId = payFromAccountId;
+      if (notes) metadata.notes = notes;
+    }
+
     try {
       await persistence.handleSave(
         accountName,
@@ -326,10 +348,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         accountSubtype,
         selectedCurrency,
         selectedIcon,
-        initialBalance,
-        balanceData || undefined, // currentBalanceData
+        isCurrentCategory ? '' : initialBalance,
+        isCurrentCategory ? undefined : balanceData || undefined,
         parentAccountId || undefined,
-        Object.keys(metadata).length > 0 ? metadata : undefined,
+        !isCurrentCategory && Object.keys(metadata).length > 0 ? metadata : undefined,
       );
 
       // Note: handleSave in persistence already calls router.back()
@@ -342,17 +364,30 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const hasExistingAccounts = accounts.length > 0;
   const heroTitle = isEditMode
-    ? 'Edit Account'
-    : hasExistingAccounts
-      ? 'Create New Account'
-      : 'Create Your First Account';
-  const heroSubtitle = isEditMode
-    ? 'Update your account details'
-    : hasExistingAccounts
-      ? 'Add another source of funds'
-      : 'Start tracking your finances';
+    ? accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
+      ? AppConfig.strings.accounts.categoryForm.formTitleEdit
+      : 'Edit Account'
+    : accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
+      ? AppConfig.strings.accounts.categoryForm.formTitleNew
+      : hasExistingAccounts
+        ? 'Create New Account'
+        : 'Create Your First Account';
+  const heroSubtitle =
+    accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
+      ? ''
+      : isEditMode
+        ? 'Update your account details'
+        : hasExistingAccounts
+          ? 'Add another source of funds'
+          : 'Start tracking your finances';
 
-  const saveLabel = isEditMode ? 'Save Changes' : 'Create Account';
+  const saveLabel = isEditMode
+    ? accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
+      ? AppConfig.strings.accounts.categoryForm.saveChanges
+      : 'Save Changes'
+    : accountType === AccountType.INCOME || accountType === AccountType.EXPENSE
+      ? AppConfig.strings.accounts.categoryForm.createCategory
+      : 'Create Account';
 
   const currencyLabel = useMemo(() => {
     return `Currency${isEditMode ? ' (cannot be changed)' : ''}`;
@@ -383,8 +418,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   }, [payFromAccountId, accounts]);
 
   const effectiveIsParent = isParent;
-  const showCurrency = true;
-  const showBalance = !effectiveIsParent;
+  const isCurrentCategory =
+    accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
+  const showCurrency = !isCurrentCategory;
+  const showBalance = !isCurrentCategory && !effectiveIsParent;
 
   const availableSubtypes = useMemo(() => {
     return getAccountSubtypesForType(accountType);
@@ -394,6 +431,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     heroTitle,
     heroSubtitle,
     isEditMode,
+    isCategory: isCurrentCategory,
     accountName,
     setAccountName,
     accountType,

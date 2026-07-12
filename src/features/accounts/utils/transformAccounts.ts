@@ -1,6 +1,6 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
-import Account from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   getAccountAccentColor,
@@ -34,6 +34,7 @@ export interface AccountSectionViewModel {
   totalColor: string;
   isCollapsed: boolean;
   data: AccountCardViewModel[];
+  type?: string;
 }
 
 interface BalancesByAccountId {
@@ -103,14 +104,14 @@ export function transformAccountsToSections(
   const rawSections = getAccountSections(accounts);
 
   const sections = rawSections.map(section => {
-    const sectionColor = getSectionColor(section.title, theme);
+    const sectionColor = getSectionColor(section.type || section.title, theme);
 
     let sectionTotal = 0;
-    if (section.title === 'Assets') sectionTotal = totalAssets;
-    else if (section.title === 'Liabilities') sectionTotal = totalLiabilities;
-    else if (section.title === 'Equity') sectionTotal = totalEquity;
-    else if (section.title === 'Income') sectionTotal = totalIncome;
-    else if (section.title === 'Expenses') sectionTotal = totalExpense;
+    if (section.type === AccountType.ASSET) sectionTotal = totalAssets;
+    else if (section.type === AccountType.LIABILITY) sectionTotal = totalLiabilities;
+    else if (section.type === AccountType.EQUITY) sectionTotal = totalEquity;
+    else if (section.type === AccountType.INCOME) sectionTotal = totalIncome;
+    else if (section.type === AccountType.EXPENSE) sectionTotal = totalExpense;
 
     const totalDisplay = isPrivacyMode
       ? '••••'
@@ -250,6 +251,7 @@ export function transformAccountsToSections(
       totalColor: sectionColor,
       isCollapsed: collapsedSections.has(section.title),
       data: flattenedData,
+      type: section.type,
     };
   });
 

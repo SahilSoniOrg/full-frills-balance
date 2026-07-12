@@ -89,6 +89,8 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     );
   }
 
+  const isCategory = accountType === 'INCOME' || accountType === 'EXPENSE';
+
   const headerActionsNode = (
     <ScreenHeaderActions
       actions={
@@ -121,18 +123,20 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
                 iconColor: theme.text,
                 testID: 'edit-button',
               },
-              {
-                name: 'checkCircle',
-                onPress: headerActions.onReconcile,
-                variant: 'surface',
-                iconColor:
-                  vm.unreconciledCount > 0
-                    ? theme.warning
-                    : vm.reconciledAt
-                      ? theme.success
-                      : theme.textSecondary,
-                testID: 'reconcile-button',
-              },
+              !isCategory
+                ? {
+                    name: 'checkCircle',
+                    onPress: headerActions.onReconcile,
+                    variant: 'surface',
+                    iconColor:
+                      vm.unreconciledCount > 0
+                        ? theme.warning
+                        : vm.reconciledAt
+                          ? theme.success
+                          : theme.textSecondary,
+                    testID: 'reconcile-button',
+                  }
+                : null,
               headerActions.canDelete
                 ? {
                     name: 'delete',
@@ -156,9 +160,17 @@ export function AccountDetailsView(vm: AccountDetailsViewModel) {
     />
   );
 
+  const screenTitle = isParent
+    ? isCategory
+      ? 'Group Category'
+      : 'Group Account'
+    : isCategory
+      ? 'Category Details'
+      : 'Account Details';
+
   return (
     <Screen
-      title={isParent ? 'Group Account' : 'Account Details'}
+      title={screenTitle}
       headerActions={headerActionsNode}
       onBack={isSelectionModeActive ? exitSelectionMode : onBack}
       showBack={true}

@@ -40,24 +40,37 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   const { balancesByAccountId } = useAccountBalances(workplaceId, accounts, defaultCurrencyCode);
   const { updateAccount } = useAccountActions(workplaceId);
 
-  const params = useLocalSearchParams<{ accountId?: AccountId }>();
+  const params = useLocalSearchParams<{
+    accountId?: AccountId;
+    filterMode?: 'accounts' | 'categories';
+  }>();
   const initialFocusedId = params.accountId || null;
+  const filterMode = params.filterMode || 'accounts';
 
   const [selectedAccountId, setSelectedAccountId] = useState<AccountId | null>(initialFocusedId);
   const [expandedAccountIds, setExpandedAccountIds] = useState<Set<string>>(new Set());
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
+  // Filter accounts list to only match the current workspace mode
+  const filteredAccounts = useMemo(() => {
+    if (filterMode === 'categories') {
+      return accounts.filter(a => a.accountType === 'INCOME' || a.accountType === 'EXPENSE');
+    } else {
+      return accounts.filter(a => a.accountType !== 'INCOME' && a.accountType !== 'EXPENSE');
+    }
+  }, [accounts, filterMode]);
+
   // Auto-expand parents of the focused account
   useEffect(() => {
-    if (!initialFocusedId || accounts.length === 0) return;
+    if (!initialFocusedId || filteredAccounts.length === 0) return;
 
     const expanded = new Set<string>();
-    let current = accounts.find((a: Account) => a.id === initialFocusedId);
+    let current = filteredAccounts.find((a: Account) => a.id === initialFocusedId);
 
     while (current?.parentAccountId) {
       expanded.add(current.parentAccountId);
       const parentId = current.parentAccountId;
-      current = accounts.find((a: Account) => a.id === parentId);
+      current = filteredAccounts.find((a: Account) => a.id === parentId);
     }
 
     if (expanded.size > 0) {
@@ -65,7 +78,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
     }
 
     // Ensure category is expanded
-    const focusedAccount = accounts.find((a: Account) => a.id === initialFocusedId);
+    const focusedAccount = filteredAccounts.find((a: Account) => a.id === initialFocusedId);
     if (focusedAccount) {
       setTimeout(
         () =>
@@ -77,11 +90,11 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
         0,
       );
     }
-  }, [initialFocusedId, accounts]);
+  }, [initialFocusedId, filteredAccounts]);
 
   const accountsByParent = useMemo(() => {
     const groups = new Map<AccountId | null, Account[]>();
-    accounts.forEach((account: Account) => {
+    filteredAccounts.forEach((account: Account) => {
       const parentId = account.parentAccountId || null;
       if (!groups.has(parentId)) {
         groups.set(parentId, []);
@@ -89,11 +102,11 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
       groups.get(parentId)!.push(account);
     });
     return groups;
-  }, [accounts]);
+  }, [filteredAccounts]);
 
   const rootAccounts = useMemo(
-    () => accounts.filter((account: Account) => !account.parentAccountId),
-    [accounts],
+    () => filteredAccounts.filter((account: Account) => !account.parentAccountId),
+    [filteredAccounts],
   );
 
   const visibleRootAccountsByCategory = useMemo(() => {
@@ -113,8 +126,8 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   }, [accountsByParent, balancesByAccountId, rootAccounts]);
 
   const selectedAccount = useMemo(
-    () => accounts.find(account => account.id === selectedAccountId),
-    [accounts, selectedAccountId],
+    () => filteredAccounts.find(account => account.id === selectedAccountId),
+    [filteredAccounts, selectedAccountId],
   );
 
   const canSelectedAccountBeParent = useMemo(() => {
@@ -140,7 +153,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
   const addChildCandidates = useMemo(() => {
     if (!selectedAccount) return [];
 
-    return accounts.filter((account: Account) => {
+    return filteredAccounts.filter((account: Account) => {
       const isOwnParent = account.id === selectedAccount.id;
       const isCurrentParent = account.id === selectedAccount.parentAccountId;
       const isDescendant = descendantIds.has(account.id);
@@ -148,12 +161,12 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
       const sameType = account.accountType === selectedAccount.accountType;
       return !isOwnParent && !isCurrentParent && !isDescendant && !isAlreadyChild && sameType;
     });
-  }, [accounts, selectedAccount, descendantIds]);
+  }, [filteredAccounts, selectedAccount, descendantIds]);
 
   const parentCandidates = useMemo(() => {
     if (!selectedAccount) return [];
 
-    return accounts.filter(account => {
+    return filteredAccounts.filter(account => {
       const isDescendant = descendantIds.has(account.id);
       const isCurrentParent = account.id === selectedAccount.parentAccountId;
       const balance = balancesByAccountId.get(account.id);
@@ -162,7 +175,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
       const sameType = account.accountType === selectedAccount.accountType;
       return !isSameAccount && !isCurrentParent && !isDescendant && canTakeChild && sameType;
     });
-  }, [accounts, balancesByAccountId, selectedAccount, descendantIds]);
+  }, [filteredAccounts, balancesByAccountId, selectedAccount, descendantIds]);
 
   const onToggleExpand = useCallback((accountId: AccountId) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -186,7 +199,7 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
 
   const onAssignParent = useCallback(
     async (accountId: AccountId, parentId: AccountId | null) => {
-      const account = accounts.find((candidate: Account) => candidate.id === accountId);
+      const account = filteredAccounts.find((candidate: Account) => candidate.id === accountId);
       if (!account) return;
 
       try {
@@ -200,12 +213,12 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
 
       setSelectedAccountId(null);
     },
-    [accounts, updateAccount],
+    [filteredAccounts, updateAccount],
   );
 
   const onAddChild = useCallback(
     async (parentId: AccountId, childId: AccountId) => {
-      const childAccount = accounts.find((candidate: Account) => candidate.id === childId);
+      const childAccount = filteredAccounts.find((candidate: Account) => candidate.id === childId);
       if (!childAccount) return;
 
       try {
@@ -217,19 +230,23 @@ export function useManageHierarchyViewModel(): ManageHierarchyViewModel {
 
       setSelectedAccountId(null);
     },
-    [accounts, updateAccount],
+    [filteredAccounts, updateAccount],
   );
 
   const onCreateParent = useCallback(() => {
-    AppNavigation.toAccountCreation();
-  }, []);
+    if (filterMode === 'categories') {
+      AppNavigation.toCategoryCreation();
+    } else {
+      AppNavigation.toAccountCreation();
+    }
+  }, [filterMode]);
 
   const onSelectAccount = useCallback((accountId: AccountId | null) => {
     setSelectedAccountId(accountId);
   }, []);
 
   return {
-    accounts,
+    accounts: filteredAccounts,
     balancesByAccountId,
     selectedAccountId,
     selectedAccount,

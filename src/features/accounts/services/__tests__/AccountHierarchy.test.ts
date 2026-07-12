@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { accountService } from '../AccountService';
@@ -12,6 +13,12 @@ describe('Account Hierarchy Integration', () => {
   beforeEach(async () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
+    });
+    await workplaceRepository.create({
+      id: workplaceId,
+      name: 'Test Workplace',
+      icon: 'briefcase',
+      defaultCurrencyCode: 'USD',
     });
   });
 

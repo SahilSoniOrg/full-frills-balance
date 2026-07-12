@@ -279,6 +279,41 @@ export const AppNavigation = {
   },
 
   /**
+   * Navigate to the Category Form screen (Create or Edit).
+   */
+  toCategoryForm: (
+    accountId?: string,
+    preview?: {
+      name?: string;
+      type?: string;
+      currency?: string;
+      icon?: string;
+    },
+  ) => {
+    const queryParams = new URLSearchParams();
+    if (accountId) queryParams.append('accountId', accountId);
+    if (preview) {
+      if (preview.name) queryParams.append('pName', preview.name);
+      if (preview.type) queryParams.append('pType', preview.type);
+      if (preview.currency) queryParams.append('pCurrency', preview.currency);
+      if (preview.icon) queryParams.append('pIcon', preview.icon);
+    }
+    const queryString = queryParams.toString();
+    router.push((queryString ? `/category-creation?${queryString}` : '/category-creation') as Href);
+  },
+
+  /**
+   * Navigate to category creation route with optional preselected type.
+   */
+  toCategoryCreation: (type?: string) => {
+    if (type) {
+      router.push(`/category-creation?type=${type}` as Href);
+    } else {
+      router.push('/category-creation' as Href);
+    }
+  },
+
+  /**
    * Navigate to the Budget Detail screen.
    */
   toBudgetDetail: (
@@ -394,19 +429,24 @@ export const AppNavigation = {
   /**
    * Navigate to the Account Reorder screen.
    */
-  toAccountReorder: () => {
-    router.push('/account-reorder' as Href);
+  toAccountReorder: (filterMode?: 'accounts' | 'categories') => {
+    if (filterMode) {
+      router.push(`/account-reorder?filterMode=${filterMode}` as Href);
+    } else {
+      router.push('/account-reorder' as Href);
+    }
   },
 
   /**
    * Navigate to the Manage Hierarchy screen.
    */
-  toManageHierarchy: (options?: { accountId?: string }) => {
-    if (options?.accountId) {
-      router.push(`/manage-hierarchy?accountId=${options.accountId}` as Href);
-    } else {
-      router.push('/manage-hierarchy' as Href);
-    }
+  toManageHierarchy: (options?: { accountId?: string; filterMode?: 'accounts' | 'categories' }) => {
+    const queryParams = new URLSearchParams();
+    if (options?.accountId) queryParams.append('accountId', options.accountId);
+    if (options?.filterMode) queryParams.append('filterMode', options.filterMode);
+    const queryString = queryParams.toString();
+    const route = queryString ? `/manage-hierarchy?${queryString}` : '/manage-hierarchy';
+    router.push(route as Href);
   },
 
   /**

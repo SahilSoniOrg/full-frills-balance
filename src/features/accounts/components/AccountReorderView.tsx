@@ -12,11 +12,12 @@ export function AccountReorderView({
   isLoading,
   onMove,
   onBack,
+  title,
 }: AccountReorderViewModel) {
   if (isLoading) return null;
 
   return (
-    <Screen title="Reorder Accounts" showBack backIcon="close" onBack={onBack}>
+    <Screen title={title} showBack backIcon="close" onBack={onBack}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <AppText variant="caption" color="secondary" style={styles.tipText}>
           Manual ordering affects all lists. Accounts are grouped by category but follow this

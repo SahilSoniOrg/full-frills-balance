@@ -11,6 +11,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { analytics } from '@/src/services/analytics-service';
 import { auditService } from '@/src/services/audit-service';
@@ -19,7 +20,6 @@ import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
@@ -547,11 +547,16 @@ export class AccountService {
     potentialDescendantId: AccountId,
     workplaceId: WorkplaceId,
   ): Promise<boolean> {
-    let currentParentId = (await accountRepository.find(workplaceId, potentialDescendantId))
-      ?.parentAccountId;
+    if (potentialParentId === potentialDescendantId) return true;
+
+    let currentParentId: AccountId | undefined = potentialParentId;
+    const visited = new Set<AccountId>();
 
     while (currentParentId) {
-      if (currentParentId === potentialParentId) return true;
+      if (currentParentId === potentialDescendantId) return true;
+      if (visited.has(currentParentId)) break;
+      visited.add(currentParentId);
+
       const parent = await accountRepository.find(workplaceId, currentParentId);
       currentParentId = parent?.parentAccountId;
     }

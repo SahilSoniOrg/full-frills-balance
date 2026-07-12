@@ -1,5 +1,7 @@
+import { CashFlowCard } from '@/src/components/common/CashFlowCard';
 import { NetWorthCard } from '@/src/components/common/NetWorthCard';
 import {
+  AppTabs,
   AppText,
   ExpandableSearchButton,
   FloatingActionButton,
@@ -15,6 +17,11 @@ import {
 } from '@/src/features/accounts/utils/transformAccounts';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+
+const TAB_OPTIONS = [
+  { id: 'accounts' as const, label: 'Accounts' },
+  { id: 'categories' as const, label: 'Categories' },
+] as const;
 
 export function AccountsListView({
   sections,
@@ -32,11 +39,18 @@ export function AccountsListView({
   netWorth,
   totalAssets,
   totalLiabilities,
+  inflowPeriod,
+  setInflowPeriod,
+  inflowIncome,
+  inflowExpense,
+  isPeriodLoading,
   currencyCode,
   searchQuery,
   isSearching,
   onSearchChange,
   setIsSearching,
+  activeTab,
+  setActiveTab,
 }: AccountsListViewModel) {
   const { theme } = useTheme();
 
@@ -85,6 +99,10 @@ export function AccountsListView({
       headerActions={headerActions}
     >
       <View style={styles.container}>
+        <View style={styles.tabContainer}>
+          <AppTabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
+        </View>
+
         <SectionList
           sections={sections}
           refreshing={isRefreshing}
@@ -92,9 +110,9 @@ export function AccountsListView({
           keyExtractor={(item: AccountCardViewModel) => item.id}
           renderSectionHeader={({ section }: { section: AccountSectionViewModel }) => {
             const isStartOfGroup =
-              section.title === 'Expenses' ||
-              section.title === 'Liabilities' ||
-              section.title === 'Equity';
+              section.type === 'EXPENSE' ||
+              section.type === 'LIABILITY' ||
+              section.type === 'EQUITY';
             return (
               <TouchableOpacity
                 onPress={() => onToggleSection(section.title)}
@@ -149,17 +167,32 @@ export function AccountsListView({
             );
           }}
           ListHeaderComponent={
-            <View style={styles.header}>
-              <NetWorthCard
-                netWorth={netWorth}
-                totalAssets={totalAssets}
-                totalLiabilities={totalLiabilities}
-                currencyCode={currencyCode}
-                isLoading={isLoading}
-                hidden={isPrivacyMode}
-                onToggleHidden={onTogglePrivacy}
-              />
-            </View>
+            activeTab === 'accounts' ? (
+              <View style={styles.header}>
+                <NetWorthCard
+                  netWorth={netWorth}
+                  totalAssets={totalAssets}
+                  totalLiabilities={totalLiabilities}
+                  currencyCode={currencyCode}
+                  isLoading={isLoading}
+                  hidden={isPrivacyMode}
+                  onToggleHidden={onTogglePrivacy}
+                />
+              </View>
+            ) : (
+              <View style={styles.header}>
+                <CashFlowCard
+                  totalIncome={inflowIncome}
+                  totalExpense={inflowExpense}
+                  inflowPeriod={inflowPeriod}
+                  onChangePeriod={setInflowPeriod}
+                  currencyCode={currencyCode}
+                  isLoading={isLoading || isPeriodLoading}
+                  hidden={isPrivacyMode}
+                  onToggleHidden={onTogglePrivacy}
+                />
+              </View>
+            )
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
@@ -168,7 +201,9 @@ export function AccountsListView({
               ) : (
                 <View style={styles.emptyStateContent}>
                   <AppText variant="body" color="secondary">
-                    No accounts yet. Create your first account to get started!
+                    {activeTab === 'categories'
+                      ? 'No categories yet. Create your first category to get started!'
+                      : 'No accounts yet. Create your first account to get started!'}
                   </AppText>
                 </View>
               )}
@@ -181,9 +216,11 @@ export function AccountsListView({
         {!isSearching ? (
           <FloatingActionButton
             onPress={onCreateAccount}
-            label="New Account"
+            label={activeTab === 'categories' ? 'New Category' : 'New Account'}
             placement="end"
-            accessibilityLabel="Create a new account"
+            accessibilityLabel={
+              activeTab === 'categories' ? 'Create a new category' : 'Create a new account'
+            }
           />
         ) : null}
       </View>
@@ -194,6 +231,9 @@ export function AccountsListView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  tabContainer: {
+    paddingTop: Spacing.md,
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,

@@ -9,8 +9,8 @@ import { SectionLabel } from './SectionLabel';
 interface FormHeroSectionProps {
   nameValue: string;
   onNameChange: (text: string) => void;
-  amountValue: string;
-  onAmountChange: (text: string) => void;
+  amountValue?: string;
+  onAmountChange?: (text: string) => void;
   namePlaceholder?: string;
   amountPlaceholder?: string;
   nameLabel?: string;
@@ -18,6 +18,7 @@ interface FormHeroSectionProps {
   footer?: ReactNode;
   prefix?: ReactNode;
   nameAlign?: 'left' | 'center';
+  showAmount?: boolean;
 }
 
 /**
@@ -27,8 +28,8 @@ interface FormHeroSectionProps {
 export const FormHeroSection = ({
   nameValue,
   onNameChange,
-  amountValue,
-  onAmountChange,
+  amountValue = '',
+  onAmountChange = () => {},
   namePlaceholder = 'e.g., Groceries',
   amountPlaceholder = '0.00',
   nameLabel = 'Name',
@@ -36,6 +37,7 @@ export const FormHeroSection = ({
   footer,
   prefix,
   nameAlign = 'center',
+  showAmount = true,
 }: FormHeroSectionProps) => {
   const { theme, fonts } = useTheme();
 
@@ -66,16 +68,20 @@ export const FormHeroSection = ({
         </Box>
       </Inline>
 
-      <SectionLabel
-        label={amountLabel}
-        marginTop="none"
-        style={{ marginBottom: Spacing.xs, letterSpacing: 1 }}
-      />
-      <HeroNumberInput
-        value={amountValue}
-        onChangeText={onAmountChange}
-        placeholder={amountPlaceholder}
-      />
+      {showAmount && (
+        <>
+          <SectionLabel
+            label={amountLabel}
+            marginTop="none"
+            style={{ marginBottom: Spacing.xs, letterSpacing: 1 }}
+          />
+          <HeroNumberInput
+            value={amountValue}
+            onChangeText={onAmountChange}
+            placeholder={amountPlaceholder}
+          />
+        </>
+      )}
 
       {footer && <Box marginTop="md">{footer}</Box>}
 

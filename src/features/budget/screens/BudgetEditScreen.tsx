@@ -203,13 +203,13 @@ export default function BudgetEditScreen() {
             </Stack>
           </FormSectionGroup>
 
-          <FormSectionGroup title="Accounts">
+          <FormSectionGroup title="Scope">
             <Stack space="md" paddingHorizontal="md">
               <AccountSelectionRow
-                title="Target Accounts"
+                title="Target Categories"
                 accounts={expenseAccounts}
                 selectedAccountIds={selectedAccountIds}
-                placeholder="Select accounts"
+                placeholder="Select categories"
                 onPress={() => setIsAccountPickerVisible(true)}
                 style={{
                   paddingHorizontal: 0,
@@ -219,7 +219,7 @@ export default function BudgetEditScreen() {
               />
 
               <AccountSelectionRow
-                title="Source Accounts"
+                title="Funding Accounts"
                 accounts={liquidAssetAccounts}
                 selectedAccountIds={assetAccountIds}
                 placeholder="Select accounts"
@@ -235,7 +235,7 @@ export default function BudgetEditScreen() {
         visible={isAccountPickerVisible}
         accounts={expenseAccounts}
         selectedIds={selectedAccountIds}
-        title="Select Scope Accounts"
+        title="Select Target Categories"
         onClose={() => setIsAccountPickerVisible(false)}
         onSelect={ids => {
           setSelectedAccountIds(ids);
@@ -247,7 +247,7 @@ export default function BudgetEditScreen() {
         visible={isAssetPickerVisible}
         accounts={liquidAssetAccounts}
         selectedIds={assetAccountIds}
-        title="Select Asset Accounts"
+        title="Select Funding Accounts"
         onClose={() => setIsAssetPickerVisible(false)}
         onSelect={ids => {
           setAssetAccountIds(ids);

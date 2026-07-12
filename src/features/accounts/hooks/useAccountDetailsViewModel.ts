@@ -543,12 +543,22 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
 
   const onEdit = useCallback(() => {
     if (!account) return;
-    AppNavigation.toAccountForm(accountId, {
-      name: account.name,
-      type: account.accountType,
-      currency: account.currencyCode,
-      icon: account.icon || 'wallet',
-    });
+    const isCategory = account.accountType === 'INCOME' || account.accountType === 'EXPENSE';
+    if (isCategory) {
+      AppNavigation.toCategoryForm(accountId, {
+        name: account.name,
+        type: account.accountType,
+        currency: account.currencyCode,
+        icon: account.icon || 'tag',
+      });
+    } else {
+      AppNavigation.toAccountForm(accountId, {
+        name: account.name,
+        type: account.accountType,
+        currency: account.currencyCode,
+        icon: account.icon || 'wallet',
+      });
+    }
   }, [accountId, account]);
 
   const onTransactionPress = useCallback(

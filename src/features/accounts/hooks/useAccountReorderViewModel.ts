@@ -5,6 +5,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { ACCOUNT_TYPE_ORDER } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 
 export interface AccountReorderViewModel {
@@ -13,6 +14,7 @@ export interface AccountReorderViewModel {
   isLoading: boolean;
   onMove: (index: number, direction: 'up' | 'down') => void;
   onBack: () => void;
+  title: string;
 }
 
 export function useAccountReorderViewModel(): AccountReorderViewModel {
@@ -22,9 +24,17 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
   const { updateAccountOrder } = useAccountActions(workplaceId);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
+  const params = useLocalSearchParams<{ filterMode?: 'accounts' | 'categories' }>();
+  const filterMode = params.filterMode || 'accounts';
+
   useEffect(() => {
     if (!isLoading) {
-      const sorted = [...initialAccounts].sort((a, b) => {
+      const filtered = initialAccounts.filter(a => {
+        const isCategory = a.accountType === 'INCOME' || a.accountType === 'EXPENSE';
+        return filterMode === 'categories' ? isCategory : !isCategory;
+      });
+
+      const sorted = [...filtered].sort((a, b) => {
         // First by Type
         const typeRankA = ACCOUNT_TYPE_ORDER.indexOf(a.accountType);
         const typeRankB = ACCOUNT_TYPE_ORDER.indexOf(b.accountType);
@@ -35,7 +45,7 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
       });
       setTimeout(() => setAccounts(sorted), 0);
     }
-  }, [initialAccounts, isLoading]);
+  }, [initialAccounts, isLoading, filterMode]);
 
   const onMove = useCallback(
     async (index: number, direction: 'up' | 'down') => {
@@ -99,5 +109,6 @@ export function useAccountReorderViewModel(): AccountReorderViewModel {
     isLoading,
     onMove,
     onBack,
+    title: filterMode === 'categories' ? 'Reorder Categories' : 'Reorder Accounts',
   };
 }

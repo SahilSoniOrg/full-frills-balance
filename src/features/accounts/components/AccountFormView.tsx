@@ -10,6 +10,7 @@ import { AppIcon, AppText, IconName, isValidIconName, IvyIcon } from '@/src/comp
 import { Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
+import { AccountType } from '@/src/data/models/Account';
 import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
@@ -25,6 +26,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
   const {
     heroTitle,
     isEditMode,
+    isCategory,
     accountName,
     setAccountName,
     accountType,
@@ -87,17 +89,25 @@ export function AccountFormView(vm: AccountFormViewModel) {
           >
             <IvyIcon
               name={selectedIcon as IconName}
-              fallbackIcon="wallet"
+              fallbackIcon={isCategory ? 'tag' : 'wallet'}
               color={theme.primary}
               size={Size.iconLg}
             />
           </TouchableOpacity>
         }
         nameAlign="left"
-        nameLabel={AppConfig.strings.accounts.form.accountName}
+        nameLabel={
+          isCategory
+            ? AppConfig.strings.accounts.categoryForm.categoryName
+            : AppConfig.strings.accounts.form.accountName
+        }
         nameValue={accountName}
         onNameChange={setAccountName}
-        namePlaceholder={AppConfig.strings.accounts.form.accountNamePlaceholder}
+        namePlaceholder={
+          isCategory
+            ? AppConfig.strings.accounts.categoryForm.categoryNamePlaceholder
+            : AppConfig.strings.accounts.form.accountNamePlaceholder
+        }
         amountLabel={
           isEditMode
             ? AppConfig.strings.accounts.form.currentBalance
@@ -105,42 +115,49 @@ export function AccountFormView(vm: AccountFormViewModel) {
         }
         amountValue={initialBalance}
         onAmountChange={onInitialBalanceChange}
+        showAmount={!isCategory}
         footer={
-          <Inline align="center" space="xs">
-            {isEditMode && (
-              <Stack space="xs" align="flex-start">
-                <TouchableOpacity
-                  onPress={() => setIsCurrencyInfoVisible(true)}
-                  style={{
-                    padding: Spacing.sm,
-                    marginRight: -Spacing.sm,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                  }}
-                  activeOpacity={Opacity.medium}
-                >
-                  <AppText variant="caption" color="secondary" style={{ marginRight: Spacing.xs }}>
-                    {selectedCurrency} (Locked)
-                  </AppText>
-                  <AppIcon
-                    name="helpCircle"
-                    size={Size.iconSm}
-                    color={theme.textSecondary}
-                    opacity={Opacity.heavy}
-                  />
-                </TouchableOpacity>
-              </Stack>
-            )}
-            {!isEditMode && (
-              <CurrencySelector
-                variant="pill"
-                selectedCurrency={selectedCurrency}
-                currencies={currencies}
-                onSelect={setSelectedCurrency}
-                disabled={isEditMode}
-              />
-            )}
-          </Inline>
+          !isCategory ? (
+            <Inline align="center" space="xs">
+              {isEditMode && (
+                <Stack space="xs" align="flex-start">
+                  <TouchableOpacity
+                    onPress={() => setIsCurrencyInfoVisible(true)}
+                    style={{
+                      padding: Spacing.sm,
+                      marginRight: -Spacing.sm,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                    activeOpacity={Opacity.medium}
+                  >
+                    <AppText
+                      variant="caption"
+                      color="secondary"
+                      style={{ marginRight: Spacing.xs }}
+                    >
+                      {selectedCurrency} (Locked)
+                    </AppText>
+                    <AppIcon
+                      name="helpCircle"
+                      size={Size.iconSm}
+                      color={theme.textSecondary}
+                      opacity={Opacity.heavy}
+                    />
+                  </TouchableOpacity>
+                </Stack>
+              )}
+              {!isEditMode && (
+                <CurrencySelector
+                  variant="pill"
+                  selectedCurrency={selectedCurrency}
+                  currencies={currencies}
+                  onSelect={setSelectedCurrency}
+                  disabled={isEditMode}
+                />
+              )}
+            </Inline>
+          ) : undefined
         }
       />
 
@@ -162,19 +179,34 @@ export function AccountFormView(vm: AccountFormViewModel) {
           </FadeIn>
         ) : null}
 
-        <FormSectionGroup title={AppConfig.strings.accounts.form.accountType}>
+        <FormSectionGroup
+          title={
+            isCategory
+              ? AppConfig.strings.accounts.categoryForm.categoryType
+              : AppConfig.strings.accounts.form.accountType
+          }
+        >
           <Stack space="lg" paddingHorizontal="md">
             <Box>
               <AccountTypeSelector
                 value={accountType}
                 onChange={setAccountType}
-                disabled={isParent}
+                disabled={isCategory ? isEditMode : isParent}
+                allowedTypes={
+                  isCategory
+                    ? [AccountType.EXPENSE, AccountType.INCOME]
+                    : [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY]
+                }
               />
             </Box>
 
             <Box>
               <SectionLabel
-                label={AppConfig.strings.accounts.form.accountSubtype}
+                label={
+                  isCategory
+                    ? AppConfig.strings.accounts.categoryForm.categorySubtype
+                    : AppConfig.strings.accounts.form.accountSubtype
+                }
                 marginTop="none"
               />
               <AccountSubtypeSelector
@@ -187,10 +219,14 @@ export function AccountFormView(vm: AccountFormViewModel) {
           </Stack>
         </FormSectionGroup>
 
-        <FormSectionGroup>
+        <FormSectionGroup title={isCategory ? 'Hierarchy' : undefined}>
           <Stack space="lg" paddingHorizontal="md">
             <AccountSelectionRow
-              title={AppConfig.strings.accounts.form.parentAccount}
+              title={
+                isCategory
+                  ? AppConfig.strings.accounts.categoryForm.parentCategory
+                  : AppConfig.strings.accounts.form.parentAccount
+              }
               accounts={potentialParents}
               selectedAccountId={parentAccountId}
               placeholder={AppConfig.strings.common.none}
@@ -226,17 +262,19 @@ export function AccountFormView(vm: AccountFormViewModel) {
           setIsParentPickerVisible(false);
         }}
       />
-      <AccountPickerModal
-        visible={isPayFromPickerVisible}
-        accounts={payFromAccountOptions}
-        selectedId={payFromAccountId}
-        title={AppConfig.strings.accounts.form.selectPaymentAccount}
-        onClose={() => setIsPayFromPickerVisible(false)}
-        onSelect={id => {
-          setPayFromAccountId(id);
-          setIsPayFromPickerVisible(false);
-        }}
-      />
+      {!isCategory && (
+        <AccountPickerModal
+          visible={isPayFromPickerVisible}
+          accounts={payFromAccountOptions}
+          selectedId={payFromAccountId}
+          title={AppConfig.strings.accounts.form.selectPaymentAccount}
+          onClose={() => setIsPayFromPickerVisible(false)}
+          onSelect={id => {
+            setPayFromAccountId(id);
+            setIsPayFromPickerVisible(false);
+          }}
+        />
+      )}
       <InfoSheet
         visible={isCurrencyInfoVisible}
         title={AppConfig.strings.accounts.selectCurrency}
