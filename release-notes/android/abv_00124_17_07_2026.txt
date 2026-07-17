@@ -1,0 +1,26 @@
+New release 🚀
+
+A major update introducing a bulk transaction editor, clearer ways to manage your categories and accounts, and refined readability and accessibility.
+
+---
+
+Also in this update:
+
+* Bulk Journal Editing: Log and edit multiple transactions at once in a spreadsheet-like grid, making batch entries much faster.
+* Separate Categories & Accounts: Creating a spending category is now completely separate from creating a financial account. Budget screens and creation forms now use clearer terms so they don't get mixed up.
+* Tablet-Friendly Dashboard: The Safe-to-Spend card dynamically shifts to a side-by-side view on larger screens and tablets, making better use of your screen space.
+* Better Accessibility & Reduced Motion: Screen readers can now navigate buttons and toggles much more easily, and animations will simplify automatically if you have reduced motion turned on in your device settings.
+* Instant Reconciliation Updates: Your account's last-reconciled timestamp updates in the list immediately when you complete reconciliation.
+
+---
+
+Big difference you’ll notice:
+
+* You can write, edit, and save a whole batch of journal entries simultaneously instead of one by one.
+* It is much easier to tell categories and accounts apart when setting up your budget.
+* Financial numbers align beautifully in vertical columns for cleaner reading, and dark mode text thickness has been balanced to reduce eye strain.
+* The transaction list looks cleaner and less busy without decorative left accent bars on the cards.
+
+---
+
+Under the hood, we separated account and category creation routes, added test coverage for bulk editing, and fixed database checks to prevent circular parent-child account loops.
