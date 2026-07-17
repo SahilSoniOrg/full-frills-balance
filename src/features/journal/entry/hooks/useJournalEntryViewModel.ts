@@ -6,6 +6,10 @@ import { useAccounts } from '@/src/features/accounts';
 import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
+import {
+  useBulkJournalEditor,
+  SavedJournalSummary,
+} from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { smsService } from '@/src/services/sms-service';
@@ -30,6 +34,11 @@ export interface JournalEntryViewModel {
   editor: ReturnType<typeof useJournalEditor>;
   simpleEditor: ReturnType<typeof useSimpleJournalEditor>;
   accounts: ReturnType<typeof useAccounts>['accounts'];
+  activeMode: 'guided' | 'advanced' | 'bulk';
+  onToggleMode: (mode: 'guided' | 'advanced' | 'bulk') => void;
+  bulkEditor: ReturnType<typeof useBulkJournalEditor>;
+  savedSummary: { count: number; items: SavedJournalSummary[] } | null;
+  setSavedSummary: (summary: { count: number; items: SavedJournalSummary[] } | null) => void;
   isLoading: boolean;
   headerTitle: string;
   showEditBanner: boolean;
@@ -90,7 +99,9 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
   const params = useLocalSearchParams();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const initialMode =
-    params.mode === 'simple' || params.mode === 'advanced' ? params.mode : undefined;
+    params.mode === 'simple' || params.mode === 'advanced' || params.mode === 'bulk'
+      ? params.mode
+      : undefined;
   const initialType =
     params.type === 'expense' || params.type === 'income' || params.type === 'transfer'
       ? params.type
@@ -115,7 +126,7 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
 
   const editor = useJournalEditor(workplaceId, {
     journalId: params.journalId as JournalId,
-    initialMode,
+    initialMode: initialMode === 'bulk' ? undefined : initialMode,
     initialType,
     initialAmount: params.amount as string,
     initialDescription: params.notes as string,
@@ -143,6 +154,8 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     onSuccess: () => AppNavigation.back(),
   });
 
+  const isSimpleModeDisabled = editor.lines.length > 2;
+
   const { suggestions } = useJournalSuggestions(workplaceId, editor.description);
 
   // Editor for Simple Mode
@@ -156,6 +169,46 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       }
     },
   });
+
+  const [activeMode, setActiveMode] = useState<'guided' | 'advanced' | 'bulk'>(() => {
+    if (initialMode === 'simple') return 'guided';
+    if (initialMode === 'advanced') return 'advanced';
+    if (initialMode === 'bulk') return 'bulk';
+    return 'guided';
+  });
+
+  const [savedSummary, setSavedSummary] = useState<{
+    count: number;
+    items: SavedJournalSummary[];
+  } | null>(null);
+
+  const bulkEditor = useBulkJournalEditor({
+    workplaceId,
+    workplaceCurrency,
+    accounts,
+    onSaveSuccess: useCallback(
+      (count: number, summaries: SavedJournalSummary[]) => {
+        setSavedSummary({ count, items: summaries });
+      },
+      [setSavedSummary],
+    ),
+  });
+
+  const onToggleMode = useCallback(
+    (mode: 'guided' | 'advanced' | 'bulk') => {
+      if (mode === 'guided' && isSimpleModeDisabled) {
+        showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
+        return;
+      }
+      setActiveMode(mode);
+      if (mode === 'guided') {
+        editor.setIsGuidedMode(true);
+      } else if (mode === 'advanced') {
+        editor.setIsGuidedMode(false);
+      }
+    },
+    [editor, isSimpleModeDisabled, setActiveMode],
+  );
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [activeLineId, setActiveLineId] = useState<string | null>(null);
@@ -325,26 +378,25 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     return accounts;
   }, [accounts, activeLineId, editor.isGuidedMode, editor.transactionType, editor.lines]);
 
-  const isSimpleModeDisabled = editor.lines.length > 2;
-
   const onToggleGuidedMode = useCallback(
     (mode: boolean) => {
       if (mode && isSimpleModeDisabled) {
         showErrorAlert(AppConfig.strings.validation.simpleModeTooManyLines, undefined, __DEV__);
         return;
       }
-
+      setActiveMode(mode ? 'guided' : 'advanced');
       editor.setIsGuidedMode(mode);
     },
-    [editor, isSimpleModeDisabled],
+    [editor, isSimpleModeDisabled, setActiveMode],
   );
 
   const headerTitle = useMemo(() => {
+    if (activeMode === 'bulk') return 'Bulk Entry';
     if (editor.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
     return editor.isGuidedMode
       ? AppConfig.strings.transactionFlow.headers.new
       : AppConfig.strings.transactionFlow.headers.default;
-  }, [editor.isEdit, editor.isGuidedMode]);
+  }, [activeMode, editor.isEdit, editor.isGuidedMode]);
 
   // Calculate Validations
   const isSimpleValid =
@@ -433,7 +485,9 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     isBalanced && hasDescription && !hasIncompleteLines && !editor.isSubmitting;
 
   const handleSubmit = useCallback(() => {
-    if (editor.isGuidedMode) {
+    if (activeMode === 'bulk') {
+      bulkEditor.saveAll();
+    } else if (editor.isGuidedMode) {
       if (isAmountFocused && !isSimpleValid) {
         Keyboard.dismiss();
       } else {
@@ -442,15 +496,29 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     } else {
       editor.submit();
     }
-  }, [editor, isAmountFocused, isSimpleValid, simpleEditor]);
+  }, [activeMode, bulkEditor, editor, isAmountFocused, isSimpleValid, simpleEditor]);
 
-  const isSubmitDisabled = editor.isGuidedMode
-    ? isAmountFocused
-      ? false
-      : !isSimpleValid
-    : !isAdvancedValid;
+  const isSubmitDisabled = useMemo(() => {
+    if (activeMode === 'bulk') {
+      return bulkEditor.isSubmitting || !bulkEditor.isValid;
+    }
+    return editor.isGuidedMode ? (isAmountFocused ? false : !isSimpleValid) : !isAdvancedValid;
+  }, [
+    activeMode,
+    bulkEditor.isSubmitting,
+    bulkEditor.isValid,
+    editor.isGuidedMode,
+    isAmountFocused,
+    isSimpleValid,
+    isAdvancedValid,
+  ]);
 
   const submitLabel = useMemo(() => {
+    if (activeMode === 'bulk') {
+      return bulkEditor.isSubmitting
+        ? 'Saving All...'
+        : `Save ${bulkEditor.rows.length} Transactions`;
+    }
     if (editor.isGuidedMode) {
       if (isAmountFocused && !isSimpleValid) {
         return AppConfig.strings.transactionFlow.continue;
@@ -470,6 +538,9 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
       ? AppConfig.strings.advancedEntry.updateJournal
       : AppConfig.strings.advancedEntry.createJournal;
   }, [
+    activeMode,
+    bulkEditor.isSubmitting,
+    bulkEditor.rows.length,
     editor.isGuidedMode,
     editor.isSubmitting,
     editor.isEdit,
@@ -483,6 +554,11 @@ export function useJournalEntryViewModel(): JournalEntryViewModel {
     editor,
     simpleEditor,
     accounts,
+    activeMode,
+    onToggleMode,
+    bulkEditor,
+    savedSummary,
+    setSavedSummary,
     isLoading: isLoadingAccounts || editor.isLoading,
     headerTitle,
     showEditBanner: editor.isEdit,

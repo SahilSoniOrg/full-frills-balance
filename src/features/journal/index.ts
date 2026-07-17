@@ -15,3 +15,5 @@ export { JournalListViewProps } from './components/JournalListView';
 export { useJournalListScreen } from './hooks/useJournalListScreen';
 export { AiBenchmarkView } from './components/AiBenchmarkView';
 export { AiExampleView } from './components/AiExampleView';
+export { BulkEntryGrid } from './entry/components/BulkEntryGrid';
+export { useBulkJournalEditor } from './entry/hooks/useBulkJournalEditor';

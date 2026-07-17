@@ -7,61 +7,58 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 
 interface SubmitFooterProps {
-    onPress: () => void;
-    label: string;
-    disabled: boolean;
-    topSlot?: React.ReactNode;
+  onPress: () => void;
+  label: string;
+  disabled: boolean;
+  topSlot?: React.ReactNode;
+  loading?: boolean;
 }
 
-export const SubmitFooter = ({
-    onPress,
-    label,
-    disabled,
-    topSlot,
-}: SubmitFooterProps) => {
-    const { theme } = useTheme();
-    const insets = useSafeAreaInsets();
-    const { isKeyboardVisible } = useKeyboard();
-    const bottomPadding = isKeyboardVisible 
-        ? Spacing.md 
-        : Math.max(Spacing.lg, insets.bottom + Spacing.md);
+export const SubmitFooter = ({ onPress, label, disabled, topSlot, loading }: SubmitFooterProps) => {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { isKeyboardVisible } = useKeyboard();
+  const bottomPadding = isKeyboardVisible
+    ? Spacing.md
+    : Math.max(Spacing.lg, insets.bottom + Spacing.md);
 
-    return (
-        <View
-            style={[
-                styles.footer,
-                {
-                    backgroundColor: theme.background,
-                    borderTopColor: theme.border,
-                    paddingBottom: bottomPadding,
-                },
-            ]}
-        >
-            {topSlot && <View style={styles.topSlot}>{topSlot}</View>}
-            <AppButton
-                variant="primary"
-                onPress={onPress}
-                disabled={disabled}
-                style={styles.button}
-                testID="submit-footer-button"
-            >
-                {label}
-            </AppButton>
-        </View>
-    );
+  return (
+    <View
+      style={[
+        styles.footer,
+        {
+          backgroundColor: theme.background,
+          borderTopColor: theme.border,
+          paddingBottom: bottomPadding,
+        },
+      ]}
+    >
+      {topSlot && <View style={styles.topSlot}>{topSlot}</View>}
+      <AppButton
+        variant="primary"
+        onPress={onPress}
+        disabled={disabled}
+        loading={loading}
+        style={styles.button}
+        testID="submit-footer-button"
+      >
+        {label}
+      </AppButton>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    footer: {
-        paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.md,
-        borderTopWidth: 1,
-    },
-    topSlot: {
-        marginBottom: Spacing.md,
-    },
-    button: {
-        height: Size.buttonXl,
-        borderRadius: Shape.radius.r4,
-    },
+  footer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+  },
+  topSlot: {
+    marginBottom: Spacing.md,
+  },
+  button: {
+    height: Size.buttonXl,
+    borderRadius: Shape.radius.r4,
+  },
 });

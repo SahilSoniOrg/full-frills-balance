@@ -6,21 +6,27 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { AdvancedModeInfoModal } from './AdvancedModeInfoModal';
 
 interface JournalModeToggleProps {
-  isGuidedMode: boolean;
-  setIsGuidedMode: (mode: boolean) => void;
+  mode: 'guided' | 'advanced' | 'bulk';
+  onToggleMode: (mode: 'guided' | 'advanced' | 'bulk') => void;
   variant?: 'default' | 'compact';
   isSimpleDisabled?: boolean;
 }
 
 export const JournalModeToggle = ({
-  isGuidedMode,
-  setIsGuidedMode,
+  mode,
+  onToggleMode,
   variant = 'default',
   isSimpleDisabled,
 }: JournalModeToggleProps) => {
   const { theme } = useTheme();
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const isCompact = variant === 'compact';
+
+  const modes: { id: 'guided' | 'advanced' | 'bulk'; label: string }[] = [
+    { id: 'guided', label: 'Simple' },
+    { id: 'advanced', label: 'Advanced' },
+    { id: 'bulk', label: 'Bulk' },
+  ];
 
   if (isCompact) {
     return (
@@ -31,38 +37,29 @@ export const JournalModeToggle = ({
             { borderColor: theme.border, backgroundColor: theme.surfaceSecondary },
           ]}
         >
-          <TouchableOpacity
-            style={[
-              styles.compactButton,
-              { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
-              isSimpleDisabled && { opacity: Opacity.muted },
-            ]}
-            onPress={() => setIsGuidedMode(true)}
-          >
-            <AppText
-              variant="caption"
-              weight={isGuidedMode ? 'bold' : 'medium'}
-              style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
-            >
-              {AppConfig.strings.transactionFlow.simple}
-            </AppText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.compactButton,
-              { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
-            ]}
-            onPress={() => setIsGuidedMode(false)}
-          >
-            <AppText
-              variant="caption"
-              weight={!isGuidedMode ? 'bold' : 'medium'}
-              style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
-            >
-              {AppConfig.strings.transactionFlow.advanced}
-            </AppText>
-          </TouchableOpacity>
+          {modes.map(m => {
+            const isActive = mode === m.id;
+            const disabled = m.id === 'guided' && isSimpleDisabled;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                style={[
+                  styles.compactButton,
+                  { backgroundColor: isActive ? theme.surface : 'transparent' },
+                  disabled && { opacity: Opacity.muted },
+                ]}
+                onPress={() => !disabled && onToggleMode(m.id)}
+              >
+                <AppText
+                  variant="caption"
+                  weight={isActive ? 'bold' : 'medium'}
+                  style={{ color: isActive ? theme.primary : theme.textSecondary }}
+                >
+                  {m.label}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <TouchableOpacity
@@ -90,40 +87,30 @@ export const JournalModeToggle = ({
           { backgroundColor: theme.surfaceSecondary },
         ]}
       >
-        <TouchableOpacity
-          style={[
-            styles.modeButton,
-            { backgroundColor: isGuidedMode ? theme.surface : 'transparent' },
-            isGuidedMode && Shape.elevation.sm,
-            isSimpleDisabled && { opacity: Opacity.muted },
-          ]}
-          onPress={() => setIsGuidedMode(true)}
-        >
-          <AppText
-            variant="body"
-            weight={isGuidedMode ? 'bold' : 'medium'}
-            style={{ color: isGuidedMode ? theme.primary : theme.textSecondary }}
-          >
-            {AppConfig.strings.transactionFlow.simple}
-          </AppText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.modeButton,
-            { backgroundColor: !isGuidedMode ? theme.surface : 'transparent' },
-            !isGuidedMode && Shape.elevation.sm,
-          ]}
-          onPress={() => setIsGuidedMode(false)}
-        >
-          <AppText
-            variant="body"
-            weight={!isGuidedMode ? 'bold' : 'medium'}
-            style={{ color: !isGuidedMode ? theme.primary : theme.textSecondary }}
-          >
-            {AppConfig.strings.transactionFlow.advanced}
-          </AppText>
-        </TouchableOpacity>
+        {modes.map(m => {
+          const isActive = mode === m.id;
+          const disabled = m.id === 'guided' && isSimpleDisabled;
+          return (
+            <TouchableOpacity
+              key={m.id}
+              style={[
+                styles.modeButton,
+                { backgroundColor: isActive ? theme.surface : 'transparent' },
+                isActive && Shape.elevation.sm,
+                disabled && { opacity: Opacity.muted },
+              ]}
+              onPress={() => !disabled && onToggleMode(m.id)}
+            >
+              <AppText
+                variant="body"
+                weight={isActive ? 'bold' : 'medium'}
+                style={{ color: isActive ? theme.primary : theme.textSecondary }}
+              >
+                {m.label}
+              </AppText>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <TouchableOpacity

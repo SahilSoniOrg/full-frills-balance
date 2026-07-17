@@ -1,6 +1,6 @@
 import { AccountPickerModal } from '@/src/components/common/AccountPickerModal';
 import { SubmitFooter } from '@/src/components/common/SubmitFooter';
-import { Spacing } from '@/src/constants';
+import { Spacing, Shape, Size } from '@/src/constants';
 import { Page } from '@/src/design-system';
 import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
@@ -12,8 +12,11 @@ import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/S
 import { JournalEntryViewModel } from '@/src/features/journal/entry/hooks/useJournalEntryViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, Modal, ScrollView } from 'react-native';
 import { VoiceInputModal } from './VoiceInputModal';
+import { BulkEntryGrid } from '@/src/features/journal';
+import { AppButton, AppText, AppIcon } from '@/src/components/core';
+import { AppNavigation } from '@/src/utils/navigation';
 
 export function JournalEntryView(vm: JournalEntryViewModel) {
   const { theme } = useTheme();
@@ -23,8 +26,8 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
     headerTitle,
     showEditBanner,
     editBannerText,
-    isGuidedMode,
-    onToggleGuidedMode,
+    activeMode,
+    onToggleMode,
     simpleEditor,
     submitLabel,
     isSubmitDisabled,
@@ -34,7 +37,11 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
     isVoiceModalVisible,
     setIsVoiceModalVisible,
     handleApplyVoiceInput,
+    savedSummary,
+    setSavedSummary,
   } = vm;
+
+  const isGuidedMode = activeMode === 'guided';
 
   // Reset hide suggestions when user focuses or types
   const handleSetDescription = React.useCallback(
@@ -58,7 +65,7 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
   return (
     <Page
       keyboardAvoiding
-      scrollable
+      scrollable={activeMode !== 'bulk'} // Grid has its own ScrollView
       scrollViewProps={{
         onScrollBeginDrag: () => setHideSuggestions(true),
         scrollEventThrottle: 16,
@@ -68,8 +75,8 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
           title={headerTitle}
           rightSlot={
             <JournalModeToggle
-              isGuidedMode={isGuidedMode}
-              setIsGuidedMode={onToggleGuidedMode}
+              mode={activeMode}
+              onToggleMode={onToggleMode}
               variant="compact"
               isSimpleDisabled={vm.isSimpleModeDisabled}
             />
@@ -81,12 +88,13 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
           onPress={handleSubmit}
           disabled={isSubmitDisabled}
           label={submitLabel}
+          loading={activeMode === 'bulk' && vm.bulkEditor.isSubmitting}
           topSlot={
             isGuidedMode ? (
               <SimpleFormAmountInput
                 amount={vm.primaryDisplayAmount}
                 setAmount={simpleEditor.setAmount}
-                readOnly={!isGuidedMode}
+                readOnly={false}
                 activeColor={
                   simpleEditor.type === 'expense'
                     ? theme.expense
@@ -105,28 +113,30 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
       }
     >
       <View style={styles.content}>
-        {/* Shared Metadata Card */}
-        <JournalMetaCard
-          date={vm.editor.journalDate}
-          setDate={vm.editor.setJournalDate}
-          time={vm.editor.journalTime}
-          setTime={vm.editor.setJournalTime}
-          description={vm.editor.description}
-          setDescription={handleSetDescription}
-          notes={vm.editor.notes}
-          setNotes={vm.editor.setNotes}
-          showBanner={showEditBanner}
-          bannerText={editBannerText}
-          variant={isGuidedMode ? 'minimal' : 'default'}
-          suggestions={vm.suggestions}
-          hideSuggestions={hideSuggestions}
-          onDescriptionFocus={() => setHideSuggestions(false)}
-          onVoiceInputPress={() => setIsVoiceModalVisible(true)}
-        />
+        {/* Shared Metadata Card - only show in simple/advanced modes */}
+        {activeMode !== 'bulk' && (
+          <JournalMetaCard
+            date={vm.editor.journalDate}
+            setDate={vm.editor.setJournalDate}
+            time={vm.editor.journalTime}
+            setTime={vm.editor.setJournalTime}
+            description={vm.editor.description}
+            setDescription={handleSetDescription}
+            notes={vm.editor.notes}
+            setNotes={vm.editor.setNotes}
+            showBanner={showEditBanner}
+            bannerText={editBannerText}
+            variant={isGuidedMode ? 'minimal' : 'default'}
+            suggestions={vm.suggestions}
+            hideSuggestions={hideSuggestions}
+            onDescriptionFocus={() => setHideSuggestions(false)}
+            onVoiceInputPress={() => setIsVoiceModalVisible(true)}
+          />
+        )}
 
-        {isGuidedMode ? (
+        {activeMode === 'guided' ? (
           <SimpleForm {...vm.simpleEditor} />
-        ) : (
+        ) : activeMode === 'advanced' ? (
           <View style={{ paddingHorizontal: Spacing.lg }}>
             <AdvancedForm
               accounts={vm.accounts}
@@ -145,6 +155,16 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
               workplaceCurrency={vm.workplaceCurrency}
             />
           </View>
+        ) : (
+          <BulkEntryGrid
+            rows={vm.bulkEditor.rows}
+            submitError={vm.bulkEditor.submitError}
+            accounts={vm.accounts}
+            addRow={vm.bulkEditor.addRow}
+            removeRow={vm.bulkEditor.removeRow}
+            clearRows={vm.bulkEditor.clearRows}
+            updateRowField={vm.bulkEditor.updateRowField}
+          />
         )}
       </View>
 
@@ -164,6 +184,75 @@ export function JournalEntryView(vm: JournalEntryViewModel) {
         onApply={handleApplyVoiceInput}
         workplaceId={workplaceId}
       />
+
+      {/* Save Success Summary Popup Modal */}
+      <Modal
+        visible={!!savedSummary}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSavedSummary(null)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <View style={styles.successHeader}>
+              <AppIcon name="checkCircle" size={Size.iconLg} color={theme.primary} />
+              <AppText variant="heading" weight="bold" style={styles.modalTitle}>
+                Saved Successfully
+              </AppText>
+              <AppText variant="body" color="secondary" style={styles.modalSubtitle}>
+                Recorded {savedSummary?.count} journals to the ledger.
+              </AppText>
+            </View>
+
+            <ScrollView
+              style={styles.summaryList}
+              contentContainerStyle={styles.summaryListContent}
+            >
+              {savedSummary?.items.map((item, idx) => (
+                <View
+                  key={`${item.description}-${item.amount}-${idx}`}
+                  style={[styles.summaryItem, { backgroundColor: theme.surfaceSecondary }]}
+                >
+                  <AppText
+                    variant="body"
+                    weight="semibold"
+                    style={styles.itemDesc}
+                    numberOfLines={1}
+                  >
+                    {item.description}
+                  </AppText>
+                  <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
+                    {item.amount.toFixed(2)} {item.currency}
+                  </AppText>
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <AppButton
+                variant="outline"
+                onPress={() => {
+                  setSavedSummary(null);
+                  vm.bulkEditor.clearRows();
+                }}
+                style={styles.modalButton}
+              >
+                Continue Bulk
+              </AppButton>
+              <AppButton
+                variant="primary"
+                onPress={() => {
+                  setSavedSummary(null);
+                  AppNavigation.back();
+                }}
+                style={styles.modalButton}
+              >
+                Done
+              </AppButton>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Page>
   );
 }
@@ -177,5 +266,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {},
+  content: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '85%',
+    borderRadius: Shape.radius.r3,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.lg,
+    ...Shape.elevation.lg,
+  },
+  successHeader: {
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  modalTitle: {
+    marginTop: Spacing.sm,
+  },
+  modalSubtitle: {
+    textAlign: 'center',
+  },
+  summaryList: {
+    width: '100%',
+    maxHeight: 220,
+  },
+  summaryListContent: {
+    gap: Spacing.sm,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+    borderRadius: Shape.radius.r2,
+  },
+  itemDesc: {
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    width: '100%',
+    marginTop: Spacing.sm,
+  },
+  modalButton: {
+    flex: 1,
+  },
 });

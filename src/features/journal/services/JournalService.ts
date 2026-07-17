@@ -29,7 +29,7 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { sanitizeAmount } from '@/src/utils/validation';
-import { Q } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
 import { distinctUntilChanged, switchMap } from 'rxjs';
 
 export interface SimpleEntryParams {
@@ -572,6 +572,162 @@ export class JournalService {
     } catch (error) {
       logger.error('Failed to save journal entry:', error);
       return { success: false, error: 'Failed to save transaction' };
+    }
+  }
+
+  /**
+   * Bulk save multiple journal entries atomically in a single DB batch.
+   * If any entry fails validation, none are persisted.
+   */
+  async saveBulkJournalEntries(
+    entries: {
+      lines: JournalEntryLine[];
+      description: string;
+      journalDate: number;
+      workplaceId: WorkplaceId;
+    }[],
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    summaries: { description: string; amount: number; currency: string }[];
+  }> {
+    if (entries.length === 0) {
+      return { success: false, error: 'No entries to save', summaries: [] };
+    }
+
+    const workplaceId = entries[0].workplaceId;
+
+    // 1. Validate all entries upfront
+    for (const entry of entries) {
+      if (!entry.description.trim()) {
+        return { success: false, error: 'Description is required', summaries: [] };
+      }
+      if (entry.lines.length < 2) {
+        return {
+          success: false,
+          error: 'A journal entry must have at least 2 lines',
+          summaries: [],
+        };
+      }
+      if (entry.lines.some(l => !l.accountId)) {
+        return { success: false, error: 'All lines must have an account', summaries: [] };
+      }
+      const distinctValidation = accountingService.validateDistinctAccounts(
+        entry.lines.map(l => l.accountId),
+      );
+      if (!distinctValidation.isValid) {
+        return {
+          success: false,
+          error: 'A journal entry must involve at least 2 distinct accounts',
+          summaries: [],
+        };
+      }
+    }
+
+    // 2. Preparations (async phase — can fail independently)
+    const preparedList: {
+      journalData: CreateJournalData;
+      ops: Model[];
+      accountsToRebuild: Set<AccountId>;
+      description: string;
+      amount: number;
+      currency: string;
+    }[] = [];
+
+    try {
+      const currencyCode = await workplaceService.getCurrency(workplaceId);
+
+      for (const entry of entries) {
+        // Balance Validation
+        const domainLines = entry.lines.map(line => ({
+          amount: sanitizeAmount(line.amount) || 0,
+          type: line.transactionType,
+          exchangeRate: line.exchangeRate ? parseFloat(line.exchangeRate) : 1,
+          accountCurrency: line.accountCurrency,
+        }));
+
+        const balanceValidation = accountingService.validateJournal(domainLines);
+        if (!balanceValidation.isValid) {
+          return {
+            success: false,
+            error: `Journal is not balanced. Discrepancy: ${balanceValidation.imbalance}`,
+            summaries: [],
+          };
+        }
+
+        const journalData: CreateJournalData = {
+          journalDate: entry.journalDate,
+          description: entry.description.trim(),
+          currencyCode,
+          transactions: entry.lines.map(l => ({
+            accountId: l.accountId,
+            amount: sanitizeAmount(l.amount) || 0,
+            transactionType: l.transactionType,
+            notes: l.notes?.trim() || undefined,
+            exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
+            currencyCode: l.accountCurrency,
+          })),
+        };
+
+        const { ops, accountsToRebuild } = await ledgerWriteService.prepareCreateJournal(
+          journalData,
+          workplaceId,
+        );
+
+        preparedList.push({
+          journalData,
+          ops,
+          accountsToRebuild,
+          description: entry.description,
+          amount: parseFloat(entry.lines[0].amount),
+          currency: currencyCode,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to prepare bulk journals:', error);
+      return { success: false, error: 'Failed to prepare journal entries', summaries: [] };
+    }
+
+    // 3. Atomic batch — all ops in one write block
+    try {
+      const allOps = preparedList.flatMap(p => p.ops);
+      const allAccountsToRebuild = new Set<AccountId>();
+      const minDate = Math.min(...preparedList.map(p => p.journalData.journalDate));
+
+      await database.write(async () => {
+        await database.batch(allOps);
+
+        // Only enqueue rebuild once, for the earliest date
+        for (const p of preparedList) {
+          for (const accountId of p.accountsToRebuild) {
+            allAccountsToRebuild.add(accountId);
+          }
+        }
+        if (allAccountsToRebuild.size > 0) {
+          rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
+        }
+      });
+
+      // Analytics (non-atomic, safe to run after batch)
+      for (const p of preparedList) {
+        analytics.logTransactionCreated('simple', 'create', p.currency);
+        analytics.trackConversion(
+          'transaction_created',
+          p.journalData.transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0,
+          p.currency,
+        );
+      }
+
+      const summaries = preparedList.map(p => ({
+        description: p.description,
+        amount: p.amount,
+        currency: p.currency,
+      }));
+
+      return { success: true, summaries };
+    } catch (error) {
+      logger.error('Failed to batch save bulk journals:', error);
+      return { success: false, error: 'Failed to save journal entries atomically', summaries: [] };
     }
   }
 
