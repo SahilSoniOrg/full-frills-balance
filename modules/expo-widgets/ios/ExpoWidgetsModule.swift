@@ -1,14 +1,25 @@
 import ExpoModulesCore
 import WidgetKit
 
+private let AppGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets"
+
+private struct PendingSmsKeys {
+  static let prefix = "pending_sms_"
+  static let records = "pending_sms_records"
+  static func merchant(_ id: String) -> String { "\(prefix)\(id)_merchant" }
+  static func amount(_ id: String) -> String { "\(prefix)\(id)_amount" }
+  static func currency(_ id: String) -> String { "\(prefix)\(id)_currency" }
+  static func sender(_ id: String) -> String { "\(prefix)\(id)_sender" }
+  static func date(_ id: String) -> String { "\(prefix)\(id)_date" }
+}
+
 public final class ExpoWidgetsModule: Module {
-  private let appGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets"
 
   public func definition() -> ModuleDefinition {
     Name("ExpoWidgets")
 
     AsyncFunction("syncWidgetData") { (snapshot: [String: Any]) in
-      guard let defaults = UserDefaults(suiteName: self.appGroupId) else {
+      guard let defaults = UserDefaults(suiteName: AppGroupId) else {
         return
       }
 
@@ -77,17 +88,21 @@ public final class ExpoWidgetsModule: Module {
     /// the key pattern `pending_sms_<id>_<field>` so the widget extension can
     /// read them without accessing the database or waking JS.
     AsyncFunction("storePendingSms") { (records: [[String: Any]]) in
-      guard let defaults = UserDefaults(suiteName: self.appGroupId) else {
+      guard let defaults = UserDefaults(suiteName: AppGroupId) else {
         return
       }
 
       // Collect all existing record IDs (for cleanup of stale entries)
-      let existingRecordsData = defaults.data(forKey: "pending_sms_records")
+      let existingRecordsData = defaults.data(forKey: PendingSmsKeys.records)
       let decoder = JSONDecoder()
       var previousIds = Set<String>()
-      if let existingData = existingRecordsData,
-         let ids = try? decoder.decode([String].self, from: existingData) {
-        previousIds = Set(ids)
+      if let existingData = existingRecordsData {
+        do {
+          let ids = try decoder.decode([String].self, from: existingData)
+          previousIds = Set(ids)
+        } catch {
+          os_log(.error, "[ExpoWidgets] Failed to decode pending_sms_records: %{public}@", error.localizedDescription)
+        }
       }
 
       var currentIds: [String] = []
@@ -98,27 +113,30 @@ public final class ExpoWidgetsModule: Module {
         currentIds.append(id)
         cleanIds.insert(id)
 
-        defaults.set(record["merchant"] as? String ?? "", forKey: "pending_sms_\(id)_merchant")
-        defaults.set(record["amount"] as? String ?? "", forKey: "pending_sms_\(id)_amount")
-        defaults.set(record["currency"] as? String ?? "", forKey: "pending_sms_\(id)_currency")
-        defaults.set(record["sender"] as? String ?? "", forKey: "pending_sms_\(id)_sender")
-        defaults.set(record["date"] as? Double ?? Date().timeIntervalSince1970 * 1000, forKey: "pending_sms_\(id)_date")
+        defaults.set(record["merchant"] as? String ?? "", forKey: PendingSmsKeys.merchant(id))
+        defaults.set(record["amount"] as? String ?? "", forKey: PendingSmsKeys.amount(id))
+        defaults.set(record["currency"] as? String ?? "", forKey: PendingSmsKeys.currency(id))
+        defaults.set(record["sender"] as? String ?? "", forKey: PendingSmsKeys.sender(id))
+        defaults.set(record["date"] as? Double ?? Date().timeIntervalSince1970 * 1000, forKey: PendingSmsKeys.date(id))
       }
 
       // Store the ordered list of record IDs
       let encoder = JSONEncoder()
-      if let encoded = try? encoder.encode(currentIds) {
-        defaults.set(encoded, forKey: "pending_sms_records")
+      do {
+        let encoded = try encoder.encode(currentIds)
+        defaults.set(encoded, forKey: PendingSmsKeys.records)
+      } catch {
+        os_log(.error, "[ExpoWidgets] Failed to encode pending_sms_records: %{public}@", error.localizedDescription)
       }
 
       // Clean up stale entries that are no longer in the new records
       let staleIds = previousIds.subtracting(cleanIds)
       for staleId in staleIds {
-        defaults.removeObject(forKey: "pending_sms_\(staleId)_merchant")
-        defaults.removeObject(forKey: "pending_sms_\(staleId)_amount")
-        defaults.removeObject(forKey: "pending_sms_\(staleId)_currency")
-        defaults.removeObject(forKey: "pending_sms_\(staleId)_sender")
-        defaults.removeObject(forKey: "pending_sms_\(staleId)_date")
+        defaults.removeObject(forKey: PendingSmsKeys.merchant(staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.amount(staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.currency(staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.sender(staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.date(staleId))
       }
 
       if #available(iOS 14.0, *) {

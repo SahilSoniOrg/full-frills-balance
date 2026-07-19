@@ -45,7 +45,8 @@ class ExpoWidgetsModule : Module() {
         for (i in 0 until arr.length()) {
           previousIds.add(arr.getString(i))
         }
-      } catch (_: Exception) {
+      } catch (e: Exception) {
+        android.util.Log.e("ExpoWidgets", "Failed to parse existing pending SMS records", e)
       }
     }
 
@@ -176,7 +177,7 @@ class ExpoWidgetsModule : Module() {
     private const val KEY_THEME_TRANSFER_ACCENT_COLOR = "widget_theme_transfer_accent_color"
     private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
     private const val KEY_PENDING_SMS_RECORDS = "pending_sms_records"
-    private val WIDGET_PROVIDER_CLASS_NAMES = listOf(
+    val WIDGET_PROVIDER_CLASS_NAMES = listOf(
       "JournalLauncherWidgetProvider",
       "SafeToSpendWidgetProvider",
       "SafeToSpendActionsWidgetProvider",

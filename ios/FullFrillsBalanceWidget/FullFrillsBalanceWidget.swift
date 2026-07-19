@@ -5,7 +5,7 @@ private let appScheme = "fullfrillsbalance" // expo-inject-appscheme
 private let incomeLaunchURL = URL(string: appScheme + "://journal-entry?mode=simple&type=income&source=widget")!
 private let expenseLaunchURL = URL(string: appScheme + "://journal-entry?mode=simple&type=expense&source=widget")!
 private let transferLaunchURL = URL(string: appScheme + "://journal-entry?mode=simple&type=transfer&source=widget")!
-private let appGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets" // expo-inject-iosappgroup
+private let appGroupId = AppGroupId // expo-inject-iosappgroup
 
 struct SafeToSpendSnapshot {
   let amount: Double
@@ -381,19 +381,19 @@ struct PendingSmsSnapshot {
   static func load() -> [PendingSmsItem] {
     guard let defaults = UserDefaults(suiteName: appGroupId) else { return [] }
 
-    guard let recordsData = defaults.data(forKey: "pending_sms_records") else { return [] }
+    guard let recordsData = defaults.data(forKey: PendingSmsKeys.records) else { return [] }
 
     let decoder = JSONDecoder()
     guard let recordIds = try? decoder.decode([String].self, from: recordsData) else { return [] }
 
     return recordIds.compactMap { recordId -> PendingSmsItem? in
-      let merchant = defaults.string(forKey: "pending_sms_\(recordId)_merchant") ?? "Unknown"
-      let amount = defaults.string(forKey: "pending_sms_\(recordId)_amount") ?? "--"
+      let merchant = defaults.string(forKey: PendingSmsKeys.merchant(for: recordId)) ?? "Unknown"
+      let amount = defaults.string(forKey: PendingSmsKeys.amount(for: recordId)) ?? "--"
       guard !merchant.isEmpty, !amount.isEmpty else { return nil }
 
-      let currency = defaults.string(forKey: "pending_sms_\(recordId)_currency") ?? ""
-      let sender = defaults.string(forKey: "pending_sms_\(recordId)_sender") ?? ""
-      let timestampMs = defaults.double(forKey: "pending_sms_\(recordId)_date")
+      let currency = defaults.string(forKey: PendingSmsKeys.currency(for: recordId)) ?? ""
+      let sender = defaults.string(forKey: PendingSmsKeys.sender(for: recordId)) ?? ""
+      let timestampMs = defaults.double(forKey: PendingSmsKeys.date(for: recordId))
       let updatedAt = timestampMs > 0 ? Date(timeIntervalSince1970: timestampMs / 1000.0) : nil
 
       return PendingSmsItem(
@@ -411,6 +411,7 @@ struct PendingSmsSnapshot {
 struct SmsTriageEntry: TimelineEntry {
   let date: Date
   let pendingItems: [PendingSmsItem]
+  let theme: WidgetThemeSnapshot
 }
 
 struct SmsTriageProvider: TimelineProvider {
@@ -426,18 +427,19 @@ struct SmsTriageProvider: TimelineProvider {
           sender: "EXAMPL",
           updatedAt: Date()
         ),
-      ]
+      ],
+      theme: .fallback
     )
   }
 
   func getSnapshot(in context: Context, completion: @escaping (SmsTriageEntry) -> Void) {
-    completion(SmsTriageEntry(date: Date(), pendingItems: PendingSmsSnapshot.load()))
+    completion(SmsTriageEntry(date: Date(), pendingItems: PendingSmsSnapshot.load(), theme: WidgetThemeSnapshot.load() ?? .fallback))
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<SmsTriageEntry>) -> Void) {
     completion(
       Timeline(
-        entries: [SmsTriageEntry(date: Date(), pendingItems: PendingSmsSnapshot.load())],
+        entries: [SmsTriageEntry(date: Date(), pendingItems: PendingSmsSnapshot.load(), theme: WidgetThemeSnapshot.load() ?? .fallback)],
         policy: .never
       )
     )
@@ -472,11 +474,11 @@ struct SmsTriageWidgetView: View {
     if #available(iOS 17.0, *) {
       content
         .containerBackground(for: .widget) {
-          Color(hex: 0x1E1E26)
+          entry.theme.backgroundStartColor
         }
     } else {
       content
-        .background(Color(hex: 0x1E1E26))
+        .background(entry.theme.backgroundStartColor)
     }
   }
 
@@ -484,11 +486,11 @@ struct SmsTriageWidgetView: View {
     VStack(spacing: 8) {
       Image(systemName: "tray")
         .font(.system(size: 28, weight: .light))
-        .foregroundStyle(Color(hex: 0x8A8694))
+        .foregroundStyle(entry.theme.secondaryTextColor)
 
       Text("No pending SMS")
         .font(.system(size: 13, weight: .medium, design: .rounded))
-        .foregroundStyle(Color(hex: 0x8A8694))
+        .foregroundStyle(entry.theme.secondaryTextColor)
     }
   }
 
@@ -496,7 +498,7 @@ struct SmsTriageWidgetView: View {
     VStack(alignment: .leading, spacing: 8) {
       Text("SMS Inbox")
         .font(.system(size: 11, weight: .bold, design: .rounded))
-        .foregroundStyle(Color(hex: 0x7DD3A8))
+        .foregroundStyle(entry.theme.titleColor)
 
       let displayItems = Array(entry.pendingItems.prefix(2))
       ForEach(displayItems) { item in
@@ -504,9 +506,9 @@ struct SmsTriageWidgetView: View {
       }
 
       if entry.pendingItems.count > 2 {
-        Text("+\(entry.pendingItems.count - 2) more")
+        Text("+\\(entry.pendingItems.count - 2) more")
           .font(.system(size: 9, weight: .medium, design: .rounded))
-          .foregroundStyle(Color(hex: 0x8A8694))
+          .foregroundStyle(entry.theme.secondaryTextColor)
       }
     }
   }
@@ -515,7 +517,7 @@ struct SmsTriageWidgetView: View {
     VStack(alignment: .leading, spacing: 6) {
       Text("SMS Inbox")
         .font(.system(size: 12, weight: .bold, design: .rounded))
-        .foregroundStyle(Color(hex: 0x7DD3A8))
+        .foregroundStyle(entry.theme.titleColor)
 
       let displayItems = Array(entry.pendingItems.prefix(3))
       ForEach(displayItems) { item in
@@ -523,9 +525,9 @@ struct SmsTriageWidgetView: View {
       }
 
       if entry.pendingItems.count > 3 {
-        Text("+\(entry.pendingItems.count - 3) more")
+        Text("+\\(entry.pendingItems.count - 3) more")
           .font(.system(size: 10, weight: .medium, design: .rounded))
-          .foregroundStyle(Color(hex: 0x8A8694))
+          .foregroundStyle(entry.theme.secondaryTextColor)
       }
     }
   }
@@ -535,38 +537,38 @@ struct SmsTriageWidgetView: View {
       VStack(alignment: .leading, spacing: compact ? 1 : 2) {
         Text(item.merchant)
           .font(.system(size: compact ? 11 : 12, weight: .semibold, design: .rounded))
-          .foregroundStyle(.white)
+          .foregroundStyle(entry.theme.primaryTextColor)
           .lineLimit(1)
 
         Text(item.sender)
           .font(.system(size: compact ? 9 : 10, weight: .regular, design: .rounded))
-          .foregroundStyle(Color(hex: 0x8A8694))
+          .foregroundStyle(entry.theme.secondaryTextColor)
           .lineLimit(1)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
 
       Text(item.amount)
         .font(.system(size: compact ? 12 : 14, weight: .bold, design: .rounded))
-        .foregroundStyle(.white)
+        .foregroundStyle(entry.theme.primaryTextColor)
 
       if #available(iOS 17.0, *) {
         Button(intent: SmsQuickImportIntent(recordId: item.id)) {
           Image(systemName: "arrow.right.circle.fill")
             .font(.system(size: compact ? 18 : 22, weight: .semibold))
-            .foregroundStyle(Color(hex: 0x7DD3A8))
+            .foregroundStyle(entry.theme.actionIconColor)
         }
         .buttonStyle(.plain)
       } else {
         Link(destination: URL(string: "\(appScheme)://inbox?approve=\(item.id)")!) {
           Image(systemName: "arrow.right.circle.fill")
             .font(.system(size: compact ? 18 : 22, weight: .semibold))
-            .foregroundStyle(Color(hex: 0x7DD3A8))
+            .foregroundStyle(entry.theme.actionIconColor)
         }
       }
     }
     .padding(.horizontal, 8)
     .padding(.vertical, compact ? 4 : 6)
-    .background(Color(hex: 0x2A2A32))
+    .background(entry.theme.primaryTextColor.opacity(0.07))
     .cornerRadius(8)
   }
 }

@@ -33,12 +33,7 @@ class SmsQuickImportReceiver : BroadcastReceiver() {
 
     fun refreshWidgets(context: Context) {
       val appWidgetManager = AppWidgetManager.getInstance(context)
-      val providerClassNames = listOf(
-        "JournalLauncherWidgetProvider",
-        "SafeToSpendWidgetProvider",
-        "SafeToSpendActionsWidgetProvider",
-        "SafeToSpendActionsSquareWidgetProvider",
-      )
+      val providerClassNames = ExpoWidgetsModule.WIDGET_PROVIDER_CLASS_NAMES
 
       providerClassNames.forEach { className ->
         runCatching {
@@ -95,7 +90,7 @@ class SmsQuickImportReceiver : BroadcastReceiver() {
     val amount = prefs.getString("${EXTRA_PREFIX}${recordId}_amount", "") ?: ""
 
     // Set a flag so the app knows which record to auto-approve on launch
-    prefs.edit().putString("pending_sms_quick_approve", recordId).apply()
+    prefs.edit().putString("${EXTRA_PREFIX}quick_approve", recordId).apply()
 
     // Open the app deep link to process the approval
     val deepLinkUri = Uri.parse("$APP_SCHEME://inbox?approve=$recordId")
@@ -109,7 +104,7 @@ class SmsQuickImportReceiver : BroadcastReceiver() {
       context.startActivity(launchIntent)
     } else {
       // If the deep link can't be resolved, clear the approval flag
-      prefs.edit().remove("pending_sms_quick_approve").apply()
+      prefs.edit().remove("${EXTRA_PREFIX}quick_approve").apply()
     }
 
     // Refresh all widget timelines so the triage widget reflects the change
