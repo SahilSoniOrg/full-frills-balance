@@ -1,12 +1,16 @@
 import { database } from '@/src/data/database/Database';
-import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import FinancialPet from '@/src/data/models/FinancialPet';
-import { InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
+import TransactionInboxRecord, {
+  InboxProcessingStatus,
+} from '@/src/data/models/TransactionInboxRecord';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
-import { Observable, combineLatest, from, map, switchMap } from 'rxjs';
+import { Observable, combineLatest, firstValueFrom, from, map, switchMap, take } from 'rxjs';
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
@@ -48,18 +52,48 @@ export interface PetState {
   xpToNextLevel: number;
 }
 
-// ─── XP Constants ────────────────────────────────────────────────────────────
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const XP_REVIEW_SMS = 10;
 const XP_LOG_TRANSACTION = 25;
 const XP_STREAK_MILESTONE = 50;
 const XP_PER_LEVEL = 100;
 
+/**
+ * Maximum threshold of pending inbox records before audit discipline score drops to 0.
+ * A backlog of 10 or more pending records represents severe review deficit.
+ */
+const AUDIT_DEFICIT_PENDING_THRESHOLD = 10;
+
+/**
+ * Action to XP gain mapping table to eliminate repeated switch statements.
+ */
+const ACTION_XP_MAP: Record<PetAction, number> = {
+  [PetAction.ReviewSms]: XP_REVIEW_SMS,
+  [PetAction.LogTransaction]: XP_LOG_TRANSACTION,
+  [PetAction.StreakMilestone]: XP_STREAK_MILESTONE,
+};
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 
+/**
+ * FinancialPetService
+ *
+ * Core engine for Financial Pet health score, budget margin tracking, and inbox discipline audit.
+ *
+ * Note on gamification scope:
+ * Per specification (widget_implementation_spec.md), core health is driven by remaining budget margin
+ * and inbox audit discipline. The XP/level/evolution/mood system serves as a coherent gamification UI layer
+ * built on top of this engine.
+ *
+ * Shared Data Seam:
+ * Evaluated PetState payloads are serialized to persistent MMKV snapshot storage via SnapshotService
+ * (key: financial_pet_snapshot) and shared with the AppGroup ('group.org.sahilsoni.balance') so native widgets
+ * (T-003 bridge) can read pre-cooked pet state without direct database queries.
+ */
 export class FinancialPetService {
   /**
-   * Compute the health score for a workplace based on budget margins
+   * Compute the health score for a workplace based on remaining budget margins
    * and inbox discipline.
    *
    * Health = (budgetHealthWeight × 0.6) + (auditDisciplineWeight × 0.4)
@@ -97,61 +131,26 @@ export class FinancialPetService {
 
   /**
    * Award XP for a completed action and handle level-up.
-   * The entire read-modify-write is performed inside the write batch
-   * to prevent race conditions when two concurrent calls happen.
+   * Performs read-modify-write inside a write batch to prevent race conditions.
    */
   async awardXp(
     workplaceId: WorkplaceId,
     action: PetAction,
   ): Promise<PetState> {
     try {
-      let xpGain: number;
-      switch (action) {
-        case PetAction.ReviewSms:
-          xpGain = XP_REVIEW_SMS;
-          break;
-        case PetAction.LogTransaction:
-          xpGain = XP_LOG_TRANSACTION;
-          break;
-        case PetAction.StreakMilestone:
-          xpGain = XP_STREAK_MILESTONE;
-          break;
-        default:
-          xpGain = 0;
-      }
+      const xpGain = ACTION_XP_MAP[action] ?? 0;
 
       const result = await database.write(async writer => {
-        const petsTable = writer.get<FinancialPet>('financial_pets');
-
-        // Read pet inside write batch — safe from race conditions
-        const existing = await petsTable
-          .query(Q.where('workplace_id', workplaceId))
-          .fetch();
-
-        let pet: FinancialPet;
-        if (existing.length > 0) {
-          pet = existing[0];
-        } else {
-          // Create a new pet record
-          pet = await petsTable.create(record => {
-            record.workplaceId = workplaceId;
-            record.xp = 0;
-            record.level = 0;
-          });
-          logger.info('[FinancialPetService] Created new pet', { workplaceId });
-        }
-
+        const pet = await this.getOrCreatePet(workplaceId, writer);
         const today = dayjs().format('YYYY-MM-DD');
 
         // Daily cap: only 1 log_transaction award per day
         if (action === PetAction.LogTransaction) {
           if (pet.lastActionDate === today) {
-            // Already awarded today — return current state without modifying
             return { awarded: false, pet };
           }
         }
 
-        // Read-modify-write inside the same batch transaction
         const currentXp = pet.xp ?? 0;
         const newXp = currentXp + xpGain;
         const newLevel = this.computeLevel(newXp);
@@ -173,37 +172,28 @@ export class FinancialPetService {
         return { awarded: true, pet, newXp, newLevel };
       });
 
-      if (!result.awarded) {
-        // Daily cap hit — return current state
-        const healthResult = await this.computeHealth(workplaceId);
-        return {
-          health: healthResult.health,
-          mood: healthResult.mood,
-          level: result.pet.level ?? 0,
-          xp: result.pet.xp ?? 0,
-          evolution: this.getEvolutionStage(result.pet.level ?? 0),
-          xpToNextLevel: this.xpToNextLevel(result.pet.xp ?? 0),
-        };
+      const healthResult = await this.computeHealth(workplaceId);
+      const petState = this.buildPetState(
+        {
+          level: result.awarded ? result.newLevel : result.pet.level,
+          xp: result.awarded ? result.newXp : result.pet.xp,
+        },
+        healthResult,
+      );
+
+      snapshotService.saveFinancialPetSnapshot(workplaceId, petState);
+
+      if (result.awarded) {
+        logger.info('[FinancialPetService] XP awarded', {
+          workplaceId,
+          action,
+          xpGain,
+          newXp: result.newXp,
+          newLevel: result.newLevel,
+        });
       }
 
-      const healthResult = await this.computeHealth(workplaceId);
-
-      logger.info('[FinancialPetService] XP awarded', {
-        workplaceId,
-        action,
-        xpGain,
-        newXp: result.newXp,
-        newLevel: result.newLevel,
-      });
-
-      return {
-        health: healthResult.health,
-        mood: healthResult.mood,
-        level: result.newLevel!,
-        xp: result.newXp!,
-        evolution: this.getEvolutionStage(result.newLevel!),
-        xpToNextLevel: this.xpToNextLevel(result.newXp!),
-      };
+      return petState;
     } catch (error) {
       logger.error('[FinancialPetService] Failed to award XP', {
         workplaceId,
@@ -231,7 +221,6 @@ export class FinancialPetService {
 
     const health$ = from(this.computeHealth(workplaceId)).pipe(
       switchMap(() => {
-        // Observe budget and inbox changes to recompute health reactively
         const budgets$ = this.observeActiveBudgets(workplaceId);
         const inbox$ = this.observePendingInboxCount(workplaceId);
         return combineLatest([budgets$, inbox$]).pipe(
@@ -241,40 +230,73 @@ export class FinancialPetService {
     );
 
     return combineLatest([pet$, health$]).pipe(
-      map(([pet, healthResult]) => ({
-        health: healthResult.health,
-        mood: healthResult.mood,
-        level: pet?.level ?? 0,
-        xp: pet?.xp ?? 0,
-        evolution: this.getEvolutionStage(pet?.level ?? 0),
-        xpToNextLevel: this.xpToNextLevel(pet?.xp ?? 0),
-      })),
+      map(([pet, healthResult]) => {
+        const petState = this.buildPetState(
+          { level: pet?.level, xp: pet?.xp },
+          healthResult,
+        );
+        snapshotService.saveFinancialPetSnapshot(workplaceId, petState);
+        return petState;
+      }),
     );
+  }
+
+  /**
+   * Get evolution stage for a given level.
+   */
+  getEvolutionStage(level: number): PetEvolution {
+    if (level >= 15) return PetEvolution.Sage;
+    if (level >= 10) return PetEvolution.Companion;
+    if (level >= 5) return PetEvolution.Baby;
+    return PetEvolution.Egg;
   }
 
   // ─── Private Helpers ──────────────────────────────────────────────────────
 
   /**
-   * budgetHealthWeight based on the number of active budgets:
-   * - 0 budgets = 30 (no budgeting — risky)
-   * - 1-2 budgets = 70 (some budgeting)
-   * - 3+ budgets = 100 (well-budgeted)
+   * computeBudgetHealthWeight computes budget health weight using remaining margin across active budgets.
+   * Evaluates active budgets via budgetReadService and derives remaining margin percentage.
    */
   private async computeBudgetHealthWeight(
     workplaceId: WorkplaceId,
   ): Promise<number> {
     try {
       const activeBudgets = await budgetRepository.fetchActive(workplaceId);
-
-      const count = activeBudgets.length;
-
-      if (count === 0) {
-        return 30;
+      if (activeBudgets.length === 0) {
+        return 100;
       }
-      if (count <= 2) {
-        return 70;
+
+      let totalBudgetAmount = 0;
+      let totalRemaining = 0;
+
+      const usages = await Promise.all(
+        activeBudgets.map(async budget => {
+          try {
+            return await firstValueFrom(
+              budgetReadService.observeBudgetUsage(workplaceId, budget).pipe(take(1)),
+            );
+          } catch {
+            return {
+              spent: 0,
+              remaining: budget.amount ?? 0,
+              budgetAmount: budget.amount ?? 0,
+              usagePercent: 0,
+            };
+          }
+        }),
+      );
+
+      for (const usage of usages) {
+        totalBudgetAmount += usage.budgetAmount;
+        totalRemaining += usage.remaining;
       }
-      return 100;
+
+      if (totalBudgetAmount === 0) {
+        return 100;
+      }
+
+      const marginRatio = totalRemaining / totalBudgetAmount;
+      return Math.round(Math.max(0, Math.min(100, marginRatio * 100)));
     } catch (error) {
       logger.error(
         '[FinancialPetService] Failed to compute budget health weight',
@@ -285,14 +307,17 @@ export class FinancialPetService {
   }
 
   /**
-   * auditDisciplineWeight = clamp(1 - (pendingInboxCount / 10), 0, 1) × 100
+   * auditDisciplineWeight = clamp(1 - (pendingInboxCount / AUDIT_DEFICIT_PENDING_THRESHOLD), 0, 1) × 100
    */
   private async computeAuditDisciplineWeight(
     workplaceId: WorkplaceId,
   ): Promise<number> {
     try {
       const pendingCount = await this.countPendingInbox(workplaceId);
-      const clamped = Math.max(0, Math.min(1, 1 - pendingCount / 10));
+      const clamped = Math.max(
+        0,
+        Math.min(1, 1 - pendingCount / AUDIT_DEFICIT_PENDING_THRESHOLD),
+      );
       return clamped * 100;
     } catch (error) {
       logger.error(
@@ -308,7 +333,7 @@ export class FinancialPetService {
    */
   private async countPendingInbox(workplaceId: WorkplaceId): Promise<number> {
     try {
-      const table = database.collections.get('transaction_inbox_records');
+      const table = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
       const count = await table
         .query(
           Q.where('workplace_id', workplaceId),
@@ -322,12 +347,10 @@ export class FinancialPetService {
   }
 
   /**
-   * Observable that emits the count of pending inbox records whenever it changes.
+   * Observable emitting the count of pending inbox records on changes.
    */
-  private observePendingInboxCount(
-    workplaceId: WorkplaceId,
-  ) {
-    const table = database.collections.get('transaction_inbox_records');
+  private observePendingInboxCount(workplaceId: WorkplaceId) {
+    const table = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
     return table
       .query(
         Q.where('workplace_id', workplaceId),
@@ -337,7 +360,7 @@ export class FinancialPetService {
   }
 
   /**
-   * Observable that emits whenever active budgets change.
+   * Observable emitting whenever active budgets change.
    */
   private observeActiveBudgets(workplaceId: WorkplaceId) {
     return budgetRepository.observeAllActive(workplaceId);
@@ -355,20 +378,9 @@ export class FinancialPetService {
 
   /**
    * Compute level from XP: level = floor(sqrt(xp / 100))
-   * 100 XP per level.
    */
   private computeLevel(xp: number): number {
     return Math.floor(Math.sqrt(xp / XP_PER_LEVEL));
-  }
-
-  /**
-   * Get the evolution stage for a given level.
-   */
-  getEvolutionStage(level: number): PetEvolution {
-    if (level >= 15) return PetEvolution.Sage;
-    if (level >= 10) return PetEvolution.Companion;
-    if (level >= 5) return PetEvolution.Baby;
-    return PetEvolution.Egg;
   }
 
   /**
@@ -382,49 +394,69 @@ export class FinancialPetService {
   }
 
   /**
-   * Build a PetState from a FinancialPet record + health.
+   * Factory function to build PetState from pet level/xp and health result.
    */
-  private async getPetState(pet: FinancialPet): Promise<PetState> {
-    const healthResult = await this.computeHealth(pet.workplaceId);
+  private buildPetState(
+    pet: { level?: number; xp?: number },
+    healthResult: HealthResult,
+  ): PetState {
+    const level = pet.level ?? 0;
+    const xp = pet.xp ?? 0;
     return {
       health: healthResult.health,
       mood: healthResult.mood,
-      level: pet.level ?? 0,
-      xp: pet.xp ?? 0,
-      evolution: this.getEvolutionStage(pet.level ?? 0),
-      xpToNextLevel: this.xpToNextLevel(pet.xp ?? 0),
+      level,
+      xp,
+      evolution: this.getEvolutionStage(level),
+      xpToNextLevel: this.xpToNextLevel(xp),
     };
   }
 
   /**
+   * Build a PetState from a FinancialPet record + health.
+   */
+  private async getPetState(pet: FinancialPet): Promise<PetState> {
+    const healthResult = await this.computeHealth(pet.workplaceId);
+    const petState = this.buildPetState(pet, healthResult);
+    snapshotService.saveFinancialPetSnapshot(pet.workplaceId, petState);
+    return petState;
+  }
+
+  /**
    * Get or create a FinancialPet record for the workplace.
+   * Accepts an optional writer to participate in an existing WatermelonDB write batch.
    */
   private async getOrCreatePet(
     workplaceId: WorkplaceId,
+    writer?: any,
   ): Promise<FinancialPet> {
-    const table = database.collections.get<FinancialPet>('financial_pets');
+    const dbOrWriter = writer || database;
+    const table = dbOrWriter.collections.get('financial_pets');
     const existing = await table
       .query(Q.where('workplace_id', workplaceId))
       .fetch();
 
     if (existing.length > 0) {
-      return existing[0];
+      return existing[0] as FinancialPet;
     }
 
-    // Create a new pet record
-    const newPet = await database.write(async writer => {
-      const pet = await writer
-        .get<FinancialPet>('financial_pets')
-        .create(record => {
+    const createPetRecord = async (w: any) => {
+      const pet = await w
+        .get('financial_pets')
+        .create((record: FinancialPet) => {
           record.workplaceId = workplaceId;
           record.xp = 0;
           record.level = 0;
         });
-      return pet;
-    });
+      logger.info('[FinancialPetService] Created new pet', { workplaceId });
+      return pet as FinancialPet;
+    };
 
-    logger.info('[FinancialPetService] Created new pet', { workplaceId });
-    return newPet;
+    if (writer) {
+      return await createPetRecord(writer);
+    } else {
+      return await database.write(async w => createPetRecord(w));
+    }
   }
 }
 

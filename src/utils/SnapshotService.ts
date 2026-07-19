@@ -3,6 +3,13 @@ import { storage } from './storage';
 
 const DASHBOARD_SNAPSHOT_KEY = 'dashboard_data_snapshot';
 const WEALTH_SNAPSHOT_KEY = 'wealth_summary_snapshot';
+export const FINANCIAL_PET_SNAPSHOT_KEY = 'financial_pet_snapshot';
+
+/**
+ * AppGroup identifier for shared native widget data synchronization (iOS / Android shared storage).
+ * Coordinated with T-003 spec seam.
+ */
+export const APP_GROUP_ID = 'group.org.sahilsoni.balance';
 
 // 2 days TTL for snapshots to ensure they don't get too stale
 const SNAPSHOT_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
@@ -143,6 +150,20 @@ class SnapshotService {
    */
   getCustomSnapshot(workplaceId: string, key: string): any | null {
     return this.getValidatedSnapshot(`${key}_${workplaceId}`, workplaceId);
+  }
+
+  /**
+   * Persists financial pet state snapshot to MMKV for fast boot and shared widget seam.
+   */
+  saveFinancialPetSnapshot(workplaceId: string, data: any): void {
+    this.saveCustomSnapshot(workplaceId, FINANCIAL_PET_SNAPSHOT_KEY, data);
+  }
+
+  /**
+   * Retrieves the last saved financial pet snapshot for a workplace.
+   */
+  getFinancialPetSnapshot(workplaceId: string): any | null {
+    return this.getCustomSnapshot(workplaceId, FINANCIAL_PET_SNAPSHOT_KEY);
   }
 
   /**

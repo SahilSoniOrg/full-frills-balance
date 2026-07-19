@@ -888,17 +888,5 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
-    {
-      toVersion: 30,
-      steps: [
-        unsafeExecuteSql('-- Version 30: Reserved for T-001 bumps'),
-      ],
-    },
-    {
-      toVersion: 31,
-      steps: [
-        unsafeExecuteSql('-- Version 31: Reserved for T-004 schema version alignment'),
-      ],
-    },
   ],
 });

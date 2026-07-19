@@ -6,12 +6,13 @@ import {
   PetMood,
 } from '@/src/services/FinancialPetService';
 import { WorkplaceId } from '@/src/types/domain';
+import { of } from 'rxjs';
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockWorkplaceId = 'wp-test-001' as WorkplaceId;
 
-// Mock the database module
+// Mock database
 jest.mock('@/src/data/database/Database', () => ({
   database: {
     collections: {
@@ -35,6 +36,21 @@ jest.mock('dayjs', () => {
   mockDayjs.format = jest.fn(() => '2026-07-19');
   return mockDayjs;
 });
+
+// Mock SnapshotService
+jest.mock('@/src/utils/SnapshotService', () => ({
+  snapshotService: {
+    saveFinancialPetSnapshot: jest.fn(),
+    getFinancialPetSnapshot: jest.fn(),
+  },
+}));
+
+// Mock budgetReadService
+jest.mock('@/src/services/budget/budgetReadService', () => ({
+  budgetReadService: {
+    observeBudgetUsage: jest.fn(),
+  },
+}));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -80,18 +96,18 @@ function createMockQueryResult(items: any[]) {
 describe('FinancialPetService', () => {
   let service: FinancialPetService;
   let mockDb: any;
+  let mockObserveBudgetUsage: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     service = new FinancialPetService();
     mockDb = require('@/src/data/database/Database').database;
+    mockObserveBudgetUsage = require('@/src/services/budget/budgetReadService').budgetReadService.observeBudgetUsage;
   });
 
   describe('computeHealth', () => {
-    it('should return 50/neutral health when no budgets exist and inbox is clean', async () => {
-      // Mock budgets table returns empty
+    it('should return 100/ecstatic health when no active budgets exist and inbox is clean', async () => {
       const budgetsQuery = createMockQueryResult([]);
-      // Mock inbox table returns 0 pending
       const inboxQuery = createMockQueryResult([]);
 
       mockDb.collections.get.mockImplementation((table: string) => {
@@ -104,18 +120,22 @@ describe('FinancialPetService', () => {
 
       const result = await service.computeHealth(mockWorkplaceId);
 
-      expect(result.health).toBeGreaterThanOrEqual(0);
-      expect(result.health).toBeLessThanOrEqual(100);
-      expect(typeof result.mood).toBe('string');
-      expect(typeof result.budgetHealthWeight).toBe('number');
-      expect(typeof result.auditDisciplineWeight).toBe('number');
+      expect(result.health).toBe(100);
+      expect(result.mood).toBe(PetMood.Ecstatic);
+      expect(result.budgetHealthWeight).toBe(100);
+      expect(result.auditDisciplineWeight).toBe(100);
     });
 
-    it('should return health near 82 when 1 budget exists and inbox is empty', async () => {
-      const budgetItem = { id: 'budget-1', _raw: { amount: 3000 }, amount: 3000, active: true };
+    it('should calculate budget health weight using remaining margin percentage', async () => {
+      const budgetItem = { id: 'budget-1', amount: 1000, active: true };
       const budgetsQuery = createMockQueryResult([budgetItem]);
       const inboxQuery = createMockQueryResult([]);
 
+      // 600 remaining out of 1000 = 60% margin
+      mockObserveBudgetUsage.mockReturnValue(
+        of({ spent: 400, remaining: 600, budgetAmount: 1000, usagePercent: 0.4 }),
+      );
+
       mockDb.collections.get.mockImplementation((table: string) => {
         if (table === 'budgets') return { query: () => budgetsQuery };
         if (table === 'transaction_inbox_records') {
@@ -126,20 +146,25 @@ describe('FinancialPetService', () => {
 
       const result = await service.computeHealth(mockWorkplaceId);
 
-      // With 1 active budget:
-      // budgetHealthWeight = 70 (1-2 budgets = 70)
-      // auditDisciplineWeight = clamp(1 - 0/10, 0, 1) * 100 = 100
-      // health = 70*0.6 + 100*0.4 = 42 + 40 = 82
-      expect(result.health).toBe(82);
-      expect(result.mood).toBe(PetMood.Ecstatic);
+      // budgetHealthWeight = 60 (60% remaining margin)
+      // auditDisciplineWeight = 100 (0 pending)
+      // health = 60 * 0.6 + 100 * 0.4 = 36 + 40 = 76
+      expect(result.budgetHealthWeight).toBe(60);
+      expect(result.auditDisciplineWeight).toBe(100);
+      expect(result.health).toBe(76);
+      expect(result.mood).toBe(PetMood.Happy);
     });
 
     it('should return low health when inbox has many pending items', async () => {
-      const budgetItem = { id: 'budget-1', _raw: { amount: 3000 }, amount: 3000, active: true };
+      const budgetItem = { id: 'budget-1', amount: 1000, active: true };
       const budgetsQuery = createMockQueryResult([budgetItem]);
-      // 10+ pending items
       const inboxQuery = createMockQueryResult(
         Array(10).fill({ id: 'inbox-1', processingStatus: InboxProcessingStatus.PENDING }),
+      );
+
+      // 100% remaining margin
+      mockObserveBudgetUsage.mockReturnValue(
+        of({ spent: 0, remaining: 1000, budgetAmount: 1000, usagePercent: 0 }),
       );
 
       mockDb.collections.get.mockImplementation((table: string) => {
@@ -152,17 +177,23 @@ describe('FinancialPetService', () => {
 
       const result = await service.computeHealth(mockWorkplaceId);
 
-      // budgetHealthWeight = 70 (1 budget)
+      // budgetHealthWeight = 100
       // auditDisciplineWeight = clamp(1 - 10/10, 0, 1) * 100 = 0
-      // health = 70*0.6 + 0*0.4 = 42
-      expect(result.health).toBe(42);
+      // health = 100*0.6 + 0*0.4 = 60
+      expect(result.health).toBe(60);
       expect(result.auditDisciplineWeight).toBe(0);
     });
 
-    it('should return health of 18 when inbox has 10+ pending and budget is empty', async () => {
-      const budgetsQuery = createMockQueryResult([]);
+    it('should return health of 0 when budget is overspent and inbox has 10+ pending items', async () => {
+      const budgetItem = { id: 'budget-1', amount: 1000, active: true };
+      const budgetsQuery = createMockQueryResult([budgetItem]);
       const inboxQuery = createMockQueryResult(
         Array(10).fill({ id: 'inbox-1', processingStatus: InboxProcessingStatus.PENDING }),
+      );
+
+      // Overspent budget (-200 remaining = 0% margin)
+      mockObserveBudgetUsage.mockReturnValue(
+        of({ spent: 1200, remaining: -200, budgetAmount: 1000, usagePercent: 1.2 }),
       );
 
       mockDb.collections.get.mockImplementation((table: string) => {
@@ -175,10 +206,11 @@ describe('FinancialPetService', () => {
 
       const result = await service.computeHealth(mockWorkplaceId);
 
-      // budgetHealthWeight = 30 (0 budgets = 30)
-      // auditDisciplineWeight = clamp(1 - 10/10, 0, 1) * 100 = 0
-      // health = 30*0.6 + 0*0.4 = 18
-      expect(result.health).toBe(18);
+      // budgetHealthWeight = 0 (clamped)
+      // auditDisciplineWeight = 0
+      // health = 0
+      expect(result.health).toBe(0);
+      expect(result.mood).toBe(PetMood.Asleep);
     });
 
     it('should handle errors gracefully and return neutral health', async () => {
@@ -195,7 +227,6 @@ describe('FinancialPetService', () => {
 
   describe('mood mapping', () => {
     it('should map health 0-19 to Asleep', () => {
-      // Access private method via prototype
       const result = (service as any).mapMood(0);
       expect(result).toBe(PetMood.Asleep);
       expect((service as any).mapMood(19)).toBe(PetMood.Asleep);
@@ -231,10 +262,15 @@ describe('FinancialPetService', () => {
         return { query: () => createMockQueryResult([]) };
       });
 
-      // Mock find + update inside write
       mockDb.write.mockImplementation(async (cb: any) => {
         const writer = {
+          collections: {
+            get: jest.fn(() => ({
+              query: () => petQuery,
+            })),
+          },
           get: jest.fn(() => ({
+            query: () => petQuery,
             find: jest.fn().mockResolvedValue({
               ...pet,
               update: jest.fn(async (updater: any) => {
@@ -267,13 +303,13 @@ describe('FinancialPetService', () => {
 
       mockDb.write.mockImplementation(async (cb: any) => {
         const writer = {
+          collections: {
+            get: jest.fn(() => ({
+              query: () => petQuery,
+            })),
+          },
           get: jest.fn(() => ({
-            find: jest.fn().mockResolvedValue({
-              ...pet,
-              update: jest.fn(async (updater: any) => {
-                await updater(pet);
-              }),
-            }),
+            query: () => petQuery,
           })),
         };
         return cb(writer);
@@ -302,13 +338,13 @@ describe('FinancialPetService', () => {
 
       mockDb.write.mockImplementation(async (cb: any) => {
         const writer = {
+          collections: {
+            get: jest.fn(() => ({
+              query: () => petQuery,
+            })),
+          },
           get: jest.fn(() => ({
-            find: jest.fn().mockResolvedValue({
-              ...pet,
-              update: jest.fn(async (updater: any) => {
-                await updater(pet);
-              }),
-            }),
+            query: () => petQuery,
           })),
         };
         return cb(writer);
@@ -323,7 +359,6 @@ describe('FinancialPetService', () => {
     });
 
     it('should level up when crossing XP threshold', async () => {
-      // 100 XP = level 1 (floor(sqrt(100/100)) = floor(sqrt(1)) = 1)
       const pet = createMockPet({ xp: 95, level: 0 });
       const petQuery = createMockQueryResult([pet]);
 
@@ -338,17 +373,13 @@ describe('FinancialPetService', () => {
 
       mockDb.write.mockImplementation(async (cb: any) => {
         const writer = {
+          collections: {
+            get: jest.fn(() => ({
+              query: () => petQuery,
+            })),
+          },
           get: jest.fn(() => ({
-            find: jest.fn().mockResolvedValue({
-              ...pet,
-              update: jest.fn(async (updater: any) => {
-                await updater({
-                  ...pet,
-                  xp: 105,
-                  level: 1,
-                });
-              }),
-            }),
+            query: () => petQuery,
           })),
         };
         return cb(writer);
@@ -364,7 +395,6 @@ describe('FinancialPetService', () => {
     });
 
     it('should cap daily log_transaction to 1 per day', async () => {
-      // Already logged today
       const pet = createMockPet({
         xp: 25,
         level: 0,
@@ -386,7 +416,6 @@ describe('FinancialPetService', () => {
         PetAction.LogTransaction,
       );
 
-      // Should not increase XP because already logged today
       expect(result.xp).toBe(25);
     });
   });
@@ -420,7 +449,6 @@ describe('FinancialPetService', () => {
       const budgetsQuery = createMockQueryResult([]);
       const inboxQuery = createMockQueryResult([]);
 
-      // Mock the observeWithColumns to return a simple observable that emits
       petQuery.observeWithColumns = jest.fn(() => ({
         pipe: jest.fn(() => ({
           pipe: jest.fn(() => ({
@@ -432,7 +460,6 @@ describe('FinancialPetService', () => {
         })),
       }));
 
-      // Mock observeCount
       inboxQuery.observeCount = jest.fn(() => ({
         pipe: jest.fn(() => ({
           subscribe: jest.fn(),
