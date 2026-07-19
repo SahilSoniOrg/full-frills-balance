@@ -116,6 +116,13 @@ That is the lowest-risk approach for an Expo app with native folders committed.
 3. Expo Router resolves `journal-entry`.
 4. Existing journal entry screen opens in simple mode with the selected type.
 
+## SMS Ingest Dock & Foreground Import Architecture
+
+1. **Native Intent Execution**: When the user taps 1-tap quick import on an SMS widget card (`SmsQuickImportIntent` on iOS or `SmsQuickImportReceiver` on Android), native execution handles the initial tap.
+2. **Foreground Requirement**: WatermelonDB persistence, double-entry ledger rules, and `smsService.processInboxRecord(recordId, 'imported')` business logic exist exclusively in the React Native / JS runtime layer. Widget intents run in background extension/receiver contexts without the RN JS bridge or SQLite database initialized.
+3. **Deep Link Hand-off**: The native intent writes `pending_sms_quick_approve = <recordId>` to shared preferences / AppGroup UserDefaults (`group.in.sahilsoni.fullfrillsbalance.widgets`) and launches `fullfrillsbalance://inbox?approve=<recordId>`.
+4. **Foreground Approval**: Upon foregrounding, the app's JS inbox handler processes the `approve` parameter and calls `smsService.processInboxRecord(recordId, 'imported')` to complete transaction creation and reload widget timelines.
+
 ## Validation Notes
 
 - `npx expo config --type introspect` succeeds with the custom widget plugin enabled.

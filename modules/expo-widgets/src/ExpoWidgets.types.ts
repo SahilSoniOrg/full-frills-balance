@@ -28,3 +28,14 @@ export type WidgetDataSnapshot = {
   theme?: WidgetThemeSnapshot;
   isPrivacyEnabled?: boolean;
 };
+
+export type PendingSmsRecord = {
+  id: string;
+  merchant: string;
+  amount: string;
+  currency?: string;
+  sender?: string;
+  date?: number;
+  processingStatus?: 'pending' | 'imported' | 'dismissed' | 'auto_posted' | string;
+};
+

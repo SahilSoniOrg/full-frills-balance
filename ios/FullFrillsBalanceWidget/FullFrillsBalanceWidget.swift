@@ -386,7 +386,7 @@ struct PendingSmsSnapshot {
     let decoder = JSONDecoder()
     guard let recordIds = try? decoder.decode([String].self, from: recordsData) else { return [] }
 
-    return recordIds.compactMap { recordId -> PendingSmsItem? in
+    let items = recordIds.compactMap { recordId -> PendingSmsItem? in
       let merchant = defaults.string(forKey: PendingSmsKeys.merchant(for: recordId)) ?? "Unknown"
       let amount = defaults.string(forKey: PendingSmsKeys.amount(for: recordId)) ?? "--"
       guard !merchant.isEmpty, !amount.isEmpty else { return nil }
@@ -405,6 +405,8 @@ struct PendingSmsSnapshot {
         updatedAt: updatedAt
       )
     }
+
+    return items.sorted { ($0.updatedAt ?? Date.distantPast) > ($1.updatedAt ?? Date.distantPast) }
   }
 }
 
@@ -534,18 +536,11 @@ struct SmsTriageWidgetView: View {
 
   private func pendingSmsRow(item: PendingSmsItem, compact: Bool) -> some View {
     HStack(spacing: 8) {
-      VStack(alignment: .leading, spacing: compact ? 1 : 2) {
-        Text(item.merchant)
-          .font(.system(size: compact ? 11 : 12, weight: .semibold, design: .rounded))
-          .foregroundStyle(entry.theme.primaryTextColor)
-          .lineLimit(1)
-
-        Text(item.sender)
-          .font(.system(size: compact ? 9 : 10, weight: .regular, design: .rounded))
-          .foregroundStyle(entry.theme.secondaryTextColor)
-          .lineLimit(1)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
+      Text(item.merchant)
+        .font(.system(size: compact ? 11 : 12, weight: .semibold, design: .rounded))
+        .foregroundStyle(entry.theme.primaryTextColor)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
 
       Text(item.amount)
         .font(.system(size: compact ? 12 : 14, weight: .bold, design: .rounded))
