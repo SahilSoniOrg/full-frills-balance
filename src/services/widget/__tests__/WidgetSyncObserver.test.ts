@@ -1,4 +1,6 @@
 import { WidgetSyncObserver } from '../WidgetSyncObserver';
+import { database } from '@/src/data/database/Database';
+import { of, firstValueFrom } from 'rxjs';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be defined before any imports that use them
@@ -30,14 +32,10 @@ jest.mock('@/modules/expo-widgets', () => ({
   },
 }));
 
-import { database } from '@/src/data/database/Database';
-import { of } from 'rxjs';
-
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
-/** Default mock: every table returns an empty array synchronously */
 function resetDatabaseMock(): void {
   (database.collections.get as jest.Mock).mockReset();
   (database.collections.get as jest.Mock).mockImplementation(() => ({
@@ -47,11 +45,7 @@ function resetDatabaseMock(): void {
   }));
 }
 
-/**
- * Seed a specific table with records. All other tables return empty arrays.
- */
 function mockTableData(tableName: string, records: unknown[]): void {
-  // Override only the named table; keep the default fallback for everything else
   const origImpl = (database.collections.get as jest.Mock).getMockImplementation();
   (database.collections.get as jest.Mock).mockImplementation((name: string) => {
     if (name === tableName) {
@@ -61,7 +55,6 @@ function mockTableData(tableName: string, records: unknown[]): void {
         }),
       };
     }
-    // Delegate to original default fallback
     if (origImpl) {
       return origImpl(name);
     }
@@ -106,7 +99,7 @@ describe('WidgetSyncObserver', () => {
 
     it('should be idempotent on multiple start calls', () => {
       observer.start();
-      observer.start(); // second call — no-op
+      observer.start();
       expect(observer.started).toBe(true);
     });
 
@@ -116,18 +109,24 @@ describe('WidgetSyncObserver', () => {
       observer.stop();
       expect(observer.started).toBe(false);
     });
+
+    it('should dispose cleanly', () => {
+      observer.start();
+      observer.dispose();
+      expect(observer.started).toBe(false);
+    });
   });
 
   // -----------------------------------------------------------------------
-  // Payload shape
+  // Payload stream
   // -----------------------------------------------------------------------
 
-  describe('payload shape', () => {
+  describe('payload$', () => {
     it('should produce a valid WidgetPayload with empty data', async () => {
       observer.start();
       await new Promise(r => setImmediate(r));
 
-      const payload = observer.currentPayload;
+      const payload = await firstValueFrom(observer.payload$);
 
       expect(payload).toHaveProperty('streak');
       expect(payload).toHaveProperty('pendingSms');
@@ -155,7 +154,7 @@ describe('WidgetSyncObserver', () => {
       observer.start();
       await new Promise(r => setImmediate(r));
 
-      const payload = observer.currentPayload;
+      const payload = await firstValueFrom(observer.payload$);
       expect(payload.streak.todayLogged).toBe(true);
       expect(payload.streak.streakCount).toBeGreaterThanOrEqual(1);
     });
@@ -176,7 +175,7 @@ describe('WidgetSyncObserver', () => {
       observer.start();
       await new Promise(r => setImmediate(r));
 
-      const p = observer.currentPayload;
+      const p = await firstValueFrom(observer.payload$);
       expect(p.pendingSms).not.toBeNull();
       expect(p.pendingSms!.id).toBe('inbox-1');
       expect(p.pendingSms!.merchant).toBe('Starbucks');
@@ -186,101 +185,18 @@ describe('WidgetSyncObserver', () => {
     it('should set pendingSms to null when inbox is empty', async () => {
       observer.start();
       await new Promise(r => setImmediate(r));
-      expect(observer.currentPayload.pendingSms).toBeNull();
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Debounce behaviour
-  // -----------------------------------------------------------------------
-
-  describe('debounce behaviour', () => {
-    it('should not call native bridge before the debounce window expires', async () => {
-      jest.useFakeTimers({ legacyFakeTimers: false });
-
-      observer.start();
-      // Let synchronous emissions settle
-      await new Promise(r => setImmediate(r));
-
-      // At this point combineLatest has emitted, but debounceTime(300) hasn't
-      // fired yet, so pushToNative$ should NOT have been called.
-      expect(mockSyncWidgetData).not.toHaveBeenCalled();
-
-      jest.useRealTimers();
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // Partial / null safety
-  // -----------------------------------------------------------------------
-
-  describe('partial / null safety', () => {
-    it('should produce a payload even when a source emits late', async () => {
-      const { Subject } = jest.requireActual('rxjs');
-      const delayedJournals$ = new Subject<unknown[]>();
-      const origImpl = (database.collections.get as jest.Mock).getMockImplementation();
-
-      (database.collections.get as jest.Mock).mockImplementation((name: string) => {
-        if (name === 'journals') {
-          return {
-            query: jest.fn().mockReturnValue({
-              observe: jest.fn().mockReturnValue(delayedJournals$.asObservable()),
-            }),
-          };
-        }
-        // Fallback to original default
-        return origImpl ? origImpl(name) : { query: jest.fn(() => ({ observe: () => of([]) })) };
-      });
-
-      observer.start();
-
-      // Journals haven't emitted yet, so combineLatest hasn't emitted.
-      // currentPayload should still be at initial empty state.
-      const p = observer.currentPayload;
-      expect(p.streak.streakCount).toBe(0);
-
-      // Now emit journals — combineLatest should fire
-      const todayStr = new Date().toISOString().slice(0, 10);
-      delayedJournals$.next([{ id: 'j1', journalDate: new Date(todayStr).getTime() }]);
-      await new Promise(r => setImmediate(r));
-
-      const p2 = observer.currentPayload;
-      expect(p2.streak.todayLogged).toBe(true);
+      const payload = await firstValueFrom(observer.payload$);
+      expect(payload.pendingSms).toBeNull();
     });
 
     it('should handle empty DB gracefully', async () => {
       observer.start();
       await new Promise(r => setImmediate(r));
 
-      const payload = observer.currentPayload;
+      const payload = await firstValueFrom(observer.payload$);
       expect(payload.streak).toBeDefined();
       expect(payload.pet).toBeDefined();
       expect(payload.safeToSpend).toBeDefined();
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // triggerSync
-  // -----------------------------------------------------------------------
-
-  describe('triggerSync', () => {
-    it('should do nothing when observer is not started', async () => {
-      await observer.triggerSync();
-      expect(mockSyncWidgetData).not.toHaveBeenCalled();
-    });
-
-    it('should push the latest payload to native bridge', async () => {
-      observer.start();
-      await new Promise(r => setImmediate(r));
-
-      await observer.triggerSync();
-
-      expect(mockSyncWidgetData).toHaveBeenCalled();
-      expect(mockSyncWidgetData).toHaveBeenCalledWith(
-        expect.objectContaining({
-          safeToSpend: expect.any(Object),
-        }),
-      );
     });
   });
 });

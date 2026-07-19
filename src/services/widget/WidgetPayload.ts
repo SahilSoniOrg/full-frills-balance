@@ -13,6 +13,7 @@ export interface WidgetStreakPayload {
   todayLogged: boolean;
   canRecoverMissedDays: boolean;
   missedDaysCount: number;
+  contributionMatrix?: boolean[];
 }
 
 /** Pending SMS inbox item (null when inbox is empty) */

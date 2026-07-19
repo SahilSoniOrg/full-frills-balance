@@ -14,6 +14,8 @@ import {
   shareReplay,
 } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { PetService } from '@/src/services/pet/PetService';
+import { StreakService } from '@/src/services/streak/StreakService';
 import type {
   WidgetPayload,
   WidgetStreakPayload,
@@ -78,17 +80,7 @@ const SYNC_DEBOUNCE_MS = 300;
  */
 export class WidgetSyncObserver {
   private subscriptions: Subscription[] = [];
-
-  /** Whether the observer has been started */
   private _started = false;
-
-  /**
-   * Shared, multicasted payload stream. Late subscribers receive the last
-   * emitted value immediately (shareReplay(1)).
-   *
-   * Initialised in `start()`. Before `start()` is called this is `undefined`;
-   * access via the `payload$` getter which guards against that.
-   */
   private _payload$: Observable<WidgetPayload> | undefined;
 
   // ---- Public API -------------------------------------------------------
@@ -99,10 +91,10 @@ export class WidgetSyncObserver {
    * has not been called yet.
    */
   get payload$(): Observable<WidgetPayload> {
-    if (!this._payload$) {
-      return of(EMPTY_PAYLOAD);
+    if (!this._started) {
+      this.start();
     }
-    return this._payload$;
+    return this._payload$ ?? of(EMPTY_PAYLOAD);
   }
 
   /** Whether the subscriptions are active */
@@ -149,12 +141,10 @@ export class WidgetSyncObserver {
   }
 
   /**
-   * Full cleanup — identical to `stop()` but signals permanent teardown
-   * (e.g. on logout). Should be called when the observer will not be reused.
+   * Consolidate dispose into stop.
    */
   dispose(): void {
     this.stop();
-    logger.info('[WidgetSyncObserver] Disposed');
   }
 
   // ---- Internal helpers -------------------------------------------------
@@ -162,13 +152,11 @@ export class WidgetSyncObserver {
   /**
    * Combine WatermelonDB observables into a single WidgetPayload stream.
    *
-   * Each source is handled independently so a missing / slow table doesn't
-   * block the entire emission. Safe-to-spend is a zero-placeholder here;
-   * the real values come from BalanceService via the hook layer.
+   * Domain math for streak and pet is delegated to StreakService and PetService.
    */
   private buildCombinedObservable(): Observable<WidgetPayload> {
     const journals$: Observable<WidgetStreakPayload> = this.observeJournals().pipe(
-      map((journals: Journal[]) => this.buildStreakPayload(journals)),
+      map((journals: Journal[]) => StreakService.calculateStreak(journals)),
       catchError((_err: Error) => of(EMPTY_STREAK)),
     );
 
@@ -178,8 +166,8 @@ export class WidgetSyncObserver {
         catchError((_err: Error) => of(null)),
       );
 
-    const pet$: Observable<WidgetPetPayload> = this.observeJournals().pipe(
-      map((journals: Journal[]) => this.buildPetPayload(journals)),
+    const pet$: Observable<WidgetPetPayload> = this.observeTransactionInbox().pipe(
+      map((records: TransactionInboxRecord[]) => PetService.calculatePetPayload(records.length)),
       catchError((_err: Error) => of(EMPTY_PET)),
     );
 
@@ -225,63 +213,6 @@ export class WidgetSyncObserver {
       .observe() as unknown as Observable<TransactionInboxRecord[]>;
   }
 
-  // ---- Payload builders -------------------------------------------------
-
-  private buildStreakPayload(journals: Journal[]): WidgetStreakPayload {
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
-
-    // Collect distinct dates with journals
-    const journalDates = new Set<string>();
-    for (const j of journals) {
-      const d = new Date(j.journalDate).toISOString().slice(0, 10);
-      journalDates.add(d);
-    }
-
-    const todayLogged = journalDates.has(todayStr);
-
-    // Calculate consecutive streak
-    let streakCount = 0;
-    let missedDaysCount = 0;
-
-    const sortedDates = [...journalDates].sort().reverse();
-    let checkDate = new Date(todayStr);
-
-    // If not logged today, start from yesterday
-    if (!todayLogged) {
-      checkDate.setDate(checkDate.getDate() - 1);
-    }
-
-    for (const dStr of sortedDates) {
-      const expected = checkDate.toISOString().slice(0, 10);
-      if (dStr === expected) {
-        streakCount++;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else {
-        break;
-      }
-    }
-
-    // Count missed days (gaps in the last 30 days)
-    const thirtyDaysAgo = new Date(todayStr);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
-    const recentDates = sortedDates.filter(d => d >= thirtyDaysAgoStr);
-    missedDaysCount = 30 - recentDates.length - (todayLogged ? 0 : 1);
-    if (missedDaysCount < 0) missedDaysCount = 0;
-
-    // Can recover if missed days <= 3 (grace period)
-    const canRecover = missedDaysCount <= 3 && missedDaysCount > 0;
-
-    return {
-      streakCount,
-      lastLoggedDate: sortedDates.length > 0 ? sortedDates[0] : null,
-      todayLogged,
-      canRecoverMissedDays: canRecover,
-      missedDaysCount,
-    };
-  }
-
   private buildPendingSmsPayload(
     records: TransactionInboxRecord[],
   ): WidgetPendingSmsPayload | null {
@@ -303,28 +234,7 @@ export class WidgetSyncObserver {
       suggestedCategory: null,
     };
   }
-
-  private buildPetPayload(journals: Journal[]): WidgetPetPayload {
-    // Health: derive from recent journal activity (0–100)
-    const petHealth =
-      journals.length > 0
-        ? Math.min(100, Math.max(0, Math.round((journals.length / 50) * 100)))
-        : 50;
-
-    // Mood: pick based on health
-    let petMood: WidgetPetPayload['petMood'] = 'happy';
-    if (petHealth <= 25) petMood = 'asleep';
-    else if (petHealth <= 50) petMood = 'hungry';
-    else if (petHealth >= 90) petMood = 'ecstatic';
-
-    return {
-      petHealth,
-      petMood,
-      unreviewedCount: journals.length,
-      safeToSpendRunwayDays: 0, // computed externally via hook + BalanceService
-    };
-  }
 }
 
-// Singleton — exported for app-wide use (replaces WidgetSyncService)
+// Singleton — exported for app-wide use
 export const widgetSyncObserver = new WidgetSyncObserver();

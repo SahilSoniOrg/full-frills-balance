@@ -34,15 +34,15 @@ export type WidgetDataSnapshot = {
     canRecover: boolean;
     missedDays: number;
   };
-  pendingSms?: Array<{
+  pendingSms?: {
     id: string;
     merchant: string;
     amount: number;
     currency: string;
-  }>;
+  }[];
   pet?: {
     health: number;
     mood: string;
-    level: number;
+    level?: number;
   };
 };

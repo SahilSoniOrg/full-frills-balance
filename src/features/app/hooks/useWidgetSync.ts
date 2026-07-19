@@ -8,13 +8,14 @@ import {
   SafeToSpendResult,
 } from '@/src/services/notification/NotificationService';
 import { widgetSyncObserver } from '@/src/services/widget/WidgetSyncObserver';
+import { PetService } from '@/src/services/pet/PetService';
 import type { WidgetPayload } from '@/src/services/widget/WidgetPayload';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { logger } from '@/src/utils/logger';
 import React from 'react';
 import { Platform } from 'react-native';
 import { EMPTY } from 'rxjs';
 
-// Use the types from the module
 import { WorkplaceId } from '@/src/types/domain';
 import type {
   WidgetDataSnapshot,
@@ -102,6 +103,11 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked, isAppReady } = useUI();
   const { theme, themeMode } = useTheme();
 
+  // Ensure observer is started in production when widget sync is active
+  React.useEffect(() => {
+    widgetSyncObserver.start();
+  }, []);
+
   // Subscribe to the observer's payload$ (streak, pendingSms, pet data from DB)
   const { data: observerPayload } = useObservable<WidgetPayload | null>(
     () => widgetSyncObserver.payload$,
@@ -139,6 +145,11 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
 
       const isShortfall = (shortfall ?? 0) > 0;
       const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);
+
+      // Compute pet payload per spec: Audit Deficit (pending inbox) + Budget Health (safeToSpend)
+      const petCalculated = observerPayload?.pet
+        ? PetService.calculatePetPayload(observerPayload.pet.unreviewedCount, safeToSpend ?? 0)
+        : null;
 
       // Build the complete snapshot merging observer data (streak/pet/sms)
       // with the hook-owned data (safeToSpend, theme, privacy).
@@ -186,22 +197,21 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
             ]
           : undefined,
 
-        // Pet — mapped from observer payload to bridge shape
-        pet: observerPayload?.pet
+        // Pet — health computed per spec from Audit Deficit + Budget Health
+        pet: petCalculated
           ? {
-              health: observerPayload.pet.petHealth,
-              mood: observerPayload.pet.petMood,
-              level: 1, // level progression TBD; placeholder
+              health: petCalculated.petHealth,
+              mood: petCalculated.petMood,
             }
           : undefined,
       };
 
       await expoWidgetsModule.syncWidgetData(snapshot).catch((err: Error | unknown) => {
-        console.warn('[useWidgetSync] Failed to sync widget data:', err);
+        logger.warn('[useWidgetSync] Failed to sync widget data', { error: String(err) });
       });
     };
 
-    // Use a small timeout to debounce rapid changes (e.g. during batch operations)
+    // Use a small timeout to debounce rapid changes and decouple write from UI thread
     const timeoutId = setTimeout(() => {
       void bootstrapWidgets();
     }, 500);
