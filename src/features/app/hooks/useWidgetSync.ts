@@ -7,6 +7,8 @@ import {
   notificationService,
   SafeToSpendResult,
 } from '@/src/services/notification/NotificationService';
+import { widgetSyncObserver } from '@/src/services/widget/WidgetSyncObserver';
+import type { WidgetPayload } from '@/src/services/widget/WidgetPayload';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
 import { Platform } from 'react-native';
@@ -100,7 +102,15 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked, isAppReady } = useUI();
   const { theme, themeMode } = useTheme();
 
-  // Delay safeToSpend calculation until the app is ready to avoid blocking hydration
+  // Subscribe to the observer's payload$ (streak, pendingSms, pet data from DB)
+  const { data: observerPayload } = useObservable<WidgetPayload | null>(
+    () => widgetSyncObserver.payload$,
+    [],
+    null,
+  );
+
+  // Delay safeToSpend calculation until the app is ready to avoid blocking hydration.
+  // This hook remains the sole bridge writer — it merges all data sources here.
   const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
     () =>
       isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
@@ -130,6 +140,8 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
       const isShortfall = (shortfall ?? 0) > 0;
       const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);
 
+      // Build the complete snapshot merging observer data (streak/pet/sms)
+      // with the hook-owned data (safeToSpend, theme, privacy).
       const snapshot: WidgetDataSnapshot = {
         safeToSpend: isDataPresent
           ? {
@@ -150,6 +162,38 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
           : undefined,
         theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
         isPrivacyEnabled: isWidgetPrivacyEnabled,
+
+        // Streak — mapped from observer payload to bridge shape
+        streak: observerPayload?.streak
+          ? {
+              count: observerPayload.streak.streakCount,
+              todayLogged: observerPayload.streak.todayLogged,
+              lastLoggedDate: observerPayload.streak.lastLoggedDate,
+              canRecover: observerPayload.streak.canRecoverMissedDays,
+              missedDays: observerPayload.streak.missedDaysCount,
+            }
+          : undefined,
+
+        // PendingSms — observer returns single latest item; bridge expects array
+        pendingSms: observerPayload?.pendingSms
+          ? [
+              {
+                id: observerPayload.pendingSms.id,
+                merchant: observerPayload.pendingSms.merchant ?? '',
+                amount: observerPayload.pendingSms.amount,
+                currency: observerPayload.pendingSms.currency,
+              },
+            ]
+          : undefined,
+
+        // Pet — mapped from observer payload to bridge shape
+        pet: observerPayload?.pet
+          ? {
+              health: observerPayload.pet.petHealth,
+              mood: observerPayload.pet.petMood,
+              level: 1, // level progression TBD; placeholder
+            }
+          : undefined,
       };
 
       await expoWidgetsModule.syncWidgetData(snapshot).catch((err: Error | unknown) => {
@@ -185,5 +229,6 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     currencyCode,
     isDataPresent,
     isAppReady,
+    observerPayload,
   ]);
 }

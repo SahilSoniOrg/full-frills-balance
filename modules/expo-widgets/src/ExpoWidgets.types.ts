@@ -27,4 +27,22 @@ export type WidgetDataSnapshot = {
   safeToSpend?: SafeToSpendSnapshot;
   theme?: WidgetThemeSnapshot;
   isPrivacyEnabled?: boolean;
+  streak?: {
+    count: number;
+    todayLogged: boolean;
+    lastLoggedDate: string | null;
+    canRecover: boolean;
+    missedDays: number;
+  };
+  pendingSms?: Array<{
+    id: string;
+    merchant: string;
+    amount: number;
+    currency: string;
+  }>;
+  pet?: {
+    health: number;
+    mood: string;
+    level: number;
+  };
 };

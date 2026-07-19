@@ -28,21 +28,59 @@ data class WidgetThemeSnapshot(
   val actionIconColor: Int,
 )
 
+data class StreakWidgetSnapshot(
+  val count: Int,
+  val todayLogged: Boolean,
+  val lastLoggedDate: String?,
+  val canRecover: Boolean,
+  val missedDays: Int,
+)
+
+data class PetWidgetSnapshot(
+  val health: Int,
+  val mood: String,
+  val level: Int,
+)
+
 object FullFrillsBalanceWidgetSupport {
   private const val PREFS_NAME = "full_frills_balance_widgets"
+  private const val MAX_PENDING_SMS = 5
+
+  // safeToSpend
   private const val KEY_SAFE_TO_SPEND_AMOUNT = "safe_to_spend_amount"
   private const val KEY_SAFE_TO_SPEND_CURRENCY = "safe_to_spend_currency"
   private const val KEY_SAFE_TO_SPEND_FORMATTED_AMOUNT = "safe_to_spend_formatted_amount"
   private const val KEY_SAFE_TO_SPEND_TITLE = "safe_to_spend_title"
   private const val KEY_SAFE_TO_SPEND_SUBTITLE = "safe_to_spend_subtitle"
   private const val KEY_SAFE_TO_SPEND_UPDATED_AT = "safe_to_spend_updated_at"
+
+  // theme
   private const val KEY_THEME_ID = "widget_theme_id"
   private const val KEY_THEME_MODE = "widget_theme_mode"
   private const val KEY_THEME_TITLE_COLOR = "widget_theme_title_color"
   private const val KEY_THEME_PRIMARY_TEXT_COLOR = "widget_theme_primary_text_color"
   private const val KEY_THEME_SECONDARY_TEXT_COLOR = "widget_theme_secondary_text_color"
   private const val KEY_THEME_ACTION_ICON_COLOR = "widget_theme_action_icon_color"
+
+  // privacy
   private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
+
+  // streak
+  private const val KEY_STREAK_COUNT = "streak_count"
+  private const val KEY_STREAK_TODAY_LOGGED = "streak_today_logged"
+  private const val KEY_STREAK_LAST_LOGGED_DATE = "streak_last_logged_date"
+  private const val KEY_STREAK_CAN_RECOVER = "streak_can_recover"
+  private const val KEY_STREAK_MISSED_DAYS = "streak_missed_days"
+
+  // pendingSms
+  private const val KEY_PENDING_SMS_COUNT = "pending_sms_count"
+  private const val KEY_PENDING_SMS_PREFIX = "pending_sms_"
+
+  // pet
+  private const val KEY_PET_HEALTH = "pet_health"
+  private const val KEY_PET_MOOD = "pet_mood"
+  private const val KEY_PET_LEVEL = "pet_level"
+
   private const val APP_SCHEME = "fullfrillsbalance" // expo-inject-appscheme
   private const val APP_HOME_DEEP_LINK = "$APP_SCHEME://"
   private const val INCOME_DEEP_LINK = "$APP_SCHEME://journal-entry?mode=simple&type=income&source=widget"
@@ -61,6 +99,30 @@ object FullFrillsBalanceWidgetSupport {
       subtitle = prefs.getString(KEY_SAFE_TO_SPEND_SUBTITLE, context.getString(R.string.safe_to_spend_widget_subtitle))
         ?: "",
       updatedAt = prefs.getLong(KEY_SAFE_TO_SPEND_UPDATED_AT, 0L),
+    )
+  }
+
+  fun readStreakSnapshot(context: Context): StreakWidgetSnapshot? {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val count = prefs.getInt(KEY_STREAK_COUNT, 0)
+    if (count <= 0) return null
+    return StreakWidgetSnapshot(
+      count = count,
+      todayLogged = prefs.getBoolean(KEY_STREAK_TODAY_LOGGED, false),
+      lastLoggedDate = prefs.getString(KEY_STREAK_LAST_LOGGED_DATE, null)?.ifBlank { null },
+      canRecover = prefs.getBoolean(KEY_STREAK_CAN_RECOVER, false),
+      missedDays = prefs.getInt(KEY_STREAK_MISSED_DAYS, 0),
+    )
+  }
+
+  fun readPetSnapshot(context: Context): PetWidgetSnapshot? {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val health = prefs.getInt(KEY_PET_HEALTH, -1)
+    if (health < 0) return null
+    return PetWidgetSnapshot(
+      health = health,
+      mood = prefs.getString(KEY_PET_MOOD, "happy") ?: "happy",
+      level = prefs.getInt(KEY_PET_LEVEL, 1),
     )
   }
 

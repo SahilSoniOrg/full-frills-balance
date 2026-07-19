@@ -38,6 +38,27 @@ struct SafeToSpendSnapshot {
   }
 }
 
+struct StreakSnapshot {
+  let count: Int
+  let todayLogged: Bool
+  let lastLoggedDate: String?
+  let canRecover: Bool
+  let missedDays: Int
+
+  static func load() -> StreakSnapshot? {
+    guard let defaults = UserDefaults(suiteName: appGroupId) else { return nil }
+    let count = defaults.integer(forKey: "streak_count")
+    guard count > 0 else { return nil }
+    return StreakSnapshot(
+      count: count,
+      todayLogged: defaults.bool(forKey: "streak_today_logged"),
+      lastLoggedDate: defaults.string(forKey: "streak_last_logged_date"),
+      canRecover: defaults.bool(forKey: "streak_can_recover"),
+      missedDays: defaults.integer(forKey: "streak_missed_days")
+    )
+  }
+}
+
 struct WidgetThemeSnapshot {
   let themeId: String
   let themeMode: String
