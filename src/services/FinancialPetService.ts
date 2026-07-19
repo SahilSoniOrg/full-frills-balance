@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import FinancialPet from '@/src/data/models/FinancialPet';
 import { InboxProcessingStatus } from '@/src/data/models/TransactionInboxRecord';
 import { WorkplaceId } from '@/src/types/domain';
@@ -96,23 +97,14 @@ export class FinancialPetService {
 
   /**
    * Award XP for a completed action and handle level-up.
+   * The entire read-modify-write is performed inside the write batch
+   * to prevent race conditions when two concurrent calls happen.
    */
   async awardXp(
     workplaceId: WorkplaceId,
     action: PetAction,
   ): Promise<PetState> {
     try {
-      const pet = await this.getOrCreatePet(workplaceId);
-
-      // Daily cap: only 1 log_transaction award per day
-      if (action === PetAction.LogTransaction) {
-        const today = dayjs().format('YYYY-MM-DD');
-        if (pet.lastActionDate === today) {
-          // Already awarded today — return current state
-          return this.getPetState(pet);
-        }
-      }
-
       let xpGain: number;
       switch (action) {
         case PetAction.ReviewSms:
@@ -128,15 +120,43 @@ export class FinancialPetService {
           xpGain = 0;
       }
 
-      const newXp = (pet.xp ?? 0) + xpGain;
-      const newLevel = this.computeLevel(newXp);
-      const today = dayjs().format('YYYY-MM-DD');
+      const result = await database.write(async writer => {
+        const petsTable = writer.get<FinancialPet>('financial_pets');
 
-      await database.write(async writer => {
-        const petRecord = await writer
-          .get<FinancialPet>('financial_pets')
-          .find(pet.id);
-        await petRecord.update(record => {
+        // Read pet inside write batch — safe from race conditions
+        const existing = await petsTable
+          .query(Q.where('workplace_id', workplaceId))
+          .fetch();
+
+        let pet: FinancialPet;
+        if (existing.length > 0) {
+          pet = existing[0];
+        } else {
+          // Create a new pet record
+          pet = await petsTable.create(record => {
+            record.workplaceId = workplaceId;
+            record.xp = 0;
+            record.level = 0;
+          });
+          logger.info('[FinancialPetService] Created new pet', { workplaceId });
+        }
+
+        const today = dayjs().format('YYYY-MM-DD');
+
+        // Daily cap: only 1 log_transaction award per day
+        if (action === PetAction.LogTransaction) {
+          if (pet.lastActionDate === today) {
+            // Already awarded today — return current state without modifying
+            return { awarded: false, pet };
+          }
+        }
+
+        // Read-modify-write inside the same batch transaction
+        const currentXp = pet.xp ?? 0;
+        const newXp = currentXp + xpGain;
+        const newLevel = this.computeLevel(newXp);
+
+        await pet.update(record => {
           record.xp = newXp;
           record.level = newLevel;
           if (action === PetAction.LogTransaction) {
@@ -149,7 +169,22 @@ export class FinancialPetService {
             record.lastFedAt = Date.now();
           }
         });
+
+        return { awarded: true, pet, newXp, newLevel };
       });
+
+      if (!result.awarded) {
+        // Daily cap hit — return current state
+        const healthResult = await this.computeHealth(workplaceId);
+        return {
+          health: healthResult.health,
+          mood: healthResult.mood,
+          level: result.pet.level ?? 0,
+          xp: result.pet.xp ?? 0,
+          evolution: this.getEvolutionStage(result.pet.level ?? 0),
+          xpToNextLevel: this.xpToNextLevel(result.pet.xp ?? 0),
+        };
+      }
 
       const healthResult = await this.computeHealth(workplaceId);
 
@@ -157,17 +192,17 @@ export class FinancialPetService {
         workplaceId,
         action,
         xpGain,
-        newXp,
-        newLevel,
+        newXp: result.newXp,
+        newLevel: result.newLevel,
       });
 
       return {
         health: healthResult.health,
         mood: healthResult.mood,
-        level: newLevel,
-        xp: newXp,
-        evolution: this.getEvolutionStage(newLevel),
-        xpToNextLevel: this.xpToNextLevel(newXp),
+        level: result.newLevel!,
+        xp: result.newXp!,
+        evolution: this.getEvolutionStage(result.newLevel!),
+        xpToNextLevel: this.xpToNextLevel(result.newXp!),
       };
     } catch (error) {
       logger.error('[FinancialPetService] Failed to award XP', {
@@ -220,47 +255,26 @@ export class FinancialPetService {
   // ─── Private Helpers ──────────────────────────────────────────────────────
 
   /**
-   * budgetHealthWeight = clamp(safeToSpendRemainingMargin / dailyAllowance, 0, 1) × 100
-   *
-   * Computed from active budgets:
-   * - dailyAllowance = total budget amounts summed / 30 (rough daily budget)
-   * - safeToSpendRemainingMargin = total remaining budget (unspent)
+   * budgetHealthWeight based on the number of active budgets:
+   * - 0 budgets = 30 (no budgeting — risky)
+   * - 1-2 budgets = 70 (some budgeting)
+   * - 3+ budgets = 100 (well-budgeted)
    */
   private async computeBudgetHealthWeight(
     workplaceId: WorkplaceId,
   ): Promise<number> {
     try {
-      const budgetsTable = database.collections.get('budgets');
-      const activeBudgets = await budgetsTable
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.where('active', true),
-        )
-        .fetch();
+      const activeBudgets = await budgetRepository.fetchActive(workplaceId);
 
-      if (activeBudgets.length === 0) {
-        // No budgets configured — neutral score
-        return 50;
+      const count = activeBudgets.length;
+
+      if (count === 0) {
+        return 30;
       }
-
-      let totalBudgetAmount = 0;
-
-      for (const budget of activeBudgets) {
-        const amount = (budget as any).amount ?? 0;
-        totalBudgetAmount += amount;
+      if (count <= 2) {
+        return 70;
       }
-
-      // Daily allowance: spread total budget over 30 days
-      const dailyAllowance = totalBudgetAmount / 30 || 1;
-
-      // Safe-to-spend margin equals the total budget as a proxy
-      // (in production this would account for amounts already spent)
-      const safeToSpendRemainingMargin = totalBudgetAmount / 30;
-
-      const ratio = safeToSpendRemainingMargin / dailyAllowance;
-      const clamped = Math.max(0, Math.min(1, ratio));
-
-      return clamped * 100;
+      return 100;
     } catch (error) {
       logger.error(
         '[FinancialPetService] Failed to compute budget health weight',
@@ -326,13 +340,7 @@ export class FinancialPetService {
    * Observable that emits whenever active budgets change.
    */
   private observeActiveBudgets(workplaceId: WorkplaceId) {
-    const table = database.collections.get('budgets');
-    return table
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('active', true),
-      )
-      .observeWithColumns(['amount']);
+    return budgetRepository.observeAllActive(workplaceId);
   }
 
   /**

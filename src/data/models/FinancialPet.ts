@@ -1,11 +1,9 @@
-import { WorkplaceId } from '@/src/types/domain';
-import { Model } from '@nozbe/watermelondb';
+import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { date, field, readonly } from '@nozbe/watermelondb/decorators';
 
-export default class FinancialPet extends Model {
+export default class FinancialPet extends BaseScopedModel {
   static table = 'financial_pets';
 
-  @field('workplace_id') workplaceId!: WorkplaceId;
   @field('xp') xp!: number;
   @field('level') level!: number;
   @field('last_fed_at') lastFedAt?: number;

@@ -111,8 +111,8 @@ describe('FinancialPetService', () => {
       expect(typeof result.auditDisciplineWeight).toBe('number');
     });
 
-    it('should return health near 100 when budgets are healthy and inbox is empty', async () => {
-      const budgetItem = { id: 'budget-1', amount: 3000, active: true };
+    it('should return health near 82 when 1 budget exists and inbox is empty', async () => {
+      const budgetItem = { id: 'budget-1', _raw: { amount: 3000 }, amount: 3000, active: true };
       const budgetsQuery = createMockQueryResult([budgetItem]);
       const inboxQuery = createMockQueryResult([]);
 
@@ -126,16 +126,16 @@ describe('FinancialPetService', () => {
 
       const result = await service.computeHealth(mockWorkplaceId);
 
-      // With 3000 budget and 0 pending inbox:
-      // budgetHealthWeight = clamp((3000/30) / (3000/30), 0, 1) * 100 = 100
+      // With 1 active budget:
+      // budgetHealthWeight = 70 (1-2 budgets = 70)
       // auditDisciplineWeight = clamp(1 - 0/10, 0, 1) * 100 = 100
-      // health = 100*0.6 + 100*0.4 = 100
-      expect(result.health).toBe(100);
+      // health = 70*0.6 + 100*0.4 = 42 + 40 = 82
+      expect(result.health).toBe(82);
       expect(result.mood).toBe(PetMood.Ecstatic);
     });
 
     it('should return low health when inbox has many pending items', async () => {
-      const budgetItem = { id: 'budget-1', amount: 3000, active: true };
+      const budgetItem = { id: 'budget-1', _raw: { amount: 3000 }, amount: 3000, active: true };
       const budgetsQuery = createMockQueryResult([budgetItem]);
       // 10+ pending items
       const inboxQuery = createMockQueryResult(
@@ -152,13 +152,14 @@ describe('FinancialPetService', () => {
 
       const result = await service.computeHealth(mockWorkplaceId);
 
+      // budgetHealthWeight = 70 (1 budget)
       // auditDisciplineWeight = clamp(1 - 10/10, 0, 1) * 100 = 0
-      // health = 100*0.6 + 0*0.4 = 60
-      expect(result.health).toBe(60);
+      // health = 70*0.6 + 0*0.4 = 42
+      expect(result.health).toBe(42);
       expect(result.auditDisciplineWeight).toBe(0);
     });
 
-    it('should return health of 40 when inbox has 10+ pending and budget is empty', async () => {
+    it('should return health of 18 when inbox has 10+ pending and budget is empty', async () => {
       const budgetsQuery = createMockQueryResult([]);
       const inboxQuery = createMockQueryResult(
         Array(10).fill({ id: 'inbox-1', processingStatus: InboxProcessingStatus.PENDING }),
@@ -174,10 +175,10 @@ describe('FinancialPetService', () => {
 
       const result = await service.computeHealth(mockWorkplaceId);
 
-      // budgetHealthWeight = 50 (no budgets = neutral)
+      // budgetHealthWeight = 30 (0 budgets = 30)
       // auditDisciplineWeight = clamp(1 - 10/10, 0, 1) * 100 = 0
-      // health = 50*0.6 + 0*0.4 = 30
-      expect(result.health).toBe(30);
+      // health = 30*0.6 + 0*0.4 = 18
+      expect(result.health).toBe(18);
     });
 
     it('should handle errors gracefully and return neutral health', async () => {
