@@ -56,6 +56,25 @@ export class DailyCheckInRepository {
   }
 
   /**
+   * Create a new daily check-in record if one does not already exist for the date.
+   */
+  async createIfAbsent(
+    workplaceId: WorkplaceId,
+    checkInDate: number,
+    isZeroSpend: boolean = true,
+  ): Promise<DailyCheckIn> {
+    const existing = await this.findByDate(workplaceId, checkInDate, isZeroSpend);
+    if (existing) {
+      logger.info(
+        `[DailyCheckInRepository] Check-in already exists for ${new Date(checkInDate).toISOString()} (zero-spend: ${isZeroSpend})`,
+      );
+      return existing;
+    }
+
+    return this.create(workplaceId, checkInDate, isZeroSpend);
+  }
+
+  /**
    * Create a new daily check-in record.
    */
   async create(
