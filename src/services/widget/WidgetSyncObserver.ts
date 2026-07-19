@@ -3,11 +3,17 @@ import TransactionInboxRecord, {
   InboxProcessingStatus,
 } from '@/src/data/models/TransactionInboxRecord';
 import Journal from '@/src/data/models/Journal';
-import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
-import { combineLatest, Observable, of, Subject, Subscription, debounceTime } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import {
+  combineLatest,
+  Observable,
+  of,
+  Subscription,
+  debounceTime,
+  shareReplay,
+} from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import type {
   WidgetPayload,
   WidgetStreakPayload,
@@ -28,8 +34,6 @@ const EMPTY_STREAK: WidgetStreakPayload = {
   missedDaysCount: 0,
 };
 
-const EMPTY_PENDING_SMS: null = null;
-
 const EMPTY_PET: WidgetPetPayload = {
   petHealth: 50,
   petMood: 'happy',
@@ -45,7 +49,7 @@ const EMPTY_SAFE_TO_SPEND: WidgetSafeToSpendPayload = {
 
 const EMPTY_PAYLOAD: WidgetPayload = {
   streak: EMPTY_STREAK,
-  pendingSms: EMPTY_PENDING_SMS,
+  pendingSms: null,
   pet: EMPTY_PET,
   safeToSpend: EMPTY_SAFE_TO_SPEND,
 };
@@ -60,29 +64,45 @@ const SYNC_DEBOUNCE_MS = 300;
 // ---------------------------------------------------------------------------
 
 /**
- * WidgetSyncObserver — subscribes to WatermelonDB observables for
- * `journals`, `transaction_inbox_records`, and `balance_snapshots`,
- * debounces at 300 ms, serialises a unified `WidgetPayload`, and pushes
- * it to the native bridge (iOS AppGroup UserDefaults / Android SharedPreferences).
+ * WidgetSyncObserver — a PURE DATA PIPELINE that subscribes to WatermelonDB
+ * observables for `journals` and `transaction_inbox_records`, debounces at
+ * 300 ms, and exposes a single `payload$` Observable<WidgetPayload>.
  *
- * The observer is null-safe: if a data source hasn't emitted yet, a
- * sensible default value is used rather than blocking the entire sync.
+ * The observer does NOT write to the native bridge. It is the sole
+ * responsibility of `useWidgetSync` (the React hook) to subscribe to
+ * `payload$` and push data to the bridge.
+ *
+ * Safe-to-spend data comes from the BalanceService / NotificationService layer
+ * and is merged in the hook. The observer emits a zero-placeholder for that
+ * section so the payload shape is always complete.
  */
 export class WidgetSyncObserver {
   private subscriptions: Subscription[] = [];
-  private payloadSubject = new Subject<WidgetPayload>();
-
-  /** Current (last-emitted) payload — useful for tests & diagnostics */
-  private _currentPayload: WidgetPayload = { ...EMPTY_PAYLOAD };
 
   /** Whether the observer has been started */
   private _started = false;
 
+  /**
+   * Shared, multicasted payload stream. Late subscribers receive the last
+   * emitted value immediately (shareReplay(1)).
+   *
+   * Initialised in `start()`. Before `start()` is called this is `undefined`;
+   * access via the `payload$` getter which guards against that.
+   */
+  private _payload$: Observable<WidgetPayload> | undefined;
+
   // ---- Public API -------------------------------------------------------
 
-  /** Last emitted payload (read-only snapshot for tests) */
-  get currentPayload(): WidgetPayload {
-    return { ...this._currentPayload };
+  /**
+   * The observable payload stream. Subscribe here to receive widget data.
+   * Emits an empty-state payload immediately on subscription if `start()`
+   * has not been called yet.
+   */
+  get payload$(): Observable<WidgetPayload> {
+    if (!this._payload$) {
+      return of(EMPTY_PAYLOAD);
+    }
+    return this._payload$;
   }
 
   /** Whether the subscriptions are active */
@@ -91,63 +111,50 @@ export class WidgetSyncObserver {
   }
 
   /**
-   * Start observing WatermelonDB tables.
+   * Start observing WatermelonDB tables and wire up `payload$`.
    * Safe to call multiple times — subsequent calls are no-ops.
    */
   start(): void {
     if (this._started) return;
     this._started = true;
 
-    // Build the chain: combineLatest from DB → debounce → push to native
-    const combined$ = this.buildCombinedObservable();
-
-    const debouncedPush$ = combined$.pipe(
+    this._payload$ = this.buildCombinedObservable().pipe(
       debounceTime(SYNC_DEBOUNCE_MS),
-      switchMap((payload: WidgetPayload) => this.pushToNative$(payload)),
+      shareReplay(1),
     );
 
-    const sub = combined$.subscribe({
-      next: (payload: WidgetPayload) => {
-        this._currentPayload = payload;
-      },
+    // Keep the stream hot so it eagerly fetches even before the hook subscribes
+    const keepAliveSub = this._payload$.subscribe({
       error: (err: Error) => {
-        logger.error('[WidgetSyncObserver] Error in observable chain', err);
+        logger.error('[WidgetSyncObserver] Error in payload$ stream', err);
       },
     });
 
-    // Subscribe the debounced push chain too so it activates
-    const pushSub = debouncedPush$.subscribe({
-      error: (err: Error) => {
-        logger.error('[WidgetSyncObserver] Error in push chain', err);
-      },
-    });
-
-    this.subscriptions.push(sub, pushSub);
-    logger.info('[WidgetSyncObserver] Started — observing journals, inbox & snapshots');
+    this.subscriptions.push(keepAliveSub);
+    logger.info('[WidgetSyncObserver] Started — observing journals & inbox');
   }
 
   /**
-   * Tear down all subscriptions. Safe to call multiple times.
+   * Tear down all subscriptions. `payload$` reverts to emitting EMPTY_PAYLOAD.
+   * Safe to call multiple times.
    */
   stop(): void {
     for (const sub of this.subscriptions) {
       sub.unsubscribe();
     }
     this.subscriptions = [];
+    this._payload$ = undefined;
     this._started = false;
     logger.info('[WidgetSyncObserver] Stopped');
   }
 
   /**
-   * Force an immediate sync with the latest known payload.
-   * Useful for testing or explicit refresh triggers.
+   * Full cleanup — identical to `stop()` but signals permanent teardown
+   * (e.g. on logout). Should be called when the observer will not be reused.
    */
-  async triggerSync(): Promise<void> {
-    if (!this._started) {
-      logger.warn('[WidgetSyncObserver] triggerSync called but observer is not started');
-      return;
-    }
-    await this.pushToNative(this._currentPayload);
+  dispose(): void {
+    this.stop();
+    logger.info('[WidgetSyncObserver] Disposed');
   }
 
   // ---- Internal helpers -------------------------------------------------
@@ -156,46 +163,29 @@ export class WidgetSyncObserver {
    * Combine WatermelonDB observables into a single WidgetPayload stream.
    *
    * Each source is handled independently so a missing / slow table doesn't
-   * block the entire emission.
+   * block the entire emission. Safe-to-spend is a zero-placeholder here;
+   * the real values come from BalanceService via the hook layer.
    */
   private buildCombinedObservable(): Observable<WidgetPayload> {
     const journals$: Observable<WidgetStreakPayload> = this.observeJournals().pipe(
       map((journals: Journal[]) => this.buildStreakPayload(journals)),
-      catchError((_err: Error) => {
-        return of(EMPTY_STREAK);
-      }),
+      catchError((_err: Error) => of(EMPTY_STREAK)),
     );
 
     const inbox$: Observable<WidgetPendingSmsPayload | null> =
       this.observeTransactionInbox().pipe(
         map((records: TransactionInboxRecord[]) => this.buildPendingSmsPayload(records)),
-        catchError((_err: Error) => {
-          return of(EMPTY_PENDING_SMS);
-        }),
+        catchError((_err: Error) => of(null)),
       );
 
-    const pet$: Observable<WidgetPetPayload> = this.observePetData().pipe(
-      map(
-        ({
-          journals,
-          snapshots,
-        }: {
-          journals: Journal[];
-          snapshots: BalanceSnapshot[];
-        }) => this.buildPetPayload(journals, snapshots),
-      ),
-      catchError((_err: Error) => {
-        return of(EMPTY_PET);
-      }),
+    const pet$: Observable<WidgetPetPayload> = this.observeJournals().pipe(
+      map((journals: Journal[]) => this.buildPetPayload(journals)),
+      catchError((_err: Error) => of(EMPTY_PET)),
     );
 
-    const safeToSpend$: Observable<WidgetSafeToSpendPayload> =
-      this.observeSafeToSpendData().pipe(
-        map((snapshots: BalanceSnapshot[]) => this.buildSafeToSpendPayload(snapshots)),
-        catchError((_err: Error) => {
-          return of(EMPTY_SAFE_TO_SPEND);
-        }),
-      );
+    // safeToSpend is provided as zeros here; the hook merges real values from
+    // BalanceService / NotificationService before writing to the native bridge.
+    const safeToSpend$: Observable<WidgetSafeToSpendPayload> = of(EMPTY_SAFE_TO_SPEND);
 
     return combineLatest([journals$, inbox$, pet$, safeToSpend$]).pipe(
       map(
@@ -235,44 +225,15 @@ export class WidgetSyncObserver {
       .observe() as unknown as Observable<TransactionInboxRecord[]>;
   }
 
-  /** Observe journals + balance snapshots for pet data */
-  private observePetData(): Observable<{
-    journals: Journal[];
-    snapshots: BalanceSnapshot[];
-  }> {
-    const journals$ = this.observeJournals();
-    const snapshots$ = this.observeBalanceSnapshots();
-    return combineLatest([journals$, snapshots$]).pipe(
-      map(
-        ([journals, snapshots]: [Journal[], BalanceSnapshot[]]) => ({
-          journals,
-          snapshots,
-        }),
-      ),
-    );
-  }
-
-  /** Observe balance snapshots */
-  private observeBalanceSnapshots(): Observable<BalanceSnapshot[]> {
-    const collection = database.collections.get<BalanceSnapshot>('balance_snapshots');
-    return collection.query().observe() as unknown as Observable<BalanceSnapshot[]>;
-  }
-
-  /** Observe balance snapshots for safe-to-spend calculation */
-  private observeSafeToSpendData(): Observable<BalanceSnapshot[]> {
-    return this.observeBalanceSnapshots();
-  }
-
   // ---- Payload builders -------------------------------------------------
 
   private buildStreakPayload(journals: Journal[]): WidgetStreakPayload {
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
 
-    // Collect distinct dates with journals (posted journals)
+    // Collect distinct dates with journals
     const journalDates = new Set<string>();
     for (const j of journals) {
-      // journalDate is a timestamp number; convert to date string
       const d = new Date(j.journalDate).toISOString().slice(0, 10);
       journalDates.add(d);
     }
@@ -339,18 +300,15 @@ export class WidgetSyncObserver {
       amount: latest.parsedAmount ?? 0,
       currency: latest.parsedCurrencyCode ?? 'USD',
       timestamp: latest.inputDate,
-      suggestedCategory: null, // category inference can be added later
+      suggestedCategory: null,
     };
   }
 
-  private buildPetPayload(
-    _journals: Journal[],
-    snapshots: BalanceSnapshot[],
-  ): WidgetPetPayload {
-    // Health: derive from recent snapshot activity (0–100)
+  private buildPetPayload(journals: Journal[]): WidgetPetPayload {
+    // Health: derive from recent journal activity (0–100)
     const petHealth =
-      snapshots.length > 0
-        ? Math.min(100, Math.max(0, Math.round((snapshots.length / 50) * 100)))
+      journals.length > 0
+        ? Math.min(100, Math.max(0, Math.round((journals.length / 50) * 100)))
         : 50;
 
     // Mood: pick based on health
@@ -362,78 +320,11 @@ export class WidgetSyncObserver {
     return {
       petHealth,
       petMood,
-      unreviewedCount: snapshots.length,
-      safeToSpendRunwayDays: 0, // computed externally; placeholder
+      unreviewedCount: journals.length,
+      safeToSpendRunwayDays: 0, // computed externally via hook + BalanceService
     };
-  }
-
-  private buildSafeToSpendPayload(
-    _snapshots: BalanceSnapshot[],
-  ): WidgetSafeToSpendPayload {
-    // Daily allowance & spent-today are computed from the notification service
-    // in production. Here we provide a placeholder that can be overridden via
-    // the existing sync path (useWidgetSync) which is backward-compatible.
-    return {
-      dailyAllowance: 0,
-      spentToday: 0,
-      remainingMargin: 0,
-    };
-  }
-
-  /**
-   * Serialise the payload and push it to the native bridge.
-   * This is a fire-and-forget operation — errors are logged but not rethrown.
-   */
-  private async pushToNative(payload: WidgetPayload): Promise<void> {
-    try {
-      // Validate JSON size < 2 KB
-      const json = JSON.stringify(payload);
-      const bytes = new TextEncoder().encode(json).length;
-      if (bytes > 2048) {
-        logger.warn(
-          `[WidgetSyncObserver] Payload exceeds 2 KB (${bytes} bytes). ` +
-            'Widget may not display correctly.',
-        );
-      }
-
-      // Lazy-require the native module to avoid bootstrap issues
-      // (same pattern as useWidgetSync.ts)
-      const expoWidgetsModule = require('@/modules/expo-widgets').default;
-
-      // Build the backward-compatible WidgetDataSnapshot
-      await expoWidgetsModule.syncWidgetData({
-        safeToSpend: {
-          amount: payload.safeToSpend.remainingMargin,
-          currencyCode: 'USD',
-          formattedAmount: String(payload.safeToSpend.remainingMargin),
-          title: 'Safe to Spend',
-          subtitle: '',
-          updatedAt: Date.now(),
-        },
-        theme: undefined, // theme is managed by the existing useWidgetSync hook
-        isPrivacyEnabled: false,
-      });
-
-      logger.info('[WidgetSyncObserver] Payload synced to native bridge');
-    } catch (err) {
-      logger.error('[WidgetSyncObserver] Failed to push payload to native bridge', err);
-    }
-  }
-
-  /**
-   * Wraps pushToNative as an rxjs Observable for use in the switchMap chain.
-   */
-  private pushToNative$(payload: WidgetPayload): Observable<void> {
-    return new Observable<void>(subscriber => {
-      this.pushToNative(payload)
-        .then(() => {
-          subscriber.next();
-          subscriber.complete();
-        })
-        .catch(err => subscriber.error(err));
-    });
   }
 }
 
-// Singleton — exported instance for app-wide use
+// Singleton — exported for app-wide use (replaces WidgetSyncService)
 export const widgetSyncObserver = new WidgetSyncObserver();

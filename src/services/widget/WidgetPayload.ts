@@ -50,4 +50,33 @@ export interface WidgetPayload {
   pendingSms: WidgetPendingSmsPayload | null; // null when inbox is empty
   pet: WidgetPetPayload;
   safeToSpend: WidgetSafeToSpendPayload;
+
+  /**
+   * Estimate the UTF-8 byte size of the JSON-serialised payload.
+   * Useful for pre-write size validation (target: < 2 048 bytes).
+   */
+  totalByteSize?(): number;
+}
+
+/**
+ * Create a WidgetPayload with a `totalByteSize` method attached.
+ * Use this factory when you need to validate the payload before writing to
+ * the native bridge.
+ */
+export function createWidgetPayload(
+  data: Omit<WidgetPayload, 'totalByteSize'>,
+): WidgetPayload {
+  return {
+    ...data,
+    totalByteSize(): number {
+      const json = JSON.stringify({
+        streak: this.streak,
+        pendingSms: this.pendingSms,
+        pet: this.pet,
+        safeToSpend: this.safeToSpend,
+      });
+      // TextEncoder is available in React Native's Hermes / V8 runtimes
+      return new TextEncoder().encode(json).length;
+    },
+  };
 }
