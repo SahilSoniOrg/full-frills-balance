@@ -11,6 +11,7 @@ import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import Currency from '@/src/data/models/Currency';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
+import FinancialPet from '@/src/data/models/FinancialPet';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
@@ -39,6 +40,7 @@ export const database = new WatermelonDB({
     BudgetScope,
     Currency,
     ExchangeRate,
+    FinancialPet,
     Journal,
     JournalMetadata,
     PlannedPayment,

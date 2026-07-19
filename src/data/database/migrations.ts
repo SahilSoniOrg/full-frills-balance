@@ -871,5 +871,22 @@ export const migrations = schemaMigrations({
         unsafeExecuteSql('DROP TABLE IF EXISTS sms_inbox_records;'),
       ],
     },
+    {
+      toVersion: 29,
+      steps: [
+        createTable({
+          name: 'financial_pets',
+          columns: [
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+            { name: 'xp', type: 'number' },
+            { name: 'level', type: 'number' },
+            { name: 'last_fed_at', type: 'number', isOptional: true },
+            { name: 'last_action_date', type: 'string', isOptional: true },
+            { name: 'created_at', type: 'number', isIndexed: true },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 });
