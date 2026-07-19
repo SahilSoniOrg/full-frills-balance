@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 29,
+  version: 30,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -382,7 +382,7 @@ BEGIN
   SELECT RAISE(ABORT, 'Workplace ID cannot be empty on daily_check_ins');
 END;
 
-CREATE INDEX IF NOT EXISTS idx_daily_check_ins_wp_date ON daily_check_ins (workplace_id, check_in_date);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_check_ins_wp_date ON daily_check_ins (workplace_id, check_in_date);
 `,
     }),
   ],

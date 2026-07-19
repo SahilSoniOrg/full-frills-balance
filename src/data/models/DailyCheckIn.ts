@@ -1,6 +1,6 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import { DailyCheckInId } from '@/src/types/domain';
-import { date, field, readonly } from '@nozbe/watermelondb/decorators';
+import { date, field } from '@nozbe/watermelondb/decorators';
 
 export default class DailyCheckIn extends BaseScopedModel<DailyCheckInId> {
   static table = 'daily_check_ins' as const;
@@ -19,6 +19,6 @@ export default class DailyCheckIn extends BaseScopedModel<DailyCheckInId> {
    */
   @field('is_zero_spend') isZeroSpend!: boolean;
 
-  @readonly @date('created_at') createdAt!: Date;
-  @readonly @date('updated_at') updatedAt!: Date;
+  @date('created_at') createdAt!: Date;
+  @date('updated_at') updatedAt!: Date;
 }

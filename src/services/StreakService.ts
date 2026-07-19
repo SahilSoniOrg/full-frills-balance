@@ -1,6 +1,5 @@
-import { database } from '@/src/data/database/Database';
 import { dailyCheckInRepository } from '@/src/data/repositories/DailyCheckInRepository';
-import Journal from '@/src/data/models/Journal';
+import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import DailyCheckIn from '@/src/data/models/DailyCheckIn';
 import { WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
@@ -38,10 +37,6 @@ export interface StreakResult {
  * the streak.
  */
 export class StreakService {
-  private get journals() {
-    return database.collections.get<Journal>('journals');
-  }
-
   /**
    * Calculate the current streak for a workplace.
    *
@@ -136,6 +131,9 @@ export class StreakService {
   /**
    * Check whether the user can recover missed days via backdated zero-spend check-ins.
    * Returns the number of missed days (0, 1, or 2) that can be recovered.
+   *
+   * TODO: This is a thin wrapper around calculateStreak. Consider inlining
+   * callers or removing this method in favour of calling calculateStreak directly.
    */
   async canRecoverMissedDays(workplaceId: WorkplaceId): Promise<{
     canRecover: boolean;
@@ -151,29 +149,36 @@ export class StreakService {
   // ─── Private helpers ──────────────────────────────────────────────
 
   /**
+   * Deduplicate a list of records by calendar date (YYYY-MM-DD).
+   * Returns epoch-ms values (start of day) for each unique date.
+   */
+  private deduplicateDates<T>(records: T[], extractDate: (r: T) => number): number[] {
+    const seen = new Set<string>();
+    const dates: number[] = [];
+    for (const record of records) {
+      const ts = extractDate(record);
+      const dayStr = dayjs(ts).format('YYYY-MM-DD');
+      if (!seen.has(dayStr)) {
+        seen.add(dayStr);
+        dates.push(dayjs(ts).startOf('day').valueOf());
+      }
+    }
+    return dates;
+  }
+
+  /**
    * Fetch distinct journal dates (as epoch ms) for a workplace since a given date.
    */
   private async fetchJournalDates(workplaceId: WorkplaceId, since: number): Promise<number[]> {
-    const journals = await this.journals
-      .query(
+    const journals = await journalRepository
+      .journalsQuery(
         Q.where('workplace_id', workplaceId),
         Q.where('journal_date', Q.gte(since)),
-        Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('journal_date', 'desc'),
       )
       .fetch();
 
-    // Extract distinct dates at day granularity
-    const seen = new Set<string>();
-    const dates: number[] = [];
-    for (const j of journals) {
-      const dayStr = dayjs(j.journalDate).format('YYYY-MM-DD');
-      if (!seen.has(dayStr)) {
-        seen.add(dayStr);
-        dates.push(dayjs(j.journalDate).startOf('day').valueOf());
-      }
-    }
-    return dates;
+    return this.deduplicateDates(journals, j => j.journalDate);
   }
 
   /**
@@ -181,16 +186,7 @@ export class StreakService {
    */
   private async fetchCheckInDates(workplaceId: WorkplaceId, since: number): Promise<number[]> {
     const checkIns = await dailyCheckInRepository.findByWorkplaceSince(workplaceId, since);
-    const seen = new Set<string>();
-    const dates: number[] = [];
-    for (const ci of checkIns) {
-      const dayStr = dayjs(ci.checkInDate).format('YYYY-MM-DD');
-      if (!seen.has(dayStr)) {
-        seen.add(dayStr);
-        dates.push(ci.checkInDate);
-      }
-    }
-    return dates;
+    return this.deduplicateDates(checkIns, ci => ci.checkInDate);
   }
 }
 

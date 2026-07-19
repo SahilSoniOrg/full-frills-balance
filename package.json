@@ -88,7 +88,6 @@
     "@playwright/test": "^1.60.0",
     "@react-native-community/cli": "latest",
     "@react-native/metro-config": "^0.84.1",
-    "@react-navigation/native": "^7.3.11",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "29.5.14",

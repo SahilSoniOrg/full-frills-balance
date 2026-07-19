@@ -894,7 +894,21 @@ export const migrations = schemaMigrations({
           END;
         `),
         unsafeExecuteSql(`
-          CREATE INDEX IF NOT EXISTS idx_daily_check_ins_wp_date
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_check_ins_wp_date
+          ON daily_check_ins (workplace_id, check_in_date);
+        `),
+      ],
+    },
+    {
+      toVersion: 30,
+      steps: [
+        // Ensure index is UNIQUE — handles any databases that may have run v29
+        // before it was corrected to use CREATE UNIQUE INDEX.
+        unsafeExecuteSql(`
+          DROP INDEX IF EXISTS idx_daily_check_ins_wp_date;
+        `),
+        unsafeExecuteSql(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_check_ins_wp_date
           ON daily_check_ins (workplace_id, check_in_date);
         `),
       ],

@@ -64,14 +64,11 @@ export class DailyCheckInRepository {
     isZeroSpend: boolean,
   ): Promise<DailyCheckIn> {
     return database.write(async () => {
-      const record = this.collection.prepareCreate((r: DailyCheckIn) => {
+      const record = await this.collection.create((r: DailyCheckIn) => {
         r.workplaceId = workplaceId;
         r.checkInDate = checkInDate;
         r.isZeroSpend = isZeroSpend;
-        (r as any).createdAt = new Date();
-        (r as any).updatedAt = new Date();
       });
-      await database.batch([record]);
       logger.info(
         `[DailyCheckInRepository] Created check-in for ${new Date(checkInDate).toISOString()} (zero-spend: ${isZeroSpend})`,
       );
