@@ -8,8 +8,20 @@ import android.content.Intent
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
 import org.json.JSONArray
 import org.json.JSONObject
+
+class PendingSmsRecord : Record {
+  @Field val id: String = ""
+  @Field val merchant: String = ""
+  @Field val amount: String = ""
+  @Field val currency: String = ""
+  @Field val sender: String = ""
+  @Field val date: Long? = null
+  @Field val processingStatus: String = "pending"
+}
 
 class ExpoWidgetsModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -26,15 +38,20 @@ class ExpoWidgetsModule : Module() {
       refreshWidgetProviders(context)
     }
 
-    AsyncFunction("storePendingSms") { records: List<Map<String, Any?>> ->
+    AsyncFunction("storePendingSms") { records: List<PendingSmsRecord> ->
       val context: Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
       storePendingSmsRecords(context, records)
       refreshWidgetProviders(context)
     }
   }
 
-  private fun storePendingSmsRecords(context: Context, records: List<Map<String, Any?>>) {
+  private fun storePendingSmsRecords(context: Context, records: List<PendingSmsRecord>) {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // Filter only pending records and sort by recency (newest date first; null date -> 0L)
+    val pendingRecords = records
+      .filter { it.processingStatus == "pending" }
+      .sortedByDescending { it.date ?: 0L }
 
     // Collect existing record IDs (for cleanup of stale entries)
     val existingJson = prefs.getString(KEY_PENDING_SMS_RECORDS, null)
@@ -54,16 +71,17 @@ class ExpoWidgetsModule : Module() {
     val cleanIds = mutableSetOf<String>()
 
     prefs.edit().apply {
-      for (record in records) {
-        val id = record["id"] as? String ?: continue
+      for (record in pendingRecords) {
+        val id = record.id
+        if (id.isEmpty()) continue
         currentIds.add(id)
         cleanIds.add(id)
 
-        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_merchant", record["merchant"] as? String ?: "")
-        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_amount", record["amount"] as? String ?: "")
-        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_currency", record["currency"] as? String ?: "")
-        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_sender", record["sender"] as? String ?: "")
-        putLong("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_date", (record["date"] as? Number)?.toLong() ?: System.currentTimeMillis())
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_merchant", record.merchant)
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_amount", record.amount)
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_currency", record.currency)
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_sender", record.sender)
+        putLong("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_date", record.date ?: 0L)
       }
 
       // Store the ordered list of record IDs as JSON array
@@ -157,7 +175,34 @@ class ExpoWidgetsModule : Module() {
   }
 
   companion object {
-    private const val PREFS_NAME = "full_frills_balance_widgets"
+    const val PREFS_NAME = "full_frills_balance_widgets"
+    private const val KEY_SAFE_TO_SPEND_AMOUNT = "safe_to_spend_amount"
+    private const val KEY_SAFE_TO_SPEND_CURRENCY = "safe_to_spend_currency"
+    private const val KEY_SAFE_TO_SPEND_FORMATTED_AMOUNT = "safe_to_spend_formatted_amount"
+    private const val KEY_SAFE_TO_SPEND_TITLE = "safe_to_spend_title"
+    private const val KEY_SAFE_TO_SPEND_SUBTITLE = "safe_to_spend_subtitle"
+    private const val KEY_SAFE_TO_SPEND_UPDATED_AT = "safe_to_spend_updated_at"
+    private const val KEY_THEME_ID = "widget_theme_id"
+    private const val KEY_THEME_MODE = "widget_theme_mode"
+    private const val KEY_THEME_BACKGROUND_START = "widget_theme_background_start"
+    private const val KEY_THEME_BACKGROUND_END = "widget_theme_background_end"
+    private const val KEY_THEME_TITLE_COLOR = "widget_theme_title_color"
+    private const val KEY_THEME_PRIMARY_TEXT_COLOR = "widget_theme_primary_text_color"
+    private const val KEY_THEME_SECONDARY_TEXT_COLOR = "widget_theme_secondary_text_color"
+    private const val KEY_THEME_ACTION_ICON_COLOR = "widget_theme_action_icon_color"
+    private const val KEY_THEME_INCOME_ACCENT_COLOR = "widget_theme_income_accent_color"
+    private const val KEY_THEME_EXPENSE_ACCENT_COLOR = "widget_theme_expense_accent_color"
+    private const val KEY_THEME_TRANSFER_ACCENT_COLOR = "widget_theme_transfer_accent_color"
+    private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
+    private const val KEY_PENDING_SMS_RECORDS = "pending_sms_records"
+    val WIDGET_PROVIDER_CLASS_NAMES = listOf(
+      "JournalLauncherWidgetProvider",
+      "SafeToSpendWidgetProvider",
+      "SafeToSpendActionsWidgetProvider",
+      "SafeToSpendActionsSquareWidgetProvider",
+    )
+  }
+}
     private const val KEY_SAFE_TO_SPEND_AMOUNT = "safe_to_spend_amount"
     private const val KEY_SAFE_TO_SPEND_CURRENCY = "safe_to_spend_currency"
     private const val KEY_SAFE_TO_SPEND_FORMATTED_AMOUNT = "safe_to_spend_formatted_amount"

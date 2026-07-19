@@ -11,17 +11,23 @@ import android.net.Uri
 /**
  * BroadcastReceiver that handles 1-tap SMS quick-import from Android widgets.
  *
- * When a user taps the "Quick Import" button on a pending SMS widget item,
- * this receiver is invoked. It reads the pending SMS details from
- * SharedPreferences, opens the app deep link to process the approval, and
- * triggers a widget data refresh.
+ * ARCHITECTURE & FOREGROUND REQUIREMENT:
+ * WatermelonDB, ledger write services, and domain business rules exist exclusively in
+ * the React Native / JavaScript runtime. Android BroadcastReceivers triggered from widget
+ * button taps run in a lightweight background process without the RN JS bridge or SQLite
+ * connection initialized. Direct background DB updates without waking JS would risk state
+ * corruption and bypass ledger validation logic.
  *
- * This runs natively without waking the React Native JS runtime.
+ * Therefore, when the user taps "Quick Import", this receiver:
+ * 1. Writes the target record ID to SharedPreferences (`pending_sms_quick_approve`).
+ * 2. Launches the app into the foreground via deep link `fullfrillsbalance://inbox?approve=<recordId>`.
+ * 3. Upon foregrounding, the app's JS layer reads the approval parameter and invokes
+ *    `smsService.processInboxRecord(recordId, 'imported')` to complete the transaction creation.
  */
 class SmsQuickImportReceiver : BroadcastReceiver() {
 
   companion object {
-    private const val PREFS_NAME = "full_frills_balance_widgets"
+    val PREFS_NAME = ExpoWidgetsModule.PREFS_NAME
     private const val KEY_PENDING_SMS_RECORDS = "pending_sms_records"
 
     const val EXTRA_RECORD_ID = "record_id"
