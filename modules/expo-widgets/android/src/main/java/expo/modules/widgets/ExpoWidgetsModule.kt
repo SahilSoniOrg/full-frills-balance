@@ -8,6 +8,8 @@ import android.content.Intent
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import org.json.JSONArray
+import org.json.JSONObject
 
 class ExpoWidgetsModule : Module() {
   override fun definition() = ModuleDefinition {
@@ -23,6 +25,59 @@ class ExpoWidgetsModule : Module() {
       val context: Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
       refreshWidgetProviders(context)
     }
+
+    AsyncFunction("storePendingSms") { records: List<Map<String, Any?>> ->
+      val context: Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      storePendingSmsRecords(context, records)
+      refreshWidgetProviders(context)
+    }
+  }
+
+  private fun storePendingSmsRecords(context: Context, records: List<Map<String, Any?>>) {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // Collect existing record IDs (for cleanup of stale entries)
+    val existingJson = prefs.getString(KEY_PENDING_SMS_RECORDS, null)
+    val previousIds = mutableSetOf<String>()
+    if (existingJson != null) {
+      try {
+        val arr = JSONArray(existingJson)
+        for (i in 0 until arr.length()) {
+          previousIds.add(arr.getString(i))
+        }
+      } catch (_: Exception) {
+      }
+    }
+
+    val currentIds = mutableListOf<String>()
+    val cleanIds = mutableSetOf<String>()
+
+    prefs.edit().apply {
+      for (record in records) {
+        val id = record["id"] as? String ?: continue
+        currentIds.add(id)
+        cleanIds.add(id)
+
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_merchant", record["merchant"] as? String ?: "")
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_amount", record["amount"] as? String ?: "")
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_currency", record["currency"] as? String ?: "")
+        putString("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_sender", record["sender"] as? String ?: "")
+        putLong("${SmsQuickImportReceiver.EXTRA_PREFIX}${id}_date", (record["date"] as? Number)?.toLong() ?: System.currentTimeMillis())
+      }
+
+      // Store the ordered list of record IDs as JSON array
+      putString(KEY_PENDING_SMS_RECORDS, JSONArray(currentIds).toString())
+
+      // Clean up stale entries that are no longer in the new records
+      val staleIds = previousIds - cleanIds
+      for (staleId in staleIds) {
+        remove("${SmsQuickImportReceiver.EXTRA_PREFIX}${staleId}_merchant")
+        remove("${SmsQuickImportReceiver.EXTRA_PREFIX}${staleId}_amount")
+        remove("${SmsQuickImportReceiver.EXTRA_PREFIX}${staleId}_currency")
+        remove("${SmsQuickImportReceiver.EXTRA_PREFIX}${staleId}_sender")
+        remove("${SmsQuickImportReceiver.EXTRA_PREFIX}${staleId}_date")
+      }
+    }.apply()
   }
 
   private fun syncSnapshot(context: Context, snapshot: Map<String, Any?>) {
@@ -120,6 +175,7 @@ class ExpoWidgetsModule : Module() {
     private const val KEY_THEME_EXPENSE_ACCENT_COLOR = "widget_theme_expense_accent_color"
     private const val KEY_THEME_TRANSFER_ACCENT_COLOR = "widget_theme_transfer_accent_color"
     private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
+    private const val KEY_PENDING_SMS_RECORDS = "pending_sms_records"
     private val WIDGET_PROVIDER_CLASS_NAMES = listOf(
       "JournalLauncherWidgetProvider",
       "SafeToSpendWidgetProvider",
