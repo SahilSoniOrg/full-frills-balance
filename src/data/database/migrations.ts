@@ -871,5 +871,33 @@ export const migrations = schemaMigrations({
         unsafeExecuteSql('DROP TABLE IF EXISTS sms_inbox_records;'),
       ],
     },
+    {
+      toVersion: 29,
+      steps: [
+        createTable({
+          name: 'daily_check_ins',
+          columns: [
+            { name: 'check_in_date', type: 'number', isIndexed: true },
+            { name: 'is_zero_spend', type: 'boolean' },
+            { name: 'created_at', type: 'number', isIndexed: true },
+            { name: 'updated_at', type: 'number' },
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+          CREATE TRIGGER IF NOT EXISTS trg_daily_check_ins_workplace_id_check
+          BEFORE INSERT ON daily_check_ins
+          FOR EACH ROW
+          WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
+          BEGIN
+            SELECT RAISE(ABORT, 'Workplace ID cannot be empty on daily_check_ins');
+          END;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_daily_check_ins_wp_date
+          ON daily_check_ins (workplace_id, check_in_date);
+        `),
+      ],
+    },
   ],
 });

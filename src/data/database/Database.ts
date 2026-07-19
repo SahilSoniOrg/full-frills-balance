@@ -10,6 +10,7 @@ import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import Currency from '@/src/data/models/Currency';
+import DailyCheckIn from '@/src/data/models/DailyCheckIn';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
@@ -38,6 +39,7 @@ export const database = new WatermelonDB({
     Budget,
     BudgetScope,
     Currency,
+    DailyCheckIn,
     ExchangeRate,
     Journal,
     JournalMetadata,

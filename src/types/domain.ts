@@ -15,6 +15,7 @@ export type JournalId = Brand<string, 'JournalId'>;
 export type TransactionId = Brand<string, 'TransactionId'>;
 export type BudgetId = Brand<string, 'BudgetId'>;
 export type PlannedPaymentId = Brand<string, 'PlannedPaymentId'>;
+export type DailyCheckInId = Brand<string, 'DailyCheckInId'>;
 
 export type TabType = 'expense' | 'income' | 'transfer';
 export type AccountRole = 'source' | 'destination';
