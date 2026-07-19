@@ -1,5 +1,9 @@
 import Foundation
 
+public struct WidgetConstants {
+  public static let appGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets"
+}
+
 public struct PendingSmsKeys {
   public static let prefix = "pending_sms_"
   public static let records = "pending_sms_records"
@@ -11,4 +15,3 @@ public struct PendingSmsKeys {
   public static func sender(for id: String) -> String { "\(prefix)\(id)_sender" }
   public static func date(for id: String) -> String { "\(prefix)\(id)_date" }
 }
-

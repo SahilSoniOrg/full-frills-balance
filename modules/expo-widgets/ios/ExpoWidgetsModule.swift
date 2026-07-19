@@ -1,16 +1,15 @@
 import ExpoModulesCore
 import WidgetKit
+import OSLog
 
-private let AppGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets"
-
-private struct PendingSmsKeys {
-  static let prefix = "pending_sms_"
-  static let records = "pending_sms_records"
-  static func merchant(_ id: String) -> String { "\(prefix)\(id)_merchant" }
-  static func amount(_ id: String) -> String { "\(prefix)\(id)_amount" }
-  static func currency(_ id: String) -> String { "\(prefix)\(id)_currency" }
-  static func sender(_ id: String) -> String { "\(prefix)\(id)_sender" }
-  static func date(_ id: String) -> String { "\(prefix)\(id)_date" }
+struct PendingSmsRecord: Record {
+  @Field var id: String = ""
+  @Field var merchant: String = ""
+  @Field var amount: String = ""
+  @Field var currency: String = ""
+  @Field var sender: String = ""
+  @Field var date: Double?
+  @Field var processingStatus: String = "pending"
 }
 
 public final class ExpoWidgetsModule: Module {
@@ -19,7 +18,7 @@ public final class ExpoWidgetsModule: Module {
     Name("ExpoWidgets")
 
     AsyncFunction("syncWidgetData") { (snapshot: [String: Any]) in
-      guard let defaults = UserDefaults(suiteName: AppGroupId) else {
+      guard let defaults = UserDefaults(suiteName: WidgetConstants.appGroupId) else {
         return
       }
 
@@ -87,10 +86,15 @@ public final class ExpoWidgetsModule: Module {
     /// user approval. Serialises each record into AppGroup UserDefaults using
     /// the key pattern `pending_sms_<id>_<field>` so the widget extension can
     /// read them without accessing the database or waking JS.
-    AsyncFunction("storePendingSms") { (records: [[String: Any]]) in
-      guard let defaults = UserDefaults(suiteName: AppGroupId) else {
+    AsyncFunction("storePendingSms") { (records: [PendingSmsRecord]) in
+      guard let defaults = UserDefaults(suiteName: WidgetConstants.appGroupId) else {
         return
       }
+
+      // Filter only pending records and sort by recency (newest date first; null date -> 0.0)
+      let pendingRecords = records
+        .filter { $0.processingStatus == "pending" }
+        .sorted { ($0.date ?? 0.0) > ($1.date ?? 0.0) }
 
       // Collect all existing record IDs (for cleanup of stale entries)
       let existingRecordsData = defaults.data(forKey: PendingSmsKeys.records)
@@ -108,16 +112,17 @@ public final class ExpoWidgetsModule: Module {
       var currentIds: [String] = []
       var cleanIds = Set<String>()
 
-      for record in records {
-        guard let id = record["id"] as? String else { continue }
+      for record in pendingRecords {
+        let id = record.id
+        guard !id.isEmpty else { continue }
         currentIds.append(id)
         cleanIds.insert(id)
 
-        defaults.set(record["merchant"] as? String ?? "", forKey: PendingSmsKeys.merchant(id))
-        defaults.set(record["amount"] as? String ?? "", forKey: PendingSmsKeys.amount(id))
-        defaults.set(record["currency"] as? String ?? "", forKey: PendingSmsKeys.currency(id))
-        defaults.set(record["sender"] as? String ?? "", forKey: PendingSmsKeys.sender(id))
-        defaults.set(record["date"] as? Double ?? Date().timeIntervalSince1970 * 1000, forKey: PendingSmsKeys.date(id))
+        defaults.set(record.merchant, forKey: PendingSmsKeys.merchant(for: id))
+        defaults.set(record.amount, forKey: PendingSmsKeys.amount(for: id))
+        defaults.set(record.currency, forKey: PendingSmsKeys.currency(for: id))
+        defaults.set(record.sender, forKey: PendingSmsKeys.sender(for: id))
+        defaults.set(record.date ?? 0.0, forKey: PendingSmsKeys.date(for: id))
       }
 
       // Store the ordered list of record IDs
@@ -132,11 +137,11 @@ public final class ExpoWidgetsModule: Module {
       // Clean up stale entries that are no longer in the new records
       let staleIds = previousIds.subtracting(cleanIds)
       for staleId in staleIds {
-        defaults.removeObject(forKey: PendingSmsKeys.merchant(staleId))
-        defaults.removeObject(forKey: PendingSmsKeys.amount(staleId))
-        defaults.removeObject(forKey: PendingSmsKeys.currency(staleId))
-        defaults.removeObject(forKey: PendingSmsKeys.sender(staleId))
-        defaults.removeObject(forKey: PendingSmsKeys.date(staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.merchant(for: staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.amount(for: staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.currency(for: staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.sender(for: staleId))
+        defaults.removeObject(forKey: PendingSmsKeys.date(for: staleId))
       }
 
       if #available(iOS 14.0, *) {
@@ -145,3 +150,4 @@ public final class ExpoWidgetsModule: Module {
     }
   }
 }
+
