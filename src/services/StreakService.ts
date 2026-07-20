@@ -1,19 +1,25 @@
+import { database } from '@/src/data/database/Database';
+import { getRawAdapter } from '@/src/data/database/DatabaseUtils';
 import DailyCheckIn from '@/src/data/models/DailyCheckIn';
 import { dailyCheckInRepository } from '@/src/data/repositories/DailyCheckInRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { WorkplaceId } from '@/src/types/domain';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
+import { combineLatest, debounceTime, from, Observable, switchMap } from 'rxjs';
+
+/** Maximum lookback window (days) for streak calculation. */
+const STREAK_LOOKBACK_DAYS = 90;
 
 /**
  * Result of a streak calculation matching widget payload spec.
  */
 export interface StreakResult {
-  /** Number of consecutive active days ending at the most recent journal activity */
+  /** Number of consecutive active days ending at the most recent activity */
   streakDays: number;
-  /** The ISO string date of the last logged journal activity, or '' if never */
+  /** The ISO string date of the last logged activity (journal or check-in), or '' if never */
   lastLoggedDate: string;
-  /** Whether the user has logged a journal entry today */
+  /** Whether the user has logged a journal entry or check-in today */
   todayLogged: boolean;
 }
 
@@ -21,58 +27,92 @@ export interface StreakResult {
  * StreakService — Tracks consecutive days of financial journal activity
  * and supports lightweight zero-spend check-ins.
  *
- * A "day" is considered active if there is at least one journal entry for that calendar date.
+ * A "day" is considered active if there is at least one journal entry
+ * or a zero-spend check-in for that calendar date.
  */
 export class StreakService {
   /**
-   * Calculate the current streak for a workplace.
+   * Observe current streak reactively for a workplace.
+   * Scoped to recent dates only — avoids observing the entire journal table.
+   */
+  observeStreak(workplaceId: WorkplaceId): Observable<StreakResult> {
+    const lookbackMs = dayjs().subtract(STREAK_LOOKBACK_DAYS, 'day').startOf('day').valueOf();
+
+    const journals$ = journalRepository
+      .journalsQuery(
+        Q.where('workplace_id', workplaceId),
+        Q.where('journal_date', Q.gte(lookbackMs)),
+      )
+      .observe();
+
+    const checkIns$ = dailyCheckInRepository
+      .checkInsQuery(
+        workplaceId,
+        Q.where('is_zero_spend', true),
+        Q.where('check_in_date', Q.gte(lookbackMs)),
+      )
+      .observe();
+
+    return combineLatest([journals$, checkIns$]).pipe(
+      debounceTime(100),
+      switchMap(() => from(this.calculateStreak(workplaceId))),
+    );
+  }
+
+  /**
+   * Calculate the current active streak for a workplace.
    *
-   * Finds consecutive active days in the journals table ending at the most
-   * recent activity date.
+   * Uses raw SQL when available to fetch only distinct date strings
+   * (no model hydration), bounded to STREAK_LOOKBACK_DAYS.
    */
   async calculateStreak(workplaceId: WorkplaceId): Promise<StreakResult> {
-    // Look back up to 365 days (generous bound for streak calculation)
-    const lookbackStart = dayjs().startOf('day').subtract(365, 'day').valueOf();
+    const lookbackMs = dayjs().subtract(STREAK_LOOKBACK_DAYS, 'day').startOf('day').valueOf();
 
-    const journalDates = await this.fetchJournalDates(workplaceId, lookbackStart);
+    const [journalDates, checkInDates] = await Promise.all([
+      this.fetchJournalDateStrings(workplaceId, lookbackMs),
+      dailyCheckInRepository.fetchZeroSpendDateStrings(workplaceId, lookbackMs),
+    ]);
 
-    if (journalDates.length === 0) {
-      return {
-        streakDays: 0,
-        lastLoggedDate: '',
-        todayLogged: false,
-      };
+    // Merge both sets into a single active-dates set
+    const activeDates = new Set<string>(journalDates);
+    for (const d of checkInDates) {
+      activeDates.add(d);
     }
 
-    // Build a Set of date strings (YYYY-MM-DD) for O(1) lookups
-    const activeDates = new Set<string>();
-    for (const ts of journalDates) {
-      activeDates.add(dayjs(ts).format('YYYY-MM-DD'));
+    if (activeDates.size === 0) {
+      return { streakDays: 0, lastLoggedDate: '', todayLogged: false };
     }
 
     const todayStr = dayjs().format('YYYY-MM-DD');
+    const yesterdayStr = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
     const todayLogged = activeDates.has(todayStr);
 
-    const lastLoggedTs = Math.max(...journalDates);
-    const lastLoggedDateObj = dayjs(lastLoggedTs).startOf('day');
-    const lastLoggedDate = lastLoggedDateObj.toISOString();
+    // Derive lastLoggedDate from sorted active dates
+    const sortedDates = [...activeDates].sort();
+    const lastDateStr = sortedDates[sortedDates.length - 1];
+    const lastLoggedDate = dayjs(lastDateStr).startOf('day').toISOString();
 
-    // Count consecutive days backwards from the most recent activity
-    let streakDays = 1;
-    while (true) {
-      const checkDate = lastLoggedDateObj.subtract(streakDays, 'day').format('YYYY-MM-DD');
-      if (activeDates.has(checkDate)) {
-        streakDays++;
-      } else {
-        break;
-      }
+    // Determine streak anchor: must be today or yesterday
+    let anchorDateStr: string | null = null;
+    if (todayLogged) {
+      anchorDateStr = todayStr;
+    } else if (activeDates.has(yesterdayStr)) {
+      anchorDateStr = yesterdayStr;
     }
 
-    return {
-      streakDays,
-      lastLoggedDate,
-      todayLogged,
-    };
+    if (!anchorDateStr) {
+      return { streakDays: 0, lastLoggedDate, todayLogged };
+    }
+
+    // Count contiguous active days backward from anchor
+    let streakDays = 0;
+    let checkCursor = dayjs(anchorDateStr);
+    while (activeDates.has(checkCursor.format('YYYY-MM-DD'))) {
+      streakDays++;
+      checkCursor = checkCursor.subtract(1, 'day');
+    }
+
+    return { streakDays, lastLoggedDate, todayLogged };
   }
 
   /**
@@ -86,52 +126,45 @@ export class StreakService {
     return dailyCheckInRepository.createIfAbsent(workplaceId, dayStart, true);
   }
 
-  // ─── Private helpers ──────────────────────────────────────────────
+  // ── Private ───────────────────────────────────────────────────────
 
   /**
-   * Fetch distinct dates (as epoch ms at start of day) for records matching a query since a given timestamp.
+   * Fetch distinct YYYY-MM-DD date strings for non-deleted journals
+   * since `sinceMs` via raw SQL (no model hydration).
+   *
+   * Falls back to ORM query if the raw adapter is unavailable.
    */
-  private async fetchDatesSince<T>(
-    fetchFn: () => Promise<T[]>,
-    extractDate: (record: T) => number,
-  ): Promise<number[]> {
-    const records = await fetchFn();
-    return this.deduplicateDates(records, extractDate);
-  }
+  private async fetchJournalDateStrings(
+    workplaceId: WorkplaceId,
+    sinceMs: number,
+  ): Promise<Set<string>> {
+    const adapter = getRawAdapter(database);
+    if (adapter) {
+      const rows: { day: string }[] = await adapter.queryRaw(
+        `SELECT DISTINCT date(journal_date / 1000, 'unixepoch', 'localtime') AS day
+         FROM journals
+         WHERE workplace_id = ?
+           AND deleted_at IS NULL
+           AND journal_date >= ?`,
+        [workplaceId, sinceMs],
+      );
+      return new Set(rows.map(r => r.day));
+    }
 
-  /**
-   * Deduplicate a list of records by calendar date (YYYY-MM-DD).
-   * Returns epoch-ms values (start of day) for each unique date.
-   */
-  private deduplicateDates<T>(records: T[], extractDate: (r: T) => number): number[] {
-    const seen = new Set<string>();
-    const dates: number[] = [];
-    for (const record of records) {
-      const ts = extractDate(record);
-      const dayStr = dayjs(ts).format('YYYY-MM-DD');
-      if (!seen.has(dayStr)) {
-        seen.add(dayStr);
-        dates.push(dayjs(ts).startOf('day').valueOf());
-      }
+    // ORM fallback — bounded fetch
+    const journals = await journalRepository
+      .journalsQuery(
+        Q.where('workplace_id', workplaceId),
+        Q.where('journal_date', Q.gte(sinceMs)),
+        Q.sortBy('journal_date', 'desc'),
+      )
+      .fetch();
+
+    const dates = new Set<string>();
+    for (const j of journals) {
+      dates.add(dayjs(j.journalDate).format('YYYY-MM-DD'));
     }
     return dates;
-  }
-
-  /**
-   * Fetch distinct journal dates (as epoch ms) for a workplace since a given date.
-   */
-  private async fetchJournalDates(workplaceId: WorkplaceId, since: number): Promise<number[]> {
-    return this.fetchDatesSince(
-      () =>
-        journalRepository
-          .journalsQuery(
-            Q.where('workplace_id', workplaceId),
-            Q.where('journal_date', Q.gte(since)),
-            Q.sortBy('journal_date', 'desc'),
-          )
-          .fetch(),
-      j => j.journalDate,
-    );
   }
 }
 

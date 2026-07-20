@@ -1,5 +1,5 @@
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import { DailyCheckInId, WorkplaceId } from '@/src/types/domain';
+import { DailyCheckInId } from '@/src/types/domain';
 import { date, field } from '@nozbe/watermelondb/decorators';
 
 export default class DailyCheckIn extends BaseScopedModel<DailyCheckInId> {
@@ -7,10 +7,8 @@ export default class DailyCheckIn extends BaseScopedModel<DailyCheckInId> {
 
   static associations = {} as const;
 
-  @field('workplace_id') workplaceId!: WorkplaceId;
-
   /**
-   * The date this check-in applies to, stored as YYYY-MM-DD timestamp (epoch ms at midnight UTC).
+   * Epoch milliseconds at midnight UTC for the check-in day.
    * Allows backdating for the 2-day recovery window.
    */
   @field('check_in_date') checkInDate!: number;
