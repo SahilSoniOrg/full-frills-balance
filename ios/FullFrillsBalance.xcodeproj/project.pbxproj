@@ -12,9 +12,12 @@
 		371FC7E5321D41E893D9A8E3 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9CBDBC5F3F64EDDBD27B6ED /* WidgetKit.framework */; };
 		38D6F4F031672564CB7E0D82 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADEC546600324EACFCD9DB6A /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		54968E59871D42C3A9080B5F /* PendingSmsKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFDD2798215E498A87A5D67D /* PendingSmsKeys.swift */; };
+		87DB32CDC89F42A5AB0A34F6 /* WidgetConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C68A34F493F47E3ADC69272 /* WidgetConstants.swift */; };
 		A357C0F9805E24EA6E6AECAF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5261D1F9E0DA0852DCF84773 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		C0A38668C61848A2D2A3C68B /* libPods-FullFrillsBalance.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A50D9F14289D1A1361C21842 /* libPods-FullFrillsBalance.a */; };
+		C3EF40B530A34A9AADBA291D /* SmsQuickImportIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9267C30F03EC4CBAB7CFE990 /* SmsQuickImportIntent.swift */; };
 		D32D68AAF90A45DFB4A02D96 /* FullFrillsBalanceWidget.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = BEF157E0CC0D4D28986A5E41 /* FullFrillsBalanceWidget.appex */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		F6AEFF3ABDB14C338BBA8590 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7596D139A9E742F6BC150EE9 /* SwiftUI.framework */; };
@@ -35,6 +38,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0C68A34F493F47E3ADC69272 /* WidgetConstants.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = WidgetConstants.swift; path = FullFrillsBalanceWidget/WidgetConstants.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* FullFrillsBalance.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FullFrillsBalance.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = FullFrillsBalance/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = FullFrillsBalance/Info.plist; sourceTree = "<group>"; };
@@ -43,6 +47,7 @@
 		7596D139A9E742F6BC150EE9 /* SwiftUI.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		75D31062E6CB4A37BBF869B0 /* FullFrillsBalanceWidget-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "FullFrillsBalanceWidget-Info.plist"; path = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist"; sourceTree = "<group>"; };
 		82FABB6D8D7F45D1B2AA2A10 /* FullFrillsBalanceWidget.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = FullFrillsBalanceWidget.swift; path = FullFrillsBalanceWidget/FullFrillsBalanceWidget.swift; sourceTree = "<group>"; };
+		9267C30F03EC4CBAB7CFE990 /* SmsQuickImportIntent.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = SmsQuickImportIntent.swift; path = FullFrillsBalanceWidget/SmsQuickImportIntent.swift; sourceTree = "<group>"; };
 		A50D9F14289D1A1361C21842 /* libPods-FullFrillsBalance.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FullFrillsBalance.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A9CBDBC5F3F64EDDBD27B6ED /* WidgetKit.framework */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = FullFrillsBalance/SplashScreen.storyboard; sourceTree = "<group>"; };
@@ -51,6 +56,7 @@
 		BEF157E0CC0D4D28986A5E41 /* FullFrillsBalanceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = FullFrillsBalanceWidget.appex; path = FullFrillsBalanceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		ECBE308A7F828D6857B182AF /* Pods-FullFrillsBalance.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FullFrillsBalance.release.xcconfig"; path = "Target Support Files/Pods-FullFrillsBalance/Pods-FullFrillsBalance.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		EFDD2798215E498A87A5D67D /* PendingSmsKeys.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = PendingSmsKeys.swift; path = FullFrillsBalanceWidget/PendingSmsKeys.swift; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FullFrillsBalance/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* FullFrillsBalance-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "FullFrillsBalance-Bridging-Header.h"; path = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -139,6 +145,9 @@
 			children = (
 				82FABB6D8D7F45D1B2AA2A10 /* FullFrillsBalanceWidget.swift */,
 				75D31062E6CB4A37BBF869B0 /* FullFrillsBalanceWidget-Info.plist */,
+				0C68A34F493F47E3ADC69272 /* WidgetConstants.swift */,
+				EFDD2798215E498A87A5D67D /* PendingSmsKeys.swift */,
+				9267C30F03EC4CBAB7CFE990 /* SmsQuickImportIntent.swift */,
 			);
 			name = FullFrillsBalanceWidget;
 			path = "";
@@ -193,6 +202,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				048A212F6F2144DFAD710E18 /* PBXTargetDependency */,
 			);
 			name = FullFrillsBalance;
 			productName = FullFrillsBalance;
@@ -471,6 +481,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				2E57F63BEE5742748281CE2B /* FullFrillsBalanceWidget.swift in Sources */,
+				87DB32CDC89F42A5AB0A34F6 /* WidgetConstants.swift in Sources */,
+				54968E59871D42C3A9080B5F /* PendingSmsKeys.swift in Sources */,
+				C3EF40B530A34A9AADBA291D /* SmsQuickImportIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,7 +518,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = FullFrillsBalance;
+				PRODUCT_NAME = "FullFrillsBalance";
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -537,7 +550,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = in.sahilsoni.fullfrillsbalance;
-				PRODUCT_NAME = FullFrillsBalance;
+				PRODUCT_NAME = "FullFrillsBalance";
 				SWIFT_OBJC_BRIDGING_HEADER = "FullFrillsBalance/FullFrillsBalance-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -687,7 +700,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
+				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -701,6 +714,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) WIDGET";
 			};
 			name = Release;
 		};
@@ -716,7 +730,7 @@
 					"$(inherited)",
 				);
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = "FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist";
+				INFOPLIST_FILE = FullFrillsBalanceWidget/FullFrillsBalanceWidget-Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -730,6 +744,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) WIDGET";
 			};
 			name = Debug;
 		};
@@ -764,6 +779,24 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin PBXTargetDependency section */
+		048A212F6F2144DFAD710E18 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2ECE7BF05C6C4B88ADAC4F64 /* FullFrillsBalanceWidget */;
+			targetProxy = 39C5618CFEFE421CA315E133 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		39C5618CFEFE421CA315E133 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2ECE7BF05C6C4B88ADAC4F64;
+			remoteInfo = FullFrillsBalanceWidget;
+		};
+/* End PBXContainerItemProxy section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

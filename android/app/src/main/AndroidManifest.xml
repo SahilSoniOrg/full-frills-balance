@@ -76,5 +76,17 @@
       </intent-filter>
       <meta-data android:name="android.appwidget.provider" android:resource="@xml/safe_to_spend_actions_square_widget_info"/>
     </receiver>
+    <receiver android:name=".StreakPetWidgetProvider" android:exported="true">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+      </intent-filter>
+      <meta-data android:name="android.appwidget.provider" android:resource="@xml/streak_pet_widget_info"/>
+    </receiver>
+    <receiver android:name=".SmsTriageWidgetProvider" android:exported="true">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+      </intent-filter>
+      <meta-data android:name="android.appwidget.provider" android:resource="@xml/sms_triage_widget_info"/>
+    </receiver>
   </application>
 </manifest>

@@ -27,4 +27,32 @@ export type WidgetDataSnapshot = {
   safeToSpend?: SafeToSpendSnapshot;
   theme?: WidgetThemeSnapshot;
   isPrivacyEnabled?: boolean;
+  streak?: {
+    count: number;
+    todayLogged: boolean;
+    lastLoggedDate: string | null;
+    canRecover: boolean;
+    missedDays: number;
+  };
+  pendingSms?: {
+    id: string;
+    merchant: string;
+    amount: number;
+    currency: string;
+  }[];
+  pet?: {
+    health: number;
+    mood: string;
+    level?: number;
+  };
+};
+
+export type PendingSmsRecord = {
+  id: string;
+  merchant: string;
+  amount: string;
+  currency?: string;
+  sender?: string;
+  date?: number;
+  processingStatus?: 'pending' | 'imported' | 'dismissed' | 'auto_posted' | string;
 };

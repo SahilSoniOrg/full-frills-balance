@@ -38,6 +38,41 @@ struct SafeToSpendSnapshot {
   }
 }
 
+struct StreakSnapshot {
+  let count: Int
+  let todayLogged: Bool
+  let lastLoggedDate: String?
+  let canRecover: Bool
+  let missedDays: Int
+
+  static func load() -> StreakSnapshot? {
+    guard let defaults = UserDefaults(suiteName: appGroupId) else { return nil }
+    let count = defaults.integer(forKey: "streak_count")
+    return StreakSnapshot(
+      count: count,
+      todayLogged: defaults.bool(forKey: "streak_today_logged"),
+      lastLoggedDate: defaults.string(forKey: "streak_last_logged_date"),
+      canRecover: defaults.bool(forKey: "streak_can_recover"),
+      missedDays: defaults.integer(forKey: "streak_missed_days")
+    )
+  }
+}
+
+struct PetSnapshot {
+  let health: Int
+  let mood: String
+
+  static func load() -> PetSnapshot? {
+    guard let defaults = UserDefaults(suiteName: appGroupId) else { return nil }
+    let health = defaults.integer(forKey: "pet_health")
+    let mood = defaults.string(forKey: "pet_mood") ?? "happy"
+    return PetSnapshot(
+      health: health > 0 ? health : 100,
+      mood: mood
+    )
+  }
+}
+
 struct WidgetThemeSnapshot {
   let themeId: String
   let themeMode: String
@@ -344,9 +379,8 @@ struct JournalLauncherWidgetView: View {
   }
 }
 
-#if WIDGET
-@main
-#endif
+// MARK: - Journal Launcher Widget
+
 struct FullFrillsBalanceWidget: Widget {
   let kind: String = "FullFrillsBalanceJournalLauncher"
 
@@ -366,6 +400,405 @@ struct FullFrillsBalanceWidget: Widget {
     ])
   }
 }
+
+// MARK: - SMS Triage Widget
+
+struct PendingSmsItem: Identifiable {
+  let id: String
+  let merchant: String
+  let amount: String
+  let currency: String
+  let sender: String
+  let updatedAt: Date?
+}
+
+struct PendingSmsSnapshot {
+  static func load() -> [PendingSmsItem] {
+    guard let defaults = UserDefaults(suiteName: appGroupId) else { return [] }
+
+    guard let recordsData = defaults.data(forKey: PendingSmsKeys.records) else { return [] }
+
+    let decoder = JSONDecoder()
+    guard let recordIds = try? decoder.decode([String].self, from: recordsData) else { return [] }
+
+    let items = recordIds.compactMap { recordId -> PendingSmsItem? in
+      let merchant = defaults.string(forKey: PendingSmsKeys.merchant(for: recordId)) ?? "Unknown"
+      let amount = defaults.string(forKey: PendingSmsKeys.amount(for: recordId)) ?? "--"
+      guard !merchant.isEmpty, !amount.isEmpty else { return nil }
+
+      let currency = defaults.string(forKey: PendingSmsKeys.currency(for: recordId)) ?? ""
+      let sender = defaults.string(forKey: PendingSmsKeys.sender(for: recordId)) ?? ""
+      let timestampMs = defaults.double(forKey: PendingSmsKeys.date(for: recordId))
+      let updatedAt = timestampMs > 0 ? Date(timeIntervalSince1970: timestampMs / 1000.0) : nil
+
+      return PendingSmsItem(
+        id: recordId,
+        merchant: merchant,
+        amount: amount,
+        currency: currency,
+        sender: sender,
+        updatedAt: updatedAt
+      )
+    }
+
+    return items.sorted { ($0.updatedAt ?? Date.distantPast) > ($1.updatedAt ?? Date.distantPast) }
+  }
+}
+
+struct SmsTriageEntry: TimelineEntry {
+  let date: Date
+  let pendingItems: [PendingSmsItem]
+  let theme: WidgetThemeSnapshot
+}
+
+struct SmsTriageProvider: TimelineProvider {
+  func placeholder(in context: Context) -> SmsTriageEntry {
+    SmsTriageEntry(
+      date: Date(),
+      pendingItems: [
+        PendingSmsItem(
+          id: "placeholder",
+          merchant: "Example Store",
+          amount: "$42.50",
+          currency: "USD",
+          sender: "EXAMPL",
+          updatedAt: Date()
+        ),
+      ],
+      theme: .fallback
+    )
+  }
+
+  func getSnapshot(in context: Context, completion: @escaping (SmsTriageEntry) -> Void) {
+    completion(SmsTriageEntry(date: Date(), pendingItems: PendingSmsSnapshot.load(), theme: WidgetThemeSnapshot.load() ?? .fallback))
+  }
+
+  func getTimeline(in context: Context, completion: @escaping (Timeline<SmsTriageEntry>) -> Void) {
+    completion(
+      Timeline(
+        entries: [SmsTriageEntry(date: Date(), pendingItems: PendingSmsSnapshot.load(), theme: WidgetThemeSnapshot.load() ?? .fallback)],
+        policy: .never
+      )
+    )
+  }
+}
+
+struct SmsTriageWidgetView: View {
+  @Environment(\.widgetFamily) private var family
+  var entry: SmsTriageProvider.Entry
+
+  var body: some View {
+    widgetContent
+  }
+
+  @ViewBuilder
+  private var widgetContent: some View {
+    let content = Group {
+      if entry.pendingItems.isEmpty {
+        emptyState
+      } else {
+        switch family {
+        case .systemSmall:
+          smallLayout
+        default:
+          mediumLayout
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .padding(14)
+
+    if #available(iOS 17.0, *) {
+      content
+        .containerBackground(for: .widget) {
+          entry.theme.backgroundStartColor
+        }
+    } else {
+      content
+        .background(entry.theme.backgroundStartColor)
+    }
+  }
+
+  private var emptyState: some View {
+    VStack(spacing: 8) {
+      Image(systemName: "tray")
+        .font(.system(size: 28, weight: .light))
+        .foregroundStyle(entry.theme.secondaryTextColor)
+
+      Text("No pending SMS")
+        .font(.system(size: 13, weight: .medium, design: .rounded))
+        .foregroundStyle(entry.theme.secondaryTextColor)
+    }
+  }
+
+  private var smallLayout: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("SMS Inbox")
+        .font(.system(size: 11, weight: .bold, design: .rounded))
+        .foregroundStyle(entry.theme.titleColor)
+
+      let displayItems = Array(entry.pendingItems.prefix(2))
+      ForEach(displayItems) { item in
+        pendingSmsRow(item: item, compact: true)
+      }
+
+      if entry.pendingItems.count > 2 {
+        Text("+\\(entry.pendingItems.count - 2) more")
+          .font(.system(size: 9, weight: .medium, design: .rounded))
+          .foregroundStyle(entry.theme.secondaryTextColor)
+      }
+    }
+  }
+
+  private var mediumLayout: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text("SMS Inbox")
+        .font(.system(size: 12, weight: .bold, design: .rounded))
+        .foregroundStyle(entry.theme.titleColor)
+
+      let displayItems = Array(entry.pendingItems.prefix(3))
+      ForEach(displayItems) { item in
+        pendingSmsRow(item: item, compact: false)
+      }
+
+      if entry.pendingItems.count > 3 {
+        Text("+\\(entry.pendingItems.count - 3) more")
+          .font(.system(size: 10, weight: .medium, design: .rounded))
+          .foregroundStyle(entry.theme.secondaryTextColor)
+      }
+    }
+  }
+
+  private func pendingSmsRow(item: PendingSmsItem, compact: Bool) -> some View {
+    HStack(spacing: 8) {
+      Text(item.merchant)
+        .font(.system(size: compact ? 11 : 12, weight: .semibold, design: .rounded))
+        .foregroundStyle(entry.theme.primaryTextColor)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+      Text(item.amount)
+        .font(.system(size: compact ? 12 : 14, weight: .bold, design: .rounded))
+        .foregroundStyle(entry.theme.primaryTextColor)
+
+      if #available(iOS 17.0, *) {
+        Button(intent: SmsQuickImportIntent(recordId: item.id)) {
+          Image(systemName: "arrow.right.circle.fill")
+            .font(.system(size: compact ? 18 : 22, weight: .semibold))
+            .foregroundStyle(entry.theme.actionIconColor)
+        }
+        .buttonStyle(.plain)
+      } else {
+        Link(destination: URL(string: "\(appScheme)://sms-inbox?approve=\(item.id)")!) {
+          Image(systemName: "arrow.right.circle.fill")
+            .font(.system(size: compact ? 18 : 22, weight: .semibold))
+            .foregroundStyle(entry.theme.actionIconColor)
+        }
+      }
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, compact ? 4 : 6)
+    .background(entry.theme.primaryTextColor.opacity(0.07))
+    .cornerRadius(8)
+  }
+}
+
+struct SmsTriageWidget: Widget {
+  let kind: String = "FullFrillsBalanceSmsTriage"
+
+  var body: some WidgetConfiguration {
+    StaticConfiguration(kind: kind, provider: SmsTriageProvider()) { entry in
+      SmsTriageWidgetView(entry: entry)
+    }
+    .configurationDisplayName("SMS Triage")
+    .description("Quick-import pending SMS transactions.")
+    .supportedFamilies([
+      .systemSmall,
+      .systemMedium,
+    ])
+  }
+}
+
+// MARK: - Streak & Financial Pet Widget
+
+struct StreakEntry: TimelineEntry {
+  let date: Date
+  let streak: StreakSnapshot?
+  let pet: PetSnapshot?
+  let theme: WidgetThemeSnapshot
+}
+
+struct StreakProvider: TimelineProvider {
+  func placeholder(in context: Context) -> StreakEntry {
+    StreakEntry(
+      date: Date(),
+      streak: StreakSnapshot(count: 5, todayLogged: true, lastLoggedDate: nil, canRecover: false, missedDays: 0),
+      pet: PetSnapshot(health: 95, mood: "happy"),
+      theme: .fallback
+    )
+  }
+
+  func getSnapshot(in context: Context, completion: @escaping (StreakEntry) -> Void) {
+    completion(
+      StreakEntry(
+        date: Date(),
+        streak: StreakSnapshot.load(),
+        pet: PetSnapshot.load(),
+        theme: WidgetThemeSnapshot.load() ?? .fallback
+      )
+    )
+  }
+
+  func getTimeline(in context: Context, completion: @escaping (Timeline<StreakEntry>) -> Void) {
+    completion(
+      Timeline(
+        entries: [
+          StreakEntry(
+            date: Date(),
+            streak: StreakSnapshot.load(),
+            pet: PetSnapshot.load(),
+            theme: WidgetThemeSnapshot.load() ?? .fallback
+          )
+        ],
+        policy: .never
+      )
+    )
+  }
+}
+
+struct StreakWidgetView: View {
+  @Environment(\.widgetFamily) private var family
+  var entry: StreakProvider.Entry
+
+  var body: some View {
+    widgetContent
+  }
+
+  @ViewBuilder
+  private var widgetContent: some View {
+    let content = Group {
+      switch family {
+      case .systemSmall:
+        smallLayout
+      default:
+        mediumLayout
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .padding(14)
+
+    if #available(iOS 17.0, *) {
+      content
+        .containerBackground(for: .widget) {
+          entry.theme.backgroundStartColor
+        }
+    } else {
+      content
+        .background(entry.theme.backgroundStartColor)
+    }
+  }
+
+  private var smallLayout: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack {
+        Text("STREAK")
+          .font(.system(size: 11, weight: .bold, design: .rounded))
+          .foregroundStyle(entry.theme.titleColor)
+        Spacer()
+        Text(entry.pet?.mood == "ecstatic" ? "🤩" : (entry.pet?.mood == "hungry" ? "😋" : "😊"))
+          .font(.system(size: 14))
+      }
+
+      Spacer()
+
+      HStack(alignment: .firstTextBaseline, spacing: 4) {
+        Text("🔥")
+          .font(.system(size: 24))
+        Text("\(entry.streak?.count ?? 0)")
+          .font(.system(size: 34, weight: .bold, design: .rounded))
+          .foregroundStyle(entry.theme.primaryTextColor)
+      }
+
+      Text((entry.streak?.todayLogged ?? false) ? "Logged Today ✓" : "Tap to check in")
+        .font(.system(size: 11, weight: .medium, design: .rounded))
+        .foregroundStyle(entry.theme.secondaryTextColor)
+
+      Spacer()
+    }
+  }
+
+  private var mediumLayout: some View {
+    HStack(spacing: 16) {
+      // Left: Pet status
+      VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 6) {
+          Text(entry.pet?.mood == "ecstatic" ? "🤩" : "🐱")
+            .font(.system(size: 24))
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Companion")
+              .font(.system(size: 13, weight: .bold, design: .rounded))
+              .foregroundStyle(entry.theme.primaryTextColor)
+            Text("Health \(entry.pet?.health ?? 100)%")
+              .font(.system(size: 11, weight: .medium, design: .rounded))
+              .foregroundStyle(entry.theme.secondaryTextColor)
+          }
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+
+      Divider()
+
+      // Right: Streak count
+      VStack(alignment: .trailing, spacing: 4) {
+        HStack(spacing: 4) {
+          Text("🔥")
+            .font(.system(size: 20))
+          Text("\(entry.streak?.count ?? 0)")
+            .font(.system(size: 28, weight: .bold, design: .rounded))
+            .foregroundStyle(entry.theme.primaryTextColor)
+        }
+        Text("Days Streak")
+          .font(.system(size: 11, weight: .semibold, design: .rounded))
+          .foregroundStyle(entry.theme.secondaryTextColor)
+
+        Text((entry.streak?.todayLogged ?? false) ? "✓ Logged Today" : "🌿 Pending Check-In")
+          .font(.system(size: 10, weight: .bold, design: .rounded))
+          .foregroundStyle(entry.theme.actionIconColor)
+          .padding(.top, 2)
+      }
+      .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+  }
+}
+
+struct StreakWidget: Widget {
+  let kind: String = "FullFrillsBalanceStreak"
+
+  var body: some WidgetConfiguration {
+    StaticConfiguration(kind: kind, provider: StreakProvider()) { entry in
+      StreakWidgetView(entry: entry)
+    }
+    .configurationDisplayName("Streak & Pet")
+    .description("Track daily financial streak and companion health.")
+    .supportedFamilies([
+      .systemSmall,
+      .systemMedium,
+    ])
+  }
+}
+
+// MARK: - Widget Bundle
+
+#if WIDGET
+@main
+struct FullFrillsBalanceWidgetBundle: WidgetBundle {
+  var body: some Widget {
+    FullFrillsBalanceWidget()
+    SmsTriageWidget()
+    StreakWidget()
+  }
+}
+#endif
 
 private extension Color {
   init(hex: UInt32) {
