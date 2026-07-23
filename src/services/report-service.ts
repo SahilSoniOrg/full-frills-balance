@@ -1,12 +1,30 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Account, { AccountType } from '@/src/data/models/Account';
-import Transaction, { TransactionType } from '@/src/data/models/Transaction';
+import Transaction from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { AccountDelta, DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import {
+  calculateCalendarHeatmapFromHistory,
+  calculateCalendarHeatmapFromTransactions,
+  calculateSpendingHeatmapFromTransactions,
+  HeatmapPoint,
+} from '@/src/services/reports/heatmapCalculators';
+import { calculateHistoryFromDeltas } from '@/src/services/reports/historyCalculators';
+import {
+  ConvertedReportTransaction,
+  ReportAccount,
+  ReportingDeltaInput,
+} from '@/src/services/reports/reportTypes';
+import {
+  calculateSankeyDataFromSummaries,
+  SankeyData,
+  SankeyLink,
+  SankeyNode,
+} from '@/src/services/reports/sankeyCalculator';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 import {
@@ -48,31 +66,7 @@ export interface CategoryBreakdown {
   color?: string;
 }
 
-export interface SankeyNode {
-  id: string;
-  name: string;
-  color?: string;
-}
-
-export interface SankeyLink {
-  source: string;
-  target: string;
-  value: number;
-}
-
-export interface SankeyData {
-  nodes: SankeyNode[];
-  links: SankeyLink[];
-}
-
-export interface HeatmapPoint {
-  x: number; // Day of week (0-6)
-  y: number; // Row index (absolute week number)
-  value: number;
-  label?: string; // Optional label (e.g. day of month)
-  monthLabel?: string; // Optional month label (e.g. "Jan") for rows
-  timestamp?: number; // Exact date/time for this point
-}
+export type { HeatmapPoint, SankeyData, SankeyLink, SankeyNode };
 
 export interface ReportSnapshot {
   expenseBreakdown: ExpenseCategory[];
@@ -85,30 +79,6 @@ export interface ReportSnapshot {
   sankeyData: SankeyData;
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[]; // reuse HeatmapPoint: x=dayOfWeek, y=weekOfMonth
-}
-
-interface ConvertedReportTransaction {
-  accountId: AccountId;
-  accountType: AccountType;
-  transactionType: TransactionType;
-  transactionDate: number;
-  amount: number;
-}
-
-interface ReportAccount {
-  id: AccountId;
-  name: string;
-  currencyCode?: string;
-  accountType: AccountType;
-  accountSubtype?: string;
-}
-
-interface ReportingDelta {
-  accountId?: AccountId;
-  currencyCode: string;
-  delta: number;
-  dayStart?: number;
-  accountType?: AccountType;
 }
 
 export class ReportService {
@@ -232,15 +202,14 @@ export class ReportService {
 
   private calculateBreakdownFromDeltas(
     accounts: ReportAccount[],
-    deltas: ReportingDelta[] | AccountDelta[],
+    deltas: ReportingDeltaInput[],
     currency: string,
   ): ExpenseCategory[] {
     const sums = new Map<string, Money>();
     for (const d of deltas) {
       const delta = Money.from(d.delta, currency);
-      const accountId = (d as any).accountId;
-      if (accountId) {
-        sums.set(accountId, (sums.get(accountId) || Money.from(0, currency)).add(delta));
+      if (d.accountId) {
+        sums.set(d.accountId, (sums.get(d.accountId) || Money.from(0, currency)).add(delta));
       }
     }
 
@@ -288,17 +257,16 @@ export class ReportService {
 
   private calculateCategoryBreakdownFromDeltas(
     accounts: ReportAccount[],
-    deltas: ReportingDelta[] | AccountDelta[],
+    deltas: ReportingDeltaInput[],
     _currency: string,
   ): CategoryBreakdown[] {
     const accountSubtypeMap = new Map(accounts.map(a => [a.id, a.accountSubtype]));
     const items = deltas
       .map(d => {
-        const accountId = (d as any).accountId;
-        if (!accountId) return null;
+        if (!d.accountId) return null;
         const category =
-          accountSubtypeMap.get(accountId) || AppConfig.strings.reports.categoryOther;
-        const val = (d as any).delta ?? (d as any).amount ?? 0;
+          accountSubtypeMap.get(d.accountId) || AppConfig.strings.reports.categoryOther;
+        const val = d.delta ?? d.amount ?? 0;
         return { category, amount: val };
       })
       .filter((item): item is { category: string; amount: number } => item !== null);
@@ -345,7 +313,7 @@ export class ReportService {
   }
 
   private calculateIncomeVsExpenseFromDeltas(
-    deltas: ReportingDelta[],
+    deltas: ReportingDeltaInput[],
     accounts: ReportAccount[],
     _currency: string,
   ): { income: number; expense: number } {
@@ -355,7 +323,7 @@ export class ReportService {
         const accountType =
           d.accountType || (d.accountId ? accountTypeMap.get(d.accountId) : undefined);
         if (!accountType) return null;
-        const val = (d as any).delta !== undefined ? (d as any).delta : ((d as any).amount ?? 0);
+        const val = d.delta !== undefined ? d.delta : (d.amount ?? 0);
         return { accountType, amount: val };
       })
       .filter((item): item is { accountType: AccountType; amount: number } => item !== null);
@@ -458,32 +426,7 @@ export class ReportService {
         transactionRawRepository.getDailyDeltasGroupedRaw(workplaceId, ids, start, end),
     );
 
-    return this.calculateHistoryFromDeltas(normalizedDeltas, startDate, endDate, currency);
-  }
-
-  private calculateHistoryFromDeltas(
-    deltas: ReportingDelta[],
-    startDate: number,
-    endDate: number,
-    currency: string,
-  ): IncomeVsExpense[] {
-    const historyMap = this.initializeHistoryMap(startDate, endDate);
-    const { bucketUnit } = this.getHistoryConfig(startDate, endDate);
-
-    for (const d of deltas) {
-      const bucketKey = dayjs(d.dayStart).startOf(bucketUnit).valueOf();
-      const bucket = historyMap.get(bucketKey);
-      if (!bucket) continue;
-
-      const delta = Money.from(d.delta, currency);
-      if (d.accountType === AccountType.INCOME) {
-        bucket.income = Money.from(bucket.income, currency).add(delta).amount;
-      } else if (d.accountType === AccountType.EXPENSE) {
-        bucket.expense = Money.from(bucket.expense, currency).add(delta).amount;
-      }
-    }
-
-    return Array.from(historyMap.values()).sort((a, b) => a.startDate - b.startDate);
+    return calculateHistoryFromDeltas(normalizedDeltas, startDate, endDate, currency);
   }
 
   /**
@@ -525,7 +468,7 @@ export class ReportService {
   }
 
   private calculateDailyVsDeltas(
-    deltas: ReportingDelta[],
+    deltas: ReportingDeltaInput[],
     startDate: number,
     endDate: number,
     currency: string,
@@ -540,6 +483,7 @@ export class ReportService {
     }
 
     for (const d of deltas) {
+      if (!d.dayStart) continue;
       const bucket = dailyMap.get(dayjs(d.dayStart).startOf('day').valueOf());
       if (!bucket) continue;
 
@@ -557,7 +501,7 @@ export class ReportService {
   }
 
   /** Helper to centralize currency conversion and rate caching */
-  private async getNormalizedDeltas<T extends { currencyCode: string; delta: number }>(
+  private async getNormalizedDeltas<T extends ReportingDeltaInput>(
     deltas: T[],
     targetCurrency: string,
   ): Promise<T[]> {
@@ -586,7 +530,7 @@ export class ReportService {
     transactions: ConvertedReportTransaction[],
     accounts: ReportAccount[],
     targetCurrency: string,
-  ): ReportingDelta[] {
+  ): ReportingDeltaInput[] {
     const accountMap = new Map(accounts.map(a => [a.id, a]));
     return transactions.map(tx => {
       const acc = accountMap.get(tx.accountId);
@@ -604,9 +548,7 @@ export class ReportService {
   }
 
   /** Helper to fetch deltas from raw DB or fallback to manual conversion if empty */
-  private async getScopedDeltas<
-    T extends { currencyCode: string; delta: number; dayStart?: number; accountId?: string },
-  >(
+  private async getScopedDeltas<T extends ReportingDeltaInput>(
     workplaceId: WorkplaceId,
     accountIds: AccountId[],
     startDate: number,
@@ -702,15 +644,12 @@ export class ReportService {
       currency,
     );
 
-    const history = this.calculateHistoryFromDeltas(deltas, startDate, endDate, currency);
+    const history = calculateHistoryFromDeltas(deltas, startDate, endDate, currency);
     const dailyIncomeVsExpense = this.calculateDailyVsDeltas(deltas, startDate, endDate, currency);
 
-    const sankeyData = this.calculateSankeyDataFromSummaries(
-      incomeBreakdown,
-      expenseCategoryBreakdown,
-    );
-    const spendingHeatmap = this.calculateSpendingHeatmapFromTransactions(converted);
-    const calendarHeatmap = this.calculateCalendarHeatmapFromHistory(history);
+    const sankeyData = calculateSankeyDataFromSummaries(incomeBreakdown, expenseCategoryBreakdown);
+    const spendingHeatmap = calculateSpendingHeatmapFromTransactions(converted);
+    const calendarHeatmap = calculateCalendarHeatmapFromHistory(history);
 
     return {
       expenseBreakdown,
@@ -724,111 +663,6 @@ export class ReportService {
       spendingHeatmap,
       calendarHeatmap,
     };
-  }
-
-  private calculateSankeyDataFromSummaries(
-    incomeSummary: ExpenseCategory[],
-    expenseCategorySummary: CategoryBreakdown[],
-  ): SankeyData {
-    const nodes: SankeyNode[] = [
-      { id: 'total_income', name: AppConfig.strings.reports.sankeyTotalIncome },
-      { id: 'surplus', name: AppConfig.strings.reports.sankeySurplus },
-    ];
-
-    const links: SankeyLink[] = [];
-
-    // Income -> Total
-    incomeSummary.forEach(inc => {
-      nodes.push({ id: `inc_${inc.accountId}`, name: inc.accountName });
-      links.push({ source: `inc_${inc.accountId}`, target: 'total_income', value: inc.amount });
-    });
-
-    // Total -> Categories
-    let totalExpense = 0;
-    expenseCategorySummary.forEach(cat => {
-      nodes.push({ id: `exp_${cat.category}`, name: cat.category });
-      links.push({ source: 'total_income', target: `exp_${cat.category}`, value: cat.amount });
-      totalExpense += cat.amount;
-    });
-
-    // Total -> Surplus
-    const totalIncome = incomeSummary.reduce((acc, inc) => acc + inc.amount, 0);
-    const surplus = Math.max(0, totalIncome - totalExpense);
-
-    if (surplus > 0) {
-      links.push({ source: 'total_income', target: 'surplus', value: surplus });
-    }
-
-    return { nodes, links };
-  }
-
-  private calculateCalendarHeatmapFromHistory(history: IncomeVsExpense[]): HeatmapPoint[] {
-    if (history.length === 0) return [];
-    const startWeek = dayjs(history[0].startDate).startOf('week').valueOf();
-
-    let lastMonth = -1;
-
-    return history.map(h => {
-      const date = dayjs(h.startDate);
-      const currentMonth = date.month();
-      let monthLabel: string | undefined;
-
-      // Set label if month changes or it's the very first point
-      if (currentMonth !== lastMonth) {
-        monthLabel = date.format('MMM');
-        lastMonth = currentMonth;
-      }
-
-      return {
-        x: date.day(),
-        y: Math.floor(dayjs(h.startDate).diff(startWeek, 'week')),
-        value: h.expense,
-        label: date.format('D'),
-        timestamp: h.startDate,
-        monthLabel,
-      };
-    });
-  }
-
-  private async getConvertedReportTransactionsFromRaw(
-    transactions: Transaction[],
-    targetCurrency: string,
-    accounts: ReportAccount[],
-  ): Promise<ConvertedReportTransaction[]> {
-    if (transactions.length === 0) return [];
-
-    // 1. Identify unique source currencies
-    const sourceCurrencies = new Set<string>();
-    transactions.forEach(tx => {
-      if (tx.currencyCode) sourceCurrencies.add(tx.currencyCode);
-    });
-
-    // 2. Pre-fetch all required rates in parallel
-    await Promise.all(
-      Array.from(sourceCurrencies).map(base => {
-        const promise = exchangeRateService.fetchRatesForBase?.(base);
-        return promise && typeof promise.catch === 'function'
-          ? promise.catch(() => {})
-          : Promise.resolve();
-      }),
-    );
-
-    const accountMap = new Map(accounts.map(a => [a.id, a]));
-
-    // 3. Synchronous conversion pass
-    return transactions.map(tx => {
-      const rate = exchangeRateService.getRateSafe(tx.currencyCode, targetCurrency);
-      const convertedAmount = tx.amount * rate;
-      const account = accountMap.get(tx.accountId);
-
-      return {
-        accountId: tx.accountId,
-        accountType: account?.accountType || (tx as any).accountType || 'EXPENSE',
-        transactionType: tx.transactionType,
-        transactionDate: tx.transactionDate,
-        amount: convertedAmount,
-      };
-    });
   }
 
   /**
@@ -854,7 +688,7 @@ export class ReportService {
       ),
     ]);
 
-    return this.calculateSankeyDataFromSummaries(incomeSummary, expenseCategorySummary);
+    return calculateSankeyDataFromSummaries(incomeSummary, expenseCategorySummary);
   }
 
   /**
@@ -886,30 +720,7 @@ export class ReportService {
       accounts,
     );
 
-    return this.calculateSpendingHeatmapFromTransactions(converted);
-  }
-
-  private calculateSpendingHeatmapFromTransactions(
-    transactions: ConvertedReportTransaction[],
-  ): HeatmapPoint[] {
-    const densityMap = new Map<string, number>();
-
-    for (const tx of transactions) {
-      if (tx.transactionType !== TransactionType.DEBIT) continue;
-
-      const dt = dayjs(tx.transactionDate);
-      const key = `${dt.day()}_${dt.hour()}`;
-      densityMap.set(key, (densityMap.get(key) || 0) + tx.amount);
-    }
-
-    const points: HeatmapPoint[] = [];
-    for (let day = 0; day < 7; day++) {
-      for (let hour = 0; hour < 24; hour++) {
-        const value = densityMap.get(`${day}_${hour}`) || 0;
-        points.push({ x: day, y: hour, value });
-      }
-    }
-    return points;
+    return calculateSpendingHeatmapFromTransactions(converted);
   }
 
   /**
@@ -1035,6 +846,47 @@ export class ReportService {
       .filter((row): row is ConvertedReportTransaction => !!row);
   }
 
+  private async getConvertedReportTransactionsFromRaw(
+    transactions: Transaction[],
+    targetCurrency: string,
+    accounts: ReportAccount[],
+  ): Promise<ConvertedReportTransaction[]> {
+    if (transactions.length === 0) return [];
+
+    // 1. Identify unique source currencies
+    const sourceCurrencies = new Set<string>();
+    transactions.forEach(tx => {
+      if (tx.currencyCode) sourceCurrencies.add(tx.currencyCode);
+    });
+
+    // 2. Pre-fetch all required rates in parallel
+    await Promise.all(
+      Array.from(sourceCurrencies).map(base => {
+        const promise = exchangeRateService.fetchRatesForBase?.(base);
+        return promise && typeof promise.catch === 'function'
+          ? promise.catch(() => {})
+          : Promise.resolve();
+      }),
+    );
+
+    const accountMap = new Map(accounts.map(a => [a.id, a]));
+
+    // 3. Synchronous conversion pass
+    return transactions.map(tx => {
+      const rate = exchangeRateService.getRateSafe(tx.currencyCode, targetCurrency);
+      const convertedAmount = tx.amount * rate;
+      const account = accountMap.get(tx.accountId);
+
+      return {
+        accountId: tx.accountId,
+        accountType: account?.accountType || AccountType.EXPENSE,
+        transactionType: tx.transactionType,
+        transactionDate: tx.transactionDate,
+        amount: convertedAmount,
+      };
+    });
+  }
+
   private buildBreakdownFromSums(
     scopedAccounts: ReportAccount[],
     sums: Map<string, Money>,
@@ -1060,37 +912,6 @@ export class ReportService {
     return result.sort((a, b) => b.amount - a.amount);
   }
 
-  private getHistoryConfig(startDate: number, endDate: number) {
-    const start = dayjs(startDate);
-    const end = dayjs(endDate);
-    const diffDays = end.diff(start, 'day');
-    const monthlyThreshold = AppConfig.defaults.reportMonthlyBucketThresholdDays;
-    const bucketUnit: 'day' | 'month' = diffDays > monthlyThreshold ? 'month' : 'day';
-    const format = diffDays > monthlyThreshold ? 'MMM YYYY' : 'DD MMM';
-    return { bucketUnit, format };
-  }
-
-  private initializeHistoryMap(startDate: number, endDate: number): Map<number, IncomeVsExpense> {
-    const historyMap = new Map<number, IncomeVsExpense>();
-    const start = dayjs(startDate);
-    const end = dayjs(endDate);
-    const { bucketUnit, format } = this.getHistoryConfig(startDate, endDate);
-
-    let current = start.startOf(bucketUnit);
-    while (current.isBefore(end) || current.isSame(end, bucketUnit)) {
-      const bucketStart = current.startOf(bucketUnit).valueOf();
-      const bucketEnd = current.endOf(bucketUnit).valueOf();
-      historyMap.set(bucketStart, {
-        period: current.format(format),
-        startDate: Math.max(bucketStart, startDate),
-        endDate: Math.min(bucketEnd, endDate),
-        income: 0,
-        expense: 0,
-      });
-      current = current.add(1, bucketUnit);
-    }
-    return historyMap;
-  }
   /**
    * Aggregates spending by day of week and week of month (Calendar view).
    */
@@ -1115,56 +936,13 @@ export class ReportService {
       startDate,
       endDate,
     );
-    const densityMap = new Map<string, number>();
+    const converted = await this.getConvertedReportTransactionsFromRaw(
+      transactions,
+      currency,
+      accounts,
+    );
 
-    // Populate densityMap with amounts per day (YYYY-MM-DD)
-    for (const tx of transactions) {
-      if (tx.transactionType !== TransactionType.DEBIT) continue;
-
-      const dt = dayjs(tx.transactionDate);
-      const key = dt.format('YYYY-MM-DD'); // New key format for daily aggregation
-
-      const { convertedAmount } = await exchangeRateService.convert(
-        tx.amount,
-        tx.currencyCode || currency,
-        currency,
-      );
-
-      densityMap.set(key, (densityMap.get(key) || 0) + convertedAmount);
-    }
-
-    const points: HeatmapPoint[] = [];
-    const start = dayjs(startDate).startOf('week'); // Align with start of week (Sunday)
-    const end = dayjs(endDate).endOf('day');
-
-    let current = start;
-    let lastMonth = -1;
-
-    while (current.isBefore(end) || current.isSame(end, 'day')) {
-      const x = current.day(); // 0-6 (Sunday=0, Saturday=6)
-      const absoluteWeekIndex = Math.floor(current.diff(start, 'weeks'));
-      const key = current.format('YYYY-MM-DD');
-
-      // Monthly Label (e.g. "Jan") only on the first row it appears
-      let monthLabel: string | undefined;
-      if (current.month() !== lastMonth) {
-        monthLabel = current.format('MMM');
-        lastMonth = current.month();
-      }
-
-      const value = densityMap.get(key) || 0;
-      points.push({
-        x,
-        y: absoluteWeekIndex,
-        value,
-        label: current.date().toString(),
-        monthLabel,
-        timestamp: current.valueOf(),
-      });
-      current = current.add(1, 'day');
-    }
-
-    return points;
+    return calculateCalendarHeatmapFromTransactions(converted, startDate, endDate);
   }
 }
 

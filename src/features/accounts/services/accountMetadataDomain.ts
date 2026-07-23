@@ -107,15 +107,29 @@ export function validateAccountMetadata(
   return null;
 }
 
+export interface SerializedAccountMetadataPayload {
+  statementDay: number | null;
+  dueDay: number | null;
+  creditLimitAmount: number | null;
+  aprBps: number | null;
+  emiDay: number | null;
+  loanTenureMonths: number | null;
+  minimumPaymentAmount: number | null;
+  minimumPaymentPercent: number | null;
+  minPaymentOnly: boolean;
+  payFromAccountId: AccountId | null;
+  notes: string | null;
+}
+
 export function serializeAccountMetadata(
   values: AccountMetadataValues,
   accountType: AccountType,
   hasExistingRecord: boolean = false,
-): Record<string, any> | undefined {
+): SerializedAccountMetadataPayload | undefined {
   const isCategory = accountType === AccountType.INCOME || accountType === AccountType.EXPENSE;
   if (isCategory) return undefined;
 
-  const payload: Record<string, any> = {
+  const payload: SerializedAccountMetadataPayload = {
     statementDay: values.statementDay ? parseInt(values.statementDay, 10) : null,
     dueDay: values.dueDay ? parseInt(values.dueDay, 10) : null,
     creditLimitAmount: values.creditLimitAmount ? parseFloat(values.creditLimitAmount) : null,

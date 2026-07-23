@@ -23,6 +23,8 @@ import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
 import { supportsRawSql } from '../database/DatabaseUtils';
 
+import { SerializedAccountMetadataPayload } from '@/src/features/accounts/services/accountMetadataDomain';
+
 export interface AccountPersistenceInput {
   name: string;
   accountType: AccountType;
@@ -34,20 +36,7 @@ export interface AccountPersistenceInput {
   reconciledAt?: Date;
   parentAccountId?: AccountId;
   workplaceId: WorkplaceId;
-  metadata?: Partial<{
-    statementDay: number;
-    dueDay: number;
-    minimumPaymentAmount: number;
-    minimumBalanceAmount: number;
-    creditLimitAmount: number;
-    aprBps: number;
-    emiDay: number;
-    loanTenureMonths: number;
-    autopayEnabled: boolean;
-    gracePeriodDays: number;
-    payFromAccountId: AccountId;
-    notes: string;
-  }>;
+  metadata?: Partial<SerializedAccountMetadataPayload>;
 }
 
 export interface AccountListItemRaw {

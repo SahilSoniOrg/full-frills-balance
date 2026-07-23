@@ -45,7 +45,7 @@ describe('accountMetadataDomain', () => {
 
   describe('resolveAccountIcon', () => {
     it('uses custom icon if provided', () => {
-      expect(resolveAccountIcon(AccountType.ASSET, 'card')).toBe('card');
+      expect(resolveAccountIcon(AccountType.ASSET, 'pieChart')).toBe('pieChart');
     });
 
     it('falls back to tag for category account types', () => {

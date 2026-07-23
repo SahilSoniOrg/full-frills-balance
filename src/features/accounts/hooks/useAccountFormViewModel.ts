@@ -32,7 +32,7 @@ import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams, usePathname } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
 export interface AccountMetadataFormModel {
@@ -199,15 +199,15 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     createDefaultAccountMetadataValues(null),
   );
 
-  const updateMetadataValue = <K extends keyof AccountMetadataValues>(
-    key: K,
-    value: AccountMetadataValues[K],
-  ) => {
-    setMetadataValues(prev => ({ ...prev, [key]: value }));
-    if (localFormError) setLocalFormError(null);
-  };
-
   const [localFormError, setLocalFormError] = useState<string | null>(null);
+
+  const updateMetadataValue = useCallback(
+    <K extends keyof AccountMetadataValues>(key: K, value: AccountMetadataValues[K]) => {
+      setMetadataValues(prev => ({ ...prev, [key]: value }));
+      setLocalFormError(null);
+    },
+    [],
+  );
 
   // Load existing account base data
   useEffect(() => {
@@ -375,6 +375,37 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     return getAccountSubtypesForType(accountType);
   }, [accountType]);
 
+  const metadata = useMemo(
+    (): AccountMetadataFormModel => ({
+      statementDay: metadataValues.statementDay,
+      setStatementDay: v => updateMetadataValue('statementDay', v),
+      dueDay: metadataValues.dueDay,
+      setDueDay: v => updateMetadataValue('dueDay', v),
+      creditLimitAmount: metadataValues.creditLimitAmount,
+      setCreditLimitAmount: v => updateMetadataValue('creditLimitAmount', v),
+      apr: metadataValues.apr,
+      setApr: v => updateMetadataValue('apr', v),
+      emiDay: metadataValues.emiDay,
+      setEmiDay: v => updateMetadataValue('emiDay', v),
+      loanTenureMonths: metadataValues.loanTenureMonths,
+      setLoanTenureMonths: v => updateMetadataValue('loanTenureMonths', v),
+      minimumPaymentAmount: metadataValues.minimumPaymentAmount,
+      setMinimumPaymentAmount: v => updateMetadataValue('minimumPaymentAmount', v),
+      minimumPaymentPercent: metadataValues.minimumPaymentPercent,
+      setMinimumPaymentPercent: v => updateMetadataValue('minimumPaymentPercent', v),
+      payFromAccountId: metadataValues.payFromAccountId,
+      payFromAccountName,
+      setPayFromAccountId: v => updateMetadataValue('payFromAccountId', v),
+      isPayFromPickerVisible,
+      setIsPayFromPickerVisible,
+      notes: metadataValues.notes,
+      setNotes: v => updateMetadataValue('notes', v),
+      isMinPaymentOnly: metadataValues.isMinPaymentOnly,
+      setIsMinPaymentOnly: v => updateMetadataValue('isMinPaymentOnly', v),
+    }),
+    [metadataValues, updateMetadataValue, payFromAccountName, isPayFromPickerVisible],
+  );
+
   return {
     heroTitle,
     heroSubtitle,
@@ -414,33 +445,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setIsParentPickerVisible,
     isParent: effectiveIsParent,
     showCurrency,
-    metadata: {
-      statementDay: metadataValues.statementDay,
-      setStatementDay: v => updateMetadataValue('statementDay', v),
-      dueDay: metadataValues.dueDay,
-      setDueDay: v => updateMetadataValue('dueDay', v),
-      creditLimitAmount: metadataValues.creditLimitAmount,
-      setCreditLimitAmount: v => updateMetadataValue('creditLimitAmount', v),
-      apr: metadataValues.apr,
-      setApr: v => updateMetadataValue('apr', v),
-      emiDay: metadataValues.emiDay,
-      setEmiDay: v => updateMetadataValue('emiDay', v),
-      loanTenureMonths: metadataValues.loanTenureMonths,
-      setLoanTenureMonths: v => updateMetadataValue('loanTenureMonths', v),
-      minimumPaymentAmount: metadataValues.minimumPaymentAmount,
-      setMinimumPaymentAmount: v => updateMetadataValue('minimumPaymentAmount', v),
-      minimumPaymentPercent: metadataValues.minimumPaymentPercent,
-      setMinimumPaymentPercent: v => updateMetadataValue('minimumPaymentPercent', v),
-      payFromAccountId: metadataValues.payFromAccountId,
-      payFromAccountName,
-      setPayFromAccountId: v => updateMetadataValue('payFromAccountId', v),
-      isPayFromPickerVisible,
-      setIsPayFromPickerVisible,
-      notes: metadataValues.notes,
-      setNotes: v => updateMetadataValue('notes', v),
-      isMinPaymentOnly: metadataValues.isMinPaymentOnly,
-      setIsMinPaymentOnly: v => updateMetadataValue('isMinPaymentOnly', v),
-    },
+    metadata,
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
   };
 }

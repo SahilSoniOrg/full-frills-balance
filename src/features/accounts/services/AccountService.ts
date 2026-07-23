@@ -26,6 +26,8 @@ import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { getEpsilon, roundToPrecision } from '@/src/utils/money';
 
+import { SerializedAccountMetadataPayload } from './accountMetadataDomain';
+
 export interface CreateAccountData {
   name: string;
   accountType: AccountType;
@@ -37,19 +39,7 @@ export interface CreateAccountData {
   orderNum?: number;
   parentAccountId?: AccountId | null;
   workplaceId: WorkplaceId;
-  metadata?: Partial<{
-    statementDay: number;
-    dueDay: number;
-    minimumPaymentAmount: number;
-    minimumBalanceAmount: number;
-    creditLimitAmount: number;
-    aprBps: number;
-    emiDay: number;
-    loanTenureMonths: number;
-    autopayEnabled: boolean;
-    gracePeriodDays: number;
-    notes: string;
-  }>;
+  metadata?: Partial<SerializedAccountMetadataPayload>;
 }
 
 export class AccountService {
