@@ -19,6 +19,7 @@ type SettingsMenuItemProps = {
   iconColor?: boolean;
   prominent?: boolean;
   style?: ViewProps['style'];
+  testID?: string;
 };
 
 /**
@@ -37,6 +38,7 @@ export function SettingsMenuItem({
   iconColor = undefined,
   prominent = false,
   style,
+  testID,
 }: SettingsMenuItemProps) {
   const { theme } = useTheme();
 
@@ -125,6 +127,7 @@ export function SettingsMenuItem({
       accessibilityState={{ disabled: disabled || !onPress }}
       accessibilityLabel={title}
       accessibilityHint={description}
+      testID={testID}
       style={style}
     >
       <Inline

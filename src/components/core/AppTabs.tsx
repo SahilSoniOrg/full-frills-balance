@@ -50,6 +50,7 @@ function AppTabsComponent<T extends string | number>({
               accessibilityState={{ selected: isSelected }}
               accessibilityLabel={option.label}
               activeOpacity={Opacity.heavy}
+              testID={testID ? `${testID}-item-${option.id}` : `tab-item-${option.id}`}
               style={[
                 styles.tab,
                 isSelected && {

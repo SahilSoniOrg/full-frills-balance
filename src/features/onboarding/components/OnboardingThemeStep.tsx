@@ -379,6 +379,7 @@ export function OnboardingThemeStep(props: OnboardingThemeStepProps) {
           onPress={props.onContinue}
           disabled={props.isCompleting}
           style={{ width: '100%' }}
+          testID="onboarding-theme-continue-button"
         >
           Continue
         </AppButton>

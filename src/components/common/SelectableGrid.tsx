@@ -77,6 +77,7 @@ const SelectableGridItem = React.memo(
         accessibilityLabel={`${name}, ${isSelected ? 'selected' : 'not selected'}`}
         accessibilityRole="button"
         accessibilityState={{ selected: isSelected, disabled: isAtMax }}
+        testID={`grid-item-${id}`}
       >
         <Box
           borderRadius="r3"
@@ -295,10 +296,17 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
           onPress={onContinue}
           disabled={isCompleting}
           style={{ width: '100%' }}
+          testID="selectable-grid-continue-button"
         >
           {footerActionLabel}
         </AppButton>
-        <AppButton variant="ghost" size="md" onPress={onBack} disabled={isCompleting}>
+        <AppButton
+          variant="ghost"
+          size="md"
+          onPress={onBack}
+          disabled={isCompleting}
+          testID="selectable-grid-back-button"
+        >
           Back
         </AppButton>
       </Stack>

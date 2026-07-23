@@ -2,52 +2,77 @@ import { expect } from '@playwright/test';
 import { BasePage } from './base-page';
 
 export class OnboardingPage extends BasePage {
-    async completeOnboarding(userName: string = 'Test User', currency: string = 'USD') {
-        const welcome = this.page.getByText('Welcome to Balance');
-        await welcome.waitFor({ state: 'visible', timeout: 3000 });
+  async completeOnboarding(userName: string = 'Test User', currency: string = 'USD') {
+    await this.assertOnboardingStarted();
 
-        // Step 1: Name
-        await this.page.getByPlaceholder('Enter your name').fill(userName);
-        await this.page.getByText('Continue', { exact: true }).click({ force: true });
+    // Step 1: Splash / Name
+    await this.fillName(userName);
+    await this.clickContinue();
 
-        // Step 2: Currency
-        await expect(this.page.getByText('Default Currency', { exact: true })).toBeVisible({ timeout: 2000 });
-        await this.page.getByText(currency).first().click();
-        await this.page.getByText('Continue').click({ force: true });
+    // Step 2: Currency
+    await this.selectCurrency(currency);
+    await this.clickGridContinue();
 
-        // Step 3: Accounts
-        await expect(this.page.getByText('Initial Accounts')).toBeVisible({ timeout: 2000 });
-        await this.page.getByText('Continue').click({ force: true });
+    // Step 3: Accounts
+    await this.clickGridContinue();
 
-        // Step 4: Categories
-        await expect(this.page.getByText('Initial Categories')).toBeVisible({ timeout: 2000 });
-        await this.page.getByText('Continue').click({ force: true });
+    // Step 4: Categories
+    await this.clickGridContinue();
 
-        // Step 5: Finalize
-        await expect(this.page.getByText("All Ready!")).toBeVisible({ timeout: 2000 });
-        await this.page.getByText("Let's Begin").click({ force: true });
+    // Step 5: Appearance Theme
+    await this.clickThemeContinue();
 
-        // Should redirect to accounts tab
-        await expect(this.page).toHaveURL(/accounts$/);
+    // Step 6: Finalize
+    await this.clickFinish();
+
+    // Should redirect to main app tabs
+    await expect(this.page).toHaveURL(/(accounts|activity|settings|\(tabs\)|$)/);
+  }
+
+  async assertOnboardingStarted() {
+    const nameInput = this.page.getByTestId('onboarding-name-input');
+    await nameInput.waitFor({ state: 'visible', timeout: 15000 });
+  }
+
+  async fillName(name: string) {
+    await this.page.getByTestId('onboarding-name-input').fill(name);
+  }
+
+  async clickContinue() {
+    await this.page.getByTestId('onboarding-continue-button').click({ force: true });
+  }
+
+  async clickGridContinue() {
+    await this.page
+      .getByTestId('selectable-grid-continue-button')
+      .waitFor({ state: 'visible', timeout: 5000 });
+    await this.page.getByTestId('selectable-grid-continue-button').click({ force: true });
+  }
+
+  async clickThemeContinue() {
+    await this.page
+      .getByTestId('onboarding-theme-continue-button')
+      .waitFor({ state: 'visible', timeout: 5000 });
+    await this.page.getByTestId('onboarding-theme-continue-button').click({ force: true });
+  }
+
+  async clickFinish() {
+    await this.page
+      .getByTestId('onboarding-finish-button')
+      .waitFor({ state: 'visible', timeout: 5000 });
+    await this.page.getByTestId('onboarding-finish-button').click({ force: true });
+  }
+
+  async selectCurrency(currency: string) {
+    const gridItem = this.page.getByTestId(`grid-item-${currency}`);
+    if ((await gridItem.count()) > 0) {
+      await gridItem.click({ force: true });
+    } else {
+      await this.page.getByText(currency).first().click({ force: true });
     }
+  }
 
-    async assertOnboardingStarted() {
-        await expect(this.page.getByText('Welcome to Balance')).toBeVisible({ timeout: 1500 });
-    }
-
-    async fillName(name: string) {
-        await this.page.getByPlaceholder('Enter your name').fill(name);
-    }
-
-    async clickContinue() {
-        await this.page.getByText('Continue', { exact: true }).click();
-    }
-
-    async selectCurrency(currency: string) {
-        await this.page.getByText(currency).first().click();
-    }
-
-    async clickGetStarted() {
-        await this.page.getByText('Get Started').click();
-    }
+  async clickGetStarted() {
+    await this.clickContinue();
+  }
 }

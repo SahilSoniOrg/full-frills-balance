@@ -47,6 +47,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
                 onChangeText={setName}
                 autoFocus
                 accessibilityLabel={AppConfig.strings.onboarding.splash.inputLabel}
+                testID="onboarding-name-input"
                 onSubmitEditing={() => {
                   Keyboard.dismiss();
                   onContinue();
@@ -62,6 +63,7 @@ export const StepSplash: React.FC<StepSplashProps> = ({
                 }}
                 disabled={!name.trim() || isCompleting}
                 accessibilityLabel={AppConfig.strings.onboarding.splash.btnGetStarted}
+                testID="onboarding-continue-button"
               >
                 {AppConfig.strings.onboarding.splash.btnGetStarted}
               </AppButton>

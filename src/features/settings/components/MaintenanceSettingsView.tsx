@@ -45,6 +45,7 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           description={AppConfig.strings.settings.danger.resetDesc}
           onPress={vm.onFactoryReset}
           loading={vm.isResetting}
+          testID="factory-reset-button"
           danger
         />
       </SettingsMenu>
