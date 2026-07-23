@@ -11,6 +11,8 @@ import {
   SafeToSpendResult,
 } from '@/src/services/notification/NotificationService';
 import { smsService } from '@/src/services/sms-service';
+import { financialPetService, PetState } from '@/src/services/FinancialPetService';
+import { streakService, StreakResult } from '@/src/services/StreakService';
 import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { snapshotService } from '@/src/utils/SnapshotService';
@@ -40,6 +42,12 @@ export interface DashboardViewModel {
     accessibilityLabel?: string;
   };
   safeToSpendData: SafeToSpendResult | null;
+  petState: PetState | null;
+  streakState: StreakResult | null;
+  isPetModalVisible: boolean;
+  setPetModalVisible: (v: boolean) => void;
+  onCheckInZeroSpend: () => Promise<void>;
+  isCheckInLoading: boolean;
   explanationModalState: {
     visible: boolean;
     setVisible: (v: boolean) => void;
@@ -124,6 +132,34 @@ export function useDashboardViewModel(): DashboardViewModel {
     0,
   );
 
+  const { data: petState } = useObservable<PetState | null>(
+    () => (isAppReady ? financialPetService.observePetState(workplaceId) : EMPTY),
+    [workplaceId, isAppReady],
+    () => snapshotService.getFinancialPetSnapshot(workplaceId),
+  );
+
+  const { data: streakState } = useObservable<StreakResult | null>(
+    () => (isAppReady ? streakService.observeStreak(workplaceId) : EMPTY),
+    [workplaceId, isAppReady],
+    () => snapshotService.getStreakSnapshot(workplaceId),
+  );
+
+  const [isPetModalVisible, setPetModalVisible] = React.useState(false);
+  const [isCheckInLoading, setIsCheckInLoading] = React.useState(false);
+
+  const onCheckInZeroSpend = useCallback(async () => {
+    if (isCheckInLoading || !workplaceId) return;
+    try {
+      setIsCheckInLoading(true);
+      await streakService.checkInZeroSpend(workplaceId);
+      analytics.track('zero_spend_check_in', { workplaceId });
+    } catch (err) {
+      appLogger.error('[Dashboard] Zero spend check-in failed', { workplaceId, err });
+    } finally {
+      setIsCheckInLoading(false);
+    }
+  }, [workplaceId, isCheckInLoading]);
+
   // Modal states lifted for non-native overlay support
   const [isExplanationVisible, setExplanationVisible] = React.useState(false);
   const [expandedSection, setExpandedSection] = React.useState<
@@ -200,6 +236,9 @@ export function useDashboardViewModel(): DashboardViewModel {
           ? AppNavigation.toSmsInbox
           : undefined,
       onSearchPress: AppNavigation.toJournalSearch,
+      petState,
+      streakState,
+      onPetPress: () => setPetModalVisible(true),
     }),
     [
       greeting,
@@ -208,6 +247,8 @@ export function useDashboardViewModel(): DashboardViewModel {
       onTogglePrivacy,
       unreadSmsCount,
       isSmsImportEnabled,
+      petState,
+      streakState,
     ],
   );
 
@@ -253,6 +294,12 @@ export function useDashboardViewModel(): DashboardViewModel {
       transactionSectionTitle: sectionTitle,
       fab,
       safeToSpendData,
+      petState,
+      streakState,
+      isPetModalVisible,
+      setPetModalVisible,
+      onCheckInZeroSpend,
+      isCheckInLoading,
       explanationModalState,
       legendModalState,
     }),
@@ -265,6 +312,12 @@ export function useDashboardViewModel(): DashboardViewModel {
       sectionTitle,
       fab,
       safeToSpendData,
+      petState,
+      streakState,
+      isPetModalVisible,
+      setPetModalVisible,
+      onCheckInZeroSpend,
+      isCheckInLoading,
       explanationModalState,
       legendModalState,
     ],

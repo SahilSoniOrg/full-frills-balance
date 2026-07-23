@@ -7,6 +7,7 @@ import { SafeToSpendResult } from '@/src/services/notification/NotificationServi
 import React from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
+import { PetStreakDetailsModal } from './PetStreakDetailsModal';
 import { SafeToSpendCard } from './SafeToSpendCard';
 import { SafeToSpendExplanationModal } from './SafeToSpendExplanationModal';
 import { SafeToSpendLegendModal } from './SafeToSpendLegendModal';
@@ -17,6 +18,12 @@ export function DashboardScreenView({
   headerProps,
   fab,
   safeToSpendData,
+  petState,
+  streakState,
+  isPetModalVisible,
+  setPetModalVisible,
+  onCheckInZeroSpend,
+  isCheckInLoading,
   transactionSectionTitle,
   listRef,
   explanationModalState,
@@ -177,6 +184,15 @@ export function DashboardScreenView({
           </View>
         }
         fab={fab}
+      />
+
+      <PetStreakDetailsModal
+        visible={isPetModalVisible}
+        onClose={() => setPetModalVisible(false)}
+        petState={petState}
+        streakState={streakState}
+        onCheckInZeroSpend={onCheckInZeroSpend}
+        isCheckInLoading={isCheckInLoading}
       />
 
       <SafeToSpendExplanationModal
