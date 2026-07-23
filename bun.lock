@@ -55,7 +55,7 @@
         "react-native": "0.85.3",
         "react-native-gesture-handler": "~2.31.2",
         "react-native-get-random-values": "~1.11.0",
-        "react-native-litert-lm": "github:sscsps/react-native-litert-lm",
+        "react-native-litert-lm": "^0.5.1",
         "react-native-mmkv": "^4.3.1",
         "react-native-nitro-modules": "^0.35.9",
         "react-native-quick-crypto": "^1.1.5",
@@ -2101,7 +2101,7 @@
 
     "react-native-is-edge-to-edge": ["react-native-is-edge-to-edge@1.3.1", "", { "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-NIXU/iT5+ORyCc7p0z2nnlkouYKX425vuU1OEm6bMMtWWR9yvb+Xg5AZmImTKoF9abxCPqrKC3rOZsKzUYgYZA=="],
 
-    "react-native-litert-lm": ["react-native-litert-lm@github:sscsps/react-native-litert-lm#3b16b22", { "peerDependencies": { "expo": ">=55.0.0", "react": "*", "react-native": "*", "react-native-nitro-modules": "^0.35.9" }, "optionalPeers": ["expo", "react", "react-native"] }, "SscSPs-react-native-litert-lm-3b16b22", "sha512-h/eaSZdCPJLKkBemPjTaD5SYmQ5JEc659m4aG/YTsljQdxEts6C/JLBZnLXIhFxJ7hHmE1USXMoxBAijPFQnPQ=="],
+    "react-native-litert-lm": ["react-native-litert-lm@0.5.1", "", { "peerDependencies": { "expo": ">=55.0.0", "react": "*", "react-native": "*", "react-native-nitro-modules": "^0.36.1" }, "optionalPeers": ["expo", "react", "react-native"] }, "sha512-mHCcQCyFv/TaNHexBBlUwAVWSRhq318tksLlGIvs07ly5hM72vR8XYnzgqteCcuvpCgudn/8rT0o0rIpZtkUyA=="],
 
     "react-native-mmkv": ["react-native-mmkv@4.3.1", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-nitro-modules": "*" } }, "sha512-APyGGaaHtayVgT18dBM8QGGZKr9pGfSTiBwbbPNzhGGfJQSU7awLGRGq879OqYl31HmVks9hOBLCs+qfgacRZg=="],
 

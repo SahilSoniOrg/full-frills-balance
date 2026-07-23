@@ -16,7 +16,7 @@
     "test:e2e:build": "expo export -p web --output-dir dist-e2e",
     "serve:e2e": "serve dist-e2e -p 8081 --single",
     "prepare": "husky",
-    "postinstall": "cd node_modules/react-native-litert-lm && ./scripts/download-ios-frameworks.sh && npx nitrogen && npm run build",
+    "postinstall": "cd node_modules/react-native-litert-lm && ./scripts/download-ios-frameworks.sh",
     "visualize": "expo export --platform android --source-maps --no-bytecode --output-dir dist-analysis && source-map-explorer dist-analysis/_expo/static/js/android/*.js dist-analysis/_expo/static/js/android/*.js.map --no-border-checks"
   },
   "dependencies": {
@@ -70,7 +70,7 @@
     "react-native": "0.85.3",
     "react-native-gesture-handler": "~2.31.2",
     "react-native-get-random-values": "~1.11.0",
-    "react-native-litert-lm": "github:sscsps/react-native-litert-lm",
+    "react-native-litert-lm": "^0.5.1",
     "react-native-mmkv": "^4.3.1",
     "react-native-nitro-modules": "^0.35.9",
     "react-native-quick-crypto": "^1.1.5",
