@@ -74,22 +74,22 @@ export async function normalizeDeltas<T extends ReportingDeltaInput>(
 ): Promise<T[]> {
   if (deltas.length === 0) return [];
 
-  const rates = new Map<string, number>();
-  const results: T[] = [];
+  const sourceCurrencies = new Set<string>();
+  deltas.forEach(d => sourceCurrencies.add(d.currencyCode));
 
-  for (const d of deltas) {
-    if (!rates.has(d.currencyCode)) {
-      const { convertedAmount } = await exchangeRateService.convert(
-        1,
-        d.currencyCode,
-        targetCurrency,
-      );
-      rates.set(d.currencyCode, convertedAmount);
-    }
-    results.push({ ...d, delta: d.delta * (rates.get(d.currencyCode) || 1) });
-  }
+  await Promise.all(
+    Array.from(sourceCurrencies).map(base => {
+      const promise = exchangeRateService.fetchRatesForBase?.(base);
+      return promise && typeof promise.catch === 'function'
+        ? promise.catch(() => {})
+        : Promise.resolve();
+    }),
+  );
 
-  return results;
+  return deltas.map(d => {
+    const rate = exchangeRateService.getRateSafe(d.currencyCode, targetCurrency);
+    return { ...d, delta: d.delta * rate };
+  });
 }
 
 /**
