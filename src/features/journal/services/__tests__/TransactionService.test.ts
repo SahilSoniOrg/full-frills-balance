@@ -3,7 +3,7 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { transactionService } from '../TransactionService';
+import { transactionService } from '@/src/services/transaction-ingestion';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 
 describe('TransactionService', () => {

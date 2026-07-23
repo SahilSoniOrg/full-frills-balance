@@ -2,7 +2,7 @@ import { accountService } from '@/src/features/accounts';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { onboardingService } from '../OnboardingService';
 
-jest.mock('@/src/features/accounts/services/AccountService');
+jest.mock('@/src/services/accounts/accountDomainService');
 jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {

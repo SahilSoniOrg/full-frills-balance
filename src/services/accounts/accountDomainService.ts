@@ -21,13 +21,11 @@ import { ledgerWriteService } from '@/src/services/ledger/ledgerWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, SerializedAccountMetadataPayload, WorkplaceId } from '@/src/types/domain';
 import { IconName } from '@/src/types/domainIcons';
 import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { getEpsilon, roundToPrecision } from '@/src/utils/money';
-
-import { SerializedAccountMetadataPayload } from '@/src/features/accounts/services/accountMetadataDomain';
 
 export interface CreateAccountData {
   name: string;

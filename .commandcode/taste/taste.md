@@ -19,3 +19,6 @@
 # UI Design
 - For the Accounts screen: use the original AccountCard layout with the account name in body/base text and the balance (xxxl/32px) centered prominently below it. Avoid compact/inline layouts. Confidence: 0.75
 - Avoid decorative left accent bars, colored rails, or shape indicators on transaction cards; keep the card layout clean without positional decorations. Confidence: 0.75
+
+# Architecture
+- When moving files, update import paths in all consumers directly rather than keeping barrel re-export files at old locations as migration bridges; use `bunx tsc` to find/fix stale imports. Confidence: 0.65

@@ -9,7 +9,7 @@ import {
   EMPTY_ACCOUNT_ID,
   TransactionId,
 } from '@/src/types/domain';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';

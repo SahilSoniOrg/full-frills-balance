@@ -8,7 +8,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { accountService } from '@/src/features/accounts/services/AccountService';
+import { accountService } from '@/src/services/accounts/accountDomainService';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';

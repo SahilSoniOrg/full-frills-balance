@@ -16,10 +16,9 @@ import {
   useAccountBalance,
   useAccounts,
 } from '@/src/features/accounts/hooks/useAccounts';
+import { useAccountMetadataForm } from '@/src/features/accounts/hooks/useAccountMetadataForm';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import {
-  AccountMetadataValues,
-  createDefaultAccountMetadataValues,
   resolveAccountIcon,
   serializeAccountMetadata,
   validateAccountMetadata,
@@ -192,22 +191,12 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
   const hasInjectedAccountRef = useRef(false);
   const hasInjectedBalanceRef = useRef(false);
-  const hasInjectedMetadataRef = useRef(false);
-
-  // Consolidated Domain Metadata State
-  const [metadataValues, setMetadataValues] = useState<AccountMetadataValues>(() =>
-    createDefaultAccountMetadataValues(null),
-  );
 
   const [localFormError, setLocalFormError] = useState<string | null>(null);
+  const clearLocalError = useCallback(() => setLocalFormError(null), []);
 
-  const updateMetadataValue = useCallback(
-    <K extends keyof AccountMetadataValues>(key: K, value: AccountMetadataValues[K]) => {
-      setMetadataValues(prev => ({ ...prev, [key]: value }));
-      setLocalFormError(null);
-    },
-    [],
-  );
+  const metadataForm = useAccountMetadataForm(existingMetadata, clearLocalError);
+  const metadataValues = metadataForm.values;
 
   // Load existing account base data
   useEffect(() => {
@@ -231,14 +220,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       setInitialBalance(balanceData.balance.toString());
     }
   }, [balanceData]);
-
-  // Load existing metadata
-  useEffect(() => {
-    if (existingMetadata && !hasInjectedMetadataRef.current) {
-      hasInjectedMetadataRef.current = true;
-      setMetadataValues(createDefaultAccountMetadataValues(existingMetadata));
-    }
-  }, [existingMetadata]);
 
   const validation = useAccountValidation(accountName, accounts, accountId);
 
@@ -378,32 +359,32 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const metadata = useMemo(
     (): AccountMetadataFormModel => ({
       statementDay: metadataValues.statementDay,
-      setStatementDay: v => updateMetadataValue('statementDay', v),
+      setStatementDay: v => metadataForm.updateField('statementDay', v),
       dueDay: metadataValues.dueDay,
-      setDueDay: v => updateMetadataValue('dueDay', v),
+      setDueDay: v => metadataForm.updateField('dueDay', v),
       creditLimitAmount: metadataValues.creditLimitAmount,
-      setCreditLimitAmount: v => updateMetadataValue('creditLimitAmount', v),
+      setCreditLimitAmount: v => metadataForm.updateField('creditLimitAmount', v),
       apr: metadataValues.apr,
-      setApr: v => updateMetadataValue('apr', v),
+      setApr: v => metadataForm.updateField('apr', v),
       emiDay: metadataValues.emiDay,
-      setEmiDay: v => updateMetadataValue('emiDay', v),
+      setEmiDay: v => metadataForm.updateField('emiDay', v),
       loanTenureMonths: metadataValues.loanTenureMonths,
-      setLoanTenureMonths: v => updateMetadataValue('loanTenureMonths', v),
+      setLoanTenureMonths: v => metadataForm.updateField('loanTenureMonths', v),
       minimumPaymentAmount: metadataValues.minimumPaymentAmount,
-      setMinimumPaymentAmount: v => updateMetadataValue('minimumPaymentAmount', v),
+      setMinimumPaymentAmount: v => metadataForm.updateField('minimumPaymentAmount', v),
       minimumPaymentPercent: metadataValues.minimumPaymentPercent,
-      setMinimumPaymentPercent: v => updateMetadataValue('minimumPaymentPercent', v),
+      setMinimumPaymentPercent: v => metadataForm.updateField('minimumPaymentPercent', v),
       payFromAccountId: metadataValues.payFromAccountId,
       payFromAccountName,
-      setPayFromAccountId: v => updateMetadataValue('payFromAccountId', v),
+      setPayFromAccountId: v => metadataForm.updateField('payFromAccountId', v),
       isPayFromPickerVisible,
       setIsPayFromPickerVisible,
       notes: metadataValues.notes,
-      setNotes: v => updateMetadataValue('notes', v),
+      setNotes: v => metadataForm.updateField('notes', v),
       isMinPaymentOnly: metadataValues.isMinPaymentOnly,
-      setIsMinPaymentOnly: v => updateMetadataValue('isMinPaymentOnly', v),
+      setIsMinPaymentOnly: v => metadataForm.updateField('isMinPaymentOnly', v),
     }),
-    [metadataValues, updateMetadataValue, payFromAccountName, isPayFromPickerVisible],
+    [metadataValues, metadataForm.updateField, payFromAccountName, isPayFromPickerVisible],
   );
 
   return {

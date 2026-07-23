@@ -1,6 +1,6 @@
 import { WorkplaceId } from '@/src/types/domain';
 import { useEffect, useMemo, useState } from 'react';
-import { journalService } from '../services/JournalService';
+import { journalService } from '@/src/services/journal/journalDomainService';
 
 /**
  * Hook to provide journal description suggestions based on past entries.

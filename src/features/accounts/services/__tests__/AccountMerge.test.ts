@@ -7,7 +7,7 @@ import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { plannedPaymentService } from '@/src/services/PlannedPaymentService';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { accountService } from '../AccountService';
+import { accountService } from '@/src/services/accounts/accountDomainService';
 
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/services/PlannedPaymentService');

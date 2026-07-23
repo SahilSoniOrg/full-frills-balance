@@ -1,6 +1,6 @@
-import { NativeAIProvider } from '../NativeAIProvider';
+import { NativeAIProvider } from '@/src/services/transaction-ingestion';
 import type { LLMEngine, GenerateResult } from '@/src/services/ai/types';
-import type { AIContext } from '../../types/ai-parsing';
+import type { AIContext } from '@/src/services/transaction-ingestion';
 
 jest.mock('react-native-litert-lm', () => ({
   ModelRegistry: {

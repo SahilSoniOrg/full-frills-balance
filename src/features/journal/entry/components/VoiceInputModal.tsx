@@ -20,8 +20,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { transactionIngestionService } from '../../services/TransactionIngestionService';
-import { ParserOutput } from '../../types/ai-parsing';
+import { transactionIngestionService } from '@/src/services/transaction-ingestion';
+import type { ParserOutput } from '@/src/services/transaction-ingestion';
 
 interface VoiceInputModalProps {
   visible: boolean;

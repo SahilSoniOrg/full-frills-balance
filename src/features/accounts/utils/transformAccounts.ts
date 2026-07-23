@@ -143,24 +143,21 @@ export function transformAccountsToSections(
       const isExpanded = expandedAccountIds.has(account.id);
       const children = accountsByParent.get(account.id) || [];
 
-      // CACHE KEY: Specific to THIS instance's volatile state
-      // M-5 FIX: Remove isLoading from the key to preserve cache once loading finishes.
-      // M-5 FIX: Round numbers to 2 decimals to prevent floating-point drift misses.
+      // CACHE KEY: account identity + record version + rendered fields + volatile UI flags.
+      // updatedAt covers WatermelonDB model mutations; name+icon cover PlainAccount snapshots
+      // that may reconstruct fields without bumping updatedAt.
+      const updatedAtTs =
+        account.updatedAt instanceof Date
+          ? account.updatedAt.getTime()
+          : account.updatedAt
+            ? new Date(account.updatedAt).getTime()
+            : 0;
+      // Round financial values to 2dp to avoid fp drift causing phantom cache misses.
       const roundedBalance = Math.round(balance * 100) / 100;
       const roundedIncome = Math.round(monthlyIncome * 100) / 100;
       const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
-      const reconciledAtTs = account.reconciledAt
-        ? account.reconciledAt instanceof Date
-          ? account.reconciledAt.getTime()
-          : new Date(account.reconciledAt).getTime()
-        : 0;
-      const accountIcon = account.icon || '';
-      const accountName = account.name || '';
-      const accountType = account.accountType || '';
-      const accountCurrency = account.currencyCode || '';
-      const parentId = account.parentAccountId || '';
-      const hasChildren = children.length > 0;
-      const stateKey = `${account.id}:${accountName}:${accountIcon}:${accountType}:${accountCurrency}:${parentId}:${depth}:${hasChildren}:${roundedBalance}:${roundedIncome}:${roundedExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${reconciledAtTs}`;
+      // hasChildren is keyed explicitly: child writes don't bump this account's updatedAt.
+      const stateKey = `${account.id}:${updatedAtTs}:${account.name}:${account.icon ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);

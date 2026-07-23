@@ -65,4 +65,33 @@ describe('transformAccountsToSections', () => {
     const sectionsV2 = transformAccountsToSections([accountV2], defaultOptions);
     expect(sectionsV2[0].data[0].name).toBe('New Name');
   });
+
+  it('updates hasChildren when a child account is added or removed', () => {
+    const parent: PlainAccount = {
+      id: 'acc_3' as AccountId,
+      name: 'Parent Account',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      icon: 'bank',
+    };
+
+    const withoutChild = transformAccountsToSections([parent], defaultOptions);
+    expect(withoutChild[0].data[0].hasChildren).toBe(false);
+
+    // Child writes don't bump the parent's updatedAt, so this must bust the cache by key
+    const child: PlainAccount = {
+      id: 'acc_4' as AccountId,
+      name: 'Child Account',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      icon: 'wallet',
+      parentAccountId: parent.id,
+    };
+
+    const withChild = transformAccountsToSections([parent, child], defaultOptions);
+    expect(withChild[0].data[0].hasChildren).toBe(true);
+
+    const childRemoved = transformAccountsToSections([parent], defaultOptions);
+    expect(childRemoved[0].data[0].hasChildren).toBe(false);
+  });
 });

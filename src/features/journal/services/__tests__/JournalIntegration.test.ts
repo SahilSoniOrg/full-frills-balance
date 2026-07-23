@@ -12,8 +12,8 @@ import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
-import { journalService } from '../JournalService';
-import { transactionService } from '../TransactionService';
+import { journalService } from '@/src/services/journal/journalDomainService';
+import { transactionService } from '@/src/services/transaction-ingestion';
 
 describe('JournalRepository', () => {
   let cashAccountId: string;

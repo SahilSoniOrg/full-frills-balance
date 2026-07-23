@@ -3,8 +3,8 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
-import { journalService } from '@/src/features/journal/services/JournalService';
-import { transactionService } from '@/src/features/journal/services/TransactionService';
+import { journalService } from '@/src/services/journal/journalDomainService';
+import { transactionService } from '@/src/services/transaction-ingestion';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import {

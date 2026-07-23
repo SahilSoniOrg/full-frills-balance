@@ -1,7 +1,7 @@
 import { AccountType } from '@/src/data/models/Account';
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { WorkplaceId } from '@/src/types/domain';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { act, renderHook } from '@testing-library/react-native';
 
 const mockFetchRate = jest.fn();
@@ -11,7 +11,7 @@ jest.mock('@/src/hooks/useExchangeRate', () => ({
   }),
 }));
 
-jest.mock('@/src/features/journal/services/JournalService', () => ({
+jest.mock('@/src/services/journal/journalDomainService', () => ({
   journalService: {
     saveBulkJournalEntries: jest.fn(),
   },

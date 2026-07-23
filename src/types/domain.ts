@@ -419,3 +419,17 @@ export function mapTransactionToAudit(t: TransactionLike): TransactionAuditState
     currencyCode: t.currencyCode || undefined,
   };
 }
+
+export interface SerializedAccountMetadataPayload {
+  statementDay: number | null;
+  dueDay: number | null;
+  creditLimitAmount: number | null;
+  aprBps: number | null;
+  emiDay: number | null;
+  loanTenureMonths: number | null;
+  minimumPaymentAmount: number | null;
+  minimumPaymentPercent: number | null;
+  minPaymentOnly: boolean;
+  payFromAccountId: AccountId | null;
+  notes: string | null;
+}

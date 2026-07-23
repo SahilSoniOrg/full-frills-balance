@@ -1,6 +1,6 @@
 import Account from '@/src/data/models/Account';
 import { WorkplaceId } from '@/src/types/domain';
-import { ParserOutput, TransactionFallbackAIProvider } from '../../types/ai-parsing';
+import { ParserOutput, TransactionFallbackAIProvider } from '../types/ai-parsing';
 
 export interface PipelineContext {
   transcript: string;

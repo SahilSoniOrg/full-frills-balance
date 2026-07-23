@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { AccountDateRange, usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
+import { DateRange, usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { ledgerReadService } from '@/src/services/ledger/ledgerReadService';
 import { AccountId, DisplayTransaction, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';
@@ -8,16 +8,11 @@ export function useLedgerTransactionsForAccount(
   accountId: AccountId,
   workplaceId: WorkplaceId,
   pageSize: number = AppConfig.defaults.journalPageSize,
-  dateRange?: { startDate: number; endDate: number },
+  dateRange?: DateRange,
 ) {
   const observe = useCallback(
-    (limit: number, range?: AccountDateRange) => {
-      return ledgerReadService.observeEnrichedForAccount(
-        accountId,
-        workplaceId,
-        limit,
-        range as { startDate: number; endDate: number } | undefined,
-      );
+    (limit: number, range?: DateRange) => {
+      return ledgerReadService.observeEnrichedForAccount(accountId, workplaceId, limit, range);
     },
     [accountId, workplaceId],
   );
@@ -29,7 +24,7 @@ export function useLedgerTransactionsForAccount(
     hasMore,
     loadMore,
     version,
-  } = usePaginatedObservable<DisplayTransaction, DisplayTransaction, AccountDateRange>({
+  } = usePaginatedObservable<DisplayTransaction, DisplayTransaction, DateRange>({
     pageSize,
     filter: dateRange,
     observe,

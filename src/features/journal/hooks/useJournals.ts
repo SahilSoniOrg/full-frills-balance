@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
-import { journalService } from '@/src/features/journal/services/JournalService';
-import { transactionService } from '@/src/features/journal/services/TransactionService';
+import { journalService } from '@/src/services/journal/journalDomainService';
+import { transactionService } from '@/src/services/transaction-ingestion';
 import { useObservable } from '@/src/hooks/useObservable';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { DisplayTransaction, EnrichedJournal, JournalId, WorkplaceId } from '@/src/types/domain';

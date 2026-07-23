@@ -1,6 +1,6 @@
 import Journal from '@/src/data/models/Journal';
 import { CreateJournalData, journalRepository } from '@/src/data/repositories/JournalRepository';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { useCallback } from 'react';

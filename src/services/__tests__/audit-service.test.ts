@@ -17,7 +17,7 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
-jest.mock('@/src/features/accounts/services/AccountService', () => ({
+jest.mock('@/src/services/accounts/accountDomainService', () => ({
   accountService: {
     deleteAccount: jest.fn(),
     recoverAccount: jest.fn(),
@@ -25,7 +25,7 @@ jest.mock('@/src/features/accounts/services/AccountService', () => ({
   },
 }));
 
-jest.mock('@/src/features/journal/services/JournalService', () => ({
+jest.mock('@/src/services/journal/journalDomainService', () => ({
   journalService: {
     deleteJournal: jest.fn(),
     recoverJournal: jest.fn(),

@@ -4,7 +4,7 @@ import { TransactionType } from '@/src/data/models/Transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { ledgerWriteService } from '@/src/services/ledger';
-import { accountService } from '../AccountService';
+import { accountService } from '@/src/services/accounts/accountDomainService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
 
 describe('Account Hierarchy Integration', () => {

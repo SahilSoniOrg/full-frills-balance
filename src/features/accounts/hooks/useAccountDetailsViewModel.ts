@@ -18,7 +18,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTransactionGrouping } from '@/src/hooks/useTransactionGrouping';
 import { sharingService } from '@/src/services/SharingService';
-import { useLedgerTransactionsForAccount } from '@/src/services/ledger';
+import { useLedgerTransactionsForAccount } from '@/src/hooks/useLedgerTransactions';
 import { TransactionShareProvider } from '@/src/services/sharing/TransactionShareProvider';
 import {
   AccountBalance,

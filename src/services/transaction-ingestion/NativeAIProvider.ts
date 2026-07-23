@@ -6,12 +6,12 @@ import {
   ParserOutput,
   TransactionFallbackAIProvider,
   TransactionType,
-} from '../types/ai-parsing';
+} from './types/ai-parsing';
 import {
   createCompactSinglePassPrompt,
   createEntityResolutionPrompt,
   createTypeClassificationPrompt,
-} from '../utils/ai-prompts';
+} from './utils/ai-prompts';
 
 export class NativeAIProvider implements TransactionFallbackAIProvider {
   private currentRequestId: number = 0;

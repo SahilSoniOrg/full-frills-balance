@@ -209,24 +209,4 @@ export function AccountCardBase({
   );
 }
 
-export const AccountCard = React.memo(
-  AccountCardBase,
-  (prev, next) =>
-    prev.account.id === next.account.id &&
-    prev.account.name === next.account.name &&
-    prev.account.icon === next.account.icon &&
-    prev.account.accentColor === next.account.accentColor &&
-    prev.account.textColor === next.account.textColor &&
-    prev.account.balanceText === next.account.balanceText &&
-    prev.account.monthlyIncomeText === next.account.monthlyIncomeText &&
-    prev.account.monthlyExpenseText === next.account.monthlyExpenseText &&
-    prev.account.showMonthlyStats === next.account.showMonthlyStats &&
-    prev.account.currencyCode === next.account.currencyCode &&
-    prev.account.depth === next.account.depth &&
-    prev.account.hasChildren === next.account.hasChildren &&
-    prev.account.isExpanded === next.account.isExpanded &&
-    prev.account.accountType === next.account.accountType &&
-    prev.account.reconciledAt?.getTime() === next.account.reconciledAt?.getTime() &&
-    prev.surfaceColor === next.surfaceColor &&
-    prev.dividerColor === next.dividerColor,
-);
+export const AccountCard = React.memo(AccountCardBase);

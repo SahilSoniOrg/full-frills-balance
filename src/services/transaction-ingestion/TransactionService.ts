@@ -67,7 +67,6 @@ export class TransactionService {
 
   /**
    * Reactive version of getTransactionsWithAccountInfo.
-   * Replaces TransactionRepository.observeByJournalWithAccountInfo
    */
   observeTransactionsWithAccountInfo(
     workplaceId: WorkplaceId,

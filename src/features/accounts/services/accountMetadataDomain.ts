@@ -2,7 +2,7 @@ import { IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { AccountType } from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
+import { AccountId, EMPTY_ACCOUNT_ID, SerializedAccountMetadataPayload } from '@/src/types/domain';
 
 export interface AccountMetadataValues {
   statementDay: string;
@@ -105,20 +105,6 @@ export function validateAccountMetadata(
   }
 
   return null;
-}
-
-export interface SerializedAccountMetadataPayload {
-  statementDay: number | null;
-  dueDay: number | null;
-  creditLimitAmount: number | null;
-  aprBps: number | null;
-  emiDay: number | null;
-  loanTenureMonths: number | null;
-  minimumPaymentAmount: number | null;
-  minimumPaymentPercent: number | null;
-  minPaymentOnly: boolean;
-  payFromAccountId: AccountId | null;
-  notes: string | null;
 }
 
 export function serializeAccountMetadata(

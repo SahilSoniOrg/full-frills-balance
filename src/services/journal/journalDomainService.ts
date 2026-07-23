@@ -14,6 +14,8 @@ import { auditService } from '@/src/services/audit-service';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { executeBoundedBatchWrite } from '@/src/utils/dbGuardrails';
+
 import { workplaceService } from '@/src/services/WorkplaceService';
 import {
   AccountId,
@@ -665,9 +667,11 @@ export class JournalService {
       const allAccountsToRebuild = new Set<AccountId>();
       const minDate = Math.min(...preparedList.map(p => p.journalData.journalDate));
 
-      await database.write(async () => {
-        await database.batch(allOps);
-
+      // Chunks commit independently: enqueue rebuilds even on partial failure so
+      // already-committed chunks don't leave balances stale. Rebuild is idempotent.
+      try {
+        await executeBoundedBatchWrite(database, allOps);
+      } finally {
         for (const p of preparedList) {
           for (const accountId of p.accountsToRebuild) {
             allAccountsToRebuild.add(accountId);
@@ -676,7 +680,7 @@ export class JournalService {
         if (allAccountsToRebuild.size > 0) {
           rebuildQueueService.enqueueMany(allAccountsToRebuild, minDate, workplaceId);
         }
-      });
+      }
 
       for (const p of preparedList) {
         analytics.logTransactionCreated('simple', 'create', p.currency);

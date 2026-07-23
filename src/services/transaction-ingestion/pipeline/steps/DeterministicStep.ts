@@ -1,7 +1,7 @@
 import { analytics } from '@/src/services/analytics-service';
 import { accountResolutionService } from '@/src/services/ledger/AccountResolutionService';
 import { transactionExtractorRegistry } from '@/src/services/ledger/TransactionExtractor';
-import { TransactionSemanticTag } from '../../../types/ai-parsing';
+import { TransactionSemanticTag } from '../../types/ai-parsing';
 import { PipelineContext, PipelineStep } from '../types';
 
 export class DeterministicStep implements PipelineStep {

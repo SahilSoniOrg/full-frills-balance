@@ -10,7 +10,7 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { balanceService } from '@/src/services/BalanceService';
 import { AccountId, JournalDisplayType, WorkplaceId } from '@/src/types/domain';
-import { accountService } from '../AccountService';
+import { accountService } from '@/src/services/accounts/accountDomainService';
 
 describe('AccountRepository', () => {
   const workplaceId = 'test-wp-1' as WorkplaceId;

@@ -3,7 +3,7 @@ import { analytics } from '@/src/services/analytics-service';
 import { accountResolutionService } from '@/src/services/ledger/AccountResolutionService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/utils/preferences';
-import { AIContext, TransactionSemanticTag } from '../../../types/ai-parsing';
+import { AIContext, TransactionSemanticTag } from '../../types/ai-parsing';
 import { PipelineContext, PipelineStep } from '../types';
 
 export class AiFallbackStep implements PipelineStep {

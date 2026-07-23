@@ -1,4 +1,4 @@
-import { AIContext, ParserOutput, TransactionFallbackAIProvider } from '../types/ai-parsing';
+import { AIContext, ParserOutput, TransactionFallbackAIProvider } from './types/ai-parsing';
 import { logger } from '@/src/utils/logger';
 
 export class MockTransactionFallbackAIProvider implements TransactionFallbackAIProvider {
@@ -9,7 +9,6 @@ export class MockTransactionFallbackAIProvider implements TransactionFallbackAIP
 
     // Return null to simulate AI failing or not being confident,
     // which triggers the deterministic fallback.
-    // In a real mock, we could return a predefined response if the transcript matches a certain pattern.
     if (transcript.includes('mock ai success')) {
       return {
         transactions: [
@@ -18,8 +17,8 @@ export class MockTransactionFallbackAIProvider implements TransactionFallbackAIP
             amount: 500,
             currencyCode: 'INR',
             description: 'Mocked AI response',
-            accountNameHint: 'Cash', // This will be resolved to a real ID if "Cash" exists
-            categoryNameHint: 'Food', // This will be resolved to a real ID if "Food" exists
+            accountNameHint: 'Cash',
+            categoryNameHint: 'Food',
           },
         ],
         confidenceScore: 0.95,

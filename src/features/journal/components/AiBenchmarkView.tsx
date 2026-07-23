@@ -18,7 +18,7 @@ import { alert, confirm } from '@/src/utils/alerts';
 import { MotiView } from 'moti';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { nativeAIProvider } from '../services/NativeAIProvider';
+import { nativeAIProvider } from '@/src/services/transaction-ingestion';
 
 const TEST_TRANSCRIPTS = [
   'spent 250 rs for coffee at starbucks using hdfc card',

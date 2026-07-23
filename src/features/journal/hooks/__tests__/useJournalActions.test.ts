@@ -1,12 +1,12 @@
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
-import { journalService } from '@/src/features/journal/services/JournalService';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { JournalId, WorkplaceId } from '@/src/types/domain';
 import { act, renderHook } from '@testing-library/react-native';
 
 // Mock dependencies
-jest.mock('@/src/features/journal/services/JournalService');
+jest.mock('@/src/services/journal/journalDomainService');
 jest.mock('@/src/data/repositories/JournalRepository');
 jest.mock('@/src/services/ledger', () => ({
   ledgerWriteService: { createJournal: jest.fn() },

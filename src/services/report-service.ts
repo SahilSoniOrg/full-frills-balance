@@ -5,7 +5,6 @@ import { accountRepository } from '@/src/data/repositories/AccountRepository';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
-import { AccountDelta, DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import {
   calculateCalendarHeatmapFromHistory,
@@ -15,10 +14,11 @@ import {
 } from '@/src/services/reports/heatmapCalculators';
 import { calculateHistoryFromDeltas } from '@/src/services/reports/historyCalculators';
 import {
-  ConvertedReportTransaction,
-  ReportAccount,
-  ReportingDeltaInput,
-} from '@/src/services/reports/reportTypes';
+  convertReportTransactions,
+  getScopedReportingDeltas,
+  mapTransactionsToReportingDeltas,
+} from '@/src/services/reports/reportingDeltaEngine';
+import { ReportAccount, ReportingDeltaInput } from '@/src/services/reports/reportTypes';
 import {
   calculateSankeyDataFromSummaries,
   SankeyData,
@@ -32,7 +32,6 @@ import {
   calculateIncomeVsExpenseSummary,
   getAccountBalanceDelta,
 } from '@/src/utils/accountingHelpers';
-import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
@@ -186,7 +185,7 @@ export class ReportService {
     const accountIds = accounts.map(a => a.id);
     if (accountIds.length === 0) return [];
 
-    const normalizedDeltas = await this.getScopedDeltas<AccountDelta>(
+    const normalizedDeltas = await getScopedReportingDeltas(
       workplaceId,
       accountIds,
       startDate,
@@ -241,7 +240,7 @@ export class ReportService {
     const accountIds = accounts.map(a => a.id);
     if (accountIds.length === 0) return [];
 
-    const normalizedDeltas = await this.getScopedDeltas<AccountDelta>(
+    const normalizedDeltas = await getScopedReportingDeltas(
       workplaceId,
       accountIds,
       startDate,
@@ -298,7 +297,7 @@ export class ReportService {
     const allIds = allAccounts.map(a => a.id);
     if (allIds.length === 0) return { income: 0, expense: 0 };
 
-    const normalizedDeltas = await this.getScopedDeltas<AccountDelta>(
+    const normalizedDeltas = await getScopedReportingDeltas(
       workplaceId,
       allIds,
       startDate,
@@ -415,7 +414,7 @@ export class ReportService {
     const allIds = allAccounts.map(a => a.id);
     if (allIds.length === 0) return [];
 
-    const normalizedDeltas = await this.getScopedDeltas<DailyDelta>(
+    const normalizedDeltas = await getScopedReportingDeltas(
       workplaceId,
       allIds,
       startDate,
@@ -453,7 +452,7 @@ export class ReportService {
     const allIds = allAccounts.map(a => a.id);
     if (allIds.length === 0) return [];
 
-    const normalizedDeltas = await this.getScopedDeltas<DailyDelta>(
+    const normalizedDeltas = await getScopedReportingDeltas(
       workplaceId,
       allIds,
       startDate,
@@ -500,103 +499,6 @@ export class ReportService {
       .sort((a, b) => a.date - b.date);
   }
 
-  /** Helper to centralize currency conversion and rate caching */
-  private async getNormalizedDeltas<T extends ReportingDeltaInput>(
-    deltas: T[],
-    targetCurrency: string,
-  ): Promise<T[]> {
-    const rates = new Map<string, number>();
-    const results = [];
-
-    for (const d of deltas) {
-      if (!rates.has(d.currencyCode)) {
-        const { convertedAmount } = await exchangeRateService.convert(
-          1,
-          d.currencyCode,
-          targetCurrency,
-        );
-        rates.set(d.currencyCode, convertedAmount);
-      }
-      results.push({
-        ...d,
-        delta: d.delta * (rates.get(d.currencyCode) || 1),
-      });
-    }
-    return results;
-  }
-
-  /** Helper to map converted transactions into signed delta objects for reporting */
-  private mapToReportingDeltas(
-    transactions: ConvertedReportTransaction[],
-    accounts: ReportAccount[],
-    targetCurrency: string,
-  ): ReportingDeltaInput[] {
-    const accountMap = new Map(accounts.map(a => [a.id, a]));
-    return transactions.map(tx => {
-      const acc = accountMap.get(tx.accountId);
-      const type = acc?.accountType || tx.accountType;
-      const delta = getAccountBalanceDelta(tx.amount, type, tx.transactionType);
-
-      return {
-        accountId: tx.accountId,
-        currencyCode: targetCurrency,
-        delta,
-        dayStart: dayjs(tx.transactionDate).startOf('day').valueOf(),
-        accountType: type,
-      };
-    });
-  }
-
-  /** Helper to fetch deltas from raw DB or fallback to manual conversion if empty */
-  private async getScopedDeltas<T extends ReportingDeltaInput>(
-    workplaceId: WorkplaceId,
-    accountIds: AccountId[],
-    startDate: number,
-    endDate: number,
-    targetCurrency: string,
-    accounts: ReportAccount[],
-    fetchRaw: (ids: AccountId[], start: number, end: number) => Promise<T[]>,
-  ): Promise<T[]> {
-    const items = await fetchRaw(accountIds, startDate, endDate);
-    if (items.length > 0) {
-      return this.getNormalizedDeltas(items, targetCurrency);
-    }
-
-    if (accountIds.length > 0) {
-      logger.metric('ReportService.getScopedDeltas.fallbackTriggered', 1, {
-        accountCount: accountIds.length,
-        rangeDays: dayjs(endDate).diff(dayjs(startDate), 'days'),
-      });
-
-      const converted = await this.getConvertedReportTransactions(
-        workplaceId,
-        startDate,
-        endDate,
-        targetCurrency,
-        accounts,
-      );
-      const accountTypeMap = new Map(accounts.map(a => [a.id, a.accountType]));
-
-      const accountIdsSet = new Set(accountIds);
-      return converted
-        .filter(tx => accountIdsSet.has(tx.accountId))
-        .map(tx => {
-          const type = accountTypeMap.get(tx.accountId) || tx.accountType;
-          const delta = getAccountBalanceDelta(tx.amount, type, tx.transactionType);
-
-          return {
-            accountId: tx.accountId,
-            currencyCode: targetCurrency,
-            delta,
-            dayStart: tx.transactionDate,
-            accountType: type,
-          } as unknown as T;
-        });
-    }
-
-    return [];
-  }
-
   async getReportSnapshot(
     workplaceId: WorkplaceId,
     startDate: number,
@@ -623,12 +525,8 @@ export class ReportService {
     );
 
     // Convert and map once
-    const converted = await this.getConvertedReportTransactionsFromRaw(
-      transactions,
-      currency,
-      allAccounts,
-    );
-    const deltas = this.mapToReportingDeltas(converted, allAccounts, currency);
+    const converted = await convertReportTransactions(transactions, currency, allAccounts);
+    const deltas = mapTransactionsToReportingDeltas(converted, allAccounts, currency);
 
     const incomeVsExpense = this.calculateIncomeVsExpenseFromDeltas(deltas, allAccounts, currency);
     const expenseBreakdown = this.calculateBreakdownFromDeltas(expenseAccounts, deltas, currency);
@@ -714,11 +612,7 @@ export class ReportService {
       startDate,
       endDate,
     );
-    const converted = await this.getConvertedReportTransactionsFromRaw(
-      transactions,
-      currency,
-      accounts,
-    );
+    const converted = await convertReportTransactions(transactions, currency, accounts);
 
     return calculateSpendingHeatmapFromTransactions(converted);
   }
@@ -785,108 +679,6 @@ export class ReportService {
     return { currency, incomeAccounts, expenseAccounts };
   }
 
-  private async getConvertedReportTransactions(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate: number,
-    currency: string,
-    accounts: ReportAccount[],
-  ): Promise<ConvertedReportTransaction[]> {
-    const accountIds = accounts.map(account => account.id);
-    if (accountIds.length === 0) return [];
-
-    const accountTypeById = new Map(accounts.map(account => [account.id, account.accountType]));
-    const accountCurrencyById = new Map(
-      accounts.map(account => [account.id, account.currencyCode]),
-    );
-    const transactions = await transactionRepository.findByAccountsAndDateRange(
-      workplaceId,
-      accountIds,
-      startDate,
-      endDate,
-    );
-
-    if (transactions.length === 0) return [];
-
-    // 1. Identify unique currencies
-    const sourceCurrencies = new Set<string>();
-    transactions.forEach(tx => {
-      const txCurrency = tx.currencyCode || accountCurrencyById.get(tx.accountId) || currency;
-      sourceCurrencies.add(txCurrency);
-    });
-
-    // 2. Pre-fetch all required rates
-    await Promise.all(
-      Array.from(sourceCurrencies).map(base => {
-        const promise = exchangeRateService.fetchRatesForBase?.(base);
-        return promise && typeof promise.catch === 'function'
-          ? promise.catch(() => {})
-          : Promise.resolve();
-      }),
-    );
-
-    // 3. Synchronous conversion
-    return transactions
-      .map(tx => {
-        const accountType = accountTypeById.get(tx.accountId);
-        if (!accountType) return null;
-
-        const txCurrency = tx.currencyCode || accountCurrencyById.get(tx.accountId) || currency;
-        const rate = exchangeRateService.getRateSafe(txCurrency, currency);
-        const convertedAmount = tx.amount * rate;
-
-        return {
-          accountId: tx.accountId,
-          accountType,
-          transactionType: tx.transactionType,
-          transactionDate: tx.transactionDate,
-          amount: convertedAmount,
-        } as ConvertedReportTransaction;
-      })
-      .filter((row): row is ConvertedReportTransaction => !!row);
-  }
-
-  private async getConvertedReportTransactionsFromRaw(
-    transactions: Transaction[],
-    targetCurrency: string,
-    accounts: ReportAccount[],
-  ): Promise<ConvertedReportTransaction[]> {
-    if (transactions.length === 0) return [];
-
-    // 1. Identify unique source currencies
-    const sourceCurrencies = new Set<string>();
-    transactions.forEach(tx => {
-      if (tx.currencyCode) sourceCurrencies.add(tx.currencyCode);
-    });
-
-    // 2. Pre-fetch all required rates in parallel
-    await Promise.all(
-      Array.from(sourceCurrencies).map(base => {
-        const promise = exchangeRateService.fetchRatesForBase?.(base);
-        return promise && typeof promise.catch === 'function'
-          ? promise.catch(() => {})
-          : Promise.resolve();
-      }),
-    );
-
-    const accountMap = new Map(accounts.map(a => [a.id, a]));
-
-    // 3. Synchronous conversion pass
-    return transactions.map(tx => {
-      const rate = exchangeRateService.getRateSafe(tx.currencyCode, targetCurrency);
-      const convertedAmount = tx.amount * rate;
-      const account = accountMap.get(tx.accountId);
-
-      return {
-        accountId: tx.accountId,
-        accountType: account?.accountType || AccountType.EXPENSE,
-        transactionType: tx.transactionType,
-        transactionDate: tx.transactionDate,
-        amount: convertedAmount,
-      };
-    });
-  }
-
   private buildBreakdownFromSums(
     scopedAccounts: ReportAccount[],
     sums: Map<string, Money>,
@@ -936,11 +728,7 @@ export class ReportService {
       startDate,
       endDate,
     );
-    const converted = await this.getConvertedReportTransactionsFromRaw(
-      transactions,
-      currency,
-      accounts,
-    );
+    const converted = await convertReportTransactions(transactions, currency, accounts);
 
     return calculateCalendarHeatmapFromTransactions(converted, startDate, endDate);
   }

@@ -1,6 +1,6 @@
 import { TransactionType } from '@/src/data/models/Transaction';
 import { accountRepository } from '@/src/data/repositories/AccountRepository';
-import { JournalService } from '@/src/features/journal/services/JournalService';
+import { JournalService } from '@/src/services/journal/journalDomainService';
 import { ledgerWriteService } from '@/src/services/ledger';
 import { accountingService } from '@/src/utils/accountingService';
 import { JournalId, WorkplaceId } from '@/src/types/domain';

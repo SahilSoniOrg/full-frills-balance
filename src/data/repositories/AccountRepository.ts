@@ -11,7 +11,7 @@ import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
-import { AccountId, WorkplaceId } from '@/src/types/domain';
+import { AccountId, WorkplaceId, SerializedAccountMetadataPayload } from '@/src/types/domain';
 import {
   getPeriodDecreaseSQLSnippet,
   getPeriodIncreaseSQLSnippet,
@@ -22,8 +22,6 @@ import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
 import { supportsRawSql } from '../database/DatabaseUtils';
-
-import { SerializedAccountMetadataPayload } from '@/src/features/accounts/services/accountMetadataDomain';
 
 export interface AccountPersistenceInput {
   name: string;
