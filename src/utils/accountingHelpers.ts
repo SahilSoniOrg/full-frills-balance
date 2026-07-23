@@ -3,6 +3,8 @@ import { AccountType } from '@/src/data/models/Account';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { roundToPrecision } from '@/src/utils/money';
 
+import { toAccountType } from '@/src/utils/accountCategory';
+
 /**
  * Validatable transaction partial
  */
@@ -187,15 +189,16 @@ export interface AccountPeriodFlows {
 }
 
 export function calculateAccountPeriodFlows(
-  accountType: AccountType,
+  accountType: string | AccountType,
   transactions: { amount: number; transactionType: TransactionType }[],
   precision: number = AppConfig.constants.precision,
 ): AccountPeriodFlows {
+  const type = toAccountType(accountType) || (accountType as AccountType);
   let totalIncrease = 0;
   let totalDecrease = 0;
 
   for (const tx of transactions) {
-    if (isBalanceIncrease(accountType, tx.transactionType)) {
+    if (isBalanceIncrease(type, tx.transactionType)) {
       totalIncrease += tx.amount;
     } else {
       totalDecrease += tx.amount;
@@ -224,16 +227,17 @@ export interface IncomeVsExpenseSummary {
 }
 
 export function calculateIncomeVsExpenseSummary(
-  deltas: { accountType: AccountType; amount: number }[],
+  deltas: { accountType: string | AccountType; amount: number }[],
   precision: number = AppConfig.constants.precision,
 ): IncomeVsExpenseSummary {
   let income = 0;
   let expense = 0;
 
   for (const item of deltas) {
-    if (item.accountType === AccountType.INCOME) {
+    const type = toAccountType(item.accountType);
+    if (type === AccountType.INCOME) {
       income += item.amount;
-    } else if (item.accountType === AccountType.EXPENSE) {
+    } else if (type === AccountType.EXPENSE) {
       expense += item.amount;
     }
   }
@@ -269,19 +273,21 @@ export function calculateCategoryBreakdownItems(
   let grandTotal = 0;
 
   for (const item of items) {
-    if (item.amount <= 0) continue;
     const current = aggregatedMap.get(item.category) || 0;
-    const updated = current + item.amount;
-    aggregatedMap.set(item.category, updated);
-    grandTotal += item.amount;
+    aggregatedMap.set(item.category, current + item.amount);
   }
 
-  if (grandTotal <= 0) return [];
+  for (const amount of aggregatedMap.values()) {
+    if (amount > 0) {
+      grandTotal += amount;
+    }
+  }
 
   return Array.from(aggregatedMap.entries())
+    .filter(([_, amount]) => amount > 0)
     .map(([category, amount]) => {
       const roundedAmount = roundToPrecision(amount, precision);
-      const percentage = roundToPrecision((amount / grandTotal) * 100, 2);
+      const percentage = grandTotal > 0 ? roundToPrecision((amount / grandTotal) * 100, 2) : 0;
       return {
         category,
         amount: roundedAmount,

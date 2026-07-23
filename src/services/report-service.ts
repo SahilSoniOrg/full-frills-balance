@@ -9,7 +9,11 @@ import { AccountDelta, DailyDelta } from '@/src/data/repositories/TransactionTyp
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/domain';
-import { getAccountBalanceDelta } from '@/src/utils/accountingHelpers';
+import {
+  calculateCategoryBreakdownItems,
+  calculateIncomeVsExpenseSummary,
+  getAccountBalanceDelta,
+} from '@/src/utils/accountingHelpers';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
 import dayjs from 'dayjs';
@@ -285,34 +289,21 @@ export class ReportService {
   private calculateCategoryBreakdownFromDeltas(
     accounts: ReportAccount[],
     deltas: ReportingDelta[] | AccountDelta[],
-    currency: string,
+    _currency: string,
   ): CategoryBreakdown[] {
     const accountSubtypeMap = new Map(accounts.map(a => [a.id, a.accountSubtype]));
-    const sumsMap = new Map<string, Money>();
-    let grandTotal = Money.from(0, currency);
+    const items = deltas
+      .map(d => {
+        const accountId = (d as any).accountId;
+        if (!accountId) return null;
+        const category =
+          accountSubtypeMap.get(accountId) || AppConfig.strings.reports.categoryOther;
+        const val = (d as any).delta ?? (d as any).amount ?? 0;
+        return { category, amount: val };
+      })
+      .filter((item): item is { category: string; amount: number } => item !== null);
 
-    for (const d of deltas) {
-      const accountId = (d as any).accountId;
-      if (!accountId) continue;
-      const subtype = accountSubtypeMap.get(accountId) || AppConfig.strings.reports.categoryOther;
-      const delta = Money.from(d.delta, currency);
-      const current = sumsMap.get(subtype) || Money.from(0, currency);
-      sumsMap.set(subtype, current.add(delta));
-      if (delta.amount > 0) {
-        grandTotal = grandTotal.add(delta);
-      }
-    }
-
-    const breakdown = Array.from(sumsMap.entries())
-      .map(([category, money]) => ({
-        category,
-        amount: money.amount,
-        percentage: grandTotal.amount > 0 ? (money.amount / grandTotal.amount) * 100 : 0,
-      }))
-      .filter(item => item.amount > 0)
-      .sort((a, b) => b.amount - a.amount);
-
-    return breakdown;
+    return calculateCategoryBreakdownItems(items);
   }
 
   /**
@@ -356,23 +347,21 @@ export class ReportService {
   private calculateIncomeVsExpenseFromDeltas(
     deltas: ReportingDelta[],
     accounts: ReportAccount[],
-    currency: string,
+    _currency: string,
   ): { income: number; expense: number } {
     const accountTypeMap = new Map(accounts.map(a => [a.id, a.accountType]));
-    let income = Money.from(0, currency);
-    let expense = Money.from(0, currency);
+    const mapped = deltas
+      .map(d => {
+        const accountType =
+          d.accountType || (d.accountId ? accountTypeMap.get(d.accountId) : undefined);
+        if (!accountType) return null;
+        const val = (d as any).delta !== undefined ? (d as any).delta : ((d as any).amount ?? 0);
+        return { accountType, amount: val };
+      })
+      .filter((item): item is { accountType: AccountType; amount: number } => item !== null);
 
-    for (const d of deltas) {
-      const type = d.accountType || (d.accountId ? accountTypeMap.get(d.accountId) : undefined);
-      const delta = Money.from(d.delta, currency);
-      if (type === AccountType.INCOME) {
-        income = income.add(delta);
-      } else if (type === AccountType.EXPENSE) {
-        expense = expense.add(delta);
-      }
-    }
-
-    return { income: income.amount, expense: expense.amount };
+    const summary = calculateIncomeVsExpenseSummary(mapped);
+    return { income: summary.income, expense: summary.expense };
   }
 
   /**

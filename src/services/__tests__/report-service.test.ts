@@ -12,6 +12,11 @@ jest.mock('@/src/data/repositories/AccountRepository');
 jest.mock('@/src/data/repositories/TransactionRepository');
 jest.mock('@/src/services/BalanceService');
 jest.mock('@/src/services/exchange-rate-service');
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    getCurrency: jest.fn().mockResolvedValue('USD'),
+  },
+}));
 jest.mock('@/src/utils/preferences', () => ({
   preferences: { defaultCurrencyCode: 'USD' },
 }));
@@ -111,7 +116,7 @@ describe('ReportService', () => {
 
   describe('getIncomeVsExpense', () => {
     it('should calculate totals correctly', async () => {
-      (accountRepository.findByType as jest.Mock).mockImplementation(type => {
+      (accountRepository.findByType as jest.Mock).mockImplementation((_wpId, type) => {
         if (type === AccountType.INCOME)
           return Promise.resolve([{ id: 'salary', accountType: AccountType.INCOME }]);
         if (type === AccountType.EXPENSE)
@@ -182,7 +187,7 @@ describe('ReportService', () => {
 
   describe('getIncomeVsExpenseHistory', () => {
     it('should return bucketed history', async () => {
-      (accountRepository.findByType as jest.Mock).mockImplementation(type => {
+      (accountRepository.findByType as jest.Mock).mockImplementation((_wpId, type) => {
         if (type === AccountType.INCOME)
           return Promise.resolve([{ id: 'salary', accountType: AccountType.INCOME }]);
         if (type === AccountType.EXPENSE)
@@ -247,7 +252,7 @@ describe('ReportService', () => {
       const customStart = new Date('2024-01-15T00:00:00.000Z').getTime();
       const customEnd = new Date('2024-04-10T23:59:59.999Z').getTime();
 
-      (accountRepository.findByType as jest.Mock).mockImplementation(type => {
+      (accountRepository.findByType as jest.Mock).mockImplementation((_wpId, type) => {
         if (type === AccountType.INCOME)
           return Promise.resolve([{ id: 'salary', accountType: AccountType.INCOME }]);
         if (type === AccountType.EXPENSE)
@@ -270,7 +275,7 @@ describe('ReportService', () => {
 
   describe('getReportSnapshot', () => {
     it('should return all report projections from one transaction fetch', async () => {
-      (accountRepository.findByType as jest.Mock).mockImplementation(type => {
+      (accountRepository.findByType as jest.Mock).mockImplementation((_wpId, type) => {
         if (type === AccountType.INCOME)
           return Promise.resolve([
             { id: 'salary', name: 'Salary', accountType: AccountType.INCOME, currencyCode: 'USD' },
