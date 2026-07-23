@@ -30,7 +30,7 @@
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@sentry/react-native": "~7.11.0",
     "@shopify/flash-list": "2.0.2",
-    "@typescript/native-preview": "^7.0.0-dev.20260611.2",
+    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "babel-plugin-react-compiler": "^19.0.0-beta-ebf51a3-20250411",
     "dayjs": "^1.11.21",
     "expo": "~56.0.17",
