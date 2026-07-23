@@ -16,7 +16,7 @@
     "test:e2e:build": "expo export -p web --output-dir dist-e2e",
     "serve:e2e": "serve dist-e2e -p 8081 --single",
     "prepare": "husky",
-    "postinstall": "cd node_modules/react-native-litert-lm && ./scripts/download-ios-frameworks.sh && npx nitrogen",
+    "postinstall": "cd node_modules/react-native-litert-lm && ./scripts/download-ios-frameworks.sh && npx nitrogen && npm run build",
     "visualize": "expo export --platform android --source-maps --no-bytecode --output-dir dist-analysis && source-map-explorer dist-analysis/_expo/static/js/android/*.js dist-analysis/_expo/static/js/android/*.js.map --no-border-checks"
   },
   "dependencies": {
