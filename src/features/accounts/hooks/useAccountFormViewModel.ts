@@ -17,6 +17,13 @@ import {
   useAccounts,
 } from '@/src/features/accounts/hooks/useAccounts';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
+import {
+  AccountMetadataValues,
+  createDefaultAccountMetadataValues,
+  resolveAccountIcon,
+  serializeAccountMetadata,
+  validateAccountMetadata,
+} from '@/src/features/accounts/services/accountMetadataDomain';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/domain';
@@ -42,7 +49,9 @@ export interface AccountMetadataFormModel {
   loanTenureMonths: string;
   setLoanTenureMonths: (value: string) => void;
   minimumPaymentAmount: string;
+  minimumPaymentPercent: string;
   setMinimumPaymentAmount: (value: string) => void;
+  setMinimumPaymentPercent: (value: string) => void;
   payFromAccountId: AccountId;
   payFromAccountName: string;
   setPayFromAccountId: (value: AccountId) => void;
@@ -52,8 +61,6 @@ export interface AccountMetadataFormModel {
   setNotes: (value: string) => void;
   isMinPaymentOnly: boolean;
   setIsMinPaymentOnly: (value: boolean) => void;
-  minimumPaymentPercent: string;
-  setMinimumPaymentPercent: (value: string) => void;
 }
 
 export interface AccountFormViewModel {
@@ -167,7 +174,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   };
 
   const initialType = getInitialAccountType();
-  const isCategory = initialType === AccountType.INCOME || initialType === AccountType.EXPENSE;
 
   // Form State
   const [accountName, setAccountName] = useState(pName || '');
@@ -177,11 +183,10 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   );
   const [selectedCurrency, setSelectedCurrency] = useState<string>(pCurrency || workplaceCurrency);
   const [selectedIcon, setSelectedIcon] = useState<IconName>(
-    (pIcon as IconName) || (isCategory ? 'tag' : 'wallet'),
+    resolveAccountIcon(initialType, (pIcon as IconName) || null),
   );
   const [initialBalance, setInitialBalance] = useState('');
   const [parentAccountId, setParentAccountId] = useState(EMPTY_ACCOUNT_ID);
-  const [payFromAccountId, setPayFromAccountId] = useState(EMPTY_ACCOUNT_ID);
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
@@ -189,17 +194,18 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const hasInjectedBalanceRef = useRef(false);
   const hasInjectedMetadataRef = useRef(false);
 
-  // Metadata State
-  const [statementDay, setStatementDay] = useState('');
-  const [dueDay, setDueDay] = useState('');
-  const [creditLimitAmount, setCreditLimitAmount] = useState('');
-  const [apr, setApr] = useState('');
-  const [emiDay, setEmiDay] = useState('');
-  const [loanTenureMonths, setLoanTenureMonths] = useState('');
-  const [minimumPaymentAmount, setMinimumPaymentAmount] = useState('');
-  const [minimumPaymentPercent, setMinimumPaymentPercent] = useState('');
-  const [isMinPaymentOnly, setIsMinPaymentOnly] = useState(false);
-  const [notes, setNotes] = useState('');
+  // Consolidated Domain Metadata State
+  const [metadataValues, setMetadataValues] = useState<AccountMetadataValues>(() =>
+    createDefaultAccountMetadataValues(null),
+  );
+
+  const updateMetadataValue = <K extends keyof AccountMetadataValues>(
+    key: K,
+    value: AccountMetadataValues[K],
+  ) => {
+    setMetadataValues(prev => ({ ...prev, [key]: value }));
+    if (localFormError) setLocalFormError(null);
+  };
 
   const [localFormError, setLocalFormError] = useState<string | null>(null);
 
@@ -213,12 +219,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
       );
       setSelectedCurrency(existingAccount.currencyCode);
-      setSelectedIcon(
-        existingAccount.icon ||
-          (existingAccount.accountType === 'INCOME' || existingAccount.accountType === 'EXPENSE'
-            ? 'tag'
-            : 'wallet'),
-      );
+      setSelectedIcon(resolveAccountIcon(existingAccount.accountType, existingAccount.icon));
       setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
     }
   }, [existingAccount, accountVersion]);
@@ -235,17 +236,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   useEffect(() => {
     if (existingMetadata && !hasInjectedMetadataRef.current) {
       hasInjectedMetadataRef.current = true;
-      setStatementDay(existingMetadata.statementDay?.toString() || '');
-      setDueDay(existingMetadata.dueDay?.toString() || '');
-      setCreditLimitAmount(existingMetadata.creditLimitAmount?.toString() || '');
-      setApr(existingMetadata.aprBps ? (existingMetadata.aprBps / 100).toString() : '');
-      setEmiDay(existingMetadata.emiDay?.toString() || '');
-      setLoanTenureMonths(existingMetadata.loanTenureMonths?.toString() || '');
-      setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
-      setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
-      setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
-      setPayFromAccountId(existingMetadata.payFromAccountId || EMPTY_ACCOUNT_ID);
-      setNotes(existingMetadata.notes || '');
+      setMetadataValues(createDefaultAccountMetadataValues(existingMetadata));
     }
   }, [existingMetadata]);
 
@@ -284,68 +275,17 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       return;
     }
 
-    if (!isCurrentCategory && accountType === 'LIABILITY') {
-      const dayFields: Record<string, string> = {
-        'Statement Day': statementDay,
-        'Due Day': dueDay,
-        'EMI Day': emiDay,
-      };
-
-      for (const [name, value] of Object.entries(dayFields)) {
-        if (value) {
-          const day = parseInt(value, 10);
-          const minDay = AppConfig.constants.validation.minDayOfMonth;
-          const maxDay = AppConfig.constants.validation.maxDayOfMonth;
-          if (isNaN(day) || day < minDay || day > maxDay) {
-            setLocalFormError(`${name} must be between ${minDay} and ${maxDay}`);
-            return;
-          }
-        }
-      }
-
-      if (apr) {
-        const aprVal = parseFloat(apr);
-        const minApr = AppConfig.constants.validation.minAprPercent;
-        const maxApr = AppConfig.constants.validation.maxAprPercent;
-        if (isNaN(aprVal) || aprVal < minApr || aprVal > maxApr) {
-          setLocalFormError(`APR must be between ${minApr} and ${maxApr}`);
-          return;
-        }
-      }
-
-      if (minimumPaymentPercent) {
-        const percent = parseFloat(minimumPaymentPercent);
-        if (isNaN(percent) || percent < 0 || percent > 100) {
-          setLocalFormError('Minimum payment percent must be between 0 and 100');
-          return;
-        }
-      }
+    const metadataError = validateAccountMetadata(metadataValues, accountType);
+    if (metadataError) {
+      setLocalFormError(metadataError);
+      return;
     }
 
-    const metadataPayload: Record<string, any> = {};
-    if (!isCurrentCategory) {
-      metadataPayload.statementDay = statementDay ? parseInt(statementDay, 10) : null;
-      metadataPayload.dueDay = dueDay ? parseInt(dueDay, 10) : null;
-      metadataPayload.creditLimitAmount = creditLimitAmount ? parseFloat(creditLimitAmount) : null;
-      metadataPayload.aprBps = apr ? Math.round(parseFloat(apr) * 100) : null;
-      metadataPayload.emiDay = emiDay ? parseInt(emiDay, 10) : null;
-      metadataPayload.loanTenureMonths = loanTenureMonths ? parseInt(loanTenureMonths, 10) : null;
-      metadataPayload.minimumPaymentAmount = minimumPaymentAmount
-        ? parseFloat(minimumPaymentAmount)
-        : null;
-      metadataPayload.minimumPaymentPercent = minimumPaymentPercent
-        ? parseFloat(minimumPaymentPercent)
-        : null;
-      metadataPayload.minPaymentOnly = isMinPaymentOnly;
-      metadataPayload.payFromAccountId = payFromAccountId || null;
-      metadataPayload.notes = notes || null;
-    }
-
-    const hasAnyMetadataValue = Object.values(metadataPayload).some(
-      val => val !== null && val !== false,
+    const metadataPayload = serializeAccountMetadata(
+      metadataValues,
+      accountType,
+      Boolean(existingMetadata),
     );
-    const shouldSaveMetadata =
-      !isCurrentCategory && (hasAnyMetadataValue || Boolean(existingMetadata));
 
     try {
       await persistence.handleSave(
@@ -357,7 +297,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         isCurrentCategory ? '' : initialBalance,
         isCurrentCategory ? undefined : balanceData || undefined,
         parentAccountId || undefined,
-        shouldSaveMetadata ? metadataPayload : undefined,
+        metadataPayload,
       );
 
       // Note: handleSave in persistence already calls router.back()
@@ -414,14 +354,16 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     const parent = potentialParents.find(a => a.id === parentAccountId);
     return parent ? parent.name : AppConfig.strings.common.none;
   }, [parentAccountId, potentialParents]);
+
   const payFromAccountOptions = useMemo(() => {
     return accounts.filter(a => a.accountType === AccountType.ASSET && a.id !== accountId);
   }, [accounts, accountId]);
+
   const payFromAccountName = useMemo(() => {
-    if (!payFromAccountId) return AppConfig.strings.common.none;
-    const account = accounts.find(a => a.id === payFromAccountId);
+    if (!metadataValues.payFromAccountId) return AppConfig.strings.common.none;
+    const account = accounts.find(a => a.id === metadataValues.payFromAccountId);
     return account ? account.name : AppConfig.strings.common.none;
-  }, [payFromAccountId, accounts]);
+  }, [metadataValues.payFromAccountId, accounts]);
 
   const effectiveIsParent = isParent;
   const isCurrentCategory =
@@ -473,31 +415,31 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     isParent: effectiveIsParent,
     showCurrency,
     metadata: {
-      statementDay,
-      setStatementDay,
-      dueDay,
-      setDueDay,
-      creditLimitAmount,
-      setCreditLimitAmount,
-      apr,
-      setApr,
-      emiDay,
-      setEmiDay,
-      loanTenureMonths,
-      setLoanTenureMonths,
-      minimumPaymentAmount,
-      setMinimumPaymentAmount,
-      payFromAccountId,
+      statementDay: metadataValues.statementDay,
+      setStatementDay: v => updateMetadataValue('statementDay', v),
+      dueDay: metadataValues.dueDay,
+      setDueDay: v => updateMetadataValue('dueDay', v),
+      creditLimitAmount: metadataValues.creditLimitAmount,
+      setCreditLimitAmount: v => updateMetadataValue('creditLimitAmount', v),
+      apr: metadataValues.apr,
+      setApr: v => updateMetadataValue('apr', v),
+      emiDay: metadataValues.emiDay,
+      setEmiDay: v => updateMetadataValue('emiDay', v),
+      loanTenureMonths: metadataValues.loanTenureMonths,
+      setLoanTenureMonths: v => updateMetadataValue('loanTenureMonths', v),
+      minimumPaymentAmount: metadataValues.minimumPaymentAmount,
+      setMinimumPaymentAmount: v => updateMetadataValue('minimumPaymentAmount', v),
+      minimumPaymentPercent: metadataValues.minimumPaymentPercent,
+      setMinimumPaymentPercent: v => updateMetadataValue('minimumPaymentPercent', v),
+      payFromAccountId: metadataValues.payFromAccountId,
       payFromAccountName,
-      setPayFromAccountId,
+      setPayFromAccountId: v => updateMetadataValue('payFromAccountId', v),
       isPayFromPickerVisible,
       setIsPayFromPickerVisible,
-      notes,
-      setNotes,
-      isMinPaymentOnly,
-      setIsMinPaymentOnly,
-      minimumPaymentPercent,
-      setMinimumPaymentPercent,
+      notes: metadataValues.notes,
+      setNotes: v => updateMetadataValue('notes', v),
+      isMinPaymentOnly: metadataValues.isMinPaymentOnly,
+      setIsMinPaymentOnly: v => updateMetadataValue('isMinPaymentOnly', v),
     },
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
   };
