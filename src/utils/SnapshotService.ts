@@ -1,8 +1,19 @@
+import type { PetState } from '@/src/services/FinancialPetService';
+import type { StreakResult } from '@/src/services/StreakService';
+import { WIDGET_KEYS } from '@/modules/expo-widgets/src/ExpoWidgetsKeys';
 import { logger } from '@/src/utils/logger';
 import { storage } from './storage';
 
 const DASHBOARD_SNAPSHOT_KEY = 'dashboard_data_snapshot';
 const WEALTH_SNAPSHOT_KEY = 'wealth_summary_snapshot';
+export const FINANCIAL_PET_SNAPSHOT_KEY = 'financial_pet_snapshot';
+export const STREAK_SNAPSHOT_KEY = 'streak_snapshot';
+
+/**
+ * AppGroup identifier for shared native widget data synchronization (iOS / Android shared storage).
+ * Coordinated with T-003 spec seam and WIDGET_KEYS contract.
+ */
+export const APP_GROUP_ID = WIDGET_KEYS.APP_GROUP_ID;
 
 // 2 days TTL for snapshots to ensure they don't get too stale
 const SNAPSHOT_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
@@ -143,6 +154,34 @@ class SnapshotService {
    */
   getCustomSnapshot(workplaceId: string, key: string): any | null {
     return this.getValidatedSnapshot(`${key}_${workplaceId}`, workplaceId);
+  }
+
+  /**
+   * Persists financial pet state snapshot to MMKV for fast boot and shared widget seam.
+   */
+  saveFinancialPetSnapshot(workplaceId: string, data: PetState): void {
+    this.saveCustomSnapshot(workplaceId, FINANCIAL_PET_SNAPSHOT_KEY, data);
+  }
+
+  /**
+   * Retrieves the last saved financial pet snapshot for a workplace.
+   */
+  getFinancialPetSnapshot(workplaceId: string): PetState | null {
+    return this.getCustomSnapshot(workplaceId, FINANCIAL_PET_SNAPSHOT_KEY);
+  }
+
+  /**
+   * Persists streak state snapshot to MMKV for fast boot and shared widget seam.
+   */
+  saveStreakSnapshot(workplaceId: string, data: StreakResult): void {
+    this.saveCustomSnapshot(workplaceId, STREAK_SNAPSHOT_KEY, data);
+  }
+
+  /**
+   * Retrieves the last saved streak snapshot for a workplace.
+   */
+  getStreakSnapshot(workplaceId: string): StreakResult | null {
+    return this.getCustomSnapshot(workplaceId, STREAK_SNAPSHOT_KEY);
   }
 
   /**

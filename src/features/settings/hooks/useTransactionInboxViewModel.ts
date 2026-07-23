@@ -18,6 +18,7 @@ import { logger } from '@/src/utils/logger';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { AppConfig } from '@/src/constants/app-config';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
@@ -51,6 +52,7 @@ export interface TransactionInboxViewModel {
 export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
+  const params = useLocalSearchParams<{ approve?: string }>();
 
   const [filter, setFilter] = useState<InboxFilter>('pending');
   const [scanCursor, setScanCursor] = useState(PAGE_SIZE);
@@ -329,6 +331,53 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     },
     [accounts, workplaceId],
   );
+
+  // Auto-approve pending SMS record from widget deep-link parameter (fullfrillsbalance://sms-inbox?approve=<recordId>)
+  useEffect(() => {
+    const approveRecordId = params.approve;
+    if (!approveRecordId) return;
+
+    let isMounted = true;
+    const processQuickApprove = async () => {
+      try {
+        const record = await smsService.getInboxRecord(approveRecordId);
+        if (!record || !isMounted) return;
+
+        const item: TransactionInboxItem = {
+          id: record.id,
+          channel: record.channel,
+          deviceSourceId: record.deviceSourceId,
+          senderAddress: record.senderAddress || '',
+          rawBody: record.rawBody || '',
+          inputDate: record.inputDate,
+          parseStatus: record.parseStatus,
+          processingStatus: record.processingStatus,
+          parsedAmount: record.parsedAmount,
+          parsedCurrencyCode: record.parsedCurrencyCode,
+          parsedMerchant: record.parsedMerchant,
+          parsedAccountSource: record.parsedAccountSource,
+          referenceNumber: record.referenceNumber,
+          direction: record.direction,
+          parseConfidence: record.parseConfidence,
+          parseReason: record.parseReason,
+          linkedJournal: undefined,
+          duplicateCandidate: undefined,
+        };
+
+        handleImport(item);
+      } catch (error) {
+        logger.error('[useTransactionInboxViewModel] Failed to quick-approve SMS record', {
+          recordId: approveRecordId,
+          error,
+        });
+      }
+    };
+
+    processQuickApprove();
+    return () => {
+      isMounted = false;
+    };
+  }, [params.approve, handleImport]);
 
   const handleCompareDuplicate = useCallback(
     (item: TransactionInboxItem) => {

@@ -7,12 +7,15 @@ import {
   notificationService,
   SafeToSpendResult,
 } from '@/src/services/notification/NotificationService';
+import { widgetSyncObserver } from '@/src/services/widget/WidgetSyncObserver';
+import { FinancialPetService } from '@/src/services/FinancialPetService';
+import type { WidgetPayload } from '@/src/services/widget/WidgetPayload';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { logger } from '@/src/utils/logger';
 import React from 'react';
 import { Platform } from 'react-native';
 import { EMPTY } from 'rxjs';
 
-// Use the types from the module
 import { WorkplaceId } from '@/src/types/domain';
 import type {
   WidgetDataSnapshot,
@@ -100,7 +103,22 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const { themeId, isWidgetPrivacyEnabled, isAppCurrentlyLocked, isAppReady } = useUI();
   const { theme, themeMode } = useTheme();
 
-  // Delay safeToSpend calculation until the app is ready to avoid blocking hydration
+  // Ensure observer is started in production when widget sync is active
+  React.useEffect(() => {
+    if (workplaceId) {
+      widgetSyncObserver.start(workplaceId);
+    }
+  }, [workplaceId]);
+
+  // Subscribe to the observer's payload$ (streak, pendingSms, pet data from DB)
+  const { data: observerPayload } = useObservable<WidgetPayload | null>(
+    () => widgetSyncObserver.payload$,
+    [],
+    null,
+  );
+
+  // Delay safeToSpend calculation until the app is ready to avoid blocking hydration.
+  // This hook remains the sole bridge writer — it merges all data sources here.
   const { data: safeToSpendData } = useObservable<SafeToSpendResult | null>(
     () =>
       isAppReady ? notificationService.observeSafeToSpend(workplaceId, defaultCurrencyCode) : EMPTY,
@@ -129,7 +147,18 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
 
       const isShortfall = (shortfall ?? 0) > 0;
       const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);
+      const budgetMarginRatio = isShortfall ? 0.0 : 1.0;
 
+      // Compute pet payload per spec: Audit Deficit (pending inbox) + Budget Health
+      const petCalculated = observerPayload?.pet
+        ? FinancialPetService.calculatePetPayload(
+            observerPayload.pet.unreviewedCount,
+            budgetMarginRatio,
+          )
+        : null;
+
+      // Build the complete snapshot merging observer data (streak/pet/sms)
+      // with the hook-owned data (safeToSpend, theme, privacy).
       const snapshot: WidgetDataSnapshot = {
         safeToSpend: isDataPresent
           ? {
@@ -150,14 +179,45 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
           : undefined,
         theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
         isPrivacyEnabled: isWidgetPrivacyEnabled,
+
+        // Streak — mapped from observer payload to bridge shape
+        streak: observerPayload?.streak
+          ? {
+              count: observerPayload.streak.streakCount,
+              todayLogged: observerPayload.streak.todayLogged,
+              lastLoggedDate: observerPayload.streak.lastLoggedDate,
+              canRecover: observerPayload.streak.canRecoverMissedDays,
+              missedDays: observerPayload.streak.missedDaysCount,
+            }
+          : undefined,
+
+        // PendingSms — observer returns single latest item; bridge expects array
+        pendingSms: observerPayload?.pendingSms
+          ? [
+              {
+                id: observerPayload.pendingSms.id,
+                merchant: observerPayload.pendingSms.merchant ?? '',
+                amount: observerPayload.pendingSms.amount,
+                currency: observerPayload.pendingSms.currency,
+              },
+            ]
+          : undefined,
+
+        // Pet — health computed per spec from Audit Deficit + Budget Health
+        pet: petCalculated
+          ? {
+              health: petCalculated.petHealth,
+              mood: petCalculated.petMood,
+            }
+          : undefined,
       };
 
       await expoWidgetsModule.syncWidgetData(snapshot).catch((err: Error | unknown) => {
-        console.warn('[useWidgetSync] Failed to sync widget data:', err);
+        logger.warn('[useWidgetSync] Failed to sync widget data', { error: String(err) });
       });
     };
 
-    // Use a small timeout to debounce rapid changes (e.g. during batch operations)
+    // Use a small timeout to debounce rapid changes and decouple write from UI thread
     const timeoutId = setTimeout(() => {
       void bootstrapWidgets();
     }, 500);
@@ -165,15 +225,6 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     return () => clearTimeout(timeoutId);
   }, [
     theme,
-    theme.expense,
-    theme.income,
-    theme.primary,
-    theme.primaryLight,
-    theme.pure,
-    theme.surface,
-    theme.text,
-    theme.textSecondary,
-    theme.transfer,
     themeId,
     themeMode,
     isWidgetPrivacyEnabled,
@@ -185,5 +236,6 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     currencyCode,
     isDataPresent,
     isAppReady,
+    observerPayload,
   ]);
 }
