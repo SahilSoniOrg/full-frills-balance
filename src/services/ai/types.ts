@@ -27,6 +27,8 @@ export interface ModelDefaultConfig {
   topP?: number;
   temperature?: number;
   maxTokens?: number;
+  maxContextTokens?: number;
+  maxOutputTokens?: number;
   /** Preferred backend order, e.g. 'gpu,cpu' */
   accelerators?: string;
   systemPrompt?: string;

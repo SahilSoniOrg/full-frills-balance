@@ -95,7 +95,9 @@ export class SmallModelProvider implements DynamicLLMEngine {
 
     await this.llm.loadModel(model.url, {
       backend: requestedBackend,
-      maxTokens: model.defaultConfig?.maxTokens ?? 1024,
+      maxContextTokens: model.defaultConfig?.maxContextTokens ?? 4096,
+      maxOutputTokens:
+        model.defaultConfig?.maxOutputTokens ?? model.defaultConfig?.maxTokens ?? 1024,
       systemPrompt: targetSystemPrompt,
       temperature: model.defaultConfig?.temperature ?? 0.7,
       topK: model.defaultConfig?.topK ?? 40,
