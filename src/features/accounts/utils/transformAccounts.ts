@@ -1,22 +1,21 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
-import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   getAccountAccentColor,
   getAccountSections,
   getSectionColor,
 } from '@/src/utils/accountCategory';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 
 export interface AccountCardViewModel {
   id: AccountId;
   name: string;
-  icon: IconName | null;
+  icon: IconName;
   accountType?: AccountType;
-  fallbackIcon: IconName;
   accentColor: string;
   textColor: string;
   balanceText: string;
@@ -211,9 +210,8 @@ export function transformAccountsToSections(
       const createdViewModel: AccountCardViewModel = {
         id: account.id,
         name: account.name,
-        icon: account.icon || null,
+        icon: getAccountIcon(account),
         accountType: account.accountType,
-        fallbackIcon: getAccountFallbackIcon(account.accountType),
         accentColor: meta.accentColor,
         textColor: meta.textColor,
         balanceText,
