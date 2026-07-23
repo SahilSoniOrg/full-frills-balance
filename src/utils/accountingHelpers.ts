@@ -176,3 +176,117 @@ export function validateBalance(
     totalCredits: roundToPrecision(totalCredits, precision),
   };
 }
+
+/**
+ * Calculates gross period flows (increase, decrease, net flow) for an account.
+ */
+export interface AccountPeriodFlows {
+  totalIncrease: number;
+  totalDecrease: number;
+  netFlow: number;
+}
+
+export function calculateAccountPeriodFlows(
+  accountType: AccountType,
+  transactions: { amount: number; transactionType: TransactionType }[],
+  precision: number = AppConfig.constants.precision,
+): AccountPeriodFlows {
+  let totalIncrease = 0;
+  let totalDecrease = 0;
+
+  for (const tx of transactions) {
+    if (isBalanceIncrease(accountType, tx.transactionType)) {
+      totalIncrease += tx.amount;
+    } else {
+      totalDecrease += tx.amount;
+    }
+  }
+
+  const roundedIncrease = roundToPrecision(totalIncrease, precision);
+  const roundedDecrease = roundToPrecision(totalDecrease, precision);
+  const netFlow = roundToPrecision(roundedIncrease - roundedDecrease, precision);
+
+  return {
+    totalIncrease: roundedIncrease,
+    totalDecrease: roundedDecrease,
+    netFlow,
+  };
+}
+
+/**
+ * Calculates income vs expense summary, net savings, and savings rate.
+ */
+export interface IncomeVsExpenseSummary {
+  income: number;
+  expense: number;
+  netSavings: number;
+  savingsRate: number;
+}
+
+export function calculateIncomeVsExpenseSummary(
+  deltas: { accountType: AccountType; amount: number }[],
+  precision: number = AppConfig.constants.precision,
+): IncomeVsExpenseSummary {
+  let income = 0;
+  let expense = 0;
+
+  for (const item of deltas) {
+    if (item.accountType === AccountType.INCOME) {
+      income += item.amount;
+    } else if (item.accountType === AccountType.EXPENSE) {
+      expense += item.amount;
+    }
+  }
+
+  const roundedIncome = roundToPrecision(income, precision);
+  const roundedExpense = roundToPrecision(expense, precision);
+  const netSavings = roundToPrecision(roundedIncome - roundedExpense, precision);
+  const savingsRate =
+    roundedIncome > 0 ? roundToPrecision((netSavings / roundedIncome) * 100, 2) : 0;
+
+  return {
+    income: roundedIncome,
+    expense: roundedExpense,
+    netSavings,
+    savingsRate,
+  };
+}
+
+/**
+ * Aggregates category items into sorted category breakdown items with percentage metrics.
+ */
+export interface CategoryBreakdownItem {
+  category: string;
+  amount: number;
+  percentage: number;
+}
+
+export function calculateCategoryBreakdownItems(
+  items: { category: string; amount: number }[],
+  precision: number = AppConfig.constants.precision,
+): CategoryBreakdownItem[] {
+  const aggregatedMap = new Map<string, number>();
+  let grandTotal = 0;
+
+  for (const item of items) {
+    if (item.amount <= 0) continue;
+    const current = aggregatedMap.get(item.category) || 0;
+    const updated = current + item.amount;
+    aggregatedMap.set(item.category, updated);
+    grandTotal += item.amount;
+  }
+
+  if (grandTotal <= 0) return [];
+
+  return Array.from(aggregatedMap.entries())
+    .map(([category, amount]) => {
+      const roundedAmount = roundToPrecision(amount, precision);
+      const percentage = roundToPrecision((amount / grandTotal) * 100, 2);
+      return {
+        category,
+        amount: roundedAmount,
+        percentage,
+      };
+    })
+    .sort((a, b) => b.amount - a.amount);
+}
