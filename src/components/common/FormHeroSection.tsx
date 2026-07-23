@@ -56,6 +56,7 @@ export const FormHeroSection = ({
             value={nameValue}
             onChangeText={onNameChange}
             variant="minimal"
+            testID="hero-name-input"
             inputStyle={{
               textAlign: nameAlign,
               fontSize: Typography.sizes.xl,
@@ -79,6 +80,7 @@ export const FormHeroSection = ({
             value={amountValue}
             onChangeText={onAmountChange}
             placeholder={amountPlaceholder}
+            testID="hero-amount-input"
           />
         </>
       )}

@@ -10,6 +10,7 @@ interface HeroNumberInputProps {
   keyboardType?: 'numeric' | 'decimal-pad';
   containerStyle?: StyleProp<ViewStyle>;
   minWidth?: number;
+  testID?: string;
 }
 
 /**
@@ -23,6 +24,7 @@ export const HeroNumberInput = ({
   keyboardType = 'decimal-pad',
   containerStyle,
   minWidth = 150,
+  testID,
 }: HeroNumberInputProps) => {
   const { theme, fonts } = useTheme();
 
@@ -39,6 +41,7 @@ export const HeroNumberInput = ({
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType={keyboardType}
+        testID={testID}
         inputStyle={{
           fontSize: Typography.sizes.hero / 1.5,
           fontFamily: fonts.semibold,

@@ -59,6 +59,31 @@ test.describe('Transaction Management', () => {
     await expect(dashboardPage.page.getByText(/2,000\.00/).first()).toBeVisible();
   });
 
+  test('should create a transfer transaction', async ({
+    dashboardPage,
+    journalEntryPage,
+    accountsPage,
+  }) => {
+    // Create secondary Asset account for transfer target
+    await accountsPage.navigateToCreation();
+    await accountsPage.createAccount('Savings T', 'Asset');
+
+    await dashboardPage.switchToDashboard();
+    await dashboardPage.clickPlusButton();
+
+    await journalEntryPage.selectType('TRANSFER');
+    await journalEntryPage.enterAmount('300.00');
+    await journalEntryPage.selectSourceAccount('Checking T');
+    await journalEntryPage.selectDestinationAccount('Savings T');
+    await journalEntryPage.enterDescription('Emergency Fund Transfer');
+    await journalEntryPage.save();
+
+    // Verify on dashboard
+    await expect(dashboardPage.page.getByText('Emergency Fund Transfer')).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
   test('should edit a transaction', async ({ dashboardPage, journalEntryPage, page }) => {
     // Create one first
     await dashboardPage.switchToDashboard();
