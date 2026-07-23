@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import { IconName } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import Account, { AccountType } from '@/src/data/models/Account';
 import { PlainAccount } from '@/src/types/domain';

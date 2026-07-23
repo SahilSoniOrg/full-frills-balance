@@ -1,3 +1,4 @@
+import { IconName } from '@/src/types/domainIcons';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
@@ -202,7 +203,7 @@ export const IconMap = {
   terminal: Terminal,
 } as const;
 
-export type IconName = keyof typeof IconMap;
+export type { IconName };
 
 /**
  * Helper to check if a string is a valid icon name
@@ -238,9 +239,9 @@ export const AppIcon = ({
 
   const iconToUse =
     name && name in IconMap
-      ? (name as IconName)
+      ? (name as keyof typeof IconMap)
       : fallbackIcon && fallbackIcon in IconMap
-        ? fallbackIcon
+        ? (fallbackIcon as keyof typeof IconMap)
         : null;
 
   if (!iconToUse) return null;

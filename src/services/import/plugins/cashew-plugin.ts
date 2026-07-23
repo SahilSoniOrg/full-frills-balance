@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import { IconName } from '@/src/types/domainIcons';
 import { generator } from '@/src/data/database/idGenerator';
 import { AccountSubtype, AccountType } from '@/src/data/models/Account';
 import { BatchImportData } from '@/src/data/repositories/ImportRepository';

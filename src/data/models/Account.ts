@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import { IconName } from '@/src/types/domainIcons';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Transaction from '@/src/data/models/Transaction';

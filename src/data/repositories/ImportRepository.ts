@@ -1,4 +1,4 @@
-import { IconName } from '@/src/components/core/AppIcon';
+import { IconName } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Account, {
   AccountSubtype,
