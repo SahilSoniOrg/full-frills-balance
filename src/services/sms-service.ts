@@ -18,6 +18,7 @@ import { PreparedJournalData, prepareJournalData } from '@/src/services/ledger/p
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/domain';
 import { logger } from '@/src/utils/logger';
+import { executeBoundedBatchWrite } from '@/src/utils/dbGuardrails';
 import { PermissionError } from '@/src/utils/errors';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { storage } from '@/src/utils/storage';
@@ -498,45 +499,40 @@ class SmsService {
     const allAccountsToRebuild = new Set<AccountId>();
 
     if (analysisResults.length > 0) {
-      await database.write(async () => {
-        for (const result of analysisResults) {
-          let linkedJournalId = result.exactJournalId;
+      for (const result of analysisResults) {
+        let linkedJournalId = result.exactJournalId;
 
-          if (result.autoPost) {
-            const { journal, ops, accountsToRebuild } =
-              ledgerWriteService.prepareCreateJournalFromPreparedData(
-                result.autoPost.journalData,
-                result.autoPost.preparedJournal,
-                workplaceId,
-              );
+        if (result.autoPost) {
+          const { journal, ops, accountsToRebuild } =
+            ledgerWriteService.prepareCreateJournalFromPreparedData(
+              result.autoPost.journalData,
+              result.autoPost.preparedJournal,
+              workplaceId,
+            );
 
-            allOps.push(...ops);
-            accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
-            linkedJournalId = journal.id;
-            importedCount += 1;
+          allOps.push(...ops);
+          accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
+          linkedJournalId = journal.id;
+          importedCount += 1;
 
-            analytics.logSmsRuleTriggered(result.autoPost.ruleId, true);
-            this.markSmsAsProcessed(result.message.id);
-          }
-
-          const { ops: upsertOps } = this.prepareUpsertInboxRecord(
-            result.message,
-            result.parsed,
-            result.fingerprint,
-            result.existingRecord,
-            result.finalStatus,
-            workplaceId,
-            linkedJournalId,
-            result.duplicate || undefined,
-          );
-          allOps.push(...upsertOps);
+          analytics.logSmsRuleTriggered(result.autoPost.ruleId, true);
+          this.markSmsAsProcessed(result.message.id);
         }
 
-        for (let i = 0; i < allOps.length; i += SMS_CONFIG.batchOpChunkSize) {
-          const chunk = allOps.slice(i, i + SMS_CONFIG.batchOpChunkSize);
-          await database.batch(chunk);
-        }
-      });
+        const { ops: upsertOps } = this.prepareUpsertInboxRecord(
+          result.message,
+          result.parsed,
+          result.fingerprint,
+          result.existingRecord,
+          result.finalStatus,
+          workplaceId,
+          linkedJournalId,
+          result.duplicate || undefined,
+        );
+        allOps.push(...upsertOps);
+      }
+
+      await executeBoundedBatchWrite(database, allOps, SMS_CONFIG.batchOpChunkSize);
 
       if (allAccountsToRebuild.size > 0) {
         const latestDate = Math.max(...messages.map(m => m.date));

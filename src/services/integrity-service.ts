@@ -18,6 +18,7 @@ import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { analytics } from '@/src/services/analytics-service';
+import { executeBoundedBatchWrite } from '@/src/utils/dbGuardrails';
 import { smsService } from '@/src/services/sms-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/domain';
@@ -373,20 +374,18 @@ export class IntegrityService {
       // Perform ONE single unified refresh for all repaired accounts at the very end
       if (repairedAccountIds.length > 0) {
         onProgress?.('Updating database snapshots...', 0.96);
-        await database.write(async () => {
-          const accountsToNotify = await database.collections
-            .get<Account>('accounts')
-            .query(Q.where('id', Q.oneOf(repairedAccountIds)))
-            .fetch();
+        const accountsToNotify = await database.collections
+          .get<Account>('accounts')
+          .query(Q.where('id', Q.oneOf(repairedAccountIds)))
+          .fetch();
 
-          await database.batch(
-            accountsToNotify.map(a =>
-              a.prepareUpdate((record: Account) => {
-                record.updatedAt = new Date();
-              }),
-            ),
-          );
-        });
+        const updateOps = accountsToNotify.map(a =>
+          a.prepareUpdate((record: Account) => {
+            record.updatedAt = new Date();
+          }),
+        );
+
+        await executeBoundedBatchWrite(database, updateOps);
       }
     } else {
       onProgress?.('No discrepancies found. All balances correct.', 0.9);
