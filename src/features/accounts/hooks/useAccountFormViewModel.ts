@@ -132,7 +132,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   );
 
   const { currencies } = useCurrencies();
-  const { data: metadataRecords } = useObservable(
+  const { data: metadataRecords, isLoading: isMetadataLoading } = useObservable(
     () => (existingAccount ? existingAccount.metadataRecords.observe() : of([])),
     [existingAccount],
     [] as AccountMetadata[],
@@ -185,7 +185,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [isParentPickerVisible, setIsParentPickerVisible] = useState(false);
   const [isPayFromPickerVisible, setIsPayFromPickerVisible] = useState(false);
-  const hasInjectedRef = useRef(false);
+  const hasInjectedAccountRef = useRef(false);
+  const hasInjectedBalanceRef = useRef(false);
+  const hasInjectedMetadataRef = useRef(false);
 
   // Metadata State
   const [statementDay, setStatementDay] = useState('');
@@ -201,57 +203,51 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const [localFormError, setLocalFormError] = useState<string | null>(null);
 
-  // Load existing account data
+  // Load existing account base data
   useEffect(() => {
-    if (existingAccount) {
-      setTimeout(() => {
-        setAccountName(existingAccount.name);
-        setAccountType(existingAccount.accountType);
-        setAccountSubtype(
-          existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
-        );
-        setSelectedCurrency(existingAccount.currencyCode);
-        setSelectedIcon(
-          existingAccount.icon ||
-            (existingAccount.accountType === 'INCOME' || existingAccount.accountType === 'EXPENSE'
-              ? 'tag'
-              : 'wallet'),
-        );
-        setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
-
-        if (balanceData && initialBalance === '' && !hasInjectedRef.current) {
-          setInitialBalance(balanceData.balance.toString());
-        }
-
-        // Load metadata
-        if (existingMetadata && !hasInjectedRef.current) {
-          setStatementDay(existingMetadata.statementDay?.toString() || '');
-          setDueDay(existingMetadata.dueDay?.toString() || '');
-          setCreditLimitAmount(existingMetadata.creditLimitAmount?.toString() || '');
-          // apr is managed as aprBps in the repo persistence input, but let's see what model has
-          setApr(existingMetadata.aprBps ? (existingMetadata.aprBps / 100).toString() : '');
-          setEmiDay(existingMetadata.emiDay?.toString() || '');
-          setLoanTenureMonths(existingMetadata.loanTenureMonths?.toString() || '');
-          setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
-          setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
-          setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
-          setPayFromAccountId(existingMetadata.payFromAccountId || EMPTY_ACCOUNT_ID);
-          setNotes(existingMetadata.notes || '');
-        }
-      }, 0);
-
-      if (existingAccount && (balanceData || !isBalanceLoading)) {
-        hasInjectedRef.current = true;
-      }
+    if (existingAccount && !hasInjectedAccountRef.current) {
+      hasInjectedAccountRef.current = true;
+      setAccountName(existingAccount.name);
+      setAccountType(existingAccount.accountType);
+      setAccountSubtype(
+        existingAccount.accountSubtype || getDefaultSubtypeForType(existingAccount.accountType),
+      );
+      setSelectedCurrency(existingAccount.currencyCode);
+      setSelectedIcon(
+        existingAccount.icon ||
+          (existingAccount.accountType === 'INCOME' || existingAccount.accountType === 'EXPENSE'
+            ? 'tag'
+            : 'wallet'),
+      );
+      setParentAccountId(existingAccount.parentAccountId || EMPTY_ACCOUNT_ID);
     }
-  }, [
-    existingAccount,
-    accountVersion,
-    existingMetadata,
-    balanceData,
-    initialBalance,
-    isBalanceLoading,
-  ]);
+  }, [existingAccount, accountVersion]);
+
+  // Load existing balance
+  useEffect(() => {
+    if (balanceData && !hasInjectedBalanceRef.current) {
+      hasInjectedBalanceRef.current = true;
+      setInitialBalance(balanceData.balance.toString());
+    }
+  }, [balanceData]);
+
+  // Load existing metadata
+  useEffect(() => {
+    if (existingMetadata && !hasInjectedMetadataRef.current) {
+      hasInjectedMetadataRef.current = true;
+      setStatementDay(existingMetadata.statementDay?.toString() || '');
+      setDueDay(existingMetadata.dueDay?.toString() || '');
+      setCreditLimitAmount(existingMetadata.creditLimitAmount?.toString() || '');
+      setApr(existingMetadata.aprBps ? (existingMetadata.aprBps / 100).toString() : '');
+      setEmiDay(existingMetadata.emiDay?.toString() || '');
+      setLoanTenureMonths(existingMetadata.loanTenureMonths?.toString() || '');
+      setMinimumPaymentAmount(existingMetadata.minimumPaymentAmount?.toString() || '');
+      setMinimumPaymentPercent(existingMetadata.minimumPaymentPercent?.toString() || '');
+      setIsMinPaymentOnly(existingMetadata.minPaymentOnly || false);
+      setPayFromAccountId(existingMetadata.payFromAccountId || EMPTY_ACCOUNT_ID);
+      setNotes(existingMetadata.notes || '');
+    }
+  }, [existingMetadata]);
 
   const validation = useAccountValidation(accountName, accounts, accountId);
 
@@ -326,20 +322,30 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       }
     }
 
-    const metadata: any = {};
+    const metadataPayload: Record<string, any> = {};
     if (!isCurrentCategory) {
-      if (statementDay) metadata.statementDay = parseInt(statementDay, 10);
-      if (dueDay) metadata.dueDay = parseInt(dueDay, 10);
-      if (creditLimitAmount) metadata.creditLimitAmount = parseFloat(creditLimitAmount);
-      if (apr) metadata.aprBps = Math.round(parseFloat(apr) * 100);
-      if (emiDay) metadata.emiDay = parseInt(emiDay, 10);
-      if (loanTenureMonths) metadata.loanTenureMonths = parseInt(loanTenureMonths, 10);
-      if (minimumPaymentAmount) metadata.minimumPaymentAmount = parseFloat(minimumPaymentAmount);
-      if (minimumPaymentPercent) metadata.minimumPaymentPercent = parseFloat(minimumPaymentPercent);
-      metadata.minPaymentOnly = isMinPaymentOnly;
-      if (payFromAccountId) metadata.payFromAccountId = payFromAccountId;
-      if (notes) metadata.notes = notes;
+      metadataPayload.statementDay = statementDay ? parseInt(statementDay, 10) : null;
+      metadataPayload.dueDay = dueDay ? parseInt(dueDay, 10) : null;
+      metadataPayload.creditLimitAmount = creditLimitAmount ? parseFloat(creditLimitAmount) : null;
+      metadataPayload.aprBps = apr ? Math.round(parseFloat(apr) * 100) : null;
+      metadataPayload.emiDay = emiDay ? parseInt(emiDay, 10) : null;
+      metadataPayload.loanTenureMonths = loanTenureMonths ? parseInt(loanTenureMonths, 10) : null;
+      metadataPayload.minimumPaymentAmount = minimumPaymentAmount
+        ? parseFloat(minimumPaymentAmount)
+        : null;
+      metadataPayload.minimumPaymentPercent = minimumPaymentPercent
+        ? parseFloat(minimumPaymentPercent)
+        : null;
+      metadataPayload.minPaymentOnly = isMinPaymentOnly;
+      metadataPayload.payFromAccountId = payFromAccountId || null;
+      metadataPayload.notes = notes || null;
     }
+
+    const hasAnyMetadataValue = Object.values(metadataPayload).some(
+      val => val !== null && val !== false,
+    );
+    const shouldSaveMetadata =
+      !isCurrentCategory && (hasAnyMetadataValue || Boolean(existingMetadata));
 
     try {
       await persistence.handleSave(
@@ -351,7 +357,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
         isCurrentCategory ? '' : initialBalance,
         isCurrentCategory ? undefined : balanceData || undefined,
         parentAccountId || undefined,
-        !isCurrentCategory && Object.keys(metadata).length > 0 ? metadata : undefined,
+        shouldSaveMetadata ? metadataPayload : undefined,
       );
 
       // Note: handleSave in persistence already calls router.back()
@@ -493,6 +499,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       minimumPaymentPercent,
       setMinimumPaymentPercent,
     },
-    isLoading: isAccountLoading || isBalanceLoading,
+    isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
   };
 }
