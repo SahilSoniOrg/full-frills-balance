@@ -1,6 +1,7 @@
 import { TransactionBadge, TransactionCardProps } from '@/src/components/common/TransactionCard';
 import { IconName } from '@/src/components/core/AppIcon';
 import { AppConfig } from '@/src/constants';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { EnrichedJournal, JournalDisplayType } from '@/src/types/domain';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { journalPresenter } from '@/src/utils/journalPresenter';
@@ -45,7 +46,7 @@ export function mapJournalToCardProps(
       text: `${showPrefix}${acc.name}`,
       variant: getAccountTypeVariant(acc.accountType),
       icon: acc.icon,
-      fallbackIcon: (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet') as IconName,
+      fallbackIcon: getAccountFallbackIcon(acc.accountType),
     };
   });
 

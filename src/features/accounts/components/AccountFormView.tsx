@@ -15,6 +15,7 @@ import { AccountSubtypeSelector } from '@/src/features/accounts/components/Accou
 import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
 import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
@@ -89,7 +90,7 @@ export function AccountFormView(vm: AccountFormViewModel) {
           >
             <IvyIcon
               name={selectedIcon as IconName}
-              fallbackIcon={isCategory ? 'tag' : 'wallet'}
+              fallbackIcon={getAccountFallbackIcon(accountType)}
               color={theme.primary}
               size={Size.iconLg}
             />

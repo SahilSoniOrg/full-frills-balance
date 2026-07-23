@@ -2,6 +2,7 @@ import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
+import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { Modal, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -68,7 +69,7 @@ export function HierarchyMoveModal({
                   >
                     <AppIcon
                       name={candidate.icon}
-                      fallbackIcon="wallet"
+                      fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
                       size={Size.iconSm}
                       color={theme.textSecondary}
                     />
@@ -100,7 +101,7 @@ export function HierarchyMoveModal({
                 >
                   <AppIcon
                     name={candidate.icon}
-                    fallbackIcon="wallet"
+                    fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
                     size={Size.iconSm}
                     color={theme.textSecondary}
                   />

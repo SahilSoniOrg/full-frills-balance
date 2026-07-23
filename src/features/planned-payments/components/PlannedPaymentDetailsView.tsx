@@ -6,6 +6,7 @@ import { AppConfig, Opacity, Size, Spacing, Typography, withOpacity } from '@/sr
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { AppNavigation } from '@/src/utils/navigation';
 
 export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
@@ -159,7 +160,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
               <Row align="center" gap="md">
                 <IvyIcon
                   name={fromAccount?.icon}
-                  fallbackIcon="wallet"
+                  fallbackIcon={getAccountFallbackIcon(fromAccount?.accountType)}
                   label={fromAccount?.name}
                   color={theme[fromAccountColorKey as keyof typeof theme] as string}
                   size={Size.avatarSm}
@@ -177,7 +178,7 @@ export function PlannedPaymentDetailsView(vm: PlannedPaymentDetailsViewModel) {
               <Row align="center" gap="md">
                 <IvyIcon
                   name={toAccount?.icon}
-                  fallbackIcon="wallet"
+                  fallbackIcon={getAccountFallbackIcon(toAccount?.accountType)}
                   label={toAccount?.name}
                   color={theme[toAccountColorKey as keyof typeof theme] as string}
                   size={Size.avatarSm}

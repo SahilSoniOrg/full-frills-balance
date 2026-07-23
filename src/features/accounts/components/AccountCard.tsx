@@ -46,7 +46,7 @@ export function AccountCardBase({
               <Row gap="md" align="center" flex={1}>
                 <IvyIcon
                   name={account.icon || undefined}
-                  fallbackIcon="wallet"
+                  fallbackIcon={account.fallbackIcon}
                   label={account.name}
                   color={account.textColor}
                   size={Size.avatarSm}

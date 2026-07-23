@@ -4,6 +4,7 @@ import { ScreenSectionHeader } from '@/src/components/common/ScreenSectionHeader
 import { AppCard, AppText, Badge, IvyIcon } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
+import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { DateRange, formatRelativeReconciledDate, formatShortDate } from '@/src/utils/dateUtils';
@@ -74,7 +75,7 @@ export function AccountDetailsHeader({
         <View style={styles.accountHeader}>
           <IvyIcon
             name={accountIcon || undefined}
-            fallbackIcon="wallet"
+            fallbackIcon={getAccountFallbackIcon(accountType)}
             label={accountName}
             color={theme[accountTypeColorKey as keyof typeof theme] as string}
             size={Size.avatarMd}

@@ -1,8 +1,11 @@
 import { getPerfNow } from '@/src/utils/dateHelpers';
-import { IconName } from '@/src/components/core/AppIcon';
 import { useUI } from '@/src/contexts/UIContext';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { transformAccountsToSections } from '@/src/features/accounts/utils/transformAccounts';
+import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import {
+  AccountCardViewModel,
+  transformAccountsToSections,
+} from '@/src/features/accounts/utils/transformAccounts';
 import { AccountType } from '@/src/data/models/Account';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -15,22 +18,6 @@ import { logger } from '@/src/utils/logger';
 import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
-
-export interface AccountCardViewModel {
-  id: AccountId;
-  name: string;
-  icon: IconName | null;
-  accentColor: string;
-  textColor: string;
-  balanceText: string;
-  monthlyIncomeText: string;
-  monthlyExpenseText: string;
-  showMonthlyStats: boolean;
-  currencyCode: string;
-  depth: number;
-  hasChildren: boolean;
-  isExpanded: boolean;
-}
 
 export interface AccountSectionViewModel {
   title: string;
@@ -262,7 +249,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
             name: account.name,
             balance: balance?.balance,
             currency: balance?.currencyCode || account.currencyCode,
-            icon: account.icon || 'wallet',
+            icon: getAccountIcon(account),
             type: account.accountType,
           },
         });

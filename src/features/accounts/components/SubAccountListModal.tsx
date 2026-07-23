@@ -104,7 +104,7 @@ export function SubAccountListModal({
                   <View style={styles.accountLeft}>
                     <IvyIcon
                       name={account.icon}
-                      fallbackIcon="wallet"
+                      fallbackIcon={account.icon || 'wallet'}
                       label={account.name}
                       color={account.color}
                       size={36}

@@ -2,6 +2,7 @@ import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Layout, Opacity, Shape, Size, Spacing, Typography, withOpacity } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import Account from '@/src/data/models/Account';
+import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/domain';
 import { ACCOUNT_TYPE_ORDER, getAccountTypeColorKey } from '@/src/utils/accountCategory';
@@ -112,7 +113,7 @@ export function HierarchyTree({
             <View style={styles.iconWrapper}>
               <AppIcon
                 name={account.icon}
-                fallbackIcon="wallet"
+                fallbackIcon={getAccountFallbackIcon(account.accountType)}
                 size={Size.iconSm}
                 color={categoryColor}
               />

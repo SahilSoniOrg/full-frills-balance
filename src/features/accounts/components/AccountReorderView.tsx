@@ -2,7 +2,10 @@ import { AppCard, AppIcon, AppText } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Shape, Spacing, withOpacity } from '@/src/constants';
 import { AccountReorderViewModel } from '@/src/features/accounts/hooks/useAccountReorderViewModel';
-import { getAccountIcon } from '@/src/features/accounts/utils/getAccountIcon';
+import {
+  getAccountFallbackIcon,
+  getAccountIcon,
+} from '@/src/features/accounts/utils/getAccountIcon';
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -48,7 +51,7 @@ export function AccountReorderView({
                     <View style={styles.dragHandle}>
                       <AppIcon
                         name={getAccountIcon(account)}
-                        fallbackIcon="wallet"
+                        fallbackIcon={getAccountFallbackIcon(account.accountType)}
                         color={theme.primary}
                       />
                     </View>

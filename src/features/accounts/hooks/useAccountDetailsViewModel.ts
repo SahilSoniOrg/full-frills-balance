@@ -7,6 +7,10 @@ import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionRepository } from '@/src/data/repositories/TransactionRepository';
 import { useAccountActions, useAccountDashboard } from '@/src/features/accounts/hooks/useAccounts';
+import {
+  getAccountFallbackIcon,
+  getAccountIcon,
+} from '@/src/features/accounts/utils/getAccountIcon';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
@@ -239,7 +243,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
             name: pName,
             accountType: pType || 'ASSET',
             currencyCode: pCurrency || workplaceCurrency,
-            icon: pIcon || 'wallet',
+            icon: pIcon || getAccountFallbackIcon(pType),
             colorKey: pColor,
             deletedAt: null,
           }
@@ -403,7 +407,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       return {
         id: child.id,
         name: child.name,
-        icon: child.icon || 'wallet',
+        icon: getAccountIcon(child),
         balanceText: CurrencyFormatter.format(
           subBalance?.balance ?? 0,
           subBalance?.currencyCode || child.currencyCode || workplaceCurrency,
@@ -549,14 +553,14 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         name: account.name,
         type: account.accountType,
         currency: account.currencyCode,
-        icon: account.icon || 'tag',
+        icon: getAccountIcon(account),
       });
     } else {
       AppNavigation.toAccountForm(accountId, {
         name: account.name,
         type: account.accountType,
         currency: account.currencyCode,
-        icon: account.icon || 'wallet',
+        icon: getAccountIcon(account),
       });
     }
   }, [accountId, account]);
@@ -672,7 +676,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
               text: acc.name,
               variant: getAccountTypeVariant(acc.accountType),
               icon: acc.icon,
-              fallbackIcon: (acc.accountType === 'EXPENSE' ? 'tag' : 'wallet') as IconName,
+              fallbackIcon: getAccountFallbackIcon(acc.accountType),
             })),
             notes: transaction.notes,
           },

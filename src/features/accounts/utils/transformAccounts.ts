@@ -1,6 +1,7 @@
 import { IconName } from '@/src/components/core/AppIcon';
 import { Theme } from '@/src/constants/design-tokens';
 import Account, { AccountType } from '@/src/data/models/Account';
+import { getAccountFallbackIcon } from '@/src/features/accounts/utils/getAccountIcon';
 import { AccountId, PlainAccount } from '@/src/types/domain';
 import {
   getAccountAccentColor,
@@ -14,6 +15,8 @@ export interface AccountCardViewModel {
   id: AccountId;
   name: string;
   icon: IconName | null;
+  accountType?: AccountType;
+  fallbackIcon: IconName;
   accentColor: string;
   textColor: string;
   balanceText: string;
@@ -209,6 +212,8 @@ export function transformAccountsToSections(
         id: account.id,
         name: account.name,
         icon: account.icon || null,
+        accountType: account.accountType,
+        fallbackIcon: getAccountFallbackIcon(account.accountType),
         accentColor: meta.accentColor,
         textColor: meta.textColor,
         balanceText,

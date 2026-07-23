@@ -4,6 +4,7 @@ import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import { useJournalTransactions } from '@/src/features/journal/hooks/useJournals';
@@ -362,7 +363,7 @@ export function useTransactionDetailsViewModel(): TransactionDetailsViewModel {
         amountColor: color,
         // Icons should reflect flow: Down (+) to account, Up (-) from account
         iconName: item.icon || null,
-        fallbackIcon: (isDebit ? 'wallet' : 'wallet') as IconName, // Use wallet as general fallback for accounts
+        fallbackIcon: getAccountFallbackIcon(item.accountType),
         iconColor: color,
         iconBackground: color,
         onPress: () => AppNavigation.toAccountDetails(item.accountId),
