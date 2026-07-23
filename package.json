@@ -14,7 +14,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:build": "expo export -p web --output-dir dist-e2e",
-    "serve:e2e": "npx serve dist-e2e -p 8081 --single",
+    "serve:e2e": "serve dist-e2e -p 8081 --single",
     "prepare": "husky",
     "postinstall": "cd node_modules/react-native-litert-lm && ./scripts/download-ios-frameworks.sh && npx nitrogen",
     "visualize": "expo export --platform android --source-maps --no-bytecode --output-dir dist-analysis && source-map-explorer dist-analysis/_expo/static/js/android/*.js dist-analysis/_expo/static/js/android/*.js.map --no-border-checks"
@@ -108,6 +108,7 @@
     "prettier": "^3.8.4",
     "react-native-bundle-visualizer": "^3.2.0",
     "react-test-renderer": "19.2.3",
+    "serve": "^14.2.6",
     "sharp": "^0.34.5",
     "ts-jest": "^29.4.11",
     "typescript": "^6.0.3"
