@@ -124,7 +124,7 @@ export class LiabilityFlowGenerator {
   private static generateObligations(
     acc: Account,
     currentBalance: number,
-    metadata: any,
+    metadata: Record<string, any> | undefined,
     statementBalance: number,
     settledSinceStatement: number,
     startOfToday: dayjs.Dayjs,

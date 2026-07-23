@@ -1,4 +1,5 @@
-import { AccountType } from '@/src/data/models/Account';
+import Account, { AccountType } from '@/src/data/models/Account';
+import { database } from '@/src/data/database/Database';
 import { JournalStatus } from '@/src/data/models/Journal';
 import { TransactionType } from '@/src/data/models/Transaction';
 import { journalRepository } from '@/src/data/repositories/JournalRepository';
@@ -8,7 +9,7 @@ import { journalPresenter } from '@/src/utils/journalPresenter';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
-import { Observable, distinctUntilChanged, switchMap } from 'rxjs';
+import { Observable, combineLatest, distinctUntilChanged, switchMap } from 'rxjs';
 
 /**
  * Observe journals with their associated accounts for UI display.
@@ -22,7 +23,7 @@ export function observeEnrichedJournals(
   status?: JournalStatus[],
   options?: { minAmount?: number; maxAmount?: number; displayType?: string },
 ): Observable<EnrichedJournal[]> {
-  const clauses: any[] = [
+  const clauses: Q.Clause[] = [
     Q.experimentalJoinTables(['transactions']),
     Q.where('workplace_id', workplaceId),
     Q.where('deleted_at', Q.eq(null)),
@@ -91,8 +92,13 @@ export function observeEnrichedJournals(
       'updated_at',
     ]);
 
-  return journalsObservable.pipe(
-    switchMap(async journals => {
+  const accountsObservable = database.collections
+    .get<Account>('accounts')
+    .query(Q.where('workplace_id', workplaceId))
+    .observeWithColumns(['name', 'icon', 'account_type', 'updated_at']);
+
+  return combineLatest([journalsObservable, accountsObservable]).pipe(
+    switchMap(async ([journals]) => {
       logger.debug(`observeEnrichedJournals emission: length=${journals.length}`);
       if (journals.length === 0) return [] as EnrichedJournal[];
 
@@ -116,7 +122,9 @@ export function observeEnrichedJournals(
           id: r.account_id,
           name: r.account_name,
           accountType: r.account_type,
-          role: (r.transaction_type === TransactionType.CREDIT ? 'SOURCE' : 'DESTINATION') as any,
+          role: (r.transaction_type === TransactionType.CREDIT ? 'SOURCE' : 'DESTINATION') as
+            | 'SOURCE'
+            | 'DESTINATION',
           icon: r.account_icon,
         }));
 

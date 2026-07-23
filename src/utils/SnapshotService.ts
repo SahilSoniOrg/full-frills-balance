@@ -182,14 +182,20 @@ class SnapshotService {
   }
 
   /**
-   * Clears all snapshots.
+   * Clears all snapshot records selectively without wiping non-snapshot storage keys.
    */
   clearSnapshots(): void {
     try {
-      // Note: This is now slightly more complex because of workplace-prefixed keys.
-      // For now, we clear the standard keys if they exist, but a full clear
-      // might need to iterate keys (MMKV.getAllKeys())
-      storage.clearAll();
+      const keys = storage.getAllKeys();
+      for (const key of keys) {
+        if (
+          key.startsWith(DASHBOARD_SNAPSHOT_KEY) ||
+          key.startsWith(WEALTH_SNAPSHOT_KEY) ||
+          key.includes('_snapshot_')
+        ) {
+          storage.remove(key);
+        }
+      }
     } catch (error) {
       logger.warn('[SnapshotService] Failed to clear snapshots', { error });
     }

@@ -322,7 +322,7 @@ export class NativeAIProvider implements TransactionFallbackAIProvider {
     }
   }
 
-  private safeParseJSON(text: string): any {
+  private safeParseJSON(text: string): unknown {
     try {
       const cleaned = text.trim();
       return JSON.parse(cleaned);

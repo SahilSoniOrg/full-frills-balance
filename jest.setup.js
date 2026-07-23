@@ -84,6 +84,21 @@ jest.mock('react-native/Libraries/Utilities/PixelRatio', () => ({
 
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter');
 
+// Mock Share API
+jest.mock('react-native/Libraries/Share/Share', () => {
+  const shareFn = jest.fn().mockImplementation(content => {
+    if (!content || (!content.message && !content.url)) {
+      return Promise.reject(new Error('Nothing to share'));
+    }
+    return Promise.resolve({ action: 'sharedAction' });
+  });
+  return {
+    __esModule: true,
+    default: { share: shareFn },
+    share: shareFn,
+  };
+});
+
 // Mock StatusBar
 jest.mock('react-native/Libraries/Components/StatusBar/StatusBar', () => {
   return {

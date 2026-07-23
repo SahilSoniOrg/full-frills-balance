@@ -355,18 +355,20 @@ export class JournalService {
     const transactions = await transactionRepository.findByJournal(workplaceId, journalId);
 
     await database.write(async () => {
-      await journal.update((record: Journal) => {
+      const journalOp = journal.prepareUpdate((record: Journal) => {
         record.status = JournalStatus.PLANNED;
         record.journalDate = revertTime;
         record.updatedAt = new Date();
       });
 
-      for (const tx of transactions) {
-        await tx.update((record: Transaction) => {
+      const txOps = transactions.map(tx =>
+        tx.prepareUpdate((record: Transaction) => {
           record.transactionDate = revertTime;
           record.updatedAt = new Date();
-        });
-      }
+        }),
+      );
+
+      await database.batch([journalOp, ...txOps]);
     });
 
     await auditService.log(

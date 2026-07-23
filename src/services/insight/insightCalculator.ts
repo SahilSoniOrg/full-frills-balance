@@ -82,11 +82,11 @@ export function calculateInsights(input: CalculationInput): Insight[] {
 
   const finalPatterns = patterns.filter((p: Insight) => {
     if (p.type !== 'subscription-amnesiac') return true;
-    const account = accounts.find((a: any) => a.name === p.accountName);
+    const account = accounts.find((a: { id: string; name: string }) => a.name === p.accountName);
     if (!account) return true;
 
     const isAlreadyPlanned = activePlannedPayments.some(
-      (pp: any) =>
+      (pp: { amount: number; fromAccountId?: string; toAccountId?: string }) =>
         Math.abs(pp.amount) === Math.abs(p.amount || 0) &&
         (pp.fromAccountId === account.id || pp.toAccountId === account.id),
     );

@@ -262,7 +262,7 @@ export function transformAccountsToSections(
   });
 
   const duration = Date.now() - startTime;
-  logger.info(`[Trace] transformAccountsToSections: ${duration}ms`, {
+  logger.debug(`[Trace] transformAccountsToSections: ${duration}ms`, {
     accounts: totalAccounts,
     cacheHits,
     hitRate: totalAccounts > 0 ? `${((cacheHits / totalAccounts) * 100).toFixed(1)}%` : '0%',
