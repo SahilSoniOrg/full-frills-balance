@@ -3,16 +3,26 @@ import { BasePage } from './base-page';
 
 export class AccountsPage extends BasePage {
   async navigateToCreation() {
-    if (!this.page.url().includes('/account-creation')) {
-      await this.page.goto('/account-creation');
+    if (!this.page.url().includes('/accounts')) {
+      await this.switchToAccounts();
     }
+    const fab = this.page.getByTestId('fab-button');
+    if ((await fab.count()) > 0) {
+      await fab.first().waitFor({ state: 'visible' });
+      await fab.first().click();
+      return;
+    }
+    await this.page.goto('/account-creation');
   }
 
   async createAccount(name: string, type: 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity') {
     await this.page.getByPlaceholder(/Account Name|e\.g\./i).fill(name);
     await this.page.getByTestId(`account-type-option-${type.toUpperCase()}`).click();
     await this.page.getByText(/Create Account|Save Changes/i).click();
-    await this.assertAccountVisible(name); // Wait for navigation and success
+    if (!this.page.url().includes('/accounts')) {
+      await this.switchToAccounts();
+    }
+    await this.assertAccountVisible(name);
   }
 
   async assertAccountVisible(name: string) {
@@ -24,25 +34,20 @@ export class AccountsPage extends BasePage {
   }
 
   async editAccount(newName: string) {
-    // Wait for the edit button to be visible (we assume we are on details page)
     await expect(this.page.getByTestId('edit-button')).toBeVisible();
     await this.page.getByTestId('edit-button').click();
 
-    // Now on creation/edit screen
     await this.page.getByPlaceholder(/Account Name|e\.g\./i).fill(newName);
     await this.save();
   }
 
   async deleteAccount() {
-    // Wait for delete button
     await expect(this.page.getByTestId('delete-button')).toBeVisible();
 
-    // Handle dialog
     this.page.once('dialog', dialog => dialog.accept());
 
     await this.page.getByTestId('delete-button').click();
 
-    // Wait for navigation back to list
     await expect(this.page).toHaveURL(/\/accounts$/);
   }
 
