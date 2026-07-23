@@ -154,7 +154,13 @@ export function transformAccountsToSections(
           ? account.reconciledAt.getTime()
           : new Date(account.reconciledAt).getTime()
         : 0;
-      const stateKey = `${account.id}:${roundedBalance}:${roundedIncome}:${roundedExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${reconciledAtTs}`;
+      const accountIcon = account.icon || '';
+      const accountName = account.name || '';
+      const accountType = account.accountType || '';
+      const accountCurrency = account.currencyCode || '';
+      const parentId = account.parentAccountId || '';
+      const hasChildren = children.length > 0;
+      const stateKey = `${account.id}:${accountName}:${accountIcon}:${accountType}:${accountCurrency}:${parentId}:${depth}:${hasChildren}:${roundedBalance}:${roundedIncome}:${roundedExpenses}:${isExpanded}:${isPrivacyMode}:${showAccountMonthlyStats}:${reconciledAtTs}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
