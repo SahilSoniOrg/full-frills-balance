@@ -2,6 +2,7 @@ import { AppCard, AppIcon, IvyIcon } from '@/src/components/core';
 import { Opacity, Size } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
+import { AccountType } from '@/src/data/models/Account';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -17,6 +18,51 @@ interface AccountCardProps {
   surfaceColor: ColorKey;
 }
 
+function getAccountStatsConfig(
+  accountType: AccountType | undefined,
+  monthlyIncomeText: string,
+  monthlyExpenseText: string,
+) {
+  switch (accountType) {
+    case AccountType.EXPENSE:
+      return {
+        leftLabel: 'MONTH SPENT',
+        leftValue: monthlyExpenseText,
+        rightLabel: 'REFUNDS / CREDITS',
+        rightValue: monthlyIncomeText,
+      };
+    case AccountType.INCOME:
+      return {
+        leftLabel: 'MONTH EARNED',
+        leftValue: monthlyIncomeText,
+        rightLabel: 'ADJUSTMENTS',
+        rightValue: monthlyExpenseText,
+      };
+    case AccountType.LIABILITY:
+      return {
+        leftLabel: 'PAYMENTS MADE',
+        leftValue: monthlyExpenseText,
+        rightLabel: 'NEW CHARGES',
+        rightValue: monthlyIncomeText,
+      };
+    case AccountType.EQUITY:
+      return {
+        leftLabel: 'ADDITIONS',
+        leftValue: monthlyIncomeText,
+        rightLabel: 'REDUCTIONS',
+        rightValue: monthlyExpenseText,
+      };
+    case AccountType.ASSET:
+    default:
+      return {
+        leftLabel: 'MONEY IN',
+        leftValue: monthlyIncomeText,
+        rightLabel: 'MONEY OUT',
+        rightValue: monthlyExpenseText,
+      };
+  }
+}
+
 export function AccountCardBase({
   account,
   onPress,
@@ -26,6 +72,12 @@ export function AccountCardBase({
 }: AccountCardProps) {
   const { theme, fonts } = useTheme();
   const resolvedTextColor = resolveThemeColor(theme, account.textColor);
+
+  const stats = getAccountStatsConfig(
+    account.accountType,
+    account.monthlyIncomeText,
+    account.monthlyExpenseText,
+  );
 
   return (
     <AppCard
@@ -127,10 +179,10 @@ export function AccountCardBase({
                 opacity={0.6}
                 style={{ marginBottom: 4, letterSpacing: 0.5 }}
               >
-                MONTH INCOME
+                {stats.leftLabel}
               </Text>
               <Text variant="sm" weight="bold">
-                {account.monthlyIncomeText}
+                {stats.leftValue}
               </Text>
             </Column>
 
@@ -144,10 +196,10 @@ export function AccountCardBase({
                 opacity={0.6}
                 style={{ marginBottom: 4, letterSpacing: 0.5 }}
               >
-                MONTH EXPENSES
+                {stats.rightLabel}
               </Text>
               <Text variant="sm" weight="bold">
-                {account.monthlyExpenseText}
+                {stats.rightValue}
               </Text>
             </Column>
           </Row>
@@ -163,8 +215,10 @@ export const AccountCard = React.memo(
     prev.account.id === next.account.id &&
     prev.account.balanceText === next.account.balanceText &&
     prev.account.isExpanded === next.account.isExpanded &&
+    prev.account.showMonthlyStats === next.account.showMonthlyStats &&
     prev.account.monthlyIncomeText === next.account.monthlyIncomeText &&
     prev.account.monthlyExpenseText === next.account.monthlyExpenseText &&
+    prev.account.accountType === next.account.accountType &&
     prev.account.reconciledAt?.getTime() === next.account.reconciledAt?.getTime() &&
     prev.surfaceColor === next.surfaceColor &&
     prev.dividerColor === next.dividerColor,

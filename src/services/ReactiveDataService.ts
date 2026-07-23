@@ -587,8 +587,16 @@ class ReactiveDataService {
     const balance = Number(item.direct_balance || item.directBalance || 0);
     const currencyCode = (item.currency_code || item.currencyCode) as string;
     const accountType = (item.account_type || item.accountType) as AccountType;
-    const income = Number(item.monthly_income || item.monthlyIncome || 0);
-    const expenses = Number(item.monthly_expenses || item.monthlyExpenses || 0);
+    const income = Number(
+      item.periodIncrease ?? item.period_increase ?? item.monthly_income ?? item.monthlyIncome ?? 0,
+    );
+    const expenses = Number(
+      item.periodDecrease ??
+        item.period_decrease ??
+        item.monthly_expenses ??
+        item.monthlyExpenses ??
+        0,
+    );
     const txCount = Number(item.direct_transaction_count || item.directTransactionCount || 0);
 
     return {
@@ -600,8 +608,8 @@ class ReactiveDataService {
       directTransactionCount: txCount,
       asOfDate: now,
       accountType: accountType,
-      monthlyIncome: income,
-      monthlyExpenses: expenses,
+      monthlyIncome: Math.max(0, income),
+      monthlyExpenses: Math.max(0, expenses),
     };
   }
 }

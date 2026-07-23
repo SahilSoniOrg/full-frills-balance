@@ -217,7 +217,7 @@ export function transformAccountsToSections(
         balanceText,
         monthlyIncomeText,
         monthlyExpenseText,
-        showMonthlyStats: showAccountMonthlyStats,
+        showMonthlyStats: showAccountMonthlyStats || isExpanded,
         currencyCode: account.currencyCode,
         depth,
         hasChildren: children.length > 0,

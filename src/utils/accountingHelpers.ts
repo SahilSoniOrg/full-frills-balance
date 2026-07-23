@@ -120,28 +120,26 @@ export const isIncrease = isBalanceIncrease;
  * This unifies JS and SQL business logic.
  */
 export function getPeriodIncreaseSQLSnippet(): string {
-  // Matches getBalanceImpactMultiplier logic
+  // Returns gross balance increases (positive deltas)
   return `
     CASE 
       WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN -t.amount
-      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN -t.amount
       WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
       WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
-      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN -t.amount
       WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
-      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.DEBIT}') THEN -t.amount
       ELSE 0 
     END
   `.trim();
 }
 
 export function getPeriodDecreaseSQLSnippet(): string {
-  // Matches period decrease logic (specifically for Expense/Asset flows)
+  // Returns gross balance decreases (positive deltas)
   return `
     CASE 
-      WHEN a.account_type IN ('${AccountType.EXPENSE}', '${AccountType.ASSET}') AND t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount
-      WHEN a.account_type IN ('${AccountType.EXPENSE}', '${AccountType.ASSET}') AND t.transaction_type = '${TransactionType.CREDIT}' THEN -t.amount
+      WHEN (a.account_type = '${AccountType.INCOME}' AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
+      WHEN (a.account_type = '${AccountType.EXPENSE}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
+      WHEN (a.account_type = '${AccountType.ASSET}' AND t.transaction_type = '${TransactionType.CREDIT}') THEN t.amount
+      WHEN (a.account_type IN ('${AccountType.LIABILITY}', '${AccountType.EQUITY}') AND t.transaction_type = '${TransactionType.DEBIT}') THEN t.amount
       ELSE 0 
     END
   `.trim();
